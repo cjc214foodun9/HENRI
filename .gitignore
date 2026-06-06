@@ -1,0 +1,22 @@
+# GGUF and large models
+*.gguf
+gemma-4-E4B-it-Q4_0.gguf
+
+# Environment and sensitive files
+.env
+.env.*
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# OS files
+.DS_Store
+Thumbs.db
