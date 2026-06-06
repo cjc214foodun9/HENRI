@@ -26,6 +26,8 @@ from zone_b import HenriOpticalCoreD2NN
 from hopfield_cleanup import HopfieldSemanticCleanup
 from boundary_validator import BoundaryAxiomValidator
 from universal_repl import UniversalREPL
+from memory_cache import CachedHRRMemoryEngine
+from telemetry_server import telemetry_register, NonBlockingTelemetryServer
 
 try:
     import llama_cpp
@@ -319,6 +321,17 @@ class HenriCognitiveSwarmOrchestrator:
         # 8. Stateful REPL sandbox
         self.repl = UniversalREPL()
 
+        # 8b. Initialize stream-specific memory caches (INT8 phase-only growing cache)
+        self.memory_engines = {
+            i: CachedHRRMemoryEngine(wave_dim=self.hrr_dim, coherence_threshold=0.70, accumulation_limit=15)
+            for i in range(num_streams)
+        }
+        self.stream_position_indices = {i: 0 for i in range(num_streams)}
+        
+        # Start telemetry server dynamically
+        self.telemetry_server = None
+        self.start_telemetry_server()
+
         # 9. Asynchronous timed loop control structures
         self.stream_contexts = {i: [] for i in range(num_streams)}
         self.stream_prompts = {i: "" for i in range(num_streams)}
@@ -394,6 +407,12 @@ class HenriCognitiveSwarmOrchestrator:
                 return new_text
         return generated_text
 
+    def get_position_key(self, position_idx: int) -> torch.Tensor:
+        """Generates a deterministic position phase key vector for VSA binding."""
+        rng = torch.Generator().manual_seed(position_idx)
+        phases = (torch.rand(self.hrr_dim, generator=rng) * 2 * math.pi) - math.pi
+        return torch.polar(torch.ones(self.hrr_dim), phases)
+
     def step_stream(self, stream_id: int, prompt: str) -> tuple:
         """Runs a single forward step on one stream thread, returning lensed 4096-D wave."""
         # 1. Retrieve the base embedding (Gemma E4B hidden activations)
@@ -429,8 +448,29 @@ class HenriCognitiveSwarmOrchestrator:
         mags = torch.abs(focused_64)
         mags = torch.clamp(mags, min=1e-8)
         focused_64_norm = focused_64 / mags
+        focused_64_flat = focused_64_norm.flatten()
         
-        return focused_64_norm.flatten(), h_7b_lora
+        # --- Memory Cache Integration ---
+        # A. Update stream's memory engine
+        token_activation = focused_64_flat.clone()
+        pos_idx = self.stream_position_indices[stream_id]
+        position_key = self.get_position_key(pos_idx).to(token_activation.device)
+        signature_key = token_activation.clone()
+        
+        self.memory_engines[stream_id].update_active_memory(
+            token_activation=token_activation,
+            position_key=position_key,
+            signature_key=signature_key
+        )
+        self.stream_position_indices[stream_id] += 1
+        
+        # B. Retrieve blended context and perform superposition
+        retrieved_wave = self.memory_engines[stream_id].retrieve_from_cache(query_key=token_activation)
+        blended_focused = focused_64_flat + retrieved_wave
+        blended_mags = torch.abs(blended_focused).clamp(min=1e-8)
+        resolved_focused = blended_focused / blended_mags
+        
+        return resolved_focused, h_7b_lora
 
     def run_continuous_wave_timed_loop(self, interval_seconds=0.25):
         """
@@ -536,6 +576,20 @@ class HenriCognitiveSwarmOrchestrator:
                 lora_manager=self.lora_managers[0],
                 error_delta=error_energy
             )
+            
+            # Update thread-safe telemetry register
+            truth_tensor_2d = truth_tensor.reshape(64, 64)
+            telemetry_register.update(
+                active_tiles=[True] * 16,
+                coupling=1.0,
+                veto_intensity=error_energy,
+                langevin_heat=langevin_heat,
+                status="VETOED",
+                error_energy=error_energy,
+                lora_scale=1.0,
+                phase_data=torch.angle(truth_tensor_2d),
+                intensity_data=torch.abs(truth_tensor_2d) ** 2
+            )
                 
             return {
                 "status": "VETOED",
@@ -557,6 +611,20 @@ class HenriCognitiveSwarmOrchestrator:
                 error_delta=error_energy
             )
             
+            # Update thread-safe telemetry register
+            truth_tensor_2d = truth_tensor.reshape(64, 64)
+            telemetry_register.update(
+                active_tiles=[True] * 16,
+                coupling=1.0,
+                veto_intensity=0.0,
+                langevin_heat=0.0,
+                status="CONVERGED",
+                error_energy=error_energy,
+                lora_scale=1.0,
+                phase_data=torch.angle(truth_tensor_2d),
+                intensity_data=torch.abs(truth_tensor_2d) ** 2
+            )
+            
             return {
                 "status": "CONVERGED",
                 "concept": best_concept,
@@ -570,6 +638,10 @@ class HenriCognitiveSwarmOrchestrator:
             self.stream_prompts[i] = initial_prompts.get(i, "Solve SCADA thermodynamic pressure equations.")
             # Route and load specialized domain adapter
             self.synaptic_manager.route_and_load_adapter(target_label, self.lora_managers[i])
+        
+        # Start telemetry server dynamically
+        self.start_telemetry_server()
+
         self.stop_loop.clear()
         self.timed_loop_thread = threading.Thread(
             target=self.run_continuous_wave_timed_loop, 
@@ -584,6 +656,18 @@ class HenriCognitiveSwarmOrchestrator:
         if self.timed_loop_thread and self.timed_loop_thread.is_alive():
             self.timed_loop_thread.join(timeout=2.0)
         print("[SWARM LOOP] Timed loop stopped.")
+        
+        # Shutdown telemetry server gracefully
+        if hasattr(self, "telemetry_server") and self.telemetry_server:
+            self.telemetry_server.stop()
+            self.telemetry_server = None
+
+    def start_telemetry_server(self):
+        """Starts the telemetry server on port 8000 if not already running."""
+        if not hasattr(self, "telemetry_server") or self.telemetry_server is None:
+            self.telemetry_server = NonBlockingTelemetryServer(host='0.0.0.0', port=8000)
+            self.telemetry_server.start()
+
 
 
 class AletheiaAgent:
@@ -680,7 +764,14 @@ class AletheiaAgent:
             target_vector = self.orchestrator.get_stream_address(0)
             
         target_np = target_vector.detach().numpy().astype(np.complex64)
-        psi_cand_np = psi_candidate_focused.flatten().detach().numpy().astype(np.complex64)
+        psi_candidate_flat = psi_candidate_focused.flatten()
+        # Query memory cache for stream 0 and blend history
+        retrieved_wave = self.orchestrator.memory_engines[0].retrieve_from_cache(query_key=psi_candidate_flat)
+        blended_focused = psi_candidate_flat + retrieved_wave
+        blended_mags = torch.abs(blended_focused).clamp(min=1e-8)
+        psi_candidate_resolved = blended_focused / blended_mags
+        
+        psi_cand_np = psi_candidate_resolved.detach().numpy().astype(np.complex64)
 
         truth_np, delta_np, alignment = self.orchestrator.optical_core.forward(
             hr_wavefront=psi_cand_np,
@@ -694,8 +785,34 @@ class AletheiaAgent:
 
         if not is_valid:
             feedback = f"Sagnac Veto: The candidate logic violated Dirichlet boundary axioms. Reason: {veto_reason} | Error Energy: {error_energy:.4f}"
+            # Update thread-safe telemetry register
+            truth_tensor_2d = truth_tensor.reshape(64, 64)
+            telemetry_register.update(
+                active_tiles=[True] * 16,
+                coupling=1.0,
+                veto_intensity=error_energy,
+                langevin_heat=0.8,
+                status="VETOED",
+                error_energy=error_energy,
+                lora_scale=1.0,
+                phase_data=torch.angle(truth_tensor_2d),
+                intensity_data=torch.abs(truth_tensor_2d) ** 2
+            )
             return False, feedback, delta_np
             
+        # Update thread-safe telemetry register
+        truth_tensor_2d = truth_tensor.reshape(64, 64)
+        telemetry_register.update(
+            active_tiles=[True] * 16,
+            coupling=1.0,
+            veto_intensity=0.0,
+            langevin_heat=0.0,
+            status="CONVERGED",
+            error_energy=error_energy,
+            lora_scale=1.0,
+            phase_data=torch.angle(truth_tensor_2d),
+            intensity_data=torch.abs(truth_tensor_2d) ** 2
+        )
         return True, "Dirichlet boundaries verified. Sagnac alignment achieved.", delta_np
 
     def revise(self, prompt, candidate, feedback) -> str:
