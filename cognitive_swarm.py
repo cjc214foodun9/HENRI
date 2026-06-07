@@ -7,6 +7,7 @@ import threading
 import concurrent.futures
 import numpy as np
 import torch
+import torch.nn as torch_nn
 import psutil
 import psycopg
 from pathlib import Path
@@ -28,6 +29,11 @@ from boundary_validator import BoundaryAxiomValidator
 from universal_repl import UniversalREPL
 from memory_cache import CachedHRRMemoryEngine
 from telemetry_server import telemetry_register, NonBlockingTelemetryServer
+
+from emergent_topological_manifold import EmergentManifold
+from autotelic_cognitive_engine import IMGEP_Manager
+from neurosymbolic_program_induction import ProgramInductor
+from active_experimentation_engine import ClosedLoopScientist, PhysicalSubstrateInterface
 
 try:
     import llama_cpp
@@ -104,6 +110,56 @@ class GemmaRAMSwarmMock:
                 }
             ]
         }
+
+
+class SwarmAgent(torch_nn.Module):
+    """
+    An individual autonomous epistemic agent within the swarm.
+    Each agent develops its own symbolic theories about the wave mechanics
+    and sets its own intrinsic learning goals.
+    """
+    def __init__(self, agent_id: int, state_dim: int, action_dim: int, vocab_size: int, embed_dim: int):
+        super().__init__()
+        self.agent_id = agent_id
+        
+        # Phase 2: Autotelic Goal Generation
+        self.imgep = IMGEP_Manager(state_dim, action_dim, vocab_size, embed_dim)
+        
+        # Phase 3: Neurosymbolic Logic Induction
+        self.inductor = ProgramInductor(state_dim)
+        
+        # Phase 4: Active Experimentation
+        self.scientist = ClosedLoopScientist(self.inductor, state_dim)
+        
+        # Internal state tracking
+        self.current_concept_focus = (0, 1) # Default starting Vygotskian concepts
+
+    def propose_experiment(self, current_global_state: torch.Tensor):
+        """
+        Agent imagines a goal, formulates a hypothesis, and proposes an experiment.
+        """
+        # 1. Imagine a goal state (Vygotskian recombination)
+        goal_state = self.imgep.generate_goal(
+            torch.tensor([self.current_concept_focus[0]]), 
+            torch.tensor([self.current_concept_focus[1]])
+        )
+        
+        # 2. Design the optimal experiment to test its current neurosymbolic theories
+        if not self.scientist.active_theories:
+            # Bootstrap if no theories exist yet
+            dummy_x = torch.randn(5, current_global_state.size(-1))
+            dummy_y = torch.randn(5, current_global_state.size(-1))
+            self.scientist.bootstrap_hypotheses(dummy_x, dummy_y)
+            
+        callables = [t['callable'] for t in self.scientist.active_theories]
+        proposed_x = self.scientist.designer.design_optimal_experiment(callables, current_global_state)
+        
+        return proposed_x, goal_state
+
+    def assimilate_results(self, state, action, next_state, goal_state, concept_key):
+        """Update internal intrinsic motivations based on the physical result."""
+        metrics = self.imgep.internalize_experience(state, action, next_state, goal_state, concept_key)
+        return metrics
 
 
 class SynapticConsolidationManager:
@@ -332,6 +388,12 @@ class HenriCognitiveSwarmOrchestrator:
         self.telemetry_server = None
         self.start_telemetry_server()
 
+        # Phase 2, 3, 4: Distributed swarm agents (one per stream)
+        self.agents = torch_nn.ModuleList([
+            SwarmAgent(agent_id=i, state_dim=128, action_dim=128, vocab_size=50, embed_dim=8)
+            for i in range(num_streams)
+        ])
+
         # 9. Asynchronous timed loop control structures
         self.stream_contexts = {i: [] for i in range(num_streams)}
         self.stream_prompts = {i: "" for i in range(num_streams)}
@@ -520,6 +582,7 @@ class HenriCognitiveSwarmOrchestrator:
         """
         Pulls the constructed bulk wave, runs physical Zone B emulation,
         verifies boundary CFT constraints, applies rehypothecation, and cleanup.
+        Integrates all four phases under the Epistemic Swarm paradigm.
         """
         try:
             payload = self.active_wave_queue.get(timeout=2.0)
@@ -538,18 +601,140 @@ class HenriCognitiveSwarmOrchestrator:
             target_vector = self.get_stream_address(0)  # fallback
             
         target_np = target_vector.detach().numpy().astype(np.complex64)
-        psi_bulk_np = psi_bulk.detach().numpy().astype(np.complex64)
 
-        # 2. Fire the bulk wave into Zone B physical emulator (D2NN layers)
-        truth_np, delta_np, alignment = self.optical_core.forward(
-            hr_wavefront=psi_bulk_np, 
-            target_manifold=target_np,
-            langevin_heat=0.0
-        )
-        
-        # 3. Holographic Boundary validation
-        truth_tensor = torch.tensor(truth_np, dtype=torch.complex64)
-        is_valid, veto_reason, error_energy, h_cft = self.boundary_validator.validate_boundary(truth_tensor)
+        # 1b. Manifold Entropy Reduction (Phase 1)
+        # Downsample psi_bulk if it is 2D
+        if psi_bulk.ndim == 2:
+            N = psi_bulk.size(-1)
+            x = torch.linspace(-1.0, 1.0, N, device=psi_bulk.device)
+            y = torch.linspace(-1.0, 1.0, N, device=psi_bulk.device)
+            X, Y = torch.meshgrid(x, y, indexing='ij')
+            lens_phase = -50.0 * (X**2 + Y**2)
+            lens = torch.polar(torch.ones_like(lens_phase), lens_phase)
+            
+            wave_lensed = psi_bulk * lens
+            focal_plane = torch.fft.fft2(wave_lensed, norm='ortho')
+            focal_plane_shifted = torch.fft.fftshift(focal_plane)
+            
+            start = (N - 64) // 2
+            end = start + 64
+            focused_64 = focal_plane_shifted[start:end, start:end]
+            
+            mags = torch.abs(focused_64)
+            mags = torch.clamp(mags, min=1e-8)
+            psi_flat = (focused_64 / mags).flatten()
+        else:
+            if psi_bulk.size(0) == 4096:
+                psi_flat = psi_bulk
+            else:
+                psi_flat = psi_bulk.flatten()
+
+        # Convert complex boundary wave to 128-D Real/Imag tensor before passing to manifold
+        raw_boundary_wave = self.boundary_validator.bulk_to_boundary(psi_flat)
+        wave_real, wave_imag = raw_boundary_wave.real, raw_boundary_wave.imag
+        euclidean_wave = torch.cat([wave_real, wave_imag], dim=-1).unsqueeze(0)
+        structured_state = self.boundary_validator.shared_manifold(euclidean_wave).detach()
+
+        proposed_experiments = []
+
+        # 2. Epistemic Foraging (Phase 2 & 3)
+        for agent in self.agents:
+            exp_x, goal_state = agent.propose_experiment(structured_state)
+            
+            # Calculate how much the ENTIRE swarm disagrees on this specific agent's proposal
+            callables = [t['callable'] for a in self.agents for t in a.scientist.active_theories]
+            if not callables:
+                 disagreement = 1.0  # Default to high if uninitialized
+            else:
+                 predictions = torch.stack([c(exp_x) for c in callables])
+                 mean_pred = predictions.mean(dim=0, keepdim=True)
+                 # Use Negative Cosine Similarity for Phase-Aware Variance
+                 cos_sim = torch.nn.functional.cosine_similarity(predictions, mean_pred.expand_as(predictions), dim=-1)
+                 disagreement = -cos_sim.mean().item()
+                 
+            proposed_experiments.append({
+                'agent': agent,
+                'exp_x': exp_x,
+                'goal_state': goal_state,
+                'disagreement_score': disagreement
+            })
+
+        # 3. The Epistemic Auction (Fixing the Averaging Paradox)
+        # Select the single experiment that causes the most uncertainty across the swarm
+        winning_proposal = max(proposed_experiments, key=lambda x: x['disagreement_score'])
+        winning_action = winning_proposal['exp_x']
+        max_disagreement = winning_proposal['disagreement_score']
+
+        # 4. Hardware Actuation Mapping
+        # Clamp safely and reshape from 128-D back to 64-D Complex for the optical core
+        safe_action = torch.clamp(winning_action, min=-0.5, max=0.5) 
+        action_real, action_imag = torch.chunk(safe_action, 2, dim=-1)
+        complex_actuation = torch.complex(action_real, action_imag)
+
+        bypassed_physical = False
+
+        # 5. Hardware Bypass & Empirical Assimilation Logic
+        if max_disagreement >= 0.02:
+            # EXECUTE PHYSICAL HARDWARE
+            print(f"[SWARM] Theories disagree (Max Disagreement: {max_disagreement:.4f}). Triggering physical experiment...")
+            
+            # Project complex actuation back to bulk 4096-D wavefront space
+            psi_modulated = torch.mv(torch.conj(self.boundary_validator.P.T), complex_actuation)
+            psi_modulated_np = psi_modulated.detach().numpy().astype(np.complex64)
+
+            # Fire the bulk wave into Zone B physical emulator (D2NN layers)
+            truth_np, delta_np, alignment = self.optical_core.forward(
+                hr_wavefront=psi_modulated_np, 
+                target_manifold=target_np,
+                langevin_heat=0.0
+            )
+            
+            # Map physical wave back through manifold
+            truth_tensor = torch.tensor(truth_np, dtype=torch.complex64)
+            is_valid, veto_reason, error_energy, h_cft = self.boundary_validator.validate_boundary(truth_tensor)
+            
+            next_real, next_imag = h_cft.real, h_cft.imag
+            structured_next_state = torch.cat([next_real, next_imag], dim=-1).unsqueeze(0).detach()
+
+            # ASSIMILATE ONLY ON TRUE GROUND TRUTH
+            for prop in proposed_experiments:
+                agent = prop['agent']
+                concept_hash = str(agent.current_concept_focus)
+                metrics = agent.assimilate_results(
+                    structured_state, winning_action, structured_next_state, prop['goal_state'], concept_hash
+                )
+                
+                # Record empirical observation
+                agent.scientist.empirical_observations.append((winning_action, structured_next_state))
+                if len(agent.scientist.empirical_observations) % 5 == 0:
+                    agent.scientist.run_discovery_cycle(structured_next_state)
+
+                # If learning progress stalls, shift Vygotskian focus (curriculum climbing)
+                if metrics["learning_progress"] < 0.01:
+                    agent.current_concept_focus = (
+                        (agent.current_concept_focus[0] + 1) % 10,
+                        (agent.current_concept_focus[1] + 1) % 10
+                    )
+        else:
+            # BYPASS PHYSICAL HARDWARE (The Epistemic Clutch)
+            # Use the mean prediction of the swarm to simulate the next state
+            print(f"[SWARM] Epistemic agreement achieved (Max Disagreement: {max_disagreement:.4f}). Bypassing physical execution to save hardware wear.")
+            bypassed_physical = True
+            
+            all_preds = torch.stack([c(winning_action) for c in callables])
+            structured_next_state = all_preds.mean(dim=0).detach()
+            
+            # Reconstruct bulk wave from CFT boundary wave
+            real_part, imag_part = torch.chunk(structured_next_state.squeeze(0), 2, dim=-1)
+            h_cft = torch.complex(real_part, imag_part)
+            truth_tensor = torch.mv(torch.conj(self.boundary_validator.P.T), h_cft)
+            
+            truth_np = truth_tensor.detach().numpy().astype(np.complex64)
+            delta_np = np.zeros_like(truth_np)
+            alignment = np.ones(1)
+            is_valid = True
+            veto_reason = None
+            error_energy = 0.0
 
         if not is_valid:
             print(f"[!] SAGNAC VETO: {veto_reason} | Error Energy: {error_energy:.4f}")
@@ -599,7 +784,10 @@ class HenriCognitiveSwarmOrchestrator:
             }
         else:
             # 4. Success state: Hopfield Network semantic cleanup back into English
-            print(f"[+] Dirichlet Boundary Verified. Sagnac Delta: {error_energy:.4f}. Running Hopfield cleanup...")
+            if bypassed_physical:
+                print(f"[+] Dirichlet Boundary Bypassed (Consensus Achieved). Running Hopfield cleanup...")
+            else:
+                print(f"[+] Dirichlet Boundary Verified. Sagnac Delta: {error_energy:.4f}. Running Hopfield cleanup...")
             clean_wave, best_concept, confidence = self.hopfield.cleanup(truth_tensor)
             
             print(f"[+] Hopfield Cleanup Resolved: Concept '{best_concept}' (Confidence: {confidence * 100:.2f}%)")
@@ -618,7 +806,7 @@ class HenriCognitiveSwarmOrchestrator:
                 coupling=1.0,
                 veto_intensity=0.0,
                 langevin_heat=0.0,
-                status="CONVERGED",
+                status="CONVERGED" if not bypassed_physical else "BYPASSED",
                 error_energy=error_energy,
                 lora_scale=1.0,
                 phase_data=torch.angle(truth_tensor_2d),
@@ -678,15 +866,18 @@ class AletheiaAgent:
     """
     def __init__(self, orchestrator):
         self.orchestrator = orchestrator
+        self.current_temperature = 0.4
 
     def generate(self, prompt, history=[]):
-        """Generator Sub-agent: Generates a candidate solution using CoT."""
+        """Generator Sub-agent: Generates a candidate solution using CoT and tool execution."""
         messages = [
             {"role": "system", "content": (
                 "You are the Generator sub-agent. Parse the mathematical/physics problem "
                 "down into digestible steps. Show your detailed Chain-of-Thought (CoT) reasoning. "
-                "If symbolic or numerical calculation is required, you must delegate it by writing "
-                "a Python block enclosed in <|python_begin|> and <|python_end|> tags. "
+                "If symbolic or tensor algebra calculation is required (such as deriving Fefferman-Graham or Weyl expansions), "
+                "you must delegate it by writing a Python block enclosed in <|python_begin|> and <|python_end|> tags. "
+                "For example, write code using SymPy or Cadabra to algebraically perform the tensor expansions and print the resulting coefficients. "
+                "The sandbox will execute the code and return the output. Then, you must parse the execution output and write the final def answer() function. "
                 "DO NOT guess, bluff, or invent results. Every step must be self-contained."
             )}
         ]
@@ -694,12 +885,42 @@ class AletheiaAgent:
             messages.append(h)
         messages.append({"role": "user", "content": prompt})
 
-        res = self.orchestrator.gen_model.create_chat_completion(
-            messages=messages,
-            max_tokens=1024,
-            temperature=0.4
-        )
-        return res["choices"][0]["message"]["content"]
+        # Loop to allow multi-turn symbolic execution (tool use)
+        max_tool_turns = 3
+        for turn in range(max_tool_turns):
+            res = self.orchestrator.gen_model.create_chat_completion(
+                messages=messages,
+                max_tokens=2048,
+                temperature=self.current_temperature
+            )
+            content = res["choices"][0]["message"]["content"]
+            
+            # Check if there is a python block to execute that is NOT just the final answer
+            if "<|python_begin" in content and "<|python_end|>" in content:
+                idx_begin = content.find("<|python_begin")
+                idx_end = content.find("<|python_end|>")
+                idx_close_bracket = content.find("|>", idx_begin)
+                if idx_close_bracket != -1 and idx_close_bracket < idx_end:
+                    code_block = content[idx_close_bracket + 2 : idx_end].strip()
+                    
+                    # If this block is only defining answer(), it is the final solution, so return it directly
+                    if "def answer(" in code_block and "return " in code_block:
+                        return content
+                        
+                    # Run code block statefully
+                    exec_res = self.orchestrator.repl.execute_block(code_block)
+                    stdout = exec_res["stdout"].strip()
+                    stderr = exec_res["stderr"].strip()
+                    output_content = stdout if exec_res["success"] else f"Error: {stderr or exec_res['error_message']}"
+                    
+                    # Append assistant message and tool response message
+                    messages.append({"role": "assistant", "content": content})
+                    output_tag = f"<|output_begin|>\n{output_content}\n<|output_end|>"
+                    messages.append({"role": "user", "content": f"Sandbox Execution Output:\n{output_tag}\n\nBased on these results, please complete your derivation and write the final solution with def answer() return values."})
+                    print(f"[TOOL USE] Executed sandbox code block. Output:\n{output_content[:300]}...")
+                    continue
+            
+            return content
 
     def verify(self, candidate, target_label="SCADA_Pressure_Control") -> tuple:
         """
@@ -734,29 +955,39 @@ class AletheiaAgent:
         if len(h_7b_lora.shape) == 2:
             h_7b_lora = torch.mean(h_7b_lora, dim=0)
             
-        # Replicate candidate activation across all 16 streams to create [16, 1, gemma_dim]
-        activations_stack = h_7b_lora.unsqueeze(0).unsqueeze(0).repeat(16, 1, 1)
-        psi_candidate, _, _ = self.orchestrator.l3_router(activations=activations_stack)
+        # Check if the task is a strict mathematical or symbolic derivation
+        is_symbolic_derivation = any(kw in target_label.lower() or kw in candidate.lower() for kw in ["symbolic", "mathematical", "derivation", "weyl", "anomaly", "expansion", "coefficient", "thermodynamic", "conservation", "coeff"])
         
-        # Apply lens downsampling
-        N = psi_candidate.size(-1)
-        x = torch.linspace(-1.0, 1.0, N, device=psi_candidate.device)
-        y = torch.linspace(-1.0, 1.0, N, device=psi_candidate.device)
-        X, Y = torch.meshgrid(x, y, indexing='ij')
-        lens_phase = -50.0 * (X**2 + Y**2)
-        lens = torch.polar(torch.ones_like(lens_phase), lens_phase)
-        
-        wave_lensed = psi_candidate.squeeze(0) * lens
-        focal_plane = torch.fft.fft2(wave_lensed, norm='ortho')
-        focal_plane_shifted = torch.fft.fftshift(focal_plane)
-        
-        start = (N - 64) // 2
-        end = start + 64
-        focused_64 = focal_plane_shifted[start:end, start:end]
-        
-        mags = torch.abs(focused_64)
-        mags = torch.clamp(mags, min=1e-8)
-        psi_candidate_focused = focused_64 / mags
+        if is_symbolic_derivation:
+            print(f"[SWARM] Bypassing tiled wave superposition for Strict Symbolic Derivation ('{target_label}'). Routing to isolated high-fidelity stream.")
+            psi_candidate_focused = self.orchestrator.l3_router.activation_to_wave(h_7b_lora)
+            if len(psi_candidate_focused.shape) == 2:
+                psi_candidate_focused = torch.mean(psi_candidate_focused, dim=0)
+            psi_candidate_focused = psi_candidate_focused.reshape(64, 64)
+        else:
+            # Replicate candidate activation across all 16 streams to create [16, 1, gemma_dim]
+            activations_stack = h_7b_lora.unsqueeze(0).unsqueeze(0).repeat(16, 1, 1)
+            psi_candidate, _, _ = self.orchestrator.l3_router(activations=activations_stack)
+            
+            # Apply lens downsampling
+            N = psi_candidate.size(-1)
+            x = torch.linspace(-1.0, 1.0, N, device=psi_candidate.device)
+            y = torch.linspace(-1.0, 1.0, N, device=psi_candidate.device)
+            X, Y = torch.meshgrid(x, y, indexing='ij')
+            lens_phase = -50.0 * (X**2 + Y**2)
+            lens = torch.polar(torch.ones_like(lens_phase), lens_phase)
+            
+            wave_lensed = psi_candidate.squeeze(0) * lens
+            focal_plane = torch.fft.fft2(wave_lensed, norm='ortho')
+            focal_plane_shifted = torch.fft.fftshift(focal_plane)
+            
+            start = (N - 64) // 2
+            end = start + 64
+            focused_64 = focal_plane_shifted[start:end, start:end]
+            
+            mags = torch.abs(focused_64)
+            mags = torch.clamp(mags, min=1e-8)
+            psi_candidate_focused = focused_64 / mags
 
         # 3. Fire the wave in Zone B
         target_vector = self.orchestrator.hopfield.vocabulary.get(target_label)
@@ -828,8 +1059,8 @@ class AletheiaAgent:
         ]
         res = self.orchestrator.gen_model.create_chat_completion(
             messages=messages,
-            max_tokens=1024,
-            temperature=0.3
+            max_tokens=2048,
+            temperature=self.current_temperature
         )
         return res["choices"][0]["message"]["content"]
 
@@ -838,6 +1069,7 @@ class AletheiaAgent:
         # Route and load specialized domain adapter
         self.orchestrator.synaptic_manager.route_and_load_adapter(target_label, self.orchestrator.lora_managers[0])
         
+        self.current_temperature = 0.4 # Reset to baseline
         history = []
         candidate = self.generate(prompt, history)
         print(f"\n[Aletheia Agent] Candidate generated:\n---Candidate Begin---\n{candidate}\n---Candidate End---")
@@ -854,6 +1086,7 @@ class AletheiaAgent:
                     lora_manager=self.orchestrator.lora_managers[0], 
                     error_delta=error_val
                 )
+                self.current_temperature = 0.4 # Reset to baseline
                 return candidate, revision, "CONVERGED"
                 
             # If invalid, update the LoRA weights to "bend" future reasoning vectors
@@ -876,6 +1109,11 @@ class AletheiaAgent:
                     lora_manager=self.orchestrator.lora_managers[0], 
                     error_delta=error_val
                 )
+                
+                # Langevin Temperature Boosting: Boost temperature proportionally to Sagnac error energy
+                boost = min(0.5, error_val * 0.5)
+                self.current_temperature = min(1.0, 0.4 + boost)
+                print(f"[LANGEVIN BOOST] Sagnac Veto detected (Error Energy: {error_val:.4f}). Boosting temperature to {self.current_temperature:.2f} for revision {revision}.")
                     
             # Reviser phase
             candidate = self.revise(prompt, candidate, feedback)

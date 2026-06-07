@@ -1,8 +1,10 @@
 import torch
+import torch.nn as torch_nn
 import numpy as np
 import math
+from emergent_topological_manifold import EmergentManifold
 
-class BoundaryAxiomValidator:
+class BoundaryAxiomValidator(torch_nn.Module):
     """
     Implements the Dirichlet/Neumann holographic boundary validation.
     Projects the 4096-D bulk wave to a 64-D CFT boundary tensor (h_cft),
@@ -10,6 +12,7 @@ class BoundaryAxiomValidator:
     manages the adaptive Active Neumann Boundary sector.
     """
     def __init__(self, bulk_dim=4096, boundary_dim=64, epsilon_spine=0.35, seed=42):
+        super().__init__()
         self.bulk_dim = bulk_dim
         self.boundary_dim = boundary_dim
         self.sector_dim = boundary_dim // 4  # 16 dimensions per sector
@@ -40,6 +43,18 @@ class BoundaryAxiomValidator:
         neumann_phases = (torch.rand(self.sector_dim, generator=g) * 2 * math.pi) - math.pi
         self.neumann_active = torch.polar(torch.ones(self.sector_dim), neumann_phases)
 
+        # 4. Self-Organizing Topological Manifold: 64 Complex features = 128 Real features.
+        # This preserves the circular (S^1) topology of the waves
+        self.shared_manifold = EmergentManifold(in_features=boundary_dim * 2, hidden_features=boundary_dim * 2)
+        
+        # 5. Attention/Routing Layer: learns to route emergent orthogonal features back to Dirichlet sectors
+        self.routing_layer = torch_nn.Linear(boundary_dim * 2, boundary_dim * 2)
+        with torch.no_grad():
+            self.routing_layer.weight.copy_(torch.eye(boundary_dim * 2))
+            self.routing_layer.bias.zero_()
+            
+        self.routing_optimizer = torch.optim.Adam(self.routing_layer.parameters(), lr=0.01)
+
     def bulk_to_boundary(self, bulk_wave: torch.Tensor) -> torch.Tensor:
         """Projects a 4096-D bulk wave to 64-D boundary tensor."""
         # bulk_wave shape: [4096]
@@ -60,11 +75,42 @@ class BoundaryAxiomValidator:
         # 1. Project down to 64-D boundary
         h_cft = self.bulk_to_boundary(bulk_wave)
         
-        # 2. Extract 16-D sectors
-        sector_physics = h_cft[0:16]
-        sector_logic = h_cft[16:32]
-        sector_guardrails = h_cft[32:48]
-        sector_neumann = h_cft[48:64]
+        # 1b. Map to Euclidean Space for the Manifold (Preserves S^1 topology)
+        is_batched = h_cft.ndim > 1
+        if not is_batched:
+            h_cft_batched = h_cft.unsqueeze(0)
+        else:
+            h_cft_batched = h_cft
+            
+        real_part = h_cft_batched.real
+        imag_part = h_cft_batched.imag
+        euclidean_wave = torch.cat([real_part, imag_part], dim=-1)
+        
+        # Apply Emergent Self-Organization (Hebbian + Sanger + Topological Closure)
+        # Shared manifold training state is automatically managed by the validator's training attribute
+        self.shared_manifold.train(self.training)
+        crystallized_euclidean = self.shared_manifold(euclidean_wave)
+        
+        # Detach to isolate localized Hebbian/Sanger updates in shared_manifold from backprop
+        crystallized_euclidean_detached = crystallized_euclidean.detach()
+        
+        # Map back to target validation slots using Attention/Routing layer
+        routed_euclidean = self.routing_layer(crystallized_euclidean_detached)
+        
+        # Split back to Real and Imaginary and reconstruct complex h_cft
+        new_real, new_imag = torch.chunk(routed_euclidean, 2, dim=-1)
+        crystallized_h_cft_batched = torch.complex(new_real, new_imag)
+        
+        if not is_batched:
+            crystallized_h_cft = crystallized_h_cft_batched.squeeze(0)
+        else:
+            crystallized_h_cft = crystallized_h_cft_batched
+            
+        # 2. Extract 16-D sectors from crystallized CFT wave
+        sector_physics = crystallized_h_cft[0:16]
+        sector_logic = crystallized_h_cft[16:32]
+        sector_guardrails = crystallized_h_cft[32:48]
+        sector_neumann = crystallized_h_cft[48:64]
         
         # Normalize sectors to unit magnitude for phase-only comparison
         def norm_sec(s):
@@ -77,7 +123,6 @@ class BoundaryAxiomValidator:
         sec_guard_norm = norm_sec(sector_guardrails)
         
         # 3. Compute deviations (distance from Dirichlet axioms)
-        # Cosine similarity difference: 1.0 - Re(s * target*)
         dev_physics = 1.0 - torch.real(torch.sum(sec_phys_norm * torch.conj(self.dirichlet_physics))) / self.sector_dim
         dev_logic = 1.0 - torch.real(torch.sum(sec_log_norm * torch.conj(self.dirichlet_logic))) / self.sector_dim
         dev_guardrails = 1.0 - torch.real(torch.sum(sec_guard_norm * torch.conj(self.dirichlet_guardrails))) / self.sector_dim
@@ -85,17 +130,24 @@ class BoundaryAxiomValidator:
         # Compute overall error energy (mean of deviations)
         error_energy = (dev_physics + dev_logic + dev_guardrails).item() / 3.0
         
+        # Update Routing Layer weights on the validation loss
+        if self.training:
+            loss = (dev_physics + dev_logic + dev_guardrails) / 3.0
+            self.routing_optimizer.zero_grad()
+            loss.backward()
+            self.routing_optimizer.step()
+            
         # 4. Check against Lipschitz / Epsilon-Spine threshold
         if dev_physics > self.epsilon_spine:
-            return False, f"Physical Invariant Veto (deviation: {dev_physics.item():.4f} > {self.epsilon_spine:.2f})", error_energy, h_cft
+            return False, f"Physical Invariant Veto (deviation: {dev_physics.item():.4f} > {self.epsilon_spine:.2f})", error_energy, crystallized_h_cft
             
         if dev_logic > self.epsilon_spine:
-            return False, f"Sagnac Logic Veto (deviation: {dev_logic.item():.4f} > {self.epsilon_spine:.2f})", error_energy, h_cft
+            return False, f"Sagnac Logic Veto (deviation: {dev_logic.item():.4f} > {self.epsilon_spine:.2f})", error_energy, crystallized_h_cft
             
         if dev_guardrails > self.epsilon_spine:
-            return False, f"Thermodynamic Guardrail Veto (deviation: {dev_guardrails.item():.4f} > {self.epsilon_spine:.2f})", error_energy, h_cft
+            return False, f"Thermodynamic Guardrail Veto (deviation: {dev_guardrails.item():.4f} > {self.epsilon_spine:.2f})", error_energy, crystallized_h_cft
             
-        return True, None, error_energy, h_cft
+        return True, None, error_energy, crystallized_h_cft
 
     def update_neumann_boundary(self, reflection_delta_cft: torch.Tensor, alignment_score: float):
         """

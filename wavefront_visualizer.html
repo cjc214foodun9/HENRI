@@ -552,7 +552,7 @@
             uniform float uVetoIntensity;
             uniform float uTiles[16];
             uniform vec2 uProbePos;
-            uniform int uRenderType; // 0 for Phase, 1 for Intensity
+            uniform float uRenderType; // 0.0 for Phase, 1.0 for Intensity
             
             // Complex arithmetic functions
             vec2 c_exp(float theta) {
@@ -567,7 +567,7 @@
             float smoothNoise(vec2 uv) {
                 vec2 i = floor(uv * 40.0);
                 vec2 f = fract(uv * 40.0);
-                f = f*f*(3.0-2.0*f);
+                f = f * f * (vec2(3.0) - 2.0 * f);
                 float a = pseudoNoise(i);
                 float b = pseudoNoise(i + vec2(1.0, 0.0));
                 float c = pseudoNoise(i + vec2(0.0, 1.0));
@@ -605,38 +605,36 @@
             void main() {
                 vec2 uv = vUv;
                 
-                // 1. Determine Tile Sub-Region (4x4 spatial streams)
-                int tileX = int(uv.x * 4.0);
-                int tileY = int(uv.y * 4.0);
-                int tileIdx = tileY * 4 + tileX;
+                // 1. Determine Tile Sub-Region (4x4 spatial streams) using float arithmetic
+                float tileX = floor(uv.x * 4.0);
+                float tileY = floor(uv.y * 4.0);
+                float tileIdx = tileY * 4.0 + tileX;
                 
                 float streamActive = 0.0;
-                for(int i = 0; i < 16; i++) {
-                    if (i == 0 && tileIdx == 0) streamActive = uTiles[0];
-                    else if (i == 1 && tileIdx == 1) streamActive = uTiles[1];
-                    else if (i == 2 && tileIdx == 2) streamActive = uTiles[2];
-                    else if (i == 3 && tileIdx == 3) streamActive = uTiles[3];
-                    else if (i == 4 && tileIdx == 4) streamActive = uTiles[4];
-                    else if (i == 5 && tileIdx == 5) streamActive = uTiles[5];
-                    else if (i == 6 && tileIdx == 6) streamActive = uTiles[6];
-                    else if (i == 7 && tileIdx == 7) streamActive = uTiles[7];
-                    else if (i == 8 && tileIdx == 8) streamActive = uTiles[8];
-                    else if (i == 9 && tileIdx == 9) streamActive = uTiles[9];
-                    else if (i == 10 && tileIdx == 10) streamActive = uTiles[10];
-                    else if (i == 11 && tileIdx == 11) streamActive = uTiles[11];
-                    else if (i == 12 && tileIdx == 12) streamActive = uTiles[12];
-                    else if (i == 13 && tileIdx == 13) streamActive = uTiles[13];
-                    else if (i == 14 && tileIdx == 14) streamActive = uTiles[14];
-                    else if (i == 15 && tileIdx == 15) streamActive = uTiles[15];
-                }
+                if (tileIdx < 0.5) streamActive = uTiles[0];
+                else if (tileIdx < 1.5) streamActive = uTiles[1];
+                else if (tileIdx < 2.5) streamActive = uTiles[2];
+                else if (tileIdx < 3.5) streamActive = uTiles[3];
+                else if (tileIdx < 4.5) streamActive = uTiles[4];
+                else if (tileIdx < 5.5) streamActive = uTiles[5];
+                else if (tileIdx < 6.5) streamActive = uTiles[6];
+                else if (tileIdx < 7.5) streamActive = uTiles[7];
+                else if (tileIdx < 8.5) streamActive = uTiles[8];
+                else if (tileIdx < 9.5) streamActive = uTiles[9];
+                else if (tileIdx < 10.5) streamActive = uTiles[10];
+                else if (tileIdx < 11.5) streamActive = uTiles[11];
+                else if (tileIdx < 12.5) streamActive = uTiles[12];
+                else if (tileIdx < 13.5) streamActive = uTiles[13];
+                else if (tileIdx < 14.5) streamActive = uTiles[14];
+                else if (tileIdx < 15.5) streamActive = uTiles[15];
 
                 // 2. Compute Tiled Swarm Wave Phase
-                vec2 tileCenter = vec2(float(tileX)*0.25 + 0.125, float(tileY)*0.25 + 0.125);
+                vec2 tileCenter = vec2(tileX * 0.25 + 0.125, tileY * 0.25 + 0.125);
                 float distToCenter = length(uv - tileCenter);
                 
                 // Each stream generates a distinct spatial frequency pattern simulating model outputs
-                float streamPhase = sin(uv.x * (15.0 + float(tileIdx)*4.0) + uTime * 2.0) * 0.8 + 
-                                    cos(uv.y * (12.0 + float(tileIdx)*3.0) - uTime * 1.5) * 0.8;
+                float streamPhase = sin(uv.x * (15.0 + tileIdx * 4.0) + uTime * 2.0) * 0.8 + 
+                                    cos(uv.y * (12.0 + tileIdx * 3.0) - uTime * 1.5) * 0.8;
                 
                 // Add soft spatial windowing to boundary elements
                 streamPhase *= smoothstep(0.24, 0.10, distToCenter);
@@ -677,7 +675,7 @@
                 float intensity = dot(compositeWave, compositeWave);
                 
                 // Render selected viewport
-                if (uRenderType == 0) {
+                if (uRenderType < 0.5) {
                     // Compute final composite phase angle
                     float compositePhase = atan(compositeWave.y, compositeWave.x);
                     
