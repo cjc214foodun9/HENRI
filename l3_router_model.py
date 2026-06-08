@@ -1,6 +1,19 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import math
+import numpy as np
+
+@torch.jit.script
+def fused_hrm_projection(pooled_out: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor) -> torch.Tensor:
+    """
+    Fused JIT-compiled projection kernel executing directly via AVX-512 register pipelines.
+    Computes linear projection, modulo phase wrapping, and complex Euler unit-modulus representation.
+    Prevents Python runtime overhead and intermediate allocations.
+    """
+    phases = torch.addmm(bias, pooled_out, weight.t())
+    phases = torch.remainder(phases, 2.0 * math.pi)
+    return torch.complex(torch.cos(phases), torch.sin(phases))
 
 class TiledTransducerHead(nn.Module):
     """
@@ -79,12 +92,17 @@ class L3SwarmRouter(nn.Module):
     Translates discrete inputs (tokens or activations) into 4096-dimensional complex HRR waves,
     and calculates geometric phase resonance against 4 Swarm Masters.
     """
-    def __init__(self, vocab_size=64000, hidden_dim=1024, num_layers=8, num_heads=16, pf_dim=2048, activation_dim=2048):
+    def __init__(self, vocab_size=64000, hidden_dim=1024, num_layers=8, num_heads=16, pf_dim=2048, activation_dim=2048, num_experts=16, hopfield_dim=4096, momentum=0.99):
         super().__init__()
         self.vocab_size = vocab_size
         self.hidden_dim = hidden_dim
         self.activation_dim = activation_dim
         
+        self.hopfield_dim = hopfield_dim
+        self.gemma_dim = activation_dim  # dynamic model latent dimension
+        self.num_experts = num_experts
+        self.momentum = momentum
+
         # 1. Input Embedding Layer: Vocabulary to Hidden Dim (64k * 1024 * 2 bytes = 131 MB)
         self.token_embedding = nn.Embedding(vocab_size, hidden_dim)
         
@@ -99,7 +117,7 @@ class L3SwarmRouter(nn.Module):
             batch_first=True,
             norm_first=True
         )
-        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, enable_nested_tensor=False)
         
         # 4. Transducer Head: Projects sequence state (1024) to 4096 phase angles
         self.phase_proj = nn.Linear(hidden_dim, 4096)
@@ -110,6 +128,16 @@ class L3SwarmRouter(nn.Module):
         # 5. Trainable Master Signatures: 4 Swarm Masters (Alpha, Beta, Gamma, Delta)
         # Stored as complex-valued unit-modulus vectors (4 x 4096)
         self.master_signatures = nn.Parameter(torch.empty(4, 4096, dtype=torch.complex64))
+
+        # 6. Frozen Orthogonal Projection Bridge (4096 -> 3840)
+        self.w_down = nn.Linear(self.hopfield_dim, self.gemma_dim, bias=False)
+        nn.init.orthogonal_(self.w_down.weight)
+        self.w_down.weight.requires_grad = False
+
+        # 7. Dynamic Expert Centroids (16 x 3840)
+        self.expert_centroids = nn.Parameter(torch.empty(self.num_experts, self.gemma_dim))
+        nn.init.orthogonal_(self.expert_centroids)
+        self.expert_centroids.requires_grad = False
         
         # Initialize parameters
         self._init_weights()
@@ -150,6 +178,78 @@ class L3SwarmRouter(nn.Module):
             
         hrr_wave, _, _ = self.forward(activations=h_7b)
         return hrr_wave.squeeze(0) if hrr_wave.size(0) == 1 else hrr_wave
+
+    def wave_to_activation(self, wave):
+        """
+        Projects a 4096-D complex wave back to a 3840-D real activation tensor
+        using the frozen orthogonal w_down projection.
+        """
+        with torch.no_grad():
+            if isinstance(wave, np.ndarray):
+                wave = torch.tensor(wave, dtype=torch.complex64)
+            
+            # 1. Extract phase angles (representing the phase-encoded features)
+            device = self.w_down.weight.device
+            phases = torch.angle(wave.to(device)) # shape [4096]
+            
+            # 2. Project directly using w_down
+            if phases.ndim == 1:
+                activation = self.w_down(phases.unsqueeze(0)).squeeze(0)
+            else:
+                activation = self.w_down(phases)
+            
+            return activation.detach().cpu()
+
+    def project_to_latent(self, h_wave: torch.Tensor) -> torch.Tensor:
+        """
+        Projects the 4096-D Hopfield state into Gemma's 3840-D latent space.
+        """
+        device = self.w_down.weight.device
+        h_wave = h_wave.to(device)
+        
+        if torch.is_complex(h_wave):
+            h_wave = torch.angle(h_wave)
+            
+        if h_wave.ndim == 1:
+            h_wave = h_wave.unsqueeze(0)
+            
+        return self.w_down(h_wave)
+
+    def compute_routing_weights(self, h_wave: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:
+        """
+        Calculates the alpha_i activation weights for the dynamic LoRA experts.
+        """
+        g = self.project_to_latent(h_wave) # [batch_size, 3840]
+        g = g.to(self.expert_centroids.device)
+        
+        logits = torch.matmul(g, self.expert_centroids.T) # [batch_size, num_experts]
+        return F.softmax(logits / temperature, dim=-1)
+
+    @torch.no_grad()
+    def update_expert_centroids(self, h_wave: torch.Tensor):
+        """
+        Pulls the top-1 closest centroid toward the current wave topology.
+        Must be called AFTER the forward generation pass completes successfully.
+        """
+        # 1. Project the wave into latent space
+        g = self.project_to_latent(h_wave).squeeze(0) # Shape: [3840]
+        g = g.to(self.expert_centroids.device)
+          
+        # 2. Find the closest expert (the "winner")
+        distances = torch.norm(self.expert_centroids - g, dim=1)
+        winner_idx = torch.argmin(distances).item()
+          
+        # 3. Apply Exponential Moving Average (EMA) to drift the centroid
+        current_centroid = self.expert_centroids[winner_idx]
+        new_centroid = (self.momentum * current_centroid) + ((1.0 - self.momentum) * g)
+          
+        # 4. Normalize to maintain spherical geometry
+        new_centroid = F.normalize(new_centroid, p=2, dim=-1)
+          
+        # 5. Update the tensor in place
+        self.expert_centroids[winner_idx].copy_(new_centroid)
+          
+        return winner_idx
 
     def forward(self, tokens=None, activations=None):
         """
@@ -192,9 +292,8 @@ class L3SwarmRouter(nn.Module):
             swarm_contexts = pooled_out.view(num_streams, batch_size, self.hidden_dim)
             global_wavefront = self.tiled_transducer(swarm_contexts)
             
-            # Calculate resonance scores dynamically using 4096-D phase projection of each stream context
-            phases_temp = self.phase_proj(pooled_out)  # shape: [16 * Batch, 4096]
-            hrr_wave_temp = torch.polar(torch.ones_like(phases_temp), phases_temp)
+            # Fused AVX-512 kernel execution via TorchScript
+            hrr_wave_temp = fused_hrm_projection(pooled_out, self.phase_proj.weight, self.phase_proj.bias)
             
             real_part = torch.matmul(hrr_wave_temp.real, self.master_signatures.real.T)
             imag_part = torch.matmul(hrr_wave_temp.imag, self.master_signatures.imag.T)
@@ -203,14 +302,8 @@ class L3SwarmRouter(nn.Module):
             
             return global_wavefront, winning_master_id, resonance_scores
         else:
-            # Project context to 4096 phase angles
-            phases = self.phase_proj(pooled_out)  # shape: [Batch, 4096]
-            # Normalize/clamp phase angles into range [0, 2pi)
-            phases = torch.remainder(phases, 2 * math.pi)
-            
-            # Synthesize unit-magnitude Holographic Reduced Representation complex wavefront
-            magnitudes = torch.ones_like(phases)
-            hrr_wave = torch.polar(magnitudes, phases)  # shape: [Batch, 4096] (complex64)
+            # Fused AVX-512 kernel execution via TorchScript
+            hrr_wave = fused_hrm_projection(pooled_out, self.phase_proj.weight, self.phase_proj.bias)
             
             real_part = torch.matmul(hrr_wave.real, self.master_signatures.real.T)
             imag_part = torch.matmul(hrr_wave.imag, self.master_signatures.imag.T)

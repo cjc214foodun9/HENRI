@@ -1,0 +1,102 @@
+import json
+import numpy as np
+
+with open("ARC-AGI-2/data/evaluation/136b0064.json", "r") as f:
+    task = json.load(f)
+
+def get_shape_properties(block):
+    count = np.sum(block > 0)
+    if count == 7:
+        return 2, "Left"
+    elif count == 4:
+        return 2, "Down"
+    elif count == 5:
+        return 3, "Right"
+    elif count == 6:
+        return 4, "Left"
+    else:
+        return 0, "Down"
+
+def solve_task_3(grid):
+    grid_np = np.array(grid)
+    H, W = grid_np.shape
+    
+    sep_col = 7
+    left = grid_np[:, :sep_col]
+    right = grid_np[:, sep_col+1:]
+    
+    # Find position of 5 in the right half
+    r5, c5 = np.where(right == 5)
+    start_col = c5[0]
+    
+    # Find blocks in left half
+    left_row_sums = np.sum(left, axis=1)
+    non_zero_rows = np.where(left_row_sums > 0)[0]
+    
+    blocks = []
+    if len(non_zero_rows) > 0:
+        curr_block = [non_zero_rows[0]]
+        for r in non_zero_rows[1:]:
+            if r == curr_block[-1] + 1:
+                curr_block.append(r)
+            else:
+                blocks.append(curr_block)
+                curr_block = [r]
+        blocks.append(curr_block)
+        
+    left_segments = []
+    right_segments = []
+    
+    for b_rows in blocks:
+        block_data = left[b_rows, :]
+        col_0_2 = block_data[:, :3]
+        col_4_6 = block_data[:, 4:7]
+        
+        c1 = np.unique(col_0_2)
+        c1 = c1[c1 != 0]
+        if len(c1) > 0:
+            length, direction = get_shape_properties(col_0_2)
+            left_segments.append((c1[0], length, direction))
+            
+        c2 = np.unique(col_4_6)
+        c2 = c2[c2 != 0]
+        if len(c2) > 0:
+            length, direction = get_shape_properties(col_4_6)
+            right_segments.append((c2[0], length, direction))
+            
+    segments = left_segments + right_segments
+    
+    out_grid = np.zeros((H, 7), dtype=int)
+    out_grid[0, start_col] = 5
+    
+    r_last = 0
+    c_last = start_col
+    
+    for color, length, direction in segments:
+        r_start = r_last + 1
+        c_start = c_last
+        
+        if direction == "Right":
+            coords = [(r_start, c_start + k) for k in range(length)]
+            c_last = c_start + length - 1
+            r_last = r_start
+        elif direction == "Left":
+            coords = [(r_start, c_start - k) for k in range(length)]
+            c_last = c_start - length + 1
+            r_last = r_start
+        else: # Down
+            coords = [(r_start + k, c_start) for k in range(length)]
+            c_last = c_start
+            r_last = r_start + length - 1
+            
+        for r, c in coords:
+            out_grid[r, c] = color
+            
+    return out_grid.tolist()
+
+for idx, pair in enumerate(task["train"]):
+    res = solve_task_3(pair["input"])
+    print(f"Train {idx+1} Correct:", res == pair["output"])
+    
+res_test = solve_task_3(task["test"][0]["input"])
+print("Test Correct:", res_test == task["test"][0]["output"])

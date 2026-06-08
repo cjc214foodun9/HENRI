@@ -591,6 +591,8 @@ class PhysicalMixtureOfMasters:
         
         if model_path is None:
             candidates = [
+                "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf",
+                "archive/Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf",
                 "gemma-4-E4B-it-Q4_0.gguf",
                 "archive/gemma-4-E4B-it-Q4_0.gguf",
                 "c:\\Users\\chan\\Desktop\\henri gemma\\archive\\gemma-4-E4B-it-Q4_0.gguf",
@@ -605,7 +607,7 @@ class PhysicalMixtureOfMasters:
                     model_path = c
                     break
             if model_path is None:
-                model_path = "archive/gemma-4-E4B-it-Q4_0.gguf"
+                model_path = "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf"
         
         if self.test_mode:
             print("[SYSTEM] Booting P-MoM Swarm in MOCK MODE (llama.cpp not available or test mode enabled).")
@@ -619,7 +621,7 @@ class PhysicalMixtureOfMasters:
                 # 1. Embedding engine (Moved to GPU VRAM, mmap disabled to bypass Windows RAM Cache)
                 self._emb_model = llama_cpp.Llama(
                     model_path=model_path,
-                    n_ctx=4096,
+                    n_ctx=2048,
                     n_batch=256,
                     n_threads=8,
                     embedding=True,
@@ -632,7 +634,7 @@ class PhysicalMixtureOfMasters:
                 # 2. Generation engine (Vulkan GPU offload, mmap disabled to bypass Windows RAM Cache)
                 self._gen_model = llama_cpp.Llama(
                     model_path=model_path,
-                    n_ctx=8192,
+                    n_ctx=16384,
                     n_batch=512,
                     n_threads=8,
                     embedding=False,

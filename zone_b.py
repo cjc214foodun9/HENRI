@@ -13,9 +13,16 @@ class HenriOpticalCoreD2NN:
     Runs the optical core at the physical scale of 6324x6324 and downsamples
     using an analytical optical lens to focus light onto a 64x64 sensor.
     """
-    def __init__(self, num_channels: int = 4096, num_layers: int = 5, device='cpu'):
+    def __init__(self, num_channels: int = 4096, num_layers: int = 5, device=None):
         self.num_channels = num_channels
         self.num_layers = num_layers
+        
+        if device is None:
+            try:
+                import torch_directml
+                device = torch_directml.device()
+            except ImportError:
+                device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.device = device
         
         # Enforce full physical footprint resolution: N = 6324
@@ -143,9 +150,9 @@ class HenriZoneBSuite:
     """
     Orchestration suite for the Zone B physics simulation using NumPy/PyTorch bridge.
     """
-    def __init__(self, dim=4096):
+    def __init__(self, dim=4096, device=None):
         self.dim = dim
-        self.optical_core = HenriOpticalCoreD2NN(num_channels=dim)
+        self.optical_core = HenriOpticalCoreD2NN(num_channels=dim, device=device)
         self.context_engine = MockContextEngine(dim=dim)
         
     def encode_hypothesis(self, text: str, dim: int = 4096) -> tuple:

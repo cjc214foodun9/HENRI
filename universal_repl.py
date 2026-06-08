@@ -304,10 +304,10 @@ class UniversalREPL:
 
     def truncate_output(self, text: str) -> str:
         """
-        Intercepts stdout/stderr and truncates it if it exceeds the 2048 character threshold.
+        Intercepts stdout/stderr and truncates it if it exceeds the 16384 character threshold.
         Appends a SHA-256 hash summary along with leading and trailing terms.
         """
-        if len(text) <= 2048:
+        if len(text) <= 16384:
             return text
             
         total_len = len(text)

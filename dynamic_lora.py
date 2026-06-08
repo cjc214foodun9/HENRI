@@ -27,8 +27,16 @@ class DynamicLoraManager:
         if os.path.exists(self.lora_path):
             try:
                 state = torch.load(self.lora_path, map_location="cpu")
-                self.lora_A = state.get("lora_A", self.lora_A)
-                self.lora_B = state.get("lora_B", self.lora_B)
+                loaded_A = state.get("lora_A")
+                loaded_B = state.get("lora_B")
+                if loaded_A is not None and loaded_A.shape == (self.gemma_dim, self.rank):
+                    self.lora_A = loaded_A
+                else:
+                    print(f"[LoRA ENGINE] Warning: Shape mismatch for lora_A in {self.lora_path}. Expected {(self.gemma_dim, self.rank)}, got {loaded_A.shape if loaded_A is not None else None}. Reinitializing weights.")
+                if loaded_B is not None and loaded_B.shape == (self.rank, self.gemma_dim):
+                    self.lora_B = loaded_B
+                else:
+                    print(f"[LoRA ENGINE] Warning: Shape mismatch for lora_B in {self.lora_path}. Expected {(self.rank, self.gemma_dim)}, got {loaded_B.shape if loaded_B is not None else None}. Reinitializing weights.")
                 print(f"[LoRA ENGINE] Loaded dynamic LoRA weights from {self.lora_path}")
             except Exception as e:
                 print(f"[LoRA ENGINE] Warning: Failed to load LoRA weights: {e}")
@@ -45,39 +53,37 @@ class DynamicLoraManager:
         except Exception as e:
             print(f"[LoRA ENGINE] Warning: Failed to save LoRA weights: {e}")
 
-    def update_with_rehypothecated_tensors(self, reflection_delta: np.ndarray, alignment_score: float):
+    def update_with_rehypothecated_tensors(self, delta_projected, alignment_score: float):
         """
-        Dynamically updates the LoRA weights using the rehypothecated reflection delta
-        (error energy vector) from the Zone B physical emulator.
+        Dynamically updates the LoRA weights using the pre-projected error vector.
         """
-        # Convert reflection delta complex array to real features
-        delta_real = np.real(reflection_delta)
-        delta_imag = np.imag(reflection_delta)
-        
-        # Merge parts and project to gemma_dim size (4096 -> 2048)
-        delta_combined = (delta_real[:self.gemma_dim] + delta_imag[:self.gemma_dim]) / 2.0
-        if len(delta_combined) < self.gemma_dim:
-            delta_combined = np.pad(delta_combined, (0, self.gemma_dim - len(delta_combined)))
-            
-        delta_tensor = torch.tensor(delta_combined, dtype=torch.float32)
-        
-        # Calculate update step proportional to Sagnac misalignment
-        learning_rate = 0.05 * (1.0 - alignment_score)
-        
-        # Calculate update steps
-        update_A = torch.outer(delta_tensor, delta_tensor[:self.rank])
-        update_B = torch.outer(delta_tensor[:self.rank], delta_tensor)
-        
-        # Normalize updates to have unit Frobenius norm to prevent vanishing updates at scale
-        norm_A = torch.norm(update_A)
-        norm_B = torch.norm(update_B)
-        
-        if norm_A > 1e-8:
-            update_A = (update_A / norm_A) * learning_rate * 5.0  # Scale up for measurable bending
-        if norm_B > 1e-8:
-            update_B = (update_B / norm_B) * learning_rate * 5.0
-            
         with torch.no_grad():
+            if isinstance(delta_projected, np.ndarray):
+                delta_tensor = torch.tensor(delta_projected, dtype=torch.float32)
+            else:
+                delta_tensor = delta_projected.to(torch.float32)
+                
+            if len(delta_tensor) < self.gemma_dim:
+                delta_tensor = torch.nn.functional.pad(delta_tensor, (0, self.gemma_dim - len(delta_tensor)))
+            elif len(delta_tensor) > self.gemma_dim:
+                delta_tensor = delta_tensor[:self.gemma_dim]
+            
+            # Calculate update step proportional to Sagnac misalignment
+            learning_rate = 0.05 * (1.0 - alignment_score)
+            
+            # Calculate update steps
+            update_A = torch.outer(delta_tensor, delta_tensor[:self.rank])
+            update_B = torch.outer(delta_tensor[:self.rank], delta_tensor)
+            
+            # Normalize updates to have unit Frobenius norm to prevent vanishing updates at scale
+            norm_A = torch.norm(update_A)
+            norm_B = torch.norm(update_B)
+            
+            if norm_A > 1e-8:
+                update_A = (update_A / norm_A) * learning_rate * 5.0  # Scale up for measurable bending
+            if norm_B > 1e-8:
+                update_B = (update_B / norm_B) * learning_rate * 5.0
+                
             self.lora_A += update_A
             self.lora_B += update_B
             

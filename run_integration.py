@@ -18,7 +18,7 @@ def main():
     # Initialize the core orchestrator
     # We use a small mock model path or let it fallback to mock mode if not present
     orchestrator = HenriCognitiveSwarmOrchestrator(
-        model_path="gemma-4-E4B-it-Q4_0.gguf",
+        model_path="Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf",
         num_streams=16
     )
 

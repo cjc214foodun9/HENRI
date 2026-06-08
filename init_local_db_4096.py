@@ -2,7 +2,13 @@ import psycopg
 import os
 import numpy as np
 
-db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:55432/henri")
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:5433/henri")
 
 try:
     print("[*] Connecting to local TimescaleDB Docker container...")
@@ -24,9 +30,14 @@ try:
                     domain_tag TEXT,
                     hrr_wavefront vector(4096) NOT NULL,
                     epiplexity_weight FLOAT DEFAULT 1.0,
-                    last_verified TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                    last_verified TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    raw_text TEXT
                 );
             """)
+            try:
+                cur.execute("ALTER TABLE hrr_canonical_lexicon ADD COLUMN IF NOT EXISTS raw_text TEXT;")
+            except Exception as migration_err:
+                print(f"[WARNING] Migration failed for hrr_canonical_lexicon: {migration_err}")
             print("[+] Table 'hrr_canonical_lexicon' verified.")
             
             # 2. Thermodynamic Ledger
