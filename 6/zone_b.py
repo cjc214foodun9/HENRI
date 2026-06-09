@@ -17,16 +17,18 @@ class HenriOpticalCoreD2NN:
         self.num_channels = num_channels
         self.num_layers = num_layers
         
-        if device is None:
-            try:
-                import torch_directml
-                device = torch_directml.device()
-            except ImportError:
-                device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.device = device
+        import torch
+
+        # Run Zone B D2NN simulation on CPU because:
+        # 1. Complex-float FFTs/polar ops are not supported under DirectML and fallback to CPU anyway.
+        # 2. Gemma-12B unified model takes 13.3GB VRAM, leaving only 2.1GB free.
+        #    Initializing 6324x6324 D2NN layers on DirectML requires 2.4GB, causing DXGI GPU driver reset.
+        # 3. CPU execution is faster by avoiding 160MB CPU-GPU transfer overhead per layer per step.
+        self.device = torch.device('cpu')
         
         # Enforce full physical footprint resolution: N = 6324
-        self.emulator = ZoneBEmulator(resolution_scale=1.0, device=device)
+        self.emulator = ZoneBEmulator(resolution_scale=1.0, device=self.device)
+        self.emulator.to(self.device)
         
         self.last_wave = None
         self.last_reflection_error = None
@@ -38,32 +40,33 @@ class HenriOpticalCoreD2NN:
         wave_flat = np.asarray(hr_wavefront, dtype=np.complex64)
         target_flat = np.asarray(target_manifold, dtype=np.complex64)
         
-        # 1. Upsample input wavefront from 64x64 (4096-D) to 6324x6324 if needed
+        # 1. Upsample input wavefront from 64x64 (4096-D) to 6324x6324 if needed on CPU
         if wave_flat.size == 4096:
-            wave_2d_small = torch.tensor(wave_flat.reshape(64, 64), dtype=torch.complex64, device=self.device)
+            wave_2d_small = torch.tensor(wave_flat.reshape(64, 64), dtype=torch.complex64, device='cpu')
             real_2d = F.interpolate(wave_2d_small.real.unsqueeze(0).unsqueeze(0), size=(N, N), mode='bilinear', align_corners=False).squeeze()
             imag_2d = F.interpolate(wave_2d_small.imag.unsqueeze(0).unsqueeze(0), size=(N, N), mode='bilinear', align_corners=False).squeeze()
             wave_2d = torch.complex(real_2d, imag_2d)
         else:
-            wave_2d = torch.tensor(wave_flat.reshape(N, N), dtype=torch.complex64, device=self.device)
+            wave_2d = torch.tensor(wave_flat.reshape(N, N), dtype=torch.complex64, device='cpu')
 
-        # 2. Upsample target manifold from 64x64 (4096-D) to 6324x6324 if needed
+        # 2. Upsample target manifold from 64x64 (4096-D) to 6324x6324 if needed on CPU
         if target_flat.size == 4096:
-            target_2d_small = torch.tensor(target_flat.reshape(64, 64), dtype=torch.complex64, device=self.device)
+            target_2d_small = torch.tensor(target_flat.reshape(64, 64), dtype=torch.complex64, device='cpu')
             real_2d = F.interpolate(target_2d_small.real.unsqueeze(0).unsqueeze(0), size=(N, N), mode='bilinear', align_corners=False).squeeze()
             imag_2d = F.interpolate(target_2d_small.imag.unsqueeze(0).unsqueeze(0), size=(N, N), mode='bilinear', align_corners=False).squeeze()
             target_2d = torch.complex(real_2d, imag_2d)
         else:
-            target_2d = torch.tensor(target_flat.reshape(N, N), dtype=torch.complex64, device=self.device)
+            target_2d = torch.tensor(target_flat.reshape(N, N), dtype=torch.complex64, device='cpu')
             
-        # 3. Propagate through PyTorch Emulator
+        # 3. Propagate through PyTorch Emulator (hosted on DirectML device, executes complex math on CPU)
         truth_2d, delta_2d, error_energy = self.emulator(wave_2d, target_2d, langevin_heat=langevin_heat)
         
-        # 4. Downsample using an Analytical Optical Lens to focus 6324x6324 -> 64x64
+        # 4. Downsample using an Analytical Optical Lens to focus 6324x6324 -> 64x64 on CPU
         def focus_lens_downsample(wave_2d_in):
+            dev = wave_2d_in.device
             # Apply quadratic phase factor of a focusing lens
-            x = torch.linspace(-1.0, 1.0, N, device=self.device)
-            y = torch.linspace(-1.0, 1.0, N, device=self.device)
+            x = torch.linspace(-1.0, 1.0, N, device=dev)
+            y = torch.linspace(-1.0, 1.0, N, device=dev)
             X, Y = torch.meshgrid(x, y, indexing='ij')
             lens_phase = -50.0 * (X**2 + Y**2)
             lens = torch.polar(torch.ones_like(lens_phase), lens_phase)

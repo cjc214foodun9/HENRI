@@ -383,7 +383,7 @@ class ActiveInferenceSwarmAgent:
             "status": "info"
         })
         
-        truth_tensor = torch.tensor(truth_np, dtype=torch.complex64)
+        truth_tensor = torch.tensor(truth_np, dtype=torch.complex64, device=torch.device('cpu'))
         is_valid, veto_reason, error_energy, h_cft = self.orchestrator.boundary_validator.validate_boundary(truth_tensor)
 
         if not is_valid:

@@ -183,18 +183,49 @@ class ProgramInductor(torch_nn.Module):
             if not ast_params:
                 continue
                 
-            optimizer = torch.optim.Adam(ast_params, lr=0.01)
-            
-            for step in range(10): 
-                optimizer.zero_grad()
-                # execute_program no longer calls .to(x.device), it just runs the math
-                pred_y = self.execute_program(ast, x)
-                loss = F.mse_loss(pred_y, target_y)
-                loss.backward()
-                optimizer.step()
+            with torch.enable_grad():
+                optimizer = torch.optim.Adam(ast_params, lr=0.01)
+                
+                for step in range(10): 
+                    optimizer.zero_grad()
+                    # execute_program no longer calls .to(x.device), it just runs the math
+                    pred_y = self.execute_program(ast, x)
+                    loss = F.mse_loss(pred_y, target_y)
+                    loss.backward()
+                    optimizer.step()
                 
             if loss.item() < best_loss:
                 best_loss = loss.item()
                 best_ast = ast
                 
         return best_ast, best_loss
+
+    def verify_syntax(self, code_str: str) -> tuple:
+        """
+        Statically compiles candidate code string to AST to detect syntax errors.
+        """
+        import ast
+        import traceback
+        
+        code_to_parse = code_str
+        if "<|python_begin" in code_str:
+            idx_begin = code_str.find("<|python_begin")
+            idx_end = code_str.find("<|python_end|>")
+            if idx_end == -1:
+                idx_end = code_str.find("</|python_end|>")
+            idx_close = code_str.find("|>", idx_begin)
+            if idx_close != -1 and idx_close < idx_end:
+                code_to_parse = code_str[idx_close + 2 : idx_end].strip()
+        elif "```python" in code_str:
+            parts = code_str.split("```python")
+            if len(parts) > 1:
+                code_to_parse = parts[1].split("```")[0].strip()
+                
+        try:
+            ast.parse(code_to_parse)
+            return True, "Python AST compiled successfully."
+        except SyntaxError as e:
+            error_msg = f"SyntaxError: {e.msg} at line {e.lineno}, col {e.offset}\nCode: {e.text}"
+            return False, error_msg
+        except Exception as e:
+            return False, f"AST Compilation Error: {str(e)}"

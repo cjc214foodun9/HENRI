@@ -1,9 +1,9 @@
 import os
 import sys
 
-# Force llama.cpp to bypass Vulkan and execute purely on CPU to prevent VRAM KV cache crashes
-os.environ["GGML_VULKAN_DISABLE"] = "1"
-os.environ["GGML_DISABLE_VULKAN"] = "1"
+# Ensure Vulkan environment variables do not disable the backend
+os.environ.pop("GGML_DISABLE_VULKAN", None)
+os.environ.pop("GGML_VULKAN_DISABLE", None)
 os.environ["GGML_OPENCL_DISABLE"] = "1"
 
 import time
@@ -43,7 +43,11 @@ from active_experimentation_engine import ClosedLoopScientist, PhysicalSubstrate
 
 try:
     import llama_cpp
+    import llama_cpp.llama_cpp
     HAS_LLAMA_CPP = True
+    # Monkey-patch parallel sequences to 2 to ensure n_ctx_seq = n_ctx / 2 is large enough for ARC prompts
+    llama_cpp.llama_max_parallel_sequences = lambda: 2
+    llama_cpp.llama_cpp.llama_max_parallel_sequences = lambda: 2
 except ImportError:
     HAS_LLAMA_CPP = False
 
@@ -163,10 +167,54 @@ class GemmaRAMSwarmMock:
         self.gemma_dim = gemma_dim
         print("[MOCK SWARM] Initialized Gemma E4B RAM Swarm in Mock Mode.")
 
+    def __call__(self, prompt: str, *args, **kwargs) -> dict:
+        # Generate suitable mock response containing the ARC blocks
+        if "0934a4d8" in prompt or "ARC" in prompt:
+            text = (
+                "1. Background color: 0\n"
+                "2. Objects: 1x1 color 5 at (0,0)\n"
+                "3. Transformation rule: Identity\n"
+                "4. Hybrid Execution Policy: PATH A\n"
+                "</|reasoning_end|>\n"
+                "<|python_begin|>\n"
+                "def transform(grid: list[list[int]]) -> list[list[int]]:\n"
+                "    return grid\n"
+                "</|python_end|>"
+            )
+        elif "SCADA" in prompt or "thermodynamic" in prompt:
+            text = (
+                "To optimize the thermodynamic pressure loop:\n"
+                "<|python_begin: heat=0.4|>\n"
+                "import sympy as sp\n"
+                "p, v, t = sp.symbols('p v t')\n"
+                "eq = p * v - 8.314 * t\n"
+                "print(sp.solve(eq, p)[0])\n"
+                "<|python_end|>\n"
+                "Using the ideal gas law, pressure is 8.314*t/v."
+            )
+        else:
+            text = f"[Mock response for: '{prompt[:30]}'] Reasoning path verified."
+            
+        return {
+            "choices": [
+                {
+                    "text": text,
+                    "message": {
+                        "content": text
+                    }
+                }
+            ]
+        }
+
     def create_embedding(self, prompt: str) -> dict:
         rng = np.random.default_rng(seed=hash(prompt) & 0xffffffff)
         embedding = rng.normal(loc=0.0, scale=0.02, size=self.gemma_dim).tolist()
         return {"data": [{"embedding": embedding}]}
+
+    def tokenize(self, text_bytes: bytes, **kwargs) -> list:
+        if isinstance(text_bytes, str):
+            text_bytes = text_bytes.encode('utf-8', errors='ignore')
+        return [ord(c) for c in text_bytes.decode('utf-8', errors='ignore')]
 
     def create_chat_completion(self, messages, max_tokens=128, temperature=0.7, **kwargs):
         # Simulate structured reasoning or code generation
@@ -389,6 +437,10 @@ class SteeredLlama:
             # 1. Retrieve the base embedding of the prompt
             emb_res = self.orchestrator.base_model.create_embedding(prompt)
             h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], dtype=torch.float32)
+            if h_7b_raw.ndim == 2:
+                h_7b_raw = torch.mean(h_7b_raw, dim=0)
+            elif h_7b_raw.ndim == 3:
+                h_7b_raw = torch.mean(h_7b_raw.view(-1, h_7b_raw.shape[-1]), dim=0)
             
             # 2. Compute expert residuals and blend them
             with torch.no_grad():
@@ -445,6 +497,10 @@ class SteeredLlama:
             # 1. Retrieve the base embedding of the prompt
             emb_res = self.orchestrator.base_model.create_embedding(prompt_text)
             h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], dtype=torch.float32)
+            if h_7b_raw.ndim == 2:
+                h_7b_raw = torch.mean(h_7b_raw, dim=0)
+            elif h_7b_raw.ndim == 3:
+                h_7b_raw = torch.mean(h_7b_raw.view(-1, h_7b_raw.shape[-1]), dim=0)
             
             # 2. Compute expert residuals and blend them
             with torch.no_grad():
@@ -580,8 +636,12 @@ class HenriCognitiveSwarmOrchestrator:
         # To strictly use the new 12B model, we point both pathways to the same 12B model file.
         # Under use_mmap=True, weights are shared in page cache, but context allocations are separate.
         parent_dir = Path(__file__).parent
+        if not (parent_dir / self.model_path).exists() and (parent_dir.parent / self.model_path).exists():
+            parent_dir = parent_dir.parent
         gen_model_path = str(parent_dir / self.model_path)
         emb_model_path = str(parent_dir / "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf")
+        if not (parent_dir / "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf").exists() and (parent_dir.parent / "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf").exists():
+            emb_model_path = str(parent_dir.parent / "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf")
         
         if not os.path.exists(emb_model_path):
             emb_model_path = gen_model_path # Fallback to same model if not present
@@ -592,46 +652,47 @@ class HenriCognitiveSwarmOrchestrator:
         
         if HAS_LLAMA_CPP and os.path.exists(gen_model_path) and self.model_path != "mock_only.gguf":
             try:
-                # 1. Load the Generation Engine (embedding=False)
-                print(f"[SYSTEM] Loading Generation engine via mmap from: {gen_model_path}")
+                # 1. Load the Generation Engine (embedding=False, n_gpu_layers=-1)
+                print(f"[SYSTEM] Loading Generation Engine via mmap from: {gen_model_path}")
                 self.gen_model = llama_cpp.Llama(
                     model_path=gen_model_path,
-                    n_ctx=32768,       # Scale up from 16384 to allow active revision loops
+                    n_ctx=8192,        # Set to 8192 to fit within GPU VRAM under Vulkan offload
                     n_batch=512,       # Increase processing throughput for dense prompt evals
                     n_threads=llama_threads,
-                    embedding=False,   # Must be False to allow KV cache decoding slot allocation
+                    embedding=False,   # Disable embedding to avoid parallel sequence/slot issues
                     use_mmap=True,
                     use_mlock=attempt_mlock,
-                    n_gpu_layers=0
+                    n_gpu_layers=-1    # Offload ALL layers to GPU Vulkan (maximum GPU acceleration)
                 )
                 
-                # 2. Load the Embedding Engine (embedding=True)
-                if os.path.exists(emb_model_path) and emb_model_path != "mock_only.gguf":
-                    print(f"[SYSTEM] Loading Embedding engine via mmap from: {emb_model_path}")
-                    self.base_model = llama_cpp.Llama(
-                        model_path=emb_model_path,
-                        n_ctx=8192,      # Increased to 8192 to support embedding candidate solutions with long reasoning chains
-                        n_batch=32,
-                        n_threads=llama_threads,
-                        embedding=True,   # Must be True for create_embedding to work
-                        use_mmap=True,
-                        use_mlock=attempt_mlock,
-                        n_gpu_layers=0
-                    )
-                else:
-                    print(f"[SYSTEM] Embedding engine '{emb_model_path}' not found. Sharing generation context (limited mode).")
-                    self.base_model = self.gen_model
+                # 2. Load separate CPU-only Embedding Engine (embedding=True, n_gpu_layers=0)
+                print(f"[SYSTEM] Loading separate CPU-only Embedding Engine from: {emb_model_path}")
+                self.base_model = llama_cpp.Llama(
+                    model_path=emb_model_path,
+                    n_ctx=16384,       # Large context size to handle code/reasoning embedding queries
+                    n_batch=512,
+                    n_threads=llama_threads,
+                    embedding=True,
+                    use_mmap=True,
+                    use_mlock=attempt_mlock,
+                    n_gpu_layers=0     # Run entirely on CPU to consume 0 VRAM
+                )
+                
+                # 3. Use GPU Generator Engine for Reflector/Curator to maximize speed and prevent CPU thrashing
+                self.reflector_model = self.gen_model
                     
                 print("[SYSTEM] Model contexts loaded successfully.")
             except Exception as e:
                 print(f"[WARNING] Failed to load GGUF model via llama_cpp: {e}. Falling back to mock model.")
                 self.base_model = GemmaRAMSwarmMock(gemma_dim=gemma_dim)
                 self.gen_model = self.base_model
+                self.reflector_model = self.gen_model
                 self.is_mock = True
         else:
             print("[INFO] GGUF weight file not found or llama_cpp missing. Booting in high-fidelity mock mode.")
             self.base_model = GemmaRAMSwarmMock(gemma_dim=gemma_dim)
             self.gen_model = self.base_model
+            self.reflector_model = self.gen_model
             self.is_mock = True
 
         # Measure dynamic embedding dimension to support different GGUF sizes (e.g. E4B has 2560)
@@ -671,6 +732,7 @@ class HenriCognitiveSwarmOrchestrator:
             pf_dim=512, 
             activation_dim=self.gemma_dim
         )
+        self.l3_router.to(torch.device('cpu'))
         
         # Enforce VSA unit-modulus invariants on Swarm Master signatures
         self.l3_router.enforce_vsa_invariants()
@@ -738,6 +800,11 @@ class HenriCognitiveSwarmOrchestrator:
         # 12. Active inference/benchmark session caches for predictive context management
         self.evicted_text_registry = {}  # mapping of axiom_label -> raw_text
         self.active_block_embeddings = {}  # mapping of block_identifier -> 4096-D complex wave tensor
+
+        # 13. Initialize the Swarm Fabric
+        from emergent_cognitive_swarm import EmergentCognitiveSwarm
+        self.swarm_fabric = EmergentCognitiveSwarm(self.gen_model, self.l3_router)
+        self.swarm_fabric.orchestrator = self
 
     def set_core_affinity(self):
         """Pins process affinity to all logical cores to allow thread-level partitioning."""
@@ -1080,7 +1147,7 @@ class HenriCognitiveSwarmOrchestrator:
             )
             
             # Map physical wave back through manifold
-            truth_tensor = torch.tensor(truth_np, dtype=torch.complex64)
+            truth_tensor = torch.tensor(truth_np, dtype=torch.complex64, device=torch.device('cpu'))
             is_valid, veto_reason, error_energy, h_cft = self.boundary_validator.validate_boundary(truth_tensor)
             
             next_real, next_imag = h_cft.real, h_cft.imag
@@ -1844,6 +1911,260 @@ class HenriCognitiveSwarmOrchestrator:
 
         return prompt
 
+    def generate_playbook_steering_wave(self, playbook_dict):
+        """
+        Translates the discrete ACE Playbook into a continuous 4096-D steering wave.
+        """
+        rule_embeddings = []
+        
+        # Iterate through the curated operations/rules in the playbook
+        for section, content_list in playbook_dict.items():
+            for content in content_list:
+                rule_text = f"{section}: {content}"
+                
+                # 1. Embed the rule using the CPU embedding engine (Output: 3840-D)
+                emb_res = self.base_model.create_embedding(rule_text)
+                embedding_3840 = emb_res["data"][0]["embedding"]
+                embedding_tensor = torch.tensor(embedding_3840, dtype=torch.float32, device='cpu')
+                
+                # Mean pool if the embedding is a sequence of token vectors (shape [seq_len, 3840])
+                if embedding_tensor.ndim == 2:
+                    embedding_tensor = torch.mean(embedding_tensor, dim=0)
+                elif embedding_tensor.ndim == 3: # Handle any batch dimensions
+                    embedding_tensor = torch.mean(embedding_tensor.view(-1, embedding_tensor.shape[-1]), dim=0)
+                
+                # 2. Project 3840-D back up to the 4096-D Continuous Wave Space
+                # Since w_down is orthogonal, its transpose (weight matrix) acts as the perfect inverse rotation
+                device = self.l3_router.w_down.weight.device
+                wave_4096 = torch.matmul(embedding_tensor.to(device), self.l3_router.w_down.weight)
+                
+                rule_embeddings.append(wave_4096.cpu())
+          
+        if not rule_embeddings:
+            return None
+              
+        # 3. Superposition: Sum the rule waves into a single interference pattern
+        playbook_superposition = torch.sum(torch.stack(rule_embeddings), dim=0)
+          
+        return playbook_superposition
+
+    def serialize_playbook(self, playbook_dict) -> str:
+        text = ""
+        for section, guidelines in playbook_dict.items():
+            text += f"Section: {section}\n"
+            for guideline in guidelines:
+                text += f"- {guideline}\n"
+            text += "\n"
+        return text.strip()
+
+    def initialize_empty_playbook(self) -> dict:
+        return {
+            "Syntax Rules": [
+                "You must output exactly TWO blocks: BLOCK 1 wrapped in <|reasoning_begin|> and <|reasoning_end|>, and BLOCK 2 wrapped in <|python_begin|> and <|python_end|>.",
+                "Absolutely NO explanations or comments outside the tags. The output must start with <|reasoning_begin|>."
+            ],
+            "Constraints": [
+                "NumPy is strictly forbidden. You must use PyTorch (torch)."
+            ],
+            "Execution Policy": [
+                "PATH A (Rigid Geometry): If the task is a discrete bounding box crop, flip, or translation, use standard PyTorch tensor slicing.",
+                "PATH B (Complex Emergence): If the task requires fuzzy pattern completion or non-rigid emergence, translate the grid to S^1 wave phases and use the EmergentManifold."
+            ]
+        }
+
+    def compile_playbook_to_wave(self, playbook_dict):
+        return self.generate_playbook_steering_wave(playbook_dict)
+
+    def apply_json_to_playbook(self, playbook_dict, json_operations) -> dict:
+        import json
+        import re
+        
+        try:
+            clean_json = json_operations.strip()
+            # If wrapped in markdown block, extract it
+            if "```" in clean_json:
+                match = re.search(r"(\{.*\})|(\[.*\])", clean_json, re.DOTALL)
+                if match:
+                    clean_json = match.group(0)
+                else:
+                    # Strip any ```json or ```
+                    clean_json = re.sub(r"^```(?:json)?\n", "", clean_json)
+                    clean_json = re.sub(r"\n```$", "", clean_json)
+            
+            data = json.loads(clean_json)
+        except Exception as e:
+            print(f"[ACE Curator] Failed to parse JSON operations: {e}. Raw input:\n{json_operations}")
+            return playbook_dict
+
+        ops = data.get("operations", [])
+        for op in ops:
+            op_type = op.get("type", "").lower()
+            section = op.get("section", "").strip()
+            content = op.get("content", "").strip()
+            
+            if not section:
+                continue
+                
+            if op_type == "add":
+                if section not in playbook_dict:
+                    playbook_dict[section] = []
+                if content and content not in playbook_dict[section]:
+                    playbook_dict[section].append(content)
+            elif op_type == "edit":
+                if section in playbook_dict:
+                    found = False
+                    for idx, existing in enumerate(playbook_dict[section]):
+                        existing_words = set(existing.lower().split())
+                        content_words = set(content.lower().split())
+                        if len(existing_words.intersection(content_words)) > 2:
+                            playbook_dict[section][idx] = content
+                            found = True
+                            break
+                    if not found:
+                        playbook_dict[section] = [content]
+                else:
+                    playbook_dict[section] = [content]
+            elif op_type == "remove":
+                if section in playbook_dict:
+                    if content:
+                        found_idx = -1
+                        for idx, existing in enumerate(playbook_dict[section]):
+                            if content.lower() in existing.lower() or existing.lower() in content.lower():
+                                found_idx = idx
+                                break
+                        if found_idx != -1:
+                            playbook_dict[section].pop(found_idx)
+                    else:
+                        del playbook_dict[section]
+                        
+        return playbook_dict
+
+    def reflect_on_failure(self, task: str, failed_generation: str, environment_feedback: str) -> str:
+        """
+        Analyzes the failure to extract a root cause and correct approach.
+        """
+        # Truncate feedback aggressively (Vulnerability 1)
+        trimmed_feedback = environment_feedback[-1500:] if len(environment_feedback) > 1500 else environment_feedback
+        
+        # Extract code only to avoid prompt pollution
+        trimmed_generation = failed_generation
+        if "<|python_begin|>" in failed_generation:
+            parts = failed_generation.split("<|python_begin|>")
+            if len(parts) > 1:
+                subparts = parts[1].split("<|python_end|>")
+                trimmed_generation = subparts[0]
+        elif "```python" in failed_generation:
+            parts = failed_generation.split("```python")
+            if len(parts) > 1:
+                subparts = parts[1].split("```")
+                trimmed_generation = subparts[0]
+
+        reflection_prompt = (
+            "<|turn>system\n"
+            "You are the Reflector sub-agent for the ARC AGI puzzle solver. "
+            "Analyze the failed attempt and environment feedback to identify the root cause of the failure "
+            "and state the key insight needed to fix it. Keep your explanation concise and action-oriented.<turn|>\n"
+            f"<|turn>user\nTask description/prompt:\n{task}\n\nModel's Failed Attempt:\n{trimmed_generation}\n\nEnvironment Feedback:\n{trimmed_feedback}<turn|>\n"
+            "<|turn>model\n"
+        )
+        reflection_prompt = self.rehydrate_prompt(reflection_prompt)
+        
+        model = getattr(self, "reflector_model", self.gen_model)
+        try:
+            if hasattr(model, "create_chat_completion") and (not callable(model) or (hasattr(model, "llama") and model.llama.__class__.__name__ == "GemmaRAMSwarmMock")):
+                messages = [{"role": "user", "content": reflection_prompt}]
+                res = model.create_chat_completion(
+                    messages=messages,
+                    max_tokens=1024,
+                    temperature=0.1,
+                    stop=["<turn|>", "<|turn>"]
+                )
+                return res["choices"][0]["message"]["content"].strip()
+            else:
+                res = model(
+                    prompt=reflection_prompt,
+                    max_tokens=1024,
+                    temperature=0.1,
+                    stop=["<turn|>", "<|turn>"]
+                )
+                return res["choices"][0]["text"].strip()
+        except Exception as e:
+            print(f"[ACE Reflector] Error during reflection: {e}")
+            return f"Failed to analyze error. Insight: Adhere strictly to the task specifications and expected shapes."
+
+    def curate_playbook(self, current_playbook_dict: dict, reflection_insight: str) -> dict:
+        """
+        Applies structured, incremental updates to the playbook.
+        """
+        current_playbook_str = self.serialize_playbook(current_playbook_dict)
+        
+        curation_prompt = (
+            "<|turn>system\n"
+            "You are the Curator sub-agent for the ARC AGI puzzle solver. "
+            "Your job is to structurally update the active Playbook based on the recent reflection/insight from a failed attempt.\n"
+            "Output ONLY a valid JSON object with the exact fields:\n"
+            "{\n"
+            "  \"operations\": [\n"
+            "    {\n"
+            "      \"type\": \"add\" | \"edit\" | \"remove\",\n"
+            "      \"section\": \"<section_name>\",\n"
+            "      \"content\": \"<new or updated guideline>\"\n"
+            "    }\n"
+            "  ]\n"
+            "}\n"
+            "Do not output any markdown formatting other than possibly a json block.<turn|>\n"
+            f"<|turn>user\n"
+            f"Current Playbook:\n{current_playbook_str}\n\n"
+            f"Recent Reflection/Insight:\n{reflection_insight}\n\n"
+            "Generate the JSON operations to update the playbook.<turn|>\n"
+            "<|turn>model\n"
+        )
+        curation_prompt = self.rehydrate_prompt(curation_prompt)
+        
+        json_schema = {
+            "type": "object",
+            "properties": {
+                "operations": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "type": {"type": "string", "enum": ["add", "edit", "remove"]},
+                            "section": {"type": "string"},
+                            "content": {"type": "string"}
+                        },
+                        "required": ["type", "section", "content"]
+                    }
+                }
+            },
+            "required": ["operations"]
+        }
+
+        model = getattr(self, "reflector_model", self.gen_model)
+        try:
+            if hasattr(model, "create_chat_completion") and (not callable(model) or (hasattr(model, "llama") and model.llama.__class__.__name__ == "GemmaRAMSwarmMock")):
+                messages = [{"role": "user", "content": curation_prompt}]
+                res = model.create_chat_completion(
+                    messages=messages,
+                    max_tokens=1024,
+                    temperature=0.1,
+                    response_format={"type": "json_object", "schema": json_schema},
+                    stop=["<turn|>", "<|turn>"]
+                )
+                json_operations = res["choices"][0]["message"]["content"].strip()
+            else:
+                res = model(
+                    prompt=curation_prompt,
+                    max_tokens=1024,
+                    temperature=0.1,
+                    stop=["<turn|>", "<|turn>"]
+                )
+                json_operations = res["choices"][0]["text"].strip()
+            return self.apply_json_to_playbook(current_playbook_dict, json_operations)
+        except Exception as e:
+            print(f"[ACE Curator] Error during curation: {e}")
+            return current_playbook_dict
+
 
 class AletheiaAgent:
     """
@@ -2002,7 +2323,7 @@ class AletheiaAgent:
         )
 
         # 4. Boundary Validation
-        truth_tensor = torch.tensor(truth_np, dtype=torch.complex64)
+        truth_tensor = torch.tensor(truth_np, dtype=torch.complex64, device=torch.device('cpu'))
         is_valid, veto_reason, error_energy, h_cft = self.orchestrator.boundary_validator.validate_boundary(truth_tensor)
 
         if not is_valid:
