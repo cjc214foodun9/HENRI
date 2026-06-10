@@ -4,6 +4,14 @@ import torch.nn.functional as F
 import math
 import numpy as np
 
+class OrthogonalBridge(nn.Module):
+    def __init__(self, in_features, out_features):
+        super().__init__()
+        self.weight = nn.Parameter(torch.empty(in_features, out_features))
+        nn.init.orthogonal_(self.weight)
+    def forward(self, x):
+        return torch.matmul(x, self.weight)
+
 @torch.jit.script
 def fused_hrm_projection(pooled_out: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor) -> torch.Tensor:
     """
@@ -103,8 +111,9 @@ class L3SwarmRouter(nn.Module):
         self.num_experts = num_experts
         self.momentum = momentum
 
-        # 1. Input Embedding Layer: Vocabulary to Hidden Dim (64k * 1024 * 2 bytes = 131 MB)
-        self.token_embedding = nn.Embedding(vocab_size, hidden_dim)
+        # 1. Input Embedding Layer: Vocabulary to Activation Dim
+        self.token_embedding = nn.Embedding(vocab_size, activation_dim)
+        self.token_embedding.weight.requires_grad = False
         
         # 2. Input Activation Projection: 7B Hidden States (default 2048) to Encoder Hidden Dim (1024)
         self.activation_projection = nn.Linear(activation_dim, hidden_dim)
@@ -130,8 +139,7 @@ class L3SwarmRouter(nn.Module):
         self.master_signatures = nn.Parameter(torch.empty(4, 4096, dtype=torch.complex64))
 
         # 6. Frozen Orthogonal Projection Bridge (4096 -> 3840)
-        self.w_down = nn.Linear(self.hopfield_dim, self.gemma_dim, bias=False)
-        nn.init.orthogonal_(self.w_down.weight)
+        self.w_down = OrthogonalBridge(self.hopfield_dim, self.gemma_dim)
         self.w_down.weight.requires_grad = False
 
         # 7. Dynamic Expert Centroids (16 x 3840)
@@ -287,6 +295,7 @@ class L3SwarmRouter(nn.Module):
             # Process via token embedding path
             # tokens shape: [Batch, SeqLen]
             x = self.token_embedding(tokens)
+            x = self.activation_projection(x)
         elif activations is not None:
             # Process via system RAM activation projection
             if len(activations.shape) == 3:

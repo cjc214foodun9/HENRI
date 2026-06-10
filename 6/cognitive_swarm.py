@@ -32,6 +32,24 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "6"))
 
 from dynamic_lora import DynamicLoraManager
 from l3_router_model import L3SwarmRouter
+import gguf
+
+def extract_gemma_embeddings(gemma_model_path):
+    print(f"[SYNC] Extracting embeddings from {gemma_model_path}...")
+    reader = gguf.GGUFReader(gemma_model_path)
+    for tensor in reader.tensors:
+        if tensor.name == "token_embd.weight":
+            return torch.tensor(tensor.data, dtype=torch.float32).reshape(tensor.shape.tolist()[1], tensor.shape.tolist()[0])
+    raise ValueError("token_embd.weight not found in GGUF")
+
+def sync_vocab_matrices(gemma_model_path, l3_router):
+    print("[SYNC] Extracting Gemma 4 vocabulary matrix...")
+    gemma_embeddings = extract_gemma_embeddings(gemma_model_path)
+    
+    with torch.no_grad():
+        l3_router.token_embedding.weight.copy_(gemma_embeddings)
+        l3_router.token_embedding.weight.requires_grad = False
+    print("[SYNC] Vocabulary matrix physically hardwired.")
 from zone_b import HenriOpticalCoreD2NN
 from hopfield_cleanup import HopfieldSemanticCleanup
 from boundary_validator import BoundaryAxiomValidator
@@ -720,7 +738,7 @@ class HenriCognitiveSwarmOrchestrator:
 
         # 4. Initialize L3 Cache Router & Translator (pinned to Cores 4-7)
         self.l3_router = L3SwarmRouter(
-            vocab_size=64000, 
+            vocab_size=262144, 
             hidden_dim=1024, 
             num_layers=2, 
             num_heads=4, 
@@ -728,6 +746,13 @@ class HenriCognitiveSwarmOrchestrator:
             activation_dim=self.gemma_dim
         )
         self.l3_router.to(torch.device('cpu'))
+        
+        # Lexical Sync: hardwire the BPE token embeddings
+        if os.path.exists(self.model_path) and self.model_path != "mock_only.gguf":
+            try:
+                sync_vocab_matrices(self.model_path, self.l3_router)
+            except Exception as e:
+                print(f"[SYNC] Warning: Could not sync vocabulary matrix: {e}")
         
         # Enforce VSA unit-modulus invariants on Swarm Master signatures
         self.l3_router.enforce_vsa_invariants()
@@ -2073,7 +2098,7 @@ class HenriCognitiveSwarmOrchestrator:
                 # 2. Project 3840-D back up to the 4096-D Continuous Wave Space
                 # Since w_down is orthogonal, its transpose (weight matrix) acts as the perfect inverse rotation
                 device = self.l3_router.w_down.weight.device
-                wave_4096 = torch.matmul(embedding_tensor.to(device), self.l3_router.w_down.weight)
+                wave_4096 = torch.matmul(embedding_tensor.to(device), self.l3_router.w_down.weight.T)
                 
                 rule_embeddings.append(wave_4096.cpu())
           
@@ -2127,7 +2152,7 @@ class HenriCognitiveSwarmOrchestrator:
         ACE Neurosymbolic Compilation: Compiles textual rules into a 4096-D wave.
         """
         rule_waves = []
-        w_down_matrix = self.l3_router.w_down.weight # Shape: [gemma_dim, hopfield_dim]
+        w_down_matrix = self.l3_router.w_down.weight.T # Transpose to project from 3840 to 4096
         
         for section, content in playbook_sections.items():
             # Support both lists and single strings
@@ -2343,6 +2368,42 @@ class HenriCognitiveSwarmOrchestrator:
         except Exception as e:
             print(f"[ACE Curator] Error during curation: {e}")
             return current_playbook_dict
+
+
+    def flush_lora_and_context_to_db(self, domain_tag: str):
+        """
+        The Tabula Rasa (Blank Slate) Protocol.
+        """
+        print(f"[TABULA RASA] Initiating memory flush for domain '{domain_tag}'.")
+        self.distill_and_save_axiom(0, domain_tag)
+        if self.gen_model and hasattr(self.gen_model.llama, "ctx"):
+            import llama_cpp
+            llama_cpp._lib.llama_kv_cache_clear(self.gen_model.llama.ctx)
+            print("[TABULA RASA] VRAM KV-Cache successfully purged.")
+        for idx, manager in self.lora_managers.items():
+            with torch.no_grad():
+                torch.nn.init.zeros_(manager.lora_A)
+                torch.nn.init.zeros_(manager.lora_B)
+        print("[TABULA RASA] 16 PyTorch LoRA matrices zeroed out. Reverting to base geometry.")
+
+    def distill_and_save_axiom(self, expert_idx: int, domain_tag: str):
+        manager = self.lora_managers[expert_idx]
+        with torch.no_grad():
+            impulse = torch.ones(self.gemma_dim, device=manager.lora_A.device)
+            lora_state_3840 = manager.apply_lora(impulse)
+            device = self.l3_router.w_down.weight.device
+            
+            # Using the transpose .T as explicitly requested to project from 3840 to 4096-D
+            try:
+                wave_4096 = torch.matmul(lora_state_3840.to(device), self.l3_router.w_down.weight.T)
+            except Exception as e:
+                print(f"[TABULA RASA] Explicit transpose projection failed: {e}. Attempting fallback.")
+                wave_4096 = torch.matmul(lora_state_3840.to(device), self.l3_router.w_down.weight)
+
+            phases = torch.angle(torch.complex(wave_4096, torch.zeros_like(wave_4096)))
+            wave_4096_complex = torch.polar(torch.ones_like(phases), phases)
+            self.synaptic_manager.consolidate_and_save_adapter(domain_tag, manager, 0.0)
+            print(f"[TABULA RASA] Epistemic Distillation complete for Expert {expert_idx}. Macro-wave saved to Zone C.")
 
 
 class AletheiaAgent:

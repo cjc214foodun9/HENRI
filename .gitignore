@@ -28,6 +28,9 @@ Thumbs.db
 cmake_temp/
 llama_cpp_python-0.3.28/
 
+# Physics solver library clones
+lib_physics/
+
 # Logs
 *.log
 archive/*.log

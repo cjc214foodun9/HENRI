@@ -108,14 +108,22 @@ class EmergentCognitiveSwarm(nn.Module):
             )
             
             text = ""
+            generated_tokens_list = []
             token_count = 0
             for chunk in res_stream:
                 token_str = chunk["choices"][0]["text"]
                 text += token_str
+                
+                try:
+                    chunk_tokens = self.llama.tokenize(token_str.encode("utf-8"), add_bos=False)
+                except TypeError:
+                    chunk_tokens = self.llama.tokenize(token_str.encode("utf-8"))
+                generated_tokens_list.extend(chunk_tokens)
+                
                 token_count += 1
                 
                 if early_stopping_callback is not None and token_count % 64 == 0:
-                    should_kill = early_stopping_callback(text, alpha_routing)
+                    should_kill = early_stopping_callback(generated_tokens_list, alpha_routing)
                     if should_kill:
                         print(f"[SWARM] Micro-Epoch Apoptosis Triggered at token {token_count}. Thread Guillotine executed.")
                         break
@@ -186,9 +194,9 @@ class EmergentCognitiveSwarm(nn.Module):
             "2. A python code block wrapped in <|python_begin|> and <|python_end|> tags containing the transform function.\n\n"
             "CRITICAL RULES:\n"
             "- KEEP THE REASONING BLOCK VERY BRIEF (MAX 80 WORDS). Do NOT print grids, row lists, or verbose coordinate lists.\n"
-            "- NumPy is strictly forbidden. You must use PyTorch (torch).\n"
+            "- Do NOT use discrete numpy arrays for physics or spatial transformations. You must define continuous boundary conditions using wosx.boundary_query(point, geometry_id).\n"
             "- PATH A (Rigid Geometry): If the task is a discrete bounding box crop, flip, or translation, use standard PyTorch tensor slicing.\n"
-            "- PATH B (Complex Emergence): If the task requires fuzzy pattern completion or non-rigid emergence, translate the grid to S^1 wave phases and use the EmergentManifold.\n"
+            "- PATH B (Complex Emergence): If the task requires fuzzy pattern completion or physical evolution, translate the grid to S^1 wave phases and use the wosx PDE solver to define Dirichlet/Neumann boundaries.\n"
             "- Absolutely no conversational or explanatory text outside these tags is permitted.\n\n"
         )
         if guidelines:

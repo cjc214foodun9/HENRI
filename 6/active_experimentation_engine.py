@@ -229,6 +229,7 @@ class ActiveExperimentationEngine:
             "import numpy as np\n"
             "import torch\n"
             "import torch.nn as torch_nn\n"
+            "import wosx\n"
         )
         full_code = common_imports + code_payload
         
@@ -333,13 +334,18 @@ class ActiveExperimentationEngine:
             zone_c_repellers = self.fetch_forbidden_topology_waves()
             
             failure_tracker = {}
-            def micro_epoch_eval(accumulated_text, alpha_routing, candidate_idx):
+            def micro_epoch_eval(generated_tokens_list, alpha_routing, candidate_idx):
                 if candidate_idx not in failure_tracker:
                     failure_tracker[candidate_idx] = 0
                     
-                partial_wave = self.project_code_to_wave(accumulated_text)
+                # 1. Format the raw GPU token IDs for the CPU Router
+                token_tensor = torch.tensor(generated_tokens_list, dtype=torch.long, device='cpu')
+                
+                # 2. Extract the continuous 4096-D wave (Executes in CPU L3 Cache)
+                partial_wave = self.orchestrator.l3_router.text_to_wave(token_tensor)
+                
                 fitness_scores = self.entropic_engine.evaluate_entropic_fitness(
-                    [partial_wave], 
+                    partial_wave.unsqueeze(0), 
                     zone_c_attractors, 
                     zone_c_repellers
                 )
