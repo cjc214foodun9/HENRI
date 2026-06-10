@@ -200,32 +200,52 @@ class ProgramInductor(torch_nn.Module):
                 
         return best_ast, best_loss
 
-    def verify_syntax(self, code_str: str) -> tuple:
+    def verify_syntax(self, raw_hypothesis: str) -> tuple:
         """
-        Statically compiles candidate code string to AST to detect syntax errors.
+        Isolates executable syntax from natural language text to prevent compiler errors.
         """
         import ast
-        import traceback
+        import re
         
-        code_to_parse = code_str
-        if "<|python_begin" in code_str:
-            idx_begin = code_str.find("<|python_begin")
-            idx_end = code_str.find("<|python_end|>")
-            if idx_end == -1:
-                idx_end = code_str.find("</|python_end|>")
-            idx_close = code_str.find("|>", idx_begin)
-            if idx_close != -1 and idx_close < idx_end:
-                code_to_parse = code_str[idx_close + 2 : idx_end].strip()
-        elif "```python" in code_str:
-            parts = code_str.split("```python")
-            if len(parts) > 1:
-                code_to_parse = parts[1].split("```")[0].strip()
-                
+        # Search for explicit code generation block delimiters
+        code_match = re.search(r"<\|python_begin(?:[^>]*)\|>(.*?)(?:<\|python_end\|>|</\|python_end\|>)", raw_hypothesis, re.DOTALL)
+        if not code_match:
+            code_match = re.search(r"```python(.*?)```", raw_hypothesis, re.DOTALL)
+            
+        if not code_match:
+            # If no tags are found, attempt to clean up raw text block
+            lines = raw_hypothesis.split('\n')
+            sanitized_lines = [line for line in lines if not re.match(r"^\s*(\d+\.|\-|Wait|Let's|\*)", line)]
+            pure_code = "\n".join(sanitized_lines).strip()
+        else:
+            pure_code = code_match.group(1).strip()
+
+        if not pure_code or "def transform" not in pure_code:
+            return False, "VETO: Generation failed to yield an isolated functional 'transform(input_grid)' block."
+
+        # Execute Abstract Syntax Tree validation
         try:
-            ast.parse(code_to_parse)
-            return True, "Python AST compiled successfully."
+            ast.parse(pure_code)
+            return True, pure_code
         except SyntaxError as e:
-            error_msg = f"SyntaxError: {e.msg} at line {e.lineno}, col {e.offset}\nCode: {e.text}"
-            return False, error_msg
+            # Feed exact line numbers and syntax diagnostics back into the ACE Reflector loop
+            error_feedback = f"SyntaxError: {e.msg} at line {e.lineno}, col {e.offset} code: {e.text}"
+            return False, error_feedback
+
+    def assert_generalization(self, pure_code: str) -> tuple:
+        """
+        Inductive Generalization Guard: Scans the AST tree to block look-up tables and forcing overfitting paths.
+        """
+        import ast
+        try:
+            tree = ast.parse(pure_code)
         except Exception as e:
-            return False, f"AST Compilation Error: {str(e)}"
+            return False, f"AST Compilation Error during generalization check: {str(e)}"
+            
+        for node in ast.walk(tree):
+            # Block hardcoded comparisons of literal multidimensional arrays
+            if isinstance(node, ast.Compare):
+                for comparator in node.comparators:
+                    if isinstance(comparator, ast.List):
+                        return False, "VETO: Explicit list/grid value matching detected. Look-up tables are forbidden."
+        return True, "Passed Inductive Generalization Verification."

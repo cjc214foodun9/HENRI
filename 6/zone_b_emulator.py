@@ -83,18 +83,16 @@ class SagnacInterferometer(nn.Module):
     """
     def __init__(self):
         super().__init__()
+        import sys
+        import os
+        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if root_dir not in sys.path:
+            sys.path.append(root_dir)
+        from sagnac_veto import SagnacInterferometer
+        self.sagnac = SagnacInterferometer()
 
     def forward(self, current_wave: torch.Tensor, target_manifold: torch.Tensor):
-        # Destructive interference (The Error Energy / Hallucination)
-        reflection_delta = current_wave - target_manifold
-        
-        # Constructive interference (The Epiplexity / Truth)
-        transmission_truth = current_wave - reflection_delta
-        
-        # Calculate Thermodynamic Penalty (E = sum(|delta|^2))
-        error_energy = torch.sum(torch.real(reflection_delta * torch.conj(reflection_delta)))
-        
-        return transmission_truth, reflection_delta, error_energy
+        return self.sagnac(current_wave, target_manifold)
 
 
 class ZoneBEmulator(nn.Module):
@@ -216,6 +214,6 @@ class ZoneBPhysicalEmulator:
         
         if not is_valid:
             feedback = f"Sagnac Veto: Dirichlet boundary axioms violated. Reason: {veto_reason} | Error Energy: {error_energy:.4f}"
-            return False, feedback
+            return False, feedback, error_energy, truth_tensor, delta_np
         
-        return True, "Dirichlet boundaries verified. Sagnac alignment achieved."
+        return True, "Dirichlet boundaries verified. Sagnac alignment achieved.", error_energy, truth_tensor, delta_np

@@ -20,3 +20,24 @@ __pycache__/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Build/Temporary / Package files
+*.whl
+*.zip
+*.tar.gz
+cmake_temp/
+llama_cpp_python-0.3.28/
+
+# Logs
+*.log
+archive/*.log
+
+# Large Binaries / Centroids / Streams
+*.bin
+archive/domain_adapters/*.bin
+archive/dynamic_lora_stream_*.bin
+archive/l3_router_centroids.bin
+
+# Test and Scratch scripts
+scratch/
+

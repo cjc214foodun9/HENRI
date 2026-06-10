@@ -64,33 +64,91 @@ class EmergentCognitiveSwarm(nn.Module):
         import llama_cpp
         return llama_cpp.LogitsProcessorList([steered_logits_processor])
 
-    def generate_swarm_hypothesis(self, task_dict, playbook_wave, playbook_dict=None):
+    def generate_swarm_hypothesis(self, task_dict, playbook_wave, playbook_dict=None, temperature=0.7, inject_noise=False):
         """
-        Computes routing weights, initializes in-memory logit bias, and generates prompt response.
+        Computes routing weights, blends PyTorch experts, injects dynamic LoRA adapter,
+        and generates prompt response. Supports dynamic temperature and routing noise injection.
         """
+        router_temp = 1.4 if inject_noise else 0.7
         # Compute the explicit alpha routing weights based on the compiled playbook wave
         if playbook_wave is not None:
-            alpha_routing = self.router.compute_routing_weights(playbook_wave.unsqueeze(0), temperature=0.7).squeeze(0)
+            alpha_routing = self.router.compute_routing_weights(playbook_wave.unsqueeze(0), temperature=router_temp).squeeze(0)
         else:
             alpha_routing = torch.ones(self.orchestrator.num_streams) / self.orchestrator.num_streams
             
+        if inject_noise:
+            # Inject simulated randomized phase/routing noise into the MoE routing activations
+            noise = torch.randn_like(alpha_routing) * 0.2
+            alpha_routing = torch.softmax(alpha_routing + noise, dim=-1)
+            
         prompt = self.build_clean_prompt(task_dict, playbook_dict)
         
-        # Build the dynamic logit bias array entirely in-memory using the alpha weights
-        # This completely avoids writing blended LoRA adapters to disk mid-generation
-        logit_processor = self.orchestrate_in_memory_moe_steering(alpha_routing, prompt)
+        # JIT LoRA compilation & Vulkan injection
+        if self.orchestrator is not None:
+            # 1. Mathematically blend active expert weights in-memory
+            blended_A, blended_B = self.orchestrator.blend_moe_loras(
+                self.orchestrator.lora_managers,
+                alpha_routing
+            )
+            # 2. Compile to GGUF format and physically inject into Vulkan computation graph
+            self.orchestrator.apply_blended_lora_to_gemma(blended_A, blended_B)
+
+        # Legacy logit steering is completely disabled to use physical adapter injection
+        logit_processor = None
         
-        # Execute the accelerated Vulkan token generation pass
-        res = self.llama(
-            prompt,
-            logits_processor=logit_processor,
-            max_tokens=2048,
-            stop=["<turn|>", "<|turn>"]
-        )
+        try:
+            # Execute the accelerated Vulkan token generation pass
+            res = self.llama(
+                prompt,
+                logits_processor=logit_processor,
+                max_tokens=2048,
+                temperature=temperature,
+                stop=["<turn|>", "<|turn>"]
+            )
+        finally:
+            # Clear physical adapter immediately after generation to prevent graph interference
+            if self.orchestrator is not None:
+                self.orchestrator.clear_active_lora()
         
         if isinstance(res, dict):
-            return res["choices"][0]["text"].strip()
-        return str(res).strip()
+            text = res["choices"][0]["text"].strip()
+        else:
+            text = str(res).strip()
+            
+        # Log the generated swarm hypothesis to stdout
+        print(f"\n--- [SWARM HYPOTHESIS GENERATED] ---\n{text}\n-------------------------------------\n")
+        return text, alpha_routing
+
+    def generate_parallel_hypotheses(self, task_dict, playbook_wave, playbook_dict=None, temperature=0.7, inject_noise=False, num_candidates=16):
+        """
+        Generates a batch of parallel hypotheses across the swarm.
+        We perturb the playbook wave slightly for each stream to explore alternative trajectories.
+        """
+        candidates = []
+        for i in range(num_candidates):
+            if playbook_wave is not None:
+                # Perturb the playbook wave slightly for each candidate stream
+                perturbed_wave = playbook_wave.clone()
+                noise_phase = torch.randn_like(perturbed_wave.real) * 0.1
+                # Multiply by e^(i * noise_phase) to perturb the phase wavefront
+                perturbed_wave = perturbed_wave * torch.polar(torch.ones_like(perturbed_wave.real), noise_phase)
+            else:
+                perturbed_wave = None
+                
+            # Diversify non-primary candidates by injecting noise
+            stream_inject_noise = inject_noise or (i > 0)
+            
+            print(f"[SWARM] Generating candidate {i+1}/{num_candidates} (temperature={temperature:.2f}, noise={stream_inject_noise})...")
+            candidate, alpha_routing = self.generate_swarm_hypothesis(
+                task_dict=task_dict,
+                playbook_wave=perturbed_wave,
+                playbook_dict=playbook_dict,
+                temperature=temperature,
+                inject_noise=stream_inject_noise
+            )
+            candidates.append((candidate, alpha_routing))
+            
+        return candidates
 
     def build_clean_prompt(self, task_dict, playbook_dict=None):
         """
@@ -107,6 +165,7 @@ class EmergentCognitiveSwarm(nn.Module):
             "1. A reasoning block wrapped in <|reasoning_begin|> and <|reasoning_end|> tags.\n"
             "2. A python code block wrapped in <|python_begin|> and <|python_end|> tags containing the transform function.\n\n"
             "CRITICAL RULES:\n"
+            "- KEEP THE REASONING BLOCK VERY BRIEF (MAX 80 WORDS). Do NOT print grids, row lists, or verbose coordinate lists.\n"
             "- NumPy is strictly forbidden. You must use PyTorch (torch).\n"
             "- PATH A (Rigid Geometry): If the task is a discrete bounding box crop, flip, or translation, use standard PyTorch tensor slicing.\n"
             "- PATH B (Complex Emergence): If the task requires fuzzy pattern completion or non-rigid emergence, translate the grid to S^1 wave phases and use the EmergentManifold.\n"

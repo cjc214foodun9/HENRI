@@ -1,6 +1,10 @@
 import psycopg
 import os
+import sys
 import numpy as np
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from henri_contract import complex_to_db, DIMS
 
 try:
     from dotenv import load_dotenv
@@ -28,7 +32,7 @@ try:
                     concept_hash UUID PRIMARY KEY,
                     semantic_label TEXT NOT NULL,
                     domain_tag TEXT,
-                    hrr_wavefront vector(4096) NOT NULL,
+                    hrr_wavefront vector(8192) NOT NULL,
                     epiplexity_weight FLOAT DEFAULT 1.0,
                     last_verified TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                     raw_text TEXT
@@ -48,7 +52,7 @@ try:
                     langevin_heat_injected FLOAT NOT NULL,
                     sagnac_error_delta FLOAT NOT NULL,
                     attractor_locked BOOLEAN NOT NULL,
-                    hrr_trajectory vector(4096)
+                    hrr_trajectory vector(8192)
                 );
             """)
             print("[+] Table 'thermodynamic_ledger' verified.")
@@ -65,7 +69,7 @@ try:
                     langevin_heat_value DOUBLE PRECISION,
                     rate_of_annealing_value DOUBLE PRECISION DEFAULT 0.0,
                     alpha_value DOUBLE PRECISION DEFAULT 1.0,
-                    latent_wave_vector vector(4096),
+                    latent_wave_vector vector(8192),
                     PRIMARY KEY (timestamp, step_id)
                 );
             """)
@@ -164,11 +168,7 @@ try:
                     # Seed constants and quantity kinds
                     for label in list(CODATA_CONSTANTS.keys()) + list(QUDT_QUANTITY_KINDS.keys()):
                         vec = make_atomic_vector(label) # shape: (4096,) complex
-                        db_vec = np.zeros(4096, dtype=np.float32)
-                        # Map 2048 complex elements to 4096 real elements (first 2048 real, last 2048 imag)
-                        db_vec[:2048] = vec[:2048].real
-                        db_vec[2048:] = vec[:2048].imag
-                        vector_str = "[" + ",".join(map(str, db_vec)) + "]"
+                        vector_str = complex_to_db(vec, DIMS.hrr_dim)
                         concept_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, label))
                         
                         cur.execute(
@@ -185,10 +185,7 @@ try:
                     for eq_name, eq_data in FUNDAMENTAL_EQUATIONS.items():
                         atoms = [make_atomic_vector(t) for t in eq_data["terms"]]
                         vec = bind(*atoms) if len(atoms) > 1 else atoms[0]
-                        db_vec = np.zeros(4096, dtype=np.float32)
-                        db_vec[:2048] = vec[:2048].real
-                        db_vec[2048:] = vec[:2048].imag
-                        vector_str = "[" + ",".join(map(str, db_vec)) + "]"
+                        vector_str = complex_to_db(vec, DIMS.hrr_dim)
                         concept_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, eq_name))
                         
                         cur.execute(
@@ -211,10 +208,7 @@ try:
                         for name, data in items_dict.items():
                             atoms = [make_atomic_vector(t) for t in data["terms"]]
                             vec = bind(*atoms) if len(atoms) > 1 else atoms[0]
-                            db_vec = np.zeros(4096, dtype=np.float32)
-                            db_vec[:2048] = vec[:2048].real
-                            db_vec[2048:] = vec[:2048].imag
-                            vector_str = "[" + ",".join(map(str, db_vec)) + "]"
+                            vector_str = complex_to_db(vec, DIMS.hrr_dim)
                             concept_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, name))
                             
                             cur.execute(
@@ -240,13 +234,10 @@ try:
                         ]
                         seeded = 0
                         for label in concepts:
-                            # Generate a random unit-magnitude complex vector of size 2048
-                            phases = (np.random.rand(2048) * 2 * np.pi) - np.pi
+                            # Generate a random unit-magnitude complex vector of size hrr_dim
+                            phases = (np.random.rand(DIMS.hrr_dim) * 2 * np.pi) - np.pi
                             vec = np.exp(1j * phases)
-                            db_vec = np.zeros(4096, dtype=np.float32)
-                            db_vec[:2048] = vec.real
-                            db_vec[2048:] = vec.imag
-                            vector_str = "[" + ",".join(map(str, db_vec)) + "]"
+                            vector_str = complex_to_db(vec, DIMS.hrr_dim)
                             concept_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, label))
                             
                             cur.execute(

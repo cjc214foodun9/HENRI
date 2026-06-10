@@ -251,6 +251,28 @@ class L3SwarmRouter(nn.Module):
           
         return winner_idx
 
+    @torch.no_grad()
+    def measure_centroid_dispersion(self):
+        """
+        Calculates the mean pairwise cosine distance between all 16 experts.
+        Returns a scalar metric to track physical specialization.
+        """
+        # Normalize centroids to project onto the unit hypersphere
+        normed_centroids = F.normalize(self.expert_centroids, p=2, dim=1)
+        
+        # Compute the 16x16 cosine similarity matrix
+        sim_matrix = torch.matmul(normed_centroids, normed_centroids.T)
+        
+        # Distance = 1.0 - Similarity
+        distance_matrix = 1.0 - sim_matrix
+        
+        # Extract upper triangle (excluding self-distance of 0 on the diagonal)
+        upper_tri_indices = torch.triu_indices(self.num_experts, self.num_experts, offset=1)
+        pairwise_distances = distance_matrix[upper_tri_indices[0], upper_tri_indices[1]]
+        
+        mean_dispersion = torch.mean(pairwise_distances).item()
+        return mean_dispersion
+
     def forward(self, tokens=None, activations=None):
         """
         Forward pass of the Swarm Router.

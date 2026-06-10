@@ -4,6 +4,9 @@ import queue
 import time
 import os
 import psycopg
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from henri_contract import db_to_complex, DIMS
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -113,15 +116,7 @@ class ZoneCPostgresEmulatorBridge:
                     rows = cur.fetchall()
                     for idx, r in enumerate(rows):
                         label, vec_str = r[0], r[1]
-                        if isinstance(vec_str, str):
-                            vec_str = vec_str.strip("[]")
-                            vec_float = np.fromstring(vec_str, sep=",", dtype=np.float32)
-                        else:
-                            vec_float = np.array(vec_str, dtype=np.float32)
-                        
-                        # Real component is first half, Imaginary component is second half
-                        half = len(vec_float) // 2
-                        vec_complex = vec_float[:half] + 1j * vec_float[half:]
+                        vec_complex = db_to_complex(vec_str, DIMS.hrr_dim)
                         
                         # Pad or truncate to source_dim
                         if len(vec_complex) < self.source_dim:
@@ -147,14 +142,7 @@ class ZoneCPostgresEmulatorBridge:
                         rows = cur.fetchall()
                         for r in rows:
                             step_id, vec_str = r[0], r[1]
-                            if isinstance(vec_str, str):
-                                vec_str = vec_str.strip("[]")
-                                vec_float = np.fromstring(vec_str, sep=",", dtype=np.float32)
-                            else:
-                                vec_float = np.array(vec_str, dtype=np.float32)
-                            
-                            half = len(vec_float) // 2
-                            vec_complex = vec_float[:half] + 1j * vec_float[half:]
+                            vec_complex = db_to_complex(vec_str, DIMS.hrr_dim)
                             
                             if len(vec_complex) < self.source_dim:
                                 vec_complex = np.pad(vec_complex, (0, self.source_dim - len(vec_complex)))

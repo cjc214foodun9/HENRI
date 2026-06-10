@@ -59,7 +59,14 @@ class DynamicLoraManager:
         """
         with torch.no_grad():
             if isinstance(delta_projected, np.ndarray):
-                delta_tensor = torch.tensor(delta_projected, dtype=torch.float32)
+                delta_projected = torch.tensor(delta_projected)
+            
+            # CRITICAL FIX: Split complex vectors into independent real/imag features to keep phase geometry
+            if torch.is_complex(delta_projected):
+                real_channel = delta_projected.real
+                imag_channel = delta_projected.imag
+                # Concatenate channels along a new feature axis rather than casting down to real-only float32
+                delta_tensor = torch.cat([real_channel, imag_channel], dim=-1).to(torch.float32)
             else:
                 delta_tensor = delta_projected.to(torch.float32)
                 
@@ -102,3 +109,56 @@ class DynamicLoraManager:
         with torch.no_grad():
             lora_step = torch.matmul(torch.matmul(activations, self.lora_A), self.lora_B)
             return activations + lora_step
+
+class DynamicLoRAEngine:
+    @torch.no_grad()
+    def apply_reinforce_update(self, lora_managers, routing_weights, residual, reward_signal, lr=0.01):
+        """
+        Applies a REINFORCE-style rank-1 update to the MoE.
+        residual: The orthogonal geometric error (psi - truth)
+        reward_signal: +1.0 for REPL accuracy improvement, -1.0 for degradation
+        routing_weights: The alpha distribution from the L3 Router
+        """
+        if isinstance(residual, np.ndarray):
+            residual = torch.tensor(residual)
+            
+        if torch.is_complex(residual):
+            real_channel = residual.real
+            imag_channel = residual.imag
+            residual = torch.cat([real_channel, imag_channel], dim=-1).to(torch.float32)
+        else:
+            residual = residual.to(torch.float32)
+
+        # Convert lora_managers to list/dict values if it is a dictionary
+        if isinstance(lora_managers, dict):
+            lora_managers_list = [lora_managers[i] for i in range(len(lora_managers))]
+        else:
+            lora_managers_list = lora_managers
+
+        for i, manager in enumerate(lora_managers_list):
+            alpha = routing_weights[i].item() if torch.is_tensor(routing_weights) else routing_weights[i]
+            
+            # Skip updating experts that were not engaged in this trajectory
+            if alpha < 0.05:
+                continue 
+                
+            # Align residual to manager's gemma_dim
+            res_tensor = residual.clone()
+            if len(res_tensor) < manager.gemma_dim:
+                res_tensor = torch.nn.functional.pad(res_tensor, (0, manager.gemma_dim - len(res_tensor)))
+            elif len(res_tensor) > manager.gemma_dim:
+                res_tensor = res_tensor[:manager.gemma_dim]
+
+            # Create the rank-1 update matrix from the orthogonal residual
+            # shape: [gemma_dim, rank]
+            update_A = torch.outer(res_tensor, res_tensor[:manager.rank])
+            update_A = torch.nn.functional.normalize(update_A, p=2, dim=1) # Frobenius-style normalization
+            
+            # The physical step: Gated by routing participation AND the objective reward
+            step_magnitude = lr * alpha * reward_signal
+            
+            # Apply to expert's physical weights
+            manager.lora_A.data += (step_magnitude * update_A)
+            
+            # Clamp to prevent extreme saturation
+            manager.lora_A.data = torch.clamp(manager.lora_A.data, min=-1.5, max=1.5)

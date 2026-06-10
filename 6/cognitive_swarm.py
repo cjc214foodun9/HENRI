@@ -6,6 +6,9 @@ os.environ.pop("GGML_DISABLE_VULKAN", None)
 os.environ.pop("GGML_VULKAN_DISABLE", None)
 os.environ["GGML_OPENCL_DISABLE"] = "1"
 
+# Add this line to force Vulkan to ONLY see the RX 9070 XT (Device 0)
+os.environ["GGML_VK_VISIBLE_DEVICES"] = "0"
+
 import time
 import math
 import queue
@@ -567,7 +570,7 @@ class HenriCognitiveSwarmOrchestrator:
         
         # Prefer 12B model, then fall back to older ones
         self.model_path = model_path
-        if model_path in ["Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf", "gemma-4-E4B-it-Q4_0.gguf", "gemma-4-26B-A4B-it-uncensored-Q8_0.gguf", "mock_only.gguf"]:
+        if model_path != "mock_only.gguf" and model_path in ["Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf", "gemma-4-E4B-it-Q4_0.gguf", "gemma-4-26B-A4B-it-uncensored-Q8_0.gguf"]:
             for c_path in ["Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf", "gemma-4-26B-A4B-it-uncensored-Q8_0.gguf", "gemma-4-E4B-it-Q4_0.gguf"]:
                 if os.path.exists(c_path):
                     self.model_path = c_path
@@ -652,44 +655,36 @@ class HenriCognitiveSwarmOrchestrator:
         
         if HAS_LLAMA_CPP and os.path.exists(gen_model_path) and self.model_path != "mock_only.gguf":
             try:
-                # 1. Load the Generation Engine (embedding=False, n_gpu_layers=-1)
-                print(f"[SYSTEM] Loading Generation Engine via mmap from: {gen_model_path}")
+                # 1. Load the Unified Engine (embedding=True, n_gpu_layers=-1)
+                print(f"[SYSTEM] Loading Unified VRAM Engine via mmap from: {gen_model_path}")
                 self.gen_model = llama_cpp.Llama(
                     model_path=gen_model_path,
-                    n_ctx=8192,        # Set to 8192 to fit within GPU VRAM under Vulkan offload
-                    n_batch=512,       # Increase processing throughput for dense prompt evals
+                    n_ctx=8192,        # 8K context to fit fully in VRAM alongside computation graph
+                    n_batch=512,       # Processing throughput for dense prompt evals
                     n_threads=llama_threads,
-                    embedding=False,   # Disable embedding to avoid parallel sequence/slot issues
+                    embedding=True,    # ENABLED so base_model can share this instance for embeddings
                     use_mmap=True,
                     use_mlock=attempt_mlock,
-                    n_gpu_layers=-1    # Offload ALL layers to GPU Vulkan (maximum GPU acceleration)
+                    n_gpu_layers=-1,   # Offload 100% of layers to GPU
+                    flash_attn=True    # Enable to compress the kq-0 attention node memory
                 )
                 
-                # 2. Load separate CPU-only Embedding Engine (embedding=True, n_gpu_layers=0)
-                print(f"[SYSTEM] Loading separate CPU-only Embedding Engine from: {emb_model_path}")
-                self.base_model = llama_cpp.Llama(
-                    model_path=emb_model_path,
-                    n_ctx=16384,       # Large context size to handle code/reasoning embedding queries
-                    n_batch=512,
-                    n_threads=llama_threads,
-                    embedding=True,
-                    use_mmap=True,
-                    use_mlock=attempt_mlock,
-                    n_gpu_layers=0     # Run entirely on CPU to consume 0 VRAM
-                )
-                
-                # 3. Use GPU Generator Engine for Reflector/Curator to maximize speed and prevent CPU thrashing
+                # 2 & 3. Share the exact same model pointer to prevent VRAM duplication and Vulkan deadlocks
+                print("[SYSTEM] Sharing unified GPU model pointer with Base and Reflector contexts.")
+                self.base_model = self.gen_model
                 self.reflector_model = self.gen_model
                     
                 print("[SYSTEM] Model contexts loaded successfully.")
             except Exception as e:
-                print(f"[WARNING] Failed to load GGUF model via llama_cpp: {e}. Falling back to mock model.")
-                self.base_model = GemmaRAMSwarmMock(gemma_dim=gemma_dim)
-                self.gen_model = self.base_model
-                self.reflector_model = self.gen_model
-                self.is_mock = True
+                # Force thread termination so weights on disk aren't overwritten by shape mismatches
+                print(f"[FATAL FAILURE] llama.cpp failed to allocate tensors: {e}")
+                print("[HELP] Upgrade llama-cpp-python to a version supporting Gemma 4's non-uniform GQA arrays.")
+                raise SystemExit(1)
         else:
-            print("[INFO] GGUF weight file not found or llama_cpp missing. Booting in high-fidelity mock mode.")
+            if self.model_path != "mock_only.gguf":
+                print(f"[FATAL FAILURE] GGUF weight file not found or llama_cpp missing.")
+                raise SystemExit(1)
+            print("[INFO] Booting in high-fidelity mock mode (explicit mock requested).")
             self.base_model = GemmaRAMSwarmMock(gemma_dim=gemma_dim)
             self.gen_model = self.base_model
             self.reflector_model = self.gen_model
@@ -805,6 +800,151 @@ class HenriCognitiveSwarmOrchestrator:
         from emergent_cognitive_swarm import EmergentCognitiveSwarm
         self.swarm_fabric = EmergentCognitiveSwarm(self.gen_model, self.l3_router)
         self.swarm_fabric.orchestrator = self
+        self.active_lora_adapter = None
+
+    @torch.no_grad()
+    def blend_moe_loras(self, lora_managers, routing_weights):
+        """
+        Blends the 16 PyTorch experts into a single active state based on the Playbook wave.
+        """
+        blended_A = torch.zeros_like(lora_managers[0].lora_A)
+        blended_B = torch.zeros_like(lora_managers[0].lora_B)
+        
+        # Convert dict to list if needed
+        if isinstance(lora_managers, dict):
+            managers_list = [lora_managers[i] for i in range(len(lora_managers))]
+        else:
+            managers_list = lora_managers
+            
+        for i, manager in enumerate(managers_list):
+            alpha = routing_weights[i].item() if torch.is_tensor(routing_weights) else routing_weights[i]
+            if alpha > 0.01:
+                blended_A += alpha * manager.lora_A.data
+                blended_B += alpha * manager.lora_B.data
+                
+        return blended_A, blended_B
+
+    def serialize_to_ggml_format(self, blended_A, blended_B, out_path):
+        """
+        Serializes blended PyTorch weights into GGUF format mapping to the base model's attention keys.
+        """
+        import gguf
+        
+        # Read base model shapes using GGUFReader to handle non-uniform GQA layers dynamically
+        tensor_shapes = {}
+        try:
+            reader = gguf.GGUFReader(self.model_path)
+            for tensor in reader.tensors:
+                if "attn_q.weight" in tensor.name or "attn_v.weight" in tensor.name:
+                    tensor_shapes[tensor.name] = tensor.shape.tolist()
+        except Exception as e:
+            print(f"[ENGINE] Warning: GGUFReader failed to read base model shapes: {e}. Defaulting to standard dimensions.")
+            # Fallback to standard Gemma 12B layer shapes
+            for i in range(48):
+                tensor_shapes[f"blk.{i}.attn_q.weight"] = [3840, 4096]
+                tensor_shapes[f"blk.{i}.attn_v.weight"] = [3840, 2048]
+
+        # Initialize GGUFWriter
+        writer = gguf.GGUFWriter(out_path, arch="gemma4")
+        writer.add_type(gguf.GGUFType.ADAPTER)
+        writer.add_string(gguf.Keys.Adapter.TYPE, "lora")
+        writer.add_float32(gguf.Keys.Adapter.LORA_ALPHA, 16.0)
+
+        # Convert tensors to CPU numpy float32
+        blended_A_cpu = blended_A.cpu().to(torch.float32)
+        blended_B_cpu = blended_B.cpu().to(torch.float32)
+        
+        rank = 16
+        for name, shape in tensor_shapes.items():
+            # GGUF shapes are stored as [cols, rows] (i.e. [dim_out, dim_in])
+            dim_out, dim_in = shape[0], shape[1]
+            
+            # Map blended tensors to GGUF lora_a and lora_b shapes:
+            # lora_a GGUF: [dim_out, rank] -> NumPy: (rank, dim_out)
+            # lora_b GGUF: [rank, dim_in] -> NumPy: (dim_in, rank)
+            
+            # Slice/pad blended_B (shape [rank, gemma_dim]) to (rank, dim_out)
+            if dim_out == self.gemma_dim:
+                lora_a_np = blended_B_cpu.numpy()
+            elif dim_out < self.gemma_dim:
+                lora_a_np = blended_B_cpu[:, :dim_out].numpy()
+            else:
+                padded = torch.zeros(rank, dim_out)
+                padded[:, :self.gemma_dim] = blended_B_cpu
+                lora_a_np = padded.numpy()
+                
+            # Slice/pad blended_A (shape [gemma_dim, rank]) to (dim_in, rank)
+            if dim_in == self.gemma_dim:
+                lora_b_np = blended_A_cpu.numpy()
+            elif dim_in < self.gemma_dim:
+                lora_b_np = blended_A_cpu[:dim_in, :].numpy()
+            else:
+                padded = torch.zeros(dim_in, rank)
+                padded[:self.gemma_dim, :] = blended_A_cpu
+                lora_b_np = padded.numpy()
+
+            # Add to writer
+            writer.add_tensor(f"{name}.lora_a", lora_a_np)
+            writer.add_tensor(f"{name}.lora_b", lora_b_np)
+
+        writer.write_header_to_file()
+        writer.write_kv_data_to_file()
+        writer.write_tensors_to_file()
+        writer.close()
+
+    def apply_blended_lora_to_gemma(self, blended_A, blended_B):
+        """
+        Compiles the PyTorch tensors and injects them into the C++ Vulkan backend of self.gen_model.
+        """
+        if self.is_mock:
+            print("[ENGINE] Running in Mock mode. Skipping dynamic LoRA injection.")
+            return
+
+        # RAM disk path or system temp file fallback
+        ram_disk_path = "R:\\active_swarm_state.bin"
+        try:
+            # Try writing a small dummy file to verify R:\ is writable
+            with open(ram_disk_path, "wb") as f:
+                f.write(b"")
+        except Exception:
+            import tempfile
+            ram_disk_path = os.path.join(tempfile.gettempdir(), "active_swarm_state.bin")
+            print(f"[ENGINE] RAM Disk R:\\ unavailable. Falling back to memory-mapped temp path: {ram_disk_path}")
+
+        # 1. Serialize the blended PyTorch tensors to GGML format expected by llama_cpp
+        self.serialize_to_ggml_format(blended_A, blended_B, ram_disk_path)
+
+        # 2. Inject physical weights into the gen_model
+        try:
+            self.clear_active_lora()
+                
+            # Initialize new adapter
+            adapter_ptr = llama_cpp.llama_adapter_lora_init(self.gen_model.llama.model, ram_disk_path.encode('utf-8'))
+            if not adapter_ptr:
+                print(f"[ENGINE] Error: Failed to initialize dynamic LoRA adapter from {ram_disk_path}")
+                return
+                
+            # Bind adapter to context
+            ret = llama_cpp.llama_set_adapter_lora(self.gen_model.llama.ctx, adapter_ptr, 1.0)
+            if ret != 0:
+                print(f"[ENGINE] Warning: llama_set_adapter_lora returned error code {ret}")
+                llama_cpp.llama_adapter_lora_free(adapter_ptr)
+            else:
+                self.active_lora_adapter = adapter_ptr
+                print(f"[ENGINE] 12B Model physically rewired by ACE Playbook (adapter: {ram_disk_path}).")
+        except Exception as e:
+            print(f"[ENGINE] Fatal error during dynamic LoRA injection: {e}")
+
+    def clear_active_lora(self):
+        """Clears and frees the active dynamic LoRA adapter from model context."""
+        if hasattr(self, "active_lora_adapter") and self.active_lora_adapter is not None:
+            try:
+                llama_cpp.llama_set_adapters_lora(self.gen_model.llama.ctx, None, 0, None)
+                llama_cpp.llama_adapter_lora_free(self.active_lora_adapter)
+            except Exception as e:
+                print(f"[ENGINE] Warning: Failed to free dynamic LoRA adapter: {e}")
+            finally:
+                self.active_lora_adapter = None
 
     def set_core_affinity(self):
         """Pins process affinity to all logical cores to allow thread-level partitioning."""
@@ -884,6 +1024,7 @@ class HenriCognitiveSwarmOrchestrator:
             vector = torch.polar(torch.ones(self.hrr_dim), phases)
             self.hopfield.register_concept(label, vector)
         return self.hopfield.vocabulary[label]
+
 
     def process_repl_blocks(self, stream_id: int, generated_text: str) -> str:
         """Parses generated text for python blocks and executes them statefully in the REPL."""
@@ -1256,9 +1397,6 @@ class HenriCognitiveSwarmOrchestrator:
             winner_idx = self.l3_router.update_expert_centroids(truth_tensor)
             print(f"[ANCHOR] Wave converged! Centroid of expert {winner_idx} drifted toward this concept topology.")
             self.save_router_centroids()
-            with torch.no_grad():
-                self.lora_managers[winner_idx].lora_A.copy_(self.lora_managers[0].lora_A)
-                self.lora_managers[winner_idx].lora_B.copy_(self.lora_managers[0].lora_B)
             self.lora_managers[winner_idx].save_weights()
             
             # Consolidate dynamic LoRA adapter weights in database registry
@@ -1454,12 +1592,12 @@ class HenriCognitiveSwarmOrchestrator:
                     
                 # Convert complex vector elements to database format (real / imag split)
                 psi_np = psi.numpy()
-                db_vec = np.zeros(4096, dtype=np.float32)
-                # Map 2048 complex elements to 4096 real elements (first 2048 real, last 2048 imag)
-                db_vec[:2048] = psi_np[:2048].real
-                db_vec[2048:] = psi_np[:2048].imag
+                root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                if root_dir not in sys.path:
+                    sys.path.append(root_dir)
+                from henri_contract import complex_to_db, DIMS
                 
-                vector_str = "[" + ",".join(map(str, db_vec)) + "]"
+                vector_str = complex_to_db(psi_np, DIMS.hrr_dim)
                 
                 semantic_label = f"LoRA_Stream_{i}_{domain_tag}_{int(time.time())}"
                 concept_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, semantic_label))
@@ -1496,7 +1634,6 @@ class HenriCognitiveSwarmOrchestrator:
                 del h_lora
                 del psi
                 del psi_np
-                del db_vec
                 del vector_str
                 
             except Exception as e:
@@ -1949,13 +2086,25 @@ class HenriCognitiveSwarmOrchestrator:
         return playbook_superposition
 
     def serialize_playbook(self, playbook_dict) -> str:
-        text = ""
+        """
+        Serializes the ACE heuristics while enforcing a strict Epistemic Token Limit
+        to prevent context exhaustion and brevity bias.
+        """
+        lines = []
         for section, guidelines in playbook_dict.items():
-            text += f"Section: {section}\n"
+            lines.append(f"Section: {section}")
             for guideline in guidelines:
-                text += f"- {guideline}\n"
-            text += "\n"
-        return text.strip()
+                lines.append(f"- {guideline}")
+            lines.append("")
+        serialized = "\n".join(lines).strip()
+        
+        # Absolute ceiling: ~800 tokens (~3200 characters)
+        # If exceeded, we truncate the oldest generic rules to preserve the newest critical heuristics
+        if len(serialized) > 3200:
+            print("[WARNING] Playbook entropy limit reached. Executing epistemic compression...")
+            serialized = "...[Prior Axioms Compressed]...\n" + serialized[-3100:]
+            
+        return serialized
 
     def initialize_empty_playbook(self) -> dict:
         return {
@@ -1972,8 +2121,38 @@ class HenriCognitiveSwarmOrchestrator:
             ]
         }
 
-    def compile_playbook_to_wave(self, playbook_dict):
-        return self.generate_playbook_steering_wave(playbook_dict)
+    @torch.no_grad()
+    def compile_playbook_to_wave(self, playbook_sections: dict) -> torch.Tensor:
+        """
+        ACE Neurosymbolic Compilation: Compiles textual rules into a 4096-D wave.
+        """
+        rule_waves = []
+        w_down_matrix = self.l3_router.w_down.weight # Shape: [gemma_dim, hopfield_dim]
+        
+        for section, content in playbook_sections.items():
+            # Support both lists and single strings
+            guidelines = content if isinstance(content, list) else [content]
+            for guideline in guidelines:
+                rule_text = f"{section}: {guideline}"
+                
+                # Embed rule via CPU-mmap instance
+                emb_response = self.reflector_model.create_embedding(rule_text)
+                g_rule = torch.tensor(emb_response["data"][0]["embedding"], dtype=torch.float32, device='cpu')
+                if g_rule.ndim == 2:
+                    g_rule = torch.mean(g_rule, dim=0)
+                elif g_rule.ndim == 3:
+                    g_rule = torch.mean(g_rule.view(-1, g_rule.shape[-1]), dim=0)
+                
+                # Inverse orthogonal projection: Spin 3840-D back up to 4096-D continuous wave topology
+                psi_rule = torch.matmul(g_rule, w_down_matrix)
+                rule_waves.append(psi_rule)
+                
+        if not rule_waves:
+            return torch.zeros(self.hrr_dim, device='cpu')
+            
+        # Superposition: Merge all active guidelines into a single interference pattern
+        compiled_wave = torch.sum(torch.stack(rule_waves), dim=0)
+        return torch.nn.functional.normalize(compiled_wave, p=2, dim=-1)
 
     def apply_json_to_playbook(self, playbook_dict, json_operations) -> dict:
         import json

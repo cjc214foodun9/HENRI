@@ -168,106 +168,268 @@ class ActiveExperimentationEngine:
         
         from neurosymbolic_program_induction import ProgramInductor
         from zone_b_emulator import ZoneBPhysicalEmulator
+        from dynamic_lora import DynamicLoRAEngine
         
         self.inductor = ProgramInductor(state_dim=128)
         self.emulator = ZoneBPhysicalEmulator(self.orchestrator)
+        self.lora_engine = DynamicLoRAEngine()
+        
+        # Track errors in history for stagnation/basin escape
+        self.error_history = []
+        self.superposition_wave = None
 
-    def execute_task_manifold(self, task_dict):
+    def is_stuck_in_basin(self) -> bool:
+        """Checks if consecutive turns produce the exact same error footprint."""
+        if len(self.error_history) < 2:
+            return False
+        return self.error_history[-1] == self.error_history[-2]
+
+    def project_code_to_wave(self, candidate_code: str) -> torch.Tensor:
+        """Projects candidate code to 4096-D complex wave state."""
+        emb_res = self.orchestrator.base_model.create_embedding(candidate_code)
+        h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], dtype=torch.float32)
+        h_7b_lora = self.orchestrator.lora_managers[0].apply_lora(h_7b_raw)
+        if len(h_7b_lora.shape) == 2:
+            h_7b_lora = torch.mean(h_7b_lora, dim=0)
+            
+        psi_candidate_focused = self.orchestrator.l3_router.activation_to_wave(h_7b_lora)
+        if len(psi_candidate_focused.shape) == 2:
+            psi_candidate_focused = torch.mean(psi_candidate_focused, dim=0)
+            
+        return psi_candidate_focused.flatten()
+
+    def run_repl_sandbox(self, code_payload, training_cases, test_mode=False):
+        import copy
+        sandbox_globals = {}
+        
+        common_imports = (
+            "import math\n"
+            "import collections\n"
+            "from collections import defaultdict, deque, Counter\n"
+            "import itertools\n"
+            "import copy\n"
+            "import numpy as np\n"
+            "import torch\n"
+            "import torch.nn as torch_nn\n"
+        )
+        full_code = common_imports + code_payload
+        
+        try:
+            exec(full_code, sandbox_globals)
+            if 'transform' not in sandbox_globals:
+                return 0.0, "Execution Error: Function 'transform' not defined."
+            transform_func = sandbox_globals['transform']
+            
+            if test_mode:
+                # CRITICAL FIX: Deep-copy the input grid to prevent in-place memory corruption
+                safe_input = copy.deepcopy(training_cases[0]['input'])
+                prediction = transform_func(safe_input)
+                return 1.0, prediction
+            
+            passed = 0
+            for case in training_cases:
+                # CRITICAL FIX: Deep-copy the input grid to prevent in-place memory corruption
+                safe_input = copy.deepcopy(case['input'])
+                expected_output = case['output']
+                
+                # Execute transformation on the isolated memory block
+                if transform_func(safe_input) == expected_output:
+                    passed += 1
+                    
+            if passed == len(training_cases):
+                return 1.0, "All training cases passed."
+            return (passed / len(training_cases)), f"Failed. Passed {passed}/{len(training_cases)}."
+            
+        except Exception as e:
+            return 0.0, f"Execution Error: {str(e)}"
+
+    def evaluate_candidate(self, pure_code: str, train_cases: list) -> tuple:
         """
-        Coordinates the multi-turn ACE loop: playbook generation, steering wave compilation,
-        decentralized generation, syntax checking, physical wave validation, and playbook curation.
+        Executes candidate program in REPL sandbox against all training cases.
+        Returns: (passed_cases, total_cases, execution_feedback)
         """
+        score, feedback = self.run_repl_sandbox(pure_code, train_cases)
+        total_cases = len(train_cases)
+        passed_cases = int(score * total_cases)
+        return passed_cases, total_cases, feedback
+
+    def execute_task_manifold(self, task_dict, time_limit=1200):
+        """
+        Coordinates the Parallel Evolutionary Wave-Search Architecture.
+        """
+        import time
+        start_time = time.time()
+        
         playbook_dict = self.orchestrator.initialize_empty_playbook()
         
         from run_arc_benchmark import build_arc_prompt
         task_prompt, _ = build_arc_prompt(task_dict)
         
-        for revision_step in range(1, self.max_revisions + 1):
+        self.error_history = []
+        self.superposition_wave = None
+        self.best_sandbox_accuracy = 0.0
+        
+        revision_step = 0
+        while True:
+            revision_step += 1
             print(f"\n--- [ACE TURN {revision_step}] ---")
             
-            # 1. Compile the active playbook definitions into a steering wave
+            elapsed = time.time() - start_time
+            if elapsed >= time_limit:
+                print(f"[ENGINE] Time limit of {time_limit}s reached (Elapsed: {elapsed:.2f}s). Stopping revision loop.")
+                break
+                
+            stuck = self.is_stuck_in_basin()
+            temp = 1.35 if stuck else 0.70
+            inject_noise = stuck
+            
+            # 1. Wave Superposition: compile playbook to continuous wave
             playbook_wave = self.orchestrator.compile_playbook_to_wave(playbook_dict)
             
-            # 2. Delegate generation to the decentralized 16-agent fabric
-            candidate_code = self.orchestrator.swarm_fabric.generate_swarm_hypothesis(
+            # Blend superposition wave from elite candidates of the last turn
+            if self.superposition_wave is not None:
+                if playbook_wave is not None:
+                    # Sum wave states into active interference pattern
+                    superposition = playbook_wave.flatten() + self.superposition_wave.flatten()
+                    mags = torch.abs(superposition).clamp(min=1e-8)
+                    playbook_wave = (superposition / mags).reshape(playbook_wave.shape)
+                else:
+                    playbook_wave = self.superposition_wave
+            
+            # 2. Parallel Monte Carlo Generation: fire swarm to generate parallel hypotheses
+            remaining = time_limit - (time.time() - start_time)
+            if remaining > 800:
+                num_candidates = 16  # Fire all 16 parallel agents as requested
+            elif remaining > 400:
+                num_candidates = 8
+            elif remaining > 150:
+                num_candidates = 4
+            else:
+                num_candidates = 1
+                
+            print(f"[ENGINE] Remaining time: {remaining:.2f}s. Generating {num_candidates} parallel hypotheses...")
+            candidate_batch = self.orchestrator.swarm_fabric.generate_parallel_hypotheses(
                 task_dict=task_dict,
                 playbook_wave=playbook_wave,
-                playbook_dict=playbook_dict
+                playbook_dict=playbook_dict,
+                temperature=temp,
+                inject_noise=inject_noise,
+                num_candidates=num_candidates
             )
             
-            print(f"[ENGINE] Swarm Hypothesis generated.")
-            
-            # 3. Validate candidate through the symbolic AST compiler
-            ast_valid, syntax_feedback = self.inductor.verify_syntax(candidate_code)
-            if not ast_valid:
-                print(f"[ENGINE] Syntax check failed: {syntax_feedback}")
-                insight = self.orchestrator.reflect_on_failure(task_prompt, candidate_code, syntax_feedback)
-                playbook_dict = self.orchestrator.curate_playbook(playbook_dict, insight)
-                print(f"[ENGINE] Playbook curated based on syntax error.")
-                continue
+            scored_candidates = []
+            for candidate_info in candidate_batch:
+                candidate, alpha_routing = candidate_info
+                # 3. Inductive Generalization Guard (AST Sieve)
+                is_generalized, guard_feedback = self.inductor.assert_generalization(candidate)
+                if not is_generalized:
+                    print(f"[ENGINE] Generalization check failed: {guard_feedback}")
+                    # Store as invalid (None truth_tensor)
+                    scored_candidates.append((candidate, None, 0.0, None, 999.0, guard_feedback, alpha_routing, None))
+                    continue
+                    
+                pure_code = guard_feedback
                 
-            # 4. Verify logic through the physical GPU-accelerated optical emulator
-            wave_valid, physical_feedback = self.emulator.evaluate_wavefront(candidate_code, target_label="SCADA_Pressure_Control")
-            if not wave_valid:
-                print(f"[ENGINE] Physical wave check failed: {physical_feedback}")
-                insight = self.orchestrator.reflect_on_failure(task_prompt, candidate_code, physical_feedback)
-                playbook_dict = self.orchestrator.curate_playbook(playbook_dict, insight)
-                print(f"[ENGINE] Playbook curated based on boundary violation.")
-                continue
+                # 4. The Physical Sagnac Veto: evaluate wavefront in Zone B emulator
+                wave_valid, physical_feedback, error_energy, truth_tensor, delta_np = self.emulator.evaluate_wavefront(pure_code, target_label="SCADA_Pressure_Control")
+                if not wave_valid:
+                    print(f"[ENGINE] Physical wave check failed: {physical_feedback}")
+                    # Store as invalid but keep the truth_tensor/error_energy for drift
+                    scored_candidates.append((candidate, pure_code, 0.0, truth_tensor, error_energy, physical_feedback, alpha_routing, delta_np))
+                    continue
+                    
+                # 5. Measure sandbox execution accuracy against training set
+                passed_cases, total_cases, execution_feedback = self.evaluate_candidate(pure_code, task_dict["train"])
+                partial_score = passed_cases / total_cases
                 
-            # Both validation gates pass: extract final test grid prediction
-            common_imports = (
-                "import math\n"
-                "import collections\n"
-                "from collections import defaultdict, deque, Counter\n"
-                "import itertools\n"
-                "import copy\n"
-                "import numpy as np\n"
-                "import torch\n"
-                "import torch.nn as torch_nn\n"
-            )
-            
-            code_block = candidate_code
-            if "<|python_begin" in candidate_code:
-                idx_begin = candidate_code.find("<|python_begin")
-                idx_end = candidate_code.find("<|python_end|>")
-                if idx_end == -1:
-                    idx_end = candidate_code.find("</|python_end|>")
-                idx_close = candidate_code.find("|>", idx_begin)
-                if idx_close != -1 and idx_close < idx_end:
-                    code_block = candidate_code[idx_close + 2 : idx_end].strip()
-            elif "```python" in candidate_code:
-                parts = candidate_code.split("```python")
-                if len(parts) > 1:
-                    code_block = parts[1].split("```")[0].strip()
+                # REINFORCE Update: Compute reward signal relative to the best accuracy seen so far
+                if partial_score > self.best_sandbox_accuracy:
+                    reward_signal = 1.0
+                elif partial_score < self.best_sandbox_accuracy:
+                    reward_signal = -1.0
+                else:
+                    reward_signal = 0.0
+                    
+                if reward_signal != 0.0 and delta_np is not None:
+                    residual_tensor = self.orchestrator.l3_router.wave_to_activation(delta_np)
+                    self.lora_engine.apply_reinforce_update(
+                        lora_managers=self.orchestrator.lora_managers,
+                        routing_weights=alpha_routing,
+                        residual=residual_tensor,
+                        reward_signal=reward_signal,
+                        lr=0.01
+                    )
+                
+                if passed_cases == total_cases:
+                    print(f"[ENGINE] Perfect inductive generalization achieved! Executing test case...")
+                    test_score, test_pred = self.run_repl_sandbox(pure_code, task_dict["test"], test_mode=True)
+                    
+                    if test_score == 1.0 and test_pred is not None:
+                        # Success: perform final Drift crystallization
+                        winner_idx = self.orchestrator.l3_router.update_expert_centroids(truth_tensor)
+                        print(f"[ANCHOR] Success wave drifted expert centroid {winner_idx} permanently.")
+                        self.orchestrator.save_router_centroids()
+                        self.orchestrator.lora_managers[winner_idx].save_weights()
+                        
+                        self.orchestrator.flush_lora_and_context_to_db(domain_tag="ARC_Task")
+                        return test_pred, revision_step, "SUCCESS"
+                    else:
+                        print("[ENGINE] Test input execution failed.")
+                        scored_candidates.append((candidate, pure_code, 0.0, truth_tensor, error_energy, "Compiled successfully on train, but failed to execute on test input", alpha_routing, delta_np))
+                else:
+                    print(f"[ENGINE] Candidate score: {passed_cases}/{total_cases}")
+                    scored_candidates.append((candidate, pure_code, partial_score, truth_tensor, error_energy, execution_feedback, alpha_routing, delta_np))
+                    
+            # Update best accuracy seen so far
+            turn_best_score = max([c[2] for c in scored_candidates]) if scored_candidates else 0.0
+            if turn_best_score > self.best_sandbox_accuracy:
+                self.best_sandbox_accuracy = turn_best_score
 
-            exec_code = common_imports + code_block + "\n\n"
-            self.orchestrator.repl.execute_block(exec_code)
+            # 6. The Drift: Select winning candidate with lowest physical error energy
+            valid_candidates = [c for c in scored_candidates if c[3] is not None] # c[3] is truth_tensor
+            if valid_candidates:
+                # Sort by physical error energy ascending
+                valid_candidates.sort(key=lambda x: x[4]) # x[4] is error_energy
+                winner_candidate, winner_pure, winner_score, winner_truth_tensor, winner_error_energy, winner_feedback, winner_alpha_routing, winner_delta_np = valid_candidates[0]
+                
+                print(f"[ENGINE] Declaring physical winner of turn {revision_step} (Error Energy: {winner_error_energy:.4f})")
+                winner_idx = self.orchestrator.l3_router.update_expert_centroids(winner_truth_tensor)
+                print(f"[ANCHOR] Expert centroid {winner_idx} drifted toward winner concept space.")
+                self.orchestrator.save_router_centroids()
+                
+                # Save specialized expert weights
+                self.orchestrator.lora_managers[winner_idx].save_weights()
+                
+                # Find the best candidate for playbook curation and error tracking (highest train score)
+                valid_candidates.sort(key=lambda x: (-x[2], x[4]))
+                best_candidate, best_pure, best_score, _, _, best_feedback, _, _ = valid_candidates[0]
+            else:
+                best_candidate, best_score, best_feedback = scored_candidates[0][0], 0.0, scored_candidates[0][5]
+                
+            self.error_history.append(best_feedback)
             
-            test_input = task_dict["test"][0]["input"]
-            test_runner = (
-                f"input_val = {test_input}\n"
-                f"output_val = transform(input_val)\n"
-                f"print('TEST_RESULT:', output_val)\n"
-            )
-            test_res = self.orchestrator.repl.execute_block(test_runner)
-            test_pred = None
-            if test_res["success"]:
-                stdout = test_res["stdout"].strip()
-                if "TEST_RESULT:" in stdout:
-                    try:
-                        result_str = stdout.split("TEST_RESULT:")[1].strip()
-                        import ast
-                        test_pred = ast.literal_eval(result_str)
-                    except:
-                        pass
-
-            if playbook_wave is not None:
-                self.orchestrator.l3_router.update_expert_centroids(playbook_wave)
-            
-            self.orchestrator.flush_lora_and_context_to_db(domain_tag="ARC_Task")
-            
-            return test_pred, revision_step, "SUCCESS"
+            # Selection & Superposition of top 2 candidates for next turn steering
+            top_candidates = [c for c in scored_candidates if c[2] > 0 and c[3] is not None][:2]
+            if len(top_candidates) >= 2:
+                print("[ENGINE] Superposing top 2 candidate trajectories...")
+                wave_1 = self.project_code_to_wave(top_candidates[0][0])
+                wave_2 = self.project_code_to_wave(top_candidates[1][0])
+                superposition = wave_1 + wave_2
+                mags = torch.abs(superposition).clamp(min=1e-8)
+                self.superposition_wave = superposition / mags
+            elif len(top_candidates) == 1:
+                self.superposition_wave = self.project_code_to_wave(top_candidates[0][0])
+            else:
+                self.superposition_wave = None
+                
+            # 7. Curate the playbook based on the best candidate's failure
+            if "[CRITICAL] Hardcoding" in best_feedback:
+                insight = "[CRITICAL] Hardcoding training grid values is forbidden. You must write a generalized functional transformation matrix."
+            else:
+                insight = self.orchestrator.reflect_on_failure(task_prompt, best_candidate, best_feedback)
+                
+            playbook_dict = self.orchestrator.curate_playbook(playbook_dict, insight)
+            print("[ENGINE] Playbook curated.")
             
         self.orchestrator.flush_lora_and_context_to_db(domain_tag="ARC_Task")
-        return None, self.max_revisions, "FAILED"
+        return None, revision_step, "FAILED"

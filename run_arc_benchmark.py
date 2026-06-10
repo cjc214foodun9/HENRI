@@ -35,14 +35,16 @@ def build_arc_prompt(task_dict):
         "BLOCK 1: Reasoning\n"
         "Enclose this block in <|reasoning_begin|> and <|reasoning_end|> tags. Inside, you must:\n"
         "1. Identify the background color.\n"
-        "2. Identify the discrete objects, their colors, shapes, and bounding boxes.\n"
+        "2. Briefly describe the objects and pattern (MAXIMUM 80 words, DO NOT write out row-by-row or coordinate-by-coordinate lists of grids, keep it extremely concise).\n"
         "3. Deduce the topological/geometric transformation rule.\n"
         "4. Determine the Hybrid Execution Policy.\n\n"
         "BLOCK 2: Python Code\n"
         "Enclose this block in <|python_begin|> and <|python_end|> tags. Inside, write the executable `def transform(grid: list[list[int]]) -> list[list[int]]` function.\n"
         "CRITICAL RULES:\n"
+        "- KEEP THE REASONING BLOCK VERY BRIEF (MAX 80 WORDS) to leave token budget for the Python code block.\n"
         "- NumPy is strictly forbidden. You must use PyTorch (torch).\n"
-        "- Absolutely NO explanations or comments outside the tags. The output must start with <|reasoning_begin|>.\n\n"
+        "- Absolutely NO explanations or comments outside the tags. The output must start with <|reasoning_begin|>.\n"
+        "- Your program MUST print(json.dumps(answer)) as its final line.\n\n"
         "Here are the training demonstration inputs and outputs:\n\n"
     )
     
@@ -67,17 +69,16 @@ class ARCSolverAgent:
     def __init__(self, orchestrator):
         self.orchestrator = orchestrator
 
-    def solve_task(self, task_dict, max_revisions=3) -> tuple:
+    def solve_task(self, task_dict, time_limit=1200) -> tuple:
         """Hand off control to ActiveExperimentationEngine for closed-loop execution."""
         print(f"[SYSTEM] Task ingested. Initializing ActiveExperimentationEngine...")
         from active_experimentation_engine import ActiveExperimentationEngine
         
         engine = ActiveExperimentationEngine(
-            orchestrator=self.orchestrator,
-            max_revisions=max_revisions
+            orchestrator=self.orchestrator
         )
         
-        final_solution, revisions, status = engine.execute_task_manifold(task_dict)
+        final_solution, revisions, status = engine.execute_task_manifold(task_dict, time_limit=time_limit)
         return final_solution, revisions, status
 
 def main():
@@ -94,15 +95,18 @@ def main():
     task_files = sorted(list(eval_dir.glob("*.json")))
     print(f"[SYSTEM] Found {len(task_files)} public evaluation tasks.")
     
-    # Limit to first 3 tasks for validation speed
-    max_test_tasks = 3
+    # Run all tasks for full evaluation
+    max_test_tasks = len(task_files)
     tasks_to_test = task_files[:max_test_tasks]
-    print(f"[SYSTEM] Selecting first {len(tasks_to_test)} tasks for benchmarking.")
+    print(f"[SYSTEM] Selecting all {len(tasks_to_test)} tasks for benchmarking.")
     
     # 2. Initialize the Swarm Orchestrator with memory and GPU optimizations
     print("\n[SYSTEM] Booting optimized Swarm Orchestrator...")
+    model_path = "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf"
+    if len(sys.argv) > 1:
+        model_path = sys.argv[1]
     orchestrator = HenriCognitiveSwarmOrchestrator(
-        model_path="Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf",
+        model_path=model_path,
         num_streams=16
     )
     
@@ -112,6 +116,9 @@ def main():
     total_time = 0.0
     results_summary = []
     
+    dispersion_history = []
+    ma_history = []
+    
     # 3. Loop through tasks
     for idx, t_file in enumerate(tasks_to_test):
         print(f"\n--- [TASK {idx+1}/{len(tasks_to_test)}: {t_file.name}] ---")
@@ -119,7 +126,7 @@ def main():
             task_dict = json.load(f)
             
         start_time = time.perf_counter()
-        prediction, revisions, status = agent.solve_task(task_dict, max_revisions=3)
+        prediction, revisions, status = agent.solve_task(task_dict, time_limit=1200)
         elapsed = time.perf_counter() - start_time
         total_time += elapsed
         
@@ -143,6 +150,20 @@ def main():
         
         # Hard Manifold Reset between tasks to prevent VRAM/RAM leakage and context pollution
         orchestrator.flush_cognitive_manifold()
+        
+        # Log dispersion metric
+        dispersion = orchestrator.l3_router.measure_centroid_dispersion()
+        print(f"[METRIC] Mean expert centroid dispersion: {dispersion:.6f}")
+        dispersion_history.append(dispersion)
+        
+        current_ma = sum(dispersion_history[-5:]) / len(dispersion_history[-5:])
+        ma_history.append(current_ma)
+        
+        if len(ma_history) >= 5:
+            delta = ma_history[-1] - ma_history[-5]
+            print(f"[METRIC] 5-task moving average of dispersion: {current_ma:.6f} (delta: {delta:+.6f})")
+            if delta <= 0:
+                raise SystemExit("FATAL: MoE Specialization Failure. Centroids have collapsed.")
         
     # 4. Print Summary
     print("\n=====================================================================")
