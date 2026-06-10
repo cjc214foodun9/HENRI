@@ -64,7 +64,7 @@ class EmergentCognitiveSwarm(nn.Module):
         import llama_cpp
         return llama_cpp.LogitsProcessorList([steered_logits_processor])
 
-    def generate_swarm_hypothesis(self, task_dict, playbook_wave, playbook_dict=None, temperature=0.7, inject_noise=False):
+    def generate_swarm_hypothesis(self, task_dict, playbook_wave, playbook_dict=None, temperature=0.7, inject_noise=False, early_stopping_callback=None):
         """
         Computes routing weights, blends PyTorch experts, injects dynamic LoRA adapter,
         and generates prompt response. Supports dynamic temperature and routing noise injection.
@@ -98,30 +98,42 @@ class EmergentCognitiveSwarm(nn.Module):
         
         try:
             # Execute the accelerated Vulkan token generation pass
-            res = self.llama(
+            res_stream = self.llama(
                 prompt,
                 logits_processor=logit_processor,
                 max_tokens=2048,
                 temperature=temperature,
-                stop=["<turn|>", "<|turn>"]
+                stop=["<turn|>", "<|turn>"],
+                stream=True
             )
+            
+            text = ""
+            token_count = 0
+            for chunk in res_stream:
+                token_str = chunk["choices"][0]["text"]
+                text += token_str
+                token_count += 1
+                
+                if early_stopping_callback is not None and token_count % 64 == 0:
+                    should_kill = early_stopping_callback(text, alpha_routing)
+                    if should_kill:
+                        print(f"[SWARM] Micro-Epoch Apoptosis Triggered at token {token_count}. Thread Guillotine executed.")
+                        break
+                        
         finally:
             # Clear physical adapter immediately after generation to prevent graph interference
             if self.orchestrator is not None:
                 self.orchestrator.clear_active_lora()
         
-        if isinstance(res, dict):
-            text = res["choices"][0]["text"].strip()
-        else:
-            text = str(res).strip()
+        text = text.strip()
             
         # Log the generated swarm hypothesis to stdout
         print(f"\n--- [SWARM HYPOTHESIS GENERATED] ---\n{text}\n-------------------------------------\n")
         return text, alpha_routing
 
-    def generate_parallel_hypotheses(self, task_dict, playbook_wave, playbook_dict=None, temperature=0.7, inject_noise=False, num_candidates=16):
+    def generate_parallel_hypotheses(self, task_dict, playbook_wave, playbook_dict=None, temperature=0.7, inject_noise=False, num_candidates=16, early_stopping_callback=None):
         """
-        Generates a batch of parallel hypotheses across the swarm.
+        Generates a batch of parallel hypotheses across the swarm sequentially.
         We perturb the playbook wave slightly for each stream to explore alternative trajectories.
         """
         candidates = []
@@ -135,18 +147,26 @@ class EmergentCognitiveSwarm(nn.Module):
             else:
                 perturbed_wave = None
                 
-            # Diversify non-primary candidates by injecting noise
             stream_inject_noise = inject_noise or (i > 0)
             
+            if early_stopping_callback is not None:
+                stream_cb = lambda t, a, idx=i: early_stopping_callback(t, a, idx)
+            else:
+                stream_cb = None
+            
             print(f"[SWARM] Generating candidate {i+1}/{num_candidates} (temperature={temperature:.2f}, noise={stream_inject_noise})...")
-            candidate, alpha_routing = self.generate_swarm_hypothesis(
-                task_dict=task_dict,
-                playbook_wave=perturbed_wave,
-                playbook_dict=playbook_dict,
-                temperature=temperature,
-                inject_noise=stream_inject_noise
-            )
-            candidates.append((candidate, alpha_routing))
+            try:
+                candidate, alpha_routing = self.generate_swarm_hypothesis(
+                    task_dict=task_dict,
+                    playbook_wave=perturbed_wave,
+                    playbook_dict=playbook_dict,
+                    temperature=temperature,
+                    inject_noise=stream_inject_noise,
+                    early_stopping_callback=stream_cb
+                )
+                candidates.append((candidate, alpha_routing))
+            except Exception as e:
+                print(f"[SWARM] Exception during generation: {e}")
             
         return candidates
 

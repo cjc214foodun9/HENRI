@@ -48,9 +48,9 @@ try:
     import llama_cpp
     import llama_cpp.llama_cpp
     HAS_LLAMA_CPP = True
-    # Monkey-patch parallel sequences to 2 to ensure n_ctx_seq = n_ctx / 2 is large enough for ARC prompts
-    llama_cpp.llama_max_parallel_sequences = lambda: 2
-    llama_cpp.llama_cpp.llama_max_parallel_sequences = lambda: 2
+    # Monkey-patch parallel sequences to 16 to ensure we evaluate 16 agents simultaneously
+    llama_cpp.llama_max_parallel_sequences = lambda: 16
+    llama_cpp.llama_cpp.llama_max_parallel_sequences = lambda: 16
 except ImportError:
     HAS_LLAMA_CPP = False
 
@@ -660,12 +660,12 @@ class HenriCognitiveSwarmOrchestrator:
                 self.gen_model = llama_cpp.Llama(
                     model_path=gen_model_path,
                     n_ctx=8192,        # 8K context to fit fully in VRAM alongside computation graph
-                    n_batch=512,       # Processing throughput for dense prompt evals
+                    n_batch=1024,      # Ensure batch size is large enough for 16x64 tokens
                     n_threads=llama_threads,
                     embedding=True,    # ENABLED so base_model can share this instance for embeddings
                     use_mmap=True,
                     use_mlock=attempt_mlock,
-                    n_gpu_layers=-1,   # Offload 100% of layers to GPU
+                    n_gpu_layers=30,   # Throttle back layers to give VRAM room for generation graphs
                     flash_attn=True    # Enable to compress the kq-0 attention node memory
                 )
                 

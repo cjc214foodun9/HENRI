@@ -169,14 +169,32 @@ class ActiveExperimentationEngine:
         from neurosymbolic_program_induction import ProgramInductor
         from zone_b_emulator import ZoneBPhysicalEmulator
         from dynamic_lora import DynamicLoRAEngine
+        from entropic_survival_engine import EntropicSurvivalEngine
         
         self.inductor = ProgramInductor(state_dim=128)
         self.emulator = ZoneBPhysicalEmulator(self.orchestrator)
         self.lora_engine = DynamicLoRAEngine()
+        self.entropic_engine = EntropicSurvivalEngine(num_experts=self.orchestrator.num_streams)
         
         # Track errors in history for stagnation/basin escape
         self.error_history = []
         self.superposition_wave = None
+        self.playbook_wave = None
+
+    def fetch_active_playbook_waves(self):
+        if hasattr(self, 'playbook_wave') and self.playbook_wave is not None:
+            return self.playbook_wave.unsqueeze(0).to(torch.complex64)
+        return torch.zeros((1, 4096), dtype=torch.complex64)
+
+    def fetch_forbidden_topology_waves(self):
+        if not hasattr(self, 'error_history') or not self.error_history:
+            return None
+        repellers = []
+        for err in self.error_history[-5:]:
+            repellers.append(self.project_code_to_wave(err))
+        if len(repellers) > 0:
+            return torch.stack(repellers).to(torch.complex64)
+        return None
 
     def is_stuck_in_basin(self) -> bool:
         """Checks if consecutive turns produce the exact same error footprint."""
@@ -283,8 +301,9 @@ class ActiveExperimentationEngine:
             temp = 1.35 if stuck else 0.70
             inject_noise = stuck
             
-            # 1. Wave Superposition: compile playbook to continuous wave
+            # Compile current Playbook constraints into an axiomatic wave
             playbook_wave = self.orchestrator.compile_playbook_to_wave(playbook_dict)
+            self.playbook_wave = playbook_wave
             
             # Blend superposition wave from elite candidates of the last turn
             if self.superposition_wave is not None:
@@ -308,13 +327,47 @@ class ActiveExperimentationEngine:
                 num_candidates = 1
                 
             print(f"[ENGINE] Remaining time: {remaining:.2f}s. Generating {num_candidates} parallel hypotheses...")
+            
+            # --- MICRO-EPOCH APOPTOSIS CALLBACK ---
+            zone_c_attractors = self.fetch_active_playbook_waves()
+            zone_c_repellers = self.fetch_forbidden_topology_waves()
+            
+            failure_tracker = {}
+            def micro_epoch_eval(accumulated_text, alpha_routing, candidate_idx):
+                if candidate_idx not in failure_tracker:
+                    failure_tracker[candidate_idx] = 0
+                    
+                partial_wave = self.project_code_to_wave(accumulated_text)
+                fitness_scores = self.entropic_engine.evaluate_entropic_fitness(
+                    [partial_wave], 
+                    zone_c_attractors, 
+                    zone_c_repellers
+                )
+                fitness = fitness_scores[0].item()
+                
+                if candidate_idx < len(self.orchestrator.lora_managers):
+                    manager = self.orchestrator.lora_managers[candidate_idx]
+                else:
+                    return False
+                
+                if fitness < self.entropic_engine.survival_threshold:
+                    self.entropic_engine.apply_viscoelastic_apoptosis(manager, fitness)
+                    failure_tracker[candidate_idx] += 1
+                    if failure_tracker[candidate_idx] >= 3:
+                        return True
+                else:
+                    failure_tracker[candidate_idx] = 0
+                return False
+            # --------------------------------------
+
             candidate_batch = self.orchestrator.swarm_fabric.generate_parallel_hypotheses(
                 task_dict=task_dict,
                 playbook_wave=playbook_wave,
                 playbook_dict=playbook_dict,
                 temperature=temp,
                 inject_noise=inject_noise,
-                num_candidates=num_candidates
+                num_candidates=num_candidates,
+                early_stopping_callback=micro_epoch_eval
             )
             
             scored_candidates = []
@@ -350,16 +403,7 @@ class ActiveExperimentationEngine:
                 else:
                     reward_signal = 0.0
                     
-                if reward_signal != 0.0 and delta_np is not None:
-                    residual_tensor = self.orchestrator.l3_router.wave_to_activation(delta_np)
-                    self.lora_engine.apply_reinforce_update(
-                        lora_managers=self.orchestrator.lora_managers,
-                        routing_weights=alpha_routing,
-                        residual=residual_tensor,
-                        reward_signal=reward_signal,
-                        lr=0.01
-                    )
-                
+                # LoRA reinforced updates removed in favor of thermodynamic Entropic Survival Engine
                 if passed_cases == total_cases:
                     print(f"[ENGINE] Perfect inductive generalization achieved! Executing test case...")
                     test_score, test_pred = self.run_repl_sandbox(pure_code, task_dict["test"], test_mode=True)
@@ -391,6 +435,32 @@ class ActiveExperimentationEngine:
                 # Sort by physical error energy ascending
                 valid_candidates.sort(key=lambda x: x[4]) # x[4] is error_energy
                 winner_candidate, winner_pure, winner_score, winner_truth_tensor, winner_error_energy, winner_feedback, winner_alpha_routing, winner_delta_np = valid_candidates[0]
+                
+                # --- NEW ENTROPIC SURVIVAL ENGINE LOGIC ---
+                zone_c_attractors = self.fetch_active_playbook_waves()
+                zone_c_repellers = self.fetch_forbidden_topology_waves()
+                
+                # construct expert waves from the 16 candidates
+                expert_waves = []
+                for candidate_info in candidate_batch:
+                    c_wave = self.project_code_to_wave(candidate_info[0])
+                    expert_waves.append(c_wave)
+                expert_waves = torch.stack(expert_waves)
+                
+                orthogonal_residual = winner_delta_np if winner_delta_np is not None else None
+                
+                fitness_scores = self.entropic_engine.evaluate_entropic_fitness(
+                    expert_waves, 
+                    zone_c_attractors, 
+                    zone_c_repellers
+                )
+                
+                self.entropic_engine.execute_survival_creep(
+                    self.orchestrator.lora_managers, 
+                    fitness_scores, 
+                    orthogonal_residual
+                )
+                # ------------------------------------------
                 
                 print(f"[ENGINE] Declaring physical winner of turn {revision_step} (Error Energy: {winner_error_energy:.4f})")
                 winner_idx = self.orchestrator.l3_router.update_expert_centroids(winner_truth_tensor)
