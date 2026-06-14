@@ -184,7 +184,7 @@ class GemmaRAMSwarmMock:
     High-fidelity fallback mock of Gemma E4B model running from RAM
     when llama_cpp cannot find the weights or fails to initialize.
     """
-    def __init__(self, gemma_dim=2048):
+    def __init__(self, gemma_dim=3840):
         self.gemma_dim = gemma_dim
         print("[MOCK SWARM] Initialized Gemma E4B RAM Swarm in Mock Mode.")
 
@@ -576,7 +576,7 @@ class HenriCognitiveSwarmOrchestrator:
     Synchronizes the asynchronous timed loop to fire in series with the RAM cycles
     to build a continuous, coherent HRR vector stream.
     """
-    def __init__(self, model_path="Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf", num_streams=16, gemma_dim=2048, hrr_dim=4096):
+    def __init__(self, model_path="Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf", num_streams=16, gemma_dim=3840, hrr_dim=4096):
         self.num_streams = num_streams
         self.gemma_dim = gemma_dim
         self.hrr_dim = hrr_dim
@@ -793,6 +793,10 @@ class HenriCognitiveSwarmOrchestrator:
         # Start telemetry server dynamically
         self.telemetry_server = None
         self.start_telemetry_server()
+
+        # 8c. Initialize Entropic Survival Engine
+        from entropic_survival_engine import EntropicSurvivalEngine
+        self.entropic_engine = EntropicSurvivalEngine(num_experts=num_streams)
 
         # Phase 2, 3, 4: Distributed swarm agents (one per stream)
         self.agents = torch_nn.ModuleList([
@@ -1668,6 +1672,36 @@ class HenriCognitiveSwarmOrchestrator:
         self.flush_cognitive_manifold()
         print("[SYSTEM] LoRA adapters consolidated to Zone C database and contexts fully flushed.")
 
+    def save_wave_to_db(self, name: str, wave: torch.Tensor, domain_tag: str = "wosx_pde_axiom"):
+        import uuid
+        import psycopg
+        import numpy as np
+        from henri_contract import complex_to_db, DIMS
+        
+        db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:5433/henri")
+        try:
+            if torch.is_tensor(wave):
+                wave_np = wave.detach().cpu().numpy()
+            else:
+                wave_np = wave
+            vector_str = complex_to_db(wave_np, DIMS.hrr_dim)
+            concept_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, name))
+            
+            with psycopg.connect(db_url, connect_timeout=3) as conn:
+                with conn.cursor() as cur:
+                    conn.autocommit = True
+                    cur.execute(
+                        """
+                        INSERT INTO hrr_canonical_lexicon (concept_hash, semantic_label, domain_tag, hrr_wavefront)
+                        VALUES (%s, %s, %s, %s::vector)
+                        ON CONFLICT (concept_hash) DO NOTHING;
+                        """,
+                        (concept_hash, name, domain_tag, vector_str),
+                    )
+            print(f"[ZONE C] Saved wave '{name}' to TimescaleDB.")
+        except Exception as e:
+            print(f"[ZONE C] Warning: Failed to save wave {name} to TimescaleDB: {e}")
+
     def compact_prompt_history(self, prompt: str) -> str:
         """
         Compacts the prompt history when context window threshold is breached.
@@ -2376,9 +2410,8 @@ class HenriCognitiveSwarmOrchestrator:
         """
         print(f"[TABULA RASA] Initiating memory flush for domain '{domain_tag}'.")
         self.distill_and_save_axiom(0, domain_tag)
-        if self.gen_model and hasattr(self.gen_model.llama, "ctx"):
-            import llama_cpp
-            llama_cpp._lib.llama_kv_cache_clear(self.gen_model.llama.ctx)
+        if self.gen_model and hasattr(self.gen_model, "llama") and hasattr(self.gen_model.llama, "reset"):
+            self.gen_model.llama.reset()
             print("[TABULA RASA] VRAM KV-Cache successfully purged.")
         for idx, manager in self.lora_managers.items():
             with torch.no_grad():
@@ -2402,6 +2435,13 @@ class HenriCognitiveSwarmOrchestrator:
 
             phases = torch.angle(torch.complex(wave_4096, torch.zeros_like(wave_4096)))
             wave_4096_complex = torch.polar(torch.ones_like(phases), phases)
+            self.save_wave_to_db(domain_tag, wave_4096_complex, "wosx_distilled_expert_axiom")
+            
+            # Register in Hopfield lexicon so it becomes immediately fetchable in RAM
+            mags = torch.abs(wave_4096_complex)
+            mags = torch.clamp(mags, min=1e-8)
+            self.hopfield.register_concept(domain_tag, wave_4096_complex / mags)
+            
             self.synaptic_manager.consolidate_and_save_adapter(domain_tag, manager, 0.0)
             print(f"[TABULA RASA] Epistemic Distillation complete for Expert {expert_idx}. Macro-wave saved to Zone C.")
 

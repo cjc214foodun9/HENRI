@@ -202,6 +202,24 @@ class ActiveExperimentationEngine:
             return False
         return self.error_history[-1] == self.error_history[-2]
 
+    def sync_vulkan_kv_cache_slot(self, src_idx: int, dest_idx: int):
+        """
+        Overwrite the Vulkan KV-cache for this specific sequence to match the leader.
+        """
+        if not hasattr(self.orchestrator, "gen_model") or self.orchestrator.gen_model is None or self.orchestrator.is_mock:
+            return
+        try:
+            import llama_cpp
+            import llama_cpp.llama_cpp as lcpp
+            ctx = self.orchestrator.gen_model.llama.ctx
+            # Remove dest sequence
+            lcpp.llama_memory_seq_rm(ctx, dest_idx, 0, -1)
+            # Copy src sequence to dest sequence
+            lcpp.llama_memory_seq_cp(ctx, src_idx, dest_idx, 0, -1)
+            print(f"[KV CACHE SWAP] Successfully synced Vulkan KV-cache sequence slot {src_idx} -> {dest_idx}")
+        except Exception as e:
+            print(f"[KV CACHE SWAP] Warning: KV-cache sync failed: {e}")
+
     def project_code_to_wave(self, candidate_code: str) -> torch.Tensor:
         """Projects candidate code to 4096-D complex wave state."""
         emb_res = self.orchestrator.base_model.create_embedding(candidate_code)
@@ -272,13 +290,19 @@ class ActiveExperimentationEngine:
         passed_cases = int(score * total_cases)
         return passed_cases, total_cases, feedback
 
-    def execute_task_manifold(self, task_dict, time_limit=1200):
+    def execute_task_manifold(self, task_dict, time_limit=1200, domain_tag="ARC_Task"):
         """
         Coordinates the Parallel Evolutionary Wave-Search Architecture.
         """
         import time
         start_time = time.time()
         
+        # Pre-load specialized LoRA weights from the registry if they exist
+        if domain_tag:
+            print(f"[ENGINE] Pre-loading semantic LoRA adapter for domain tag '{domain_tag}'...")
+            for idx, manager in self.orchestrator.lora_managers.items():
+                self.orchestrator.synaptic_manager.route_and_load_adapter(domain_tag, manager)
+                
         playbook_dict = self.orchestrator.initialize_empty_playbook()
         
         from run_arc_benchmark import build_arc_prompt
@@ -373,7 +397,9 @@ class ActiveExperimentationEngine:
                 temperature=temp,
                 inject_noise=inject_noise,
                 num_candidates=num_candidates,
-                early_stopping_callback=micro_epoch_eval
+                early_stopping_callback=micro_epoch_eval,
+                start_time=start_time,
+                time_limit=time_limit
             )
             
             scored_candidates = []
@@ -421,7 +447,7 @@ class ActiveExperimentationEngine:
                         self.orchestrator.save_router_centroids()
                         self.orchestrator.lora_managers[winner_idx].save_weights()
                         
-                        self.orchestrator.flush_lora_and_context_to_db(domain_tag="ARC_Task")
+                        self.orchestrator.flush_lora_and_context_to_db(domain_tag=domain_tag)
                         return test_pred, revision_step, "SUCCESS"
                     else:
                         print("[ENGINE] Test input execution failed.")
@@ -507,5 +533,5 @@ class ActiveExperimentationEngine:
             playbook_dict = self.orchestrator.curate_playbook(playbook_dict, insight)
             print("[ENGINE] Playbook curated.")
             
-        self.orchestrator.flush_lora_and_context_to_db(domain_tag="ARC_Task")
+        self.orchestrator.flush_lora_and_context_to_db(domain_tag=domain_tag)
         return None, revision_step, "FAILED"

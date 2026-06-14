@@ -9,7 +9,7 @@ class DynamicLoraManager:
     to update Rank-16 LoRA adapters (A and B matrices), saving the updated state
     into a dynamic weight file to guide speculative reasoning.
     """
-    def __init__(self, gemma_dim=2048, rank=16, lora_path="archive/dynamic_lora_weights.bin"):
+    def __init__(self, gemma_dim=3840, rank=16, lora_path="archive/dynamic_lora_weights.bin"):
         self.gemma_dim = gemma_dim
         self.rank = rank
         self.lora_path = lora_path

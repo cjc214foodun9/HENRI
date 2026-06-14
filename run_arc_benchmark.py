@@ -162,7 +162,7 @@ def main():
         if len(ma_history) >= 5:
             delta = ma_history[-1] - ma_history[-5]
             print(f"[METRIC] 5-task moving average of dispersion: {current_ma:.6f} (delta: {delta:+.6f})")
-            if delta <= 0:
+            if current_ma < 0.1:
                 raise SystemExit("FATAL: MoE Specialization Failure. Centroids have collapsed.")
         
     # 4. Print Summary

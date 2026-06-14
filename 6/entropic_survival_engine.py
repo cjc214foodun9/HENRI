@@ -18,14 +18,18 @@ class EntropicSurvivalEngine:
             if t is None: return None
             if torch.is_complex(t):
                 return torch.cat([t.real, t.imag], dim=-1).to(torch.float32)
+            if t.shape[-1] == 4096:
+                zeros = torch.zeros_like(t)
+                return torch.cat([t, zeros], dim=-1).to(torch.float32)
             return t.to(torch.float32)
             
         z_attr = to_real(zone_c_attractors)
         z_rep = to_real(zone_c_repellers)
         
-        fitness_scores = torch.zeros(self.num_experts, device='cpu')
+        num_candidates = len(expert_waves)
+        fitness_scores = torch.zeros(num_candidates, device='cpu')
         
-        for i in range(self.num_experts):
+        for i in range(num_candidates):
             if i >= len(expert_waves):
                 break
             wave = expert_waves[i].unsqueeze(0) # Shape: [1, 4096]

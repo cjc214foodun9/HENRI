@@ -46,6 +46,8 @@ def compile_wosx_bindings():
     # Explicitly enforce Vulkan and disable CUDA for AMD Radeon compatibility
     os.environ["WOSX_USE_CUDA"] = "0"
     os.environ["WOSX_USE_VULKAN"] = "1"
+    os.environ["VULKAN_SDK"] = r"C:\VulkanSDK\1.4.350.0"
+    os.environ["PATH"] = r"C:\VulkanSDK\1.4.350.0\Bin;" + os.environ.get("PATH", "")
     
     build_cmd = "python setup.py build_ext --inplace --compiler=msvc"
     print(f"[INIT] Executing build command: {build_cmd}")
