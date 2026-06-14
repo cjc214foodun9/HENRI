@@ -7,6 +7,7 @@ from .core import (
 )
 from .thermodynamics import NaturalInductionLoss, DivergentMaster
 from .egress import QuantizedEgressAssembler
+from .database import HenriTimescaleConnector
 
 __all__ = [
     "HRRInputLayer",
@@ -17,4 +18,5 @@ __all__ = [
     "NaturalInductionLoss",
     "DivergentMaster",
     "QuantizedEgressAssembler",
+    "HenriTimescaleConnector",
 ]

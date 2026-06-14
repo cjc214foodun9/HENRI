@@ -1,12 +1,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import os
 from henri_core import (
     HRRInputLayer,
     ProprietaryHENRICore,
     NaturalInductionLoss,
     DivergentMaster,
     QuantizedEgressAssembler,
+    HenriTimescaleConnector,
 )
 
 def run_henri_simulation():
@@ -37,6 +39,10 @@ def run_henri_simulation():
     loss_fn = NaturalInductionLoss(lambda_boundary=15.0, reg_coefficient=2.0, dim=dim).to(device)
     thermostat = DivergentMaster(t_min=0.0, t_max=4.0, cooling_rate=0.08, heat_sensitivity=0.25, stagnation_limit=3)
     egress = QuantizedEgressAssembler(wave_dim=dim, decoder_hidden_dim=256, vocab_size=vocab_size).to(device)
+
+    # Database Connector (uses DATABASE_URL environment variable if set)
+    db_uri = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:5433/henri")
+    db = HenriTimescaleConnector(db_uri=db_uri)
 
     # Viscoelastic Creep optimizer (SGD with weight decay representing material resistance)
     optimizer = torch.optim.SGD(
@@ -107,6 +113,14 @@ def run_henri_simulation():
         resonance = torch.sum(F.normalize(final_wave, p=2, dim=-1) * zone_c_attractor, dim=-1).mean().item()
         
         print(f"  Step {step:02d} | Free Energy: {free_energy.item():.4f} | Temp: {new_T:.3f} | Resonance: {resonance:.4f}")
+        
+        # Live Telemetry Ingestion
+        db.log_relaxation_step(
+            step_id=step,
+            free_energy=free_energy.item(),
+            alpha=thermostat.alpha,
+            wave_tensor=final_wave[0] # 4096-D continuous wave
+        )
         
         if free_energy.item() < success_threshold:
             print(f"\n[RESONANCE ACHIEVED] Attractor locked at step {step} with Free Energy: {free_energy.item():.4f}")
