@@ -44,3 +44,8 @@ archive/l3_router_centroids.bin
 # Test and Scratch scripts
 scratch/
 
+
+# Data files to ignore (compiled separately)
+ARC-AGI-2/
+archive/CritPt-main/
+
