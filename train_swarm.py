@@ -89,7 +89,26 @@ def execute_master_train_run():
 
     # Build the target configuration footprint
     print(f"[*] Initializing ProprietaryHENRICore (dim={args.dim}, depth={args.depth}, experts={args.experts})...")
-    model = ProprietaryHENRICore(dim=args.dim, depth=args.depth, num_fluid_states=args.experts).to(device)
+    model = ProprietaryHENRICore(dim=args.dim, depth=args.depth, num_fluid_states=args.experts)
+    
+    device_type = 'cuda' if device.type == 'cuda' else 'cpu'
+    use_bf16 = False
+    
+    # Cast weights on CPU first to save system RAM and VRAM before GPU migration
+    if args.amp:
+        if device_type == 'cuda' and torch.cuda.is_bf16_supported():
+            model = model.bfloat16()
+            use_bf16 = True
+            print("[+] Cast model weights to bfloat16 for CPU/GPU memory efficiency.")
+        elif device_type == 'cpu':
+            model = model.bfloat16()
+            use_bf16 = True
+            print("[+] Cast model weights to bfloat16 (CPU fallback).")
+        else:
+            model = model.half()
+            print("[+] Cast model weights to float16.")
+            
+    model = model.to(device)
     
     # Configure gradient checkpointing
     if args.checkpointing:
@@ -117,10 +136,10 @@ def execute_master_train_run():
     loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
     print(f"[+] Loaded dataset of size: {len(dataset)} | Batches per Epoch: {len(loader)}")
 
-    # AMP scaler initialization
-    scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
+    # AMP scaler initialization (only needed for float16 scaling)
+    scaler = torch.amp.GradScaler(device_type, enabled=(args.amp and not use_bf16))
     if args.amp:
-        print("[+] Automatic Mixed Precision (AMP) is ENABLED.")
+        print(f"[+] Automatic Mixed Precision (AMP) is ENABLED (Dtype: {'bfloat16' if use_bf16 else 'float16'}).")
 
     model.train()
     
@@ -137,14 +156,17 @@ def execute_master_train_run():
         for batch_idx, boundary_vectors in enumerate(loader):
             optimizer.zero_grad()
             
-            boundary_vectors = F.normalize(boundary_vectors.to(device), p=2, dim=-1)
-            mock_initial_state = F.normalize(torch.randn_like(boundary_vectors).to(device), p=2, dim=-1)
+            # Match input tensor dtype and device to the model weights
+            model_dtype = next(model.parameters()).dtype
+            boundary_vectors = F.normalize(boundary_vectors.to(device, dtype=model_dtype), p=2, dim=-1)
+            mock_initial_state = F.normalize(torch.randn_like(boundary_vectors).to(device, dtype=model_dtype), p=2, dim=-1)
             
             # Fetch current thermostat temperature
             temperature = thermostat.get_temperature()
             
             # Forward pass under autocast (mixed precision)
-            with torch.cuda.amp.autocast(enabled=args.amp):
+            autocast_dtype = torch.bfloat16 if use_bf16 else torch.float16
+            with torch.amp.autocast(device_type=device_type, dtype=autocast_dtype, enabled=args.amp):
                 # We manually reconstruct the layer trajectory to compute full NaturalInductionLoss
                 wave_trajectory = [mock_initial_state.unsqueeze(1)]
                 curr = mock_initial_state
@@ -158,7 +180,7 @@ def execute_master_train_run():
                                 return block(c_wave, p_wave, z_attractor, temp_val.item())
                             return checkpoint_fn
                         
-                        temp_tensor = torch.tensor(temperature, device=device, requires_grad=False)
+                        temp_tensor = torch.tensor(temperature, device=device, dtype=model_dtype, requires_grad=False)
                         curr, _ = torch.utils.checkpoint.checkpoint(
                             create_checkpoint_fn(layer),
                             curr,
@@ -178,7 +200,7 @@ def execute_master_train_run():
                 free_energy = loss_fn(wave_trajectory, boundary_vectors, temperature)
 
             # Backward pass and optimizer step
-            if args.amp:
+            if args.amp and not use_bf16:
                 scaler.scale(free_energy).backward()
                 scaler.step(optimizer)
                 scaler.update()
