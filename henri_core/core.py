@@ -45,25 +45,16 @@ class ContinuousPhaseRouter(nn.Module):
 class UnitaryLinearLayer(nn.Linear):
     """
     Custom linear layer whose weights are projected back to the unitary/orthogonal manifold
-    using Singular Value Decomposition (SVD): W_new = U * V^T.
+    using Björck-Newton iterations: W_{k+1} = 1.5 * W_k - 0.5 * W_k * W_k^T * W_k.
+    This runs entirely as fast matrix multiplications (torch.matmul) natively on GPU.
     """
     def force_unitary_manifold(self):
         with torch.no_grad():
             W = self.weight
-            try:
-                # SVD in double precision for numerical stability on CPU/GPU
-                U, _, Vh = torch.linalg.svd(W.double(), full_matrices=False)
-                self.weight.copy_(torch.matmul(U, Vh).to(W.dtype))
-            except (RuntimeError, torch._C._LinAlgError):
-                try:
-                    # Fallback 1: Add a tiny perturbation to break repeat singular values
-                    eps = 1e-6 * torch.eye(W.shape[0], W.shape[1], device=W.device, dtype=W.dtype)
-                    U, _, Vh = torch.linalg.svd((W + eps).double(), full_matrices=False)
-                    self.weight.copy_(torch.matmul(U, Vh).to(W.dtype))
-                except (RuntimeError, torch._C._LinAlgError):
-                    # Fallback 2: QR decomposition (always stable and converges)
-                    Q, _ = torch.linalg.qr(W)
-                    self.weight.copy_(Q)
+            # Björck-Newton converges quadratically for near-orthogonal matrices.
+            # Run 5 iterations directly in the current precision and device.
+            for _ in range(5):
+                W.copy_(1.5 * W - 0.5 * torch.matmul(torch.matmul(W, W.t()), W))
 
 class OrthogonalFluidExpert(nn.Module):
     """
