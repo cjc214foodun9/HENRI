@@ -209,10 +209,12 @@ def execute_master_train_run():
                 optimizer.step()
             
             # Force compliance with strict orthogonal properties post-step (SVD manifold projection)
-            with torch.no_grad():
-                for module in model.modules():
-                    if isinstance(module, UnitaryLinearLayer):
-                        module.force_unitary_manifold()
+            # [CRITICAL] Disable autocast to preserve orthogonal manifold purity
+            with torch.amp.autocast(device_type=device_type, enabled=False):
+                with torch.no_grad():
+                    for module in model.modules():
+                        if isinstance(module, UnitaryLinearLayer):
+                            module.force_unitary_manifold()
             
             # Update the thermostat temperature
             new_temp = thermostat.step(free_energy.item())
