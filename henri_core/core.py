@@ -46,15 +46,17 @@ class UnitaryLinearLayer(nn.Linear):
     """
     Custom linear layer whose weights are projected back to the unitary/orthogonal manifold
     using Björck-Newton iterations: W_{k+1} = 1.5 * W_k - 0.5 * W_k * W_k^T * W_k.
+    Calculations are done in FP32 to ensure precision and convergence.
     This runs entirely as fast matrix multiplications (torch.matmul) natively on GPU.
     """
     def force_unitary_manifold(self):
         with torch.no_grad():
-            W = self.weight
+            W = self.weight.float()
             # Björck-Newton converges quadratically for near-orthogonal matrices.
-            # Run 5 iterations directly in the current precision and device.
+            # Run 5 iterations directly in FP32 to prevent half-precision underflow.
             for _ in range(5):
-                W.copy_(1.5 * W - 0.5 * torch.matmul(torch.matmul(W, W.t()), W))
+                W = 1.5 * W - 0.5 * torch.matmul(torch.matmul(W, W.t()), W)
+            self.weight.copy_(W.to(dtype=self.weight.dtype))
 
 class OrthogonalFluidExpert(nn.Module):
     """

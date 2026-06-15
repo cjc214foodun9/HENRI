@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -69,6 +70,71 @@ class HenriSwarmDataset(Dataset):
     def __getitem__(self, idx):
         return self.tensors[idx]
 
+class InfiniteConformalWaveGenerator:
+    """
+    GPU-native Infinite Conformal Wave Generator and Data Augmenter.
+    Generates high-density, multi-scale physical boundary waveforms directly in GPU VRAM.
+    If seed_tensors are provided, it generates infinite batches by performing random
+    conformal interpolations (superpositions), phase-shifting, and adding multi-scale
+    harmonic waves and screened Poisson decays to the concepts, preventing overfitting
+    on small datasets.
+    """
+    def __init__(self, dim=4096, device="cuda", seed_tensors=None):
+        self.dim = dim
+        self.device = device
+        if seed_tensors is not None and len(seed_tensors) > 0:
+            self.seed_tensors = torch.stack(seed_tensors).to(device)
+            print(f"[+] Infinite Conformal Wave Generator initialized with {len(seed_tensors)} seed concepts for GPU-native augmentation.")
+        else:
+            self.seed_tensors = None
+            print("[+] Infinite Conformal Wave Generator initialized in pure synthetic wave mode.")
+        
+    def generate_batch(self, batch_size=8, dtype=torch.float32):
+        # 1. Base spatial grid coordinate (t)
+        t = torch.linspace(0.0, 2.0 * math.pi, self.dim, device=self.device, dtype=dtype)
+        t_expanded = t.unsqueeze(0) # (1, dim)
+        
+        # 2. Randomize wave frequency components (MIT Fourier spatial frequencies)
+        freq_alpha = torch.randint(1, 12, (batch_size, 1), device=self.device).to(dtype)
+        freq_beta = torch.randint(15, 60, (batch_size, 1), device=self.device).to(dtype)
+        phase_shift = torch.rand((batch_size, 1), device=self.device, dtype=dtype) * 2.0 * math.pi
+        
+        # Harmonic sum representing Dirichlet potential boundaries
+        harmonics = torch.sin(freq_alpha * t_expanded + phase_shift) + 0.3 * torch.cos(freq_beta * t_expanded)
+        
+        # 3. Screened Poisson Equation boundary simulation (Bessel-like screening decay G(r) ~ e^{-lambda*r} / sqrt(r))
+        r = torch.linspace(0.1, 5.0, self.dim, device=self.device, dtype=dtype)
+        screened_damping = torch.exp(-0.5 * r) / torch.sqrt(r)
+        screened_damping = screened_damping.unsqueeze(0) # (1, dim)
+        
+        # Combine the boundary harmonics with localized screened damping
+        perturbation = harmonics * screened_damping
+        
+        if self.seed_tensors is not None:
+            # 4. Generate random superposition weights (batch_size, num_seeds)
+            num_seeds = self.seed_tensors.shape[0]
+            weights = torch.zeros(batch_size, num_seeds, device=self.device, dtype=dtype)
+            
+            for i in range(batch_size):
+                # Pick 2-5 random concepts to mix
+                num_to_mix = torch.randint(2, 6, (1,)).item()
+                indices = torch.randperm(num_seeds, device=self.device)[:num_to_mix]
+                mix_weights = torch.rand(num_to_mix, device=self.device, dtype=dtype)
+                weights[i, indices] = mix_weights / mix_weights.sum()
+                
+            # Perform batch matrix multiplication to get base waves
+            base_waves = torch.matmul(weights, self.seed_tensors.to(dtype))
+            
+            # Mix base concept waves with perturbation (85% concept, 15% physical wave perturbation)
+            # This maintains semantic concept structure while injecting geometric noise
+            wave = 0.85 * base_waves + 0.15 * perturbation
+        else:
+            wave = perturbation
+            
+        # 5. Enforce strict VSA unit-hypersphere normalization (energy conservation)
+        wave = F.normalize(wave, p=2, dim=-1)
+        return wave
+
 def parse_args():
     parser = argparse.ArgumentParser(description="HENRI 7B Swarm Training Pipeline")
     parser.add_argument("--dim", type=int, default=4096, help="Embedding dimension (default: 4096)")
@@ -82,6 +148,9 @@ def parse_args():
     parser.add_argument("--amp", action="store_true", help="Enable Automatic Mixed Precision (AMP) to save VRAM")
     parser.add_argument("--checkpointing", action="store_true", help="Enable gradient checkpointing to save VRAM")
     parser.add_argument("--dataset-dir", type=str, default="./esc_compiled_dataset", help="Path to compiled JSON dataset")
+    parser.add_argument("--infinite", action="store_true", help="Use GPU-native Infinite Conformal Wave Generator to stream infinite training data")
+    parser.add_argument("--steps-per-epoch", type=int, default=1000, help="Number of training steps per epoch in infinite mode (default: 1000)")
+    parser.add_argument("--device", type=str, choices=["cuda", "cpu"], default="cuda", help="Target execution device (default: cuda)")
     parser.add_argument("--output-weights", type=str, default="./henri_core_final.pt", help="Path to save trained weights")
     return parser.parse_args()
 
@@ -89,9 +158,23 @@ def parse_args():
 def execute_master_train_run():
     args = parse_args()
     
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if args.device == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                "\n[FATAL] CUDA (GPU acceleration) is requested but is not available in the current PyTorch environment.\n"
+                "To resolve this, verify that:\n"
+                "  1. A compatible NVIDIA GPU driver is installed.\n"
+                "  2. PyTorch with CUDA support is installed. You can install it via:\n"
+                "     pip install torch --index-url https://download.pytorch.org/whl/cu121 --force-reinstall\n"
+                "  3. Your CUDA_VISIBLE_DEVICES environment variable is configured correctly.\n"
+                "Alternatively, run with '--device cpu' to explicitly allow CPU training."
+            )
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+        
     print(f"[ACTIVE SUBSTRATE] Launching full-scale core on device: {device}")
-    if torch.cuda.is_available():
+    if device.type == "cuda":
         print(f"  GPU Name: {torch.cuda.get_device_name(0)}")
         print(f"  Allocated VRAM: {torch.cuda.memory_allocated(0)/(1024**3):.2f} GiB / Reserved VRAM: {torch.cuda.memory_reserved(0)/(1024**3):.2f} GiB")
 
@@ -135,14 +218,41 @@ def execute_master_train_run():
     thermostat = DivergentMaster(t_min=0.0, t_max=4.0, cooling_rate=0.05, heat_sensitivity=0.2, lock_threshold=1e-4)
     print("[+] Initialized DivergentMaster Thermostat and NaturalInductionLoss.")
 
-    # Load dataset
-    dataset = HenriSwarmDataset(dataset_dir=args.dataset_dir, dim=args.dim)
-    if len(dataset) == 0:
-        print(f"[ERROR] Dataset folder '{args.dataset_dir}' contains no valid packets. Please run data_foundry.py first.")
-        sys.exit(1)
-        
-    loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
-    print(f"[+] Loaded dataset of size: {len(dataset)} | Batches per Epoch: {len(loader)}")
+    # Configure Data Ingestion (Infinite Generator vs Static Dataset)
+    if args.infinite:
+        seed_tensors = None
+        # Try to load seed tensors for hybrid data augmentation if the dataset exists
+        try:
+            dataset_dir = args.dataset_dir
+            if not os.path.exists(dataset_dir):
+                fallback_dir = os.path.join(script_dir, "esc_compiled_dataset")
+                if os.path.exists(fallback_dir):
+                    dataset_dir = fallback_dir
+                else:
+                    dataset_dir = "c:/Users/chan/Desktop/HENRI 7B SWARM/HENRI/esc_compiled_dataset"
+            
+            if os.path.exists(dataset_dir) and any(f.endswith(".json") for f in os.listdir(dataset_dir)):
+                print(f"[*] Found concept files in '{dataset_dir}'. Loading seeds for hybrid augmentation...")
+                dataset = HenriSwarmDataset(dataset_dir=dataset_dir, dim=args.dim)
+                if len(dataset) > 0:
+                    seed_tensors = dataset.tensors
+            else:
+                print(f"[!] No seed concept files found in '{dataset_dir}'. Falling back to pure synthetic waves.")
+        except Exception as e:
+            print(f"[WARN] Error loading seed dataset for augmentation: {e}. Falling back to pure synthetic waves.")
+            
+        generator = InfiniteConformalWaveGenerator(dim=args.dim, device=device, seed_tensors=seed_tensors)
+        steps_per_epoch = args.steps_per_epoch
+        print(f"[+] Infinite Conformal Wave Generator initialized. Steps per Epoch: {steps_per_epoch}")
+    else:
+        dataset = HenriSwarmDataset(dataset_dir=args.dataset_dir, dim=args.dim)
+        if len(dataset) == 0:
+            print(f"[ERROR] Dataset folder '{args.dataset_dir}' contains no valid packets. Please run data_foundry.py first or enable --infinite.")
+            sys.exit(1)
+            
+        loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
+        steps_per_epoch = len(loader)
+        print(f"[+] Loaded static dataset of size: {len(dataset)} | Batches per Epoch: {steps_per_epoch}")
 
     # AMP scaler initialization (only needed for float16 scaling)
     scaler = torch.amp.GradScaler(device_type, enabled=(args.amp and not use_bf16))
@@ -161,12 +271,22 @@ def execute_master_train_run():
     for epoch in range(args.epochs):
         epoch_loss = 0.0
         
-        for batch_idx, boundary_vectors in enumerate(loader):
+        # Determine training data source loop
+        batch_source = range(steps_per_epoch) if args.infinite else enumerate(loader)
+        
+        for step in batch_source:
             optimizer.zero_grad()
             
             # Match input tensor dtype and device to the model weights
             model_dtype = next(model.parameters()).dtype
-            boundary_vectors = F.normalize(boundary_vectors.to(device, dtype=model_dtype), p=2, dim=-1)
+            
+            if args.infinite:
+                batch_idx = step
+                boundary_vectors = generator.generate_batch(batch_size=args.batch_size, dtype=model_dtype)
+            else:
+                batch_idx, boundary_vectors = step
+                boundary_vectors = F.normalize(boundary_vectors.to(device, dtype=model_dtype), p=2, dim=-1)
+                
             mock_initial_state = F.normalize(torch.randn_like(boundary_vectors).to(device, dtype=model_dtype), p=2, dim=-1)
             
             # Fetch current thermostat temperature
@@ -229,9 +349,9 @@ def execute_master_train_run():
             epoch_loss += free_energy.item()
             
             if batch_idx % 5 == 0:
-                print(f"Epoch {epoch} | Batch {batch_idx:03d}/{len(loader):03d} | Loss Free Energy: {free_energy.item():.6f} | Temp: {new_temp:.4f}")
+                print(f"Epoch {epoch} | Batch {batch_idx:03d}/{steps_per_epoch:03d} | Loss Free Energy: {free_energy.item():.6f} | Temp: {new_temp:.4f}")
 
-        avg_epoch_loss = epoch_loss / len(loader)
+        avg_epoch_loss = epoch_loss / steps_per_epoch
         print(f"[EPOCH COMPLETED] Epoch {epoch} | Avg Loss Free Energy: {avg_epoch_loss:.6f} | Final Temp: {thermostat.get_temperature():.4f}")
         if torch.cuda.is_available():
             print(f"  VRAM Memory: {torch.cuda.memory_allocated(0)/(1024**3):.2f} GiB")
