@@ -13,8 +13,9 @@ if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
 class EpistemicDataFoundry:
-    def __init__(self, api_key, output_dir="./esc_compiled_dataset", raw_dir="c:/Users/chan/Desktop/HENRI 7B SWARM/HENRI/archive/raw_sources"):
-        self.output_dir = output_dir
+    def __init__(self, api_key, output_dir=None, raw_dir="c:/Users/chan/Desktop/HENRI 7B SWARM/HENRI/archive/raw_sources"):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.output_dir = output_dir if output_dir else os.path.join(script_dir, "esc_compiled_dataset")
         self.raw_dir = raw_dir
         os.makedirs(self.output_dir, exist_ok=True)
         
