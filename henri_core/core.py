@@ -42,6 +42,29 @@ class ContinuousPhaseRouter(nn.Module):
             
         return routing_weights
 
+class UnitaryLinearLayer(nn.Linear):
+    """
+    Custom linear layer whose weights are projected back to the unitary/orthogonal manifold
+    using Singular Value Decomposition (SVD): W_new = U * V^T.
+    """
+    def force_unitary_manifold(self):
+        with torch.no_grad():
+            W = self.weight
+            try:
+                # SVD in double precision for numerical stability on CPU/GPU
+                U, _, Vh = torch.linalg.svd(W.double(), full_matrices=False)
+                self.weight.copy_(torch.matmul(U, Vh).to(W.dtype))
+            except (RuntimeError, torch._C._LinAlgError):
+                try:
+                    # Fallback 1: Add a tiny perturbation to break repeat singular values
+                    eps = 1e-6 * torch.eye(W.shape[0], W.shape[1], device=W.device, dtype=W.dtype)
+                    U, _, Vh = torch.linalg.svd((W + eps).double(), full_matrices=False)
+                    self.weight.copy_(torch.matmul(U, Vh).to(W.dtype))
+                except (RuntimeError, torch._C._LinAlgError):
+                    # Fallback 2: QR decomposition (always stable and converges)
+                    Q, _ = torch.linalg.qr(W)
+                    self.weight.copy_(Q)
+
 class OrthogonalFluidExpert(nn.Module):
     """
     A single frequency modulator in the continuous MoE.
@@ -50,7 +73,7 @@ class OrthogonalFluidExpert(nn.Module):
     """
     def __init__(self, dim=4096):
         super().__init__()
-        self.phase_shift = nn.Linear(dim, dim, bias=False)
+        self.phase_shift = UnitaryLinearLayer(dim, dim, bias=False)
         nn.init.orthogonal_(self.phase_shift.weight)
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -157,6 +180,7 @@ class ProprietaryHENRICore(nn.Module):
         self.depth = depth
         self.layers = nn.ModuleList([ThermoActiveFluidBlock(dim, num_fluid_states) for _ in range(depth)])
         self.final_layer_norm = nn.LayerNorm(dim)
+        self.gradient_checkpointing = False
 
     def forward(self, x: torch.Tensor, zone_c_attractor: torch.Tensor, temperature: float):
         """
@@ -173,7 +197,27 @@ class ProprietaryHENRICore(nn.Module):
         current_wave = x
         for layer in self.layers:
             previous_wave = current_wave
-            current_wave, local_energy = layer(current_wave, previous_wave, zone_c_attractor, temperature)
+            
+            if getattr(self, "gradient_checkpointing", False) and self.training:
+                # Wrap forward pass of block in checkpoint
+                def create_checkpoint_fn(block):
+                    def checkpoint_fn(c_wave, p_wave, z_attractor, temp_val):
+                        return block(c_wave, p_wave, z_attractor, temp_val.item())
+                    return checkpoint_fn
+
+                # temperature must be a tensor to work with torch.utils.checkpoint
+                temp_tensor = torch.tensor(temperature, device=x.device, requires_grad=False)
+                current_wave, local_energy = torch.utils.checkpoint.checkpoint(
+                    create_checkpoint_fn(layer),
+                    current_wave,
+                    previous_wave,
+                    zone_c_attractor,
+                    temp_tensor,
+                    use_reentrant=False
+                )
+            else:
+                current_wave, local_energy = layer(current_wave, previous_wave, zone_c_attractor, temperature)
+                
             total_system_energy += local_energy
             
         final_output = self.final_layer_norm(current_wave)

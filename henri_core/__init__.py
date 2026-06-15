@@ -4,6 +4,7 @@ from .core import (
     ContinuousPhaseRouter,
     ThermoActiveFluidBlock,
     ProprietaryHENRICore,
+    UnitaryLinearLayer,
 )
 from .thermodynamics import NaturalInductionLoss, DivergentMaster
 from .egress import QuantizedEgressAssembler
@@ -15,6 +16,7 @@ __all__ = [
     "ContinuousPhaseRouter",
     "ThermoActiveFluidBlock",
     "ProprietaryHENRICore",
+    "UnitaryLinearLayer",
     "NaturalInductionLoss",
     "DivergentMaster",
     "QuantizedEgressAssembler",

@@ -1,26 +1,43 @@
 import os
-import json
 import sys
+import json
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
+import argparse
 
-# Reconfigure console encoding
+# Reconfigure console encoding for Unicode compatibility
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
-# 1. Sealed Dataset Loader (Only returning numeric matrix space to avoid batching collation collapse)
+# Ensure imports from henri_core can be resolved from local paths
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(script_dir)
+sys.path.append(os.path.dirname(script_dir))
+
+from henri_core.core import ProprietaryHENRICore, UnitaryLinearLayer
+from henri_core.thermodynamics import NaturalInductionLoss, DivergentMaster
+
+# 1. Sealed Dataset Loader (Returning numeric matrix space matched to dim)
 class HenriSwarmDataset(Dataset):
-    def __init__(self, dataset_dir="c:/Users/chan/Desktop/HENRI 7B SWARM/HENRI/archive/raw_sources"):
-        # We target the compiled esc_compiled_dataset folder where JSON packets are staged
-        self.dataset_dir = "c:/Users/chan/Desktop/HENRI 7B SWARM/HENRI/esc_compiled_dataset"
+    def __init__(self, dataset_dir="./esc_compiled_dataset", dim=4096):
+        self.dataset_dir = dataset_dir
+        self.dim = dim
+        
+        # Absolute paths fallback check
         if not os.path.exists(self.dataset_dir):
-            self.dataset_dir = "./esc_compiled_dataset" # fallback
+            fallback_dir = os.path.join(script_dir, "esc_compiled_dataset")
+            if os.path.exists(fallback_dir):
+                self.dataset_dir = fallback_dir
+            else:
+                # Local workspace fallback path
+                self.dataset_dir = "c:/Users/chan/Desktop/HENRI 7B SWARM/HENRI/esc_compiled_dataset"
             
         if os.path.exists(self.dataset_dir):
-            self.files = [os.path.join(self.dataset_dir, f) for f in os.listdir(self.dataset_dir) if f.endswith(".json")]
+            self.files = sorted([os.path.join(self.dataset_dir, f) for f in os.listdir(self.dataset_dir) if f.endswith(".json")])
         else:
             self.files = []
         
@@ -30,84 +47,193 @@ class HenriSwarmDataset(Dataset):
     def __getitem__(self, idx):
         with open(self.files[idx], "r", encoding="utf-8") as f:
             data = json.load(f)
-        # Return only the numerical matrix space for seamless tensor batching
-        return torch.tensor(data["tensor_data"], dtype=torch.float32)
-
-# Try importing the remote orchestrator layers (Vast.ai training context)
-# Fallback to local mocks to allow syntax validation
-try:
-    from cloud_orchestrator import Henri7BSwarmCore, calculate_topological_loss, UnitaryLinearLayer
-    HAS_REMOTE_ORCHESTRATOR = True
-except ImportError:
-    HAS_REMOTE_ORCHESTRATOR = False
-    print("[WARN] Could not import cloud_orchestrator. Using mock placeholders for local validation.")
-    
-    class Henri7BSwarmCore(nn.Module):
-        def __init__(self, dim=4096, depth=32):
-            super().__init__()
-            self.dim = dim
-            self.depth = depth
-            # Simple mock layer
-            self.dummy_layer = nn.Linear(dim, dim)
-            
-        def forward(self, x, temperature=0.01):
-            return self.dummy_layer(x)
-            
-    def calculate_topological_loss(output_wave, boundary_vectors):
-        return torch.mean((output_wave - boundary_vectors) ** 2)
         
-    class UnitaryLinearLayer(nn.Module):
-        def force_unitary_manifold(self):
-            pass
+        tensor = torch.tensor(data["tensor_data"], dtype=torch.float32)
+        
+        # Adjust dimensions to match training target dim dynamically (slice or pad)
+        if tensor.shape[0] != self.dim:
+            if tensor.shape[0] < self.dim:
+                padded = torch.zeros(self.dim, dtype=torch.float32)
+                padded[:tensor.shape[0]] = tensor
+                tensor = padded
+            else:
+                tensor = tensor[:self.dim]
+                
+        return tensor
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="HENRI 7B Swarm Training Pipeline")
+    parser.add_argument("--dim", type=int, default=4096, help="Embedding dimension (default: 4096)")
+    parser.add_argument("--depth", type=int, default=32, help="Number of layers / block depth (default: 32)")
+    parser.add_argument("--experts", type=int, default=16, help="Number of experts / fluid states (default: 16)")
+    parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate (default: 1e-4)")
+    parser.add_argument("--weight-decay", type=float, default=1e-4, help="Weight decay (default: 1e-4)")
+    parser.add_argument("--batch-size", type=int, default=8, help="Batch size (default: 8)")
+    parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs (default: 5)")
+    parser.add_argument("--optimizer", type=str, choices=["adamw", "sgd"], default="adamw", help="Optimizer choice (default: adamw)")
+    parser.add_argument("--amp", action="store_true", help="Enable Automatic Mixed Precision (AMP) to save VRAM")
+    parser.add_argument("--checkpointing", action="store_true", help="Enable gradient checkpointing to save VRAM")
+    parser.add_argument("--dataset-dir", type=str, default="./esc_compiled_dataset", help="Path to compiled JSON dataset")
+    parser.add_argument("--output-weights", type=str, default="./henri_core_final.pt", help="Path to save trained weights")
+    return parser.parse_args()
 
 # 2. Complete Execution Framework
 def execute_master_train_run():
+    args = parse_args()
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[ACTIVE SUBSTRATE] Launching full-scale core on device: {device}")
+    if torch.cuda.is_available():
+        print(f"  GPU Name: {torch.cuda.get_device_name(0)}")
+        print(f"  Allocated VRAM: {torch.cuda.memory_allocated(0)/(1024**3):.2f} GiB / Reserved VRAM: {torch.cuda.memory_reserved(0)/(1024**3):.2f} GiB")
 
-    # Build the full 32-layer configuration footprint
-    model = Henri7BSwarmCore(dim=4096, depth=32).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
+    # Build the target configuration footprint
+    print(f"[*] Initializing ProprietaryHENRICore (dim={args.dim}, depth={args.depth}, experts={args.experts})...")
+    model = ProprietaryHENRICore(dim=args.dim, depth=args.depth, num_fluid_states=args.experts).to(device)
+    
+    # Configure gradient checkpointing
+    if args.checkpointing:
+        model.gradient_checkpointing = True
+        print("[+] Gradient Checkpointing is ENABLED.")
+        
+    # Configure optimizer
+    if args.optimizer == "adamw":
+        optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    else:
+        optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    print(f"[+] Using {args.optimizer.upper()} Optimizer (lr={args.lr:.1e}, weight_decay={args.weight_decay:.1e})")
 
-    dataset = HenriSwarmDataset()
+    # Initialize the thermodynamic loss and DivergentMaster thermostat
+    loss_fn = NaturalInductionLoss(lambda_boundary=10.0, reg_coefficient=1.0, dim=args.dim).to(device)
+    thermostat = DivergentMaster(t_min=0.0, t_max=4.0, cooling_rate=0.05, heat_sensitivity=0.2, lock_threshold=1e-4)
+    print("[+] Initialized DivergentMaster Thermostat and NaturalInductionLoss.")
+
+    # Load dataset
+    dataset = HenriSwarmDataset(dataset_dir=args.dataset_dir, dim=args.dim)
     if len(dataset) == 0:
-        print("[ERROR] Dataset is empty. Please run the Epistemic Data Foundry first to compile packets.")
-        # If running mock verification, generate dummy data if needed
-        return
+        print(f"[ERROR] Dataset folder '{args.dataset_dir}' contains no valid packets. Please run data_foundry.py first.")
+        sys.exit(1)
+        
+    loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
+    print(f"[+] Loaded dataset of size: {len(dataset)} | Batches per Epoch: {len(loader)}")
 
-    loader = DataLoader(dataset, batch_size=8, shuffle=True, drop_last=True)
-    print(f"[+] Loaded dataset of size: {len(dataset)} | Batches: {len(loader)}")
+    # AMP scaler initialization
+    scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
+    if args.amp:
+        print("[+] Automatic Mixed Precision (AMP) is ENABLED.")
 
     model.train()
-    for epoch in range(5):
+    
+    # Enforce initial orthogonality on expert layers
+    with torch.no_grad():
+        for module in model.modules():
+            if isinstance(module, UnitaryLinearLayer):
+                module.force_unitary_manifold()
+
+    print("\n[*] Starting pre-training loop...")
+    for epoch in range(args.epochs):
+        epoch_loss = 0.0
+        
         for batch_idx, boundary_vectors in enumerate(loader):
             optimizer.zero_grad()
             
-            boundary_vectors = boundary_vectors.to(device)
-            mock_initial_state = torch.randn_like(boundary_vectors).to(device)
+            boundary_vectors = F.normalize(boundary_vectors.to(device), p=2, dim=-1)
+            mock_initial_state = F.normalize(torch.randn_like(boundary_vectors).to(device), p=2, dim=-1)
             
-            # Forward Pass: Running the wave mechanics through the 32 layers
-            output_wave = model(mock_initial_state, temperature=0.01)
+            # Fetch current thermostat temperature
+            temperature = thermostat.get_temperature()
             
-            # Compute physical stress and conformance loss
-            free_energy = calculate_topological_loss(output_wave, boundary_vectors)
-            free_energy.backward()
+            # Forward pass under autocast (mixed precision)
+            with torch.cuda.amp.autocast(enabled=args.amp):
+                # We manually reconstruct the layer trajectory to compute full NaturalInductionLoss
+                wave_trajectory = [mock_initial_state.unsqueeze(1)]
+                curr = mock_initial_state
+                for layer in model.layers:
+                    prev = curr
+                    
+                    if args.checkpointing and model.training:
+                        # Wrap layer execution in checkpoint to save activation memory
+                        def create_checkpoint_fn(block):
+                            def checkpoint_fn(c_wave, p_wave, z_attractor, temp_val):
+                                return block(c_wave, p_wave, z_attractor, temp_val.item())
+                            return checkpoint_fn
+                        
+                        temp_tensor = torch.tensor(temperature, device=device, requires_grad=False)
+                        curr, _ = torch.utils.checkpoint.checkpoint(
+                            create_checkpoint_fn(layer),
+                            curr,
+                            prev,
+                            boundary_vectors,
+                            temp_tensor,
+                            use_reentrant=False
+                        )
+                    else:
+                        curr, _ = layer(curr, prev, boundary_vectors, temperature)
+                        
+                    wave_trajectory.append(curr.unsqueeze(1))
+                    
+                wave_trajectory = torch.cat(wave_trajectory, dim=1)
+                
+                # Compute thermodynamic Free Energy
+                free_energy = loss_fn(wave_trajectory, boundary_vectors, temperature)
+
+            # Backward pass and optimizer step
+            if args.amp:
+                scaler.scale(free_energy).backward()
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                free_energy.backward()
+                optimizer.step()
             
-            optimizer.step()
-            
-            # Force compliance with strict orthogonal properties post-step
+            # Force compliance with strict orthogonal properties post-step (SVD manifold projection)
             with torch.no_grad():
                 for module in model.modules():
                     if isinstance(module, UnitaryLinearLayer):
                         module.force_unitary_manifold()
-                        
+            
+            # Update the thermostat temperature
+            new_temp = thermostat.step(free_energy.item())
+            epoch_loss += free_energy.item()
+            
             if batch_idx % 5 == 0:
-                print(f"Epoch {epoch} | Batch {batch_idx:03d} | Loss Free Energy: {free_energy.item():.6f}")
+                print(f"Epoch {epoch} | Batch {batch_idx:03d}/{len(loader):03d} | Loss Free Energy: {free_energy.item():.6f} | Temp: {new_temp:.4f}")
 
-    # Save native PyTorch state dict for server deployment
-    output_weights_path = "./henri_core_final.pt"
-    torch.save(model.state_dict(), output_weights_path)
-    print(f"[SUCCESS] Training cycle complete. Native weights anchored at: {output_weights_path}")
+        avg_epoch_loss = epoch_loss / len(loader)
+        print(f"[EPOCH COMPLETED] Epoch {epoch} | Avg Loss Free Energy: {avg_epoch_loss:.6f} | Final Temp: {thermostat.get_temperature():.4f}")
+        if torch.cuda.is_available():
+            print(f"  VRAM Memory: {torch.cuda.memory_allocated(0)/(1024**3):.2f} GiB")
+
+    # 3. Save native PyTorch state dict for server deployment
+    print(f"\n[*] Saving trained weights model footprint to: {args.output_weights}...")
+    torch.save(model.state_dict(), args.output_weights)
+    print(f"[SUCCESS] Native weights anchored at: {args.output_weights}")
+    
+    # 4. Verify post-training weight orthorectification
+    print("[*] Performing post-training orthorectification verification...")
+    with torch.no_grad():
+        test_orthogonal = True
+        unitary_layers_count = 0
+        max_deviation = 0.0
+        
+        for name, module in model.named_modules():
+            if isinstance(module, UnitaryLinearLayer):
+                unitary_layers_count += 1
+                W = module.weight
+                I_approx = torch.matmul(W, W.t())
+                I = torch.eye(W.shape[0], device=W.device)
+                deviation = torch.norm(I_approx - I).item()
+                max_deviation = max(max_deviation, deviation)
+                if deviation > 1e-2:
+                    test_orthogonal = False
+                    print(f"  [WARN] Module '{name}' deviation from orthogonality: {deviation:.6f}")
+                    
+        if test_orthogonal and unitary_layers_count > 0:
+            print(f"  [SUCCESS] All {unitary_layers_count} expert phase-shift layers are strictly orthogonal (Max deviation: {max_deviation:.6e}).")
+        elif unitary_layers_count == 0:
+            print("  [WARN] No UnitaryLinearLayer modules were found to verify.")
+        else:
+            print("  [WARNING] Orthorectification verification completed with minor warnings.")
 
 if __name__ == "__main__":
     execute_master_train_run()
