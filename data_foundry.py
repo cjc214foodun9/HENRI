@@ -179,6 +179,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Epistemic Data Foundry Pipeline")
     parser.add_argument("--verify", action="store_true", help="Run in mock/verify mode using mock file")
     parser.add_argument("--all", action="store_true", help="Process all files in the raw_sources folder")
+    parser.add_argument("--raw-dir", type=str, default="c:/Users/chan/Desktop/HENRI 7B SWARM/HENRI/archive/raw_sources", help="Directory containing raw source files")
     args = parser.parse_args()
 
     # Configure API Key securely from environment variable
@@ -207,7 +208,7 @@ if __name__ == "__main__":
             print("[FATAL] Please set the DEEPSEEK_API_KEY environment variable before running in production mode.")
             sys.exit(1)
             
-        foundry = EpistemicDataFoundry(api_key=api_key)
+        foundry = EpistemicDataFoundry(api_key=api_key, raw_dir=args.raw_dir)
         foundry.process_all_sources()
         
     else:
