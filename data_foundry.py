@@ -158,21 +158,24 @@ class EpistemicDataFoundry:
             print(f"[PARSING LOCK FAULT] Failed to de-serialize structured payload: {e}")
             return None
 
-    def process_all_sources(self):
+    def process_all_sources(self, workers=8):
         if not os.path.exists(self.raw_dir):
             print(f"[ERROR] Raw sources directory does not exist: {self.raw_dir}")
             return
             
         files = [os.path.join(self.raw_dir, f) for f in os.listdir(self.raw_dir) if f.endswith(".md") or f.endswith(".txt")]
-        print(f"[FOUNDRY START] Processing {len(files)} text/markdown files...")
+        print(f"[FOUNDRY START] Processing {len(files)} text/markdown files across {workers} parallel threads...")
         
-        success = 0
-        for idx, f in enumerate(files):
-            print(f"\n[{idx+1}/{len(files)}] Processing...")
-            result = self.forge_raw_source(f)
-            if result:
-                success += 1
-                
+        from concurrent.futures import ThreadPoolExecutor
+        
+        def worker(f):
+            # Calls forge_raw_source which dynamically routes via self.auto_classify_quadrant
+            return self.forge_raw_source(f)
+            
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            results = list(executor.map(worker, files))
+            
+        success = sum(1 for r in results if r is not None)
         print(f"\n[FOUNDRY FINISHED] Successfully vectorized and compiled {success}/{len(files)} packets.")
 
 if __name__ == "__main__":
@@ -180,6 +183,7 @@ if __name__ == "__main__":
     parser.add_argument("--verify", action="store_true", help="Run in mock/verify mode using mock file")
     parser.add_argument("--all", action="store_true", help="Process all files in the raw_sources folder")
     parser.add_argument("--raw-dir", type=str, default="c:/Users/chan/Desktop/HENRI 7B SWARM/HENRI/archive/raw_sources", help="Directory containing raw source files")
+    parser.add_argument("--workers", type=int, default=10, help="Number of concurrent worker threads")
     args = parser.parse_args()
 
     # Configure API Key securely from environment variable
@@ -209,7 +213,7 @@ if __name__ == "__main__":
             sys.exit(1)
             
         foundry = EpistemicDataFoundry(api_key=api_key, raw_dir=args.raw_dir)
-        foundry.process_all_sources()
+        foundry.process_all_sources(workers=args.workers)
         
     else:
         parser.print_help()
