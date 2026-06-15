@@ -40,26 +40,34 @@ class HenriSwarmDataset(Dataset):
             self.files = sorted([os.path.join(self.dataset_dir, f) for f in os.listdir(self.dataset_dir) if f.endswith(".json")])
         else:
             self.files = []
+            
+        # Pre-load all tensors to avoid disk I/O and JSON decoding bottlenecks on the CPU
+        print(f"[*] Pre-loading {len(self.files)} files into memory...")
+        self.tensors = []
+        for file_path in self.files:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                tensor = torch.tensor(data["tensor_data"], dtype=torch.float32)
+                
+                # Adjust dimensions to match training target dim dynamically
+                if tensor.shape[0] != self.dim:
+                    if tensor.shape[0] < self.dim:
+                        padded = torch.zeros(self.dim, dtype=torch.float32)
+                        padded[:tensor.shape[0]] = tensor
+                        tensor = padded
+                    else:
+                        tensor = tensor[:self.dim]
+                self.tensors.append(tensor)
+            except Exception as e:
+                print(f"[WARN] Failed to load {file_path}: {e}")
+        print(f"[+] Loaded {len(self.tensors)} dataset vectors into RAM.")
         
     def __len__(self):
-        return len(self.files)
+        return len(self.tensors)
         
     def __getitem__(self, idx):
-        with open(self.files[idx], "r", encoding="utf-8") as f:
-            data = json.load(f)
-        
-        tensor = torch.tensor(data["tensor_data"], dtype=torch.float32)
-        
-        # Adjust dimensions to match training target dim dynamically (slice or pad)
-        if tensor.shape[0] != self.dim:
-            if tensor.shape[0] < self.dim:
-                padded = torch.zeros(self.dim, dtype=torch.float32)
-                padded[:tensor.shape[0]] = tensor
-                tensor = padded
-            else:
-                tensor = tensor[:self.dim]
-                
-        return tensor
+        return self.tensors[idx]
 
 def parse_args():
     parser = argparse.ArgumentParser(description="HENRI 7B Swarm Training Pipeline")
