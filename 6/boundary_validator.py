@@ -66,8 +66,9 @@ class BoundaryAxiomValidator(torch_nn.Module):
         # bulk_wave shape: [4096]
         # P shape: [64, 4096]
         # Output shape: [64]
-        dev = bulk_wave.device
-        P = torch.complex(self.P_real.to(dev), self.P_imag.to(dev))
+        dev = self.P_real.device
+        bulk_wave = bulk_wave.to(dev)
+        P = torch.complex(self.P_real, self.P_imag)
         h_cft = torch.mv(P, bulk_wave)
         return h_cft
 
@@ -80,7 +81,8 @@ class BoundaryAxiomValidator(torch_nn.Module):
             error_energy: float
             h_cft: projected 64-D boundary tensor
         """
-        dev = bulk_wave.device
+        dev = self.P_real.device
+        bulk_wave = bulk_wave.to(dev)
         
         # 1. Project down to 64-D boundary
         h_cft = self.bulk_to_boundary(bulk_wave)
@@ -169,7 +171,8 @@ class BoundaryAxiomValidator(torch_nn.Module):
         Dynamically shifts the Active Neumann Boundary (Living Playbook)
         in response to the error delta from the learning loop.
         """
-        dev = reflection_delta_cft.device
+        dev = self.P_real.device
+        reflection_delta_cft = reflection_delta_cft.to(dev)
         # Expose Sector 3 reflection delta
         delta_neumann = reflection_delta_cft[48:64]
         
