@@ -1,7 +1,11 @@
 import llama_cpp
 try:
+    import os
+    model_path = "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf"
+    if os.path.exists("/dev/shm/Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf"):
+        model_path = "/dev/shm/Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf"
     model = llama_cpp.Llama(
-        model_path="Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf",
+        model_path=model_path,
         n_ctx=8192,
         n_batch=512,
         n_gpu_layers=-1,

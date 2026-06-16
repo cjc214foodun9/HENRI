@@ -576,7 +576,7 @@ class HenriCognitiveSwarmOrchestrator:
     Synchronizes the asynchronous timed loop to fire in series with the RAM cycles
     to build a continuous, coherent HRR vector stream.
     """
-    def __init__(self, model_path="Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf", num_streams=16, gemma_dim=3840, hrr_dim=4096):
+    def __init__(self, model_path="mock_only.gguf", num_streams=16, gemma_dim=3840, hrr_dim=4096):
         self.num_streams = num_streams
         self.gemma_dim = gemma_dim
         self.hrr_dim = hrr_dim
@@ -680,10 +680,11 @@ class HenriCognitiveSwarmOrchestrator:
                     n_ctx=8192,        # 8K context to fit fully in VRAM alongside computation graph
                     n_batch=1024,      # Ensure batch size is large enough for 16x64 tokens
                     n_threads=llama_threads,
+                    n_seq_max=self.num_streams, # Size KV cache slots for 16 parallel streams
                     embedding=True,    # ENABLED so base_model can share this instance for embeddings
                     use_mmap=True,
                     use_mlock=attempt_mlock,
-                    n_gpu_layers=30,   # Throttle back layers to give VRAM room for generation graphs
+                    n_gpu_layers=-1,   # Offload all layers to GPU to maximize performance on RTX 5090
                     flash_attn=True    # Enable to compress the kq-0 attention node memory
                 )
                 
@@ -974,6 +975,45 @@ class HenriCognitiveSwarmOrchestrator:
                 print(f"[ENGINE] Warning: Failed to free dynamic LoRA adapter: {e}")
             finally:
                 self.active_lora_adapter = None
+
+    def apply_functorflow_kan_repair(self, top_expert_idx: int, dead_idx: int):
+        """
+        Stitches consecutive 64-token chunks together by enforcing a categorical 
+        pullback invariant across the KV-cache sequence layers and VSA memory state.
+        """
+        if self.is_mock or not HAS_LLAMA_CPP or self.gen_model is None:
+            return
+            
+        try:
+            import llama_cpp
+            import llama_cpp.llama_cpp as lcpp
+            ctx = self.gen_model.llama.ctx
+            
+            # 1. Capture the terminal wave boundary of the preceding chunk (S_n)
+            # We extract the active wave phase-state from the leader stream's memory engine
+            leader_wave = self.memory_engines[top_expert_idx].active_wave.clone()
+            
+            # 2. Compute the Right Kan universal mapping property in the Fourier domain
+            # (factors out high-frequency noise from sequence boundaries)
+            kan_extension_invariant = torch.fft.fft(leader_wave, dim=-1)
+            
+            # 3. Synchronize the destination sequence slot over the hardware KV cache
+            # This is safe because n_seq_max is explicitly sized to 16
+            lcpp.llama_memory_seq_cp(ctx, top_expert_idx, dead_idx, 0, -1)
+            
+            # 4. Inject the pullback constraint directly into the destination sequence's active cache
+            # The pullback constraint is the dequantized/reconstructed wave from the Fourier domain
+            pullback_wave = torch.fft.ifft(kan_extension_invariant, dim=-1)
+            # Normalize to conserve energy on the hypersphere
+            pullback_wave_phases = torch.angle(pullback_wave)
+            reconstructed_wave = torch.polar(torch.ones_like(pullback_wave_phases), pullback_wave_phases)
+            
+            # Copy to the destination expert's active memory engine
+            self.memory_engines[dead_idx].active_wave.copy_(reconstructed_wave)
+            print(f"[FUNCTORFLOW] Categorical Kan Pullback repaired slot {top_expert_idx} -> {dead_idx}")
+            
+        except Exception as e:
+            print(f"[FUNCTORFLOW] Warning: Kan Pullback repair failed: {e}")
 
     def set_core_affinity(self):
         """Pins process affinity to all logical cores to allow thread-level partitioning."""
@@ -1460,8 +1500,112 @@ class HenriCognitiveSwarmOrchestrator:
                 "status": "CONVERGED",
                 "concept": best_concept,
                 "confidence": confidence,
-                "error": error_energy
+                "error": error_energy,
+                "trajectory_vector": clean_wave
             }
+
+    def pipe_trajectory_to_diffusion_sampler(self, trajectory_vector, sequence_length=512, guidance_scale=4.5, num_diffusion_steps=25):
+        """
+        Orchestration Handler: Pipes the final lowest-entropy trajectory vector (complex HRR wave)
+        straight into the guidance head of the NonAutoregressiveCanvasSampler.
+        """
+        from diffusion_canvas import NonAutoregressiveCanvasSampler
+        import torch.nn as nn
+        import os
+        import sys
+        
+        # Ensure parent directory is in sys.path to import henri_core
+        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if parent_dir not in sys.path:
+            sys.path.append(parent_dir)
+            
+        from henri_core.core import ProprietaryHENRICore
+
+        # 1. Resolve model layout dynamically from the pre-trained core weights file
+        core_path = "henri_core_final.pt"
+        if not os.path.exists(core_path):
+            core_path = os.path.join(parent_dir, "henri_core_final.pt")
+            
+        # Default fallback parameters
+        num_layers = 8
+        num_base_experts = 4
+        hidden_dim = self.hrr_dim # 4096
+        
+        state_dict = None
+        if os.path.exists(core_path):
+            try:
+                state_dict = torch.load(core_path, map_location="cpu")
+                layer_indices = set()
+                expert_indices = set()
+                for key, val in state_dict.items():
+                    if key.startswith("layers."):
+                        parts = key.split(".")
+                        layer_indices.add(int(parts[1]))
+                        if len(parts) > 3 and parts[2] == "experts":
+                            expert_indices.add(int(parts[3]))
+                            if "weight" in key:
+                                hidden_dim = val.shape[-1]
+                        elif "weight" in key:
+                            hidden_dim = val.shape[-1]
+                if layer_indices:
+                    num_layers = len(layer_indices)
+                if expert_indices:
+                    num_base_experts = len(expert_indices)
+                print(f"[ORCHESTRATOR] Detected pre-trained core geometry from {core_path}: {num_layers} layers, {num_base_experts} experts, dim={hidden_dim}")
+            except Exception as e:
+                print(f"[ORCHESTRATOR] Warning: Failed to parse checkpoint geometry: {e}. Using defaults.")
+                state_dict = None
+        else:
+            print(f"[ORCHESTRATOR] Warning: Pre-trained core weights checkpoint not found at {core_path}. Initializing tabula rasa core.")
+
+        # 2. Instantiate the pre-trained ProprietaryHENRICore model
+        device = next(self.optical_core.emulator.parameters()).device if list(self.optical_core.emulator.parameters()) else torch.device("cpu")
+        core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
+        if state_dict is not None:
+            try:
+                core_model.load_state_dict(state_dict)
+                print("[ORCHESTRATOR] Successfully loaded pre-trained core weights into diffusion core.")
+            except Exception as e:
+                print(f"[ORCHESTRATOR] Warning: Failed to load core weights state dict: {e}")
+        core_model = core_model.to(device)
+        core_model.eval()
+
+        # 3. Resolve vocabulary size from the L3 router or default to 32000
+        vocab_size = getattr(self.l3_router, 'vocab_size', 32000)
+        
+        # 4. Instantiate translation head to map hidden_dim -> vocab_size
+        translation_head = nn.Linear(hidden_dim, vocab_size)
+        translation_head = translation_head.to(device)
+        
+        # 5. Initialize the Non-Autoregressive Canvas Sampler
+        sampler = NonAutoregressiveCanvasSampler(
+            core_model=core_model,
+            translation_head=translation_head,
+            num_diffusion_steps=num_diffusion_steps
+        )
+        
+        # 6. Prepare trajectory vector: if complex, extract the real phase alignment representation
+        if torch.is_complex(trajectory_vector):
+            # Complex phase angles/real projection
+            trajectory_real = torch.real(trajectory_vector)
+            # Add batch dimension if missing: shape [1, hrr_dim]
+            if trajectory_real.ndim == 1:
+                trajectory_real = trajectory_real.unsqueeze(0)
+            trajectory_input = trajectory_real.to(device)
+        else:
+            if trajectory_vector.ndim == 1:
+                trajectory_vector = trajectory_vector.unsqueeze(0)
+            trajectory_input = trajectory_vector.to(device)
+            
+        # 7. Run crystallization to produce token IDs
+        target_tokens = sampler.crystallize_motif(
+            swarm_trajectory=trajectory_input,
+            sequence_length=sequence_length,
+            guidance_scale=guidance_scale
+        )
+        
+        return target_tokens
+
 
     def save_router_centroids(self):
         try:

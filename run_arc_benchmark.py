@@ -102,7 +102,7 @@ def main():
     
     # 2. Initialize the Swarm Orchestrator with memory and GPU optimizations
     print("\n[SYSTEM] Booting optimized Swarm Orchestrator...")
-    model_path = "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf"
+    model_path = "mock_only.gguf"
     if len(sys.argv) > 1:
         model_path = sys.argv[1]
     orchestrator = HenriCognitiveSwarmOrchestrator(

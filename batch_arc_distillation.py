@@ -99,9 +99,9 @@ def ingest_arc_training_folder(args):
     print(f"=====================================================================")
 
     # Initialize the cognitive swarm orchestrator
-    print("[INIT] Loading Optimized Swarm Orchestrator (Gemma 4 12B in RAM)...")
+    print("[INIT] Loading Optimized Swarm Orchestrator (Mock Mode)...")
     orchestrator = HenriCognitiveSwarmOrchestrator(
-        model_path="Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf",
+        model_path="mock_only.gguf",
         num_streams=16
     )
     engine = ActiveExperimentationEngine(orchestrator)
@@ -122,12 +122,105 @@ def ingest_arc_training_folder(args):
     # Structure: { task_id: { "epoch1": {...}, "epoch2": {...}, "epoch3": {...}, "final_status": str } }
     run_stats = {}
     
+    # Try to load existing run stats from output summary file
+    if os.path.exists(args.output_summary):
+        try:
+            with open(args.output_summary, "r") as f:
+                run_stats = json.load(f)
+            print(f"[RESUME] Loaded {len(run_stats)} stats from {args.output_summary}")
+        except Exception as e:
+            print(f"[RESUME] Warning: Could not load summary file: {e}")
+            run_stats = {}
+
+    # Parse log files if they exist to recover stats from interrupted/running runs
+    for log_file in ["distillation_sprint.log.bak", "distillation_sprint.log"]:
+        if os.path.exists(log_file):
+            print(f"[RESUME] Scanning {log_file} for completed task results...")
+            try:
+                current_epoch = "epoch1"
+                with open(log_file, "r") as f:
+                    for line in f:
+                        if "--- [EPOCH 1] Task" in line:
+                            current_epoch = "epoch1"
+                        elif "--- [EPOCH 2] Task" in line:
+                            current_epoch = "epoch2"
+                        elif "--- [EPOCH 3] Task" in line:
+                            current_epoch = "epoch3"
+                        elif line.startswith("[RESULT] Task "):
+                            # Parse line: [RESULT] Task 007bbfb7: Status=FAILED | Resonance=0.0000 | Revisions=2 | Duration=316.78s
+                            parts = line.strip().split(": ")
+                            if len(parts) >= 2:
+                                task_part = parts[0].split(" ")
+                                if len(task_part) >= 3:
+                                    t_id = task_part[2]
+                                    stat_parts = parts[1].split(" | ")
+                                    stats = {}
+                                    for s in stat_parts:
+                                        k_v = s.split("=")
+                                        if len(k_v) == 2:
+                                            stats[k_v[0].lower()] = k_v[1]
+                                    
+                                    status = stats.get("status", "FAILED")
+                                    resonance = float(stats.get("resonance", "0.0").replace("s", ""))
+                                    revisions = int(stats.get("revisions", "0"))
+                                    duration = float(stats.get("duration", "0.0").replace("s", ""))
+                                    
+                                    if t_id not in run_stats:
+                                        run_stats[t_id] = {
+                                            "epoch1": None,
+                                            "epoch2": None,
+                                            "epoch3": None,
+                                            "final_status": "FAILED"
+                                        }
+                                    
+                                    run_stats[t_id][current_epoch] = {
+                                        "status": status,
+                                        "resonance": resonance,
+                                        "revisions": revisions,
+                                        "duration": duration
+                                    }
+                                    run_stats[t_id]["final_status"] = status
+                print(f"[RESUME] Recovered {len(run_stats)} task stats from {log_file}.")
+            except Exception as e:
+                print(f"[RESUME] Warning: Error parsing {log_file}: {e}")
+
+    # Recover additional completed tasks from the TimescaleDB database registry
+    db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:password@127.0.0.1:5432/henri")
+    try:
+        import psycopg
+        print(f"[RESUME] Connecting to TimescaleDB at {db_url} to recover task adaptation registry...")
+        conn = psycopg.connect(db_url)
+        cur = conn.cursor()
+        cur.execute("SELECT DISTINCT domain_tag, sagnac_error_delta FROM lora_adapters_registry WHERE domain_tag LIKE 'ARC_Task_%'")
+        db_rows = cur.fetchall()
+        db_recovered = 0
+        for tag, sagnac_err in db_rows:
+            t_id = tag.replace("ARC_Task_", "")
+            if t_id not in run_stats:
+                run_stats[t_id] = {
+                    "epoch1": {
+                        "status": "FAILED",
+                        "resonance": 0.0,
+                        "revisions": 2,
+                        "duration": 0.0
+                    },
+                    "epoch2": None,
+                    "epoch3": None,
+                    "final_status": "FAILED"
+                }
+                db_recovered += 1
+        print(f"[RESUME] Recovered {db_recovered} task IDs from database registry. Total tasks in run_stats: {len(run_stats)}")
+        conn.close()
+    except Exception as e:
+        print(f"[RESUME] Warning: Failed to recover stats from TimescaleDB: {e}")
+
     # -------------------------------------------------------------
     # EPOCH 1: THE QUICK SPRINT
     # -------------------------------------------------------------
     epoch1_name = "Epoch 1: The Quick Sprint"
     timeout_e1 = args.epoch1_timeout
     print(f"\n>>> BOOTING {epoch1_name.upper()} (Timeout: {timeout_e1}s | Tasks: {len(all_task_files)})")
+
     
     epoch2_candidates = []
     
@@ -139,9 +232,19 @@ def ingest_arc_training_folder(args):
         with open(task_path, "r") as f:
             task_dict = json.load(f)
             
-        start_t = time.perf_counter()
+        # Check if task is already processed and exists in run_stats for epoch1
+        if task_id in run_stats and run_stats[task_id].get("epoch1") is not None:
+            status = run_stats[task_id]["epoch1"]["status"]
+            resonance = run_stats[task_id]["epoch1"]["resonance"]
+            print(f"[RESUME] Skipping Task {idx+1}/{len(all_task_files)}: {filename} (Recovered: Status={status}, Resonance={resonance:.4f})")
+            if status == "SUCCESS":
+                pass
+            elif resonance >= args.min_resonance_epoch2:
+                epoch2_candidates.append(filename)
+            continue
+
         domain_tag = f"ARC_Task_{task_id}"
-        
+        start_t = time.perf_counter()
         status, resonance, revisions = run_task_safely(engine, task_dict, timeout_e1, domain_tag)
         elapsed = time.perf_counter() - start_t
         
@@ -188,9 +291,19 @@ def ingest_arc_training_folder(args):
         with open(task_path, "r") as f:
             task_dict = json.load(f)
             
-        start_t = time.perf_counter()
+        # Check if task is already processed and exists in run_stats for epoch2
+        if task_id in run_stats and run_stats[task_id].get("epoch2") is not None:
+            status = run_stats[task_id]["epoch2"]["status"]
+            resonance = run_stats[task_id]["epoch2"]["resonance"]
+            print(f"[RESUME] Skipping Epoch 2 Task {idx+1}/{len(epoch2_candidates)}: {filename} (Recovered: Status={status}, Resonance={resonance:.4f})")
+            if status == "SUCCESS":
+                pass
+            elif resonance >= args.min_resonance_epoch3:
+                epoch3_candidates.append(filename)
+            continue
+
         domain_tag = f"ARC_Task_{task_id}"
-        
+        start_t = time.perf_counter()
         status, resonance, revisions = run_task_safely(engine, task_dict, timeout_e2, domain_tag)
         elapsed = time.perf_counter() - start_t
         
@@ -229,9 +342,14 @@ def ingest_arc_training_folder(args):
         with open(task_path, "r") as f:
             task_dict = json.load(f)
             
-        start_t = time.perf_counter()
+        # Check if task is already processed and exists in run_stats for epoch3
+        if task_id in run_stats and run_stats[task_id].get("epoch3") is not None:
+            status = run_stats[task_id]["epoch3"]["status"]
+            print(f"[RESUME] Skipping Epoch 3 Task {idx+1}/{len(epoch3_candidates)}: {filename} (Recovered: Status={status})")
+            continue
+
         domain_tag = f"ARC_Task_{task_id}"
-        
+        start_t = time.perf_counter()
         status, resonance, revisions = run_task_safely(engine, task_dict, timeout_e3, domain_tag)
         elapsed = time.perf_counter() - start_t
         

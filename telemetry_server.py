@@ -95,10 +95,23 @@ class NonBlockingTelemetryServer:
         self.server_thread = None
 
     def start(self):
-        self.server = http.server.HTTPServer((self.host, self.port), TelemetryHTTPHandler)
-        self.server_thread = threading.Thread(target=self.server.serve_forever, daemon=True)
-        self.server_thread.start()
-        print(f"[Telemetry] Non-blocking server listening on http://{self.host}:{self.port}/telemetry")
+        for p in range(self.port, self.port + 10):
+            try:
+                self.server = http.server.HTTPServer((self.host, p), TelemetryHTTPHandler)
+                self.port = p
+                self.server_thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+                self.server_thread.start()
+                print(f"[Telemetry] Non-blocking server listening on http://{self.host}:{self.port}/telemetry")
+                return
+            except OSError as e:
+                # Handle address already in use (98 on Linux, 10048 on Windows)
+                import errno
+                if e.errno == errno.EADDRINUSE:
+                    continue
+                else:
+                    raise e
+        print(f"[Telemetry] Warning: Could not find any open port for telemetry server (started looking at {self.port}).")
+
 
     def stop(self):
         if self.server:

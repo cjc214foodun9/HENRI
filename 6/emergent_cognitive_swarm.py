@@ -340,16 +340,9 @@ class EmergentCognitiveSwarm(nn.Module):
                     generated_texts[dead_idx] = generated_texts[top_expert_idx]
                     tokens_lists[dead_idx] = list(tokens_lists[top_expert_idx])
                     
-                    # 4. Overwrite Vulkan KV-cache slot
-                    if not self.orchestrator.is_mock and hasattr(self.orchestrator.gen_model, "llama"):
-                        try:
-                            import llama_cpp.llama_cpp as lcpp
-                            ctx = self.orchestrator.gen_model.llama.ctx
-                            lcpp.llama_memory_seq_rm(ctx, dead_idx, 0, -1)
-                            lcpp.llama_memory_seq_cp(ctx, top_expert_idx, dead_idx, 0, -1)
-                            print(f"[KV CACHE SWAP] Synced Vulkan KV-cache sequence slot {top_expert_idx} -> {dead_idx}")
-                        except Exception as kv_err:
-                            print(f"[KV CACHE SWAP] Warning: KV-cache sync failed: {kv_err}")
+                    # 4. Overwrite Vulkan KV-cache slot and VSA memory cache using Kan Pullback
+                    if self.orchestrator is not None:
+                        self.orchestrator.apply_functorflow_kan_repair(top_expert_idx, dead_idx)
                             
         candidates = []
         for idx in range(num_candidates):

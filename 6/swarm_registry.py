@@ -627,7 +627,7 @@ class PhysicalMixtureOfMasters:
                     embedding=True,
                     use_mmap=False,
                     use_mlock=False,
-                    n_gpu_layers=0,
+                    n_gpu_layers=-1,
                     main_gpu=0,
                     split_mode=0
                 )
@@ -637,10 +637,11 @@ class PhysicalMixtureOfMasters:
                     n_ctx=16384,
                     n_batch=512,
                     n_threads=8,
+                    n_seq_max=16,
                     embedding=False,
                     use_mmap=False,
                     use_mlock=False,
-                    n_gpu_layers=0,
+                    n_gpu_layers=-1,
                     main_gpu=0,
                     split_mode=0
                 )
