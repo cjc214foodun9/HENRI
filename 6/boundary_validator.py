@@ -24,25 +24,31 @@ class BoundaryAxiomValidator(torch_nn.Module):
         g.manual_seed(seed)
         
         phases = (torch.rand(boundary_dim, bulk_dim, generator=g) * 2 * math.pi) - math.pi
-        self.P = torch.polar(torch.ones(boundary_dim, bulk_dim), phases)
-        # Normalize rows to make it a projection
-        self.P = self.P / math.sqrt(bulk_dim)
+        self.register_buffer('P_real', torch.cos(phases) / math.sqrt(bulk_dim))
+        self.register_buffer('P_imag', torch.sin(phases) / math.sqrt(bulk_dim))
         
         # 2. Initialize the Dirichlet Axiom targets
         # Sector 0: Physical Invariants (thermodynamics, conservation)
-        self.dirichlet_physics = torch.polar(torch.ones(self.sector_dim), (torch.rand(self.sector_dim, generator=g) * 2 * math.pi) - math.pi)
+        physics_phases = (torch.rand(self.sector_dim, generator=g) * 2 * math.pi) - math.pi
+        self.register_buffer('dirichlet_physics_real', torch.cos(physics_phases))
+        self.register_buffer('dirichlet_physics_imag', torch.sin(physics_phases))
         
         # Sector 1: Sagnac Logic Axioms (truth/hallucination limits)
-        self.dirichlet_logic = torch.polar(torch.ones(self.sector_dim), (torch.rand(self.sector_dim, generator=g) * 2 * math.pi) - math.pi)
+        logic_phases = (torch.rand(self.sector_dim, generator=g) * 2 * math.pi) - math.pi
+        self.register_buffer('dirichlet_logic_real', torch.cos(logic_phases))
+        self.register_buffer('dirichlet_logic_imag', torch.sin(logic_phases))
         
         # Sector 2: Thermodynamic Guardrails (Lipschitz bounds, phase-proximity)
-        self.dirichlet_guardrails = torch.polar(torch.ones(self.sector_dim), (torch.rand(self.sector_dim, generator=g) * 2 * math.pi) - math.pi)
+        guard_phases = (torch.rand(self.sector_dim, generator=g) * 2 * math.pi) - math.pi
+        self.register_buffer('dirichlet_guardrails_real', torch.cos(guard_phases))
+        self.register_buffer('dirichlet_guardrails_imag', torch.sin(guard_phases))
         
         # 3. Initialize Sector 3: Active Neumann Boundary (Living Playbook)
         # Starts as a pure Gaussian potential on the unit circle
         neumann_phases = (torch.rand(self.sector_dim, generator=g) * 2 * math.pi) - math.pi
-        self.neumann_active = torch.polar(torch.ones(self.sector_dim), neumann_phases)
-
+        self.register_buffer('neumann_active_real', torch.cos(neumann_phases))
+        self.register_buffer('neumann_active_imag', torch.sin(neumann_phases))
+        
         # 4. Self-Organizing Topological Manifold: 64 Complex features = 128 Real features.
         # This preserves the circular (S^1) topology of the waves
         self.shared_manifold = EmergentManifold(in_features=boundary_dim * 2, hidden_features=boundary_dim * 2)
@@ -60,7 +66,9 @@ class BoundaryAxiomValidator(torch_nn.Module):
         # bulk_wave shape: [4096]
         # P shape: [64, 4096]
         # Output shape: [64]
-        h_cft = torch.mv(self.P, bulk_wave)
+        dev = bulk_wave.device
+        P = torch.complex(self.P_real.to(dev), self.P_imag.to(dev))
+        h_cft = torch.mv(P, bulk_wave)
         return h_cft
 
     def validate_boundary(self, bulk_wave: torch.Tensor) -> tuple:
@@ -72,6 +80,8 @@ class BoundaryAxiomValidator(torch_nn.Module):
             error_energy: float
             h_cft: projected 64-D boundary tensor
         """
+        dev = bulk_wave.device
+        
         # 1. Project down to 64-D boundary
         h_cft = self.bulk_to_boundary(bulk_wave)
         
@@ -122,10 +132,15 @@ class BoundaryAxiomValidator(torch_nn.Module):
         sec_log_norm = norm_sec(sector_logic)
         sec_guard_norm = norm_sec(sector_guardrails)
         
+        # Reconstruct complex targets on the current device
+        dirichlet_physics = torch.complex(self.dirichlet_physics_real.to(dev), self.dirichlet_physics_imag.to(dev))
+        dirichlet_logic = torch.complex(self.dirichlet_logic_real.to(dev), self.dirichlet_logic_imag.to(dev))
+        dirichlet_guardrails = torch.complex(self.dirichlet_guardrails_real.to(dev), self.dirichlet_guardrails_imag.to(dev))
+        
         # 3. Compute deviations (distance from Dirichlet axioms)
-        dev_physics = 1.0 - torch.real(torch.sum(sec_phys_norm * torch.conj(self.dirichlet_physics))) / self.sector_dim
-        dev_logic = 1.0 - torch.real(torch.sum(sec_log_norm * torch.conj(self.dirichlet_logic))) / self.sector_dim
-        dev_guardrails = 1.0 - torch.real(torch.sum(sec_guard_norm * torch.conj(self.dirichlet_guardrails))) / self.sector_dim
+        dev_physics = 1.0 - torch.real(torch.sum(sec_phys_norm * torch.conj(dirichlet_physics))) / self.sector_dim
+        dev_logic = 1.0 - torch.real(torch.sum(sec_log_norm * torch.conj(dirichlet_logic))) / self.sector_dim
+        dev_guardrails = 1.0 - torch.real(torch.sum(sec_guard_norm * torch.conj(dirichlet_guardrails))) / self.sector_dim
         
         # Compute overall error energy (mean of deviations)
         error_energy = (dev_physics + dev_logic + dev_guardrails).item() / 3.0
@@ -154,6 +169,7 @@ class BoundaryAxiomValidator(torch_nn.Module):
         Dynamically shifts the Active Neumann Boundary (Living Playbook)
         in response to the error delta from the learning loop.
         """
+        dev = reflection_delta_cft.device
         # Expose Sector 3 reflection delta
         delta_neumann = reflection_delta_cft[48:64]
         
@@ -170,11 +186,17 @@ class BoundaryAxiomValidator(torch_nn.Module):
         lr = 0.05 * (1.0 - alignment_score)
         
         with torch.no_grad():
+            # Reconstruct complex active neumann on device
+            neumann_active = torch.complex(self.neumann_active_real.to(dev), self.neumann_active_imag.to(dev))
+            
             # Apply shift along error direction
-            self.neumann_active += lr * delta_neumann
+            neumann_active += lr * delta_neumann
             # Project back to unit circle to maintain normalization
-            mags = torch.abs(self.neumann_active)
+            mags = torch.abs(neumann_active)
             mags = torch.clamp(mags, min=1e-8)
-            self.neumann_active.copy_(self.neumann_active / mags)
+            neumann_active = neumann_active / mags
+            
+            self.neumann_active_real.copy_(neumann_active.real)
+            self.neumann_active_imag.copy_(neumann_active.imag)
             
         print(f"[BOUNDARY] Active Neumann Boundary updated (Learning Rate: {lr:.4f}).")

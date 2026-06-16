@@ -776,6 +776,7 @@ class HenriCognitiveSwarmOrchestrator:
             boundary_dim=64, 
             epsilon_spine=0.35
         )
+        self.boundary_validator.to(self.optical_core.device)
 
         # 7. Initialize Hopfield Network Cleanup and pre-populate with seed concepts
         self.hopfield = HopfieldSemanticCleanup(dim=self.hrr_dim, beta=35.0, max_iterations=5)
@@ -804,6 +805,7 @@ class HenriCognitiveSwarmOrchestrator:
             SwarmAgent(agent_id=i, state_dim=128, action_dim=128, vocab_size=50, embed_dim=8)
             for i in range(num_streams)
         ])
+        self.agents.to(self.optical_core.device)
 
         # 9. Asynchronous timed loop control structures
         self.stream_contexts = {i: [] for i in range(num_streams)}
@@ -1347,7 +1349,7 @@ class HenriCognitiveSwarmOrchestrator:
             
             # Project complex actuation back to bulk 4096-D wavefront space
             psi_modulated = torch.mv(torch.conj(self.boundary_validator.P.T), complex_actuation)
-            psi_modulated_np = psi_modulated.detach().numpy().astype(np.complex64)
+            psi_modulated_np = psi_modulated.detach().cpu().numpy().astype(np.complex64)
 
             # Fire the bulk wave into Zone B physical emulator (D2NN layers)
             truth_np, delta_np, alignment = self.optical_core.forward(
@@ -1357,7 +1359,7 @@ class HenriCognitiveSwarmOrchestrator:
             )
             
             # Map physical wave back through manifold
-            truth_tensor = torch.tensor(truth_np, dtype=torch.complex64, device=torch.device('cpu'))
+            truth_tensor = torch.tensor(truth_np, dtype=torch.complex64, device=self.optical_core.device)
             is_valid, veto_reason, error_energy, h_cft = self.boundary_validator.validate_boundary(truth_tensor)
             
             next_real, next_imag = h_cft.real, h_cft.imag
@@ -1396,7 +1398,7 @@ class HenriCognitiveSwarmOrchestrator:
             h_cft = torch.complex(real_part, imag_part)
             truth_tensor = torch.mv(torch.conj(self.boundary_validator.P.T), h_cft)
             
-            truth_np = truth_tensor.detach().numpy().astype(np.complex64)
+            truth_np = truth_tensor.detach().cpu().numpy().astype(np.complex64)
             delta_np = np.zeros_like(truth_np)
             alignment = np.ones(1)
             is_valid = True
@@ -1414,7 +1416,7 @@ class HenriCognitiveSwarmOrchestrator:
             alignment_scalar = alignment.mean().item() if isinstance(alignment, (np.ndarray, torch.Tensor)) else alignment
             
             # Update Active Neumann Boundary CFT sector
-            delta_tensor = torch.tensor(delta_np, dtype=torch.complex64)
+            delta_tensor = torch.tensor(delta_np, dtype=torch.complex64, device=self.optical_core.device)
             delta_cft = self.boundary_validator.bulk_to_boundary(delta_tensor)
             self.boundary_validator.update_neumann_boundary(delta_cft, alignment_scalar)
             

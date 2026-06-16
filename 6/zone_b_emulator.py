@@ -209,7 +209,7 @@ class ZoneBPhysicalEmulator:
         )
 
         # 4. Boundary Validation
-        truth_tensor = torch.tensor(truth_np, dtype=torch.complex64, device=torch.device('cpu'))
+        truth_tensor = torch.tensor(truth_np, dtype=torch.complex64, device=self.orchestrator.optical_core.device)
         is_valid, veto_reason, error_energy, h_cft = self.orchestrator.boundary_validator.validate_boundary(truth_tensor)
         
         if not is_valid:
