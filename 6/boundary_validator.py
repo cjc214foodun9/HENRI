@@ -61,6 +61,26 @@ class BoundaryAxiomValidator(torch_nn.Module):
             
         self.routing_optimizer = torch.optim.Adam(self.routing_layer.parameters(), lr=0.01)
 
+    @property
+    def P(self) -> torch.Tensor:
+        return torch.complex(self.P_real, self.P_imag)
+
+    @property
+    def dirichlet_physics(self) -> torch.Tensor:
+        return torch.complex(self.dirichlet_physics_real, self.dirichlet_physics_imag)
+
+    @property
+    def dirichlet_logic(self) -> torch.Tensor:
+        return torch.complex(self.dirichlet_logic_real, self.dirichlet_logic_imag)
+
+    @property
+    def dirichlet_guardrails(self) -> torch.Tensor:
+        return torch.complex(self.dirichlet_guardrails_real, self.dirichlet_guardrails_imag)
+
+    @property
+    def neumann_active(self) -> torch.Tensor:
+        return torch.complex(self.neumann_active_real, self.neumann_active_imag)
+
     def bulk_to_boundary(self, bulk_wave: torch.Tensor) -> torch.Tensor:
         """Projects a 4096-D bulk wave to 64-D boundary tensor."""
         # bulk_wave shape: [4096]

@@ -406,14 +406,20 @@ class ActiveExperimentationEngine:
             for candidate_info in candidate_batch:
                 candidate, alpha_routing = candidate_info
                 # 3. Inductive Generalization Guard (AST Sieve)
-                is_generalized, guard_feedback = self.inductor.assert_generalization(candidate)
+                is_syntax_valid, pure_code_or_err = self.inductor.verify_syntax(candidate)
+                if not is_syntax_valid:
+                    print(f"[ENGINE] Syntax check failed: {pure_code_or_err}")
+                    scored_candidates.append((candidate, None, 0.0, None, 999.0, pure_code_or_err, alpha_routing, None))
+                    continue
+                    
+                pure_code = pure_code_or_err
+                
+                is_generalized, guard_feedback = self.inductor.assert_generalization(pure_code)
                 if not is_generalized:
                     print(f"[ENGINE] Generalization check failed: {guard_feedback}")
                     # Store as invalid (None truth_tensor)
                     scored_candidates.append((candidate, None, 0.0, None, 999.0, guard_feedback, alpha_routing, None))
                     continue
-                    
-                pure_code = guard_feedback
                 
                 # 4. The Physical Sagnac Veto: evaluate wavefront in Zone B emulator
                 wave_valid, physical_feedback, error_energy, truth_tensor, delta_np = self.emulator.evaluate_wavefront(pure_code, target_label="SCADA_Pressure_Control")
