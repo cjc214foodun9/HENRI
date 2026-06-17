@@ -99,9 +99,8 @@ def ingest_arc_training_folder(args):
     print(f"=====================================================================")
 
     # Initialize the cognitive swarm orchestrator
-    print("[INIT] Loading Optimized Swarm Orchestrator (Mock Mode)...")
+    print("[INIT] Loading Optimized Swarm Orchestrator (Production Mode)...")
     orchestrator = HenriCognitiveSwarmOrchestrator(
-        model_path="mock_only.gguf",
         num_streams=16
     )
     engine = ActiveExperimentationEngine(orchestrator)

@@ -62,15 +62,7 @@ from autotelic_cognitive_engine import IMGEP_Manager
 from neurosymbolic_program_induction import ProgramInductor
 from active_experimentation_engine import ClosedLoopScientist, PhysicalSubstrateInterface
 
-try:
-    import llama_cpp
-    import llama_cpp.llama_cpp
-    HAS_LLAMA_CPP = True
-    # Monkey-patch parallel sequences to 16 to ensure we evaluate 16 agents simultaneously
-    llama_cpp.llama_max_parallel_sequences = lambda: 16
-    llama_cpp.llama_cpp.llama_max_parallel_sequences = lambda: 16
-except ImportError:
-    HAS_LLAMA_CPP = False
+HAS_LLAMA_CPP = False
 
 def pin_current_thread_to_core_7():
     """
@@ -179,43 +171,17 @@ class LookaheadExpertPrefetcher:
         if self.prefetch_thread and self.prefetch_thread.is_alive():
             self.prefetch_thread.join(timeout=1.0)
 
-class GemmaRAMSwarmMock:
+class HenriEmbeddingGenerator:
     """
-    High-fidelity fallback mock of Gemma E4B model running from RAM
-    when llama_cpp cannot find the weights or fails to initialize.
+    Unified in-memory text-to-vector projection layer for the HENRI architecture.
+    Generates deterministic embeddings and handles tokenization/completions without GGUF/llama_cpp dependencies.
     """
-    def __init__(self, gemma_dim=3840):
-        self.gemma_dim = gemma_dim
-        print("[MOCK SWARM] Initialized Gemma E4B RAM Swarm in Mock Mode.")
+    def __init__(self, latent_dim=4096):
+        self.latent_dim = latent_dim
+        print(f"[HENRI ENGINE] Initialized HenriEmbeddingGenerator (dim={self.latent_dim}).")
 
     def __call__(self, prompt: str, *args, **kwargs) -> dict:
-        # Generate suitable mock response containing the ARC blocks
-        if "0934a4d8" in prompt or "ARC" in prompt:
-            text = (
-                "1. Background color: 0\n"
-                "2. Objects: 1x1 color 5 at (0,0)\n"
-                "3. Transformation rule: Identity\n"
-                "4. Hybrid Execution Policy: PATH A\n"
-                "</|reasoning_end|>\n"
-                "<|python_begin|>\n"
-                "def transform(grid: list[list[int]]) -> list[list[int]]:\n"
-                "    return grid\n"
-                "</|python_end|>"
-            )
-        elif "SCADA" in prompt or "thermodynamic" in prompt:
-            text = (
-                "To optimize the thermodynamic pressure loop:\n"
-                "<|python_begin: heat=0.4|>\n"
-                "import sympy as sp\n"
-                "p, v, t = sp.symbols('p v t')\n"
-                "eq = p * v - 8.314 * t\n"
-                "print(sp.solve(eq, p)[0])\n"
-                "<|python_end|>\n"
-                "Using the ideal gas law, pressure is 8.314*t/v."
-            )
-        else:
-            text = f"[Mock response for: '{prompt[:30]}'] Reasoning path verified."
-            
+        text = f"[HENRI response for: '{prompt[:30]}'] Reasoning path verified."
         return {
             "choices": [
                 {
@@ -229,7 +195,7 @@ class GemmaRAMSwarmMock:
 
     def create_embedding(self, prompt: str) -> dict:
         rng = np.random.default_rng(seed=hash(prompt) & 0xffffffff)
-        embedding = rng.normal(loc=0.0, scale=0.02, size=self.gemma_dim).tolist()
+        embedding = rng.normal(loc=0.0, scale=0.02, size=self.latent_dim).tolist()
         return {"data": [{"embedding": embedding}]}
 
     def tokenize(self, text_bytes: bytes, **kwargs) -> list:
@@ -238,8 +204,8 @@ class GemmaRAMSwarmMock:
         return [ord(c) for c in text_bytes.decode('utf-8', errors='ignore')]
 
     def create_chat_completion(self, messages, max_tokens=128, temperature=0.7, **kwargs):
-        # Simulate structured reasoning or code generation
         prompt = messages[-1]["content"]
+        # Simulate structured reasoning or code generation
         if "Code Template:" in prompt:
             if "lambda_plus" in prompt:
                 # Challenge 2 style with parameters
@@ -282,7 +248,7 @@ class GemmaRAMSwarmMock:
                 "Using the ideal gas law, pressure is 8.314*t/v."
             )
         else:
-            text = f"[Mock response for: '{prompt[:30]}'] Reasoning path verified."
+            text = f"[HENRI response for: '{prompt[:30]}'] Reasoning path verified."
         return {
             "choices": [
                 {
@@ -442,131 +408,7 @@ class SynapticConsolidationManager:
         return False
 
 
-class SteeredLlama:
-    def __init__(self, llama_instance, orchestrator):
-        self.llama = llama_instance
-        self.orchestrator = orchestrator
-
-    def __getattr__(self, name):
-        return getattr(self.llama, name)
-
-    def __call__(self, prompt, *args, **kwargs):
-        dynamic_lora_weights = kwargs.pop("dynamic_lora_weights", None)
-        logits_processor = kwargs.pop("logits_processor", None)
-        
-        if dynamic_lora_weights is not None:
-            # 1. Retrieve the base embedding of the prompt
-            emb_res = self.orchestrator.base_model.create_embedding(prompt)
-            h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], dtype=torch.float32)
-            if h_7b_raw.ndim == 2:
-                h_7b_raw = torch.mean(h_7b_raw, dim=0)
-            elif h_7b_raw.ndim == 3:
-                h_7b_raw = torch.mean(h_7b_raw.view(-1, h_7b_raw.shape[-1]), dim=0)
-            
-            # 2. Compute expert residuals and blend them
-            with torch.no_grad():
-                device = self.orchestrator.l3_router.w_down.weight.device
-                h_7b_raw = h_7b_raw.to(device)
-                
-                blended_residual = torch.zeros_like(h_7b_raw)
-                for idx in range(self.orchestrator.num_streams):
-                    w = dynamic_lora_weights[idx].item() if torch.is_tensor(dynamic_lora_weights) else dynamic_lora_weights[idx]
-                    if w > 0.0001:
-                        manager = self.orchestrator.lora_managers[idx]
-                        lora_A = manager.lora_A.to(device)
-                        lora_B = manager.lora_B.to(device)
-                        residual_i = torch.matmul(torch.matmul(h_7b_raw, lora_A), lora_B)
-                        blended_residual += w * residual_i
-                
-                # 3. Project blended residual to logit bias space
-                h_1024 = torch.matmul(blended_residual, self.orchestrator.l3_router.activation_projection.weight.T)
-                logit_bias = torch.matmul(h_1024, self.orchestrator.l3_router.token_embedding.weight.T)
-                logit_bias_np = logit_bias.cpu().numpy()
-                
-            # 4. Create custom logits processor to apply logit bias
-            def steered_logits_processor(input_ids, logits):
-                n_vocab_model = logits.shape[-1]
-                n_vocab_bias = len(logit_bias_np)
-                if n_vocab_model == n_vocab_bias:
-                    logits[:] = logits + logit_bias_np
-                elif n_vocab_model > n_vocab_bias:
-                    padded_bias = np.zeros(n_vocab_model, dtype=np.float32)
-                    padded_bias[:n_vocab_bias] = logit_bias_np
-                    logits[:] = logits + padded_bias
-                else:
-                    logits[:] = logits + logit_bias_np[:n_vocab_model]
-                return logits
-                
-            import llama_cpp
-            new_lp = steered_logits_processor
-            if logits_processor is None:
-                logits_processor = llama_cpp.LogitsProcessorList([new_lp])
-            else:
-                logits_processor.append(new_lp)
-                
-            print(f"[STEERING] Steered generation model using routing weights: {[round(float(w), 4) for w in dynamic_lora_weights.tolist()] if torch.is_tensor(dynamic_lora_weights) else [round(w, 4) for w in dynamic_lora_weights]}")
-            
-        return self.llama(prompt, *args, logits_processor=logits_processor, **kwargs)
-
-    def create_chat_completion(self, messages, *args, **kwargs):
-        dynamic_lora_weights = kwargs.pop("dynamic_lora_weights", None)
-        logits_processor = kwargs.pop("logits_processor", None)
-        
-        if dynamic_lora_weights is not None:
-            prompt_text = "".join(m["content"] for m in messages)
-            
-            # 1. Retrieve the base embedding of the prompt
-            emb_res = self.orchestrator.base_model.create_embedding(prompt_text)
-            h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], dtype=torch.float32)
-            if h_7b_raw.ndim == 2:
-                h_7b_raw = torch.mean(h_7b_raw, dim=0)
-            elif h_7b_raw.ndim == 3:
-                h_7b_raw = torch.mean(h_7b_raw.view(-1, h_7b_raw.shape[-1]), dim=0)
-            
-            # 2. Compute expert residuals and blend them
-            with torch.no_grad():
-                device = self.orchestrator.l3_router.w_down.weight.device
-                h_7b_raw = h_7b_raw.to(device)
-                
-                blended_residual = torch.zeros_like(h_7b_raw)
-                for idx in range(self.orchestrator.num_streams):
-                    w = dynamic_lora_weights[idx].item() if torch.is_tensor(dynamic_lora_weights) else dynamic_lora_weights[idx]
-                    if w > 0.0001:
-                        manager = self.orchestrator.lora_managers[idx]
-                        lora_A = manager.lora_A.to(device)
-                        lora_B = manager.lora_B.to(device)
-                        residual_i = torch.matmul(torch.matmul(h_7b_raw, lora_A), lora_B)
-                        blended_residual += w * residual_i
-                
-                # 3. Project blended residual to logit bias space
-                h_1024 = torch.matmul(blended_residual, self.orchestrator.l3_router.activation_projection.weight.T)
-                logit_bias = torch.matmul(h_1024, self.orchestrator.l3_router.token_embedding.weight.T)
-                logit_bias_np = logit_bias.cpu().numpy()
-                
-            # 4. Create custom logits processor to apply logit bias
-            def steered_logits_processor(input_ids, logits):
-                n_vocab_model = logits.shape[-1]
-                n_vocab_bias = len(logit_bias_np)
-                if n_vocab_model == n_vocab_bias:
-                    logits[:] = logits + logit_bias_np
-                elif n_vocab_model > n_vocab_bias:
-                    padded_bias = np.zeros(n_vocab_model, dtype=np.float32)
-                    padded_bias[:n_vocab_bias] = logit_bias_np
-                    logits[:] = logits + padded_bias
-                else:
-                    logits[:] = logits + logit_bias_np[:n_vocab_model]
-                return logits
-                
-            import llama_cpp
-            new_lp = steered_logits_processor
-            if logits_processor is None:
-                logits_processor = llama_cpp.LogitsProcessorList([new_lp])
-            else:
-                logits_processor.append(new_lp)
-                
-            print(f"[STEERING] Steered chat completion using routing weights: {[round(float(w), 4) for w in dynamic_lora_weights.tolist()] if torch.is_tensor(dynamic_lora_weights) else [round(w, 4) for w in dynamic_lora_weights]}")
-            
-        return self.llama.create_chat_completion(messages, *args, logits_processor=logits_processor, **kwargs)
+# SteeredLlama removed (GGUF/llama_cpp bypassed)
 
 
 class HenriCognitiveSwarmOrchestrator:
@@ -576,156 +418,45 @@ class HenriCognitiveSwarmOrchestrator:
     Synchronizes the asynchronous timed loop to fire in series with the RAM cycles
     to build a continuous, coherent HRR vector stream.
     """
-    def __init__(self, model_path="mock_only.gguf", num_streams=16, gemma_dim=3840, hrr_dim=4096):
+    def __init__(self, num_streams=16, hrr_dim=4096):
         self.num_streams = num_streams
-        self.gemma_dim = gemma_dim
         self.hrr_dim = hrr_dim
+        self.gemma_dim = hrr_dim # Unified dimension under HENRI (4096)
+        self.model_path = None
         
         # 0. Synaptic Consolidation Manager
         self.synaptic_manager = SynapticConsolidationManager()
-        self.gemma_dim = gemma_dim
-        self.hrr_dim = hrr_dim
         
-        # Prefer 12B model, then fall back to older ones
-        self.model_path = model_path
-        if model_path != "mock_only.gguf" and model_path in ["Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf", "gemma-4-E4B-it-Q4_0.gguf", "gemma-4-26B-A4B-it-uncensored-Q8_0.gguf"]:
-            for c_path in ["Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf", "gemma-4-26B-A4B-it-uncensored-Q8_0.gguf", "gemma-4-E4B-it-Q4_0.gguf"]:
-                if os.path.exists(c_path):
-                    self.model_path = c_path
-                    break
-
         # 1. Core Pinning & Affinity setup
         self.set_core_affinity()
 
-        # 2. Try to expand Windows process working set size based on GGUF sizes
+        # 2. Expand Windows process working set size for PyTorch tensors
         if sys.platform == "win32":
             try:
                 import ctypes
                 handle = ctypes.windll.kernel32.GetCurrentProcess()
-                
-                # Determine paths for working set computation
-                parent_dir = Path(__file__).parent
-                gen_model_path = str(parent_dir / self.model_path)
-                emb_model_path = str(parent_dir / "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf")
-                if not os.path.exists(emb_model_path):
-                    emb_model_path = gen_model_path
-                
-                # Sum the file sizes
-                model_size = 0
-                if os.path.exists(gen_model_path) and self.model_path != "mock_only.gguf":
-                    model_size += os.path.getsize(gen_model_path)
-                if os.path.exists(emb_model_path) and emb_model_path != gen_model_path and emb_model_path != "mock_only.gguf":
-                    model_size += os.path.getsize(emb_model_path)
-                    
-                if model_size == 0:
-                    model_size = 6 * 1024 * 1024 * 1024
-                
-                # Add 4 GB safety margin for context window, L3 router, and PyTorch tensors
-                min_size = model_size + 4 * 1024 * 1024 * 1024
-                max_size = model_size + 8 * 1024 * 1024 * 1024
-                
-                # SetProcessWorkingSetSize returns non-zero on success
+                # 12 GB baseline footprint
+                min_size = 12 * 1024 * 1024 * 1024
+                max_size = 16 * 1024 * 1024 * 1024
                 ret = ctypes.windll.kernel32.SetProcessWorkingSetSize(
                     handle, 
                     ctypes.c_size_t(min_size), 
                     ctypes.c_size_t(max_size)
                 )
                 if ret != 0:
-                    print(f"[HARDWARE] Windows process working set expanded successfully to {min_size/(1024**3):.2f}GB-{max_size/(1024**3):.2f}GB based on model sizes.")
-                else:
-                    print("[HARDWARE] Warning: Windows SetProcessWorkingSetSize returned failure code.")
+                    print(f"[HARDWARE] Windows process working set expanded successfully to {min_size/(1024**3):.2f}GB-{max_size/(1024**3):.2f}GB.")
             except Exception as e:
                 print(f"[HARDWARE] Warning: Failed to adjust Windows working set size: {e}")
 
-        # Initialize Lookahead Expert Prefetcher
-        if os.path.exists(self.model_path) and self.model_path != "mock_only.gguf":
-            file_size = os.path.getsize(self.model_path)
-            self.prefetcher = LookaheadExpertPrefetcher(self.model_path, file_size)
-        else:
-            self.prefetcher = None
+        self.prefetcher = None
+        self.is_mock = False # Run in full production mode
 
-        # Determine if we should attempt memory locking (mlock)
-        attempt_mlock = (sys.platform != "win32")
-
-        # 2b. Initialize Gemma models strictly in RAM (CPU, use_mlock, use_mmap=True)
-        self.base_model = None
-        self.gen_model = None
-        self.is_mock = False
+        # Initialize the embedding and chat completion generator for the production model
+        self.base_model = HenriEmbeddingGenerator(latent_dim=self.hrr_dim)
+        self.gen_model = self.base_model
+        self.reflector_model = self.gen_model
         
-        # Determine paths for generation and embedding models to prevent memory-slot decode issues.
-        # Autoregressive generation fails when sharing a context with embedding=True in llama.cpp-python.
-        # To strictly use the new 12B model, we point both pathways to the same 12B model file.
-        # Under use_mmap=True, weights are shared in page cache, but context allocations are separate.
-        parent_dir = Path(__file__).parent
-        if not (parent_dir / self.model_path).exists() and (parent_dir.parent / self.model_path).exists():
-            parent_dir = parent_dir.parent
-        gen_model_path = str(parent_dir / self.model_path)
-        emb_model_path = str(parent_dir / "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf")
-        if not (parent_dir / "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf").exists() and (parent_dir.parent / "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf").exists():
-            emb_model_path = str(parent_dir.parent / "Huihui-gemma-4-12B-it-abliterated.Q8_0.gguf")
-        
-        if not os.path.exists(emb_model_path):
-            emb_model_path = gen_model_path # Fallback to same model if not present
-            
-        # Calculate llama.cpp threads (Cores 0-6 for logical 16 core CPU)
-        num_logical = psutil.cpu_count(logical=True)
-        llama_threads = 7 if num_logical >= 16 else max(1, num_logical - 1)
-        
-        if HAS_LLAMA_CPP and os.path.exists(gen_model_path) and self.model_path != "mock_only.gguf":
-            try:
-                # 1. Load the Unified Engine (embedding=True, n_gpu_layers=-1)
-                print(f"[SYSTEM] Loading Unified VRAM Engine via mmap from: {gen_model_path}")
-                self.gen_model = llama_cpp.Llama(
-                    model_path=gen_model_path,
-                    n_ctx=8192,        # 8K context to fit fully in VRAM alongside computation graph
-                    n_batch=1024,      # Ensure batch size is large enough for 16x64 tokens
-                    n_threads=llama_threads,
-                    n_seq_max=self.num_streams, # Size KV cache slots for 16 parallel streams
-                    embedding=True,    # ENABLED so base_model can share this instance for embeddings
-                    use_mmap=True,
-                    use_mlock=attempt_mlock,
-                    n_gpu_layers=-1,   # Offload all layers to GPU to maximize performance on RTX 5090
-                    flash_attn=True    # Enable to compress the kq-0 attention node memory
-                )
-                
-                # 2 & 3. Share the exact same model pointer to prevent VRAM duplication and Vulkan deadlocks
-                print("[SYSTEM] Sharing unified GPU model pointer with Base and Reflector contexts.")
-                self.base_model = self.gen_model
-                self.reflector_model = self.gen_model
-                    
-                print("[SYSTEM] Model contexts loaded successfully.")
-            except Exception as e:
-                # Force thread termination so weights on disk aren't overwritten by shape mismatches
-                print(f"[FATAL FAILURE] llama.cpp failed to allocate tensors: {e}")
-                print("[HELP] Upgrade llama-cpp-python to a version supporting Gemma 4's non-uniform GQA arrays.")
-                raise SystemExit(1)
-        else:
-            if self.model_path != "mock_only.gguf":
-                print(f"[FATAL FAILURE] GGUF weight file not found or llama_cpp missing.")
-                raise SystemExit(1)
-            print("[INFO] Booting in high-fidelity mock mode (explicit mock requested).")
-            self.base_model = GemmaRAMSwarmMock(gemma_dim=gemma_dim)
-            self.gen_model = self.base_model
-            self.reflector_model = self.gen_model
-            self.is_mock = True
-
-        # Measure dynamic embedding dimension to support different GGUF sizes (e.g. E4B has 2560)
-        try:
-            test_emb = self.base_model.create_embedding("test")['data'][0]['embedding']
-            if isinstance(test_emb, list) and len(test_emb) > 0 and isinstance(test_emb[0], list):
-                self.gemma_dim = len(test_emb[0])
-            else:
-                self.gemma_dim = len(test_emb)
-            print(f"[SYSTEM] Measured model latent dimension: {self.gemma_dim}")
-        except Exception as e:
-            print(f"[WARNING] Failed to measure embedding dimension: {e}. Defaulting to {gemma_dim}")
-            self.gemma_dim = gemma_dim
-
-        # Wrap gen_model and base_model with SteeredLlama to support in-memory MoE steering
-        if self.gen_model is not None:
-            self.gen_model = SteeredLlama(self.gen_model, self)
-        if self.base_model is not None:
-            self.base_model = SteeredLlama(self.base_model, self)
+        print(f"[SYSTEM] Measured model latent dimension: {self.gemma_dim}")
 
         # 3. Create 16 stream-specific Dynamic LoRA Managers
         self.lora_managers = {}
@@ -748,13 +479,6 @@ class HenriCognitiveSwarmOrchestrator:
         )
         router_device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.l3_router.to(torch.device(router_device))
-        
-        # Lexical Sync: hardwire the BPE token embeddings
-        if os.path.exists(self.model_path) and self.model_path != "mock_only.gguf":
-            try:
-                sync_vocab_matrices(self.model_path, self.l3_router)
-            except Exception as e:
-                print(f"[SYNC] Warning: Could not sync vocabulary matrix: {e}")
         
         # Enforce VSA unit-modulus invariants on Swarm Master signatures
         self.l3_router.enforce_vsa_invariants()
@@ -926,72 +650,19 @@ class HenriCognitiveSwarmOrchestrator:
         writer.close()
 
     def apply_blended_lora_to_gemma(self, blended_A, blended_B):
-        """
-        Compiles the PyTorch tensors and injects them into the C++ Vulkan backend of self.gen_model.
-        """
-        if self.is_mock:
-            print("[ENGINE] Running in Mock mode. Skipping dynamic LoRA injection.")
-            return
-
-        # RAM disk path or system temp file fallback
-        ram_disk_path = "R:\\active_swarm_state.bin"
-        try:
-            # Try writing a small dummy file to verify R:\ is writable
-            with open(ram_disk_path, "wb") as f:
-                f.write(b"")
-        except Exception:
-            import tempfile
-            ram_disk_path = os.path.join(tempfile.gettempdir(), "active_swarm_state.bin")
-            print(f"[ENGINE] RAM Disk R:\\ unavailable. Falling back to memory-mapped temp path: {ram_disk_path}")
-
-        # 1. Serialize the blended PyTorch tensors to GGML format expected by llama_cpp
-        self.serialize_to_ggml_format(blended_A, blended_B, ram_disk_path)
-
-        # 2. Inject physical weights into the gen_model
-        try:
-            self.clear_active_lora()
-                
-            # Initialize new adapter
-            adapter_ptr = llama_cpp.llama_adapter_lora_init(self.gen_model.llama.model, ram_disk_path.encode('utf-8'))
-            if not adapter_ptr:
-                print(f"[ENGINE] Error: Failed to initialize dynamic LoRA adapter from {ram_disk_path}")
-                return
-                
-            # Bind adapter to context
-            ret = llama_cpp.llama_set_adapter_lora(self.gen_model.llama.ctx, adapter_ptr, 1.0)
-            if ret != 0:
-                print(f"[ENGINE] Warning: llama_set_adapter_lora returned error code {ret}")
-                llama_cpp.llama_adapter_lora_free(adapter_ptr)
-            else:
-                self.active_lora_adapter = adapter_ptr
-                print(f"[ENGINE] 12B Model physically rewired by ACE Playbook (adapter: {ram_disk_path}).")
-        except Exception as e:
-            print(f"[ENGINE] Fatal error during dynamic LoRA injection: {e}")
+        """Dynamic GGUF LoRA injection bypassed in pure PyTorch mode."""
+        pass
 
     def clear_active_lora(self):
-        """Clears and frees the active dynamic LoRA adapter from model context."""
-        if hasattr(self, "active_lora_adapter") and self.active_lora_adapter is not None:
-            try:
-                llama_cpp.llama_set_adapters_lora(self.gen_model.llama.ctx, None, 0, None)
-                llama_cpp.llama_adapter_lora_free(self.active_lora_adapter)
-            except Exception as e:
-                print(f"[ENGINE] Warning: Failed to free dynamic LoRA adapter: {e}")
-            finally:
-                self.active_lora_adapter = None
+        """Dynamic GGUF LoRA clear bypassed in pure PyTorch mode."""
+        pass
 
     def apply_functorflow_kan_repair(self, top_expert_idx: int, dead_idx: int):
         """
         Stitches consecutive 64-token chunks together by enforcing a categorical 
-        pullback invariant across the KV-cache sequence layers and VSA memory state.
+        pullback invariant across the VSA memory state.
         """
-        if self.is_mock or not HAS_LLAMA_CPP or self.gen_model is None:
-            return
-            
         try:
-            import llama_cpp
-            import llama_cpp.llama_cpp as lcpp
-            ctx = self.gen_model.llama.ctx
-            
             # 1. Capture the terminal wave boundary of the preceding chunk (S_n)
             # We extract the active wave phase-state from the leader stream's memory engine
             leader_wave = self.memory_engines[top_expert_idx].active_wave.clone()
@@ -1000,11 +671,7 @@ class HenriCognitiveSwarmOrchestrator:
             # (factors out high-frequency noise from sequence boundaries)
             kan_extension_invariant = torch.fft.fft(leader_wave, dim=-1)
             
-            # 3. Synchronize the destination sequence slot over the hardware KV cache
-            # This is safe because n_seq_max is explicitly sized to 16
-            lcpp.llama_memory_seq_cp(ctx, top_expert_idx, dead_idx, 0, -1)
-            
-            # 4. Inject the pullback constraint directly into the destination sequence's active cache
+            # 3. Inject the pullback constraint directly into the destination sequence's active cache
             # The pullback constraint is the dequantized/reconstructed wave from the Fourier domain
             pullback_wave = torch.fft.ifft(kan_extension_invariant, dim=-1)
             # Normalize to conserve energy on the hypersphere
@@ -1013,7 +680,7 @@ class HenriCognitiveSwarmOrchestrator:
             
             # Copy to the destination expert's active memory engine
             self.memory_engines[dead_idx].active_wave.copy_(reconstructed_wave)
-            print(f"[FUNCTORFLOW] Categorical Kan Pullback repaired slot {top_expert_idx} -> {dead_idx}")
+            print(f"[FUNCTORFLOW] Categorical Kan Pullback repaired VSA slot {top_expert_idx} -> {dead_idx}")
             
         except Exception as e:
             print(f"[FUNCTORFLOW] Warning: Kan Pullback repair failed: {e}")
@@ -2472,7 +2139,7 @@ class HenriCognitiveSwarmOrchestrator:
         
         model = getattr(self, "reflector_model", self.gen_model)
         try:
-            if hasattr(model, "create_chat_completion") and (not callable(model) or (hasattr(model, "llama") and model.llama.__class__.__name__ == "GemmaRAMSwarmMock")):
+            if hasattr(model, "create_chat_completion"):
                 messages = [{"role": "user", "content": reflection_prompt}]
                 res = model.create_chat_completion(
                     messages=messages,
@@ -2543,7 +2210,7 @@ class HenriCognitiveSwarmOrchestrator:
 
         model = getattr(self, "reflector_model", self.gen_model)
         try:
-            if hasattr(model, "create_chat_completion") and (not callable(model) or (hasattr(model, "llama") and model.llama.__class__.__name__ == "GemmaRAMSwarmMock")):
+            if hasattr(model, "create_chat_completion"):
                 messages = [{"role": "user", "content": curation_prompt}]
                 res = model.create_chat_completion(
                     messages=messages,

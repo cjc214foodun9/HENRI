@@ -173,316 +173,137 @@ class EmergentCognitiveSwarm(nn.Module):
                 alpha = torch.softmax(alpha + noise, dim=-1)
             alpha_routings.append(alpha)
             
-        # Check if GGUF is omitted (i.e., we are in mock mode)
-        is_mock_swarm = (self.orchestrator is not None and getattr(self.orchestrator, 'is_mock', False))
-        
-        if is_mock_swarm:
-            import os
-            print("[SWARM] GGUF files omitted. Generating candidates using continuous PyTorch core model samplers...")
-            device = self.router.w_down.weight.device
-            
-            # Resolve/import model components
-            from diffusion_canvas import NonAutoregressiveCanvasSampler
-            from henri_core.egress import QuantizedEgressAssembler
-            from henri_core.core import ProprietaryHENRICore
-            
-            # Retrieve or instantiate the core model cached on the orchestrator
-            if not hasattr(self.orchestrator, '_diffusion_core_model') or self.orchestrator._diffusion_core_model is None:
-                # Target Full-Scale Swarm Target Configuration: dim=4096, depth=32, experts=16
-                num_layers = 32
-                num_base_experts = 16
-                hidden_dim = 4096
-                
-                # Check for state dict in parent dir
-                parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                core_path = os.path.join(parent_dir, "henri_core_final.pt")
-                state_dict = None
-                if os.path.exists(core_path):
-                    try:
-                        state_dict = torch.load(core_path, map_location="cpu")
-                    except Exception as e:
-                        print(f"[SWARM] Warning: Failed to parse checkpoint: {e}")
-                
-                core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
-                # Cast core to bfloat16 to optimize VRAM footprint on RTX 5090
-                core_model = core_model.to(device=device, dtype=torch.bfloat16)
-                core_model.eval()
-                self.orchestrator._diffusion_core_model = core_model
-            else:
-                core_model = self.orchestrator._diffusion_core_model
-                
-            # Retrieve or instantiate cached translation head
-            vocab_size = getattr(self.router, 'vocab_size', 32000)
-            if not hasattr(self.orchestrator, '_diffusion_translation_head') or self.orchestrator._diffusion_translation_head is None:
-                translation_head = nn.Linear(core_model.layers[0].dim, vocab_size)
-                translation_head = translation_head.to(device=device, dtype=torch.bfloat16)
-                translation_head.eval()
-                self.orchestrator._diffusion_translation_head = translation_head
-            else:
-                translation_head = self.orchestrator._diffusion_translation_head
-                
-            # Lazily initialize H-MPC orchestrator on self.orchestrator if missing
-            if not hasattr(self.orchestrator, 'h_mpc') or self.orchestrator.h_mpc is None:
-                from cognitive_swarm import HolographicMPCOrchestrator
-                self.orchestrator.h_mpc = HolographicMPCOrchestrator(core_model, dim=core_model.layers[0].dim).to(device=device, dtype=torch.bfloat16)
-
-            # Generate and select winning action trajectory via Holographic MPC
-            winning_wave = None
-            if hasattr(self.orchestrator, 'h_mpc') and self.orchestrator.h_mpc is not None and playbook_wave is not None:
-                horizon = 5
-                candidate_action_sequences = []
-                for idx in range(num_candidates):
-                    actions_seq = []
-                    for t in range(horizon):
-                        perturbed_step = playbook_wave.clone()
-                        noise_phase = torch.randn_like(perturbed_step.real) * 0.1
-                        perturbed_step = perturbed_step * torch.polar(torch.ones_like(perturbed_step.real), noise_phase)
-                        actions_seq.append(perturbed_step)
-                    candidate_action_sequences.append(torch.stack(actions_seq, dim=0))
-                candidate_action_sequences = torch.stack(candidate_action_sequences, dim=0) # [num_candidates, horizon, hrr_dim]
-                
-                if hasattr(self.orchestrator, 'memory_engines') and 0 in self.orchestrator.memory_engines:
-                    current_wave = self.orchestrator.memory_engines[0].active_wave.to(device)
-                else:
-                    current_wave = torch.zeros(self.orchestrator.hrr_dim, dtype=torch.complex64, device=device)
-
-                # H-MPC operations must be real-valued. Cast tensors to real parts and bfloat16.
-                current_wave_real = torch.real(current_wave).to(device=device, dtype=torch.bfloat16)
-                target_goal_real = torch.real(playbook_wave).to(device=device, dtype=torch.bfloat16)
-                candidate_actions_real = torch.real(candidate_action_sequences).to(device=device, dtype=torch.bfloat16)
-
-                winning_idx = self.orchestrator.h_mpc.run_h_mpc_selection(
-                    current_wave=current_wave_real,
-                    target_goal_wave=target_goal_real,
-                    candidate_action_sequences=candidate_actions_real,
-                    horizon=horizon
-                )
-                winning_wave = candidate_action_sequences[winning_idx][-1] # use terminal state (keep original complex form)
-
-            # Generate parallel candidate outputs
-            for idx in range(num_candidates):
-                if winning_wave is not None:
-                    # Perturb around the selected winning wave trajectory to generate diverse candidates
-                    perturbed_wave = winning_wave.clone()
-                    noise_phase = torch.randn_like(perturbed_wave.real) * 0.05
-                    perturbed_wave = perturbed_wave * torch.polar(torch.ones_like(perturbed_wave.real), noise_phase)
-                elif playbook_wave is not None:
-                    perturbed_wave = playbook_wave.clone()
-                    noise_phase = torch.randn_like(perturbed_wave.real) * 0.1
-                    perturbed_wave = perturbed_wave * torch.polar(torch.ones_like(perturbed_wave.real), noise_phase)
-                else:
-                    perturbed_wave = torch.zeros(self.orchestrator.hrr_dim, dtype=torch.complex64, device=device)
-                    
-                # Project complex to real projection if needed
-                if torch.is_complex(perturbed_wave):
-                    trajectory_real = torch.real(perturbed_wave)
-                else:
-                    trajectory_real = perturbed_wave
-                    
-                if trajectory_real.ndim == 1:
-                    trajectory_real = trajectory_real.unsqueeze(0)
-                    
-                trajectory_input = trajectory_real.to(device=device, dtype=torch.bfloat16)
-                
-                try:
-                    # Non-Autoregressive Canvas Sampler is the primary pathway for score-guided relaxation
-                    sampler = NonAutoregressiveCanvasSampler(
-                        core_model=core_model,
-                        translation_head=translation_head,
-                        num_diffusion_steps=25
-                    )
-                    target_tokens = sampler.crystallize_motif(
-                        swarm_trajectory=trajectory_input,
-                        sequence_length=512,
-                        guidance_scale=4.5
-                    )
-                    token_ids = target_tokens[0].tolist()
-                except Exception as e:
-                    print(f"[SWARM] Continuous canvas sampler failed for candidate {idx}: {e}. Falling back to default tokens.")
-                    token_ids = [ord(c) for c in "def transform(grid):\n    return grid"]
-                
-                # Decode to string using character mapping
-                generated_text = "".join(chr(t % 256) for t in token_ids)
-                generated_texts[idx] = generated_text
-                tokens_lists[idx] = token_ids
-                active_mask[idx] = False # Completed immediately
-                
-            candidates = []
-            for idx in range(num_candidates):
-                candidates.append((generated_texts[idx], alpha_routings[idx]))
-            return candidates
-            
-        # Volatile attraction CPU buffer
-        ephemeral_attractors = []
-        
-        # Coordinated micro-epoch generation loop
-        max_epochs = 32 # 32 epochs * 64 tokens = 2048 max tokens
-        APOPTOSIS_THRESHOLD = 0.35
-        DYNAMIC_STEERING_THRESHOLD = 0.85
-        HARVEST_THRESHOLD = 0.95
-        
+        # Generate candidates using continuous PyTorch core model samplers
+        import os
+        print("[SWARM] Generating candidates using continuous PyTorch core model samplers...")
         device = self.router.w_down.weight.device
         
-        for epoch in range(max_epochs):
-            any_active = False
-            for idx in range(num_candidates):
-                if not active_mask[idx]:
-                    continue
-                any_active = True
-                
-                # Generate next 64 tokens for this candidate
-                current_prompt = prompts[idx] + generated_texts[idx]
-                
-                # Blend LoRAs and apply
-                if self.orchestrator is not None:
-                    blended_A, blended_B = self.orchestrator.blend_moe_loras(
-                        self.orchestrator.lora_managers,
-                        alpha_routings[idx]
-                    )
-                    self.orchestrator.apply_blended_lora_to_gemma(blended_A, blended_B)
-                    
-                new_text = ""
-                try:
-                    res = self.llama(
-                        current_prompt,
-                        max_tokens=64,
-                        temperature=temperature,
-                        stop=["<turn|>", "<|turn>"],
-                        stream=False
-                    )
-                    new_text = res["choices"][0]["text"]
-                except Exception as gen_err:
-                    print(f"[SWARM] Error during generation for candidate {idx}: {gen_err}")
-                finally:
-                    if self.orchestrator is not None:
-                        self.orchestrator.clear_active_lora()
-                        
-                generated_texts[idx] += new_text
-                
-                # Tokenize and append
-                try:
-                    chunk_tokens = self.llama.tokenize(new_text.encode("utf-8"), add_bos=False)
-                except TypeError:
-                    chunk_tokens = self.llama.tokenize(new_text.encode("utf-8"))
-                tokens_lists[idx].extend(chunk_tokens)
-                
-                # Check for stop conditions
-                if not new_text or any(stop_word in new_text for stop_word in ["<turn|>", "<|turn>"]):
-                    active_mask[idx] = False
-                    
-                # Call early stopping/apoptosis callback if active
-                if active_mask[idx] and early_stopping_callback is not None:
-                    should_kill = early_stopping_callback(tokens_lists[idx], alpha_routings[idx], idx)
-                    if should_kill:
-                        print(f"[SWARM] Micro-Epoch Apoptosis Triggered at epoch {epoch} for candidate {idx}. Thread execution aborted.")
-                        active_mask[idx] = False
-                    
-            if not any_active:
-                break
-                
-            # Check for overall timeout limit
-            if start_time is not None and time_limit is not None:
-                import time
-                if time.time() - start_time >= time_limit:
-                    print(f"[SWARM] Swarm generation timeout reached (Elapsed: {time.time() - start_time:.2f}s >= {time_limit}s). Stopping batch generation.")
-                    break
-                
-            # --- EVALUATE RESONANCE FOR ACTIVE SWARM ---
-            expert_waves = []
-            for idx in range(num_candidates):
-                t_list = tokens_lists[idx] if tokens_lists[idx] else [0]
-                token_tensor = torch.tensor(t_list, dtype=torch.long, device='cpu')
-                wave = self.router.text_to_wave(token_tensor)
-                # Ensure wave has shape [4096]
-                if wave.ndim == 2:
-                    wave = torch.mean(wave, dim=0)
-                expert_waves.append(wave)
-            expert_waves_tensor = torch.stack(expert_waves)
+        # Resolve/import model components
+        from diffusion_canvas import NonAutoregressiveCanvasSampler
+        from henri_core.egress import QuantizedEgressAssembler
+        from henri_core.core import ProprietaryHENRICore
+        
+        # Retrieve or instantiate the core model cached on the orchestrator
+        if not hasattr(self.orchestrator, '_diffusion_core_model') or self.orchestrator._diffusion_core_model is None:
+            # Target Full-Scale Swarm Target Configuration: dim=4096, depth=32, experts=16
+            num_layers = 32
+            num_base_experts = 16
+            hidden_dim = 4096
             
-            # Retrieve stable Zone C axioms
-            zone_c_attractors = playbook_wave.unsqueeze(0) if playbook_wave is not None else torch.zeros((1, 4096), dtype=torch.complex64)
+            # Check for state dict in parent dir
+            parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            core_path = os.path.join(parent_dir, "henri_core_final.pt")
+            state_dict = None
+            if os.path.exists(core_path):
+                try:
+                    state_dict = torch.load(core_path, map_location="cpu")
+                except Exception as e:
+                    print(f"[SWARM] Warning: Failed to parse checkpoint: {e}")
             
-            # Combine with ephemeral attractors
-            if ephemeral_attractors:
-                combined_attractors = torch.cat([zone_c_attractors, torch.stack(ephemeral_attractors)], dim=0)
+            core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
+            # Cast core to bfloat16 to optimize VRAM footprint on RTX 5090
+            core_model = core_model.to(device=device, dtype=torch.bfloat16)
+            core_model.eval()
+            self.orchestrator._diffusion_core_model = core_model
+        else:
+            core_model = self.orchestrator._diffusion_core_model
+            
+        # Retrieve or instantiate cached translation head
+        vocab_size = getattr(self.router, 'vocab_size', 32000)
+        if not hasattr(self.orchestrator, '_diffusion_translation_head') or self.orchestrator._diffusion_translation_head is None:
+            translation_head = nn.Linear(core_model.layers[0].dim, vocab_size)
+            translation_head = translation_head.to(device=device, dtype=torch.bfloat16)
+            translation_head.eval()
+            self.orchestrator._diffusion_translation_head = translation_head
+        else:
+            translation_head = self.orchestrator._diffusion_translation_head
+            
+        # Lazily initialize H-MPC orchestrator on self.orchestrator if missing
+        if not hasattr(self.orchestrator, 'h_mpc') or self.orchestrator.h_mpc is None:
+            from cognitive_swarm import HolographicMPCOrchestrator
+            self.orchestrator.h_mpc = HolographicMPCOrchestrator(core_model, dim=core_model.layers[0].dim).to(device=device, dtype=torch.bfloat16)
+
+        # Generate and select winning action trajectory via Holographic MPC
+        winning_wave = None
+        if hasattr(self.orchestrator, 'h_mpc') and self.orchestrator.h_mpc is not None and playbook_wave is not None:
+            horizon = 5
+            candidate_action_sequences = []
+            for idx in range(num_candidates):
+                actions_seq = []
+                for t in range(horizon):
+                    perturbed_step = playbook_wave.clone()
+                    noise_phase = torch.randn_like(perturbed_step.real) * 0.1
+                    perturbed_step = perturbed_step * torch.polar(torch.ones_like(perturbed_step.real), noise_phase)
+                    actions_seq.append(perturbed_step)
+                candidate_action_sequences.append(torch.stack(actions_seq, dim=0))
+            candidate_action_sequences = torch.stack(candidate_action_sequences, dim=0) # [num_candidates, horizon, hrr_dim]
+            
+            if hasattr(self.orchestrator, 'memory_engines') and 0 in self.orchestrator.memory_engines:
+                current_wave = self.orchestrator.memory_engines[0].active_wave.to(device)
             else:
-                combined_attractors = zone_c_attractors
-                
-            # Entropic survival calculation
-            resonances = self.orchestrator.entropic_engine.evaluate_entropic_fitness(
-                expert_waves_tensor,
-                combined_attractors,
-                zone_c_repellers=None
+                current_wave = torch.zeros(self.orchestrator.hrr_dim, dtype=torch.complex64, device=device)
+
+            # H-MPC operations must be real-valued. Cast tensors to real parts and bfloat16.
+            current_wave_real = torch.real(current_wave).to(device=device, dtype=torch.bfloat16)
+            target_goal_real = torch.real(playbook_wave).to(device=device, dtype=torch.bfloat16)
+            candidate_actions_real = torch.real(candidate_action_sequences).to(device=device, dtype=torch.bfloat16)
+
+            winning_idx = self.orchestrator.h_mpc.run_h_mpc_selection(
+                current_wave=current_wave_real,
+                target_goal_wave=target_goal_real,
+                candidate_action_sequences=candidate_actions_real,
+                horizon=horizon
             )
+            winning_wave = candidate_action_sequences[winning_idx][-1] # use terminal state (keep original complex form)
+
+        # Generate parallel candidate outputs
+        for idx in range(num_candidates):
+            if winning_wave is not None:
+                # Perturb around the selected winning wave trajectory to generate diverse candidates
+                perturbed_wave = winning_wave.clone()
+                noise_phase = torch.randn_like(perturbed_wave.real) * 0.05
+                perturbed_wave = perturbed_wave * torch.polar(torch.ones_like(perturbed_wave.real), noise_phase)
+            elif playbook_wave is not None:
+                perturbed_wave = playbook_wave.clone()
+                noise_phase = torch.randn_like(perturbed_wave.real) * 0.1
+                perturbed_wave = perturbed_wave * torch.polar(torch.ones_like(perturbed_wave.real), noise_phase)
+            else:
+                perturbed_wave = torch.zeros(self.orchestrator.hrr_dim, dtype=torch.complex64, device=device)
+                
+            # Project complex to real projection if needed
+            if torch.is_complex(perturbed_wave):
+                trajectory_real = torch.real(perturbed_wave)
+            else:
+                trajectory_real = perturbed_wave
+                
+            if trajectory_real.ndim == 1:
+                trajectory_real = trajectory_real.unsqueeze(0)
+                
+            trajectory_input = trajectory_real.to(device=device, dtype=torch.bfloat16)
             
-            # Rank the experts
-            ranked_experts = torch.argsort(resonances, descending=True)
-            top_expert_idx = ranked_experts[0].item()
-            # Bottom 25% or at least the bottom candidate if num_candidates is small
-            k_bottom = max(1, num_candidates // 4)
-            bottom_experts = ranked_experts[-k_bottom:]
+            try:
+                # Non-Autoregressive Canvas Sampler is the primary pathway for score-guided relaxation
+                sampler = NonAutoregressiveCanvasSampler(
+                    core_model=core_model,
+                    translation_head=translation_head,
+                    num_diffusion_steps=25
+                )
+                target_tokens = sampler.crystallize_motif(
+                    swarm_trajectory=trajectory_input,
+                    sequence_length=512,
+                    guidance_scale=4.5
+                )
+                token_ids = target_tokens[0].tolist()
+            except Exception as e:
+                print(f"[SWARM] Continuous canvas sampler failed for candidate {idx}: {e}. Falling back to default tokens.")
+                token_ids = [ord(c) for c in "def transform(grid):\n    return grid"]
             
-            # --- THE EPHEMERAL HARVEST ---
-            top_resonance = resonances[top_expert_idx].item()
-            if top_resonance > DYNAMIC_STEERING_THRESHOLD:
-                # Extract the winning LoRA state
-                winning_lora = self.orchestrator.lora_managers[top_expert_idx].lora_A.data.mean(dim=1)
-                top_wave = torch.matmul(winning_lora.to(device), self.router.w_down.weight.T)
-                top_wave = torch.nn.functional.normalize(top_wave, p=2, dim=0)
-                
-                # Convert to unit-modulus complex representation
-                phases = torch.angle(torch.complex(top_wave, torch.zeros_like(top_wave)))
-                top_wave_complex = torch.polar(torch.ones_like(phases), phases)
-                
-                # Add to the volatile CPU buffer
-                ephemeral_attractors.append(top_wave_complex)
-                print(f"[EPHEMERAL] Expert {top_expert_idx} established new local attractor. Resonance: {top_resonance:.4f}")
-                
-            # --- SPONTANEOUS RESONANCE HARVEST ---
-            for idx in range(num_candidates):
-                res_val = resonances[idx].item()
-                if res_val > HARVEST_THRESHOLD:
-                    print(f"[ZONE B] SPONTANEOUS RESONANCE DETECTED ({res_val:.4f}) on Expert {idx}. Harvesting fragment...")
-                    winning_lora = self.orchestrator.lora_managers[idx].lora_A.data.mean(dim=1)
-                    top_wave = torch.matmul(winning_lora.to(device), self.router.w_down.weight.T)
-                    top_wave = torch.nn.functional.normalize(top_wave, p=2, dim=0)
-                    phases = torch.angle(torch.complex(top_wave, torch.zeros_like(top_wave)))
-                    top_wave_complex = torch.polar(torch.ones_like(phases), phases)
-                    
-                    # Save directly to TimescaleDB via orchestrator's save_wave_to_db method
-                    fragment_name = f"fragment_{task_dict.get('id', 'task')}_step_{len(tokens_lists[idx])}"
-                    self.orchestrator.save_wave_to_db(fragment_name, top_wave_complex, "wosx_spontaneous_sub_axiom")
-                    
-            # --- THE PRUNE AND CLONE ---
-            for dead_idx in bottom_experts:
-                dead_idx = dead_idx.item()
-                if dead_idx >= num_candidates:
-                    continue
-                if dead_idx == top_expert_idx:
-                    continue
-                if resonances[dead_idx].item() < APOPTOSIS_THRESHOLD and active_mask[dead_idx]:
-                    print(f"[REALLOCATION] Pruning lagging Expert {dead_idx} (Resonance: {resonances[dead_idx].item():.4f}). Cloning Expert {top_expert_idx}...")
-                    
-                    # 1. Overwrite the dead expert's LoRA weights with the leader's weights
-                    self.orchestrator.lora_managers[dead_idx].lora_A.data.copy_(
-                        self.orchestrator.lora_managers[top_expert_idx].lora_A.data
-                    )
-                    self.orchestrator.lora_managers[dead_idx].lora_B.data.copy_(
-                        self.orchestrator.lora_managers[top_expert_idx].lora_B.data
-                    )
-                    
-                    # 2. Inject Gaussian noise
-                    noise_A = torch.randn_like(self.orchestrator.lora_managers[dead_idx].lora_A.data) * 0.01
-                    self.orchestrator.lora_managers[dead_idx].lora_A.data.add_(noise_A)
-                    
-                    # 3. Synchronize text and tokens
-                    generated_texts[dead_idx] = generated_texts[top_expert_idx]
-                    tokens_lists[dead_idx] = list(tokens_lists[top_expert_idx])
-                    
-                    # 4. Overwrite Vulkan KV-cache slot and VSA memory cache using Kan Pullback
-                    if self.orchestrator is not None:
-                        self.orchestrator.apply_functorflow_kan_repair(top_expert_idx, dead_idx)
-                            
+            # Decode to string using character mapping
+            generated_text = "".join(chr(t % 256) for t in token_ids)
+            generated_texts[idx] = generated_text
+            tokens_lists[idx] = token_ids
+            active_mask[idx] = False # Completed immediately
+            
         candidates = []
         for idx in range(num_candidates):
             candidates.append((generated_texts[idx], alpha_routings[idx]))
