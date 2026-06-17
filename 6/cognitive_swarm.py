@@ -1025,6 +1025,9 @@ class HenriCognitiveSwarmOrchestrator:
             num_logical = psutil.cpu_count(logical=True)
             p.cpu_affinity(list(range(num_logical)))
             print(f"[HARDWARE] Process affinity set to logical cores 0-{num_logical-1}.")
+            # Prevent PyTorch from spawning 192 threads which degrades CPU performance due to synchronization overhead
+            torch.set_num_threads(8)
+            print("[HARDWARE] PyTorch CPU thread count restricted to 8 to optimize context switching.")
         except Exception as e:
             print(f"[WARNING] Process affinity setting failed: {e}")
 
