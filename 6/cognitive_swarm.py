@@ -2343,7 +2343,8 @@ class HenriCognitiveSwarmOrchestrator:
                 
                 # Embed rule via CPU-mmap instance
                 emb_response = self.reflector_model.create_embedding(rule_text)
-                g_rule = torch.tensor(emb_response["data"][0]["embedding"], dtype=torch.float32, device='cpu')
+                device = w_down_matrix.device
+                g_rule = torch.tensor(emb_response["data"][0]["embedding"], dtype=torch.float32, device=device)
                 if g_rule.ndim == 2:
                     g_rule = torch.mean(g_rule, dim=0)
                 elif g_rule.ndim == 3:
@@ -2354,7 +2355,8 @@ class HenriCognitiveSwarmOrchestrator:
                 rule_waves.append(psi_rule)
                 
         if not rule_waves:
-            return torch.zeros(self.hrr_dim, device='cpu')
+            device = w_down_matrix.device
+            return torch.zeros(self.hrr_dim, device=device)
             
         # Superposition: Merge all active guidelines into a single interference pattern
         compiled_wave = torch.sum(torch.stack(rule_waves), dim=0)

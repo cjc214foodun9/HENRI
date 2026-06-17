@@ -79,8 +79,8 @@ class DynamicLoraManager:
             learning_rate = 0.05 * (1.0 - alignment_score)
             
             # Calculate update steps
-            update_A = torch.outer(delta_tensor, delta_tensor[:self.rank])
-            update_B = torch.outer(delta_tensor[:self.rank], delta_tensor)
+            update_A = torch.outer(delta_tensor, delta_tensor[:self.rank]).to(self.lora_A.device)
+            update_B = torch.outer(delta_tensor[:self.rank], delta_tensor).to(self.lora_B.device)
             
             # Normalize updates to have unit Frobenius norm to prevent vanishing updates at scale
             norm_A = torch.norm(update_A)
@@ -107,6 +107,11 @@ class DynamicLoraManager:
         Formula: h_new = h + (h @ A) @ B
         """
         with torch.no_grad():
+            device = activations.device
+            if self.lora_A.device != device:
+                self.lora_A = self.lora_A.to(device)
+            if self.lora_B.device != device:
+                self.lora_B = self.lora_B.to(device)
             lora_step = torch.matmul(torch.matmul(activations, self.lora_A), self.lora_B)
             return activations + lora_step
 
@@ -152,7 +157,7 @@ class DynamicLoRAEngine:
             # Create the rank-1 update matrix from the orthogonal residual
             # shape: [gemma_dim, rank]
             update_A = torch.outer(res_tensor, res_tensor[:manager.rank])
-            update_A = torch.nn.functional.normalize(update_A, p=2, dim=1) # Frobenius-style normalization
+            update_A = torch.nn.functional.normalize(update_A, p=2, dim=1).to(manager.lora_A.device) # Frobenius-style normalization
             
             # The physical step: Gated by routing participation AND the objective reward
             step_magnitude = lr * alpha * reward_signal
