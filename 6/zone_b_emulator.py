@@ -148,73 +148,74 @@ class ZoneBPhysicalEmulator:
         import torch
         import numpy as np
         
-        # 1. Project candidate solution to 4096-D complex wave using L3 Router
-        emb_res = self.orchestrator.base_model.create_embedding(candidate_code)
-        h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], dtype=torch.float32)
-        h_7b_lora = self.orchestrator.lora_managers[0].apply_lora(h_7b_raw)
-        if len(h_7b_lora.shape) == 2:
-            h_7b_lora = torch.mean(h_7b_lora, dim=0)
+        with torch.no_grad():
+            # 1. Project candidate solution to 4096-D complex wave using L3 Router
+            emb_res = self.orchestrator.base_model.create_embedding(candidate_code)
+            h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], dtype=torch.float32)
+            h_7b_lora = self.orchestrator.lora_managers[0].apply_lora(h_7b_raw)
+            if len(h_7b_lora.shape) == 2:
+                h_7b_lora = torch.mean(h_7b_lora, dim=0)
+                
+            is_symbolic = any(kw in target_label.lower() or kw in candidate_code.lower() for kw in ["symbolic", "mathematical", "derivation", "weyl", "anomaly", "expansion", "coefficient", "thermodynamic", "conservation", "coeff"])
             
-        is_symbolic = any(kw in target_label.lower() or kw in candidate_code.lower() for kw in ["symbolic", "mathematical", "derivation", "weyl", "anomaly", "expansion", "coefficient", "thermodynamic", "conservation", "coeff"])
-        
-        if is_symbolic:
-            psi_candidate_focused = self.orchestrator.l3_router.activation_to_wave(h_7b_lora)
-            if len(psi_candidate_focused.shape) == 2:
-                psi_candidate_focused = torch.mean(psi_candidate_focused, dim=0)
-            psi_candidate_focused = psi_candidate_focused.reshape(64, 64)
-        else:
-            # Replicate candidate activation across all 16 streams to create [16, 1, gemma_dim]
-            activations_stack = h_7b_lora.unsqueeze(0).unsqueeze(0).repeat(16, 1, 1)
-            psi_candidate, _, _ = self.orchestrator.l3_router(activations=activations_stack)
-            
-            # Apply lens downsampling
-            N = psi_candidate.size(-1)
-            x = torch.linspace(-1.0, 1.0, N, device=psi_candidate.device)
-            y = torch.linspace(-1.0, 1.0, N, device=psi_candidate.device)
-            X, Y = torch.meshgrid(x, y, indexing='ij')
-            lens_phase = -50.0 * (X**2 + Y**2)
-            lens = torch.polar(torch.ones_like(lens_phase), lens_phase)
-            
-            wave_lensed = psi_candidate.squeeze(0) * lens
-            focal_plane = torch.fft.fft2(wave_lensed, norm='ortho')
-            focal_plane_shifted = torch.fft.fftshift(focal_plane)
-            
-            start = (N - 64) // 2
-            end = start + 64
-            focused_64 = focal_plane_shifted[start:end, start:end]
-            
-            mags = torch.abs(focused_64).clamp(min=1e-8)
-            psi_candidate_focused = focused_64 / mags
+            if is_symbolic:
+                psi_candidate_focused = self.orchestrator.l3_router.activation_to_wave(h_7b_lora)
+                if len(psi_candidate_focused.shape) == 2:
+                    psi_candidate_focused = torch.mean(psi_candidate_focused, dim=0)
+                psi_candidate_focused = psi_candidate_focused.reshape(64, 64)
+            else:
+                # Replicate candidate activation across all 16 streams to create [16, 1, gemma_dim]
+                activations_stack = h_7b_lora.unsqueeze(0).unsqueeze(0).repeat(16, 1, 1)
+                psi_candidate, _, _ = self.orchestrator.l3_router(activations=activations_stack)
+                
+                # Apply lens downsampling
+                N = psi_candidate.size(-1)
+                x = torch.linspace(-1.0, 1.0, N, device=psi_candidate.device)
+                y = torch.linspace(-1.0, 1.0, N, device=psi_candidate.device)
+                X, Y = torch.meshgrid(x, y, indexing='ij')
+                lens_phase = -50.0 * (X**2 + Y**2)
+                lens = torch.polar(torch.ones_like(lens_phase), lens_phase)
+                
+                wave_lensed = psi_candidate.squeeze(0) * lens
+                focal_plane = torch.fft.fft2(wave_lensed, norm='ortho')
+                focal_plane_shifted = torch.fft.fftshift(focal_plane)
+                
+                start = (N - 64) // 2
+                end = start + 64
+                focused_64 = focal_plane_shifted[start:end, start:end]
+                
+                mags = torch.abs(focused_64).clamp(min=1e-8)
+                psi_candidate_focused = focused_64 / mags
 
-        # 3. Fire the wave in Zone B
-        target_vector = self.orchestrator.hopfield.vocabulary.get(target_label)
-        if target_vector is None:
-            target_vector = self.orchestrator.get_stream_address(0)
+            # 3. Fire the wave in Zone B
+            target_vector = self.orchestrator.hopfield.vocabulary.get(target_label)
+            if target_vector is None:
+                target_vector = self.orchestrator.get_stream_address(0)
+                
+            target_np = target_vector.detach().cpu().numpy().astype(np.complex64)
+            psi_candidate_flat = psi_candidate_focused.flatten()
             
-        target_np = target_vector.detach().cpu().numpy().astype(np.complex64)
-        psi_candidate_flat = psi_candidate_focused.flatten()
-        
-        # Query memory cache and blend history
-        retrieved_wave = self.orchestrator.memory_engines[0].retrieve_from_cache(query_key=psi_candidate_flat)
-        retrieved_wave = retrieved_wave.to(psi_candidate_flat.device)
-        blended_focused = psi_candidate_flat + retrieved_wave
-        blended_mags = torch.abs(blended_focused).clamp(min=1e-8)
-        psi_candidate_resolved = blended_focused / blended_mags
-        
-        psi_cand_np = psi_candidate_resolved.detach().cpu().numpy().astype(np.complex64)
+            # Query memory cache and blend history
+            retrieved_wave = self.orchestrator.memory_engines[0].retrieve_from_cache(query_key=psi_candidate_flat)
+            retrieved_wave = retrieved_wave.to(psi_candidate_flat.device)
+            blended_focused = psi_candidate_flat + retrieved_wave
+            blended_mags = torch.abs(blended_focused).clamp(min=1e-8)
+            psi_candidate_resolved = blended_focused / blended_mags
+            
+            psi_cand_np = psi_candidate_resolved.detach().cpu().numpy().astype(np.complex64)
 
-        truth_np, delta_np, alignment = self.orchestrator.optical_core.forward(
-            hr_wavefront=psi_cand_np,
-            target_manifold=target_np,
-            langevin_heat=0.0
-        )
+            truth_np, delta_np, alignment = self.orchestrator.optical_core.forward(
+                hr_wavefront=psi_cand_np,
+                target_manifold=target_np,
+                langevin_heat=0.0
+            )
 
-        # 4. Boundary Validation
-        truth_tensor = torch.tensor(truth_np, dtype=torch.complex64, device=self.orchestrator.optical_core.device)
-        is_valid, veto_reason, error_energy, h_cft = self.orchestrator.boundary_validator.validate_boundary(truth_tensor)
-        
-        if not is_valid:
-            feedback = f"Sagnac Veto: Dirichlet boundary axioms violated. Reason: {veto_reason} | Error Energy: {error_energy:.4f}"
-            return False, feedback, error_energy, truth_tensor, delta_np
-        
-        return True, "Dirichlet boundaries verified. Sagnac alignment achieved.", error_energy, truth_tensor, delta_np
+            # 4. Boundary Validation
+            truth_tensor = torch.tensor(truth_np, dtype=torch.complex64, device=self.orchestrator.optical_core.device)
+            is_valid, veto_reason, error_energy, h_cft = self.orchestrator.boundary_validator.validate_boundary(truth_tensor)
+            
+            if not is_valid:
+                feedback = f"Sagnac Veto: Dirichlet boundary axioms violated. Reason: {veto_reason} | Error Energy: {error_energy:.4f}"
+                return False, feedback, error_energy, truth_tensor, delta_np
+            
+            return True, "Dirichlet boundaries verified. Sagnac alignment achieved.", error_energy, truth_tensor, delta_np
