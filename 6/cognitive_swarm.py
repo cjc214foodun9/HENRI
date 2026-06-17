@@ -746,7 +746,8 @@ class HenriCognitiveSwarmOrchestrator:
             pf_dim=512, 
             activation_dim=self.gemma_dim
         )
-        self.l3_router.to(torch.device('cpu'))
+        router_device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.l3_router.to(torch.device(router_device))
         
         # Lexical Sync: hardwire the BPE token embeddings
         if os.path.exists(self.model_path) and self.model_path != "mock_only.gguf":

@@ -236,12 +236,13 @@ def ingest_arc_training_folder(args):
         if task_id in run_stats and run_stats[task_id].get("epoch1") is not None:
             status = run_stats[task_id]["epoch1"]["status"]
             resonance = run_stats[task_id]["epoch1"]["resonance"]
-            print(f"[RESUME] Skipping Task {idx+1}/{len(all_task_files)}: {filename} (Recovered: Status={status}, Resonance={resonance:.4f})")
-            if status == "SUCCESS":
-                pass
-            elif resonance >= args.min_resonance_epoch2:
-                epoch2_candidates.append(filename)
-            continue
+            if status != "CRASHED" and (status == "SUCCESS" or resonance > 0.0):
+                print(f"[RESUME] Skipping Task {idx+1}/{len(all_task_files)}: {filename} (Recovered: Status={status}, Resonance={resonance:.4f})")
+                if status == "SUCCESS":
+                    pass
+                elif resonance >= args.min_resonance_epoch2:
+                    epoch2_candidates.append(filename)
+                continue
 
         domain_tag = f"ARC_Task_{task_id}"
         start_t = time.perf_counter()
@@ -295,12 +296,13 @@ def ingest_arc_training_folder(args):
         if task_id in run_stats and run_stats[task_id].get("epoch2") is not None:
             status = run_stats[task_id]["epoch2"]["status"]
             resonance = run_stats[task_id]["epoch2"]["resonance"]
-            print(f"[RESUME] Skipping Epoch 2 Task {idx+1}/{len(epoch2_candidates)}: {filename} (Recovered: Status={status}, Resonance={resonance:.4f})")
-            if status == "SUCCESS":
-                pass
-            elif resonance >= args.min_resonance_epoch3:
-                epoch3_candidates.append(filename)
-            continue
+            if status != "CRASHED" and (status == "SUCCESS" or resonance > 0.0):
+                print(f"[RESUME] Skipping Epoch 2 Task {idx+1}/{len(epoch2_candidates)}: {filename} (Recovered: Status={status}, Resonance={resonance:.4f})")
+                if status == "SUCCESS":
+                    pass
+                elif resonance >= args.min_resonance_epoch3:
+                    epoch3_candidates.append(filename)
+                continue
 
         domain_tag = f"ARC_Task_{task_id}"
         start_t = time.perf_counter()
@@ -332,12 +334,22 @@ def ingest_arc_training_folder(args):
     # -------------------------------------------------------------
     epoch3_name = "Epoch 3: Deep Literacy (Extended Reasoning)"
     timeout_e3 = args.epoch3_timeout
-    print(f"\n>>> BOOTING {epoch3_name.upper()} (Timeout: {timeout_e3}s | Target Tasks: {len(epoch3_candidates)})")
     
-    for idx, filename in enumerate(epoch3_candidates):
+    # Build target tasks for Epoch 3 (unsolved in Epoch 1 or 2)
+    epoch3_targets = []
+    for filename in all_task_files:
+        task_id = filename.replace(".json", "")
+        epoch1_status = run_stats.get(task_id, {}).get("epoch1", {}).get("status") if run_stats.get(task_id) else None
+        epoch2_status = run_stats.get(task_id, {}).get("epoch2", {}).get("status") if run_stats.get(task_id) and run_stats[task_id].get("epoch2") else None
+        if epoch1_status != "SUCCESS" and epoch2_status != "SUCCESS":
+            epoch3_targets.append(filename)
+            
+    print(f"\n>>> BOOTING {epoch3_name.upper()} (Timeout: {timeout_e3}s | Target Tasks: {len(epoch3_targets)})")
+    
+    for idx, filename in enumerate(epoch3_targets):
         task_id = filename.replace(".json", "")
         task_path = os.path.join(args.arc_folder, filename)
-        print(f"\n--- [EPOCH 3] Task {idx+1}/{len(epoch3_candidates)}: {filename} ---")
+        print(f"\n--- [EPOCH 3] Task {idx+1}/{len(epoch3_targets)}: {filename} ---")
         
         with open(task_path, "r") as f:
             task_dict = json.load(f)
@@ -345,8 +357,10 @@ def ingest_arc_training_folder(args):
         # Check if task is already processed and exists in run_stats for epoch3
         if task_id in run_stats and run_stats[task_id].get("epoch3") is not None:
             status = run_stats[task_id]["epoch3"]["status"]
-            print(f"[RESUME] Skipping Epoch 3 Task {idx+1}/{len(epoch3_candidates)}: {filename} (Recovered: Status={status})")
-            continue
+            resonance = run_stats[task_id]["epoch3"]["resonance"]
+            if status != "CRASHED" and (status == "SUCCESS" or resonance > 0.0):
+                print(f"[RESUME] Skipping Epoch 3 Task {idx+1}/{len(epoch3_targets)}: {filename} (Recovered: Status={status})")
+                continue
 
         domain_tag = f"ARC_Task_{task_id}"
         start_t = time.perf_counter()
