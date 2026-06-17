@@ -1529,32 +1529,37 @@ class HenriCognitiveSwarmOrchestrator:
         if not os.path.exists(core_path):
             core_path = os.path.join(parent_dir, "henri_core_final.pt")
             
-        # Default fallback parameters
-        num_layers = 8
-        num_base_experts = 4
-        hidden_dim = self.hrr_dim # 4096
+        # Default fallback parameters (Forced to Full-Scale Swarm Target Configuration)
+        num_layers = 32
+        num_base_experts = 16
+        hidden_dim = 4096
+        
+        force_full_scale = True
         
         state_dict = None
         if os.path.exists(core_path):
             try:
                 state_dict = torch.load(core_path, map_location="cpu")
-                layer_indices = set()
-                expert_indices = set()
-                for key, val in state_dict.items():
-                    if key.startswith("layers."):
-                        parts = key.split(".")
-                        layer_indices.add(int(parts[1]))
-                        if len(parts) > 3 and parts[2] == "experts":
-                            expert_indices.add(int(parts[3]))
-                            if "weight" in key:
+                if not force_full_scale:
+                    layer_indices = set()
+                    expert_indices = set()
+                    for key, val in state_dict.items():
+                        if key.startswith("layers."):
+                            parts = key.split(".")
+                            layer_indices.add(int(parts[1]))
+                            if len(parts) > 3 and parts[2] == "experts":
+                                expert_indices.add(int(parts[3]))
+                                if "weight" in key:
+                                    hidden_dim = val.shape[-1]
+                            elif "weight" in key:
                                 hidden_dim = val.shape[-1]
-                        elif "weight" in key:
-                            hidden_dim = val.shape[-1]
-                if layer_indices:
-                    num_layers = len(layer_indices)
-                if expert_indices:
-                    num_base_experts = len(expert_indices)
-                print(f"[ORCHESTRATOR] Detected pre-trained core geometry from {core_path}: {num_layers} layers, {num_base_experts} experts, dim={hidden_dim}")
+                    if layer_indices:
+                        num_layers = len(layer_indices)
+                    if expert_indices:
+                        num_base_experts = len(expert_indices)
+                    print(f"[ORCHESTRATOR] Detected pre-trained core geometry from {core_path}: {num_layers} layers, {num_base_experts} experts, dim={hidden_dim}")
+                else:
+                    print(f"[ORCHESTRATOR] Forced Full-Scale Swarm Target Configuration: {num_layers} layers, {num_base_experts} experts, dim={hidden_dim}.")
             except Exception as e:
                 print(f"[ORCHESTRATOR] Warning: Failed to parse checkpoint geometry: {e}. Using defaults.")
                 state_dict = None
@@ -1564,13 +1569,15 @@ class HenriCognitiveSwarmOrchestrator:
         # 2. Instantiate the pre-trained ProprietaryHENRICore model
         device = next(self.optical_core.emulator.parameters()).device if list(self.optical_core.emulator.parameters()) else torch.device("cpu")
         core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
-        if state_dict is not None:
+        if state_dict is not None and not force_full_scale:
             try:
                 core_model.load_state_dict(state_dict)
                 print("[ORCHESTRATOR] Successfully loaded pre-trained core weights into diffusion core.")
             except Exception as e:
                 print(f"[ORCHESTRATOR] Warning: Failed to load core weights state dict: {e}")
-        core_model = core_model.to(device)
+                
+        # Force model to bfloat16 to optimize VRAM footprint on RTX 5090
+        core_model = core_model.to(device=device, dtype=torch.bfloat16)
         core_model.eval()
 
         # 3. Resolve vocabulary size from the L3 router or default to 32000
@@ -1578,7 +1585,7 @@ class HenriCognitiveSwarmOrchestrator:
         
         # 4. Instantiate translation head to map hidden_dim -> vocab_size
         translation_head = nn.Linear(hidden_dim, vocab_size)
-        translation_head = translation_head.to(device)
+        translation_head = translation_head.to(device=device, dtype=torch.bfloat16)
         
         # 5. Initialize the Non-Autoregressive Canvas Sampler
         sampler = NonAutoregressiveCanvasSampler(

@@ -31,26 +31,29 @@ class NonAutoregressiveCanvasSampler:
         device = next(self.core.parameters()).device if list(self.core.parameters()) else torch.device("cpu")
         batch_size = 1
 
-        # Adjust dimensions based on the core model parameters
+        # Adjust dimensions and datatype based on the core model parameters
+        model_dtype = torch.float32
         for p in self.core.parameters():
             self.hidden_dim = p.shape[-1]
+            model_dtype = p.dtype
             break
 
         # 1. Instantiate the High-Entropy Staging Canvas (Pure Gaussian Noise)
         # Shape: [1, Sequence_Length, hidden_dim]
-        canvas = torch.randn(batch_size, sequence_length, self.hidden_dim, device=device)
+        canvas = torch.randn(batch_size, sequence_length, self.hidden_dim, device=device, dtype=model_dtype)
         canvas = F.normalize(canvas, p=2, dim=-1) # Project cleanly onto the hypersphere
 
         # Construct a discrete variance schedule (cosinespace time-stepping)
-        timesteps = torch.linspace(1.0, 0.001, self.N, device=device)
+        timesteps = torch.linspace(1.0, 0.001, self.N, device=device, dtype=model_dtype)
         dt = 1.0 / self.N
 
         print(f"[*] Initializing parallel thermodynamic relaxation phase over {self.N} steps...")
 
-        # Ensure swarm_trajectory matches the hidden_dim
+        # Ensure swarm_trajectory matches the hidden_dim and model_dtype
+        swarm_trajectory = swarm_trajectory.to(device=device, dtype=model_dtype)
         if swarm_trajectory.shape[-1] != self.hidden_dim:
             if swarm_trajectory.shape[-1] < self.hidden_dim:
-                padded = torch.zeros(swarm_trajectory.shape[0], self.hidden_dim, device=device)
+                padded = torch.zeros(swarm_trajectory.shape[0], self.hidden_dim, device=device, dtype=model_dtype)
                 padded[:, :swarm_trajectory.shape[-1]] = swarm_trajectory
                 swarm_trajectory = padded
             else:
