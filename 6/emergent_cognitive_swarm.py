@@ -245,14 +245,19 @@ class EmergentCognitiveSwarm(nn.Module):
                     current_wave = self.orchestrator.memory_engines[0].active_wave.to(device)
                 else:
                     current_wave = torch.zeros(self.orchestrator.hrr_dim, dtype=torch.complex64, device=device)
-                    
+
+                # H-MPC operations must be real-valued. Cast tensors to real parts and bfloat16.
+                current_wave_real = torch.real(current_wave).to(device=device, dtype=torch.bfloat16)
+                target_goal_real = torch.real(playbook_wave).to(device=device, dtype=torch.bfloat16)
+                candidate_actions_real = torch.real(candidate_action_sequences).to(device=device, dtype=torch.bfloat16)
+
                 winning_idx = self.orchestrator.h_mpc.run_h_mpc_selection(
-                    current_wave=current_wave,
-                    target_goal_wave=playbook_wave,
-                    candidate_action_sequences=candidate_action_sequences,
+                    current_wave=current_wave_real,
+                    target_goal_wave=target_goal_real,
+                    candidate_action_sequences=candidate_actions_real,
                     horizon=horizon
                 )
-                winning_wave = candidate_action_sequences[winning_idx][-1] # use terminal state
+                winning_wave = candidate_action_sequences[winning_idx][-1] # use terminal state (keep original complex form)
 
             # Generate parallel candidate outputs
             for idx in range(num_candidates):

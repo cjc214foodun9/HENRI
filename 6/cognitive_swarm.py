@@ -2973,15 +2973,11 @@ class HolographicMPCOrchestrator(torch.nn.Module):
         device = current_wave.device
         dtype = current_wave.dtype
         
-        # Extract real parts (continuous phase representation)
-        current_wave_real = torch.real(current_wave).to(device=device, dtype=dtype)
-        target_goal_real = torch.real(target_goal_wave).to(device=device, dtype=dtype)
-        candidate_actions = torch.real(candidate_action_sequences).to(device=device, dtype=dtype)
-        
         # Initialize parallel rollout states
         # state_wave: [NumCandidates, 4096]
-        state_wave = current_wave_real.unsqueeze(0).repeat(num_candidates, 1)
-        target_goal_batched = target_goal_real.unsqueeze(0).repeat(num_candidates, 1)
+        state_wave = current_wave.unsqueeze(0).repeat(num_candidates, 1)
+        target_goal_batched = target_goal_wave.unsqueeze(0).repeat(num_candidates, 1)
+        candidate_actions = candidate_action_sequences
         
         trajectory_tracks = []
         
@@ -2999,7 +2995,7 @@ class HolographicMPCOrchestrator(torch.nn.Module):
             
         # Isolate terminal state
         terminal_state = torch.nn.functional.normalize(state_wave, p=2, dim=-1) # [NumCandidates, 4096]
-        goal_norm = torch.nn.functional.normalize(target_goal_real, p=2, dim=-1) # [4096]
+        goal_norm = torch.nn.functional.normalize(target_goal_wave, p=2, dim=-1) # [4096]
         
         # Calculate Angular Geometric Resonance (Phase Cosine Similarity)
         # angular_resonance shape: [NumCandidates]
