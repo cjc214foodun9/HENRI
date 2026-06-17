@@ -242,7 +242,7 @@ class EmergentCognitiveSwarm(nn.Module):
                 candidate_action_sequences = torch.stack(candidate_action_sequences, dim=0) # [num_candidates, horizon, hrr_dim]
                 
                 if hasattr(self.orchestrator, 'memory_engines') and 0 in self.orchestrator.memory_engines:
-                    current_wave = self.orchestrator.memory_engines[0].historical_memory_cache.to(device)
+                    current_wave = self.orchestrator.memory_engines[0].active_wave.to(device)
                 else:
                     current_wave = torch.zeros(self.orchestrator.hrr_dim, dtype=torch.complex64, device=device)
                     
