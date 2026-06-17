@@ -3,6 +3,26 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.fft
 
+def fast_orthogonal_init(tensor, gain=1.0):
+    if tensor.ndimension() < 2:
+        return torch.nn.init.orthogonal_(tensor, gain)
+    rows = tensor.size(0)
+    cols = tensor.numel() // rows
+    if torch.cuda.is_available():
+        with torch.no_grad():
+            flat_shape = (cols, rows) if rows < cols else (rows, cols)
+            flattened = torch.randn(flat_shape, device='cuda', dtype=torch.float32)
+            q, r = torch.linalg.qr(flattened)
+            d = torch.diag(r, 0).sign()
+            d[d == 0] = 1
+            q *= d
+            if rows < cols:
+                q = q.t()
+            tensor.copy_(q.view_as(tensor).to(device=tensor.device, dtype=tensor.dtype) * gain)
+            return tensor
+    else:
+        return torch.nn.init.orthogonal_(tensor, gain)
+
 class ContinuousPhaseRouter(nn.Module):
     """
     Replaces the discrete softmax gating network of standard MoE.
@@ -16,7 +36,7 @@ class ContinuousPhaseRouter(nn.Module):
         
         # Phase attractors: "centers of gravity" for routing
         self.phase_attractors = nn.Parameter(torch.randn(num_fluid_states, dim))
-        nn.init.orthogonal_(self.phase_attractors)
+        fast_orthogonal_init(self.phase_attractors)
         
         # Thermodynamic temperature scalar controls strictness of routing
         self.beta = nn.Parameter(torch.tensor(10.0))
@@ -67,7 +87,7 @@ class OrthogonalFluidExpert(nn.Module):
     def __init__(self, dim=4096):
         super().__init__()
         self.phase_shift = UnitaryLinearLayer(dim, dim, bias=False)
-        nn.init.orthogonal_(self.phase_shift.weight)
+        fast_orthogonal_init(self.phase_shift.weight)
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x shape: (batch_size, seq_len, dim) or (batch_size, dim)
@@ -93,7 +113,7 @@ class ThermoActiveFluidBlock(nn.Module):
         
         # HRR Value Projection (Circular Convolution Involution)
         self.output_binding_geometry = nn.Parameter(torch.randn(1, dim))
-        nn.init.orthogonal_(self.output_binding_geometry)
+        fast_orthogonal_init(self.output_binding_geometry)
 
     def _hrr_bind(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         # Internal FFT circular convolution binding
