@@ -191,7 +191,7 @@ class ZoneBPhysicalEmulator:
         if target_vector is None:
             target_vector = self.orchestrator.get_stream_address(0)
             
-        target_np = target_vector.detach().numpy().astype(np.complex64)
+        target_np = target_vector.detach().cpu().numpy().astype(np.complex64)
         psi_candidate_flat = psi_candidate_focused.flatten()
         
         # Query memory cache and blend history
@@ -201,7 +201,7 @@ class ZoneBPhysicalEmulator:
         blended_mags = torch.abs(blended_focused).clamp(min=1e-8)
         psi_candidate_resolved = blended_focused / blended_mags
         
-        psi_cand_np = psi_candidate_resolved.detach().numpy().astype(np.complex64)
+        psi_cand_np = psi_candidate_resolved.detach().cpu().numpy().astype(np.complex64)
 
         truth_np, delta_np, alignment = self.orchestrator.optical_core.forward(
             hr_wavefront=psi_cand_np,
