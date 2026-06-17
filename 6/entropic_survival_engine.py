@@ -82,7 +82,12 @@ class EntropicSurvivalEngine:
         ranked_indices = torch.argsort(fitness_scores, descending=True)
         alpha_winner = ranked_indices[0]
         
-        for i, manager in enumerate(lora_managers):
+        if isinstance(lora_managers, dict):
+            lora_items = list(lora_managers.items())
+        else:
+            lora_items = list(enumerate(lora_managers))
+            
+        for i, manager in lora_items:
             if i >= len(fitness_scores):
                 break
                 
