@@ -196,6 +196,7 @@ class ZoneBPhysicalEmulator:
         
         # Query memory cache and blend history
         retrieved_wave = self.orchestrator.memory_engines[0].retrieve_from_cache(query_key=psi_candidate_flat)
+        retrieved_wave = retrieved_wave.to(psi_candidate_flat.device)
         blended_focused = psi_candidate_flat + retrieved_wave
         blended_mags = torch.abs(blended_focused).clamp(min=1e-8)
         psi_candidate_resolved = blended_focused / blended_mags
