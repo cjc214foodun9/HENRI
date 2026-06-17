@@ -173,6 +173,102 @@ class EmergentCognitiveSwarm(nn.Module):
                 alpha = torch.softmax(alpha + noise, dim=-1)
             alpha_routings.append(alpha)
             
+        # Check if GGUF is omitted (i.e., we are in mock mode)
+        is_mock_swarm = (self.orchestrator is not None and getattr(self.orchestrator, 'is_mock', False))
+        
+        if is_mock_swarm:
+            import os
+            print("[SWARM] GGUF files omitted. Generating candidates using continuous PyTorch core model samplers...")
+            device = self.router.w_down.weight.device
+            
+            # Resolve/import model components
+            from diffusion_canvas import NonAutoregressiveCanvasSampler
+            from henri_core.egress import QuantizedEgressAssembler
+            from henri_core.core import ProprietaryHENRICore
+            
+            # Retrieve or instantiate the core model cached on the orchestrator
+            if not hasattr(self.orchestrator, '_diffusion_core_model') or self.orchestrator._diffusion_core_model is None:
+                # Target Full-Scale Swarm Target Configuration: dim=4096, depth=32, experts=16
+                num_layers = 32
+                num_base_experts = 16
+                hidden_dim = 4096
+                
+                # Check for state dict in parent dir
+                parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                core_path = os.path.join(parent_dir, "henri_core_final.pt")
+                state_dict = None
+                if os.path.exists(core_path):
+                    try:
+                        state_dict = torch.load(core_path, map_location="cpu")
+                    except Exception as e:
+                        print(f"[SWARM] Warning: Failed to parse checkpoint: {e}")
+                
+                core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
+                # Cast core to bfloat16 to optimize VRAM footprint on RTX 5090
+                core_model = core_model.to(device=device, dtype=torch.bfloat16)
+                core_model.eval()
+                self.orchestrator._diffusion_core_model = core_model
+            else:
+                core_model = self.orchestrator._diffusion_core_model
+                
+            # Retrieve or instantiate cached translation head
+            vocab_size = getattr(self.router, 'vocab_size', 32000)
+            if not hasattr(self.orchestrator, '_diffusion_translation_head') or self.orchestrator._diffusion_translation_head is None:
+                translation_head = nn.Linear(core_model.layers[0].dim, vocab_size)
+                translation_head = translation_head.to(device=device, dtype=torch.bfloat16)
+                translation_head.eval()
+                self.orchestrator._diffusion_translation_head = translation_head
+            else:
+                translation_head = self.orchestrator._diffusion_translation_head
+                
+            # Generate parallel candidate outputs
+            for idx in range(num_candidates):
+                if playbook_wave is not None:
+                    perturbed_wave = playbook_wave.clone()
+                    noise_phase = torch.randn_like(perturbed_wave.real) * 0.1
+                    perturbed_wave = perturbed_wave * torch.polar(torch.ones_like(perturbed_wave.real), noise_phase)
+                else:
+                    perturbed_wave = torch.zeros(self.orchestrator.hrr_dim, dtype=torch.complex64, device=device)
+                    
+                # Project complex to real projection if needed
+                if torch.is_complex(perturbed_wave):
+                    trajectory_real = torch.real(perturbed_wave)
+                else:
+                    trajectory_real = perturbed_wave
+                    
+                if trajectory_real.ndim == 1:
+                    trajectory_real = trajectory_real.unsqueeze(0)
+                    
+                trajectory_input = trajectory_real.to(device=device, dtype=torch.bfloat16)
+                
+                try:
+                    # Non-Autoregressive Canvas Sampler is the primary pathway for score-guided relaxation
+                    sampler = NonAutoregressiveCanvasSampler(
+                        core_model=core_model,
+                        translation_head=translation_head,
+                        num_diffusion_steps=25
+                    )
+                    target_tokens = sampler.crystallize_motif(
+                        swarm_trajectory=trajectory_input,
+                        sequence_length=512,
+                        guidance_scale=4.5
+                    )
+                    token_ids = target_tokens[0].tolist()
+                except Exception as e:
+                    print(f"[SWARM] Continuous canvas sampler failed for candidate {idx}: {e}. Falling back to default tokens.")
+                    token_ids = [ord(c) for c in "def transform(grid):\n    return grid"]
+                
+                # Decode to string using character mapping
+                generated_text = "".join(chr(t % 256) for t in token_ids)
+                generated_texts[idx] = generated_text
+                tokens_lists[idx] = token_ids
+                active_mask[idx] = False # Completed immediately
+                
+            candidates = []
+            for idx in range(num_candidates):
+                candidates.append((generated_texts[idx], alpha_routings[idx]))
+            return candidates
+            
         # Volatile attraction CPU buffer
         ephemeral_attractors = []
         
