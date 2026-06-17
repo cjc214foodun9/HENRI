@@ -96,11 +96,11 @@ class ThermoActiveFluidBlock(nn.Module):
         nn.init.orthogonal_(self.output_binding_geometry)
 
     def _hrr_bind(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        # Internal FFT circular convolution binding
-        X_freq = torch.fft.rfft(x, dim=-1)
-        Y_freq = torch.fft.rfft(y, dim=-1)
+        orig_dtype = x.dtype
+        X_freq = torch.fft.rfft(x.float(), dim=-1)
+        Y_freq = torch.fft.rfft(y.float(), dim=-1)
         z = torch.fft.irfft(X_freq * Y_freq, n=self.dim, dim=-1)
-        return F.normalize(z, p=2, dim=-1)
+        return F.normalize(z.to(dtype=orig_dtype), p=2, dim=-1)
 
     def forward(self, 
                 current_wave: torch.Tensor, 
