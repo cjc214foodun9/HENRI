@@ -294,10 +294,14 @@ class L3SwarmRouter(nn.Module):
         if tokens is not None:
             # Process via token embedding path
             # tokens shape: [Batch, SeqLen]
+            device = self.token_embedding.weight.device
+            tokens = tokens.to(device)
             x = self.token_embedding(tokens)
             x = self.activation_projection(x)
         elif activations is not None:
             # Process via system RAM activation projection
+            device = self.activation_projection.weight.device
+            activations = activations.to(device)
             if len(activations.shape) == 3:
                 # Shape: [16, Batch, activation_dim]
                 is_tiled_mode = True
