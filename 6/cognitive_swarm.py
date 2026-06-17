@@ -1580,6 +1580,10 @@ class HenriCognitiveSwarmOrchestrator:
         core_model = core_model.to(device=device, dtype=torch.bfloat16)
         core_model.eval()
 
+        # Instantiate H-MPC orchestrator lazily
+        if not hasattr(self, 'h_mpc') or self.h_mpc is None:
+            self.h_mpc = HolographicMPCOrchestrator(core_model, dim=hidden_dim).to(device=device, dtype=torch.bfloat16)
+
         # 3. Resolve vocabulary size from the L3 router or default to 32000
         vocab_size = getattr(self.l3_router, 'vocab_size', 32000)
         
@@ -2873,3 +2877,146 @@ class AletheiaAgent:
             
         self.orchestrator.flush_lora_and_context_to_db(domain_tag=target_label)
         return candidate, max_revisions, "TIMEOUT"
+
+
+class ThermoActiveAdaLNBlock(torch.nn.Module):  
+    """  
+    HENRI Explicit Conditioning Module: Uses AdaLN-zero parameters to modulate  
+    expert phase transitions without corrupting continuous vector coordinates.  
+    """  
+    def __init__(self, dim=4096):  
+        super().__init__()  
+        self.dim = dim  
+        self.adaLN_modulation = torch.nn.Sequential(  
+            torch.nn.SiLU(),  
+            torch.nn.Linear(dim, 6 * dim, bias=True)  
+        )  
+        # Initialize to zero so the block functions as a clean identity mapping at step zero  
+        torch.nn.init.constant_(self.adaLN_modulation[-1].weight, 0.0)  
+        torch.nn.init.constant_(self.adaLN_modulation[-1].bias, 0.0)
+
+    def forward(self, x, condition_wave):  
+        # Partition the conditioning vector into 6 distinct parametric dimensions  
+        mods = self.adaLN_modulation(condition_wave).chunk(6, dim=-1)  
+        shift_phase, scale_phase, gate_phase, shift_mlp, scale_mlp, gate_mlp = mods  
+          
+        # Modulate phase space states before passing to fluid experts  
+        x_norm = torch.nn.functional.normalize(x, p=2, dim=-1)  
+        modulated_state = x_norm * (1.0 + scale_phase) + shift_phase  
+          
+        return x + gate_phase * torch.nn.functional.normalize(modulated_state, p=2, dim=-1)
+
+
+class JITSUiteSIGRegGuardrail(torch.nn.Module):  
+    """  
+    Information Maximization Engine: Leverages the Epps-Pulley statistic to  
+    veto candidate rollouts that collapse or saturate 4096-D phase space dimensions.  
+    """  
+    def __init__(self, knots=17, num_proj=512, dim=4096):  
+        super().__init__()  
+        self.num_proj = num_proj  
+        self.dim = dim  
+          
+        # Initialize analytical Gaussian evaluation points/knots  
+        t_vals = torch.linspace(0, 3, knots, dtype=torch.float32)  
+        dt = 3 / (knots - 1)  
+        weights = torch.full((knots,), 2 * dt, dtype=torch.float32)  
+        weights[[0, -1]] = dt  
+        phi_window = torch.exp(-t_vals.square() / 2.0)  
+          
+        self.register_buffer("t", t_vals)  
+        self.register_buffer("phi", phi_window)  
+        self.register_buffer("weights", weights * phi_window)
+
+    def evaluate_feature_obstruction(self, rollout_batch: torch.Tensor) -> torch.Tensor:  
+        """  
+        rollout_batch shape: [BatchSize, Dim] (Extracted pre-normalized trajectories)  
+        """  
+        # Generate random unit-modulus 1D projection axes  
+        A = torch.randn(self.dim, self.num_proj, device=rollout_batch.device, dtype=rollout_batch.dtype)  
+        A = A / (A.norm(p=2, dim=0, keepdim=True) + 1e-8)  
+          
+        # Project high-dimensional trajectories down to 1D slices  
+        sliced_projections = torch.matmul(rollout_batch, A).unsqueeze(-1) # [B, N_proj, 1]  
+        x_t = sliced_projections * self.t.to(dtype=rollout_batch.dtype) # [B, N_proj, Knots]  
+          
+        # Compute empirical distance to analytical isotropic Gaussian distribution  
+        err = (x_t.cos().mean(dim=0) - self.phi.to(dtype=rollout_batch.dtype)).square() + x_t.sin().mean(dim=0).square()  
+        statistic = torch.matmul(err, self.weights.to(dtype=rollout_batch.dtype)) * float(rollout_batch.size(0))  
+          
+        return statistic.mean()
+
+
+class HolographicMPCOrchestrator(torch.nn.Module):  
+    """  
+    H-MPC Pipeline: Integrates forward-rolling dynamics with an angular phase   
+    resonance cost function and a SIGReg dimension-collapse guardrail.  
+    """  
+    def __init__(self, core_dynamics_network, dim=4096):  
+        super().__init__()  
+        self.dynamics = core_dynamics_network # Pinned ProprietaryHENRICore transition network  
+        self.dim = dim  
+        self.guardrail = JITSUiteSIGRegGuardrail(dim=dim)  
+        self.conditioning_layer = ThermoActiveAdaLNBlock(dim=dim)
+
+    def run_h_mpc_selection(self, current_wave: torch.Tensor, target_goal_wave: torch.Tensor,   
+                             candidate_action_sequences: torch.Tensor, horizon=5) -> int:  
+        """  
+        current_wave: [4096] Complex phase tensor  
+        target_goal_wave: [4096] Complex target baseline from Zone C  
+        candidate_action_sequences: [NumCandidates, Horizon, 4096] Proposed action steps  
+        """  
+        num_candidates = candidate_action_sequences.size(0)  
+        device = current_wave.device
+        dtype = current_wave.dtype
+        
+        # Extract real parts (continuous phase representation)
+        current_wave_real = torch.real(current_wave).to(device=device, dtype=dtype)
+        target_goal_real = torch.real(target_goal_wave).to(device=device, dtype=dtype)
+        candidate_actions = torch.real(candidate_action_sequences).to(device=device, dtype=dtype)
+        
+        # Initialize parallel rollout states
+        # state_wave: [NumCandidates, 4096]
+        state_wave = current_wave_real.unsqueeze(0).repeat(num_candidates, 1)
+        target_goal_batched = target_goal_real.unsqueeze(0).repeat(num_candidates, 1)
+        
+        trajectory_tracks = []
+        
+        # Parallel forward projection loop
+        for t in range(horizon):
+            act_step = candidate_actions[:, t, :] # [NumCandidates, 4096]
+            
+            # Apply explicit AdaLN conditioning
+            modulated_state = self.conditioning_layer(state_wave, act_step) # [NumCandidates, 4096]
+            
+            # Project the continuous trajectory step into the future
+            # ProprietaryHENRICore: forward(x, zone_c_attractor, temperature)
+            state_wave, _ = self.dynamics(modulated_state, target_goal_batched, 0.0)
+            trajectory_tracks.append(state_wave)
+            
+        # Isolate terminal state
+        terminal_state = torch.nn.functional.normalize(state_wave, p=2, dim=-1) # [NumCandidates, 4096]
+        goal_norm = torch.nn.functional.normalize(target_goal_real, p=2, dim=-1) # [4096]
+        
+        # Calculate Angular Geometric Resonance (Phase Cosine Similarity)
+        # angular_resonance shape: [NumCandidates]
+        angular_resonance = torch.sum(terminal_state * goal_norm.unsqueeze(0), dim=-1)
+        phase_alignment_costs = 1.0 - angular_resonance
+        
+        # Evaluate feature obstruction (SIGReg guardrail)
+        # stacked_trajectory shape: [Horizon, NumCandidates, 4096]
+        stacked_trajectory = torch.stack(trajectory_tracks, dim=0)
+        
+        entropy_penalties = torch.zeros(num_candidates, device=device, dtype=dtype)
+        for idx in range(num_candidates):
+            # stacked_trajectory[:, idx, :] shape: [Horizon, 4096]
+            entropy_penalties[idx] = self.guardrail.evaluate_feature_obstruction(stacked_trajectory[:, idx, :])
+            
+        # Composite H-MPC Cost Evaluation
+        candidate_costs = phase_alignment_costs + (0.1 * entropy_penalties)
+        
+        # Select winning candidate plan
+        winning_candidate_idx = torch.argmin(candidate_costs).item()
+        print(f"[H-MPC] Selection Complete. Best Plan Index: {winning_candidate_idx} | Min Cost: {candidate_costs[winning_candidate_idx]:.4f}")  
+          
+        return winning_candidate_idx

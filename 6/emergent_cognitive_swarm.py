@@ -221,9 +221,47 @@ class EmergentCognitiveSwarm(nn.Module):
             else:
                 translation_head = self.orchestrator._diffusion_translation_head
                 
+            # Lazily initialize H-MPC orchestrator on self.orchestrator if missing
+            if not hasattr(self.orchestrator, 'h_mpc') or self.orchestrator.h_mpc is None:
+                from cognitive_swarm import HolographicMPCOrchestrator
+                self.orchestrator.h_mpc = HolographicMPCOrchestrator(core_model, dim=core_model.layers[0].dim).to(device=device, dtype=torch.bfloat16)
+
+            # Generate and select winning action trajectory via Holographic MPC
+            winning_wave = None
+            if hasattr(self.orchestrator, 'h_mpc') and self.orchestrator.h_mpc is not None and playbook_wave is not None:
+                horizon = 5
+                candidate_action_sequences = []
+                for idx in range(num_candidates):
+                    actions_seq = []
+                    for t in range(horizon):
+                        perturbed_step = playbook_wave.clone()
+                        noise_phase = torch.randn_like(perturbed_step.real) * 0.1
+                        perturbed_step = perturbed_step * torch.polar(torch.ones_like(perturbed_step.real), noise_phase)
+                        actions_seq.append(perturbed_step)
+                    candidate_action_sequences.append(torch.stack(actions_seq, dim=0))
+                candidate_action_sequences = torch.stack(candidate_action_sequences, dim=0) # [num_candidates, horizon, hrr_dim]
+                
+                if hasattr(self.orchestrator, 'memory_engines') and 0 in self.orchestrator.memory_engines:
+                    current_wave = self.orchestrator.memory_engines[0].historical_memory_cache.to(device)
+                else:
+                    current_wave = torch.zeros(self.orchestrator.hrr_dim, dtype=torch.complex64, device=device)
+                    
+                winning_idx = self.orchestrator.h_mpc.run_h_mpc_selection(
+                    current_wave=current_wave,
+                    target_goal_wave=playbook_wave,
+                    candidate_action_sequences=candidate_action_sequences,
+                    horizon=horizon
+                )
+                winning_wave = candidate_action_sequences[winning_idx][-1] # use terminal state
+
             # Generate parallel candidate outputs
             for idx in range(num_candidates):
-                if playbook_wave is not None:
+                if winning_wave is not None:
+                    # Perturb around the selected winning wave trajectory to generate diverse candidates
+                    perturbed_wave = winning_wave.clone()
+                    noise_phase = torch.randn_like(perturbed_wave.real) * 0.05
+                    perturbed_wave = perturbed_wave * torch.polar(torch.ones_like(perturbed_wave.real), noise_phase)
+                elif playbook_wave is not None:
                     perturbed_wave = playbook_wave.clone()
                     noise_phase = torch.randn_like(perturbed_wave.real) * 0.1
                     perturbed_wave = perturbed_wave * torch.polar(torch.ones_like(perturbed_wave.real), noise_phase)
