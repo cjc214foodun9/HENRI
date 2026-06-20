@@ -23,8 +23,14 @@ class NonAutoregressiveCanvasSampler(nn.Module):
         vocab_size = self.translation_head.out_features
         mask_tensor = torch.zeros(vocab_size, dtype=torch.float32)
         try:
+            import os
             from transformers import GPT2Tokenizer
-            tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+            parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            local_tok_dir = os.path.join(parent_dir, "gpt2_tokenizer_local")
+            if os.path.exists(local_tok_dir):
+                tokenizer = GPT2Tokenizer.from_pretrained(local_tok_dir)
+            else:
+                tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
             forbidden_keywords = ["scada", "actuator", "gripper", "torque", "vulkan", "valve", 
                                   "firmware", "reflash", "motor", "fluid", "mixer", "conjugation", 
                                   "pressure", "axis", "hardware", "alleviate"]
