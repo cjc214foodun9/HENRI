@@ -375,6 +375,21 @@ class SprintActiveExperimentationEngine(ActiveExperimentationEngine):
                 candidate, alpha_routing = candidate_info
                 is_syntax_valid, pure_code_or_err = self.inductor.verify_syntax(candidate)
                 if not is_syntax_valid:
+                    # Syntax error: Project and queue as repeller
+                    try:
+                        c_wave = self.project_code_to_wave(candidate)
+                        code_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, candidate))[:8]
+                        repeller_label = f"repeller_syntax_{task_id}_rev{revision_step}_{code_hash}"
+                        self.write_buffer.enqueue_vector(
+                            semantic_label=repeller_label,
+                            domain_tag=domain_tag,
+                            wave=c_wave,
+                            raw_text=candidate
+                        )
+                        self.orchestrator.hopfield.register_repeller(c_wave)
+                        print(f"[ENGINE] Registered and queued syntax repeller: {repeller_label}")
+                    except Exception as e:
+                        print(f"[ENGINE] Warning: Failed to queue syntax repeller: {e}")
                     scored_candidates.append((candidate, None, 0.0, None, 999.0, pure_code_or_err, alpha_routing, None))
                     continue
                     
@@ -382,6 +397,21 @@ class SprintActiveExperimentationEngine(ActiveExperimentationEngine):
                 
                 is_generalized, guard_feedback = self.inductor.assert_generalization(pure_code)
                 if not is_generalized:
+                    # Overfitting lookup table: Project and queue as repeller
+                    try:
+                        c_wave = self.project_code_to_wave(pure_code)
+                        code_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, pure_code))[:8]
+                        repeller_label = f"repeller_overfit_{task_id}_rev{revision_step}_{code_hash}"
+                        self.write_buffer.enqueue_vector(
+                            semantic_label=repeller_label,
+                            domain_tag=domain_tag,
+                            wave=c_wave,
+                            raw_text=pure_code
+                        )
+                        self.orchestrator.hopfield.register_repeller(c_wave)
+                        print(f"[ENGINE] Registered and queued overfit repeller: {repeller_label}")
+                    except Exception as e:
+                        print(f"[ENGINE] Warning: Failed to queue overfit repeller: {e}")
                     scored_candidates.append((candidate, None, 0.0, None, 999.0, guard_feedback, alpha_routing, None))
                     continue
                 
