@@ -83,6 +83,12 @@ class CachedHRRMemoryEngine(nn.Module):
         Bridges digital activations into the working holographic wavefront via circular
         convolution, tracks coherence degradation, and selectively offloads to DRAM.
         """
+        device = self.active_wave.device
+        token_activation = token_activation.to(device)
+        position_key = position_key.to(device)
+        if signature_key is not None:
+            signature_key = signature_key.to(device)
+
         # 1. Bind token activation to sequence position key via circular convolution
         bound_state = self.complex_circular_convolution(token_activation, position_key)
         

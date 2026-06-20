@@ -222,8 +222,13 @@ class ActiveExperimentationEngine:
 
     def project_code_to_wave(self, candidate_code: str) -> torch.Tensor:
         """Projects candidate code to 4096-D complex wave state."""
-        emb_res = self.orchestrator.base_model.create_embedding(candidate_code)
-        h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], dtype=torch.float32)
+        device = next(self.orchestrator.l3_router.parameters()).device
+        
+        # Intercept the incoming embedding payload array and migrate its memory page to the card
+        raw_embedding = self.orchestrator.base_model.create_embedding(candidate_code)
+        # Push the tensor straight into the active GPU memory channel
+        h_7b_raw = torch.tensor(raw_embedding["data"][0]["embedding"], device=device, dtype=torch.bfloat16)
+        
         h_7b_lora = self.orchestrator.lora_managers[0].apply_lora(h_7b_raw)
         if len(h_7b_lora.shape) == 2:
             h_7b_lora = torch.mean(h_7b_lora, dim=0)
@@ -401,6 +406,60 @@ class ActiveExperimentationEngine:
                 start_time=start_time,
                 time_limit=time_limit
             )
+            
+            # --- STIRRUP ROBOTIC HARNESS GROUNDING CHECK ---
+            if hasattr(self.orchestrator, "stirrup") and self.orchestrator.stirrup is not None and len(candidate_batch) > 0:
+                print(f"[STIRRUP] Grounding candidate batch of size {len(candidate_batch)} via sensory-motor harness...")
+                try:
+                    translation = task_dict.get("translation", (0.745, -1.204, 2.891))
+                    rotation = task_dict.get("rotation", (0.05, -0.12, 1.41))
+                    target_setpoint = task_dict.get("target_setpoint", (0.750, -1.200, 2.900))
+                    
+                    # Project candidates to 4096-D waves
+                    horizon = getattr(self.orchestrator, "h_mpc_horizon", 4)
+                    candidate_waves = []
+                    for cand_text, _ in candidate_batch:
+                        try:
+                            c_wave = self.project_code_to_wave(cand_text)
+                            c_wave_real = torch.real(c_wave)
+                        except Exception:
+                            # Fallback if code projection fails
+                            c_wave_real = torch.randn(4096)
+                        # Expand across lookahead horizon
+                        seq = torch.stack([c_wave_real] * horizon, dim=0)
+                        candidate_waves.append(seq)
+                    candidate_motor_waves = torch.stack(candidate_waves, dim=0) # [num_candidates, horizon, 4096]
+                    
+                    device = self.orchestrator.stirrup.registry.bulk_lifter.weight.device
+                    control_telemetry = self.orchestrator.stirrup.execute_grounded_control_tick(
+                        translation=translation,
+                        rotation=rotation,
+                        target_setpoint=target_setpoint,
+                        candidate_motor_waves=candidate_motor_waves.to(device=device, dtype=self.orchestrator.stirrup.registry.bulk_lifter.weight.dtype),
+                        horizon=horizon
+                    )
+                    
+                    print("\n=== STIRRUP GROUNDED ACTUATION REPORT ===")
+                    print(f"  Selected Candidate Index: {control_telemetry['selected_plan_index']}")
+                    print(f"  Thermodynamic Stress:     {control_telemetry['thermodynamic_stress_cost']:.6f}")
+                    print(f"  SIGReg Separation Score:  {control_telemetry['sigreg_disentanglement_score']:.6f}")
+                    print(f"  Transduced Token ID:      {control_telemetry['transduced_motor_token_id']}")
+                    print(f"  Actuated Command:         \"{control_telemetry['actuated_environment_command']}\"")
+                    print("=========================================\n")
+                    
+                    # Log telemetry to TimescaleDB
+                    self.orchestrator.stirrup.log_telemetry_to_db(control_telemetry)
+
+                    # Trigger dynamic gear-shifter transmission execute step
+                    if hasattr(self.orchestrator, "gear_bridge") and self.orchestrator.gear_bridge is not None:
+                        self.orchestrator.gear_bridge.execute_synchronized_gear_shift({
+                            "thermodynamic_stress_cost": control_telemetry.get("thermodynamic_stress_cost", 0.5),
+                            "sigreg_disentanglement_score": control_telemetry.get("sigreg_disentanglement_score", 3.0)
+                        })
+                    
+                except Exception as stirrup_err:
+                    print(f"[STIRRUP] Grounding check encountered an error: {stirrup_err}")
+            # -----------------------------------------------
             
             scored_candidates = []
             for candidate_info in candidate_batch:

@@ -61,6 +61,7 @@ from emergent_topological_manifold import EmergentManifold
 from autotelic_cognitive_engine import IMGEP_Manager
 from neurosymbolic_program_induction import ProgramInductor
 from active_experimentation_engine import ClosedLoopScientist, PhysicalSubstrateInterface
+from henri_sensory_motor import StirrupRoboticHarness
 
 HAS_LLAMA_CPP = False
 
@@ -515,6 +516,8 @@ class HenriCognitiveSwarmOrchestrator:
             i: CachedHRRMemoryEngine(wave_dim=self.hrr_dim, coherence_threshold=0.70, accumulation_limit=15)
             for i in range(num_streams)
         }
+        for engine in self.memory_engines.values():
+            engine.to(self.optical_core.device)
         self.stream_position_indices = {i: 0 for i in range(num_streams)}
         
         # Start telemetry server dynamically
@@ -558,6 +561,47 @@ class HenriCognitiveSwarmOrchestrator:
         self.swarm_fabric = EmergentCognitiveSwarm(self.gen_model, self.l3_router)
         self.swarm_fabric.orchestrator = self
         self.active_lora_adapter = None
+
+        # 14. Initialize Grounded Stirrup Robotics Harness
+        self.stirrup = StirrupRoboticHarness(db_url=self.synaptic_manager.db_url).to(device=self.optical_core.device)
+
+        # 15. Initialize Dynamic Gear Shifting Transmission Parameters & Bridge
+        self.h_mpc_horizon = 6
+        self.current_active_experts = 8
+        self.max_context_len = 4096
+        
+        if not hasattr(self, "gear_bridge"):
+            from dynamic_gear_shifter import AdaptiveSwarmOrchestratorBridge
+            self.gear_bridge = AdaptiveSwarmOrchestratorBridge(self)
+
+    def to(self, device, dtype=None):
+        if hasattr(self, 'l3_router') and self.l3_router is not None:
+            self.l3_router.to(device=device, dtype=dtype)
+        if hasattr(self, 'boundary_validator') and self.boundary_validator is not None:
+            self.boundary_validator.to(device=device, dtype=dtype)
+        if hasattr(self, 'hopfield') and self.hopfield is not None:
+            if hasattr(self.hopfield, 'to'):
+                self.hopfield.to(device=device, dtype=dtype)
+        if hasattr(self, 'agents') and self.agents is not None:
+            self.agents.to(device=device, dtype=dtype)
+        if hasattr(self, 'memory_engines') and self.memory_engines is not None:
+            for idx, engine in self.memory_engines.items():
+                engine.to(device)
+        if hasattr(self, 'optical_core') and self.optical_core is not None:
+            if hasattr(self.optical_core, 'to'):
+                self.optical_core.to(device=device, dtype=dtype)
+            elif hasattr(self.optical_core, 'device'):
+                self.optical_core.device = device
+        if hasattr(self, '_diffusion_core_model') and self._diffusion_core_model is not None:
+            self._diffusion_core_model.to(device=device, dtype=dtype)
+        if hasattr(self, '_diffusion_translation_head') and self._diffusion_translation_head is not None:
+            self._diffusion_translation_head.to(device=device, dtype=dtype)
+        if hasattr(self, 'h_mpc') and self.h_mpc is not None:
+            self.h_mpc.to(device=device, dtype=dtype)
+        if hasattr(self, 'stirrup') and self.stirrup is not None:
+            if hasattr(self.stirrup, 'to'):
+                self.stirrup.to(device=device, dtype=torch.float32)
+        return self
 
     @torch.no_grad()
     def blend_moe_loras(self, lora_managers, routing_weights):
@@ -814,7 +858,9 @@ class HenriCognitiveSwarmOrchestrator:
             
         # 1. Retrieve the base embedding (Gemma hidden activations)
         emb_res = self.base_model.create_embedding(prompt)
-        h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], dtype=torch.float32)
+        device = next(self.l3_router.parameters()).device
+        dtype = next(self.l3_router.parameters()).dtype
+        h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], device=device, dtype=dtype)
 
         # 2. Apply the stream-specific LoRA weights to activations
         h_7b_lora = self.lora_managers[stream_id].apply_lora(h_7b_raw)
@@ -892,7 +938,9 @@ class HenriCognitiveSwarmOrchestrator:
             stream_activations = []
             for i in range(self.num_streams):
                 emb_res = self.base_model.create_embedding(prompts[i])
-                h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], dtype=torch.float32)
+                device = next(self.l3_router.parameters()).device
+                dtype = next(self.l3_router.parameters()).dtype
+                h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], device=device, dtype=dtype)
                 h_7b_lora = self.lora_managers[i].apply_lora(h_7b_raw)
                 if len(h_7b_lora.shape) == 2:
                     h_7b_lora = torch.mean(h_7b_lora, dim=0)
@@ -940,7 +988,7 @@ class HenriCognitiveSwarmOrchestrator:
         if target_vector is None:
             target_vector = self.get_stream_address(0)  # fallback
             
-        target_np = target_vector.detach().numpy().astype(np.complex64)
+        target_np = target_vector.detach().cpu().numpy().astype(np.complex64)
 
         # 1b. Manifold Entropy Reduction (Phase 1)
         # Downsample psi_bulk if it is 2D
@@ -1199,18 +1247,59 @@ class HenriCognitiveSwarmOrchestrator:
         if not os.path.exists(core_path):
             core_path = os.path.join(parent_dir, "henri_core_final.pt")
             
-        # Default fallback parameters (Forced to Full-Scale Swarm Target Configuration)
-        num_layers = 32
-        num_base_experts = 16
-        hidden_dim = 4096
+        device = next(self.optical_core.emulator.parameters()).device if list(self.optical_core.emulator.parameters()) else torch.device("cpu")
+        checkpoint = None
         
-        force_full_scale = True
-        
-        state_dict = None
         if os.path.exists(core_path):
+            print(f"[INIT] Extracting binary mapping arrays from unified token asset: {core_path}")
             try:
-                state_dict = torch.load(core_path, map_location="cpu")
-                if not force_full_scale:
+                checkpoint = torch.load(core_path, map_location=device)
+            except Exception as load_err:
+                print(f"[INIT] Error loading checkpoint: {load_err}")
+                checkpoint = None
+                
+        if checkpoint is not None and isinstance(checkpoint, dict) and "config" in checkpoint:
+            # Extract configuration coordinates directly from the saved footprint
+            cfg = checkpoint["config"]
+            hidden_dim = cfg['dim']
+            num_layers = cfg['depth']
+            num_base_experts = cfg['num_fluid_states']
+            vocab_size = cfg['vocab_size']
+            print(f"[GEOMETRY] Checkpoint verified. Shape detected: dim={hidden_dim}, depth={num_layers}, fluid_states={num_base_experts}")
+            
+            # Initialize the physical substrate graph to match saved configurations
+            core_model = ProprietaryHENRICore(
+                dim=hidden_dim, 
+                depth=num_layers, 
+                num_fluid_states=num_base_experts
+            )
+            core_model.load_state_dict(checkpoint["model_state_dict"])
+            core_model = core_model.to(device=device, dtype=torch.bfloat16).eval()
+            
+            # Rehydrate the exact trained linear projection layer
+            translation_head = nn.Linear(hidden_dim, vocab_size, bias=False)
+            if checkpoint.get("translation_head_state_dict") is not None:
+                try:
+                    translation_head.load_state_dict(checkpoint["translation_head_state_dict"])
+                    print("[SUCCESS] Transduction vocabulary layer fully aligned with continuous core weights.")
+                except Exception as lsd_err:
+                    print(f"[WARNING] Failed to load translation head state dict: {lsd_err}. Reinitializing.")
+                    nn.init.orthogonal_(translation_head.weight)
+            else:
+                print("[WARNING] No trained translation state found. Falling back to orthogonal init.")
+                nn.init.orthogonal_(translation_head.weight)
+                
+            translation_head = translation_head.to(device=device, dtype=torch.bfloat16).eval()
+        else:
+            # Fallback to legacy dictionary or default
+            state_dict = checkpoint
+            num_layers = 32
+            num_base_experts = 16
+            hidden_dim = 4096
+            
+            if state_dict is not None:
+                print("[INIT] Fallback: Checkpoint config missing but state dict found. Resolving geometry...")
+                try:
                     layer_indices = set()
                     expert_indices = set()
                     for key, val in state_dict.items():
@@ -1227,47 +1316,42 @@ class HenriCognitiveSwarmOrchestrator:
                         num_layers = len(layer_indices)
                     if expert_indices:
                         num_base_experts = len(expert_indices)
-                    print(f"[ORCHESTRATOR] Detected pre-trained core geometry from {core_path}: {num_layers} layers, {num_base_experts} experts, dim={hidden_dim}")
-                else:
-                    print(f"[ORCHESTRATOR] Forced Full-Scale Swarm Target Configuration: {num_layers} layers, {num_base_experts} experts, dim={hidden_dim}.")
-            except Exception as e:
-                print(f"[ORCHESTRATOR] Warning: Failed to parse checkpoint geometry: {e}. Using defaults.")
-                state_dict = None
-        else:
-            print(f"[ORCHESTRATOR] Warning: Pre-trained core weights checkpoint not found at {core_path}. Initializing tabula rasa core.")
-
-        # 2. Instantiate the pre-trained ProprietaryHENRICore model
-        device = next(self.optical_core.emulator.parameters()).device if list(self.optical_core.emulator.parameters()) else torch.device("cpu")
-        core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
-        if state_dict is not None and not force_full_scale:
-            try:
-                core_model.load_state_dict(state_dict)
-                print("[ORCHESTRATOR] Successfully loaded pre-trained core weights into diffusion core.")
-            except Exception as e:
-                print(f"[ORCHESTRATOR] Warning: Failed to load core weights state dict: {e}")
+                    print(f"[ORCHESTRATOR] Detected pre-trained core geometry from legacy dictionary: {num_layers} layers, {num_base_experts} experts, dim={hidden_dim}")
+                except Exception as e:
+                    print(f"[ORCHESTRATOR] Warning: Failed to parse legacy state dict: {e}. Using defaults.")
+                    state_dict = None
+            else:
+                print(f"[ORCHESTRATOR] Warning: Pre-trained core weights checkpoint not found or corrupt at {core_path}. Initializing tabula rasa 8.59B model.")
                 
-        # Force model to bfloat16 to optimize VRAM footprint on RTX 5090
-        core_model = core_model.to(device=device, dtype=torch.bfloat16)
-        core_model.eval()
+            core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
+            if state_dict is not None:
+                try:
+                    core_model.load_state_dict(state_dict)
+                    print("[ORCHESTRATOR] Successfully loaded pre-trained core weights from legacy state dict.")
+                except Exception as e:
+                    print(f"[ORCHESTRATOR] Warning: Failed to load legacy core weights state dict: {e}")
+                    
+            core_model = core_model.to(device=device, dtype=torch.bfloat16).eval()
+            vocab_size = getattr(self.l3_router, 'vocab_size', 32000)
+            translation_head = nn.Linear(hidden_dim, vocab_size, bias=False)
+            nn.init.orthogonal_(translation_head.weight)
+            translation_head = translation_head.to(device=device, dtype=torch.bfloat16).eval()
 
         # Instantiate H-MPC orchestrator lazily
         if not hasattr(self, 'h_mpc') or self.h_mpc is None:
             self.h_mpc = HolographicMPCOrchestrator(core_model, dim=hidden_dim).to(device=device, dtype=torch.bfloat16)
 
-        # 3. Resolve vocabulary size from the L3 router or default to 32000
-        vocab_size = getattr(self.l3_router, 'vocab_size', 32000)
-        
-        # 4. Instantiate translation head to map hidden_dim -> vocab_size
-        translation_head = nn.Linear(hidden_dim, vocab_size)
-        translation_head = translation_head.to(device=device, dtype=torch.bfloat16)
-        
-        # 5. Initialize the Non-Autoregressive Canvas Sampler
-        sampler = NonAutoregressiveCanvasSampler(
+        # 5. Initialize or retrieve the cached Non-Autoregressive Canvas Sampler
+        self._diffusion_core_model = core_model
+        self._diffusion_translation_head = translation_head
+        self._canvas_sampler = NonAutoregressiveCanvasSampler(
             core_model=core_model,
             translation_head=translation_head,
             num_diffusion_steps=num_diffusion_steps
         )
-        
+        self.canvas_sampler = self._canvas_sampler
+        self.canvas_sampler.guidance_scale = guidance_scale
+            
         # 6. Prepare trajectory vector: if complex, extract the real phase alignment representation
         if torch.is_complex(trajectory_vector):
             # Complex phase angles/real projection
@@ -1281,11 +1365,15 @@ class HenriCognitiveSwarmOrchestrator:
                 trajectory_vector = trajectory_vector.unsqueeze(0)
             trajectory_input = trajectory_vector.to(device)
             
+        # Determine sequence length and guidance scale from dynamically shifted parameters
+        active_seq_len = min(512, getattr(self, "max_context_len", sequence_length))
+        active_guidance = getattr(self.canvas_sampler, "guidance_scale", guidance_scale)
+
         # 7. Run crystallization to produce token IDs
-        target_tokens = sampler.crystallize_motif(
+        target_tokens = self.canvas_sampler.crystallize_motif(
             swarm_trajectory=trajectory_input,
-            sequence_length=sequence_length,
-            guidance_scale=guidance_scale
+            sequence_length=active_seq_len,
+            guidance_scale=active_guidance
         )
         
         return target_tokens
@@ -1704,7 +1792,9 @@ class HenriCognitiveSwarmOrchestrator:
 
             try:
                 emb_res = self.base_model.create_embedding(active_trace)
-                q_3840 = torch.tensor(emb_res["data"][0]["embedding"], dtype=torch.float32)
+                device = next(self.l3_router.parameters()).device
+                dtype = next(self.l3_router.parameters()).dtype
+                q_3840 = torch.tensor(emb_res["data"][0]["embedding"], device=device, dtype=dtype)
                 with torch.no_grad():
                     q_4096 = self.l3_router.activation_to_wave(q_3840).detach().cpu()
             except Exception as e:
@@ -1720,7 +1810,9 @@ class HenriCognitiveSwarmOrchestrator:
                 if block_hash not in self.active_block_embeddings:
                     try:
                         emb_res_block = self.base_model.create_embedding(block_text)
-                        block_3840 = torch.tensor(emb_res_block["data"][0]["embedding"], dtype=torch.float32)
+                        device = next(self.l3_router.parameters()).device
+                        dtype = next(self.l3_router.parameters()).dtype
+                        block_3840 = torch.tensor(emb_res_block["data"][0]["embedding"], device=device, dtype=dtype)
                         with torch.no_grad():
                             block_4096 = self.l3_router.activation_to_wave(block_3840).detach().cpu()
                         self.active_block_embeddings[block_hash] = block_4096
@@ -1871,7 +1963,9 @@ class HenriCognitiveSwarmOrchestrator:
 
         try:
             emb_res = self.base_model.create_embedding(active_trace)
-            q_3840 = torch.tensor(emb_res["data"][0]["embedding"], dtype=torch.float32)
+            device = next(self.l3_router.parameters()).device
+            dtype = next(self.l3_router.parameters()).dtype
+            q_3840 = torch.tensor(emb_res["data"][0]["embedding"], device=device, dtype=dtype)
             with torch.no_grad():
                 q_4096 = self.l3_router.activation_to_wave(q_3840).detach().cpu()
         except Exception as e:
@@ -1949,7 +2043,9 @@ class HenriCognitiveSwarmOrchestrator:
                 # 1. Embed the rule using the CPU embedding engine (Output: 3840-D)
                 emb_res = self.base_model.create_embedding(rule_text)
                 embedding_3840 = emb_res["data"][0]["embedding"]
-                embedding_tensor = torch.tensor(embedding_3840, dtype=torch.float32, device='cpu')
+                device = self.l3_router.w_down.weight.device
+                dtype = self.l3_router.w_down.weight.dtype
+                embedding_tensor = torch.tensor(embedding_3840, dtype=dtype, device=device)
                 
                 # Mean pool if the embedding is a sequence of token vectors (shape [seq_len, 3840])
                 if embedding_tensor.ndim == 2:
@@ -1959,8 +2055,7 @@ class HenriCognitiveSwarmOrchestrator:
                 
                 # 2. Project 3840-D back up to the 4096-D Continuous Wave Space
                 # Since w_down is orthogonal, its transpose (weight matrix) acts as the perfect inverse rotation
-                device = self.l3_router.w_down.weight.device
-                wave_4096 = torch.matmul(embedding_tensor.to(device), self.l3_router.w_down.weight.T)
+                wave_4096 = torch.matmul(embedding_tensor, self.l3_router.w_down.weight.T)
                 
                 rule_embeddings.append(wave_4096.cpu())
           
@@ -2025,7 +2120,7 @@ class HenriCognitiveSwarmOrchestrator:
                 # Embed rule via CPU-mmap instance
                 emb_response = self.reflector_model.create_embedding(rule_text)
                 device = w_down_matrix.device
-                g_rule = torch.tensor(emb_response["data"][0]["embedding"], dtype=torch.float32, device=device)
+                g_rule = torch.tensor(emb_response["data"][0]["embedding"], dtype=w_down_matrix.dtype, device=device)
                 if g_rule.ndim == 2:
                     g_rule = torch.mean(g_rule, dim=0)
                 elif g_rule.ndim == 3:
@@ -2048,18 +2143,15 @@ class HenriCognitiveSwarmOrchestrator:
         import re
         
         try:
-            clean_json = json_operations.strip()
-            # If wrapped in markdown block, extract it
-            if "```" in clean_json:
-                match = re.search(r"(\{.*\})|(\[.*\])", clean_json, re.DOTALL)
-                if match:
-                    clean_json = match.group(0)
-                else:
-                    # Strip any ```json or ```
-                    clean_json = re.sub(r"^```(?:json)?\n", "", clean_json)
-                    clean_json = re.sub(r"\n```$", "", clean_json)
-            
-            data = json.loads(clean_json)
+            raw_curator_input = json_operations
+            # Force strict structural isolation on the raw input stream
+            json_match = re.search(r"\{.*\}", raw_curator_input, re.DOTALL)
+            if json_match:
+                clean_json_payload = json_match.group(0)
+            else:
+                clean_json_payload = "{}"
+                
+            data = json.loads(clean_json_payload)
         except Exception as e:
             print(f"[ACE Curator] Failed to parse JSON operations: {e}. Raw input:\n{json_operations}")
             return playbook_dict
@@ -2252,19 +2344,21 @@ class HenriCognitiveSwarmOrchestrator:
     def distill_and_save_axiom(self, expert_idx: int, domain_tag: str):
         manager = self.lora_managers[expert_idx]
         with torch.no_grad():
-            impulse = torch.ones(self.gemma_dim, device=manager.lora_A.device)
+            impulse = torch.ones(self.gemma_dim, device=manager.lora_A.device, dtype=manager.lora_A.dtype)
             lora_state_3840 = manager.apply_lora(impulse)
             device = self.l3_router.w_down.weight.device
+            target_dtype = self.l3_router.w_down.weight.dtype
             
             # Using the transpose .T as explicitly requested to project from 3840 to 4096-D
             try:
-                wave_4096 = torch.matmul(lora_state_3840.to(device), self.l3_router.w_down.weight.T)
+                wave_4096 = torch.matmul(lora_state_3840.to(device=device, dtype=target_dtype), self.l3_router.w_down.weight.T)
             except Exception as e:
                 print(f"[TABULA RASA] Explicit transpose projection failed: {e}. Attempting fallback.")
-                wave_4096 = torch.matmul(lora_state_3840.to(device), self.l3_router.w_down.weight)
+                wave_4096 = torch.matmul(lora_state_3840.to(device=device, dtype=target_dtype), self.l3_router.w_down.weight)
 
-            phases = torch.angle(torch.complex(wave_4096, torch.zeros_like(wave_4096)))
-            wave_4096_complex = torch.polar(torch.ones_like(phases), phases)
+            wave_4096_fp32 = wave_4096.to(dtype=torch.float32)
+            phases = torch.angle(torch.complex(wave_4096_fp32, torch.zeros_like(wave_4096_fp32)))
+            wave_4096_complex = torch.polar(torch.ones_like(phases, dtype=torch.float32), phases)
             self.save_wave_to_db(domain_tag, wave_4096_complex, "wosx_distilled_expert_axiom")
             
             # Register in Hopfield lexicon so it becomes immediately fetchable in RAM
@@ -2372,7 +2466,9 @@ class AletheiaAgent:
 
         # 2. Project candidate solution to 4096-D complex wave using L3 Router
         emb_res = self.orchestrator.base_model.create_embedding(candidate)
-        h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], dtype=torch.float32)
+        device = next(self.orchestrator.l3_router.parameters()).device
+        dtype = next(self.orchestrator.l3_router.parameters()).dtype
+        h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], device=device, dtype=dtype)
         h_7b_lora = self.orchestrator.lora_managers[0].apply_lora(h_7b_raw)
         if len(h_7b_lora.shape) == 2:
             h_7b_lora = torch.mean(h_7b_lora, dim=0)
@@ -2416,7 +2512,7 @@ class AletheiaAgent:
         if target_vector is None:
             target_vector = self.orchestrator.get_stream_address(0)
             
-        target_np = target_vector.detach().numpy().astype(np.complex64)
+        target_np = target_vector.detach().cpu().numpy().astype(np.complex64)
         psi_candidate_flat = psi_candidate_focused.flatten()
         # Query memory cache for stream 0 and blend history
         retrieved_wave = self.orchestrator.memory_engines[0].retrieve_from_cache(query_key=psi_candidate_flat)
@@ -2424,7 +2520,7 @@ class AletheiaAgent:
         blended_mags = torch.abs(blended_focused).clamp(min=1e-8)
         psi_candidate_resolved = blended_focused / blended_mags
         
-        psi_cand_np = psi_candidate_resolved.detach().numpy().astype(np.complex64)
+        psi_cand_np = psi_candidate_resolved.detach().cpu().numpy().astype(np.complex64)
 
         truth_np, delta_np, alignment = self.orchestrator.optical_core.forward(
             hr_wavefront=psi_cand_np,
@@ -2632,54 +2728,85 @@ class HolographicMPCOrchestrator(torch.nn.Module):
     def run_h_mpc_selection(self, current_wave: torch.Tensor, target_goal_wave: torch.Tensor,   
                              candidate_action_sequences: torch.Tensor, horizon=5) -> int:  
         """  
-        current_wave: [4096] Complex phase tensor  
-        target_goal_wave: [4096] Complex target baseline from Zone C  
-        candidate_action_sequences: [NumCandidates, Horizon, 4096] Proposed action steps  
+        current_wave: Complex phase tensor  
+        target_goal_wave: Complex target baseline from Zone C  
+        candidate_action_sequences: Proposed action steps  
         """  
         num_candidates = candidate_action_sequences.size(0)  
         device = current_wave.device
         dtype = current_wave.dtype
+
+        # Dynamically align incoming wave dimensions with the model's inner dim
+        if current_wave.shape[-1] != self.dim:
+            if current_wave.shape[-1] < self.dim:
+                padded = torch.zeros(self.dim, device=device, dtype=dtype)
+                padded[:current_wave.shape[-1]] = current_wave
+                current_wave = padded
+            else:
+                current_wave = current_wave[:self.dim]
+                
+        if target_goal_wave.shape[-1] != self.dim:
+            if target_goal_wave.shape[-1] < self.dim:
+                padded = torch.zeros(self.dim, device=device, dtype=dtype)
+                padded[:target_goal_wave.shape[-1]] = target_goal_wave
+                target_goal_wave = padded
+            else:
+                target_goal_wave = target_goal_wave[:self.dim]
+                
+        if candidate_action_sequences.shape[-1] != self.dim:
+            if candidate_action_sequences.shape[-1] < self.dim:
+                padded = torch.zeros(candidate_action_sequences.shape[0], candidate_action_sequences.shape[1], self.dim, device=device, dtype=dtype)
+                padded[:, :, :candidate_action_sequences.shape[-1]] = candidate_action_sequences
+                candidate_action_sequences = padded
+            else:
+                candidate_action_sequences = candidate_action_sequences[:, :, :self.dim]
         
-        # Initialize parallel rollout states
-        # state_wave: [NumCandidates, 4096]
-        state_wave = current_wave.unsqueeze(0).repeat(num_candidates, 1)
-        target_goal_batched = target_goal_wave.unsqueeze(0).repeat(num_candidates, 1)
-        candidate_actions = candidate_action_sequences
+        # Limit evaluation batch size to prevent VRAM saturation
+        chunk_size = 4
+        candidate_costs_list = []
         
-        trajectory_tracks = []
-        
-        # Parallel forward projection loop
-        for t in range(horizon):
-            act_step = candidate_actions[:, t, :] # [NumCandidates, 4096]
+        for chunk_start in range(0, num_candidates, chunk_size):
+            chunk_end = min(chunk_start + chunk_size, num_candidates)
+            chunk_candidates = candidate_action_sequences[chunk_start:chunk_end]
+            chunk_num = chunk_end - chunk_start
             
-            # Apply explicit AdaLN conditioning
-            modulated_state = self.conditioning_layer(state_wave, act_step) # [NumCandidates, 4096]
+            # Initialize parallel rollout states for this chunk
+            state_wave = current_wave.unsqueeze(0).repeat(chunk_num, 1)
+            target_goal_batched = target_goal_wave.unsqueeze(0).repeat(chunk_num, 1)
             
-            # Project the continuous trajectory step into the future
-            # ProprietaryHENRICore: forward(x, zone_c_attractor, temperature)
-            state_wave, _ = self.dynamics(modulated_state, target_goal_batched, 0.0)
-            trajectory_tracks.append(state_wave)
+            trajectory_tracks = []
             
-        # Isolate terminal state
-        terminal_state = torch.nn.functional.normalize(state_wave, p=2, dim=-1) # [NumCandidates, 4096]
-        goal_norm = torch.nn.functional.normalize(target_goal_wave, p=2, dim=-1) # [4096]
-        
-        # Calculate Angular Geometric Resonance (Phase Cosine Similarity)
-        # angular_resonance shape: [NumCandidates]
-        angular_resonance = torch.sum(terminal_state * goal_norm.unsqueeze(0), dim=-1)
-        phase_alignment_costs = 1.0 - angular_resonance
-        
-        # Evaluate feature obstruction (SIGReg guardrail)
-        # stacked_trajectory shape: [Horizon, NumCandidates, 4096]
-        stacked_trajectory = torch.stack(trajectory_tracks, dim=0)
-        
-        entropy_penalties = torch.zeros(num_candidates, device=device, dtype=dtype)
-        for idx in range(num_candidates):
-            # stacked_trajectory[:, idx, :] shape: [Horizon, 4096]
-            entropy_penalties[idx] = self.guardrail.evaluate_feature_obstruction(stacked_trajectory[:, idx, :])
+            # Parallel forward projection loop for this chunk
+            for t in range(horizon):
+                act_step = chunk_candidates[:, t, :] # [chunk_num, 4096]
+                
+                # Apply explicit AdaLN conditioning
+                modulated_state = self.conditioning_layer(state_wave, act_step) # [chunk_num, 4096]
+                
+                # Project the continuous trajectory step into the future
+                state_wave, _ = self.dynamics(modulated_state, target_goal_batched, 0.0)
+                trajectory_tracks.append(state_wave)
+                
+            # Isolate terminal state
+            terminal_state = torch.nn.functional.normalize(state_wave, p=2, dim=-1) # [chunk_num, 4096]
+            goal_norm = torch.nn.functional.normalize(target_goal_wave, p=2, dim=-1) # [4096]
             
-        # Composite H-MPC Cost Evaluation
-        candidate_costs = phase_alignment_costs + (0.1 * entropy_penalties)
+            # Calculate Angular Geometric Resonance (Phase Cosine Similarity)
+            angular_resonance = torch.sum(terminal_state * goal_norm.unsqueeze(0), dim=-1)
+            phase_alignment_costs = 1.0 - angular_resonance
+            
+            # Evaluate feature obstruction (SIGReg guardrail)
+            stacked_trajectory = torch.stack(trajectory_tracks, dim=0)
+            
+            entropy_penalties = torch.zeros(chunk_num, device=device, dtype=dtype)
+            for idx in range(chunk_num):
+                entropy_penalties[idx] = self.guardrail.evaluate_feature_obstruction(stacked_trajectory[:, idx, :])
+                
+            # Composite H-MPC Cost Evaluation for this chunk
+            chunk_costs = phase_alignment_costs + (0.1 * entropy_penalties)
+            candidate_costs_list.append(chunk_costs)
+            
+        candidate_costs = torch.cat(candidate_costs_list, dim=0)
         
         # Select winning candidate plan
         winning_candidate_idx = torch.argmin(candidate_costs).item()

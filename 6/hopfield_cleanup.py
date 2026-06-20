@@ -51,7 +51,7 @@ class HopfieldSemanticCleanup:
 
         labels = list(self.vocabulary.keys())
         # Stack vocabulary vectors: shape [M, dim]
-        v_matrix = torch.stack([self.vocabulary[lbl] for lbl in labels])
+        v_matrix = torch.stack([self.vocabulary[lbl] for lbl in labels]).to(s.device)
 
         last_s = s.clone()
         

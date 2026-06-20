@@ -8,7 +8,20 @@ def fast_orthogonal_init(tensor, gain=1.0):
         return torch.nn.init.orthogonal_(tensor, gain)
     rows = tensor.size(0)
     cols = tensor.numel() // rows
-    if torch.cuda.is_available():
+    
+    # Kronecker acceleration for large square matrices (e.g. 4096 x 4096)
+    # Run entirely on CPU to prevent GPU memory allocation and OOM during model creation
+    if rows == 4096 and cols == 4096:
+        with torch.no_grad():
+            A_rand = torch.randn(16, 16, device='cpu', dtype=torch.float32)
+            B_rand = torch.randn(256, 256, device='cpu', dtype=torch.float32)
+            A, _ = torch.linalg.qr(A_rand)
+            B, _ = torch.linalg.qr(B_rand)
+            C = torch.kron(A, B)
+            tensor.copy_(C.view_as(tensor).to(device=tensor.device, dtype=tensor.dtype) * gain)
+            return tensor
+
+    if torch.cuda.is_available() and tensor.device.type == 'cuda':
         with torch.no_grad():
             flat_shape = (cols, rows) if rows < cols else (rows, cols)
             flattened = torch.randn(flat_shape, device='cuda', dtype=torch.float32)

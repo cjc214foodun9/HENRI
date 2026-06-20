@@ -21,7 +21,8 @@ def fused_hrm_projection(pooled_out: torch.Tensor, weight: torch.Tensor, bias: t
     """
     phases = torch.addmm(bias, pooled_out, weight.t())
     phases = torch.remainder(phases, 2.0 * math.pi)
-    return torch.complex(torch.cos(phases), torch.sin(phases))
+    phases_f32 = phases.to(torch.float32)
+    return torch.complex(torch.cos(phases_f32), torch.sin(phases_f32))
 
 class TiledTransducerHead(nn.Module):
     """
@@ -198,7 +199,8 @@ class L3SwarmRouter(nn.Module):
             
             # 1. Extract phase angles (representing the phase-encoded features)
             device = self.w_down.weight.device
-            phases = torch.angle(wave.to(device)) # shape [4096]
+            dtype = self.w_down.weight.dtype
+            phases = torch.angle(wave.to(device)).to(dtype=dtype) # shape [4096]
             
             # 2. Project directly using w_down
             if phases.ndim == 1:
@@ -213,10 +215,13 @@ class L3SwarmRouter(nn.Module):
         Projects the 4096-D Hopfield state into Gemma's 3840-D latent space.
         """
         device = self.w_down.weight.device
-        h_wave = h_wave.to(device)
+        dtype = self.w_down.weight.dtype
+        h_wave = h_wave.to(device=device)
         
         if torch.is_complex(h_wave):
             h_wave = torch.angle(h_wave)
+            
+        h_wave = h_wave.to(dtype=dtype)
             
         if h_wave.ndim == 1:
             h_wave = h_wave.unsqueeze(0)
@@ -330,9 +335,32 @@ class L3SwarmRouter(nn.Module):
             # Fused AVX-512 kernel execution via TorchScript
             hrr_wave_temp = fused_hrm_projection(pooled_out, self.phase_proj.weight, self.phase_proj.bias)
             
-            real_part = torch.matmul(hrr_wave_temp.real, self.master_signatures.real.T)
-            imag_part = torch.matmul(hrr_wave_temp.imag, self.master_signatures.imag.T)
-            resonance_scores = (real_part + imag_part) / 4096.0  # shape: [16 * Batch, 4]
+            # 1. Adapt device and dtype for the master signatures matrix
+            signatures_device = self.master_signatures.to(device=hrr_wave_temp.device)
+
+            # 2. Check if the tensors are complex fields or real-valued arrays
+            if torch.is_complex(hrr_wave_temp) or torch.is_complex(signatures_device):
+                # Safe isolation for complex wave configurations
+                w_wave_real = hrr_wave_temp.real if torch.is_complex(hrr_wave_temp) else hrr_wave_temp
+                w_wave_imag = hrr_wave_temp.imag if torch.is_complex(hrr_wave_temp) else torch.zeros_like(hrr_wave_temp)
+                
+                sig_real = signatures_device.real if torch.is_complex(signatures_device) else signatures_device
+                sig_imag = signatures_device.imag if torch.is_complex(signatures_device) else torch.zeros_like(signatures_device)
+                
+                # Cast matrices to match input precision limits before execution
+                real_part = torch.matmul(w_wave_real.to(dtype=hrr_wave_temp.real.dtype), sig_real.to(dtype=hrr_wave_temp.real.dtype).T)
+                imag_part = torch.matmul(w_wave_imag.to(dtype=hrr_wave_temp.real.dtype), sig_imag.to(dtype=hrr_wave_temp.real.dtype).T)
+                
+                # Combine back into a unified complex matrix mapping
+                real_part = real_part + imag_part
+            else:
+                # Deterministic fallback path for standard real-valued arrays
+                real_part = torch.matmul(hrr_wave_temp.to(dtype=signatures_device.dtype), signatures_device.T)
+
+            # Cast the computed output matrix back to match the original activation flow shape
+            real_part = real_part.to(dtype=hrr_wave_temp.dtype if not torch.is_complex(hrr_wave_temp) else hrr_wave_temp.real.dtype)
+            
+            resonance_scores = real_part / 4096.0  # shape: [16 * Batch, 4]
             winning_master_id = torch.argmax(resonance_scores, dim=-1)  # shape: [16 * Batch]
             
             return global_wavefront, winning_master_id, resonance_scores
@@ -340,11 +368,56 @@ class L3SwarmRouter(nn.Module):
             # Fused AVX-512 kernel execution via TorchScript
             hrr_wave = fused_hrm_projection(pooled_out, self.phase_proj.weight, self.phase_proj.bias)
             
-            real_part = torch.matmul(hrr_wave.real, self.master_signatures.real.T)
-            imag_part = torch.matmul(hrr_wave.imag, self.master_signatures.imag.T)
-            resonance_scores = (real_part + imag_part) / 4096.0  # shape: [Batch, 4]
+            # 1. Adapt device and dtype for the master signatures matrix
+            signatures_device = self.master_signatures.to(device=hrr_wave.device)
+
+            # 2. Check if the tensors are complex fields or real-valued arrays
+            if torch.is_complex(hrr_wave) or torch.is_complex(signatures_device):
+                # Safe isolation for complex wave configurations
+                w_wave_real = hrr_wave.real if torch.is_complex(hrr_wave) else hrr_wave
+                w_wave_imag = hrr_wave.imag if torch.is_complex(hrr_wave) else torch.zeros_like(hrr_wave)
+                
+                sig_real = signatures_device.real if torch.is_complex(signatures_device) else signatures_device
+                sig_imag = signatures_device.imag if torch.is_complex(signatures_device) else torch.zeros_like(signatures_device)
+                
+                # Cast matrices to match input precision limits before execution
+                real_part = torch.matmul(w_wave_real.to(dtype=hrr_wave.real.dtype), sig_real.to(dtype=hrr_wave.real.dtype).T)
+                imag_part = torch.matmul(w_wave_imag.to(dtype=hrr_wave.real.dtype), sig_imag.to(dtype=hrr_wave.real.dtype).T)
+                
+                # Combine back into a unified complex matrix mapping
+                real_part = real_part + imag_part
+            else:
+                # Deterministic fallback path for standard real-valued arrays
+                real_part = torch.matmul(hrr_wave.to(dtype=signatures_device.dtype), signatures_device.T)
+
+            # Cast the computed output matrix back to match the original activation flow shape
+            real_part = real_part.to(dtype=hrr_wave.dtype if not torch.is_complex(hrr_wave) else hrr_wave.real.dtype)
+            
+            resonance_scores = real_part / 4096.0  # shape: [Batch, 4]
             
             # Find winning Master ID
             winning_master_id = torch.argmax(resonance_scores, dim=-1)  # shape: [Batch]
             
             return hrr_wave, winning_master_id, resonance_scores
+
+    def to(self, *args, **kwargs):
+        # Identify target device
+        device = None
+        for arg in args:
+            if isinstance(arg, (torch.device, str)):
+                device = arg
+        if 'device' in kwargs:
+            device = kwargs['device']
+            
+        # Temporarily detach and clone the master_signatures to preserve complex64
+        signatures_cpu = self.master_signatures.data.clone()
+        
+        # Call standard nn.Module.to()
+        super().to(*args, **kwargs)
+        
+        # Re-register or re-assign master_signatures to complex64 on target device
+        self.master_signatures.data = signatures_cpu.to(
+            device=device or self.master_signatures.device,
+            dtype=torch.complex64
+        )
+        return self

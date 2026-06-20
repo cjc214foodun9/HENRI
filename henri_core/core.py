@@ -3,6 +3,39 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.fft
 
+def fast_orthogonal_init(tensor, gain=1.0):
+    if tensor.ndimension() < 2:
+        return torch.nn.init.orthogonal_(tensor, gain)
+    rows = tensor.size(0)
+    cols = tensor.numel() // rows
+    
+    # Kronecker acceleration for large square matrices (e.g. 4096 x 4096)
+    # Run entirely on CPU to prevent GPU memory allocation and OOM during model creation
+    if rows == 4096 and cols == 4096:
+        with torch.no_grad():
+            A_rand = torch.randn(16, 16, device='cpu', dtype=torch.float32)
+            B_rand = torch.randn(256, 256, device='cpu', dtype=torch.float32)
+            A, _ = torch.linalg.qr(A_rand)
+            B, _ = torch.linalg.qr(B_rand)
+            C = torch.kron(A, B)
+            tensor.copy_(C.view_as(tensor).to(device=tensor.device, dtype=tensor.dtype) * gain)
+            return tensor
+
+    if torch.cuda.is_available() and tensor.device.type == 'cuda':
+        with torch.no_grad():
+            flat_shape = (cols, rows) if rows < cols else (rows, cols)
+            flattened = torch.randn(flat_shape, device='cuda', dtype=torch.float32)
+            q, r = torch.linalg.qr(flattened)
+            d = torch.diag(r, 0).sign()
+            d[d == 0] = 1
+            q *= d
+            if rows < cols:
+                q = q.t()
+            tensor.copy_(q.view_as(tensor).to(device=tensor.device, dtype=tensor.dtype) * gain)
+            return tensor
+    else:
+        return torch.nn.init.orthogonal_(tensor, gain)
+
 class ContinuousPhaseRouter(nn.Module):
     """
     Replaces the discrete softmax gating network of standard MoE.
@@ -16,7 +49,7 @@ class ContinuousPhaseRouter(nn.Module):
         
         # Phase attractors: "centers of gravity" for routing
         self.phase_attractors = nn.Parameter(torch.randn(num_fluid_states, dim))
-        nn.init.orthogonal_(self.phase_attractors)
+        fast_orthogonal_init(self.phase_attractors)
         
         # Thermodynamic temperature scalar controls strictness of routing
         self.beta = nn.Parameter(torch.tensor(10.0))
@@ -67,7 +100,7 @@ class OrthogonalFluidExpert(nn.Module):
     def __init__(self, dim=4096):
         super().__init__()
         self.phase_shift = UnitaryLinearLayer(dim, dim, bias=False)
-        nn.init.orthogonal_(self.phase_shift.weight)
+        fast_orthogonal_init(self.phase_shift.weight)
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x shape: (batch_size, seq_len, dim) or (batch_size, dim)
@@ -93,14 +126,17 @@ class ThermoActiveFluidBlock(nn.Module):
         
         # HRR Value Projection (Circular Convolution Involution)
         self.output_binding_geometry = nn.Parameter(torch.randn(1, dim))
-        nn.init.orthogonal_(self.output_binding_geometry)
+        fast_orthogonal_init(self.output_binding_geometry)
 
     def _hrr_bind(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        # Internal FFT circular convolution binding
+        # Cast to float32 to prevent Unsupported dtype BFloat16/Float16 errors during FFT
         orig_dtype = x.dtype
         X_freq = torch.fft.rfft(x.float(), dim=-1)
         Y_freq = torch.fft.rfft(y.float(), dim=-1)
         z = torch.fft.irfft(X_freq * Y_freq, n=self.dim, dim=-1)
-        return F.normalize(z.to(dtype=orig_dtype), p=2, dim=-1)
+        z = z.to(dtype=orig_dtype)
+        return F.normalize(z, p=2, dim=-1)
 
     def forward(self, 
                 current_wave: torch.Tensor, 

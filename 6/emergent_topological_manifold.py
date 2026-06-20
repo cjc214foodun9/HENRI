@@ -128,12 +128,13 @@ class TopologicalClosureMemory(torch_nn.Module):
                 cycle_start_state = self.trajectory_buffer[max_idx]
                 
                 # Active Inference step: Minimize surprise by predicting the invariant
-                predicted_invariant = self.amortized_projection(cycle_start_state)
-                loss = F.mse_loss(predicted_invariant, batch_mean_state)
-                
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
+                with torch.enable_grad():
+                    predicted_invariant = self.amortized_projection(cycle_start_state)
+                    loss = F.mse_loss(predicted_invariant, batch_mean_state)
+                    
+                    self.optimizer.zero_grad()
+                    loss.backward()
+                    self.optimizer.step()
                 
                 # Substitute the current transient computation with the amortized invariant
                 # This dynamically reshapes the topology based on stable regularities

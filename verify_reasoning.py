@@ -23,7 +23,7 @@ def test_vector_bending():
     print("\n=== Test 1: Vector Bending Mechanics ===")
     
     # 1. Initialize orchestrator in mock mode using nonexistent GGUF path
-    orchestrator = HenriCognitiveSwarmOrchestrator(model_path="mock_only.gguf", num_streams=16, gemma_dim=2560)
+    orchestrator = HenriCognitiveSwarmOrchestrator(num_streams=16)
     
     # 2. Get baseline wave and target Dirichlet physics axiom
     psi_bound_1, h_lora_1 = orchestrator.step_stream(0, "Solve SCADA thermodynamic pressure equations.")
@@ -41,7 +41,7 @@ def test_vector_bending():
     sec_phys_1_norm = sector_physics_1 / m
     boundary_delta = target_dirichlet - sec_phys_1_norm
     delta_bulk = torch.mv(torch.conj(P_phys.T), boundary_delta) # shape [4096]
-    delta_np = delta_bulk.detach().numpy().astype(np.complex64)
+    delta_np = delta_bulk.detach().cpu().numpy().astype(np.complex64)
     
     # 4. Apply the rehypothecated tensor update
     lora_manager = orchestrator.lora_managers[0]
@@ -64,7 +64,7 @@ def test_active_inference_harness():
     print("\n=== Test 2: Active Inference Swarm Agent Harness ===")
     
     # 1. Initialize orchestrator in mock mode
-    orchestrator = HenriCognitiveSwarmOrchestrator(model_path="mock_only.gguf", num_streams=16, gemma_dim=2560)
+    orchestrator = HenriCognitiveSwarmOrchestrator(num_streams=16)
     agent = ActiveInferenceSwarmAgent(orchestrator)
     
     # 2. Execute active inference loop (requires physics routing)
@@ -99,5 +99,7 @@ if __name__ == "__main__":
         print(f"\n[FAIL] Test Assertion Failed: {e}")
         sys.exit(1)
     except Exception as e:
+        import traceback
         print(f"\n[ERROR] Unexpected error during verification: {e}")
+        traceback.print_exc()
         sys.exit(1)

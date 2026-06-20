@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
 class NonAutoregressiveCanvasSampler:
     def __init__(self, core_model, translation_head, num_diffusion_steps=25):
@@ -92,13 +93,47 @@ class NonAutoregressiveCanvasSampler:
             # Re-normalize immediately to keep parameters anchored to the lossless hypersphere manifold
             canvas = F.normalize(canvas, p=2, dim=-1)
 
-        print("[+] Canvas relaxation complete. Projecting latent phase-space to vocabulary strings...")
+        print("[+] Canvas relaxation complete. Executing out-of-band Holographic Dictionary Lookup...")
 
-        # 5. Parallel Translation Gate
-        # Map the entire stabilized 2D coordinate grid to token dimensions instantly
-        logits = self.translation_head(canvas) # Shape: [1, Sequence_Length, Vocabulary_Size]
-        target_tokens = torch.argmax(logits, dim=-1) # Shape: [1, Sequence_Length]
+        # 5. Holographic Dictionary Lookup (Platonic Search Paradigm)
+        # Location keys generation for unbinding
+        generator = torch.Generator(device=device).manual_seed(101)
+        phases_keys = (torch.rand(sequence_length, self.hidden_dim, generator=generator, device=device) * 2.0 * math.pi) - math.pi
+        location_keys = torch.polar(torch.ones(sequence_length, self.hidden_dim, device=device), phases_keys)
 
+        # Generate deterministic vocabulary waves on CPU to conserve GPU VRAM
+        vocab_size = self.translation_head.out_features
+        vocab_generator = torch.Generator(device="cpu").manual_seed(202)
+        phases_vocab = (torch.rand(vocab_size, self.hidden_dim, generator=vocab_generator, device="cpu") * 2.0 * math.pi) - math.pi
+        vocab_waves = torch.polar(torch.ones(vocab_size, self.hidden_dim, device="cpu"), phases_vocab)
+
+        # Map real canvas to complex phase vectors
+        canvas_phases = (canvas[0] * 2.0 * math.pi).to(dtype=torch.float32)
+        canvas_complex = torch.polar(torch.ones_like(canvas_phases), canvas_phases) # [Sequence_Length, hidden_dim]
+
+        # Bind canvas waves to location keys via circular convolution (element-wise in phase domain)
+        bound_waves = canvas_complex * location_keys
+        # Superpose into a single joint thought wave
+        M_thought = torch.sum(bound_waves, dim=0) # [hidden_dim]
+        # Normalize joint wave to unit magnitude
+        M_thought = M_thought / (torch.abs(M_thought) + 1e-8)
+
+        # Unbind and clean up all sequence positions in parallel on the CPU
+        # Force complex64 (float32 real/imag) representation to ensure CPU matmul compatibility
+        Phi_retrieved_all = (M_thought.unsqueeze(0) * torch.conj(location_keys)).to(device="cpu", dtype=torch.complex64)
+        vocab_waves_cpu = vocab_waves.to(torch.complex64)
+        
+        # Parallel inner-product similarity (resonance) over all vocabulary elements
+        similarity_all = torch.matmul(Phi_retrieved_all, torch.conj(vocab_waves_cpu).t()) # [Sequence_Length, vocab_size]
+        resonance_all = torch.abs(similarity_all)
+        
+        # Modern Hopfield Network energy interaction
+        energy_all = -torch.exp(resonance_all / math.sqrt(self.hidden_dim))
+        
+        # Argmin on CPU, then move winning tokens back to GPU device
+        winning_tokens = torch.argmin(energy_all, dim=-1).to(device) # [Sequence_Length]
+        
+        target_tokens = winning_tokens.unsqueeze(0) # Shape: [1, Sequence_Length]
         return target_tokens
 
 class BirkhoffTopologicalLoss(nn.Module):  

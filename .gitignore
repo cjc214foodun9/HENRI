@@ -53,4 +53,6 @@ archive/extrapolated_sources/
 archive/raw_sources/
 notebooklm_source_pool/
 *.pt
+henri_corpus_4096.h5
+archive/ARC-AGI-2-main/
 

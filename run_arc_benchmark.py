@@ -95,20 +95,36 @@ def main():
     task_files = sorted(list(eval_dir.glob("*.json")))
     print(f"[SYSTEM] Found {len(task_files)} public evaluation tasks.")
     
-    # Run all tasks for full evaluation
     max_test_tasks = len(task_files)
+    for i, arg in enumerate(sys.argv):
+        if arg.startswith("--max-tasks="):
+            max_test_tasks = int(arg.split("=")[1])
+        elif arg == "--max-tasks" and i + 1 < len(sys.argv):
+            max_test_tasks = int(sys.argv[i + 1])
+            
     tasks_to_test = task_files[:max_test_tasks]
-    print(f"[SYSTEM] Selecting all {len(tasks_to_test)} tasks for benchmarking.")
+    print(f"[SYSTEM] Selecting first {len(tasks_to_test)} tasks for benchmarking.")
     
     # 2. Initialize the Swarm Orchestrator with memory and GPU optimizations
     print("\n[SYSTEM] Booting optimized Swarm Orchestrator...")
-    model_path = "mock_only.gguf"
-    if len(sys.argv) > 1:
-        model_path = sys.argv[1]
     orchestrator = HenriCognitiveSwarmOrchestrator(
-        model_path=model_path,
         num_streams=16
     )
+    
+    # 1. Enforce explicit CUDA device validation
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"[HARDWARE ACCELERATION] Binding execution substrate natively to: {device.type.upper()}")
+
+    # 2. Lift the primary orchestration components to the accelerator card
+    if device.type == "cuda":
+        print(f"  - Active GPU Target detected: {torch.cuda.get_device_name(0)}")
+        # Ensure the core model graph is explicitly cast to high-efficiency bfloat16
+        orchestrator.to(device=device, dtype=torch.bfloat16)
+        
+        # Enable PyTorch's native cuDNN autotuner to optimize the relaxation convolutions
+        torch.backends.cudnn.benchmark = True
+    else:
+        print("[WARNING] No CUDA engine initialized. Operating under legacy CPU thread restrictions.")
     
     agent = ARCSolverAgent(orchestrator)
     

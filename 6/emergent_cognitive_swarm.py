@@ -156,7 +156,8 @@ class EmergentCognitiveSwarm(nn.Module):
             if playbook_wave is not None:
                 perturbed_wave = playbook_wave.clone()
                 noise_phase = torch.randn_like(perturbed_wave.real) * 0.1
-                perturbed_wave = perturbed_wave * torch.polar(torch.ones_like(perturbed_wave.real), noise_phase)
+                polar_factor = torch.polar(torch.ones_like(perturbed_wave.real, dtype=torch.float32), noise_phase.to(torch.float32))
+                perturbed_wave = perturbed_wave.to(torch.complex64) * polar_factor
             else:
                 perturbed_wave = None
                 
@@ -185,37 +186,87 @@ class EmergentCognitiveSwarm(nn.Module):
         
         # Retrieve or instantiate the core model cached on the orchestrator
         if not hasattr(self.orchestrator, '_diffusion_core_model') or self.orchestrator._diffusion_core_model is None:
-            # Target Full-Scale Swarm Target Configuration: dim=4096, depth=32, experts=16
-            num_layers = 32
-            num_base_experts = 16
-            hidden_dim = 4096
-            
-            # Check for state dict in parent dir
             parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             core_path = os.path.join(parent_dir, "henri_core_final.pt")
-            state_dict = None
+            if not os.path.exists(core_path):
+                core_path = "henri_core_final.pt"
+            
+            checkpoint = None
             if os.path.exists(core_path):
+                print(f"[SWARM] Extracting binary mapping arrays from unified token asset: {core_path}")
                 try:
-                    state_dict = torch.load(core_path, map_location="cpu")
+                    checkpoint = torch.load(core_path, map_location=device)
                 except Exception as e:
-                    print(f"[SWARM] Warning: Failed to parse checkpoint: {e}")
-            
-            core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
-            # Cast core to bfloat16 to optimize VRAM footprint on RTX 5090
-            core_model = core_model.to(device=device, dtype=torch.bfloat16)
-            core_model.eval()
+                    print(f"[SWARM] Warning: Failed to load checkpoint: {e}")
+                    checkpoint = None
+
+            if checkpoint is not None and isinstance(checkpoint, dict) and "config" in checkpoint:
+                cfg = checkpoint["config"]
+                hidden_dim = cfg["dim"]
+                num_layers = cfg["depth"]
+                num_base_experts = cfg["num_fluid_states"]
+                vocab_size = cfg["vocab_size"]
+                print(f"[SWARM GEOMETRY] Checkpoint verified: dim={hidden_dim}, depth={num_layers}, fluid_states={num_base_experts}")
+
+                core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
+                core_model.load_state_dict(checkpoint["model_state_dict"])
+                core_model = core_model.to(device=device, dtype=torch.bfloat16).eval()
+
+                translation_head = nn.Linear(hidden_dim, vocab_size, bias=False)
+                if checkpoint.get("translation_head_state_dict") is not None:
+                    try:
+                        translation_head.load_state_dict(checkpoint["translation_head_state_dict"])
+                        print("[SWARM SUCCESS] Transduction vocabulary layer fully aligned with continuous core weights.")
+                    except Exception as lsd_err:
+                        print(f"[SWARM WARNING] Failed to load translation head state dict: {lsd_err}. Reinitializing.")
+                        nn.init.orthogonal_(translation_head.weight)
+                else:
+                    print("[SWARM WARNING] No trained translation state found. Falling back to orthogonal init.")
+                    nn.init.orthogonal_(translation_head.weight)
+                translation_head = translation_head.to(device=device, dtype=torch.bfloat16).eval()
+            else:
+                state_dict = checkpoint
+                num_layers = 32
+                num_base_experts = 16
+                hidden_dim = 4096
+                
+                if state_dict is not None:
+                    try:
+                        layer_indices = set()
+                        expert_indices = set()
+                        for key, val in state_dict.items():
+                            if key.startswith("layers."):
+                                parts = key.split(".")
+                                layer_indices.add(int(parts[1]))
+                                if len(parts) > 3 and parts[2] == "experts":
+                                    expert_indices.add(int(parts[3]))
+                                    if "weight" in key:
+                                        hidden_dim = val.shape[-1]
+                                elif "weight" in key:
+                                    hidden_dim = val.shape[-1]
+                        if layer_indices:
+                            num_layers = len(layer_indices)
+                        if expert_indices:
+                            num_base_experts = len(expert_indices)
+                        print(f"[SWARM] Detected legacy state dict: {num_layers} layers, {num_base_experts} experts, dim={hidden_dim}")
+                    except Exception as e:
+                        print(f"[SWARM] Warning: Failed to parse legacy state dict: {e}")
+                        state_dict = None
+
+                core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
+                if state_dict is not None:
+                    core_model.load_state_dict(state_dict)
+                core_model = core_model.to(device=device, dtype=torch.bfloat16).eval()
+
+                vocab_size = getattr(self.router, 'vocab_size', 32000)
+                translation_head = nn.Linear(hidden_dim, vocab_size, bias=False)
+                nn.init.orthogonal_(translation_head.weight)
+                translation_head = translation_head.to(device=device, dtype=torch.bfloat16).eval()
+
             self.orchestrator._diffusion_core_model = core_model
-        else:
-            core_model = self.orchestrator._diffusion_core_model
-            
-        # Retrieve or instantiate cached translation head
-        vocab_size = getattr(self.router, 'vocab_size', 32000)
-        if not hasattr(self.orchestrator, '_diffusion_translation_head') or self.orchestrator._diffusion_translation_head is None:
-            translation_head = nn.Linear(core_model.layers[0].dim, vocab_size)
-            translation_head = translation_head.to(device=device, dtype=torch.bfloat16)
-            translation_head.eval()
             self.orchestrator._diffusion_translation_head = translation_head
         else:
+            core_model = self.orchestrator._diffusion_core_model
             translation_head = self.orchestrator._diffusion_translation_head
             
         # Lazily initialize H-MPC orchestrator on self.orchestrator if missing
@@ -226,14 +277,15 @@ class EmergentCognitiveSwarm(nn.Module):
         # Generate and select winning action trajectory via Holographic MPC
         winning_wave = None
         if hasattr(self.orchestrator, 'h_mpc') and self.orchestrator.h_mpc is not None and playbook_wave is not None:
-            horizon = 5
+            horizon = getattr(self.orchestrator, "h_mpc_horizon", 5)
             candidate_action_sequences = []
             for idx in range(num_candidates):
                 actions_seq = []
                 for t in range(horizon):
                     perturbed_step = playbook_wave.clone()
                     noise_phase = torch.randn_like(perturbed_step.real) * 0.1
-                    perturbed_step = perturbed_step * torch.polar(torch.ones_like(perturbed_step.real), noise_phase)
+                    polar_factor = torch.polar(torch.ones_like(perturbed_step.real, dtype=torch.float32), noise_phase.to(torch.float32))
+                    perturbed_step = perturbed_step.to(torch.complex64) * polar_factor
                     actions_seq.append(perturbed_step)
                 candidate_action_sequences.append(torch.stack(actions_seq, dim=0))
             candidate_action_sequences = torch.stack(candidate_action_sequences, dim=0) # [num_candidates, horizon, hrr_dim]
@@ -262,11 +314,13 @@ class EmergentCognitiveSwarm(nn.Module):
                 # Perturb around the selected winning wave trajectory to generate diverse candidates
                 perturbed_wave = winning_wave.clone()
                 noise_phase = torch.randn_like(perturbed_wave.real) * 0.05
-                perturbed_wave = perturbed_wave * torch.polar(torch.ones_like(perturbed_wave.real), noise_phase)
+                polar_factor = torch.polar(torch.ones_like(perturbed_wave.real, dtype=torch.float32), noise_phase.to(torch.float32))
+                perturbed_wave = perturbed_wave.to(torch.complex64) * polar_factor
             elif playbook_wave is not None:
                 perturbed_wave = playbook_wave.clone()
                 noise_phase = torch.randn_like(perturbed_wave.real) * 0.1
-                perturbed_wave = perturbed_wave * torch.polar(torch.ones_like(perturbed_wave.real), noise_phase)
+                polar_factor = torch.polar(torch.ones_like(perturbed_wave.real, dtype=torch.float32), noise_phase.to(torch.float32))
+                perturbed_wave = perturbed_wave.to(torch.complex64) * polar_factor
             else:
                 perturbed_wave = torch.zeros(self.orchestrator.hrr_dim, dtype=torch.complex64, device=device)
                 
@@ -283,23 +337,44 @@ class EmergentCognitiveSwarm(nn.Module):
             
             try:
                 # Non-Autoregressive Canvas Sampler is the primary pathway for score-guided relaxation
-                sampler = NonAutoregressiveCanvasSampler(
-                    core_model=core_model,
-                    translation_head=translation_head,
-                    num_diffusion_steps=25
-                )
-                target_tokens = sampler.crystallize_motif(
+                if not hasattr(self.orchestrator, "canvas_sampler") or self.orchestrator.canvas_sampler is None:
+                    self.orchestrator.canvas_sampler = NonAutoregressiveCanvasSampler(
+                        core_model=core_model,
+                        translation_head=translation_head,
+                        num_diffusion_steps=25
+                    )
+                    self.orchestrator.canvas_sampler.guidance_scale = 4.5
+                self.orchestrator._canvas_sampler = self.orchestrator.canvas_sampler
+
+                active_seq_len = min(512, getattr(self.orchestrator, "max_context_len", 512))
+                active_guidance = getattr(self.orchestrator.canvas_sampler, "guidance_scale", 4.5)
+
+                target_tokens = self.orchestrator.canvas_sampler.crystallize_motif(
                     swarm_trajectory=trajectory_input,
-                    sequence_length=512,
-                    guidance_scale=4.5
+                    sequence_length=active_seq_len,
+                    guidance_scale=active_guidance
                 )
                 token_ids = target_tokens[0].tolist()
+                
+                # Convert character arrays directly back to python text strings
+                decoded_chars = []
+                for token in token_ids:
+                    char_code = abs(int(token)) % 256
+                    if (char_code >= 32 and char_code <= 126) or char_code == 10 or char_code == 13:
+                        decoded_chars.append(chr(char_code))
+                generated_text = "".join(decoded_chars)
+                
+                # Before passing the materialized string to the sandbox, clamp the signature block
+                prefix_constraint = "def transform(input_grid):\n"
+                if not generated_text.strip().startswith("def transform"):
+                    generated_text = prefix_constraint + generated_text
+                    
+                print(f"[CRYSTALLIZATION COMPLETED] Generated executable block size: {len(generated_text)} characters.")
             except Exception as e:
                 print(f"[SWARM] Continuous canvas sampler failed for candidate {idx}: {e}. Falling back to default tokens.")
                 token_ids = [ord(c) for c in "def transform(grid):\n    return grid"]
+                generated_text = "def transform(grid):\n    return grid"
             
-            # Decode to string using character mapping
-            generated_text = "".join(chr(t % 256) for t in token_ids)
             generated_texts[idx] = generated_text
             tokens_lists[idx] = token_ids
             active_mask[idx] = False # Completed immediately
