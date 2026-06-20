@@ -17,9 +17,26 @@ class NonAutoregressiveCanvasSampler:
         self.translation_head = translation_head
         self.N = num_diffusion_steps
         self.hidden_dim = 4096
+        
+        # Compile blocked indices for vocabulary domain mask exactly once
+        self.blocked_indices = []
+        try:
+            from transformers import GPT2Tokenizer
+            tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+            vocab_size = self.translation_head.out_features
+            forbidden_keywords = ["scada", "actuator", "gripper", "torque", "vulkan", "valve", 
+                                  "firmware", "reflash", "motor", "fluid", "mixer", "conjugation", 
+                                  "pressure", "axis", "hardware", "alleviate"]
+            for idx in range(vocab_size):
+                token_str = tokenizer.decode([idx]).lower()
+                if any(kw in token_str for kw in forbidden_keywords):
+                    self.blocked_indices.append(idx)
+            print(f"[CANVAS MASK] Compiled {len(self.blocked_indices)} blocked SCADA/robotics tokens.")
+        except Exception as e:
+            print(f"[CANVAS MASK] Warning: Failed to compile tokenizer-based mask: {e}")
 
     @torch.no_grad()
-    def crystallize_motif(self, swarm_trajectory, sequence_length=512, guidance_scale=4.5, winning_jepa_track=None, jl_guard=None):
+    def crystallize_motif(self, swarm_trajectory, sequence_length=512, guidance_scale=4.5, winning_jepa_track=None, jl_guard=None, domain_tag=None):
         """
         De-noises a raw high-entropy canvas into a structured, low-entropy English response matrix.
         
@@ -154,6 +171,10 @@ class NonAutoregressiveCanvasSampler:
         # Modern Hopfield Network energy interaction
         energy_all = -torch.exp(resonance_all / math.sqrt(self.hidden_dim))
         
+        # Apply strict semantic projection mask to block SCADA/robotics subwords
+        if self.blocked_indices and domain_tag == "ARC_Task":
+            energy_all[:, self.blocked_indices] = float('inf')
+
         # Argmin on CPU, then move winning tokens back to GPU device
         winning_tokens = torch.argmin(energy_all, dim=-1).to(device) # [Sequence_Length]
         

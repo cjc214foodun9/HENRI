@@ -301,6 +301,7 @@ class ActiveExperimentationEngine:
         """
         import time
         start_time = time.time()
+        task_dict["domain_tag"] = domain_tag
         
         # Pre-load specialized LoRA weights from the registry if they exist
         if domain_tag:
@@ -333,6 +334,23 @@ class ActiveExperimentationEngine:
             
             # Compile current Playbook constraints into an axiomatic wave
             playbook_wave = self.orchestrator.compile_playbook_to_wave(playbook_dict)
+            
+            # Blend syntax anchor attractor wave to enforce clean python syntax
+            if playbook_wave is not None and domain_tag == "ARC_Task":
+                try:
+                    syntax_anchor = self.project_code_to_wave("def transform(input_grid):\n")
+                    dev = playbook_wave.device
+                    dtype = playbook_wave.dtype
+                    
+                    syntax_flat = syntax_anchor.to(device=dev, dtype=torch.complex64)
+                    playbook_flat = playbook_wave.to(device=dev, dtype=torch.complex64).flatten()
+                    
+                    blended_wave = (0.30 * syntax_flat) + (0.70 * playbook_flat)
+                    playbook_flat_norm = torch.nn.functional.normalize(blended_wave, p=2, dim=-1)
+                    playbook_wave = playbook_flat_norm.reshape(playbook_wave.shape).to(dtype=dtype)
+                except Exception as e:
+                    print(f"[ENGINE] Warning: Failed to blend syntax anchor: {e}")
+                    
             self.playbook_wave = playbook_wave
             
             # Blend superposition wave from elite candidates of the last turn

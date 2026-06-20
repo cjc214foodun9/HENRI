@@ -145,6 +145,7 @@ class EmergentCognitiveSwarm(nn.Module):
         Integrates Ephemeral Attractors, mid-flight Prune & Clone, and Spontaneous Resonance Harvesting.
         """
         # Initialize prompts, generated texts, token lists, active masks for all candidates
+        domain_tag = task_dict.get("domain_tag", "ARC_Task")
         prompts = [self.build_clean_prompt(task_dict, playbook_dict) for _ in range(num_candidates)]
         generated_texts = ["" for _ in range(num_candidates)]
         tokens_lists = [[] for _ in range(num_candidates)]
@@ -381,7 +382,8 @@ class EmergentCognitiveSwarm(nn.Module):
                     sequence_length=active_seq_len,
                     guidance_scale=active_guidance,
                     winning_jepa_track=winning_jepa_track,
-                    jl_guard=jl_guard
+                    jl_guard=jl_guard,
+                    domain_tag=domain_tag
                 )
                 token_ids = target_tokens[0].tolist()
                 
