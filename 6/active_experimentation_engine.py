@@ -338,16 +338,13 @@ class ActiveExperimentationEngine:
             # Blend syntax anchor attractor wave to enforce clean python syntax
             if playbook_wave is not None and domain_tag == "ARC_Task":
                 try:
-                    syntax_anchor = self.project_code_to_wave("def transform(input_grid):\n")
+                    syntax_anchor_wave = self.project_code_to_wave("def transform(input_grid):\n")
                     dev = playbook_wave.device
                     dtype = playbook_wave.dtype
                     
-                    syntax_flat = syntax_anchor.to(device=dev, dtype=torch.complex64)
-                    playbook_flat = playbook_wave.to(device=dev, dtype=torch.complex64).flatten()
-                    
-                    blended_wave = (0.30 * syntax_flat) + (0.70 * playbook_flat)
-                    playbook_flat_norm = torch.nn.functional.normalize(blended_wave, p=2, dim=-1)
-                    playbook_wave = playbook_flat_norm.reshape(playbook_wave.shape).to(dtype=dtype)
+                    syntax_anchor_wave = syntax_anchor_wave.to(device=dev, dtype=dtype)
+                    blended_wave = (0.30 * syntax_anchor_wave) + (0.70 * playbook_wave)
+                    playbook_wave = torch.nn.functional.normalize(blended_wave, p=2, dim=-1)
                 except Exception as e:
                     print(f"[ENGINE] Warning: Failed to blend syntax anchor: {e}")
                     
