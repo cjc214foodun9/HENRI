@@ -14,6 +14,7 @@ class HopfieldSemanticCleanup:
         self.max_iterations = max_iterations
         self.tolerance = tolerance
         self.vocabulary = {}  # Map: label -> complex tensor (shape: [dim])
+        self.repellers = []  # List of complex tensors (shape: [dim])
 
     def register_concept(self, label: str, vector: torch.Tensor):
         """Registers a pristine vector in the Hopfield vocabulary."""
@@ -24,15 +25,31 @@ class HopfieldSemanticCleanup:
         mags = torch.clamp(mags, min=1e-8)
         self.vocabulary[label] = vector / mags
 
+    def register_repeller(self, vector: torch.Tensor):
+        """Registers a repeller vector in the Hopfield memory to form topological hills."""
+        if vector.shape[0] != self.dim:
+            raise ValueError(f"Repeller dimension must be {self.dim}, got {vector.shape[0]}")
+        mags = torch.abs(vector)
+        mags = torch.clamp(mags, min=1e-8)
+        self.repellers.append(vector / mags)
+        # Bounded size to prevent memory bloat
+        if len(self.repellers) > 50:
+            self.repellers.pop(0)
+
+    def clear_repellers(self):
+        """Clears the repellers list."""
+        self.repellers = []
+
     def register_lexicon(self, lexicon):
         """Loads all concepts from a ZoneCOrthogonalLexicon instance."""
         for label, vector in lexicon.vocabulary.items():
             self.register_concept(label, vector)
 
-    def cleanup(self, noisy_wave: torch.Tensor) -> tuple:
+    def cleanup(self, noisy_wave: torch.Tensor, gamma: float = 0.5) -> tuple:
         """
-        Executes continuous state evolution of the Modern Hopfield Network:
-        s_new = sgn_complex( sum_mu e^{beta * sim_mu} * v_mu )
+        Executes continuous state evolution of the Modern Hopfield Network
+        incorporating dynamic repellers as a negative exponential interaction term:
+        x = sum_mu e^{beta * sim_mu} * v_mu - gamma * sum_nu e^{beta * sim_nu} * r_nu
         Returns:
             clean_wave: The converged unit-magnitude complex tensor [dim]
             best_label: The closest semantic label in the vocabulary
@@ -50,28 +67,37 @@ class HopfieldSemanticCleanup:
         s = s / s_mags
 
         labels = list(self.vocabulary.keys())
-        # Stack vocabulary vectors: shape [M, dim]
         v_matrix = torch.stack([self.vocabulary[lbl] for lbl in labels]).to(s.device)
 
         last_s = s.clone()
         
         for iteration in range(self.max_iterations):
-            # Compute complex cosine similarities: Re(v_mu * s^*)
-            # v_matrix is [M, dim], s is [dim]
-            # dot product: sum_j v_{mu, j} * conj(s_j)
-            dot_products = torch.sum(v_matrix * torch.conj(s).unsqueeze(0), dim=-1)
-            similarities = torch.real(dot_products) / float(self.dim)
+            # 1. Attractor updates
+            dot_products_a = torch.sum(v_matrix * torch.conj(s).unsqueeze(0), dim=-1)
+            similarities_a = torch.real(dot_products_a) / float(self.dim)
             
-            # Apply exponential activation function (Modern Hopfield Network)
-            # We subtract max similarity for numerical stability in softmax/exp
-            max_sim = torch.max(similarities)
-            weights = torch.exp(self.beta * (similarities - max_sim))
-            weights = weights / (torch.sum(weights) + 1e-8)  # normalize weights
-
-            # Form state superposition: shape [dim]
-            x = torch.sum(weights.unsqueeze(1) * v_matrix, dim=0)
+            max_sim = torch.max(similarities_a)
+            weights_a = torch.exp(self.beta * (similarities_a - max_sim))
+            weights_a = weights_a / (torch.sum(weights_a) + 1e-8)
             
-            # Apply complex-valued sgn projection (project elements back to unit circle)
+            x_attractors = torch.sum(weights_a.unsqueeze(1) * v_matrix, dim=0)
+            x = x_attractors
+            
+            # 2. Repeller updates (negative exponential interaction term)
+            if self.repellers:
+                rep_matrix = torch.stack(self.repellers).to(s.device)
+                dot_products_r = torch.sum(rep_matrix * torch.conj(s).unsqueeze(0), dim=-1)
+                similarities_r = torch.real(dot_products_r) / float(self.dim)
+                
+                weights_r = torch.exp(self.beta * (similarities_r - max_sim))
+                weights_r = weights_r / (torch.sum(weights_r) + 1e-8)
+                
+                x_repellers = torch.sum(weights_r.unsqueeze(1) * rep_matrix, dim=0)
+                
+                # Apply the negative interaction update
+                x = x - gamma * x_repellers
+            
+            # Apply complex-valued sgn projection
             x_mags = torch.abs(x)
             x_mags = torch.clamp(x_mags, min=1e-8)
             s = x / x_mags
@@ -82,7 +108,7 @@ class HopfieldSemanticCleanup:
                 break
             last_s = s.clone()
 
-        # Final match lookup
+        # Final match lookup (against attractors only)
         dot_products = torch.sum(v_matrix * torch.conj(s).unsqueeze(0), dim=-1)
         similarities = torch.real(dot_products) / float(self.dim)
         
