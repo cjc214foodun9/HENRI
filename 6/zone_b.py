@@ -32,8 +32,37 @@ class HenriOpticalCoreD2NN:
         
         self.last_wave = None
         self.last_reflection_error = None
+        
+        # Instantiate fast FNO surrogate
+        self.use_fourier_surrogate = True
+        from d2nn_physics_engine import FourierSpectralDiffractionSurrogate
+        self.fno_surrogate = FourierSpectralDiffractionSurrogate(modes=128, dimension=num_channels).to(self.device)
 
     def forward(self, hr_wavefront: np.ndarray, target_manifold: np.ndarray, langevin_heat: float = 0.0) -> tuple:
+        if getattr(self, "use_fourier_surrogate", False):
+            # Fast Fourier Neural Operator path on 4096-D complex inputs
+            wave_tensor = torch.as_tensor(hr_wavefront, dtype=torch.complex64, device=self.device)
+            target_tensor = torch.as_tensor(target_manifold, dtype=torch.complex64, device=self.device)
+            
+            # Map input wave through the FNO surrogate
+            truth_tensor = self.fno_surrogate(wave_tensor)
+            
+            # Sagnac Veto calculations
+            transmission_truth, reflection_delta, error_energy = self.emulator.sagnac_veto(truth_tensor, target_tensor)
+            
+            truth_np = truth_tensor.detach().cpu().numpy()
+            delta_np = reflection_delta.detach().cpu().numpy()
+            
+            # Sagnac Phase Alignment score
+            psi_cw_angle = np.angle(truth_np)
+            psi_ccw_angle = np.angle(np.asarray(target_manifold, dtype=np.complex64))
+            alignment = np.cos(psi_cw_angle - psi_ccw_angle)
+            
+            self.last_wave = truth_np.copy()
+            self.last_reflection_error = delta_np.copy()
+            
+            return truth_np, delta_np, alignment
+
         N = self.emulator.N # 6324
         
         # Reshape flat 1D inputs
@@ -41,22 +70,38 @@ class HenriOpticalCoreD2NN:
         target_flat = np.asarray(target_manifold, dtype=np.complex64)
         
         # 1. Upsample input wavefront from 64x64 (4096-D) to 6324x6324 if needed
-        if wave_flat.size == 4096:
-            wave_2d_small = torch.tensor(wave_flat.reshape(64, 64), dtype=torch.complex64, device=self.device)
-            real_2d = F.interpolate(wave_2d_small.real.unsqueeze(0).unsqueeze(0), size=(N, N), mode='bilinear', align_corners=False).squeeze()
-            imag_2d = F.interpolate(wave_2d_small.imag.unsqueeze(0).unsqueeze(0), size=(N, N), mode='bilinear', align_corners=False).squeeze()
-            wave_2d = torch.complex(real_2d, imag_2d)
-        else:
-            wave_2d = torch.tensor(wave_flat.reshape(N, N), dtype=torch.complex64, device=self.device)
+        # Determine batch dimensions and upsample
+        def upsample_to_physical(arr, N):
+            tensor = torch.as_tensor(arr, dtype=torch.complex64, device=self.device)
+            is_4096 = (tensor.shape[-1] == 4096)
+            if is_4096:
+                sh = list(tensor.shape[:-1]) + [64, 64]
+                small_2d = tensor.reshape(sh)
+                orig_batch_shape = small_2d.shape[:-2]
+                
+                # Check if it has batch dimensions
+                if len(orig_batch_shape) > 0:
+                    M = 1
+                    for dim in orig_batch_shape:
+                        M *= dim
+                    small_2d_flat = small_2d.reshape(M, 1, 64, 64)
+                    real_2d = F.interpolate(small_2d_flat.real, size=(N, N), mode='bilinear', align_corners=False)
+                    imag_2d = F.interpolate(small_2d_flat.imag, size=(N, N), mode='bilinear', align_corners=False)
+                    flat_2d = torch.complex(real_2d, imag_2d).reshape(list(orig_batch_shape) + [N, N])
+                else:
+                    # No batch dimension
+                    small_2d_flat = small_2d.unsqueeze(0).unsqueeze(0) # [1, 1, 64, 64]
+                    real_2d = F.interpolate(small_2d_flat.real, size=(N, N), mode='bilinear', align_corners=False).squeeze()
+                    imag_2d = F.interpolate(small_2d_flat.imag, size=(N, N), mode='bilinear', align_corners=False).squeeze()
+                    flat_2d = torch.complex(real_2d, imag_2d)
+                return flat_2d
+            else:
+                if tensor.shape[-1] == N * N:
+                    return tensor.reshape(list(tensor.shape[:-1]) + [N, N])
+                return tensor
 
-        # 2. Upsample target manifold from 64x64 (4096-D) to 6324x6324 if needed
-        if target_flat.size == 4096:
-            target_2d_small = torch.tensor(target_flat.reshape(64, 64), dtype=torch.complex64, device=self.device)
-            real_2d = F.interpolate(target_2d_small.real.unsqueeze(0).unsqueeze(0), size=(N, N), mode='bilinear', align_corners=False).squeeze()
-            imag_2d = F.interpolate(target_2d_small.imag.unsqueeze(0).unsqueeze(0), size=(N, N), mode='bilinear', align_corners=False).squeeze()
-            target_2d = torch.complex(real_2d, imag_2d)
-        else:
-            target_2d = torch.tensor(target_flat.reshape(N, N), dtype=torch.complex64, device=self.device)
+        wave_2d = upsample_to_physical(wave_flat, N)
+        target_2d = upsample_to_physical(target_flat, N)
             
         # 3. Propagate through PyTorch Emulator (hosted on DirectML device, executes complex math on CPU)
         truth_2d, delta_2d, error_energy = self.emulator(wave_2d, target_2d, langevin_heat=langevin_heat)
@@ -75,12 +120,12 @@ class HenriOpticalCoreD2NN:
             
             # Physical lens performs a 2D Fourier transform to focus to the focal plane
             focal_plane = torch.fft.fft2(wave_lensed, norm='ortho')
-            focal_plane_shifted = torch.fft.fftshift(focal_plane)
+            focal_plane_shifted = torch.fft.fftshift(focal_plane, dim=(-2, -1))
             
             # Extract central 64 x 64 region of the focal plane
             start = (N - 64) // 2
             end = start + 64
-            focused_64 = focal_plane_shifted[start:end, start:end]
+            focused_64 = focal_plane_shifted[..., start:end, start:end]
             
             # Normalize to preserve unit-modulus
             mags = torch.abs(focused_64)
@@ -90,9 +135,13 @@ class HenriOpticalCoreD2NN:
         truth_64 = focus_lens_downsample(truth_2d)
         delta_64 = focus_lens_downsample(delta_2d)
         
-        # Resqueeze/flatten back to 1D NumPy complex arrays
-        truth_np = truth_64.detach().cpu().numpy().flatten()
-        delta_np = delta_64.detach().cpu().numpy().flatten()
+        # Resqueeze/flatten back to NumPy complex arrays
+        if truth_64.ndim > 2:
+            truth_np = truth_64.detach().cpu().numpy().reshape(truth_64.shape[:-2] + (-1,))
+            delta_np = delta_64.detach().cpu().numpy().reshape(delta_64.shape[:-2] + (-1,))
+        else:
+            truth_np = truth_64.detach().cpu().numpy().flatten()
+            delta_np = delta_64.detach().cpu().numpy().flatten()
         
         self.last_wave = truth_np.copy()
         self.last_reflection_error = delta_np.copy()

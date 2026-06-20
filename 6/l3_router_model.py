@@ -92,7 +92,8 @@ class TiledTransducerHead(nn.Module):
         global_phases = torch.cat(rows, dim=-2)  # Shape: [B, 6324, 6324]
         
         # Step 5: Direct Euler synthesis without step-discontinuous modulo wraps
-        global_wavefront = torch.polar(torch.ones_like(global_phases), global_phases)
+        global_phases_f32 = global_phases.to(torch.float32)
+        global_wavefront = torch.polar(torch.ones_like(global_phases_f32), global_phases_f32)
         return global_wavefront
 
 class L3SwarmRouter(nn.Module):
@@ -302,11 +303,13 @@ class L3SwarmRouter(nn.Module):
             device = self.token_embedding.weight.device
             tokens = tokens.to(device)
             x = self.token_embedding(tokens)
+            x = x.to(dtype=self.activation_projection.weight.dtype)
             x = self.activation_projection(x)
         elif activations is not None:
             # Process via system RAM activation projection
             device = self.activation_projection.weight.device
-            activations = activations.to(device)
+            dtype = self.activation_projection.weight.dtype
+            activations = activations.to(device=device, dtype=dtype)
             if len(activations.shape) == 3:
                 # Shape: [16, Batch, activation_dim]
                 is_tiled_mode = True
@@ -400,24 +403,37 @@ class L3SwarmRouter(nn.Module):
             
             return hrr_wave, winning_master_id, resonance_scores
 
-    def to(self, *args, **kwargs):
-        # Identify target device
-        device = None
-        for arg in args:
-            if isinstance(arg, (torch.device, str)):
-                device = arg
-        if 'device' in kwargs:
-            device = kwargs['device']
-            
-        # Temporarily detach and clone the master_signatures to preserve complex64
-        signatures_cpu = self.master_signatures.data.clone()
-        
-        # Call standard nn.Module.to()
-        super().to(*args, **kwargs)
-        
-        # Re-register or re-assign master_signatures to complex64 on target device
-        self.master_signatures.data = signatures_cpu.to(
-            device=device or self.master_signatures.device,
-            dtype=torch.complex64
-        )
+    def _apply(self, fn):
+        # Intercept and prevent casting complex parameters/buffers to real dtypes
+        # to prevent warnings and preserve the imaginary phase information.
+        for module in self.children():
+            module._apply(fn)
+
+        def new_fn(tensor):
+            if tensor is not None and tensor.is_complex():
+                # Determine device from applying fn to a dummy tensor
+                try:
+                    dummy = torch.complex(torch.ones(1), torch.ones(1))
+                    import warnings
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        res = fn(dummy)
+                    device = res.device
+                    # Preserve complex64 on the target device
+                    return tensor.to(device=device, dtype=torch.complex64)
+                except Exception:
+                    pass
+            return fn(tensor)
+
+        for key, param in self._parameters.items():
+            if param is not None:
+                with torch.no_grad():
+                    param_applied = new_fn(param.data)
+                new_param = nn.Parameter(param_applied, param.requires_grad)
+                self._parameters[key] = new_param
+
+        for key, buf in self._buffers.items():
+            if buf is not None:
+                self._buffers[key] = new_fn(buf)
+
         return self

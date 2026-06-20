@@ -195,7 +195,7 @@ class EmergentCognitiveSwarm(nn.Module):
             if os.path.exists(core_path):
                 print(f"[SWARM] Extracting binary mapping arrays from unified token asset: {core_path}")
                 try:
-                    checkpoint = torch.load(core_path, map_location=device)
+                    checkpoint = torch.load(core_path, map_location='cpu')
                 except Exception as e:
                     print(f"[SWARM] Warning: Failed to load checkpoint: {e}")
                     checkpoint = None
@@ -208,22 +208,40 @@ class EmergentCognitiveSwarm(nn.Module):
                 vocab_size = cfg["vocab_size"]
                 print(f"[SWARM GEOMETRY] Checkpoint verified: dim={hidden_dim}, depth={num_layers}, fluid_states={num_base_experts}")
 
-                core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
-                core_model.load_state_dict(checkpoint["model_state_dict"])
-                core_model = core_model.to(device=device, dtype=torch.bfloat16).eval()
+                # Set default dtype to bfloat16 to instantiate directly in low-precision and prevent OOM
+                orig_default_dtype = torch.get_default_dtype()
+                torch.set_default_dtype(torch.bfloat16)
+                try:
+                    core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
+                finally:
+                    torch.set_default_dtype(orig_default_dtype)
 
-                translation_head = nn.Linear(hidden_dim, vocab_size, bias=False)
+                core_model.load_state_dict(checkpoint["model_state_dict"])
+                core_model = core_model.to(device=device).eval()
+
+                has_bias = (checkpoint.get("translation_head_state_dict") is not None and "bias" in checkpoint["translation_head_state_dict"])
+                translation_head = nn.Linear(hidden_dim, vocab_size, bias=has_bias).to(device=device, dtype=torch.bfloat16)
                 if checkpoint.get("translation_head_state_dict") is not None:
                     try:
                         translation_head.load_state_dict(checkpoint["translation_head_state_dict"])
                         print("[SWARM SUCCESS] Transduction vocabulary layer fully aligned with continuous core weights.")
                     except Exception as lsd_err:
                         print(f"[SWARM WARNING] Failed to load translation head state dict: {lsd_err}. Reinitializing.")
-                        nn.init.orthogonal_(translation_head.weight)
+                        with torch.no_grad():
+                            temp_th = torch.empty(translation_head.weight.shape, dtype=torch.float32, device='cpu')
+                            torch.nn.init.orthogonal_(temp_th)
+                            translation_head.weight.copy_(temp_th.to(device=device, dtype=torch.bfloat16))
                 else:
                     print("[SWARM WARNING] No trained translation state found. Falling back to orthogonal init.")
-                    nn.init.orthogonal_(translation_head.weight)
-                translation_head = translation_head.to(device=device, dtype=torch.bfloat16).eval()
+                    with torch.no_grad():
+                        temp_th = torch.empty(translation_head.weight.shape, dtype=torch.float32, device='cpu')
+                        torch.nn.init.orthogonal_(temp_th)
+                        translation_head.weight.copy_(temp_th.to(device=device, dtype=torch.bfloat16))
+
+                # Free checkpoint memory immediately
+                del checkpoint
+                import gc; gc.collect()
+                translation_head = translation_head.eval()
             else:
                 state_dict = checkpoint
                 num_layers = 32
@@ -276,6 +294,8 @@ class EmergentCognitiveSwarm(nn.Module):
 
         # Generate and select winning action trajectory via Holographic MPC
         winning_wave = None
+        winning_jepa_track = None
+        jl_guard = None
         if hasattr(self.orchestrator, 'h_mpc') and self.orchestrator.h_mpc is not None and playbook_wave is not None:
             horizon = getattr(self.orchestrator, "h_mpc_horizon", 5)
             candidate_action_sequences = []
@@ -295,21 +315,28 @@ class EmergentCognitiveSwarm(nn.Module):
             else:
                 current_wave = torch.zeros(self.orchestrator.hrr_dim, dtype=torch.complex64, device=device)
 
-            # H-MPC operations must be real-valued. Cast tensors to real parts and bfloat16.
-            current_wave_real = torch.real(current_wave).to(device=device, dtype=torch.bfloat16)
-            target_goal_real = torch.real(playbook_wave).to(device=device, dtype=torch.bfloat16)
-            candidate_actions_real = torch.real(candidate_action_sequences).to(device=device, dtype=torch.bfloat16)
-
-            winning_idx = self.orchestrator.h_mpc.run_h_mpc_selection(
-                current_wave=current_wave_real,
-                target_goal_wave=target_goal_real,
-                candidate_action_sequences=candidate_actions_real,
+            # Pass raw complex tensors directly to run_h_mpc_selection to prevent complex casting leak
+            winning_idx, winning_jepa_track = self.orchestrator.h_mpc.run_h_mpc_selection(
+                current_wave=current_wave.to(device=device),
+                target_goal_wave=playbook_wave.to(device=device),
+                candidate_action_sequences=candidate_action_sequences.to(device=device),
                 horizon=horizon
             )
             winning_wave = candidate_action_sequences[winning_idx][-1] # use terminal state (keep original complex form)
+            jl_guard = getattr(self.orchestrator.h_mpc, 'jl_guard', None)
 
         # Generate parallel candidate outputs
         for idx in range(num_candidates):
+            target_idx = winning_idx if (winning_idx is not None) else 0
+            if idx != target_idx:
+                # PEARL Short-Circuit Veto: skip continuous canvas sampler for suboptimal plans
+                generated_text = "def transform(grid):\n    return grid"
+                token_ids = [ord(c) for c in generated_text]
+                generated_texts[idx] = generated_text
+                tokens_lists[idx] = token_ids
+                active_mask[idx] = False
+                continue
+
             if winning_wave is not None:
                 # Perturb around the selected winning wave trajectory to generate diverse candidates
                 perturbed_wave = winning_wave.clone()
@@ -352,7 +379,9 @@ class EmergentCognitiveSwarm(nn.Module):
                 target_tokens = self.orchestrator.canvas_sampler.crystallize_motif(
                     swarm_trajectory=trajectory_input,
                     sequence_length=active_seq_len,
-                    guidance_scale=active_guidance
+                    guidance_scale=active_guidance,
+                    winning_jepa_track=winning_jepa_track,
+                    jl_guard=jl_guard
                 )
                 token_ids = target_tokens[0].tolist()
                 

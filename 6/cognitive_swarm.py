@@ -17,6 +17,7 @@ import concurrent.futures
 import numpy as np
 import torch
 import torch.nn as torch_nn
+import torch.nn.functional as F
 import psutil
 import psycopg
 from pathlib import Path
@@ -859,7 +860,7 @@ class HenriCognitiveSwarmOrchestrator:
         # 1. Retrieve the base embedding (Gemma hidden activations)
         emb_res = self.base_model.create_embedding(prompt)
         device = next(self.l3_router.parameters()).device
-        dtype = next(self.l3_router.parameters()).dtype
+        dtype = self.l3_router.activation_projection.weight.dtype
         h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], device=device, dtype=dtype)
 
         # 2. Apply the stream-specific LoRA weights to activations
@@ -1067,7 +1068,7 @@ class HenriCognitiveSwarmOrchestrator:
             print(f"[SWARM] Theories disagree (Max Disagreement: {max_disagreement:.4f}). Triggering physical experiment...")
             
             # Project complex actuation back to bulk 4096-D wavefront space
-            psi_modulated = torch.mv(torch.conj(self.boundary_validator.P.T), complex_actuation)
+            psi_modulated = torch.matmul(complex_actuation, torch.conj(self.boundary_validator.P))
             psi_modulated_np = psi_modulated.detach().cpu().numpy().astype(np.complex64)
 
             # Fire the bulk wave into Zone B physical emulator (D2NN layers)
@@ -1154,7 +1155,7 @@ class HenriCognitiveSwarmOrchestrator:
             )
             
             # Update thread-safe telemetry register
-            truth_tensor_2d = truth_tensor.reshape(64, 64)
+            truth_tensor_2d = truth_tensor.reshape(truth_tensor.shape[:-1] + (64, 64))
             telemetry_register.update(
                 active_tiles=[True] * 16,
                 coupling=1.0,
@@ -1204,7 +1205,7 @@ class HenriCognitiveSwarmOrchestrator:
             )
             
             # Update thread-safe telemetry register
-            truth_tensor_2d = truth_tensor.reshape(64, 64)
+            truth_tensor_2d = truth_tensor.reshape(truth_tensor.shape[:-1] + (64, 64))
             telemetry_register.update(
                 active_tiles=[True] * 16,
                 coupling=1.0,
@@ -1253,7 +1254,7 @@ class HenriCognitiveSwarmOrchestrator:
         if os.path.exists(core_path):
             print(f"[INIT] Extracting binary mapping arrays from unified token asset: {core_path}")
             try:
-                checkpoint = torch.load(core_path, map_location=device)
+                checkpoint = torch.load(core_path, map_location='cpu')
             except Exception as load_err:
                 print(f"[INIT] Error loading checkpoint: {load_err}")
                 checkpoint = None
@@ -1267,17 +1268,23 @@ class HenriCognitiveSwarmOrchestrator:
             vocab_size = cfg['vocab_size']
             print(f"[GEOMETRY] Checkpoint verified. Shape detected: dim={hidden_dim}, depth={num_layers}, fluid_states={num_base_experts}")
             
-            # Initialize the physical substrate graph to match saved configurations
-            core_model = ProprietaryHENRICore(
-                dim=hidden_dim, 
-                depth=num_layers, 
-                num_fluid_states=num_base_experts
-            )
+            # Set default dtype to bfloat16 to instantiate directly in low-precision and prevent OOM
+            orig_default_dtype = torch.get_default_dtype()
+            torch.set_default_dtype(torch.bfloat16)
+            try:
+                core_model = ProprietaryHENRICore(
+                    dim=hidden_dim, 
+                    depth=num_layers, 
+                    num_fluid_states=num_base_experts
+                )
+            finally:
+                torch.set_default_dtype(orig_default_dtype)
+
             core_model.load_state_dict(checkpoint["model_state_dict"])
-            core_model = core_model.to(device=device, dtype=torch.bfloat16).eval()
+            core_model = core_model.to(device=device).eval()
             
             # Rehydrate the exact trained linear projection layer
-            translation_head = nn.Linear(hidden_dim, vocab_size, bias=False)
+            translation_head = nn.Linear(hidden_dim, vocab_size, bias=False).to(device=device, dtype=torch.bfloat16)
             if checkpoint.get("translation_head_state_dict") is not None:
                 try:
                     translation_head.load_state_dict(checkpoint["translation_head_state_dict"])
@@ -1289,6 +1296,10 @@ class HenriCognitiveSwarmOrchestrator:
                 print("[WARNING] No trained translation state found. Falling back to orthogonal init.")
                 nn.init.orthogonal_(translation_head.weight)
                 
+            # Free checkpoint memory immediately
+            del checkpoint
+            import gc; gc.collect()
+
             translation_head = translation_head.to(device=device, dtype=torch.bfloat16).eval()
         else:
             # Fallback to legacy dictionary or default
@@ -1369,11 +1380,16 @@ class HenriCognitiveSwarmOrchestrator:
         active_seq_len = min(512, getattr(self, "max_context_len", sequence_length))
         active_guidance = getattr(self.canvas_sampler, "guidance_scale", guidance_scale)
 
+        winning_jepa_track = getattr(self.h_mpc, "winning_jepa_track", None)
+        jl_guard = getattr(self.h_mpc, "jl_guard", None)
+
         # 7. Run crystallization to produce token IDs
         target_tokens = self.canvas_sampler.crystallize_motif(
             swarm_trajectory=trajectory_input,
             sequence_length=active_seq_len,
-            guidance_scale=active_guidance
+            guidance_scale=active_guidance,
+            winning_jepa_track=winning_jepa_track,
+            jl_guard=jl_guard
         )
         
         return target_tokens
@@ -2481,7 +2497,7 @@ class AletheiaAgent:
             psi_candidate_focused = self.orchestrator.l3_router.activation_to_wave(h_7b_lora)
             if len(psi_candidate_focused.shape) == 2:
                 psi_candidate_focused = torch.mean(psi_candidate_focused, dim=0)
-            psi_candidate_focused = psi_candidate_focused.reshape(64, 64)
+            psi_candidate_focused = psi_candidate_focused.reshape(psi_candidate_focused.shape[:-1] + (64, 64))
         else:
             # Replicate candidate activation across all 16 streams to create [16, 1, gemma_dim]
             activations_stack = h_7b_lora.unsqueeze(0).unsqueeze(0).repeat(16, 1, 1)
@@ -2535,7 +2551,7 @@ class AletheiaAgent:
         if not is_valid:
             feedback = f"Sagnac Veto: The candidate logic violated Dirichlet boundary axioms. Reason: {veto_reason} | Error Energy: {error_energy:.4f}"
             # Update thread-safe telemetry register
-            truth_tensor_2d = truth_tensor.reshape(64, 64)
+            truth_tensor_2d = truth_tensor.reshape(truth_tensor.shape[:-1] + (64, 64))
             telemetry_register.update(
                 active_tiles=[True] * 16,
                 coupling=1.0,
@@ -2550,7 +2566,7 @@ class AletheiaAgent:
             return False, feedback, delta_np
             
         # Update thread-safe telemetry register
-        truth_tensor_2d = truth_tensor.reshape(64, 64)
+        truth_tensor_2d = truth_tensor.reshape(truth_tensor.shape[:-1] + (64, 64))
         telemetry_register.update(
             active_tiles=[True] * 16,
             coupling=1.0,
@@ -2724,92 +2740,75 @@ class HolographicMPCOrchestrator(torch.nn.Module):
         self.dim = dim  
         self.guardrail = JITSUiteSIGRegGuardrail(dim=dim)  
         self.conditioning_layer = ThermoActiveAdaLNBlock(dim=dim)
+        
+        # Protect VSA phase-space metrics by projecting high-dimensional waves (4096-D)
+        # down to low-dimensional substrates (1024-D core dimension)
+        from henri_pearl_aligner import JohnsonLindenstraussGuard
+        self.jl_guard = JohnsonLindenstraussGuard(global_dim=4096, core_dim=dim)
 
     def run_h_mpc_selection(self, current_wave: torch.Tensor, target_goal_wave: torch.Tensor,   
-                             candidate_action_sequences: torch.Tensor, horizon=5) -> int:  
+                             candidate_action_sequences: torch.Tensor, horizon=16) -> tuple:  
         """  
-        current_wave: Complex phase tensor  
-        target_goal_wave: Complex target baseline from Zone C  
-        candidate_action_sequences: Proposed action steps  
+        PEARL Trajectory Optimizer: Tracks lookahead futures inside the integer   
+        phase-space boundary, eliminating the latent blindness bottleneck.  
         """  
+        device = current_wave.device  
         num_candidates = candidate_action_sequences.size(0)  
-        device = current_wave.device
-        dtype = current_wave.dtype
-
-        # Dynamically align incoming wave dimensions with the model's inner dim
-        if current_wave.shape[-1] != self.dim:
-            if current_wave.shape[-1] < self.dim:
-                padded = torch.zeros(self.dim, device=device, dtype=dtype)
-                padded[:current_wave.shape[-1]] = current_wave
-                current_wave = padded
-            else:
-                current_wave = current_wave[:self.dim]
-                
-        if target_goal_wave.shape[-1] != self.dim:
-            if target_goal_wave.shape[-1] < self.dim:
-                padded = torch.zeros(self.dim, device=device, dtype=dtype)
-                padded[:target_goal_wave.shape[-1]] = target_goal_wave
-                target_goal_wave = padded
-            else:
-                target_goal_wave = target_goal_wave[:self.dim]
-                
-        if candidate_action_sequences.shape[-1] != self.dim:
-            if candidate_action_sequences.shape[-1] < self.dim:
-                padded = torch.zeros(candidate_action_sequences.shape[0], candidate_action_sequences.shape[1], self.dim, device=device, dtype=dtype)
-                padded[:, :, :candidate_action_sequences.shape[-1]] = candidate_action_sequences
-                candidate_action_sequences = padded
-            else:
-                candidate_action_sequences = candidate_action_sequences[:, :, :self.dim]
         
-        # Limit evaluation batch size to prevent VRAM saturation
-        chunk_size = 4
-        candidate_costs_list = []
+        # 1. Project VSA waves to 1024-D core dimension using Johnson-Lindenstrauss guard
+        # Handle complex tensors safely during linear projection
+        W_aligned = self.jl_guard.W_JL.to(device=device, dtype=torch.float32)
         
-        for chunk_start in range(0, num_candidates, chunk_size):
-            chunk_end = min(chunk_start + chunk_size, num_candidates)
-            chunk_candidates = candidate_action_sequences[chunk_start:chunk_end]
-            chunk_num = chunk_end - chunk_start
-            
-            # Initialize parallel rollout states for this chunk
-            state_wave = current_wave.unsqueeze(0).repeat(chunk_num, 1)
-            target_goal_batched = target_goal_wave.unsqueeze(0).repeat(chunk_num, 1)
-            
-            trajectory_tracks = []
-            
-            # Parallel forward projection loop for this chunk
-            for t in range(horizon):
-                act_step = chunk_candidates[:, t, :] # [chunk_num, 4096]
+        def compress_wave_safe(psi_4096):
+            if torch.is_complex(psi_4096):
+                real_part = F.linear(psi_4096.real.to(dtype=W_aligned.dtype), W_aligned)
+                imag_part = F.linear(psi_4096.imag.to(dtype=W_aligned.dtype), W_aligned)
+                return torch.complex(real_part, imag_part)
+            else:
+                return F.linear(psi_4096.to(dtype=W_aligned.dtype), W_aligned)
                 
-                # Apply explicit AdaLN conditioning
-                modulated_state = self.conditioning_layer(state_wave, act_step) # [chunk_num, 4096]
-                
-                # Project the continuous trajectory step into the future
-                state_wave, _ = self.dynamics(modulated_state, target_goal_batched, 0.0)
-                trajectory_tracks.append(state_wave)
-                
-            # Isolate terminal state
-            terminal_state = torch.nn.functional.normalize(state_wave, p=2, dim=-1) # [chunk_num, 4096]
-            goal_norm = torch.nn.functional.normalize(target_goal_wave, p=2, dim=-1) # [4096]
-            
-            # Calculate Angular Geometric Resonance (Phase Cosine Similarity)
-            angular_resonance = torch.sum(terminal_state * goal_norm.unsqueeze(0), dim=-1)
-            phase_alignment_costs = 1.0 - angular_resonance
-            
-            # Evaluate feature obstruction (SIGReg guardrail)
-            stacked_trajectory = torch.stack(trajectory_tracks, dim=0)
-            
-            entropy_penalties = torch.zeros(chunk_num, device=device, dtype=dtype)
-            for idx in range(chunk_num):
-                entropy_penalties[idx] = self.guardrail.evaluate_feature_obstruction(stacked_trajectory[:, idx, :])
-                
-            # Composite H-MPC Cost Evaluation for this chunk
-            chunk_costs = phase_alignment_costs + (0.1 * entropy_penalties)
-            candidate_costs_list.append(chunk_costs)
-            
-        candidate_costs = torch.cat(candidate_costs_list, dim=0)
-        
-        # Select winning candidate plan
-        winning_candidate_idx = torch.argmin(candidate_costs).item()
-        print(f"[H-MPC] Selection Complete. Best Plan Index: {winning_candidate_idx} | Min Cost: {candidate_costs[winning_candidate_idx]:.4f}")  
+        current_wave_1024 = compress_wave_safe(current_wave)
+        target_goal_wave_1024 = compress_wave_safe(target_goal_wave)
+        candidate_action_sequences_1024 = compress_wave_safe(candidate_action_sequences)
           
-        return winning_candidate_idx
+        # Initialize the packed-phase engine buffer out-of-band  
+        if not hasattr(self, "packed_vsa_engine"):  
+            from henri_core.hrr import PackedPhaseVSAEngine  
+            self.packed_vsa_engine = PackedPhaseVSAEngine(dimension=self.dim)  
+              
+        # Pack global continuous thought boundaries into stable 8-bit integer coordinates  
+        phase_current = self.packed_vsa_engine.pack_wave_to_phase(current_wave_1024)  
+        phase_goal = self.packed_vsa_engine.pack_wave_to_phase(target_goal_wave_1024)  
+          
+        best_cost = float('inf')  
+        winning_idx = 0  
+        winning_trajectory_track = []  
+          
+        # Concurrently evaluate parallel candidate paths across the deep Gear 3 horizon  
+        for idx in range(num_candidates):  
+            active_phase_state = phase_current.clone()  
+            local_track = []  
+              
+            for t in range(horizon):  
+                action_phase = self.packed_vsa_engine.pack_wave_to_phase(candidate_action_sequences_1024[idx, t, :])  
+                # Advance lookahead states cleanly using type-safe modular addition math  
+                active_phase_state = self.packed_vsa_engine.compute_fused_binding(active_phase_state, action_phase)  
+                # Convert uint8 phase to float32 radians in [-pi, pi] range for output trajectory
+                active_phase_radians = (active_phase_state.float() * (2.0 * math.pi / 256.0)) - math.pi
+                local_track.append(active_phase_radians.to(device=device, dtype=torch.float32))  
+                  
+            # Compute geometric resonance using raw integer angular errors  
+            phase_error = torch.abs(active_phase_state.float() - phase_goal.float())  
+            wrapped_error = torch.minimum(phase_error, 256.0 - phase_error)  
+            # Divide by 128.0 to normalize cost cleanly in [0.0, 1.0] interval
+            mean_trajectory_cost = (wrapped_error.mean() / 128.0).item()  
+              
+            if mean_trajectory_cost < best_cost:  
+                best_cost = mean_trajectory_cost  
+                winning_idx = idx  
+                winning_trajectory_track = local_track  
+                  
+        self.winning_jepa_track = torch.stack(winning_trajectory_track, dim=0)
+        print(f"[H-MPC] Selection Complete. Best Plan Index: {winning_idx} | Min Cost: {best_cost:.4f}")  
+        # Return the winning selection parameters accompanied by the pristine trajectory guidance field  
+        return winning_idx, self.winning_jepa_track

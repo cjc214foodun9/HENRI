@@ -160,7 +160,7 @@ class EmergentManifold(torch_nn.Module):
         self.topology_closer = TopologicalClosureMemory(hidden_features)
         
     def forward(self, x):
-        x = x.to(self.crystallizer.weight.device)
+        x = x.to(device=self.crystallizer.weight.device, dtype=self.crystallizer.weight.dtype)
         # 1. Crystallize structure from environmental signals
         embedded = self.crystallizer(x)
         embedded = torch.tanh(embedded)

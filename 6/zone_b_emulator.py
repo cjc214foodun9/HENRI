@@ -70,8 +70,10 @@ class OpticalD2NNLayer(nn.Module):
         # Cast phase_mask from DirectML/GPU to CPU (wave's device) to avoid ComplexFloat errors on DirectML
         dev = wave.device
         mask = self.phase_mask.to(dev)
+        mask_f32 = mask.to(torch.float32)
         # Calculate complex transmission coefficient t = exp(i * phi) (out of place, no modulo)
-        t = torch.polar(torch.ones_like(mask), mask)
+        t = torch.polar(torch.ones_like(mask_f32), mask_f32)
+        t = t.to(dtype=wave.dtype)
         # Out-of-place element-wise wave modulation
         return wave * t
 
@@ -162,7 +164,7 @@ class ZoneBPhysicalEmulator:
                 psi_candidate_focused = self.orchestrator.l3_router.activation_to_wave(h_7b_lora)
                 if len(psi_candidate_focused.shape) == 2:
                     psi_candidate_focused = torch.mean(psi_candidate_focused, dim=0)
-                psi_candidate_focused = psi_candidate_focused.reshape(64, 64)
+                psi_candidate_focused = psi_candidate_focused.reshape(psi_candidate_focused.shape[:-1] + (64, 64))
             else:
                 # Replicate candidate activation across all 16 streams to create [16, 1, gemma_dim]
                 activations_stack = h_7b_lora.unsqueeze(0).unsqueeze(0).repeat(16, 1, 1)

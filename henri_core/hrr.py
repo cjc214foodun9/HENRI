@@ -22,15 +22,8 @@ class HRRInputLayer(nn.Module):
         z = IFFT( FFT(x) * FFT(y) )
         Complexity: O(N log N)
         """
-        # 1. Project to Frequency Domain (Real FFT)
-        X_freq = torch.fft.rfft(x, dim=-1)
-        Y_freq = torch.fft.rfft(y, dim=-1)
-        
-        # 2. Complex Element-wise Multiplication (Binding)
-        Z_freq = X_freq * Y_freq
-        
-        # 3. Inverse FFT back to spatial/wave domain
-        z = torch.fft.irfft(Z_freq, n=self.dim, dim=-1)
+        from kernels import flash_circular_convolution
+        z = flash_circular_convolution(x, y)
         
         # 4. Re-normalize to maintain energy conservation on L2 hypersphere
         return F.normalize(z, p=2, dim=-1)
@@ -63,3 +56,49 @@ class HRRInputLayer(nn.Module):
         final_input_wave = self.bind(bound_wave, self.base_geometry)
         
         return final_input_wave
+
+
+class PackedPhaseVSAEngine(nn.Module):  
+    """  
+    PEARL Core Phase Protector: Quantizes continuous complex waveforms into   
+    8-bit integer phase spectrums, enforcing strict wrapped boundaries modulo 256.  
+    Eliminates the complex-to-real casting leak completely.  
+    """  
+    def __init__(self, dimension: int = 4096):  
+        super().__init__()  
+        self.dim = dimension  
+        # Map the full 2*pi spectrum into 256 discrete angular integer steps  
+        self.phase_scale = 256.0 / (2.0 * 3.141592653589793)
+
+    def pack_wave_to_phase(self, complex_wave: torch.Tensor) -> torch.Tensor:  
+        """Extracts phase angles safely and packs them into INT8 registers."""  
+        if torch.is_complex(complex_wave):  
+            angles = torch.angle(complex_wave)  
+        else:  
+            # Safe boundary tracking fallback if input arrived un-constituted  
+            angles = torch.atan2(complex_wave, torch.zeros_like(complex_wave) + 1e-8)  
+              
+        positive_angles = torch.remainder(angles, 2.0 * 3.141592653589793)  
+        return (positive_angles * self.phase_scale).to(dtype=torch.uint8)
+
+    def compute_fused_binding(self, packed_feature: torch.Tensor, packed_coordinate: torch.Tensor) -> torch.Tensor:  
+        """  
+        Executes circular convolution as raw integer additions wrapped modulo 256.  
+        Psi_bound = (Phase_feature + Phase_coordinate) % 256  
+        Maps directly to consumer GPU specialized INT8 Tensor Cores with zero linewidth drift.  
+        """  
+        # Cast to int16 to compute additions safely before overflow wrap checks  
+        feat_u16 = packed_feature.to(torch.int16)  
+        coord_u16 = packed_coordinate.to(torch.int16)  
+          
+        # Enforce exact modular phase boundary wrapping to prevent the SIGReg variance explosion  
+        bound_phase = torch.remainder(feat_u16 + coord_u16, 256).to(torch.uint8)  
+        return bound_phase
+
+    def unbind_wave(self, packed_joint_wave: torch.Tensor, packed_key_wave: torch.Tensor) -> torch.Tensor:  
+        """Performs VSA contextual unbinding via integer phase subtraction modulo 256."""  
+        joint_u16 = packed_joint_wave.to(torch.int16)  
+        key_u16 = packed_key_wave.to(torch.int16)  
+          
+        unbound_phase = torch.remainder(joint_u16 - key_u16 + 256, 256).to(torch.uint8)  
+        return unbound_phase

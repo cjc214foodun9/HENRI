@@ -92,6 +92,21 @@ try:
             """)
             print("[+] Table 'lora_adapters_registry' verified.")
             
+            # 5. Stirrup Telemetry Ledger
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS stirrup_telemetry_ledger (
+                    timestamp TIMESTAMPTZ NOT NULL,
+                    inference_id UUID NOT NULL,
+                    selected_plan_index INT NOT NULL,
+                    thermodynamic_stress_cost DOUBLE PRECISION NOT NULL,
+                    sigreg_disentanglement_score DOUBLE PRECISION NOT NULL,
+                    transduced_motor_token_id INT NOT NULL,
+                    actuated_command TEXT NOT NULL,
+                    success BOOLEAN NOT NULL
+                );
+            """)
+            print("[+] Table 'stirrup_telemetry_ledger' verified.")
+            
             print("[*] Converting tables to TimescaleDB Hypertables...")
             try:
                 cur.execute("SELECT create_hypertable('thermodynamic_ledger', 'timestamp');")
@@ -106,6 +121,13 @@ try:
             except Exception as e:
                 if "already a hypertable" not in str(e).lower():
                     print(f"[WARNING] hypertable creation gemma_latent_history: {e}")
+
+            try:
+                cur.execute("SELECT create_hypertable('stirrup_telemetry_ledger', 'timestamp', if_not_exists => TRUE);")
+                print("[+] stirrup_telemetry_ledger converted to hypertable.")
+            except Exception as e:
+                if "already a hypertable" not in str(e).lower():
+                    print(f"[WARNING] hypertable creation stirrup_telemetry_ledger: {e}")
             
             print("[*] Creating StreamingDiskANN index via vectorscale for 4096D hrr_canonical_lexicon...")
             try:

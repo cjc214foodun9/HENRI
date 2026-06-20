@@ -19,7 +19,7 @@ class NonAutoregressiveCanvasSampler:
         self.hidden_dim = 4096
 
     @torch.no_grad()
-    def crystallize_motif(self, swarm_trajectory, sequence_length=512, guidance_scale=4.5):
+    def crystallize_motif(self, swarm_trajectory, sequence_length=512, guidance_scale=4.5, winning_jepa_track=None, jl_guard=None):
         """
         De-noises a raw high-entropy canvas into a structured, low-entropy English response matrix.
         
@@ -27,6 +27,8 @@ class NonAutoregressiveCanvasSampler:
             swarm_trajectory (Tensor): The optimal geometric path discovered by the 16 swarms [1, 4096].
             sequence_length (int): Fixed spatial token layout limit.
             guidance_scale (float): Strength of the Zone C attractor field injection.
+            winning_jepa_track (Tensor, optional): The chronological track of predicted latent states from PEARL MPC.
+            jl_guard (nn.Module, optional): The Johnson-Lindenstrauss Guard.
         """
         self.core.eval()
         device = next(self.core.parameters()).device if list(self.core.parameters()) else torch.device("cpu")
@@ -60,37 +62,59 @@ class NonAutoregressiveCanvasSampler:
             else:
                 swarm_trajectory = swarm_trajectory[:, :self.hidden_dim]
 
+        # Project PEARL trajectory track if provided
+        if winning_jepa_track is not None and jl_guard is not None:
+            W_aligned = jl_guard.W_JL.to(device=device, dtype=model_dtype)
+            # Lift [Horizon, core_dim] to [Horizon, global_dim (4096)] using W_JL. Since W_JL is [core_dim, global_dim],
+            # [Horizon, core_dim] @ [core_dim, global_dim] -> [Horizon, global_dim]
+            steering_field_4096 = torch.matmul(winning_jepa_track.to(device=device, dtype=model_dtype), W_aligned)
+            horizon_steps = steering_field_4096.size(0)
+        else:
+            steering_field_4096 = None
+
         # 2. Reverse-Diffusion Denoising Loop
         for step_idx, t in enumerate(timesteps):
             # Broadcast scalar time position to match matrix shape requirements
             t_tensor = torch.full((batch_size, sequence_length, 1), t, device=device)
             
+            # Determine active steering/attractor vector for this step
+            if steering_field_4096 is not None:
+                track_idx = min(int((step_idx / self.N) * horizon_steps), horizon_steps - 1)
+                active_steering_vector = steering_field_4096[track_idx]
+                
+                # Align active steering vector with core hidden_dim
+                if active_steering_vector.shape[-1] != self.hidden_dim:
+                    if active_steering_vector.shape[-1] < self.hidden_dim:
+                        padded = torch.zeros(self.hidden_dim, device=device, dtype=model_dtype)
+                        padded[:active_steering_vector.shape[-1]] = active_steering_vector
+                        active_steering_vector = padded
+                    else:
+                        active_steering_vector = active_steering_vector[:self.hidden_dim]
+            else:
+                active_steering_vector = swarm_trajectory.squeeze(0)
+
             # Predict the random noise contamination vector field using the unitary layers
-            # Support both ProprietaryHENRICore and other standard models
             if hasattr(self.core, 'layers'):
                 # ProprietaryHENRICore signature: forward(x, zone_c_attractor, temperature)
-                predicted_noise, _ = self.core(canvas, swarm_trajectory, float(t))
+                predicted_noise, _ = self.core(canvas, active_steering_vector.unsqueeze(0), float(t))
             else:
                 predicted_noise = self.core(canvas, t_tensor)
 
             # 3. Inject Zone C Trajectory Guidance Field
-            # This warps the score vector field, pulling the text canvas down toward the swarm's solution path
-            trajectory_guidance = swarm_trajectory.unsqueeze(1).expand_as(canvas)
+            trajectory_guidance = active_steering_vector.unsqueeze(0).unsqueeze(0).expand_as(canvas)
             
             # Synthesize the modified score function gradient
             total_score_direction = predicted_noise + (guidance_scale * trajectory_guidance)
 
             # 4. Execute the Euler-Maruyama Reverse Step
-            # Remove a slice of predicted noise while maintaining strict orthogonal magnitude rules
             canvas = canvas - (total_score_direction * dt)
             
             # Enforce Langevin Thermal Restabilization
-            # Adding a decaying amount of thermal jitter to prevent early freezing in bad local modes
             if t > 0.1:
                 langevin_noise = torch.randn_like(canvas) * (t * 0.001)
                 canvas += langevin_noise
             
-            # Re-normalize immediately to keep parameters anchored to the lossless hypersphere manifold
+            # Re-normalize immediately
             canvas = F.normalize(canvas, p=2, dim=-1)
 
         print("[+] Canvas relaxation complete. Executing out-of-band Holographic Dictionary Lookup...")

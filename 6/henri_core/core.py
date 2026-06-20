@@ -4,13 +4,15 @@ import torch.nn.functional as F
 import torch.fft
 
 def fast_orthogonal_init(tensor, gain=1.0):
-    if tensor.ndimension() < 2:
-        return torch.nn.init.orthogonal_(tensor, gain)
-    rows = tensor.size(0)
-    cols = tensor.numel() // rows
+    orig_dtype = tensor.dtype
+    orig_device = tensor.device
     
-    # Kronecker acceleration for large square matrices (e.g. 4096 x 4096)
-    # Run entirely on CPU to prevent GPU memory allocation and OOM during model creation
+    # Force float32 on CPU to prevent QR factorization errors on bfloat16 CPU
+    temp_tensor = torch.empty(tensor.shape, device='cpu', dtype=torch.float32)
+    
+    rows = temp_tensor.size(0)
+    cols = temp_tensor.numel() // rows
+    
     if rows == 4096 and cols == 4096:
         with torch.no_grad():
             A_rand = torch.randn(16, 16, device='cpu', dtype=torch.float32)
@@ -18,23 +20,13 @@ def fast_orthogonal_init(tensor, gain=1.0):
             A, _ = torch.linalg.qr(A_rand)
             B, _ = torch.linalg.qr(B_rand)
             C = torch.kron(A, B)
-            tensor.copy_(C.view_as(tensor).to(device=tensor.device, dtype=tensor.dtype) * gain)
-            return tensor
-
-    if torch.cuda.is_available() and tensor.device.type == 'cuda':
-        with torch.no_grad():
-            flat_shape = (cols, rows) if rows < cols else (rows, cols)
-            flattened = torch.randn(flat_shape, device='cuda', dtype=torch.float32)
-            q, r = torch.linalg.qr(flattened)
-            d = torch.diag(r, 0).sign()
-            d[d == 0] = 1
-            q *= d
-            if rows < cols:
-                q = q.t()
-            tensor.copy_(q.view_as(tensor).to(device=tensor.device, dtype=tensor.dtype) * gain)
-            return tensor
+            temp_tensor.copy_(C.view_as(temp_tensor) * gain)
     else:
-        return torch.nn.init.orthogonal_(tensor, gain)
+        torch.nn.init.orthogonal_(temp_tensor, gain)
+        
+    with torch.no_grad():
+        tensor.copy_(temp_tensor.to(device=orig_device, dtype=orig_dtype))
+    return tensor
 
 class ContinuousPhaseRouter(nn.Module):
     """

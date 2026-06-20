@@ -66,3 +66,38 @@ class OpticalD2NNLayer(nn.Module):
         t = torch.polar(torch.ones_like(self.phase_mask), self.phase_mask)
         # Out-of-place element-wise wave modulation
         return wave * t
+
+
+class FourierSpectralDiffractionSurrogate(nn.Module):
+    """
+    Fourier Neural Operator (FNO) Surrogate Block.
+    Replaces step-by-step ASM numerical Helmholtz wave propagation with an
+    operator mapping that executes at native tensor core speeds.
+    """
+    def __init__(self, modes: int = 128, dimension: int = 4096):
+        super().__init__()
+        self.modes = modes
+        self.dim = dimension
+        
+        # Parameterize the phase transformations directly as complex weights in Fourier space
+        self.fourier_weight_real = nn.Parameter(torch.randn(modes, modes) * (1.0 / modes))
+        self.fourier_weight_imag = nn.Parameter(torch.randn(modes, modes) * (1.0 / modes))
+
+    def forward(self, psi_wave: torch.Tensor) -> torch.Tensor:
+        # 1. Transform ingress wave into the frequency domain along the context row
+        # Ensure input is complex, otherwise cast
+        psi_complex = psi_wave.to(dtype=torch.complex64)
+        psi_fft = torch.fft.fft(psi_complex, dim=-1)
+        out_fft = torch.zeros_like(psi_fft)
+        
+        # 2. Extract and modulate higher spatial frequency modes natively
+        w_complex = torch.complex(self.fourier_weight_real, self.fourier_weight_imag).to(device=psi_wave.device, dtype=torch.complex64)
+        
+        # Execute matrix multiplication spectral mixing pass
+        modes_to_apply = min(self.modes, psi_fft.size(-1))
+        w_complex_sliced = w_complex[:modes_to_apply, :modes_to_apply]
+        out_fft[..., :modes_to_apply] = torch.matmul(psi_fft[..., :modes_to_apply], w_complex_sliced)
+        
+        # 3. Invert back to the boundary plane in a single execution step
+        psi_diffracted = torch.fft.ifft(out_fft, dim=-1)
+        return torch.nn.functional.normalize(psi_diffracted, p=2, dim=-1)

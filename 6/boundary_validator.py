@@ -63,23 +63,23 @@ class BoundaryAxiomValidator(torch_nn.Module):
 
     @property
     def P(self) -> torch.Tensor:
-        return torch.complex(self.P_real, self.P_imag)
+        return torch.complex(self.P_real.to(torch.float32), self.P_imag.to(torch.float32))
 
     @property
     def dirichlet_physics(self) -> torch.Tensor:
-        return torch.complex(self.dirichlet_physics_real, self.dirichlet_physics_imag)
+        return torch.complex(self.dirichlet_physics_real.to(torch.float32), self.dirichlet_physics_imag.to(torch.float32))
 
     @property
     def dirichlet_logic(self) -> torch.Tensor:
-        return torch.complex(self.dirichlet_logic_real, self.dirichlet_logic_imag)
+        return torch.complex(self.dirichlet_logic_real.to(torch.float32), self.dirichlet_logic_imag.to(torch.float32))
 
     @property
     def dirichlet_guardrails(self) -> torch.Tensor:
-        return torch.complex(self.dirichlet_guardrails_real, self.dirichlet_guardrails_imag)
+        return torch.complex(self.dirichlet_guardrails_real.to(torch.float32), self.dirichlet_guardrails_imag.to(torch.float32))
 
     @property
     def neumann_active(self) -> torch.Tensor:
-        return torch.complex(self.neumann_active_real, self.neumann_active_imag)
+        return torch.complex(self.neumann_active_real.to(torch.float32), self.neumann_active_imag.to(torch.float32))
 
     def bulk_to_boundary(self, bulk_wave: torch.Tensor) -> torch.Tensor:
         """Projects a 4096-D bulk wave to 64-D boundary tensor."""
@@ -88,8 +88,8 @@ class BoundaryAxiomValidator(torch_nn.Module):
         # Output shape: [64]
         dev = self.P_real.device
         bulk_wave = bulk_wave.to(dev)
-        P = torch.complex(self.P_real, self.P_imag)
-        h_cft = torch.mv(P, bulk_wave)
+        P = torch.complex(self.P_real.to(torch.float32), self.P_imag.to(torch.float32))
+        h_cft = torch.matmul(bulk_wave.to(dtype=P.dtype), P.t())
         return h_cft
 
     def validate_boundary(self, bulk_wave: torch.Tensor) -> tuple:
@@ -131,7 +131,7 @@ class BoundaryAxiomValidator(torch_nn.Module):
         
         # Split back to Real and Imaginary and reconstruct complex h_cft
         new_real, new_imag = torch.chunk(routed_euclidean, 2, dim=-1)
-        crystallized_h_cft_batched = torch.complex(new_real, new_imag)
+        crystallized_h_cft_batched = torch.complex(new_real.to(torch.float32), new_imag.to(torch.float32))
         
         if not is_batched:
             crystallized_h_cft = crystallized_h_cft_batched.squeeze(0)
@@ -139,10 +139,10 @@ class BoundaryAxiomValidator(torch_nn.Module):
             crystallized_h_cft = crystallized_h_cft_batched
             
         # 2. Extract 16-D sectors from crystallized CFT wave
-        sector_physics = crystallized_h_cft[0:16]
-        sector_logic = crystallized_h_cft[16:32]
-        sector_guardrails = crystallized_h_cft[32:48]
-        sector_neumann = crystallized_h_cft[48:64]
+        sector_physics = crystallized_h_cft[..., 0:16]
+        sector_logic = crystallized_h_cft[..., 16:32]
+        sector_guardrails = crystallized_h_cft[..., 32:48]
+        sector_neumann = crystallized_h_cft[..., 48:64]
         
         # Normalize sectors to unit magnitude for phase-only comparison
         def norm_sec(s):
@@ -155,14 +155,14 @@ class BoundaryAxiomValidator(torch_nn.Module):
         sec_guard_norm = norm_sec(sector_guardrails)
         
         # Reconstruct complex targets on the current device
-        dirichlet_physics = torch.complex(self.dirichlet_physics_real.to(dev), self.dirichlet_physics_imag.to(dev))
-        dirichlet_logic = torch.complex(self.dirichlet_logic_real.to(dev), self.dirichlet_logic_imag.to(dev))
-        dirichlet_guardrails = torch.complex(self.dirichlet_guardrails_real.to(dev), self.dirichlet_guardrails_imag.to(dev))
+        dirichlet_physics = torch.complex(self.dirichlet_physics_real.to(device=dev, dtype=torch.float32), self.dirichlet_physics_imag.to(device=dev, dtype=torch.float32))
+        dirichlet_logic = torch.complex(self.dirichlet_logic_real.to(device=dev, dtype=torch.float32), self.dirichlet_logic_imag.to(device=dev, dtype=torch.float32))
+        dirichlet_guardrails = torch.complex(self.dirichlet_guardrails_real.to(device=dev, dtype=torch.float32), self.dirichlet_guardrails_imag.to(device=dev, dtype=torch.float32))
         
         # 3. Compute deviations (distance from Dirichlet axioms)
-        dev_physics = 1.0 - torch.real(torch.sum(sec_phys_norm * torch.conj(dirichlet_physics))) / self.sector_dim
-        dev_logic = 1.0 - torch.real(torch.sum(sec_log_norm * torch.conj(dirichlet_logic))) / self.sector_dim
-        dev_guardrails = 1.0 - torch.real(torch.sum(sec_guard_norm * torch.conj(dirichlet_guardrails))) / self.sector_dim
+        dev_physics = torch.mean(1.0 - torch.real(torch.sum(sec_phys_norm * torch.conj(dirichlet_physics), dim=-1)) / self.sector_dim)
+        dev_logic = torch.mean(1.0 - torch.real(torch.sum(sec_log_norm * torch.conj(dirichlet_logic), dim=-1)) / self.sector_dim)
+        dev_guardrails = torch.mean(1.0 - torch.real(torch.sum(sec_guard_norm * torch.conj(dirichlet_guardrails), dim=-1)) / self.sector_dim)
         
         # Compute overall error energy (mean of deviations)
         error_energy = (dev_physics + dev_logic + dev_guardrails).item() / 3.0
@@ -194,7 +194,10 @@ class BoundaryAxiomValidator(torch_nn.Module):
         dev = self.P_real.device
         reflection_delta_cft = reflection_delta_cft.to(dev)
         # Expose Sector 3 reflection delta
-        delta_neumann = reflection_delta_cft[48:64]
+        if reflection_delta_cft.ndim > 1:
+            delta_neumann = reflection_delta_cft[..., 48:64].mean(dim=0)
+        else:
+            delta_neumann = reflection_delta_cft[48:64]
         
         # Ensure alignment_score is a scalar float
         if isinstance(alignment_score, (np.ndarray, torch.Tensor)):
@@ -210,7 +213,7 @@ class BoundaryAxiomValidator(torch_nn.Module):
         
         with torch.no_grad():
             # Reconstruct complex active neumann on device
-            neumann_active = torch.complex(self.neumann_active_real.to(dev), self.neumann_active_imag.to(dev))
+            neumann_active = torch.complex(self.neumann_active_real.to(device=dev, dtype=torch.float32), self.neumann_active_imag.to(device=dev, dtype=torch.float32))
             
             # Apply shift along error direction
             neumann_active += lr * delta_neumann

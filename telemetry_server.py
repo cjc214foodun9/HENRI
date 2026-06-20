@@ -31,7 +31,12 @@ class ThreadSafeTelemetryState:
                     if isinstance(val, torch.Tensor):
                         # Safely extract PyTorch tensor values to Python lists to avoid thread race conditions
                         detached_val = val.detach().clone().cpu()
-                        if detached_val.ndim == 2:
+                        if detached_val.ndim > 2:
+                            dims_to_reduce = tuple(range(detached_val.ndim - 2))
+                            detached_val = detached_val.mean(dim=dims_to_reduce)
+                        if detached_val.ndim >= 2:
+                            self.data[key] = detached_val.tolist()
+                        elif detached_val.ndim == 1:
                             self.data[key] = detached_val.tolist()
                         else:
                             self.data[key] = detached_val.item()

@@ -327,7 +327,7 @@ class ActiveInferenceSwarmAgent:
             psi_candidate_focused = self.orchestrator.l3_router.activation_to_wave(h_7b_lora)
             if len(psi_candidate_focused.shape) == 2:
                 psi_candidate_focused = torch.mean(psi_candidate_focused, dim=0)
-            psi_candidate_focused = psi_candidate_focused.reshape(64, 64)
+            psi_candidate_focused = psi_candidate_focused.reshape(psi_candidate_focused.shape[:-1] + (64, 64))
         else:
             self.step_logs.append({
                 "stage": "VERIFIER PROJECTION",

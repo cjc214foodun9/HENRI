@@ -76,23 +76,34 @@ class SagnacInterferometer(nn.Module):
         self.eps = eps
 
     def forward(self, current_wave: torch.Tensor, target_manifold: torch.Tensor):
+        import numpy as np
         psi = current_wave
         tgt = target_manifold
 
-        # Flatten to a single complex vector for the inner products; we
-        # restore the original shape on the way out so downstream reshape(64,64)
-        # etc. keeps working.
         orig_shape = psi.shape
-        psi_flat = psi.reshape(-1)
-        tgt_flat = tgt.reshape(-1)
+        if psi.ndim == 1:
+            is_batched = False
+            batch_shape = ()
+            spatial_shape = psi.shape
+        elif psi.ndim == 2:
+            if psi.shape[0] == psi.shape[1]:
+                is_batched = False
+                batch_shape = ()
+                spatial_shape = psi.shape
+            else:
+                is_batched = True
+                batch_shape = (psi.shape[0],)
+                spatial_shape = (psi.shape[1],)
+        else:
+            is_batched = True
+            batch_shape = psi.shape[:-2]
+            spatial_shape = psi.shape[-2:]
 
-        if psi_flat.shape != tgt_flat.shape:
-            raise ValueError(
-                f"SagnacInterferometer: candidate shape {tuple(psi.shape)} "
-                f"!= target shape {tuple(tgt.shape)}. Dimensions must match "
-                f"before projection (check L3 router output and target_manifold "
-                f"dimensionality)."
-            )
+        M = int(np.prod(batch_shape)) if is_batched else 1
+        S_dim = int(np.prod(spatial_shape))
+        
+        psi_flat = psi.reshape(M, S_dim)
+        tgt_flat = tgt.reshape(M, S_dim)
 
         # Promote to complex so the inner products are well defined even if a
         # real wave is passed in.
@@ -102,46 +113,79 @@ class SagnacInterferometer(nn.Module):
             tgt_flat = tgt_flat.to(torch.complex64)
 
         # Target energy and unit direction.
-        tgt_energy = torch.real(torch.vdot(tgt_flat, tgt_flat))  # ||tgt||^2, real >= 0
+        tgt_energy = torch.real(torch.sum(torch.conj(tgt_flat) * tgt_flat, dim=-1))
         tgt_energy = torch.clamp(tgt_energy, min=self.eps)
 
         # Coherent homodyne projection coefficient c = <tgt, psi> / ||tgt||^2.
-        # torch.vdot(a, b) conjugates the FIRST argument -> <tgt, psi>.
-        inner = torch.vdot(tgt_flat, psi_flat)        # complex scalar
-        c = inner / tgt_energy                          # complex scalar coefficient
+        inner = torch.sum(torch.conj(tgt_flat) * psi_flat, dim=-1)
+        c = inner / tgt_energy
 
         # Transmission (truth): projection of psi onto the target axis.
-        truth_flat = c * tgt_flat
+        truth_flat = c.unsqueeze(-1) * tgt_flat
 
         # Reflection (error): orthogonal residual.
         delta_flat = psi_flat - truth_flat
 
         # Genuine error energy = ||delta||^2 (real, >= 0).
-        error_energy = torch.real(torch.vdot(delta_flat, delta_flat))
+        error_energy = torch.real(torch.sum(torch.conj(delta_flat) * delta_flat, dim=-1))
 
         # Restore shapes.
         truth = truth_flat.reshape(orig_shape)
         delta = delta_flat.reshape(orig_shape)
+        
+        if is_batched:
+            error_energy = error_energy.reshape(batch_shape)
 
         return truth, delta, error_energy
 
     # --- Diagnostic helpers (optional, used by tests / telemetry) -----------
 
-    def alignment(self, current_wave: torch.Tensor, target_manifold: torch.Tensor) -> float:
+    def alignment(self, current_wave: torch.Tensor, target_manifold: torch.Tensor):
         """
         Normalized agreement in [0, 1]: |<psi, tgt>|^2 / (||psi||^2 ||tgt||^2).
         1.0 = perfect logical agreement (parallel); 0.0 = total contradiction
         (orthogonal). This is the squared cosine / fringe visibility.
         """
-        psi = current_wave.reshape(-1)
-        tgt = target_manifold.reshape(-1)
+        import numpy as np
+        psi = current_wave
+        tgt = target_manifold
         if not torch.is_complex(psi):
             psi = psi.to(torch.complex64)
         if not torch.is_complex(tgt):
             tgt = tgt.to(torch.complex64)
-        num = torch.abs(torch.vdot(tgt, psi)) ** 2
+
+        if psi.ndim == 1:
+            is_batched = False
+            batch_shape = ()
+            spatial_shape = psi.shape
+        elif psi.ndim == 2:
+            if psi.shape[0] == psi.shape[1]:
+                is_batched = False
+                batch_shape = ()
+                spatial_shape = psi.shape
+            else:
+                is_batched = True
+                batch_shape = (psi.shape[0],)
+                spatial_shape = (psi.shape[1],)
+        else:
+            is_batched = True
+            batch_shape = psi.shape[:-2]
+            spatial_shape = psi.shape[-2:]
+
+        M = int(np.prod(batch_shape)) if is_batched else 1
+        S_dim = int(np.prod(spatial_shape))
+        
+        psi_flat = psi.reshape(M, S_dim)
+        tgt_flat = tgt.reshape(M, S_dim)
+
+        num = torch.abs(torch.sum(torch.conj(tgt_flat) * psi_flat, dim=-1)) ** 2
         den = torch.clamp(
-            torch.real(torch.vdot(psi, psi)) * torch.real(torch.vdot(tgt, tgt)),
+            torch.real(torch.sum(torch.conj(psi_flat) * psi_flat, dim=-1)) * 
+            torch.real(torch.sum(torch.conj(tgt_flat) * tgt_flat, dim=-1)),
             min=self.eps,
         )
-        return float((num / den).item())
+        val = num / den
+        if is_batched:
+            return val.reshape(batch_shape)
+        else:
+            return float(val.item())

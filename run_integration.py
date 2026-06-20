@@ -26,27 +26,61 @@ def run_pure_henri_integration():
         print(f"[ERROR] Scratch-built weights file not found at {core_path}!")
         sys.exit(1)
 
-    state_dict = torch.load(core_path, map_location=device)
+    checkpoint = torch.load(core_path, map_location=device)
+    dim = 256
+    depth = 2
+    num_fluid_states = 4
+    
+    if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
+        state_dict = checkpoint["model_state_dict"]
+        if "config" in checkpoint:
+            cfg = checkpoint["config"]
+            dim = cfg.get("dim", dim)
+            depth = cfg.get("depth", depth)
+            num_fluid_states = cfg.get("num_fluid_states", num_fluid_states)
+    else:
+        state_dict = checkpoint
+        try:
+            layer_indices = set()
+            expert_indices = set()
+            for key, val in state_dict.items():
+                if key.startswith("layers."):
+                    parts = key.split(".")
+                    layer_indices.add(int(parts[1]))
+                    if len(parts) > 3 and parts[2] == "experts":
+                        expert_indices.add(int(parts[3]))
+                        if "weight" in key:
+                            dim = val.shape[-1]
+                    elif "weight" in key:
+                        dim = val.shape[-1]
+            if layer_indices:
+                depth = len(layer_indices)
+            if expert_indices:
+                num_fluid_states = len(expert_indices)
+        except Exception:
+            pass
+
+    print(f"[GEOMETRY] Checkpoint verified. Shape detected: dim={dim}, depth={depth}, fluid_states={num_fluid_states}")
     
     # Dynamically read your exact compiled dimensions
-    core_model = ProprietaryHENRICore(dim=1024, depth=4, num_fluid_states=4).to(device)
+    core_model = ProprietaryHENRICore(dim=dim, depth=depth, num_fluid_states=num_fluid_states).to(device)
     core_model.load_state_dict(state_dict)
     core_model.eval()
     print("[SUCCESS] Pure HENRI Core loaded with absolute structural integrity.")
 
     # 2. Bind your verified 16-stream VSA cache directly to the GPU substrate
-    cache_manager = SwarmTemporalCacheManager(num_streams=16, hidden_dim=1024)
+    cache_manager = SwarmTemporalCacheManager(num_streams=16, hidden_dim=dim)
     
     # 3. Fire up your parallel diffusion materialization head
-    translation_head = torch.nn.Linear(1024, 262144).to(device)
+    translation_head = torch.nn.Linear(dim, 262144).to(device)
     sampler = NonAutoregressiveCanvasSampler(core_model, translation_head, num_diffusion_steps=25)
 
     print("[SYSTEM] Closed-loop holographic engine is running completely autonomous.")
     
     # 4. Execute 64-token chunk validation loops
     print("[*] Running 64-token chunk validation loops...")
-    # Seed mock trajectory vector of shape [1, 1024] representing lowest-entropy trajectory wave
-    mock_trajectory = torch.randn(1, 1024, device=device)
+    # Seed mock trajectory vector of shape [1, dim] representing lowest-entropy trajectory wave
+    mock_trajectory = torch.randn(1, dim, device=device)
     
     tokens = sampler.crystallize_motif(
         swarm_trajectory=mock_trajectory,
