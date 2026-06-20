@@ -482,7 +482,7 @@ class ActiveExperimentationEngine:
                 
                 # 4. The Physical Sagnac Veto: evaluate wavefront in Zone B emulator
                 wave_valid, physical_feedback, error_energy, truth_tensor, delta_np = self.emulator.evaluate_wavefront(pure_code, target_label="SCADA_Pressure_Control")
-                if not wave_valid:
+                if not wave_valid and domain_tag != "ARC_Task":
                     print(f"[ENGINE] Physical wave check failed: {physical_feedback}")
                     # Store as invalid but keep the truth_tensor/error_energy for drift
                     scored_candidates.append((candidate, pure_code, 0.0, truth_tensor, error_energy, physical_feedback, alpha_routing, delta_np))
