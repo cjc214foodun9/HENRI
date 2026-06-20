@@ -99,7 +99,7 @@ class EntropicSurvivalEngine:
                 # by pulling its weights toward the orthogonal residual.
                 
                 # Align residual wave dimension to manager's gemma_dim if needed
-                res_tensor = residual_wave.clone()
+                res_tensor = residual_wave.clone().to(device=manager.lora_A.device, dtype=manager.lora_A.dtype)
                 if len(res_tensor) < manager.gemma_dim:
                     res_tensor = F.pad(res_tensor, (0, manager.gemma_dim - len(res_tensor)))
                 elif len(res_tensor) > manager.gemma_dim:
