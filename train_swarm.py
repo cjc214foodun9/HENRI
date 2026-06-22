@@ -243,7 +243,7 @@ def parse_args():
     parser.add_argument("--weight-decay", type=float, default=1e-4, help="Weight decay (default: 1e-4)")
     parser.add_argument("--batch-size", type=int, default=8, help="Batch size (default: 8)")
     parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs (default: 5)")
-    parser.add_argument("--optimizer", type=str, choices=["adamw", "sgd"], default="adamw", help="Optimizer choice (default: adamw)")
+    parser.add_argument("--optimizer", type=str, choices=["adamw", "sgd", "adafactor"], default="adafactor", help="Optimizer choice (default: adafactor)")
     parser.add_argument("--amp", action="store_true", help="Enable Automatic Mixed Precision (AMP) to save VRAM")
     parser.add_argument("--checkpointing", action="store_true", help="Enable gradient checkpointing to save VRAM")
     parser.add_argument("--dataset-path", type=str, default="./henri_corpus_4096.h5", help="Path to compiled HDF5 dataset")
@@ -276,32 +276,47 @@ def execute_master_train_run():
         
     print(f"[ACTIVE SUBSTRATE] Launching full-scale core on device: {device}")
     
-    print(f"[*] Initializing ProprietaryHENRICore (dim={args.dim}, depth={args.depth}, experts={args.experts}) on {device}...")
-    with torch.device(device):
-        model = ProprietaryHENRICore(dim=args.dim, depth=args.depth, num_fluid_states=args.experts)
-        transition_mlp = TransitionDynamicsNetwork(dim=args.dim)
-        translation_head = nn.Linear(args.dim, args.vocab_size)
-        birkhoff_loss_fn = BirkhoffTopologicalLoss(translation_head, alpha=1.0, beta=args.birkhoff_beta, eta=args.birkhoff_eta)
-        sigreg_reg = SIGRegRegularizer(dim=args.dim)
-
     device_type = 'cuda' if device.type == 'cuda' else 'cpu'
     use_bf16 = False
+    init_dtype = torch.float32
     
     if args.amp:
         if device_type == 'cuda' and torch.cuda.is_bf16_supported():
+            init_dtype = torch.bfloat16
+            use_bf16 = True
+            print("[+] Will initialize and train in bfloat16 for memory efficiency.")
+        else:
+            init_dtype = torch.float16
+            print("[+] Will initialize and train in float16 for memory efficiency.")
+            
+    print(f"[*] Initializing ProprietaryHENRICore (dim={args.dim}, depth={args.depth}, experts={args.experts}) on CPU in {init_dtype}...")
+    
+    # Temporarily set default dtype for memory-efficient CPU initialization
+    torch.set_default_dtype(init_dtype)
+    
+    model = ProprietaryHENRICore(dim=args.dim, depth=args.depth, num_fluid_states=args.experts)
+    transition_mlp = TransitionDynamicsNetwork(dim=args.dim)
+    translation_head = nn.Linear(args.dim, args.vocab_size)
+    birkhoff_loss_fn = BirkhoffTopologicalLoss(translation_head, alpha=1.0, beta=args.birkhoff_beta, eta=args.birkhoff_eta)
+    sigreg_reg = SIGRegRegularizer(dim=args.dim)
+    
+    # Restore default dtype to float32
+    torch.set_default_dtype(torch.float32)
+
+    # Cast to final low-precision types if they aren't already
+    if args.amp:
+        if use_bf16:
             model = model.bfloat16()
             transition_mlp = transition_mlp.bfloat16()
             translation_head = translation_head.bfloat16()
             sigreg_reg = sigreg_reg.bfloat16()
-            use_bf16 = True
-            print("[+] Cast weights to bfloat16 for memory efficiency.")
         else:
             model = model.half()
             transition_mlp = transition_mlp.half()
             translation_head = translation_head.half()
             sigreg_reg = sigreg_reg.half()
-            print("[+] Cast weights to float16.")
             
+    print(f"[*] Moving model weights to target device: {device}...")
     model = model.to(device)
     transition_mlp = transition_mlp.to(device)
     translation_head = translation_head.to(device)
@@ -311,11 +326,26 @@ def execute_master_train_run():
         model.gradient_checkpointing = True
         print("[+] Gradient Checkpointing is ENABLED.")
         
-    optimizer = torch.optim.AdamW([
-        {"params": model.parameters(), "lr": args.lr, "weight_decay": args.weight_decay},
-        {"params": transition_mlp.parameters(), "lr": 5e-4, "weight_decay": 1e-5},
-        {"params": translation_head.parameters(), "lr": 5e-4, "weight_decay": 1e-5}
-    ])
+    print(f"[*] Instantiating optimizer: {args.optimizer}...")
+    if args.optimizer == "adamw":
+        optimizer = torch.optim.AdamW([
+            {"params": model.parameters(), "lr": args.lr, "weight_decay": args.weight_decay},
+            {"params": transition_mlp.parameters(), "lr": 5e-4, "weight_decay": 1e-5},
+            {"params": translation_head.parameters(), "lr": 5e-4, "weight_decay": 1e-5}
+        ])
+    elif args.optimizer == "sgd":
+        optimizer = torch.optim.SGD([
+            {"params": model.parameters(), "lr": args.lr},
+            {"params": transition_mlp.parameters(), "lr": 5e-4},
+            {"params": translation_head.parameters(), "lr": 5e-4}
+        ], momentum=0.9)
+    elif args.optimizer == "adafactor":
+        from transformers.optimization import Adafactor
+        optimizer = Adafactor([
+            {"params": model.parameters(), "lr": args.lr, "weight_decay": args.weight_decay},
+            {"params": transition_mlp.parameters(), "lr": 5e-4, "weight_decay": 1e-5},
+            {"params": translation_head.parameters(), "lr": 5e-4, "weight_decay": 1e-5}
+        ], scale_parameter=False, relative_step=False, warmup_init=False, lr=args.lr)
 
     loss_fn = NaturalInductionLoss(lambda_boundary=10.0, reg_coefficient=1.0, dim=args.dim).to(device)
     thermostat = DivergentMaster(t_min=0.0, t_max=4.0, cooling_rate=0.05, heat_sensitivity=0.2, lock_threshold=1e-4)
@@ -357,16 +387,16 @@ def execute_master_train_run():
             optimizer.zero_grad()
             model_dtype = next(model.parameters()).dtype
             
-            # Dynamic Gumbel-Softmax temperature exponential annealing from 1.0 down to 0.01
-            fraction = step / max(1, steps_per_epoch - 1)
-            gumbel_temp = 1.0 * ((0.01 / 1.0) ** fraction)
-            
             if args.infinite:
                 batch_idx = step
                 boundary_vectors = generator.generate_batch(batch_size=args.batch_size, seq_len=args.seq_len, dtype=model_dtype)
             else:
                 batch_idx, boundary_vectors = step
                 boundary_vectors = F.normalize(boundary_vectors.to(device, dtype=model_dtype), p=2, dim=-1)
+                
+            # Dynamic Gumbel-Softmax temperature exponential annealing from 1.0 down to 0.01
+            fraction = batch_idx / max(1, steps_per_epoch - 1)
+            gumbel_temp = 1.0 * ((0.01 / 1.0) ** fraction)
                 
             mock_initial_state = F.normalize(torch.randn_like(boundary_vectors).to(device, dtype=model_dtype), p=2, dim=-1)
             temperature = thermostat.get_temperature()

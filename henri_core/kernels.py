@@ -45,19 +45,19 @@ def flash_circular_convolution(feature: torch.Tensor, coordinate: torch.Tensor) 
         return output
     else:
         # High-performance PyTorch fallback
-        # If input is complex, perform spatial-frequency domain complex binding (circular convolution)
-        if torch.is_complex(feature) or torch.is_complex(coordinate):
-            orig_dtype = feature.dtype
-            # Ensure FFT runs in float32 to prevent half/bfloat16 precision support errors
-            feat_f32 = feature.to(dtype=torch.float32)
-            coord_f32 = coordinate.to(dtype=torch.float32)
+        # Perform circular convolution in the frequency domain
+        orig_dtype = feature.dtype
+        # Ensure FFT runs in float32 to prevent half/bfloat16 precision support errors during FFT
+        feat_f32 = feature.to(dtype=torch.float32)
+        coord_f32 = coordinate.to(dtype=torch.float32)
+        
+        feat_fft = torch.fft.fft(feat_f32, dim=-1)
+        coord_fft = torch.fft.fft(coord_f32, dim=-1)
+        
+        modulated = feat_fft * coord_fft
+        out = torch.fft.ifft(modulated, dim=-1)
+        
+        if not (torch.is_complex(feature) or torch.is_complex(coordinate)):
+            out = out.real
             
-            feat_fft = torch.fft.fft(feat_f32, dim=-1)
-            coord_fft = torch.fft.fft(coord_f32, dim=-1)
-            
-            modulated = feat_fft * coord_fft
-            out = torch.fft.ifft(modulated, dim=-1)
-            return out.to(dtype=orig_dtype)
-        else:
-            # Real element-wise binding
-            return feature * coordinate
+        return out.to(dtype=orig_dtype)

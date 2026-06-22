@@ -41,7 +41,7 @@ def run_henri_simulation():
     egress = QuantizedEgressAssembler(wave_dim=dim, decoder_hidden_dim=256, vocab_size=vocab_size).to(device)
 
     # Database Connector (uses DATABASE_URL environment variable if set)
-    db_uri = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:5433/henri")
+    db_uri = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:5432/henri")
     db = HenriTimescaleConnector(db_uri=db_uri)
 
     # Viscoelastic Creep optimizer (SGD with weight decay representing material resistance)

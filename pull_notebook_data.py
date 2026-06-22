@@ -16,139 +16,113 @@ except ImportError:
     HAS_PSYCOPG = False
 
 # Default configurations
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:5433/henri")
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:password@127.0.0.1:5432/henri")
 HRR_DIM = 4096
-NOTEBOOK_ID = "discrete-to-continuous-spatial"
+NOTEBOOK_ID = "henri-mathematical-foundation-"
 
 # RAG static data compiled from successful manual queries (for offline seeder fallback)
 STATIC_RAG_DATA = {
-    "spatial_logic": """Discrete topological and structural invariants are holographically bound to continuous wave physics by mathematically defining attractors (constructive resonant states) and repellers (destructive ghost states) in the continuous domain.
+    "spatial_logic": """Hyperdimensional Computing (HDC) & Holographic Reduced Representations (HRR) in the HENRI 7B Core:
+1. Algebraic Binding (Circular Convolution)
+Continuous variables are bound compositionally on the S^4095 hypersphere using circular convolution:
+z = x ⊛ y
+Using the Convolution Theorem, this is evaluated in the frequency domain as:
+X_freq = FFT(x), Y_freq = FFT(y)
+Z_freq = X_freq ⊙ Y_freq
+z = IFFT(Z_freq)
+z = z / ||z||_2 (Thermodynamic normalization to unit norm)
 
-1. Spatial Translation via the Fourier Shift Theorem
-Moving a discrete object rigidly across a grid without altering its shape (rigid translation) is bound to continuous wave physics using the Fourier Shift Theorem.
-- Continuous-Space Formulation: In the frequency domain, a rigid spatial translation (x0) maps strictly to a linear phase ramp:
-  Ψ(x - x0) -> F{Ψ_hat(k)} e^(-i k x0)
-  If the wave tries to translate outside the permitted grid domain, the phase ramp mathematically exceeds the boundary condition, the entanglement thread is severed, and the movement is vetoed.
-- Discrete 2D Formulation: Translating a 2D signal ℓ[n,m] by a displacement of (n0,m0) pixels yields a circular shift property in the Fourier domain:
-  F{ℓ[n - n0, m - m0]} = L[u,v] exp(-2π j (u n0 / N + v m0 / M))
-  Where N×M is the image size.
-- Translation Verification Metric: To mathematically estimate the exact displacement [n0, m0] on an N=M=128 grid, the real part of the ratio of the Discrete Fourier Transforms (DFTs) of the two translated images is evaluated as:
-  cos(-2π j (u n0 / N + v m0 / M))
+2. Algebraic Retrieval (Vector Involution)
+Retrieving concepts from a bound state using the involution key:
+involution_key = [key_0, key_-1, key_-2, ..., key_1]
+x_retrieved = z ⊛ involution_key ≈ x
 
-2. Symmetries via SU(N) Rotations
-ARC-AGI grid transformations heavily rely on D4 (dihedral) symmetries—the rotations and reflections of shapes.
-- Unitary Symmetry Attractor: A valid continuous spatial rotation maps to a specific unitary operator in the special unitary group SU(N). Under a Holographic Reduced Representation (HRR), this corresponds to a deterministic circular phase shift.
-- Destructive Repeller: If a non-isometric transformation occurs (such as a rotation that distorts the shape’s internal proportions), the phase evolution of the wave falls out of sync with the orthogonal generator seeds. This phase mismatch triggers destructive interference at the polarizing Sagnac loop, driving the transmission coefficient to zero: T -> 0.
+3. Olivera et al. (2026) Statistical Structural Regularizer R(X)
+To prevent amplitude collapse across deep layers, we enforce:
+R(X; τ_n, τ_v) = (sum_{i=1}^n ||x_i||^2 - τ_n)^2 + (mean(X))^2 + (Var(X) - τ_v)^2
+- L_latent: Enforced on the latent wave transpose z^T (n=1, τ_n=m, τ_v=m/d) to match m bundled HRR pairs.
+- L_value: Enforced on the denoised retrievals V_bar (n=m, τ_n=1, τ_v=1/d) to restore expected unit norm.
 
-3. Bounding Box Invariants as Spatial Bandpass Filters
-Strict bounding boxes that define an object's discrete footprint are translated into continuous wave physics as spatial bandpass filters.
-- The Boundary Tensor Constraint: The boundary tensor (hcft) acting on the solid-state device (SSD) is configured to enforce a strict frequency cutoff representing the dimensions of the invariant bounding box.
-- The Propagation Limit: If a wave vector attempts to "smear" the object outside its bounded topology, it generates high-frequency spatial components that exceed this cutoff. The physical material—such as a Barium Titanate (BaTiO3) crystal—simply refuses to propagate these invalid high frequencies, naturally annihilating the error.
+4. Information-Theoretic Capacity Bound
+The mutual information I between input x and the quantized, m-slot symbolic latent z_hat is bounded by:
+I(x; z_hat) <= min(m * (d / 2) * log(1 + 1/m), m * log(k))
 
-4. Affine Constraints (Scaling) via Wavelength Dilation
-Scaling a discrete shape to a different size is physically translated as dilating the continuous wave's length.
-- Total Phase Birefringence Bounds: Scaling limits are mathematically etched into the Dirichlet Boundary of the waveguide as total phase birefringence bounds:
-  B = BG + BS
-- The Repelling Mechanism: If the spatial logic attempts an invalid scale change, the dilated wavelength shifts completely out of the physical material's transmission window (such as the glass constitution), causing the continuous wave to be entirely repelled and vetoed.
+5. Generalized Holographic Reduced Representations (GHRR)
+GHRR extends traditional Fourier HRR to block-diagonal unitary matrices in the U(m) group:
+H = [A^(1), ..., A^(D)]^T in C^(D x m x m), where A^(j) in U(m)
+Non-Commutative Binding: H_1 * H_2 = [A^(j) * B^(j)]_{j=1}^D
+Representational Similarity δ: δ(H_1, H_2) = (1 / mD) * Re(tr(sum_{j=1}^D A^(j) (B^(j))^†))
+Holographic Attention: [σ(Q * K^†) * V]_j = σ(W_qj Λ_qj Λ_kj^† W_kj^†) W_vj * Λ_vj where σ(·) := softmax(Re[·]).""",
 
-5. Supporting Mathematical Foundations (DFT & IDFT)
-The discrete-to-continuous translation architecture is underpinned by the exact mathematical definitions of 2D wave equations and Fourier transformations:
-- 2D Discrete Sine and Cosine Waves: Spatial frequencies u and v define how fast the waves vary along the spatial dimensions n and m:
-  su,v[n,m] = A sin(2π (u n / N + v m / M))
-  cu,v[n,m] = A cos(2π (u n / N + v m / M))
-- 2D Discrete Fourier Transform (DFT): Converts a finite image ℓ[n,m] of size N×M into its spatial frequency representation L[u,v]:
-  L[u,v] = sum_{n=0}^{N-1} sum_{m=0}^{M-1} ℓ[n,m] exp(-2π j (u n / N + v m / M))
-- 2D Inverse Discrete Fourier Transform (IDFT): Reconstructs the original image by adding together the corresponding amplitudes of complex conjugate exponentials:
-  ℓ[n,m] = 1/(NM) sum_{u=0}^{N-1} sum_{v=0}^{M-1} L[u,v] exp(+2π j (u n / N + v m / M))""",
+    "thermodynamic_architecture": """Basal Cognition & Thermodynamic Optimization:
+1. Continuum Free Energy Loss F (Natural Induction)
+The continuous loss is defined by the sum of internal propagation gradients and a Dirichlet boundary condition:
+F(Ψ, W) = (1/2) * \int_{Ω} ||∇Ψ||^2 dV + (λ / 2) * \oint_{∂Ω} ||Ψ - A_ZoneC||^2 dS
+In the tensor graph, this is discretized as:
+- Internal Propagation Stress: internal_stress = (1 / 2BD) * sum_{b=1}^B sum_{d=1}^D ||Ψ_{b,d} - Ψ_{b,d-1}||_2^2
+- Boundary Resonance Penalty: resonance = sum(Ψ_final · A_ZoneC), boundary_penalty = λ * mean(1.0 - resonance)
+- Langevin Entropic Allowance: entropic_allowance = T * mean(||Ψ||^2)
+Total Loss L_topo = internal_stress + boundary_penalty - entropic_allowance
 
-    "thermodynamic_architecture": """Thermodynamic Software Architecture defines software engineering as a physical and mathematical struggle against computational entropy, where loosely typed systems naturally decay toward a state of maximum disorder (H_max). Unconstrained codebases suffer from spaghetti code, which is a physical manifestation of information-theoretic entropy.
-To enforce architectural predictability, the conditional entropy of a system state space S governed by an interface boundary specification I—written as H(S|I)—must approach zero:
-H(S|I) = - sum_i P(s_i | I) log_2 P(s_i | I) ≈ 0
+2. Langevin State Update (The Divergent Master)
+To bypass non-convex local energy basins:
+dΨ / dt = -∇_{Ψ} F(Ψ, W) + sqrt(2T) * η(t)
+where T is the active thermodynamic temperature and η(t) is standard Gaussian noise.
 
-I. The Abstract Syntax Tree (AST) Playbook
-Rather than treating source code as unstructured strings, high-performance systems analyze and generate code by manipulating its Abstract Syntax Tree (AST).
-1. The ESTree Architectural Philosophy:
-- Backwards Compatible: Non-additive modifications to existing constructs are rejected to maintain ecosystem stability.
-- Contextless: AST nodes must not retain any information about their parent (e.g., an expression node should not know if it is nested inside a loop).
-- Unique: Information must never be duplicated in the tree.
-- Extensible: New node types must be designed globally to allow future specification additions.
-2. Performance-Critical AST Manipulation (The ts-morph Playbook):
-- Work with Structures, Not Strings: Structures are simplified, lightweight representations of ASTs. Code-generating agents should build complete structures in memory before writing them to the compiler API, avoiding intermediate parsing cycles.
-- Batch Operations: Group multiple modifications together. Bundling them into a single array write reduces compilation time by 80%.
-- Analyze Then Manipulate: Always complete semantic analysis (using the compiler's type checker or symbol table) before performing any structural mutations.
-3. Zero-Dependency, Zero-Allocation AST Parsers:
-- Custom zero-dependency JSON and AST parsers designed specifically to process stream payloads from LLMs without memory leaks or execution drops.
+3. Second-Order Viscoelastic Creep Weight Update
+The orthogonal weight matrices (W) evolve according to viscoelastic material creep:
+∂W / ∂t = -μ * ∇_{W} F(Ψ, W)
+where μ represents the plasticity coefficient of the fluid experts.
 
-II. Strict Interface Design Patterns
-Unstructured data objects must never pass across internal system boundaries. Thermodynamic software architectures use strict, compiler-enforced interfaces to restrict the available degrees of freedom.
-1. TypeScript Discriminated Unions:
-- TypeScript AST interfaces prevent dynamic, sloppy states by using strict, immutable readonly properties and discriminated union types.
-2. Python Structural Typing via typing.Protocol:
-- Enforces compile-time duck-typing without runtime overhead using runtime checkable Protocols.
-3. Rust Compile-Time Traits:
-- Organizing code loops around generic traits rather than concrete types. Marker traits (like Send, Sync, and Future) eliminate runtime thread safety bugs at compile time.
+4. Continuous Phase-Space Routing (Fluid MoE)
+Geometric resonance (Cosine Similarity R_i) against the learned phase attractors a_i:
+R_i = <x, a_i> / (||x|| * ||a_i||)
+Superposition collapsed according to thermodynamic weight:
+w_i = exp(β * R_i) / sum_j exp(β * R_j)""",
 
-III. Schema Invariant Playbooks
-A schema is a mathematical boundary that defines the permissible states of a resource.
-1. AWS CloudFormation Resource Provider Schemas (RPDS):
-- No-Bypass Rule: Imperative programming constructs like if, then, else, and not are disallowed to ensure configuration determinism.
-- Strict-Containment Rule: Every schema must define additionalProperties: false.
-- Immutability Isolation Rule: Properties that can only be written during creation must be declared in createOnlyProperties.
-2. Stripe's OpenAPI Dynamic Resource Expansions:
-- x-expandableFields: Defines which object keys can be expanded at runtime.
-- x-expansionResources: Points to the schema type that will replace the ID string upon expansion.
-3. GraphQL Schema Introspection:
-- __typename: Acts as a runtime type discriminator.
-- __type and __schema: Introspection meta-fields reserved for structural discovery.
+    "logic_puzzles": """Wave-Geometric Duality & Boundary Conformal Field Theory (BCFT):
+1. Free Boson Action on a Strip
+S = (1 / 4π) * \int dσ dτ [(∂_σ X)^2 + (∂_τ X)^2]
+Boundary conditions:
+- Neumann: ∂_σ X = 0 at σ = 0, π
+- Dirichlet: δX = 0 at σ = 0, π
+Laurent modes gluing conditions:
+- Neumann: j_n - \bar{j}_{-n} = 0
+- Dirichlet: j_n + \bar{j}_{-n} = 0
+Closed sector gluing:
+- Neumann: (j_n + \bar{j}_{-n}) |B_N> = 0, solution |B_N> = (1 / \sqrt{2}) * exp(-sum_{k=1}^∞ (1/k) j_-k \bar{j}_-k) |0>
+- Dirichlet: (j_n - \bar{j}_{-n}) |B_D> = 0, solution |B_D> = exp(sum_{k=1}^∞ (1/k) j_-k \bar{j}_-k) |0>
 
-IV. The BMAD Method Playbook (Context Engineering)
-Decoupling development into clean, progressive phases to eliminate planning inconsistency and context loss.
-1. Strict Context Sharding: Requirements in prd.md (Phase 2), mapped to architectural constraints in architecture.md (Phase 3), and sharded into story-[slug].md tasks in Phase 4.
-2. Two-Spine UX Contract (DESIGN.md and EXPERIENCE.md): DESIGN.md holds visual tokens; EXPERIENCE.md holds interactive behaviors. Downstream code resolves values via path-based token notation (e.g. {path.to.token}).
+2. Conformal Ward Identities and Cardy Doubling Trick
+Boundary condition: T(z) = \bar{T}(\bar{z}) for z = \bar{z}.
+Doubling Trick: Maps the boundary problem on H^+ to a chiral problem on the full plane C:
+<T(ζ) ϕ_1(z_1)...ϕ_m(z_m) \bar{ϕ}_1(z_1^*)...\bar{ϕ}_m(z_m^*)>_C
 
-V. Human Heuristics & Swarm Vulnerabilities
-1. Target Audience vs. Supervision Paradox: The human-in-the-loop must act as a strict system architect, writing specifications and type boundaries, while delegating only low-level, self-contained method implementations to the agents.
-2. The Safeguard Gap in Developer Loops (The "Green-Build" Fallacy): Development agents must be programmatically forced to re-read files, analyze context, and run targeted tests, rather than working from high-level titles alone.
-3. Parallel Workspace Git Clashes: Use distinct git worktrees for every concurrent agent session to prevent filesystem conflicts.
-4. The Ablohian 3% Sparse Matrix Heurbation Heuristic: Limit code changes strictly to a highly localized 3% perturbation matrix (ΔP) over a 97% familiar codebase (P0):
-   P_remix = P0 + ΔP subject to 0.02 <= ||ΔP||_F / ||P0||_F <= 0.04""",
+3. Ishibashi States, Cardy States, and Cardy Conditions
+Conformal gluing: (L_n - \bar{L}_{-n}) |B> = 0. Ishibashi State: |h>> = sum_{N=0}^∞ sum_{j=1}^{d_h(N)} |h,N;j> ⊗ |h,N;j>.
+Cardy State: |a> = sum_h (S_0h / \sqrt{S_ah}) |h>> where S is the modular S-matrix.
+Cardy Conditions: n_{ab}^h = sum_{h'} (S_h^{h'} S_a^{h'} S_b^{h'} / S_0^{h'}) in Z_0^+.
 
-    "logic_puzzles": """ARC-AGI grid transformations require extracting abstract, discrete spatial laws from minimal examples. In continuous optoelectronic systems, these discrete rules map directly onto continuous physical wave states through exact group and Fourier operator mappings:
+4. Loop-Channel vs. Tree-Channel Equivalence
+Open Sector: Z_{ab}^C(t) = Tr_{H_B}(q^{L_0 - c/24}) with q = e^{-2πt}.
+Closed Sector: \tilde{Z}_{ab}^C(l) = <Θa| e^{-2πl(L_0 + \bar{L}_0 - 2c/24)} |b>.
+Equivalence establishes t = 1 / 2l and normalizes the Neumann state to N_N = 2^(1/4).
 
-1. Dihedral (D4) Symmetry Patterns (Rotations & Reflections)
-- Input-Output Mapping: Shape rotated by multiples of 90 degrees or reflected.
-- Wave Vector Transformation: Attractor maps to a unitary operator in SU(N), corresponding to circular phase shift in HRRs. Invalid states trigger phase mismatches, causing destructive interference (T -> 0) at the Sagnac loop.
+5. Holographic AdS/BCFT Duality
+Israel junction equation for ETW brane x(z): sqrt(1 + x'(z)^2) / x'(z) = R * σ.
+Static spatial trajectory: x(z) = x_b - (sqrt(1 - R^2 σ^2) / Rσ) * z.
+One-point function: <O(t,w,x_1)> = (2 |x_1 - x_b|)^-Δ * A^Δ.
+Boundary entropy: g = (c/12)*log(2) + (c/24)*log((1 - Rσ) / (1 + Rσ)).
 
-2. Bounding Box Invariants
-- Input-Output Mapping: Shape translated/manipulated while preserving its outer boundary.
-- Wave Vector Transformation: Boundary tensor (hcft) enforces a frequency cutoff as a spatial bandpass filter. Out-of-bounds leakage generates high frequencies which are destroyed by the physical medium.
+6. Disordered Nishimori Boundary Condition
+Boundary spin-orientation tensor: B_σ^θ = cos(π/4 - θ/2) δ_{σ,+1} + sin(π/4 - θ/2) δ_{σ,-1}.
+Renormalization group flow drives from unstable free boundary (θ=0) to stable Dirichlet boundary (θ=±π/2).
 
-3. Spatial Translation
-- Input-Output Mapping: Shape position shifts.
-- Wave Vector Transformation: Linear phase ramp governed by the Fourier Shift Theorem. Boundary-violating translations trigger phase ramps that violate Dirichlet boundary conditions, vetoing the token.
-
-4. Affine Constraints (Scaling)
-- Input-Output Mapping: Shape resized proportionally.
-- Wave Vector Transformation: Wavelength dilation. Invalid scaling causes the wavelength to drift outside the medium's transmission window, repelling the wave.
-
-5. WRIGHT Constraint-Based Spatial Layouts
-- Input: Layout canvas, design units.
-- Output: Non-overlapping, aligned layout.
-- Mathematical Constraints: Overlap prevention using Big-M formulation:
-  x_j + w_j <= x_k + M(1 - z_jk)
-  x_k + w_k <= x_j + M z_jk
-  Adjacency: |x_j - (x_k + w_k)| <= ϵ subject to z_jk = 1
-
-6. Conformal Welding & Shape Geodesics
-- Welding: Möbius transformations and power scaling z_3 = z^α mapping unit circle pre-vertices to boundary curves:
-  Ψ(θ) = 2 arctan(±|tan(θ/2)|^(1/2))
-- Geodesics: Path of diffeomorphisms in Diff(S1)/PSL2(R) shape space cosets. Minimizes Weil-Petersson energy E_{0,1}:
-  E_{0,1}(Ψ) = sum_{i,j,s} w_{i-j} f_{i,s}(Ψ) f_{j,s}(Ψ)
-
-7. Continuous Scalar-Transport Gravitational Analogs
-- Ray-like Bending: Wave packet traversal through a graded transport tensor medium. Evolves under:
-  ∂_tt Φ - ∇·(R(x)∇Φ) + Λ(x)∂_t Φ = 0
-- Anisotropy-Driven Drift: Transverse lateral drift via rotated transport tensor R(x) = Q^T diag(r1, r2) Q with R_xy != 0. Drift sign matches sign(R_xy)."""
+7. Field-Theoretic Derivation of the Constructal Law (Miguel, 2026)
+Dimensionless Sagnac-stressed objective tensor rate:
+K_*^o = Π_1 J_* ⊗ J_* - K_* + Π_2 ∇_*^2 K_* + Π_3 ξ_*
+where Π_1 is Morphogenic Number, Π_2 is Structural Diffusion Number.
+Lyapunov functional: F[K] = \int_{Ω} [-α * Tr(J ⊗ J · K) + (β/2) * Tr(K^2) + (γ/2) * |∇K|^2] d^n x."""
 }
 
 def complex_to_db(psi, hrr_dim: int = 4096) -> str:
