@@ -246,19 +246,13 @@ class ThermoActiveFluidBlock(nn.Module):
         # HRR Value Projection (Circular Convolution Involution)
         self.output_binding_geometry = nn.Parameter(torch.randn(1, dim))
         fast_orthogonal_init(self.output_binding_geometry)
+        
+        # Learnable beta_1 parameter initialized to preserve variance: sqrt(1 - 0.75^2) ≈ 0.661437
+        self.beta_1 = nn.Parameter(torch.tensor(0.661437))
 
     @property
     def alpha_1(self):
         return self.router.alpha_1
-        
-    @property
-    def beta_1(self):
-        alpha_1 = self.router.alpha_1
-        alpha_2 = self.router.alpha_2
-        L = self.router.depth
-        beta_2 = 1.0 - alpha_2 * (alpha_1 ** (2 * L))
-        beta_1 = beta_2 * (1.0 - alpha_1) / (1.0 - alpha_1 ** (2 * L) + 1e-8)
-        return beta_1
 
     @property
     def beta_2(self):
@@ -297,16 +291,19 @@ class ThermoActiveFluidBlock(nn.Module):
             
         batch_size, seq_len, dim = current_wave.shape
         
-        # 1. Step-size coupled contractive update and routing weights
+        # Establishing pre-norm (layer input pre-normalization)
+        z_pre = F.normalize(current_wave, p=2, dim=-1)
+        
+        # 1. Step-size coupled contractive update and routing weights (using z_pre)
         shaken_wave, routing_weights = self.router.couple_thermodynamics(
-            current_wave, previous_wave, zone_c_attractor, temperature
+            z_pre, previous_wave, zone_c_attractor, temperature
         )
         if shaken_wave.ndim == 2:
             shaken_wave = shaken_wave.unsqueeze(1)
         
-        # 2. Execute Functors (Phase Shifts)
+        # 2. Execute Functors (Phase Shifts) on z_pre
         # expert_outputs shape: (batch, seq_len, dim, num_fluid_states)
-        expert_outputs = torch.stack([expert(current_wave) for expert in self.experts], dim=-1)
+        expert_outputs = torch.stack([expert(z_pre) for expert in self.experts], dim=-1)
         
         # 3. Collapse into the Superposition Wave (Colimit)
         superposition_wave = torch.einsum('bsde,bse->bsd', expert_outputs, routing_weights)
@@ -326,12 +323,11 @@ class ThermoActiveFluidBlock(nn.Module):
         
         local_free_energy = internal_stress + boundary_penalty
         
-        # 5. Final HRR Binding (Residual Connection with Layer-wise scaling)
+        # 5. Final HRR Binding
         output_wave = self._hrr_bind(shaken_wave, self.output_binding_geometry)
         
-        # Theorem 1 Equation (2)
+        # Theorem 1 Equation (2) - strictly pre-norm and NO post-normalization
         final_wave = self.alpha_1 * current_wave + self.beta_1 * output_wave
-        final_wave = F.normalize(final_wave, p=2, dim=-1)
 
         if is_2d:
             final_wave = final_wave.squeeze(1)
@@ -371,6 +367,10 @@ class ProprietaryHENRICore(nn.Module):
         
         first_router = self.layers[0].router
         
+        # FPOPT: Damped Relaxation Map with Adaptive Step Size (eta)
+        eta_val = torch.ones(batch_size, seq_len, 1, device=x.device) if is_3d else torch.ones(batch_size, 1, device=x.device)
+        prev_r_i = None
+        
         for loop_idx in range(self.max_loops):
             z_in = z_current.clone()
             
@@ -407,15 +407,29 @@ class ProprietaryHENRICore(nn.Module):
             # Theorem 1 Equation (3) input injection executed BEFORE checking the relative residual condition
             alpha_2 = first_router.alpha_2
             beta_2 = self.layers[0].beta_2
-            z_next_loop = alpha_2 * z_out + beta_2 * x
+            z_proposed = alpha_2 * z_out + beta_2 * x
+            z_proposed = F.normalize(z_proposed, p=2, dim=-1)
+            
+            # Compute relative infinity norm residual of proposed update
+            diff_proposed = z_proposed - z_in
+            r_i = torch.norm(diff_proposed, p=float('inf'), dim=-1, keepdim=True) / (torch.norm(z_proposed, p=float('inf'), dim=-1, keepdim=True) + 1e-8)
+            
+            # Dynamic Step-Size Adjustment: if residual stalls, decrease eta_val geometrically
+            if prev_r_i is not None:
+                stalled = (r_i >= prev_r_i * 0.99) # Stall: less than 1% improvement
+                eta_val = torch.where(stalled, eta_val * 0.8, eta_val)
+            
+            # Apply Damped Relaxation Map
+            z_next_loop = eta_val * z_proposed + (1.0 - eta_val) * z_in
             z_next_loop = F.normalize(z_next_loop, p=2, dim=-1)
             
-            # Relative infinity norm residual
-            diff = z_next_loop - z_in
-            r_i = torch.norm(diff, p=float('inf'), dim=-1, keepdim=True) / (torch.norm(z_next_loop, p=float('inf'), dim=-1, keepdim=True) + 1e-8)
+            # Recompute residual for final convergence check
+            diff_final = z_next_loop - z_in
+            r_i_final = torch.norm(diff_final, p=float('inf'), dim=-1, keepdim=True) / (torch.norm(z_next_loop, p=float('inf'), dim=-1, keepdim=True) + 1e-8)
             
-            converged = (r_i < self.fp_threshold).all()
+            converged = (r_i_final < self.fp_threshold).all()
             z_current = z_next_loop
+            prev_r_i = r_i # track proposed residual for next iteration stall check
             
             if converged and not self.training:
                 break
