@@ -326,8 +326,12 @@ class ThermoActiveFluidBlock(nn.Module):
         # 5. Final HRR Binding
         output_wave = self._hrr_bind(shaken_wave, self.output_binding_geometry)
         
+        # Clamp beta_1 structurally to maintain contractive Banach envelope: beta_1 <= sqrt(1 - alpha_1^2)
+        max_beta = torch.sqrt((1.0 - self.alpha_1 ** 2).clamp(min=0.0))
+        beta_1_clamped = torch.minimum(self.beta_1, max_beta)
+        
         # Theorem 1 Equation (2) - strictly pre-norm and NO post-normalization
-        final_wave = self.alpha_1 * current_wave + self.beta_1 * output_wave
+        final_wave = self.alpha_1 * current_wave + beta_1_clamped * output_wave
 
         if is_2d:
             final_wave = final_wave.squeeze(1)

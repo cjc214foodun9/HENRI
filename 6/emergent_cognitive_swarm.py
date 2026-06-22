@@ -194,11 +194,11 @@ class EmergentCognitiveSwarm(nn.Module):
             
             checkpoint = None
             if os.path.exists(core_path):
-                print(f"[SWARM] Extracting binary mapping arrays from unified token asset: {core_path}")
+                print(f"[SWARM] Loading checkpoint to CPU to conserve GPU VRAM...")
                 try:
                     checkpoint = torch.load(core_path, map_location='cpu')
-                except Exception as e:
-                    print(f"[SWARM] Warning: Failed to load checkpoint: {e}")
+                except Exception as load_err:
+                    print(f"[SWARM] Error loading checkpoint: {load_err}")
                     checkpoint = None
 
             if checkpoint is not None and isinstance(checkpoint, dict) and "config" in checkpoint:
@@ -213,18 +213,32 @@ class EmergentCognitiveSwarm(nn.Module):
                 orig_default_dtype = torch.get_default_dtype()
                 torch.set_default_dtype(torch.bfloat16)
                 try:
-                    core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
+                    with torch.device(device):
+                        core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
                 finally:
                     torch.set_default_dtype(orig_default_dtype)
 
-                core_model.load_state_dict(checkpoint["model_state_dict"])
-                core_model = core_model.to(device=device).eval()
+                # Load state dict on CPU
+                print("[SWARM] Loading model state dict on CPU...")
+                core_model.load_state_dict(checkpoint["model_state_dict"], strict=False)
 
-                has_bias = (checkpoint.get("translation_head_state_dict") is not None and "bias" in checkpoint["translation_head_state_dict"])
-                translation_head = nn.Linear(hidden_dim, vocab_size, bias=has_bias).to(device=device, dtype=torch.bfloat16)
-                if checkpoint.get("translation_head_state_dict") is not None:
+                # Extract translation head state dict from checkpoint before deleting checkpoint
+                checkpoint_translation_head_state_dict = checkpoint.get("translation_head_state_dict")
+
+                # Free checkpoint memory immediately
+                del checkpoint
+                import gc; gc.collect(); torch.cuda.empty_cache()
+
+                # Move core_model to device after loading state dict and freeing checkpoint
+                print(f"[SWARM] Moving model to device: {device}...")
+                core_model = core_model.to(device=device).eval()
+                import gc; gc.collect(); torch.cuda.empty_cache()
+
+                has_bias = (checkpoint_translation_head_state_dict is not None and "bias" in checkpoint_translation_head_state_dict)
+                translation_head = nn.Linear(hidden_dim, vocab_size, bias=has_bias).to(dtype=torch.bfloat16)
+                if checkpoint_translation_head_state_dict is not None:
                     try:
-                        translation_head.load_state_dict(checkpoint["translation_head_state_dict"])
+                        translation_head.load_state_dict(checkpoint_translation_head_state_dict)
                         print("[SWARM SUCCESS] Transduction vocabulary layer fully aligned with continuous core weights.")
                     except Exception as lsd_err:
                         print(f"[SWARM WARNING] Failed to load translation head state dict: {lsd_err}. Reinitializing.")
@@ -239,10 +253,9 @@ class EmergentCognitiveSwarm(nn.Module):
                         torch.nn.init.orthogonal_(temp_th)
                         translation_head.weight.copy_(temp_th.to(device=device, dtype=torch.bfloat16))
 
-                # Free checkpoint memory immediately
-                del checkpoint
-                import gc; gc.collect()
-                translation_head = translation_head.eval()
+                translation_head = translation_head.to(device=device).eval()
+                del checkpoint_translation_head_state_dict
+                gc.collect(); torch.cuda.empty_cache()
             else:
                 state_dict = checkpoint
                 num_layers = 32
@@ -272,10 +285,23 @@ class EmergentCognitiveSwarm(nn.Module):
                         print(f"[SWARM] Warning: Failed to parse legacy state dict: {e}")
                         state_dict = None
 
-                core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
+                # Set default dtype to bfloat16 to instantiate directly in low-precision and prevent OOM
+                orig_default_dtype = torch.get_default_dtype()
+                torch.set_default_dtype(torch.bfloat16)
+                try:
+                    with torch.device(device):
+                        core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
+                finally:
+                    torch.set_default_dtype(orig_default_dtype)
+
+                # Move core_model to device before loading state dict to prevent CPU memory duplication
+                core_model = core_model.to(device=device).eval()
                 if state_dict is not None:
-                    core_model.load_state_dict(state_dict)
-                core_model = core_model.to(device=device, dtype=torch.bfloat16).eval()
+                    core_model.load_state_dict(state_dict, strict=False)
+                
+                # Free state_dict memory immediately
+                del state_dict
+                import gc; gc.collect(); torch.cuda.empty_cache()
 
                 vocab_size = getattr(self.router, 'vocab_size', 32000)
                 translation_head = nn.Linear(hidden_dim, vocab_size, bias=False)

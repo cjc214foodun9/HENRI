@@ -468,12 +468,16 @@ def execute_master_train_run():
                 total_loss.backward()
                 optimizer.step()
             
-            # Post-step Stiefel manifold projection in FP32
+            # Post-step Stiefel manifold projection and beta_1 clamping in FP32
             with torch.amp.autocast(device_type=device_type, enabled=False):
                 with torch.no_grad():
                     for module in model.modules():
                         if isinstance(module, UnitaryLinearLayer):
                             module.force_unitary_manifold()
+                        if module.__class__.__name__ == "ThermoActiveFluidBlock":
+                            # Clamp beta_1 structurally to maintain contractive Banach envelope: beta_1 <= sqrt(1 - alpha_1^2)
+                            max_beta = torch.sqrt((1.0 - module.alpha_1 ** 2).clamp(min=0.0))
+                            module.beta_1.data.clamp_(max=max_beta)
             
             new_temp = thermostat.step(free_energy.item())
             epoch_loss += total_loss.item()

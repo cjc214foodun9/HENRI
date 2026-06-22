@@ -22,7 +22,7 @@ class HRRInputLayer(nn.Module):
         z = IFFT( FFT(x) * FFT(y) )
         Complexity: O(N log N)
         """
-        from kernels import flash_circular_convolution
+        from .kernels import flash_circular_convolution
         z = flash_circular_convolution(x, y)
         
         # 4. Re-normalize to maintain energy conservation on L2 hypersphere

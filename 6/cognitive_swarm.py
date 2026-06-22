@@ -1252,13 +1252,13 @@ class HenriCognitiveSwarmOrchestrator:
         checkpoint = None
         
         if os.path.exists(core_path):
-            print(f"[INIT] Extracting binary mapping arrays from unified token asset: {core_path}")
+            print(f"[INIT] Loading checkpoint to CPU to conserve GPU VRAM...")
             try:
                 checkpoint = torch.load(core_path, map_location='cpu')
             except Exception as load_err:
                 print(f"[INIT] Error loading checkpoint: {load_err}")
                 checkpoint = None
-                
+                 
         if checkpoint is not None and isinstance(checkpoint, dict) and "config" in checkpoint:
             # Extract configuration coordinates directly from the saved footprint
             cfg = checkpoint["config"]
@@ -1272,22 +1272,36 @@ class HenriCognitiveSwarmOrchestrator:
             orig_default_dtype = torch.get_default_dtype()
             torch.set_default_dtype(torch.bfloat16)
             try:
-                core_model = ProprietaryHENRICore(
-                    dim=hidden_dim, 
-                    depth=num_layers, 
-                    num_fluid_states=num_base_experts
-                )
+                with torch.device(device):
+                    core_model = ProprietaryHENRICore(
+                        dim=hidden_dim, 
+                        depth=num_layers, 
+                        num_fluid_states=num_base_experts
+                    )
             finally:
                 torch.set_default_dtype(orig_default_dtype)
 
-            core_model.load_state_dict(checkpoint["model_state_dict"])
-            core_model = core_model.to(device=device).eval()
+            # Load the state dict on CPU
+            print("[INIT] Loading model state dict on CPU...")
+            core_model.load_state_dict(checkpoint["model_state_dict"], strict=False)
             
-            # Rehydrate the exact trained linear projection layer
-            translation_head = nn.Linear(hidden_dim, vocab_size, bias=False).to(device=device, dtype=torch.bfloat16)
-            if checkpoint.get("translation_head_state_dict") is not None:
+            # Extract translation head state dict from checkpoint before deleting checkpoint
+            checkpoint_translation_head_state_dict = checkpoint.get("translation_head_state_dict")
+            
+            # Free checkpoint memory immediately
+            del checkpoint
+            import gc; gc.collect(); torch.cuda.empty_cache()
+
+            # Move core_model to device after loading state dict and freeing checkpoint
+            print(f"[INIT] Moving model to device: {device}...")
+            core_model = core_model.to(device=device).eval()
+            import gc; gc.collect(); torch.cuda.empty_cache()
+            
+            # Rehydrate the exact trained linear projection layer on CPU first, then move to GPU
+            translation_head = nn.Linear(hidden_dim, vocab_size, bias=False).to(dtype=torch.bfloat16)
+            if checkpoint_translation_head_state_dict is not None:
                 try:
-                    translation_head.load_state_dict(checkpoint["translation_head_state_dict"])
+                    translation_head.load_state_dict(checkpoint_translation_head_state_dict)
                     print("[SUCCESS] Transduction vocabulary layer fully aligned with continuous core weights.")
                 except Exception as lsd_err:
                     print(f"[WARNING] Failed to load translation head state dict: {lsd_err}. Reinitializing.")
@@ -1296,11 +1310,9 @@ class HenriCognitiveSwarmOrchestrator:
                 print("[WARNING] No trained translation state found. Falling back to orthogonal init.")
                 nn.init.orthogonal_(translation_head.weight)
                 
-            # Free checkpoint memory immediately
-            del checkpoint
-            import gc; gc.collect()
-
-            translation_head = translation_head.to(device=device, dtype=torch.bfloat16).eval()
+            translation_head = translation_head.to(device=device).eval()
+            del checkpoint_translation_head_state_dict
+            gc.collect(); torch.cuda.empty_cache()
         else:
             # Fallback to legacy dictionary or default
             state_dict = checkpoint
@@ -1334,15 +1346,28 @@ class HenriCognitiveSwarmOrchestrator:
             else:
                 print(f"[ORCHESTRATOR] Warning: Pre-trained core weights checkpoint not found or corrupt at {core_path}. Initializing tabula rasa 8.59B model.")
                 
-            core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
+            # Set default dtype to bfloat16 to instantiate directly in low-precision and prevent OOM
+            orig_default_dtype = torch.get_default_dtype()
+            torch.set_default_dtype(torch.bfloat16)
+            try:
+                with torch.device(device):
+                    core_model = ProprietaryHENRICore(dim=hidden_dim, depth=num_layers, num_fluid_states=num_base_experts)
+            finally:
+                torch.set_default_dtype(orig_default_dtype)
+                
+            # Move core_model to device before loading state dict to prevent CPU memory duplication
+            core_model = core_model.to(device=device).eval()
             if state_dict is not None:
                 try:
-                    core_model.load_state_dict(state_dict)
+                    core_model.load_state_dict(state_dict, strict=False)
                     print("[ORCHESTRATOR] Successfully loaded pre-trained core weights from legacy state dict.")
                 except Exception as e:
                     print(f"[ORCHESTRATOR] Warning: Failed to load legacy core weights state dict: {e}")
-                    
-            core_model = core_model.to(device=device, dtype=torch.bfloat16).eval()
+            
+            # Free state_dict memory immediately
+            del state_dict
+            import gc; gc.collect(); torch.cuda.empty_cache()
+            
             vocab_size = getattr(self.l3_router, 'vocab_size', 32000)
             translation_head = nn.Linear(hidden_dim, vocab_size, bias=False)
             nn.init.orthogonal_(translation_head.weight)

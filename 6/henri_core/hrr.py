@@ -22,7 +22,7 @@ class HRRInputLayer(nn.Module):
         z = IFFT( FFT(x) * FFT(y) )
         Complexity: O(N log N)
         """
-        from kernels import flash_circular_convolution
+        from .kernels import flash_circular_convolution
         # Use fused Triton kernel if available, else high-performance PyTorch circular convolution fallback
         z = flash_circular_convolution(x, y)
         

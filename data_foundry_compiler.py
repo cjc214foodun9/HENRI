@@ -277,8 +277,8 @@ class MultiDomainCorpusCompiler:
 if __name__ == "__main__":
     # Test execution stub using raw sources
     physics_dir = "foundry_physics"
-    code_dir = "c:/Users/chan/Desktop/HENRI 7B SWARM/HENRI/6"
-    heuristics_dir = "c:/Users/chan/Desktop/HENRI 7B SWARM/HENRI/archive/raw_sources"
+    code_dir = "6"
+    heuristics_dir = "archive/raw_sources"
     
     os.makedirs(physics_dir, exist_ok=True)
     

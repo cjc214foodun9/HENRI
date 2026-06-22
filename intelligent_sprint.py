@@ -112,6 +112,8 @@ class DatabaseWriteBuffer:
         print("[DB WRITE BUFFER] Threaded database writer active.")
 
     def _worker_loop(self):
+        insert_count = 0
+        last_reindex_time = time.time()
         while True:
             item = self.write_queue.get()
             if item is None:
@@ -133,6 +135,7 @@ class DatabaseWriteBuffer:
                 with psycopg.connect(self.db_url, connect_timeout=5) as conn:
                     with conn.cursor() as cur:
                         conn.autocommit = True
+                        inserted_any = False
                         for q_type, q_args in batch:
                             if q_type == "lexicon":
                                 concept_hash, semantic_label, domain_tag, vector_str, raw_text = q_args
@@ -147,6 +150,20 @@ class DatabaseWriteBuffer:
                                     """,
                                     (concept_hash, semantic_label, domain_tag, vector_str, raw_text),
                                 )
+                                inserted_any = True
+                                
+                        if inserted_any:
+                            insert_count += len(batch)
+                            current_time = time.time()
+                            if insert_count >= 50 or (current_time - last_reindex_time) >= 300:
+                                print(f"[DB WRITE BUFFER] Reindexing table concurrently (Inserts: {insert_count}, Elapsed: {current_time - last_reindex_time:.1f}s)...")
+                                try:
+                                    cur.execute("REINDEX TABLE CONCURRENTLY hrr_canonical_lexicon;")
+                                    print("[DB WRITE BUFFER] Concurrent reindexing completed.")
+                                except Exception as idx_err:
+                                    print(f"[DB WRITE BUFFER] Warning: Concurrent reindexing failed: {idx_err}")
+                                insert_count = 0
+                                last_reindex_time = current_time
             except Exception as e:
                 print(f"[DB WRITE BUFFER] Warning: Failed to insert batch of size {len(batch)} to database: {e}")
                 
@@ -257,6 +274,25 @@ class SprintActiveExperimentationEngine(ActiveExperimentationEngine):
             revision_step += 1
             print(f"\n--- [ACE TURN {revision_step}] ---")
             
+            # Monitor learnable metrics of the base model if loaded
+            if hasattr(self.orchestrator, "_diffusion_core_model") and self.orchestrator._diffusion_core_model is not None:
+                core_model = self.orchestrator._diffusion_core_model
+                with torch.no_grad():
+                    betas = [layer.beta_1.item() for layer in core_model.layers]
+                    alphas = [layer.alpha_1.item() for layer in core_model.layers]
+                    print(f"[METRIC MONITOR] Base Model Parameters (Banach Envelope Check):")
+                    print(f"  - Mean beta_1: {sum(betas)/len(betas):.6f} (Min: {min(betas):.6f}, Max: {max(betas):.6f})")
+                    print(f"  - Mean alpha_1: {sum(alphas)/len(alphas):.6f} (Min: {min(alphas):.6f}, Max: {max(alphas):.6f})")
+                    # Banach check: beta_1 <= sqrt(1 - alpha_1^2)
+                    banach_violations = 0
+                    for b, a in zip(betas, alphas):
+                        if b > math.sqrt(max(0.0, 1.0 - a**2)) + 1e-5:
+                            banach_violations += 1
+                    if banach_violations > 0:
+                        print(f"  - WARNING: {banach_violations}/{len(betas)} layers violate Banach contractive envelope!")
+                    else:
+                        print(f"  - Banach Contractive Envelope status: SECURE (All layers within bounds)")
+
             elapsed = time.time() - start_time
             if elapsed >= time_limit:
                 print(f"[ENGINE] Time limit of {time_limit}s reached (Elapsed: {elapsed:.2f}s). Stopping revision loop.")
@@ -500,6 +536,9 @@ class SprintActiveExperimentationEngine(ActiveExperimentationEngine):
                     zone_c_attractors, 
                     zone_c_repellers
                 )
+                
+                # Monitor entropic fitness range
+                print(f"[METRIC MONITOR] Expert Entropic Fitness: Mean: {fitness_scores.mean().item():.4f} (Min: {fitness_scores.min().item():.4f}, Max: {fitness_scores.max().item():.4f})")
                 
                 self.entropic_engine.execute_survival_creep(
                     self.orchestrator.lora_managers, 
