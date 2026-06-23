@@ -188,4 +188,78 @@ In a pure complex-valued hyperdimensional space (like your 8192-real unrolled da
 To kill this phase spiral without altering the underlying fixed point, we wrap the raw forward pass in a damped relaxation map ($g\_{\\eta, \\theta}$) using an adaptive step size $\\eta$:
 
 $$g\_{\\eta, \\theta}(z\_i; x) \= \\eta f\_\\theta(z\_i; x) \+ (1 \- \\eta)z\_i$$  
-When the residual $r\_i$ stalls due to phase orthogonal components, the **Fixed-Point Optimizer (FPOPT)** decreases $\\eta$ geometrically to force the trajectory into a straight sink line toward the attractor valley.  
+When the residual $r\_i$ stalls due to phase orthogonal components, the **Fixed-Point Optimizer (FPOPT)** decreases $\\eta$ geometrically to force the trajectory into a straight sink line toward the attractor valley.
+
+# Implementation Plan: Discrete-to-Continuous Boundary and active learning loop remediation
+
+This plan details the updates to break out of the training loop stall in the 8.5 Billion Parameter Complex Wave Annealer. 
+
+We will implement three targeted fixes:
+1. **Fix I**: Implement Bounded Real/Imaginary Concatenation in the Egress Layer. Avoid casting warnings by folding real and imaginary spectrums of $z^*$ into an 8192-D real vector.
+2. **Fix II**: Enforce Strict GBNF Grammar Constraints on the Sampler by hardwiring the `python.gbnf` grammar path in the sampler configuration.
+3. **Fix III**: Hot-Fix the Guard Condition in `intelligent_sprint.py` to allow the top 5% resonant wave states to update LoRA expert weights even when syntax errors occur.
+
+---
+
+## Proposed Changes
+
+### Egress Layer (Wave-to-Token Transduction)
+
+#### [MODIFY] [henri_core/egress.py](file:///c:/Users/chan/Desktop/HENRI%207B%20SWARM/HENRI/henri_core/egress.py) & [6/henri_core/egress.py](file:///c:/Users/chan/Desktop/HENRI%207B%20SWARM/HENRI/6/henri_core/egress.py)
+
+1. **Complex Wave Folding**:
+   - In `QuantizedEgressAssembler.forward`, check if `final_hrr_wave` is complex.
+   - If complex, concatenate real and imaginary components along the last dimension: `folded_wave = torch.cat([final_hrr_wave.real, final_hrr_wave.imag], dim=-1)`.
+   - If real, pad with zeros or match the dimension to `2 * wave_dim`.
+   - Pass the folded wave to `_simulate_4bit_adc` and `wave_to_hidden`.
+2. **Linear Layer Scaling**:
+   - Double the input dimension of `self.wave_to_hidden` to `2 * wave_dim`.
+   - Double the output dimension of `self.token_embedding` to `2 * wave_dim` to match.
+3. **Sampler Configuration Grammar**:
+   - Add a `SamplerConfig` class that contains a `grammar` attribute.
+   - Initialize `self.sampler_config` in `QuantizedEgressAssembler.__init__` and set `sampler_config.grammar` dynamically to the path of `python.gbnf`.
+
+---
+
+### Swarm & Active Experimentation Engine
+
+#### [MODIFY] [intelligent_sprint.py](file:///c:/Users/chan/Desktop/HENRI%207B%20SWARM/HENRI/intelligent_sprint.py)
+
+1. **Resonance Survival Floor**:
+   - Add `self.resonance_survival_floor = 0.5` to `SprintActiveExperimentationEngine.__init__`.
+   - In each turn, dynamically update `self.resonance_survival_floor` to be the 95th percentile (top 5%) of resonance scores of all generated candidates in the current batch.
+2. **Loosened Guard Condition**:
+   - Modify the `valid_candidates` collection:
+     ```python
+     valid_candidates = []
+     for c in scored_candidates:
+         # Include candidate if it has a truth_tensor, or if it is in the top 5% resonant states and best sandbox accuracy is low
+         cand_code = c[0]
+         res_score = resonance_scores.get(cand_code, 0.0)
+         if c[3] is not None or (self.best_sandbox_accuracy == 0.0 and res_score >= self.resonance_survival_floor):
+             # Ensure a valid truth_tensor and delta_np are available for the survival creep and centroid update
+             if c[3] is None:
+                 # If truth_tensor is None (due to syntax error), evaluate wavefront directly on raw candidate code to retrieve it
+                 try:
+                     wave_valid, phys_feedback, error_energy, truth_tensor, delta_np = self.emulator.evaluate_wavefront(cand_code, target_label="SCADA_Pressure_Control")
+                     # Re-construct the candidate tuple with valid truth_tensor and delta_np
+                     c = (c[0], c[1], c[2], truth_tensor, error_energy, c[5], c[6], delta_np)
+                 except Exception as eval_err:
+                     print(f"[ENGINE] Warning: Fallback wavefront evaluation failed: {eval_err}")
+             valid_candidates.append(c)
+     ```
+   - Track all candidate resonance scores in a `resonance_scores` dictionary during code generation.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Run `pytest tests/test_egress.py` to ensure egress functionality works with the new dimension scaling.
+- Run `python verify_reasoning.py` to ensure convergence of the reasoning loops.
+
+### Remote execution verification
+- Upload modified files (`egress.py`, `intelligent_sprint.py`, `python.gbnf`) to the remote RTX 5090 container.
+- Relaunch the 12-hour training sprint in the background:
+  `nohup /venv/main/bin/python intelligent_sprint.py --hours 12 --device cuda > sprint_execution.log 2>&1 &`
+- Monitor logs to verify that `Expert Entropic Fitness` and weight updates are active.

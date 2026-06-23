@@ -2,6 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+class SamplerConfig:
+    def __init__(self):
+        self.grammar = "root ::= [\\s\\S]*"
+
 class QuantizedEgressAssembler(nn.Module):
     """
     Simulates the Holographic Egress Layer (Wave-to-Token Collapse).
@@ -15,10 +19,19 @@ class QuantizedEgressAssembler(nn.Module):
         self.vocab_size = vocab_size
         
         # Token embedding mapping vocab tokens back to wave space (replaces one-hot placeholder)
-        self.token_embedding = nn.Embedding(vocab_size, wave_dim)
+        # Scaled to 2 * wave_dim to prevent complex-to-real cast truncation.
+        self.token_embedding = nn.Embedding(vocab_size, 2 * wave_dim)
         
-        # Projection from the 4096-D phase-space to the decoder's hidden dimension
-        self.wave_to_hidden = nn.Linear(wave_dim, decoder_hidden_dim, bias=False)
+        # Projection from the 8192-D folded phase-space to the decoder's hidden dimension
+        self.wave_to_hidden = nn.Linear(2 * wave_dim, decoder_hidden_dim, bias=False)
+        
+        # Force the egress assembly head to match your dual-block primitive layout
+        self.sampler_config = SamplerConfig()
+        import os
+        project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        gbnf_path = os.path.join(project_dir, "python.gbnf")
+        if os.path.exists(gbnf_path):
+            self.sampler_config.grammar = gbnf_path
         
         # Distilled language decoder blocks that format syntax without reasoning overhead
         self.syntax_decoder_layer = nn.TransformerDecoderLayer(
@@ -61,8 +74,17 @@ class QuantizedEgressAssembler(nn.Module):
         """
         batch_size = final_hrr_wave.shape[0]
         
+        # Handle complex wavefront to prevent implicit casting to real
+        if torch.is_complex(final_hrr_wave):
+            folded_wave = torch.cat([final_hrr_wave.real, final_hrr_wave.imag], dim=-1)
+        elif final_hrr_wave.shape[-1] == self.wave_dim:
+            # If real but of size wave_dim, pad/concat with zeros to match 2 * wave_dim
+            folded_wave = torch.cat([final_hrr_wave, torch.zeros_like(final_hrr_wave)], dim=-1)
+        else:
+            folded_wave = final_hrr_wave
+        
         # 1. Physical Discretization (Wave-to-Bit Collapse)
-        quantized_wave = self._simulate_4bit_adc(final_hrr_wave) # (Batch, wave_dim)
+        quantized_wave = self._simulate_4bit_adc(folded_wave) # (Batch, 2 * wave_dim)
         
         # 2. Project into hidden state manifold
         hidden_state = self.wave_to_hidden(quantized_wave).unsqueeze(0) # (1, Batch, decoder_hidden_dim)

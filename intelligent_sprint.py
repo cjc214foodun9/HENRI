@@ -199,6 +199,7 @@ class SprintActiveExperimentationEngine(ActiveExperimentationEngine):
         self.write_buffer = write_buffer
         self.verifier = verifier
         self.db_url = db_url
+        self.resonance_survival_floor = 0.5
 
     def get_db_count_for_tag(self, domain_tag):
         try:
@@ -269,6 +270,84 @@ class SprintActiveExperimentationEngine(ActiveExperimentationEngine):
         self.superposition_wave = None
         self.best_sandbox_accuracy = 0.0
         
+        candidates_to_log = []
+        
+        def flush_task_logs(candidates):
+            if not candidates:
+                return
+            
+            # Sort candidates by:
+            # 1. partial_score (descending)
+            # 2. is_syntax_valid (descending)
+            # 3. is_generalized (descending)
+            # 4. res_score (descending)
+            candidates.sort(key=lambda x: (
+                x["partial_score"],
+                1 if x["is_syntax_valid"] else 0,
+                1 if x["is_generalized"] else 0,
+                x["res_score"]
+            ), reverse=True)
+            
+            # De-duplicate raw_texts to avoid logging identical codes multiple times
+            seen_codes = set()
+            unique_candidates = []
+            for cand in candidates:
+                if cand["code"] not in seen_codes:
+                    seen_codes.add(cand["code"])
+                    unique_candidates.append(cand)
+            
+            if not unique_candidates:
+                return
+                
+            # Maintain an ideal attractor to repeller ratio of 1:4 (20% attractors, 80% repellers).
+            # We log at least 1 attractor per task to track marginally/partially coherent vectors.
+            num_attractors = max(1, len(unique_candidates) // 5)
+            
+            logged_attractors = 0
+            for cand in unique_candidates:
+                c_wave = cand["wave"]
+                res_score = cand["res_score"]
+                partial_score = cand["partial_score"]
+                rev_step = cand["revision_step"]
+                code_hash = cand["code_hash"]
+                cand_type = cand["type"]
+                code = cand["code"]
+                
+                # Check if it should be logged as an attractor
+                is_attractor = (partial_score > 0.0) or (logged_attractors < num_attractors)
+                
+                # Force syntax-invalid ones to be repellers unless there are ONLY syntax-invalid ones
+                if cand_type == "syntax" and any(c["type"] != "syntax" for c in unique_candidates):
+                    is_attractor = False
+                    
+                if is_attractor:
+                    attractor_label = f"attractor_{task_id}_rev{rev_step}_{code_hash}"
+                    self.write_buffer.enqueue_vector(
+                        semantic_label=attractor_label,
+                        domain_tag=domain_tag,
+                        wave=c_wave,
+                        raw_text=code
+                    )
+                    print(f"[ENGINE] Queued attractor: {attractor_label} (Accuracy: {partial_score:.4f}, Resonance: {res_score:.4f}, Type: {cand_type})")
+                    logged_attractors += 1
+                else:
+                    if cand_type == "syntax":
+                        repeller_label = f"repeller_syntax_{task_id}_rev{rev_step}_{code_hash}"
+                    elif cand_type == "overfit":
+                        repeller_label = f"repeller_overfit_{task_id}_rev{rev_step}_{code_hash}"
+                    else:
+                        repeller_label = f"repeller_{task_id}_rev{rev_step}_{code_hash}"
+                        
+                    self.write_buffer.enqueue_vector(
+                        semantic_label=repeller_label,
+                        domain_tag=domain_tag,
+                        wave=c_wave,
+                        raw_text=code
+                    )
+                    # Register in Hopfield memory to form topological hills
+                    self.orchestrator.hopfield.register_repeller(c_wave)
+                    print(f"[ENGINE] Queued repeller: {repeller_label} (Resonance: {res_score:.4f}, Type: {cand_type})")
+
         revision_step = 0
         while True:
             revision_step += 1
@@ -407,25 +486,32 @@ class SprintActiveExperimentationEngine(ActiveExperimentationEngine):
             )
             
             scored_candidates = []
+            resonance_scores = {}
             for candidate_info in candidate_batch:
                 candidate, alpha_routing = candidate_info
                 is_syntax_valid, pure_code_or_err = self.inductor.verify_syntax(candidate)
                 if not is_syntax_valid:
-                    # Syntax error: Project and queue as repeller
+                    # Syntax error: Project and queue in local list
                     try:
                         c_wave = self.project_code_to_wave(candidate)
                         code_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, candidate))[:8]
-                        repeller_label = f"repeller_syntax_{task_id}_rev{revision_step}_{code_hash}"
-                        self.write_buffer.enqueue_vector(
-                            semantic_label=repeller_label,
-                            domain_tag=domain_tag,
-                            wave=c_wave,
-                            raw_text=candidate
-                        )
+                        res_dict = self.verifier.verify_hypothesis_wave(c_wave)
+                        res_score = res_dict["resonance_score"]
+                        resonance_scores[candidate] = res_score
+                        candidates_to_log.append({
+                            "type": "syntax",
+                            "wave": c_wave,
+                            "code": candidate,
+                            "res_score": res_score,
+                            "partial_score": 0.0,
+                            "revision_step": revision_step,
+                            "code_hash": code_hash,
+                            "is_syntax_valid": False,
+                            "is_generalized": False
+                        })
                         self.orchestrator.hopfield.register_repeller(c_wave)
-                        print(f"[ENGINE] Registered and queued syntax repeller: {repeller_label}")
                     except Exception as e:
-                        print(f"[ENGINE] Warning: Failed to queue syntax repeller: {e}")
+                        print(f"[ENGINE] Warning: Failed to process syntax repeller: {e}")
                     scored_candidates.append((candidate, None, 0.0, None, 999.0, pure_code_or_err, alpha_routing, None))
                     continue
                     
@@ -433,21 +519,28 @@ class SprintActiveExperimentationEngine(ActiveExperimentationEngine):
                 
                 is_generalized, guard_feedback = self.inductor.assert_generalization(pure_code)
                 if not is_generalized:
-                    # Overfitting lookup table: Project and queue as repeller
+                    # Overfitting lookup table: Project and queue in local list
                     try:
                         c_wave = self.project_code_to_wave(pure_code)
                         code_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, pure_code))[:8]
-                        repeller_label = f"repeller_overfit_{task_id}_rev{revision_step}_{code_hash}"
-                        self.write_buffer.enqueue_vector(
-                            semantic_label=repeller_label,
-                            domain_tag=domain_tag,
-                            wave=c_wave,
-                            raw_text=pure_code
-                        )
+                        res_dict = self.verifier.verify_hypothesis_wave(c_wave)
+                        res_score = res_dict["resonance_score"]
+                        resonance_scores[candidate] = res_score
+                        resonance_scores[pure_code] = res_score
+                        candidates_to_log.append({
+                            "type": "overfit",
+                            "wave": c_wave,
+                            "code": pure_code,
+                            "res_score": res_score,
+                            "partial_score": 0.0,
+                            "revision_step": revision_step,
+                            "code_hash": code_hash,
+                            "is_syntax_valid": True,
+                            "is_generalized": False
+                        })
                         self.orchestrator.hopfield.register_repeller(c_wave)
-                        print(f"[ENGINE] Registered and queued overfit repeller: {repeller_label}")
                     except Exception as e:
-                        print(f"[ENGINE] Warning: Failed to queue overfit repeller: {e}")
+                        print(f"[ENGINE] Warning: Failed to process overfit repeller: {e}")
                     scored_candidates.append((candidate, None, 0.0, None, 999.0, guard_feedback, alpha_routing, None))
                     continue
                 
@@ -461,33 +554,25 @@ class SprintActiveExperimentationEngine(ActiveExperimentationEngine):
                     c_wave = self.project_code_to_wave(pure_code)
                     res_dict = self.verifier.verify_hypothesis_wave(c_wave)
                     res_score = res_dict["resonance_score"]
-                    
+                    resonance_scores[candidate] = res_score
+                    resonance_scores[pure_code] = res_score
                     code_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, pure_code))[:8]
                     
-                    # SOLUTION 3: Deploy Asynchronous Threaded Write-Buffer for Attractors and Repellers
+                    candidates_to_log.append({
+                        "type": "standard",
+                        "wave": c_wave,
+                        "code": pure_code,
+                        "res_score": res_score,
+                        "partial_score": partial_score,
+                        "revision_step": revision_step,
+                        "code_hash": code_hash,
+                        "is_syntax_valid": True,
+                        "is_generalized": True
+                    })
                     if partial_score == 0.0:
-                        # SOLUTION 2: Configure the Repeller as a Negative Hopfield Energy Interaction Term
                         self.orchestrator.hopfield.register_repeller(c_wave)
-                        
-                        repeller_label = f"repeller_{task_id}_rev{revision_step}_{code_hash}"
-                        self.write_buffer.enqueue_vector(
-                            semantic_label=repeller_label,
-                            domain_tag=domain_tag,
-                            wave=c_wave,
-                            raw_text=pure_code
-                        )
-                        print(f"[ENGINE] Queued repeller: {repeller_label} (Resonance: {res_score:.4f})")
-                    else:
-                        attractor_label = f"attractor_{task_id}_rev{revision_step}_{code_hash}"
-                        self.write_buffer.enqueue_vector(
-                            semantic_label=attractor_label,
-                            domain_tag=domain_tag,
-                            wave=c_wave,
-                            raw_text=pure_code
-                        )
-                        print(f"[ENGINE] Queued attractor: {attractor_label} (Accuracy: {passed_cases}/{total_cases}, Resonance: {res_score:.4f})")
                 except Exception as proj_err:
-                    print(f"[ENGINE] Warning: Projecting and enqueuing candidate wave failed: {proj_err}")
+                    print(f"[ENGINE] Warning: Projecting and staging candidate wave failed: {proj_err}")
                 
                 if passed_cases == total_cases:
                     print(f"[ENGINE] Perfect inductive generalization achieved! Executing test case...")
@@ -502,6 +587,9 @@ class SprintActiveExperimentationEngine(ActiveExperimentationEngine):
                         # Queue boundary expert distilled axiom
                         self.distill_and_queue_expert_axiom(winner_idx, domain_tag)
                         
+                        # Flush all accumulated candidates to database
+                        flush_task_logs(candidates_to_log)
+                        
                         self.orchestrator.flush_lora_and_context_to_db(domain_tag=domain_tag)
                         return test_pred, revision_step, "SUCCESS"
                     else:
@@ -514,7 +602,47 @@ class SprintActiveExperimentationEngine(ActiveExperimentationEngine):
             if turn_best_score > self.best_sandbox_accuracy:
                 self.best_sandbox_accuracy = turn_best_score
 
-            valid_candidates = [c for c in scored_candidates if c[3] is not None]
+            # Calculate dynamic resonance floor (top 5% of this turn's candidates)
+            if resonance_scores:
+                all_res_values = list(resonance_scores.values())
+                self.resonance_survival_floor = float(np.percentile(all_res_values, 95))
+                print(f"[ENGINE] Dynamic 95th Percentile Resonance Survival Floor: {self.resonance_survival_floor:.4f}")
+            else:
+                self.resonance_survival_floor = 0.5
+
+            valid_candidates = []
+            for c in scored_candidates:
+                cand_code = c[0]
+                res_score = resonance_scores.get(cand_code, 0.0)
+                if c[1] is not None:
+                    res_score = max(res_score, resonance_scores.get(c[1], 0.0))
+                
+                if c[3] is not None or (self.best_sandbox_accuracy == 0.0 and res_score >= self.resonance_survival_floor):
+                    if c[3] is None:
+                        # Fallback: Evaluate wavefront directly on raw candidate code to retrieve truth_tensor and delta_np
+                        try:
+                            # Safely clean candidate code string from any non-UTF8/binary junk
+                            safe_cand_code = cand_code
+                            if isinstance(safe_cand_code, bytes):
+                                try:
+                                    safe_cand_code = safe_cand_code.decode('utf-8', errors='ignore')
+                                except Exception:
+                                    safe_cand_code = str(safe_cand_code)
+                            elif not isinstance(safe_cand_code, str):
+                                safe_cand_code = str(safe_cand_code)
+                            else:
+                                safe_cand_code = safe_cand_code.encode('utf-8', errors='ignore').decode('utf-8')
+                                
+                            wave_valid, phys_feedback, error_energy, truth_tensor, delta_np = self.emulator.evaluate_wavefront(
+                                safe_cand_code, target_label="SCADA_Pressure_Control"
+                            )
+                            c = (c[0], c[1], c[2], truth_tensor, error_energy, c[5], c[6], delta_np)
+                            print(f"[ENGINE] Fallback wavefront evaluation succeeded for candidate (Resonance: {res_score:.4f}, Error Energy: {error_energy:.4f})")
+                        except Exception as eval_err:
+                            print(f"[ENGINE] Warning: Fallback wavefront evaluation failed for candidate: {eval_err}")
+                            continue
+                    valid_candidates.append(c)
+
             if valid_candidates:
                 valid_candidates.sort(key=lambda x: x[4])
                 winner_candidate, winner_pure, winner_score, winner_truth_tensor, winner_error_energy, winner_feedback, winner_alpha_routing, winner_delta_np = valid_candidates[0]
@@ -586,6 +714,9 @@ class SprintActiveExperimentationEngine(ActiveExperimentationEngine):
             except Exception as e:
                 print(f"[ENGINE] Warning: Failed to distill expert axiom on failure: {e}")
                 
+        # Flush all accumulated candidates to database
+        flush_task_logs(candidates_to_log)
+        
         self.orchestrator.flush_lora_and_context_to_db(domain_tag=domain_tag)
         return None, revision_step, "FAILED"
 

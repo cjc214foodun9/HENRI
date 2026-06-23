@@ -367,12 +367,12 @@ class ProprietaryHENRICore(nn.Module):
         temp_val = temperature if self.training else 0.0
         
         z_current = x.clone()
-        total_system_energy = torch.zeros(batch_size, seq_len, device=x.device) if is_3d else torch.zeros(batch_size, device=x.device)
+        total_system_energy = torch.zeros(batch_size, seq_len, device=x.device, dtype=x.dtype) if is_3d else torch.zeros(batch_size, device=x.device, dtype=x.dtype)
         
         first_router = self.layers[0].router
         
         # FPOPT: Damped Relaxation Map with Adaptive Step Size (eta)
-        eta_val = torch.ones(batch_size, seq_len, 1, device=x.device) if is_3d else torch.ones(batch_size, 1, device=x.device)
+        eta_val = torch.ones(batch_size, seq_len, 1, device=x.device, dtype=x.dtype) if is_3d else torch.ones(batch_size, 1, device=x.device, dtype=x.dtype)
         prev_r_i = None
         
         for loop_idx in range(self.max_loops):
