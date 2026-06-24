@@ -414,13 +414,21 @@ class EmergentCognitiveSwarm(nn.Module):
                 )
                 token_ids = target_tokens[0].tolist()
                 
-                # Convert character arrays directly back to python text strings
-                decoded_chars = []
-                for token in token_ids:
-                    char_code = abs(int(token)) % 256
-                    if (char_code >= 32 and char_code <= 126) or char_code == 10 or char_code == 13:
-                        decoded_chars.append(chr(char_code))
-                generated_text = "".join(decoded_chars)
+                # Convert character arrays directly back to python text strings using the GPT-2 Tokenizer
+                try:
+                    from transformers import GPT2Tokenizer
+                    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    local_tok_dir = os.path.join(parent_dir, "gpt2_tokenizer_local")
+                    tokenizer = GPT2Tokenizer.from_pretrained(local_tok_dir) if os.path.exists(local_tok_dir) else GPT2Tokenizer.from_pretrained('gpt2')
+                    generated_text = tokenizer.decode(token_ids)
+                except Exception as tok_err:
+                    print(f"[SWARM WARNING] Tokenizer decode failed: {tok_err}. Falling back to character mapping.")
+                    decoded_chars = []
+                    for token in token_ids:
+                        char_code = abs(int(token)) % 256
+                        if (char_code >= 32 and char_code <= 126) or char_code == 10 or char_code == 13:
+                            decoded_chars.append(chr(char_code))
+                    generated_text = "".join(decoded_chars)
                 
                 # Before passing the materialized string to the sandbox, clamp the signature block
                 prefix_constraint = "def transform(input_grid):\n"
