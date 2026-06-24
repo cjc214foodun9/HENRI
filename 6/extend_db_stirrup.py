@@ -26,7 +26,8 @@ try:
                 (1, "WORKSPACE_WRITE_PATCH", "WORKSPACE_WRITE_PATCH", "Writes patch string to workspace file"),
                 (2, "RUN_PYTHON_REPL", "RUN_PYTHON_REPL", "Runs python script in isolated REPL sandbox"),
                 (3, "RUN_TEST_SUITE", "RUN_TEST_SUITE", "Executes isolated test suite runner"),
-                (4, "SCHEMA_AXIOM_LOOKUP", "SCHEMA_AXIOM_LOOKUP", "Queries permanent TimescaleDB hypertables for axioms")
+                (4, "SCHEMA_AXIOM_LOOKUP", "SCHEMA_AXIOM_LOOKUP", "Queries permanent TimescaleDB hypertables for axioms"),
+                (5, "SCIENTIFIC_DOMAIN_SOLVER", "SCIENTIFIC_DOMAIN_SOLVER", "Executes scientific domain-specific solvers")
             ]
             
             for motor_id, cmd, cmd_type, desc in default_commands:
