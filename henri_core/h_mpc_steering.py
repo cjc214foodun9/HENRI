@@ -212,13 +212,14 @@ class LatentSpeculativeDraftEngine(nn.Module):
         else:
             device = current_latent_wave.device
             dtype = torch.bfloat16
+        num_candidates = candidate_token_sequences.size(0)
         
         # Ensure z_running is real and has shape [num_candidates, dim]
         if torch.is_complex(current_latent_wave):
             current_latent_wave = torch.real(current_latent_wave)
-        z_running = current_latent_wave.view(1, -1).repeat(self.num_candidates, 1).to(device=device, dtype=dtype)
+        z_running = current_latent_wave.view(1, -1).repeat(num_candidates, 1).to(device=device, dtype=dtype)
         
-        cumulative_resonance = torch.zeros(self.num_candidates, device=device, dtype=torch.float32)
+        cumulative_resonance = torch.zeros(num_candidates, device=device, dtype=torch.float32)
         trajectory_tracks = []
 
         for step in range(self.horizon):
