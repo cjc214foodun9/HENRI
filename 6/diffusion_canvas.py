@@ -3,8 +3,103 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
+def _safe_core_forward(core_model, canvas, target_goal_wave, t):
+    t_val = float(t.mean().item()) if torch.is_tensor(t) else float(t)
+    import inspect
+    sig = inspect.signature(core_model.forward)
+    params = list(sig.parameters.keys())
+    num_params = len(params)
+    
+    if num_params >= 3:
+        if target_goal_wave is None:
+            target_goal_wave = torch.zeros(canvas.size(0), canvas.size(-1), device=canvas.device, dtype=canvas.dtype)
+        else:
+            target_goal_wave = target_goal_wave.to(device=canvas.device, dtype=canvas.dtype)
+        if target_goal_wave.ndim == 1:
+            target_goal_wave = target_goal_wave.unsqueeze(0)
+        output = core_model(canvas, target_goal_wave, t_val)
+        if isinstance(output, tuple):
+            return output[0]
+        return output
+    else:
+        t_tensor = torch.full((canvas.size(0), canvas.size(1), 1), t_val, device=canvas.device, dtype=canvas.dtype)
+        try:
+            output = core_model(canvas, t_tensor)
+        except Exception:
+            output = core_model(canvas, t_val)
+        if isinstance(output, tuple):
+            return output[0]
+        return output
+
+class ConsistencyCanvasCrystallizer(nn.Module):
+    """
+    Collapses the 25-step Euler-Maruyama loop into a 1- or 2-step single-shot pass
+    using Continuous-Time Consistency Distillation tailored for the HENRI core.
+    """
+    def __init__(self, dim=4096, sequence_length=512, epsilon=0.002, T=80.0):
+        super().__init__()
+        self.dim = dim
+        self.seq_len = sequence_length
+        self.epsilon = epsilon
+        self.T = T
+        
+        # Hard boundary scaling parameters matching the continuous phase manifolds
+        self.sigma_data = 0.5
+
+    def get_boundary_coefficients(self, t):
+        """
+        Computes c_skip and c_out to guarantee the identity mapping f_theta(x_0, 0) = x_0.
+        """
+        denom = (t - self.epsilon) ** 2 + self.sigma_data ** 2
+        c_skip = self.sigma_data ** 2 / denom
+        c_out = (t - self.epsilon) * self.sigma_data / torch.sqrt(denom)
+        return c_skip.unsqueeze(-1).unsqueeze(-1), c_out.unsqueeze(-1).unsqueeze(-1)
+
+    def single_shot_crystallize(self, core_model, noisy_canvas, target_goal_wave):
+        """
+        Executes a 1-step direct mapping from maximum entropy noise (t = T)
+        straight back to the low-entropy canonical AST attractor basin.
+        """
+        device = noisy_canvas.device
+        batch_size = noisy_canvas.size(0)
+        
+        t_max = torch.full((batch_size,), self.T, device=device, dtype=noisy_canvas.dtype)
+        c_skip, c_out = self.get_boundary_coefficients(t_max)
+        
+        with torch.no_grad():
+            score_network_output = _safe_core_forward(core_model, noisy_canvas, target_goal_wave, t_max)
+            crystallized_manifold = c_skip * noisy_canvas + c_out * score_network_output
+            
+        return crystallized_manifold
+
+    def two_step_chording_crystallize(self, core_model, noisy_canvas, target_goal_wave, t_mid=20.0):
+        """
+        Executes a 2-step chording pass. Step 1 leaps from T to t_mid, 
+        allowing the out-of-band Sagnac Veto to inject fine-grained localized adjustments
+        before Step 2 snaps the manifold directly to the final clean code tokens.
+        """
+        device = noisy_canvas.device
+        batch_size = noisy_canvas.size(0)
+        
+        # --- STEP 1: Leap from maximum noise (T) to intermediate horizon (t_mid) ---
+        t_max = torch.full((batch_size,), self.T, device=device, dtype=noisy_canvas.dtype)
+        c_skip_1, c_out_1 = self.get_boundary_coefficients(t_max)
+        
+        with torch.no_grad():
+            score_out_1 = _safe_core_forward(core_model, noisy_canvas, target_goal_wave, t_max)
+            x_mid = c_skip_1 * noisy_canvas + c_out_1 * score_out_1
+            
+            # --- STEP 2: Refinement leap from t_mid down to absolute zero ---
+            t_low = torch.full((batch_size,), t_mid, device=device, dtype=noisy_canvas.dtype)
+            c_skip_2, c_out_2 = self.get_boundary_coefficients(t_low)
+            
+            score_out_2 = _safe_core_forward(core_model, x_mid, target_goal_wave, t_low)
+            final_crystallized_manifold = c_skip_2 * x_mid + c_out_2 * score_out_2
+            
+        return final_crystallized_manifold
+
 class NonAutoregressiveCanvasSampler(nn.Module):
-    def __init__(self, core_model, translation_head, num_diffusion_steps=25):
+    def __init__(self, core_model, translation_head, num_diffusion_steps=2):
         """
         Executes parallel, score-guided relaxation to materialize text blocks all at once.
         
@@ -75,76 +170,34 @@ class NonAutoregressiveCanvasSampler(nn.Module):
         canvas = torch.randn(batch_size, sequence_length, self.hidden_dim, device=device, dtype=model_dtype)
         canvas = F.normalize(canvas, p=2, dim=-1) # Project cleanly onto the hypersphere
 
-        # Construct a discrete variance schedule (cosinespace time-stepping)
-        timesteps = torch.linspace(1.0, 0.001, self.N, device=device, dtype=model_dtype)
-        dt = 1.0 / self.N
-
-        print(f"[*] Initializing parallel thermodynamic relaxation phase over {self.N} steps...")
-
-        # Ensure swarm_trajectory matches the hidden_dim and model_dtype
-        swarm_trajectory = swarm_trajectory.to(device=device, dtype=model_dtype)
-        if swarm_trajectory.shape[-1] != self.hidden_dim:
-            if swarm_trajectory.shape[-1] < self.hidden_dim:
-                padded = torch.zeros(swarm_trajectory.shape[0], self.hidden_dim, device=device, dtype=model_dtype)
-                padded[:, :swarm_trajectory.shape[-1]] = swarm_trajectory
-                swarm_trajectory = padded
-            else:
-                swarm_trajectory = swarm_trajectory[:, :self.hidden_dim]
-
-        # Project PEARL trajectory track if provided
+        # Use 2-step chording consistency crystallizer
         if winning_jepa_track is not None and jl_guard is not None:
             W_aligned = jl_guard.W_JL.to(device=device, dtype=model_dtype)
-            # Lift [Horizon, core_dim] to [Horizon, global_dim (4096)] using W_JL. Since W_JL is [core_dim, global_dim],
-            # [Horizon, core_dim] @ [core_dim, global_dim] -> [Horizon, global_dim]
-            steering_field_4096 = torch.matmul(winning_jepa_track.to(device=device, dtype=model_dtype), W_aligned)
-            horizon_steps = steering_field_4096.size(0)
+            jepa_squeezed = winning_jepa_track.squeeze(0) if winning_jepa_track.ndim == 3 else winning_jepa_track
+            steering_field_4096 = torch.matmul(jepa_squeezed.to(dtype=model_dtype), W_aligned)
+            target_goal_wave = steering_field_4096[-1].unsqueeze(0)
         else:
-            steering_field_4096 = None
+            target_goal_wave = swarm_trajectory.to(device=device, dtype=model_dtype).view(1, self.hidden_dim)
 
-        # 2. Reverse-Diffusion Denoising Loop
-        for step_idx, t in enumerate(timesteps):
-            # Broadcast scalar time position to match matrix shape requirements
-            t_tensor = torch.full((batch_size, sequence_length, 1), t, device=device)
-            
-            # Determine active steering/attractor vector for this step
-            if steering_field_4096 is not None:
-                track_idx = min(int((step_idx / self.N) * horizon_steps), horizon_steps - 1)
-                active_steering_vector = steering_field_4096[track_idx]
-                
-                # Align active steering vector with core hidden_dim
-                if active_steering_vector.shape[-1] != self.hidden_dim:
-                    if active_steering_vector.shape[-1] < self.hidden_dim:
-                        padded = torch.zeros(self.hidden_dim, device=device, dtype=model_dtype)
-                        padded[:active_steering_vector.shape[-1]] = active_steering_vector
-                        active_steering_vector = padded
-                    else:
-                        active_steering_vector = active_steering_vector[:self.hidden_dim]
+        if target_goal_wave.shape[-1] != self.hidden_dim:
+            if target_goal_wave.shape[-1] < self.hidden_dim:
+                padded = torch.zeros(target_goal_wave.shape[0], self.hidden_dim, device=device, dtype=model_dtype)
+                padded[:, :target_goal_wave.shape[-1]] = target_goal_wave
+                target_goal_wave = padded
             else:
-                active_steering_vector = swarm_trajectory.squeeze(0)
+                target_goal_wave = target_goal_wave[:, :self.hidden_dim]
 
-            # Predict the random noise contamination vector field using the unitary layers
-            if hasattr(self.core, 'layers'):
-                # ProprietaryHENRICore signature: forward(x, zone_c_attractor, temperature)
-                predicted_noise, _ = self.core(canvas, active_steering_vector.unsqueeze(0), float(t))
-            else:
-                predicted_noise = self.core(canvas, t_tensor)
-
-            # 3. Inject Zone C Trajectory Guidance Field
-            trajectory_guidance = active_steering_vector.unsqueeze(0).unsqueeze(0).expand_as(canvas)
-            
-            # Synthesize the modified score function gradient
-            total_score_direction = predicted_noise + (guidance_scale * trajectory_guidance)
-
-            # 4. Execute the Euler-Maruyama Reverse Step
-            canvas = canvas - (total_score_direction * dt)
-            
-            # Enforce Langevin Thermal Restabilization
-            if t > 0.1:
-                langevin_noise = torch.randn_like(canvas) * (t * 0.001)
-                canvas += langevin_noise
-            
-            # Re-normalize immediately
-            canvas = F.normalize(canvas, p=2, dim=-1)
+        consistency_engine = ConsistencyCanvasCrystallizer(
+            dim=self.hidden_dim,
+            sequence_length=sequence_length
+        ).to(device=device, dtype=model_dtype)
+        
+        canvas = consistency_engine.two_step_chording_crystallize(
+            core_model=self.core,
+            noisy_canvas=canvas,
+            target_goal_wave=target_goal_wave
+        )
+        canvas = F.normalize(canvas, p=2, dim=-1)
 
         print("[+] Canvas relaxation complete. Executing out-of-band Holographic Dictionary Lookup...")
 

@@ -1226,7 +1226,7 @@ class HenriCognitiveSwarmOrchestrator:
                 "trajectory_vector": clean_wave
             }
 
-    def pipe_trajectory_to_diffusion_sampler(self, trajectory_vector, sequence_length=512, guidance_scale=4.5, num_diffusion_steps=25):
+    def pipe_trajectory_to_diffusion_sampler(self, trajectory_vector, sequence_length=512, guidance_scale=4.5, num_diffusion_steps=2):
         """
         Orchestration Handler: Pipes the final lowest-entropy trajectory vector (complex HRR wave)
         straight into the guidance head of the NonAutoregressiveCanvasSampler.

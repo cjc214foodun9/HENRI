@@ -395,7 +395,7 @@ class EmergentCognitiveSwarm(nn.Module):
                     self.orchestrator.canvas_sampler = NonAutoregressiveCanvasSampler(
                         core_model=core_model,
                         translation_head=translation_head,
-                        num_diffusion_steps=25
+                        num_diffusion_steps=2
                     )
                     self.orchestrator.canvas_sampler.guidance_scale = 4.5
                 self.orchestrator._canvas_sampler = self.orchestrator.canvas_sampler
