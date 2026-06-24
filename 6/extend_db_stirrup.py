@@ -22,18 +22,21 @@ try:
             
             # Seed default motor commands
             default_commands = [
-                (0, "API_CALL: actuator.stabilize_gripper_torque()", "API_CALL", "Stabilizes gripper torque to target boundary"),
-                (1, "EXEC_SHELL: cd /workspace/hardware && ./step_motor_vulkan --axis_x 12", "EXEC_SHELL", "Steps vulkan motor on X axis"),
-                (2, "API_CALL: scada.alleviate_fluid_valve_pressure()", "API_CALL", "Alleviates valve pressure via fluid mechanics"),
-                (3, "EXEC_SHELL: python firmware_reflash_probe.py --mode homeostatic", "EXEC_SHELL", "Reflashes probe firmware in homeostatic mode"),
-                (4, "API_CALL: robot_arm.engage_four_wave_mixer_conjugation()", "API_CALL", "Engages four wave mixer conjugation")
+                (0, "WORKSPACE_READ_FILE", "WORKSPACE_READ_FILE", "Reads file content from sandboxed workspace"),
+                (1, "WORKSPACE_WRITE_PATCH", "WORKSPACE_WRITE_PATCH", "Writes patch string to workspace file"),
+                (2, "RUN_PYTHON_REPL", "RUN_PYTHON_REPL", "Runs python script in isolated REPL sandbox"),
+                (3, "RUN_TEST_SUITE", "RUN_TEST_SUITE", "Executes isolated test suite runner"),
+                (4, "SCHEMA_AXIOM_LOOKUP", "SCHEMA_AXIOM_LOOKUP", "Queries permanent TimescaleDB hypertables for axioms")
             ]
             
             for motor_id, cmd, cmd_type, desc in default_commands:
                 cur.execute("""
                     INSERT INTO stirrup_motor_command_registry (motor_id, command_string, command_type, description)
                     VALUES (%s, %s, %s, %s)
-                    ON CONFLICT (motor_id) DO NOTHING;
+                    ON CONFLICT (motor_id) DO UPDATE SET
+                        command_string = EXCLUDED.command_string,
+                        command_type = EXCLUDED.command_type,
+                        description = EXCLUDED.description;
                 """, (motor_id, cmd, cmd_type, desc))
             print("[+] Seeded default commands in stirrup_motor_command_registry.")
             
