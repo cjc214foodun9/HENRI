@@ -63,6 +63,35 @@ if HAS_TRITON:
         # Stream the crystallized wave front directly out to the L3 cache line egress
         tl.store(out_ptr + pid_batch * stride_outb + offsets * stride_outd, out_wave, mask=mask)
 
+    @triton.jit
+    def _quantized_layer_forward_kernel(
+        x_ptr, w_ptr, out_ptr,
+        stride_xb, stride_xd,
+        stride_wb, stride_wd,
+        stride_outb, stride_outd,
+        DIM, BLOCK_DIM: tl.constexpr
+    ):
+        """
+        Fused Triton kernel executing quantized 8-bit phase transitions modulo 256.
+        Bypasses uncompiled floating-point overheads natively within local registers.
+        """
+        pid_batch = tl.program_id(0)
+        pid_dim = tl.program_id(1)
+        
+        offsets = pid_dim * BLOCK_DIM + tl.arange(0, BLOCK_DIM)
+        mask = offsets < DIM
+        
+        # Load packed 8-bit coordinates straight into fast register files
+        x_phase = tl.load(x_ptr + pid_batch * stride_xb + offsets * stride_xd, mask=mask).to(tl.int8)
+        w_phase = tl.load(w_ptr + offsets * stride_wd, mask=mask).to(tl.int8)
+        
+        # Run high-throughput parallel addition. 
+        # Modulo 256 wrapping occurs automatically at the bitwise hardware register layer.
+        out_phase = x_phase + w_phase
+        
+        # Direct egress stream out to the active cache line
+        tl.store(out_ptr + pid_batch * stride_outb + offsets * stride_outd, out_phase, mask=mask)
+
 def flash_circular_convolution(feature: torch.Tensor, coordinate: torch.Tensor) -> torch.Tensor:
     """
     Differentiable entry point driving the fused Triton VSA kernel or PyTorch fallback.
@@ -133,3 +162,41 @@ def fused_circular_conv(x: torch.Tensor, w: torch.Tensor) -> torch.Tensor:
     
     res = out.reshape(orig_shape)
     return F.normalize(res, p=2, dim=-1)
+
+def fused_quantized_layer_forward(x: torch.Tensor, w: torch.Tensor) -> torch.Tensor:
+    """
+    x: shape (batch_size, seq_len, dim) or (batch_size, dim) (uint8 phase angles)
+    w: shape (1, dim) or (dim,) (uint8 phase angles)
+    """
+    if not (x.is_cuda and w.is_cuda and HAS_TRITON):
+        # Fallback implementing modulo 256 wrapping addition
+        res = x + w
+        return res
+        
+    orig_shape = x.shape
+    if x.ndim == 3:
+        x_flat = x.reshape(-1, x.shape[-1])
+    else:
+        x_flat = x
+        
+    batch_size, dim = x_flat.shape
+    w_flat = w.flatten()
+    
+    out = torch.empty_like(x_flat)
+    
+    BLOCK_DIM = 4096
+    grid = (batch_size, 1)
+    
+    stride_xb, stride_xd = x_flat.stride(0), x_flat.stride(1)
+    stride_wb, stride_wd = 0, w_flat.stride(0)
+    stride_outb, stride_outd = out.stride(0), out.stride(1)
+    
+    _quantized_layer_forward_kernel[grid](
+        x_flat, w_flat, out,
+        stride_xb, stride_xd,
+        stride_wb, stride_wd,
+        stride_outb, stride_outd,
+        dim, BLOCK_DIM=BLOCK_DIM
+    )
+    
+    return out.reshape(orig_shape)
