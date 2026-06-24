@@ -146,20 +146,38 @@ class InfiniteConformalWaveGenerator:
         return wave
 
 # Transition Dynamics Network (F_theta) for Next-Latent prediction
-class TransitionDynamicsNetwork(nn.Module):
-    def __init__(self, dim=4096, hidden_dim=1024):
+class NextLatentTransitionNetwork(nn.Module):
+    """
+    Transition operator F_theta predicting next belief state on S^4095
+    given current latent wave state and next token embedding slice.
+    """
+    def __init__(self, dim=4096, hidden_dim=512):
         super().__init__()
         self.dim = dim
-        self.net = nn.Sequential(
+        self.transition_gate = nn.Sequential(
             nn.Linear(dim * 2, hidden_dim),
-            nn.LayerNorm(hidden_dim),
             nn.GELU(),
-            nn.Linear(hidden_dim, dim)
+            nn.Linear(hidden_dim, dim),
+            nn.LayerNorm(dim)
         )
-        
-    def forward(self, z_t, x_next):
-        cat_input = torch.cat([z_t, x_next], dim=-1)
-        return self.net(cat_input)
+
+    def forward(self, z_t, x_next_embed):
+        combined = torch.cat([z_t, x_next_embed], dim=-1)
+        z_next_pred = self.transition_gate(combined)
+        return F.normalize(z_next_pred, p=2, dim=-1)
+
+class HenriNextLatLoss(nn.Module):
+    """
+    Next-Latent prediction loss based on Cosine Distance and Smooth L1.
+    """
+    def __init__(self, dim=4096):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, z_next_actual, z_next_predicted):
+        # Cosine distance loss to align perfectly with wave-geometric phase spaces
+        cosine_similarity = F.cosine_similarity(z_next_actual, z_next_predicted, dim=-1).mean()
+        return 1.0 - cosine_similarity
 
 # Sketch Isotropic Gaussian Regularizer (SIGReg)
 class SIGRegRegularizer(nn.Module):
@@ -256,7 +274,7 @@ def parse_args():
     parser.add_argument("--seq-len", type=int, default=5, help="Sequence length for chronological context (default: 5)")
     parser.add_argument("--vocab-size", type=int, default=32000, help="Target vocabulary footprint (default: 32000)")
     parser.add_argument("--alpha-free", type=float, default=1.0, help="Free energy coefficient (default: 1.0)")
-    parser.add_argument("--beta-nextlat", type=float, default=1.0, help="NextLat coefficient (default: 1.0)")
+    parser.add_argument("--beta-nextlat", type=float, default=0.4, help="NextLat coefficient (default: 0.4)")
     parser.add_argument("--gamma-birkhoff", type=float, default=1.0, help="Birkhoff loss coefficient (default: 1.0)")
     parser.add_argument("--beta-sigreg", type=float, default=1.0, help="SIGReg loss coefficient (default: 1.0)")
     parser.add_argument("--birkhoff-beta", type=float, default=0.05, help="Birkhoff entropy scaling coefficient (default: 0.05)")
@@ -295,10 +313,11 @@ def execute_master_train_run():
     torch.set_default_dtype(init_dtype)
     
     model = ProprietaryHENRICore(dim=args.dim, depth=args.depth, num_fluid_states=args.experts)
-    transition_mlp = TransitionDynamicsNetwork(dim=args.dim)
+    transition_mlp = NextLatentTransitionNetwork(dim=args.dim)
     translation_head = nn.Linear(args.dim, args.vocab_size)
     birkhoff_loss_fn = BirkhoffTopologicalLoss(translation_head, alpha=1.0, beta=args.birkhoff_beta, eta=args.birkhoff_eta)
     sigreg_reg = SIGRegRegularizer(dim=args.dim)
+    nextlat_loss_fn = HenriNextLatLoss(dim=args.dim).to(device)
     
     # Restore default dtype to float32
     torch.set_default_dtype(torch.float32)
@@ -448,7 +467,7 @@ def execute_master_train_run():
                 z_next_flat = z_next.reshape(-1, Dim)
                 
                 pred_z_next = transition_mlp(z_t_flat, x_next_flat)
-                loss_nextlat = F.mse_loss(pred_z_next, z_next_flat)
+                loss_nextlat = nextlat_loss_fn(z_next_flat, pred_z_next)
                 
                 # 3. Birkhoff Topological Loss (Complexity C + Order O + MSE Alignment) using dynamic Gumbel temp
                 loss_birkhoff, birkhoff_metrics = birkhoff_loss_fn(final_output, boundary_vectors, final_output, gumbel_temp=gumbel_temp)

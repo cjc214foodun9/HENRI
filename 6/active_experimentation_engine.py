@@ -311,6 +311,10 @@ class ActiveExperimentationEngine:
                 
         playbook_dict = self.orchestrator.initialize_empty_playbook()
         
+        # Pre-fetch mastered sub-axiom visual primitives from TimescaleDB
+        if hasattr(self.orchestrator, "prefetch_mastered_sub_axioms"):
+            self.orchestrator.prefetch_mastered_sub_axioms()
+        
         from run_arc_benchmark import build_arc_prompt
         task_prompt, _ = build_arc_prompt(task_dict)
         
@@ -506,6 +510,25 @@ class ActiveExperimentationEngine:
                 # 5. Measure sandbox execution accuracy against training set
                 passed_cases, total_cases, execution_feedback = self.evaluate_candidate(pure_code, task_dict["train"])
                 partial_score = passed_cases / total_cases
+                
+                # Mid-Flight Sub-Axiom Harvesting Loop (HARVEST_THRESHOLD = 0.5)
+                if partial_score >= 0.5:
+                    try:
+                        code_lower = pure_code.lower()
+                        if "rotate" in code_lower or "rotation" in code_lower:
+                            label = "rotation_primitive"
+                        elif "border" in code_lower or "boundary" in code_lower or "contain" in code_lower:
+                            label = "border_containment_primitive"
+                        elif "color" in code_lower or "palette" in code_lower or "scale" in code_lower:
+                            label = "color_scaling_primitive"
+                        else:
+                            label = "general_spatial_primitive"
+                        
+                        c_wave = self.project_code_to_wave(candidate)
+                        if hasattr(self.orchestrator, "harvest_and_persist_sub_axiom"):
+                            self.orchestrator.harvest_and_persist_sub_axiom(label, pure_code, c_wave)
+                    except Exception as harvest_err:
+                        print(f"[HARVEST ERROR] Failed to harvest sub-axiom: {harvest_err}")
                 
                 # REINFORCE Update: Compute reward signal relative to the best accuracy seen so far
                 if partial_score > self.best_sandbox_accuracy:

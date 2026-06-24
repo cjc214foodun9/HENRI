@@ -116,4 +116,8 @@ class HopfieldSemanticCleanup:
         best_label = labels[best_idx]
         confidence = similarities[best_idx].item()
         
+        # Contrastive Egress Snapping: cleanly snap continuous phase angles onto the closest canonical vector
+        canonical_vector = v_matrix[best_idx]
+        s = torch.polar(torch.ones_like(s.real), torch.angle(canonical_vector))
+        
         return s, best_label, confidence

@@ -161,8 +161,89 @@ class NonAutoregressiveCanvasSampler(nn.Module):
         else:  # CONVERSATION  
             energy_all = energy_all + self.open_conversation_mask.view(1, vocab_size)
 
-        winning_tokens = torch.argmin(energy_all, dim=-1)  
-        return winning_tokens.unsqueeze(0)
+        # Token-by-token crystallization with FSM grammar masking
+        winning_tokens = []
+        open_quote = None  # None, or character code
+        escape_active = False
+        brace_stack = []  # List of open brace char codes
+        
+        # Mapping close braces to open braces
+        brace_map = {41: 40, 93: 91, 125: 123}
+        open_braces = {40, 91, 123}
+        close_braces = {41, 93, 125}
+        
+        # Precompute constants to avoid device transfers in the loop
+        valid_chars_base = torch.ones(256, dtype=torch.bool, device=device)
+        for c in range(256):
+            if not (32 <= c <= 126 or c in (9, 10, 13)):
+                valid_chars_base[c] = False
+                
+        for i in range(sequence_length):
+            valid_chars = valid_chars_base.clone()
+            
+            # Apply FSM constraints to the 256 possible ASCII byte values
+            if open_quote is not None:
+                # Inside string literal: disallow newlines unless escaped
+                if not escape_active:
+                    valid_chars[10] = False
+                    valid_chars[13] = False
+                
+                # If we are at the last token, we must force-close the open quote
+                remaining_tokens = sequence_length - 1 - i
+                if remaining_tokens == 0:
+                    valid_chars[:] = False
+                    valid_chars[open_quote] = True
+            else:
+                # Outside a string literal
+                # Cannot close a brace that doesn't match the top of the stack
+                for close_c, open_c in brace_map.items():
+                    if not brace_stack or brace_stack[-1] != open_c:
+                        valid_chars[close_c] = False
+                
+                # If running out of tokens, force close the open braces in order
+                remaining_tokens = sequence_length - 1 - i
+                if remaining_tokens < len(brace_stack):
+                    target_close = None
+                    for close_c, open_c in brace_map.items():
+                        if open_c == brace_stack[-1]:
+                            target_close = close_c
+                            break
+                    if target_close is not None:
+                        valid_chars[:] = False
+                        valid_chars[target_close] = True
+
+            # Project 256-D mask to vocab_size via repeating/indexing
+            repeats = (vocab_size + 255) // 256
+            mask_vocab = valid_chars.repeat(repeats)[:vocab_size]
+            
+            # Retrieve energy at position i
+            energy_i = energy_all[i].clone()
+            energy_i[~mask_vocab] = float('inf')
+            
+            selected_token = torch.argmin(energy_i).item()
+            winning_tokens.append(selected_token)
+            
+            # Update FSM state based on the chosen character
+            chosen_char = selected_token % 256
+            if open_quote is not None:
+                if escape_active:
+                    escape_active = False
+                else:
+                    if chosen_char == 92:  # Backslash '\'
+                        escape_active = True
+                    elif chosen_char == open_quote:
+                        open_quote = None  # Closed
+            else:
+                if chosen_char in (34, 39):  # " or '
+                    open_quote = chosen_char
+                elif chosen_char in open_braces:
+                    brace_stack.append(chosen_char)
+                elif chosen_char in close_braces:
+                    if brace_stack and brace_stack[-1] == brace_map[chosen_char]:
+                        brace_stack.pop()
+                        
+        winning_tokens_tensor = torch.tensor(winning_tokens, dtype=torch.long, device=device)
+        return winning_tokens_tensor.unsqueeze(0)
 
 class BirkhoffTopologicalLoss(nn.Module):    
     def __init__(self, translation_head: nn.Module, alpha: float = 1.0, beta: float = 0.05, eta: float = 0.1):    

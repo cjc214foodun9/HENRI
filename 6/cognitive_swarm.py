@@ -1610,10 +1610,14 @@ class HenriCognitiveSwarmOrchestrator:
                     mags = torch.clamp(mags, min=1e-8)
                     self.hopfield.register_concept(semantic_label, psi / mags)
                     
-                # Re-initialize the LoRA manager's weights to clear the memory footprint and start fresh
-                lora_manager.lora_A = torch.randn(self.gemma_dim, lora_manager.rank) * 0.02
-                lora_manager.lora_B = torch.zeros(lora_manager.rank, self.gemma_dim)
-                lora_manager.save_weights()
+                # Re-initialize the volatile LoRA manager's weights to clear the memory footprint and start fresh
+                if i < self.num_streams - 2:
+                    lora_manager.lora_A = torch.randn(self.gemma_dim, lora_manager.rank) * 0.02
+                    lora_manager.lora_B = torch.zeros(lora_manager.rank, self.gemma_dim)
+                    lora_manager.save_weights()
+                    print(f"  - Volatile LoRA Stream {i} reset to base geometry.")
+                else:
+                    print(f"  - Persistent Sub-Axiom Stream {i} preserved.")
                 
                 # Explicitly delete references
                 del probe
@@ -1628,6 +1632,109 @@ class HenriCognitiveSwarmOrchestrator:
         # 3. Wipe the llama.cpp context windows (Hard Manifold Reset)
         self.flush_cognitive_manifold()
         print("[SYSTEM] LoRA adapters consolidated to Zone C database and contexts fully flushed.")
+
+    def harvest_and_persist_sub_axiom(self, label: str, code: str, wave: torch.Tensor):
+        """
+        Persists a harvested sub-axiom wave fragment inside the TimescaleDB hypertable.
+        Also registers it in the local Hopfield Network vocabulary so it's locked in memory.
+        """
+        import uuid
+        import psycopg
+        import os
+        import sys
+        
+        db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:5433/henri")
+        
+        # 1. Register in local Hopfield Network (persist in RAM)
+        mags = torch.abs(wave)
+        mags = torch.clamp(mags, min=1e-8)
+        unit_wave = wave / mags
+        self.hopfield.register_concept(label, unit_wave.detach().cpu())
+        print(f"[HARVEST] Sub-axiom '{label}' registered in local Hopfield Network.")
+        
+        # 2. Persist in TimescaleDB
+        wave_np = wave.detach().cpu().numpy()
+        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if root_dir not in sys.path:
+            sys.path.append(root_dir)
+        from henri_contract import complex_to_db, DIMS
+        
+        vector_str = complex_to_db(wave_np, DIMS.hrr_dim)
+        concept_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, label + "_" + str(hash(code))))
+        
+        try:
+            with psycopg.connect(db_url, connect_timeout=3) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO hrr_canonical_lexicon (concept_hash, semantic_label, domain_tag, hrr_wavefront, raw_text)
+                        VALUES (%s, %s, %s, %s::vector, %s)
+                        ON CONFLICT (concept_hash) DO NOTHING;
+                        """,
+                        (concept_hash, label, "sub-axiom", vector_str, code),
+                    )
+            print(f"[HARVEST] Sub-axiom '{label}' successfully persisted in TimescaleDB.")
+        except Exception as e:
+            print(f"[HARVEST WARNING] Failed to persist sub-axiom in DB: {e}")
+
+    def prefetch_mastered_sub_axioms(self):
+        """
+        Instantly pre-fetches mastered sub-axiom visual primitives from TimescaleDB
+        and loads them into the Hopfield Network vocabulary.
+        Also loads dynamic sub-axiom weights into persistent expert streams (14 and 15).
+        """
+        import psycopg
+        import os
+        import sys
+        
+        db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:5433/henri")
+        print("[PREFETCH] Pre-fetching mastered sub-axiom primitives from database...")
+        
+        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if root_dir not in sys.path:
+            sys.path.append(root_dir)
+        from henri_contract import db_to_complex, DIMS
+        
+        try:
+            with psycopg.connect(db_url, connect_timeout=3) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT semantic_label, hrr_wavefront, raw_text
+                        FROM hrr_canonical_lexicon
+                        WHERE domain_tag = 'sub-axiom';
+                        """
+                    )
+                    rows = cur.fetchall()
+                    prefetched_count = 0
+                    for row in rows:
+                        label, vec_str, code = row[0], row[1], row[2]
+                        wave_complex = db_to_complex(vec_str, DIMS.hrr_dim)
+                        wave_tensor = torch.tensor(wave_complex, dtype=torch.complex64)
+                        
+                        mags = torch.abs(wave_tensor)
+                        mags = torch.clamp(mags, min=1e-8)
+                        self.hopfield.register_concept(label, wave_tensor / mags)
+                        
+                        # Load dynamic sub-axiom weights into streams 14 and 15
+                        stream_idx = self.num_streams - 2 + (prefetched_count % 2)
+                        with torch.no_grad():
+                            # Rehydrate weights for the persistent expert streams
+                            self.lora_managers[stream_idx].lora_A.normal_(0.0, 0.02)
+                            self.lora_managers[stream_idx].lora_B.zero_()
+                            # Inject persistent sub-axiom representation into the weights matrix
+                            wave_real = torch.real(wave_tensor).to(self.lora_managers[stream_idx].lora_A.device).to(self.lora_managers[stream_idx].lora_A.dtype)
+                            self.lora_managers[stream_idx].lora_A[:, 0] = wave_real * 0.1
+                            self.lora_managers[stream_idx].save_weights()
+                            
+                        prefetched_count += 1
+                        
+                    if prefetched_count > 0:
+                        print(f"[PREFETCH SUCCESS] Successfully loaded {prefetched_count} sub-axiom primitives into Hopfield Network and persistent expert streams.")
+                    else:
+                        print("[PREFETCH] No persistent sub-axioms found in database registry.")
+        except Exception as e:
+            print(f"[PREFETCH WARNING] Failed to pre-fetch sub-axioms from DB: {e}")
 
     def save_wave_to_db(self, name: str, wave: torch.Tensor, domain_tag: str = "wosx_pde_axiom"):
         import uuid
