@@ -51,7 +51,7 @@ class NaturalInductionLoss(nn.Module):
 
         # 1. Internal Propagation Stress (Gradient of the wave across network depth)
         wave_gradients = wave_trajectory[:, 1:, :] - wave_trajectory[:, :-1, :]
-        internal_stress = 0.5 * torch.sum(torch.norm(wave_gradients, p=2, dim=-1)**2) / (batch_size * depth)
+        internal_stress = 0.5 * torch.sum(wave_gradients**2) / (batch_size * depth)
 
         # 2. Boundary Resonance Penalty (Dirichlet Constraint at the output)
         final_wave_state = wave_trajectory[:, -1, :]

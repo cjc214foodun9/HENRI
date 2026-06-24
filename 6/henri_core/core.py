@@ -166,9 +166,9 @@ class ContinuousPhaseRouter(nn.Module):
         
         # Tier 1: Adaptive Operator-Norm Lipschitz step-size
         delta_z = z_t - z_prev
-        norm_delta_z = torch.norm(delta_z, p=2, dim=-1, keepdim=True).clamp(min=1e-7)
+        norm_delta_z = torch.sqrt(torch.sum(delta_z**2, dim=-1, keepdim=True) + 1e-12)
         delta_grad = grad_E - grad_E_prev
-        norm_delta_grad = torch.norm(delta_grad, p=2, dim=-1, keepdim=True)
+        norm_delta_grad = torch.sqrt(torch.sum(delta_grad**2, dim=-1, keepdim=True) + 1e-12)
         L_hat = norm_delta_grad / norm_delta_z
         
         L_bound = self.gamma_B * w_B_val * self.L_B_base + self.gamma_C * w_C_val * self.L_C_base
@@ -306,7 +306,7 @@ class ThermoActiveFluidBlock(nn.Module):
 
         # 4. Local Thermodynamic Stress (Natural Induction Loss)
         # Gradient of the wave across depth (between sequential layers)
-        internal_stress = 0.5 * torch.norm(shaken_wave - previous_wave, p=2, dim=-1)**2
+        internal_stress = 0.5 * torch.sum((shaken_wave - previous_wave)**2, dim=-1)
         
         # Dirichlet boundary resonance penalty (cosine similarity with target attractor)
         # Target attractor shape is (batch, dim), need to expand to match shaken_wave

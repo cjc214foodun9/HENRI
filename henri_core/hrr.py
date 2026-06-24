@@ -23,6 +23,7 @@ class HRRInputLayer(nn.Module):
         Complexity: O(N log N)
         """
         from .kernels import flash_circular_convolution
+        # Use fused Triton kernel if available, else high-performance PyTorch circular convolution fallback
         z = flash_circular_convolution(x, y)
         
         # 4. Re-normalize to maintain energy conservation on L2 hypersphere
@@ -102,3 +103,67 @@ class PackedPhaseVSAEngine(nn.Module):
           
         unbound_phase = torch.remainder(joint_u16 - key_u16 + 256, 256).to(torch.uint8)  
         return unbound_phase
+
+class PackedInt8HolographicEngine(nn.Module):
+    """
+    Implements a hardware-conscious VSA using packed INT8 phase configurations modulo 256.
+    Eliminates the complex casting leak and activates dense integer execution pathways.
+    """
+    def __init__(self, dim=4096):
+        super().__init__()
+        self.dim = dim
+        
+        # Pre-compute the Cosine Lookup Table (LUT) for hyper-fast resonance scanning
+        # Cast to bfloat16 to match the precision of the remaining core layers
+        phase_steps = np.arange(256) * (2.0 * np.pi / 256.0)
+        lut_values = np.cos(phase_steps)
+        self.register_buffer("cosine_lut", torch.from_numpy(lut_values).to(torch.bfloat16))
+
+    def quantize_phase(self, complex_tensor):
+        """
+        Extracts raw phase angles from complex tensors and packs them into INT8 registers.
+        """
+        # Extract angular phase using arctan2: [-pi, pi]
+        angles = torch.atan2(complex_tensor.imag, complex_tensor.real)
+        # Remap phase space bounds uniformly to [0, 2*pi]
+        angles = torch.remainder(angles, 2.0 * np.pi)
+        
+        # Scale and quantize straight to unsigned byte ranges
+        quantized_bytes = torch.floor(angles * (256.0 / (2.0 * np.pi))).to(torch.uint8)
+        return quantized_bytes
+
+    def quantized_bind(self, q1, q2):
+        """
+        Executes holographic binding via element-wise addition modulo 256.
+        Utilizes native uint8 wrapping overflow to calculate the modulo operation automatically.
+        """
+        # In PyTorch, adding two torch.uint8 tensors naturally executes wrapping modulo 256
+        return q1 + q2
+
+    def quantized_unbind(self, q_composite, q_key):
+        """
+        Executes holographic unbinding via element-wise subtraction modulo 256.
+        """
+        return q_composite - q_key
+
+    def calculate_resonance_matrix(self, q_thought, q_database_lexicon):
+        """
+        Computes the cosine similarity across your Zone C lexicon using the hardware LUT.
+        
+        Args:
+            q_thought: [Batch, 4096] (Active quantized thought wave)
+            q_database_lexicon: [Num_Axioms, 4096] (Quantized reference constants)
+        """
+        # Step 1: Compute element-wise difference across all channels via broadcasting
+        # Shape: [Batch, Num_Axioms, 4096]
+        phase_diff = q_thought.unsqueeze(1) - q_database_lexicon.unsqueeze(0)
+        
+        # Step 2: Remap negative differences to positive uint8 indices safely via bitwise masking
+        # Simulates the cyclic ring mapping process on the GPU
+        lut_indices = phase_diff.to(torch.long) & 0xFF
+        
+        # Step 3: Stream the indexing values through the pre-computed hardware table
+        resonance_contributions = self.cosine_lut[lut_indices]
+        
+        # Step 4: Average across the hyperdimensional channels to extract final scalar scores
+        return torch.mean(resonance_contributions, dim=-1)
