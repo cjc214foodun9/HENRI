@@ -18,10 +18,18 @@ print(f"Model moved and cast in {time.time() - start_move:.4f} seconds", flush=T
 x = torch.randn(1, 512, 4096, dtype=torch.bfloat16, device='cuda')
 y = torch.randn(1, 4096, dtype=torch.bfloat16, device='cuda')
 
-print("Starting forward pass...", flush=True)
-start = time.time()
+print("Starting warmup pass (compiling Triton kernels)...", flush=True)
 with torch.no_grad():
     out, _ = core(x, y, 0.5)
 torch.cuda.synchronize()
+
+print("Starting benchmark loop...", flush=True)
+start = time.time()
+num_iters = 10
+with torch.no_grad():
+    for _ in range(num_iters):
+        out, _ = core(x, y, 0.5)
+torch.cuda.synchronize()
 elapsed = time.time() - start
-print(f"Forward pass completed in {elapsed:.4f} seconds", flush=True)
+avg_time = elapsed / num_iters
+print(f"Benchmark completed: average time per pass is {avg_time:.6f} seconds ({num_iters} iterations)", flush=True)
