@@ -297,9 +297,11 @@ class ActiveExperimentationEngine:
 
     def execute_task_manifold(self, task_dict, time_limit=1200, domain_tag="ARC_Task"):
         """
-        Coordinates the Parallel Evolutionary Wave-Search Architecture.
+        Coordinates the Parallel Evolutionary Wave-Search Architecture with 
+        an added Thermodynamic Best-Effort Fallback Egress gate.
         """
         import time
+        import copy
         start_time = time.time()
         task_dict["domain_tag"] = domain_tag
         
@@ -322,6 +324,15 @@ class ActiveExperimentationEngine:
         self.superposition_wave = None
         self.best_sandbox_accuracy = 0.0
         
+        # --- NEW ACCUMULATION REGISTER: Best-effort trajectory fallback cache ---
+        global_best_candidate_tracker = {
+            "score": -1.0,
+            "error_energy": float('inf'),
+            "pure_code": None,
+            "provisional_prediction": None
+        }
+        # ------------------------------------------------------------------------
+        
         revision_step = 0
         while True:
             revision_step += 1
@@ -329,7 +340,7 @@ class ActiveExperimentationEngine:
             
             elapsed = time.time() - start_time
             if elapsed >= time_limit:
-                print(f"[ENGINE] Time limit of {time_limit}s reached (Elapsed: {elapsed:.2f}s). Stopping revision loop.")
+                print(f"[ENGINE] Time limit of {time_limit}s reached. Engaging Fallback Egress...")
                 break
                 
             stuck = self.is_stuck_in_basin()
@@ -538,6 +549,22 @@ class ActiveExperimentationEngine:
                 else:
                     reward_signal = 0.0
                     
+                # Execute evaluation of the exact sandbox predictions for the best-effort ledger cache
+                try:
+                    _, provisional_pred = self.run_repl_sandbox(pure_code, task_dict["test"], test_mode=True)
+                except Exception:
+                    provisional_pred = None
+
+                # --- TRACK EXCELLENCE: Cache the highest-scoring candidate seen globally ---
+                if (partial_score > global_best_candidate_tracker["score"]) or \
+                   (partial_score == global_best_candidate_tracker["score"] and error_energy < global_best_candidate_tracker["error_energy"]):
+                    if provisional_pred is not None and (not isinstance(provisional_pred, str) or "Error" not in str(provisional_pred)):
+                        global_best_candidate_tracker["score"] = partial_score
+                        global_best_candidate_tracker["error_energy"] = error_energy
+                        global_best_candidate_tracker["pure_code"] = pure_code
+                        global_best_candidate_tracker["provisional_prediction"] = copy.deepcopy(provisional_pred)
+                # ----------------------------------------------------------------------------
+                    
                 # LoRA reinforced updates removed in favor of thermodynamic Entropic Survival Engine
                 if passed_cases == total_cases:
                     print(f"[ENGINE] Perfect inductive generalization achieved! Executing test case...")
@@ -636,5 +663,13 @@ class ActiveExperimentationEngine:
             playbook_dict = self.orchestrator.curate_playbook(playbook_dict, insight)
             print("[ENGINE] Playbook curated.")
             
+        # --- TIMEOUT OVERDRIVE RELEASE: Submit the single best-scoring provisional answer ---
+        if global_best_candidate_tracker["provisional_prediction"] is not None:
+            print(f"\n[THERMODYNAMIC EVACUATION] Hard cap reached. Releasing best-effort trajectory candidate.")
+            print(f" -> Retained Accuracy Tier: {global_best_candidate_tracker['score'] * 100:.2f}% validation coverage.")
+            self.orchestrator.flush_lora_and_context_to_db(domain_tag=domain_tag)
+            return global_best_candidate_tracker["provisional_prediction"], revision_step, "SUCCESS_BEST_EFFORT"
+        # ------------------------------------------------------------------------------------
+        
         self.orchestrator.flush_lora_and_context_to_db(domain_tag=domain_tag)
         return None, revision_step, "FAILED"
