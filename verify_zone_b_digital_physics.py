@@ -6,8 +6,9 @@ import torch.nn.functional as F
 import math
 
 # Ensure henri_core path is in sys.path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(PROJECT_DIR, "6"))
+sys.path.append(PROJECT_DIR)
 
 from henri_core.core import ProprietaryHENRICore, UnitaryLinearLayer
 from henri_core.thermodynamics import NaturalInductionLoss, DivergentMaster

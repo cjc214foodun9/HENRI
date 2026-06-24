@@ -19,8 +19,15 @@ The reward from ground truth is what should drive the LoRA / centroid updates
 (that's Phase 2, not done here, but the hook is shown).
 """
 
+import os
+import sys
 import numpy as np
 import torch
+
+# Add paths to sys.path prioritizing the 6/ folder
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(PROJECT_DIR)
+sys.path.append(os.path.join(PROJECT_DIR, "6"))
 
 from ground_truth import GroundTruthGate, GroundTruthResult
 from sagnac_veto import SagnacInterferometer
