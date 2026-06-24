@@ -2895,10 +2895,10 @@ class HolographicMPCOrchestrator(torch.nn.Module):
             lexicon_list = []
             for v in vocab_vals:
                 if torch.is_complex(v):
-                    lexicon_list.append(torch.real(v))
+                    lexicon_list.append(torch.real(v).to(device=device, dtype=dtype))
                 else:
-                    lexicon_list.append(v)
-            return torch.stack(lexicon_list).to(device=device, dtype=dtype)
+                    lexicon_list.append(v.to(device=device, dtype=dtype))
+            return torch.stack(lexicon_list)
             
         return torch.randn(10, self.dim, device=device, dtype=dtype)
 
