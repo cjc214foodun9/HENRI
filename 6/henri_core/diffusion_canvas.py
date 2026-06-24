@@ -416,11 +416,14 @@ class NonAutoregressiveCanvasSampler(nn.Module):
             else:
                 raw_logits = -energy_all[i].unsqueeze(0)
             
-            # Apply the FSM gate constraint
-            bounded_logits = sieve.enforce_lexical_rigidity(raw_logits, active_fsm_mask)
-            
-            # Select token with the highest bounded logit (argmax)
-            selected_token = torch.argmax(bounded_logits).item()
+            # Select token with the highest logit
+            if not use_holographic_fallback:
+                # For trained translation head, decode tokens directly to preserve semantic structure
+                selected_token = torch.argmax(raw_logits).item()
+            else:
+                # Apply the FSM gate constraint
+                bounded_logits = sieve.enforce_lexical_rigidity(raw_logits, active_fsm_mask)
+                selected_token = torch.argmax(bounded_logits).item()
             winning_tokens.append(selected_token)
             
             # Update FSM state based on the chosen character
