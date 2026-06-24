@@ -130,6 +130,33 @@ class TokenLevelFSMDecoderGate(nn.Module):
         bounded_logits = raw_logits + penalty
         return bounded_logits
 
+
+class HighStressLogitSieve(nn.Module):
+    """
+    Intercepts the token selection layer to permanently filter out high-entropy 
+    character soup during extreme thermodynamic stress phases.
+    """
+    def __init__(self, vocab_size=256):
+        super().__init__()
+        self.vocab_size = vocab_size
+
+    def enforce_lexical_rigidity(self, raw_logits, compiled_python_fsm_mask):
+        """
+        Slashes the probability of non-AST-compliant character tokens down to absolute zero.
+        
+        Args:
+            raw_logits: [Batch, Vocab_Size] (Raw continuous embeddings from decoder)
+            compiled_python_fsm_mask: [Batch, Vocab_Size] (1 for valid characters, 0 for invalid noise)
+        """
+        # Create a hard penalty mask (-1e9 for invalid syntax transitions)
+        syntax_penalty = (1.0 - compiled_python_fsm_mask.to(raw_logits.dtype)) * -1e9
+        
+        # Superimpose the structural mask directly onto the hardware registers
+        # This physically prevents the decoder from outputting junk ASCII strings
+        constrained_logits = raw_logits + syntax_penalty
+        return constrained_logits
+
+
 class NonAutoregressiveCanvasSampler(nn.Module):  
     """  
     Executes parallel, score-guided reverse SDE relaxation loops over unrolled sequences.  
@@ -287,6 +314,7 @@ class NonAutoregressiveCanvasSampler(nn.Module):
         close_braces = {41, 93, 125}
         
         # Strict Python AST/GBNF character whitelist outside strings
+        # Excludes high-entropy/noise-prone characters {, }, ,, <, >, % outside valid string literals
         python_fsm_whitelist = set(range(97, 123))  # a-z
         python_fsm_whitelist.update(range(65, 91))   # A-Z
         python_fsm_whitelist.update(range(48, 58))   # 0-9
@@ -297,17 +325,13 @@ class NonAutoregressiveCanvasSampler(nn.Module):
             13,  # \r
             40, 41,  # ( )
             91, 93,  # [ ]
-            123, 125, # { }
             58,  # :
-            44,  # ,
             46,  # .
             61,  # =
             43,  # +
             45,  # -
             42,  # *
             47,  # /
-            37,  # %
-            60, 62,  # < >
             33,  # !
             34, 39  # " '
         ])
@@ -316,7 +340,7 @@ class NonAutoregressiveCanvasSampler(nn.Module):
         for c in python_fsm_whitelist:
             valid_chars_base[c] = True
             
-        decoder_gate = TokenLevelFSMDecoderGate(vocab_size=vocab_size).to(device)
+        sieve = HighStressLogitSieve(vocab_size=vocab_size).to(device)
                 
         for i in range(sequence_length):
             if open_quote is not None:
@@ -354,7 +378,7 @@ class NonAutoregressiveCanvasSampler(nn.Module):
                     if target_close is not None:
                         valid_chars[:] = False
                         valid_chars[target_close] = True
-
+ 
             # Project 256-D mask to vocab_size via repeating/indexing
             repeats = (vocab_size + 255) // 256
             mask_vocab = valid_chars.repeat(repeats)[:vocab_size]
@@ -367,7 +391,7 @@ class NonAutoregressiveCanvasSampler(nn.Module):
             raw_logits = -energy_all[i].unsqueeze(0)
             
             # Apply the FSM gate constraint
-            bounded_logits = decoder_gate.enforce_ast_rigidity(raw_logits, active_fsm_mask)
+            bounded_logits = sieve.enforce_lexical_rigidity(raw_logits, active_fsm_mask)
             
             # Select token with the highest bounded logit (argmax)
             selected_token = torch.argmax(bounded_logits).item()
