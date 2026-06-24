@@ -194,26 +194,12 @@ def run_litmus_test():
         loss = loss_fn(trajectory_tensor, packets_tgt, temperature)
         loss.backward()
         
-        # Diagnostics
-        for name, param in model.named_parameters():
-            if param.grad is not None:
-                if torch.isnan(param.grad).any():
-                    print(f"  [DIAG] Parameter '{name}' gradient contains NaNs!")
-                if torch.isinf(param.grad).any():
-                    print(f"  [DIAG] Parameter '{name}' gradient contains Infs!")
-                if torch.isnan(param).any():
-                    print(f"  [DIAG] Parameter '{name}' values contain NaNs before step!")
-        
         # Force unitary constraints on weights
         for block in model.layers:
             for expert in block.experts:
                 expert.phase_shift.force_unitary_manifold()
                 
         optimizer.step()
-        
-        for name, param in model.named_parameters():
-            if torch.isnan(param).any():
-                print(f"  [DIAG] Parameter '{name}' values contain NaNs AFTER step!")
         losses.append(loss.item())
         print(f"  Batch {epoch+1:02d} | Topological Loss: {loss.item():.6f}")
         
