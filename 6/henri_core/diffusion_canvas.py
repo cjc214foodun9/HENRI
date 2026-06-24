@@ -186,12 +186,17 @@ class NonAutoregressiveCanvasSampler(nn.Module):
         canvas = torch.randn(1, sequence_length, self.hidden_dim, device=device, dtype=model_dtype)  
         canvas = F.normalize(canvas, p=2, dim=-1)
 
-        if winning_jepa_track is not None and jl_guard is not None:  
-            W_aligned = jl_guard.W_JL.to(device=device, dtype=model_dtype)  
+        if winning_jepa_track is not None:
             jepa_squeezed = winning_jepa_track.squeeze(0) if winning_jepa_track.ndim == 3 else winning_jepa_track
-            steering_field = torch.matmul(jepa_squeezed.to(dtype=model_dtype), W_aligned)  
-            target_goal_wave = steering_field[-1].unsqueeze(0)
-        else:  
+            if jepa_squeezed.shape[-1] == self.hidden_dim:
+                target_goal_wave = jepa_squeezed[-1].unsqueeze(0)
+            elif jl_guard is not None:
+                W_aligned = jl_guard.W_JL.to(device=device, dtype=model_dtype)
+                steering_field = torch.matmul(jepa_squeezed.to(dtype=model_dtype), W_aligned)
+                target_goal_wave = steering_field[-1].unsqueeze(0)
+            else:
+                target_goal_wave = jepa_squeezed[-1].unsqueeze(0)
+        else:
             target_goal_wave = swarm_trajectory.to(device=device, dtype=model_dtype).view(1, self.hidden_dim)
 
         if target_goal_wave.shape[-1] != self.hidden_dim:

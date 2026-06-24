@@ -170,12 +170,16 @@ class NonAutoregressiveCanvasSampler(nn.Module):
         canvas = torch.randn(batch_size, sequence_length, self.hidden_dim, device=device, dtype=model_dtype)
         canvas = F.normalize(canvas, p=2, dim=-1) # Project cleanly onto the hypersphere
 
-        # Use 2-step chording consistency crystallizer
-        if winning_jepa_track is not None and jl_guard is not None:
-            W_aligned = jl_guard.W_JL.to(device=device, dtype=model_dtype)
+        if winning_jepa_track is not None:
             jepa_squeezed = winning_jepa_track.squeeze(0) if winning_jepa_track.ndim == 3 else winning_jepa_track
-            steering_field_4096 = torch.matmul(jepa_squeezed.to(dtype=model_dtype), W_aligned)
-            target_goal_wave = steering_field_4096[-1].unsqueeze(0)
+            if jepa_squeezed.shape[-1] == self.hidden_dim:
+                target_goal_wave = jepa_squeezed[-1].unsqueeze(0)
+            elif jl_guard is not None:
+                W_aligned = jl_guard.W_JL.to(device=device, dtype=model_dtype)
+                steering_field_4096 = torch.matmul(jepa_squeezed.to(dtype=model_dtype), W_aligned)
+                target_goal_wave = steering_field_4096[-1].unsqueeze(0)
+            else:
+                target_goal_wave = jepa_squeezed[-1].unsqueeze(0)
         else:
             target_goal_wave = swarm_trajectory.to(device=device, dtype=model_dtype).view(1, self.hidden_dim)
 

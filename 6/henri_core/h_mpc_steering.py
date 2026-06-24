@@ -168,6 +168,79 @@ class HolographicMPCOrchestrator(nn.Module):
           
         return best_plan_idx, winning_trajectory_track
 
+class NextLatentTransitionNetwork(nn.Module):
+    """
+    Transition operator F_theta predicting next belief state on S^4095
+    given current latent wave state and next token embedding slice.
+    """
+    def __init__(self, dim=4096, hidden_dim=512):
+        super().__init__()
+        self.dim = dim
+        self.transition_gate = nn.Sequential(
+            nn.Linear(dim * 2, hidden_dim),
+            nn.GELU(),
+            nn.Linear(hidden_dim, dim),
+            nn.LayerNorm(dim)
+        )
+
+    def forward(self, z_t, x_next_embed):
+        combined = torch.cat([z_t, x_next_embed], dim=-1)
+        z_next_pred = self.transition_gate(combined)
+        return F.normalize(z_next_pred, p=2, dim=-1)
+
+class LatentSpeculativeDraftEngine(nn.Module):
+    """
+    Executes hyper-fast lookahead trajectory drafting within the continuous manifold.
+    Uses the 2-layer NextLat transition network F_theta to evaluate 16 parallel paths
+    simultaneously, bypassing dense model rollout bottlenecks.
+    """
+    def __init__(self, dim=4096, horizon=16, num_candidates=16):
+        super().__init__()
+        self.dim = dim
+        self.horizon = horizon
+        self.num_candidates = num_candidates
+
+    def draft_speculative_horizons(self, current_latent_wave, candidate_token_sequences, transition_network, zone_c_lexicon):
+        """
+        Rolls out 16 parallel candidate paths entirely within the latent space using F_theta.
+        """
+        device = current_latent_wave.device
+        dtype = current_latent_wave.dtype
+        
+        # Ensure z_running is real and has shape [num_candidates, dim]
+        if torch.is_complex(current_latent_wave):
+            current_latent_wave = torch.real(current_latent_wave)
+        z_running = current_latent_wave.view(1, -1).repeat(self.num_candidates, 1).to(device=device, dtype=dtype)
+        
+        cumulative_resonance = torch.zeros(self.num_candidates, device=device, dtype=torch.float32)
+        trajectory_tracks = []
+
+        for step in range(self.horizon):
+            x_next_embed = candidate_token_sequences[:, step, :]
+            if torch.is_complex(x_next_embed):
+                x_next_embed = torch.real(x_next_embed)
+            x_next_embed = x_next_embed.to(device=device, dtype=dtype)
+            
+            with torch.no_grad():
+                z_next_pred = transition_network(z_running, x_next_embed)
+            
+            trajectory_tracks.append(z_next_pred.unsqueeze(1))
+            
+            # Align zone_c_lexicon device and dtype
+            zone_c_lexicon_aligned = zone_c_lexicon.to(device=device, dtype=dtype)
+            similarity_matrix = torch.matmul(z_next_pred, zone_c_lexicon_aligned.t()) # [16, Num_Axioms]
+            
+            max_step_resonance, _ = torch.max(similarity_matrix, dim=-1)
+            cumulative_resonance += max_step_resonance.float()
+            
+            z_running = z_next_pred
+
+        completed_tracks = torch.cat(trajectory_tracks, dim=1)
+        winning_candidate_idx = torch.argmax(cumulative_resonance).item()
+        selected_jepa_track = completed_tracks[winning_candidate_idx]
+        
+        return winning_candidate_idx, selected_jepa_track
+
 def run_phase_3_validation():  
     print("=== INITIALIZING HENRI PHASE 3: H-MPC TRAJECTORY STEERING VALIDATION ===")  
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  

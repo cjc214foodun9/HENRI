@@ -1373,9 +1373,9 @@ class HenriCognitiveSwarmOrchestrator:
             nn.init.orthogonal_(translation_head.weight)
             translation_head = translation_head.to(device=device, dtype=torch.bfloat16).eval()
 
-        # Instantiate H-MPC orchestrator lazily
         if not hasattr(self, 'h_mpc') or self.h_mpc is None:
             self.h_mpc = HolographicMPCOrchestrator(core_model, dim=hidden_dim).to(device=device, dtype=torch.bfloat16)
+            self.h_mpc.orchestrator = self
 
         # 5. Initialize or retrieve the cached Non-Autoregressive Canvas Sampler
         self._diffusion_core_model = core_model
@@ -2877,70 +2877,52 @@ class HolographicMPCOrchestrator(torch.nn.Module):
         # down to low-dimensional substrates (1024-D core dimension)
         from henri_pearl_aligner import JohnsonLindenstraussGuard
         self.jl_guard = JohnsonLindenstraussGuard(global_dim=4096, core_dim=dim)
+        
+        # Instantiate speculative transition network and draft engine
+        from henri_core.h_mpc_steering import NextLatentTransitionNetwork, LatentSpeculativeDraftEngine
+        self.nextlat_transition_net = NextLatentTransitionNetwork(dim=dim)
+        
+        # Database reference proxy
+        self.database = self
+
+    def get_cached_canonical_lexicon_tensor(self):
+        device = next(self.parameters()).device if list(self.parameters()) else torch.device("cpu")
+        dtype = next(self.parameters()).dtype if list(self.parameters()) else torch.float32
+        
+        # Retrieve clean concept waves from Hopfield vocabulary if available
+        if hasattr(self, 'orchestrator') and hasattr(self.orchestrator, 'hopfield') and self.orchestrator.hopfield.vocabulary:
+            vocab_vals = list(self.orchestrator.hopfield.vocabulary.values())
+            lexicon_list = []
+            for v in vocab_vals:
+                if torch.is_complex(v):
+                    lexicon_list.append(torch.real(v))
+                else:
+                    lexicon_list.append(v)
+            return torch.stack(lexicon_list).to(device=device, dtype=dtype)
+            
+        return torch.randn(10, self.dim, device=device, dtype=dtype)
 
     def run_h_mpc_selection(self, current_wave: torch.Tensor, target_goal_wave: torch.Tensor,   
                              candidate_action_sequences: torch.Tensor, horizon=16) -> tuple:  
         """  
-        PEARL Trajectory Optimizer: Tracks lookahead futures inside the integer   
-        phase-space boundary, eliminating the latent blindness bottleneck.  
+        PEARL Trajectory Optimizer: Tracks lookahead futures inside the speculative
+        latent drafting engine using F_theta transition rollouts.
         """  
-        device = current_wave.device  
-        num_candidates = candidate_action_sequences.size(0)  
+        device = current_wave.device
+        dtype = current_wave.dtype if current_wave.dtype != torch.complex64 else torch.float32
         
-        # 1. Project VSA waves to 1024-D core dimension using Johnson-Lindenstrauss guard
-        # Handle complex tensors safely during linear projection
-        W_aligned = self.jl_guard.W_JL.to(device=device, dtype=torch.float32)
+        from henri_core.h_mpc_steering import LatentSpeculativeDraftEngine
+        draft_engine = LatentSpeculativeDraftEngine(dim=self.dim, horizon=horizon).to(device=device, dtype=dtype)
         
-        def compress_wave_safe(psi_4096):
-            if torch.is_complex(psi_4096):
-                real_part = F.linear(psi_4096.real.to(dtype=W_aligned.dtype), W_aligned)
-                imag_part = F.linear(psi_4096.imag.to(dtype=W_aligned.dtype), W_aligned)
-                return torch.complex(real_part, imag_part)
-            else:
-                return F.linear(psi_4096.to(dtype=W_aligned.dtype), W_aligned)
-                
-        current_wave_1024 = compress_wave_safe(current_wave)
-        target_goal_wave_1024 = compress_wave_safe(target_goal_wave)
-        candidate_action_sequences_1024 = compress_wave_safe(candidate_action_sequences)
-          
-        # Initialize the packed-phase engine buffer out-of-band  
-        if not hasattr(self, "packed_vsa_engine"):  
-            from henri_core.hrr import PackedPhaseVSAEngine  
-            self.packed_vsa_engine = PackedPhaseVSAEngine(dimension=self.dim)  
-              
-        # Pack global continuous thought boundaries into stable 8-bit integer coordinates  
-        phase_current = self.packed_vsa_engine.pack_wave_to_phase(current_wave_1024)  
-        phase_goal = self.packed_vsa_engine.pack_wave_to_phase(target_goal_wave_1024)  
-          
-        best_cost = float('inf')  
-        winning_idx = 0  
-        winning_trajectory_track = []  
-          
-        # Concurrently evaluate parallel candidate paths across the deep Gear 3 horizon  
-        for idx in range(num_candidates):  
-            active_phase_state = phase_current.clone()  
-            local_track = []  
-              
-            for t in range(horizon):  
-                action_phase = self.packed_vsa_engine.pack_wave_to_phase(candidate_action_sequences_1024[idx, t, :])  
-                # Advance lookahead states cleanly using type-safe modular addition math  
-                active_phase_state = self.packed_vsa_engine.compute_fused_binding(active_phase_state, action_phase)  
-                # Convert uint8 phase to float32 radians in [-pi, pi] range for output trajectory
-                active_phase_radians = (active_phase_state.float() * (2.0 * math.pi / 256.0)) - math.pi
-                local_track.append(active_phase_radians.to(device=device, dtype=torch.float32))  
-                  
-            # Compute geometric resonance using raw integer angular errors  
-            phase_error = torch.abs(active_phase_state.float() - phase_goal.float())  
-            wrapped_error = torch.minimum(phase_error, 256.0 - phase_error)  
-            # Divide by 128.0 to normalize cost cleanly in [0.0, 1.0] interval
-            mean_trajectory_cost = (wrapped_error.mean() / 128.0).item()  
-              
-            if mean_trajectory_cost < best_cost:  
-                best_cost = mean_trajectory_cost  
-                winning_idx = idx  
-                winning_trajectory_track = local_track  
-                  
-        self.winning_jepa_track = torch.stack(winning_trajectory_track, dim=0)
-        print(f"[H-MPC] Selection Complete. Best Plan Index: {winning_idx} | Min Cost: {best_cost:.4f}")  
-        # Return the winning selection parameters accompanied by the pristine trajectory guidance field  
+        zone_c_lexicon = self.database.get_cached_canonical_lexicon_tensor().to(device=device, dtype=dtype)
+        
+        winning_idx, pristine_jepa_track = draft_engine.draft_speculative_horizons(
+            current_latent_wave=current_wave,
+            candidate_token_sequences=candidate_action_sequences,
+            transition_network=self.nextlat_transition_net,
+            zone_c_lexicon=zone_c_lexicon
+        )
+        
+        self.winning_jepa_track = pristine_jepa_track
+        print(f"[H-MPC SPECULATION] Best Plan Index: {winning_idx} selected via speculative latent drafting.")  
         return winning_idx, self.winning_jepa_track

@@ -318,6 +318,7 @@ class EmergentCognitiveSwarm(nn.Module):
         if not hasattr(self.orchestrator, 'h_mpc') or self.orchestrator.h_mpc is None:
             from cognitive_swarm import HolographicMPCOrchestrator
             self.orchestrator.h_mpc = HolographicMPCOrchestrator(core_model, dim=core_model.layers[0].dim).to(device=device, dtype=torch.bfloat16)
+            self.orchestrator.h_mpc.orchestrator = self.orchestrator
 
         # Generate and select winning action trajectory via Holographic MPC
         winning_wave = None
