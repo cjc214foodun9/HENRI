@@ -101,6 +101,11 @@ class AgentialLangevinThermostat(nn.Module):
             active_wave_state: [Batch, 4096] (Current phase vector in Zn domain)
             zone_c_lexicon: [Num_Axioms, 4096] (Canonical reference baseplate)
         """
+        if torch.is_complex(active_wave_state):
+            active_wave_state = torch.real(active_wave_state)
+        if torch.is_complex(zone_c_lexicon):
+            zone_c_lexicon = torch.real(zone_c_lexicon)
+
         device = active_wave_state.device
         dtype = active_wave_state.dtype
         batch_size = active_wave_state.size(0)
