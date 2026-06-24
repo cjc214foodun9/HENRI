@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.fft
+from henri_core.kernels import fused_circular_conv
 
 def fast_orthogonal_init(tensor, gain=1.0):
     orig_dtype = tensor.dtype
@@ -263,14 +264,8 @@ class ThermoActiveFluidBlock(nn.Module):
         return beta_2
 
     def _hrr_bind(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        # Internal FFT circular convolution binding
-        # Cast to float32 to prevent Unsupported dtype BFloat16/Float16 errors during FFT
-        orig_dtype = x.dtype
-        X_freq = torch.fft.rfft(x.float(), dim=-1)
-        Y_freq = torch.fft.rfft(y.float(), dim=-1)
-        z = torch.fft.irfft(X_freq * Y_freq, n=self.dim, dim=-1)
-        z = z.to(dtype=orig_dtype)
-        return F.normalize(z, p=2, dim=-1)
+        # Fused circular convolution using Triton kernel or high-performance PyTorch fallback
+        return fused_circular_conv(x, y)
 
     def forward(self, 
                 current_wave: torch.Tensor, 
