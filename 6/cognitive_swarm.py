@@ -2883,7 +2883,7 @@ class HolographicMPCOrchestrator(torch.nn.Module):
         self.nextlat_transition_net = NextLatentTransitionNetwork(dim=dim)
         
         # Database reference proxy
-        self.database = self
+        self.__dict__['database'] = self
 
     def get_cached_canonical_lexicon_tensor(self):
         device = next(self.parameters()).device if list(self.parameters()) else torch.device("cpu")
