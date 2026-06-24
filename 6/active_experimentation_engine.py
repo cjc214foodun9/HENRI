@@ -355,7 +355,17 @@ class ActiveExperimentationEngine:
                 current_thought_wave = current_thought_wave.unsqueeze(0)
 
             # Step 2: Query HENRI's internal thermostat to decide on noise injection
-            zone_c_lexicon = self.orchestrator.database.get_cached_canonical_lexicon_tensor()
+            if hasattr(self.orchestrator, 'hopfield') and self.orchestrator.hopfield.vocabulary:
+                vocab_vals = list(self.orchestrator.hopfield.vocabulary.values())
+                lexicon_list = []
+                for v in vocab_vals:
+                    if torch.is_complex(v):
+                        lexicon_list.append(torch.real(v))
+                    else:
+                        lexicon_list.append(v)
+                zone_c_lexicon = torch.stack(lexicon_list)
+            else:
+                zone_c_lexicon = torch.randn(10, 4096)
             zone_c_lexicon = zone_c_lexicon.to(device=current_thought_wave.device, dtype=current_thought_wave.dtype)
             agential_noise, applied_voltage = self.thermostat.calculate_agential_perturbation(
                 active_wave_state=current_thought_wave,
