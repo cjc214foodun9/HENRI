@@ -271,36 +271,55 @@ class NonAutoregressiveCanvasSampler(nn.Module):
         )
         canvas = F.normalize(canvas, p=2, dim=-1)
 
-        # Out-of-Band Holographic Spatial-Spectral Key Unbinding  
-        generator = torch.Generator(device=device).manual_seed(101)  
-        phases_keys = (torch.rand(sequence_length, self.hidden_dim, generator=generator, device=device) * 2.0 * math.pi) - math.pi  
-        location_keys = torch.polar(torch.ones(sequence_length, self.hidden_dim, device=device), phases_keys)
-
         vocab_size = self.translation_head.out_features  
-        vocab_generator = torch.Generator(device="cpu").manual_seed(202)  
-        phases_vocab = (torch.rand(vocab_size, self.hidden_dim, generator=vocab_generator, device="cpu") * 2.0 * math.pi) - math.pi  
-        vocab_waves = torch.polar(torch.ones(vocab_size, self.hidden_dim, device="cpu"), phases_vocab).to(device=device, dtype=torch.complex64)
+        
+        # Primary pathway: Project continuous states directly using the trained translation head
+        try:
+            raw_logits_all = self.translation_head(canvas).to(dtype=torch.float32)  # [1, sequence_length, vocab_size]
+            
+            # Apply dynamic intent-driven penalty masks (subtracting from logits)
+            if intent_flag == "CODE":
+                raw_logits_all = raw_logits_all - self.strict_python_mask.view(1, 1, vocab_size)
+            elif intent_flag == "RESEARCH":
+                raw_logits_all = raw_logits_all - self.scada_robotics_mask.view(1, 1, vocab_size)
+            else:
+                raw_logits_all = raw_logits_all - self.open_conversation_mask.view(1, 1, vocab_size)
+            
+            use_holographic_fallback = False
+        except Exception as e:
+            print(f"[CANVAS] Warning: Trained translation head projection failed: {e}. Falling back to holographic unbinding.")
+            use_holographic_fallback = True
 
-        canvas_phases = (canvas[0] * 2.0 * math.pi).to(dtype=torch.float32)  
-        canvas_complex = torch.polar(torch.ones_like(canvas_phases), canvas_phases)  
-          
-        bound_waves = canvas_complex * location_keys  
-        M_thought = torch.sum(bound_waves, dim=0)  
-        M_thought = M_thought / (torch.abs(M_thought) + 1e-8)
+        if use_holographic_fallback:
+            # Out-of-Band Holographic Spatial-Spectral Key Unbinding  
+            generator = torch.Generator(device=device).manual_seed(101)  
+            phases_keys = (torch.rand(sequence_length, self.hidden_dim, generator=generator, device=device) * 2.0 * math.pi) - math.pi  
+            location_keys = torch.polar(torch.ones(sequence_length, self.hidden_dim, device=device), phases_keys)
 
-        Phi_retrieved_all = (M_thought.unsqueeze(0) * torch.conj(location_keys)).to(dtype=torch.complex64)  
-        similarity_all = torch.matmul(Phi_retrieved_all, torch.conj(vocab_waves).t())  
-        resonance_all = torch.abs(similarity_all)  
-          
-        energy_all = -torch.exp(resonance_all / math.sqrt(self.hidden_dim))  
-          
-        # 2. Dynamic Intent-Driven Energy Mask Selection Gate  
-        if intent_flag == "CODE":  
-            energy_all = energy_all + self.strict_python_mask.view(1, vocab_size)  
-        elif intent_flag == "RESEARCH":  
-            energy_all = energy_all + self.scada_robotics_mask.view(1, vocab_size)  
-        else:  # CONVERSATION  
-            energy_all = energy_all + self.open_conversation_mask.view(1, vocab_size)
+            vocab_generator = torch.Generator(device="cpu").manual_seed(202)  
+            phases_vocab = (torch.rand(vocab_size, self.hidden_dim, generator=vocab_generator, device="cpu") * 2.0 * math.pi) - math.pi  
+            vocab_waves = torch.polar(torch.ones(vocab_size, self.hidden_dim, device="cpu"), phases_vocab).to(device=device, dtype=torch.complex64)
+
+            canvas_phases = (canvas[0] * 2.0 * math.pi).to(dtype=torch.float32)  
+            canvas_complex = torch.polar(torch.ones_like(canvas_phases), canvas_phases)  
+              
+            bound_waves = canvas_complex * location_keys  
+            M_thought = torch.sum(bound_waves, dim=0)  
+            M_thought = M_thought / (torch.abs(M_thought) + 1e-8)
+
+            Phi_retrieved_all = (M_thought.unsqueeze(0) * torch.conj(location_keys)).to(dtype=torch.complex64)  
+            similarity_all = torch.matmul(Phi_retrieved_all, torch.conj(vocab_waves).t())  
+            resonance_all = torch.abs(similarity_all)  
+              
+            energy_all = -torch.exp(resonance_all / math.sqrt(self.hidden_dim))  
+              
+            # 2. Dynamic Intent-Driven Energy Mask Selection Gate  
+            if intent_flag == "CODE":  
+                energy_all = energy_all + self.strict_python_mask.view(1, vocab_size)  
+            elif intent_flag == "RESEARCH":  
+                energy_all = energy_all + self.scada_robotics_mask.view(1, vocab_size)  
+            else:  # CONVERSATION  
+                energy_all = energy_all + self.open_conversation_mask.view(1, vocab_size)
 
         # Token-by-token crystallization with FSM grammar masking
         winning_tokens = []
@@ -390,9 +409,12 @@ class NonAutoregressiveCanvasSampler(nn.Module):
             # Format active_fsm_mask for the gate (1.0 for valid, 0.0 for invalid)
             active_fsm_mask = mask_vocab.to(dtype=torch.float32).unsqueeze(0)
             
-            # Retrieve logits (negative of energy) at position i
+            # Retrieve logits at position i
             # raw_logits shape: [1, vocab_size]
-            raw_logits = -energy_all[i].unsqueeze(0)
+            if not use_holographic_fallback:
+                raw_logits = raw_logits_all[0, i].unsqueeze(0)
+            else:
+                raw_logits = -energy_all[i].unsqueeze(0)
             
             # Apply the FSM gate constraint
             bounded_logits = sieve.enforce_lexical_rigidity(raw_logits, active_fsm_mask)
