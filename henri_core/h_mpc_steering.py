@@ -204,8 +204,14 @@ class LatentSpeculativeDraftEngine(nn.Module):
         """
         Rolls out 16 parallel candidate paths entirely within the latent space using F_theta.
         """
-        device = current_latent_wave.device
-        dtype = current_latent_wave.dtype
+        # Align device and dtype with the transition network to avoid dtype mismatches
+        network_params = list(transition_network.parameters())
+        if network_params:
+            device = network_params[0].device
+            dtype = network_params[0].dtype
+        else:
+            device = current_latent_wave.device
+            dtype = torch.bfloat16
         
         # Ensure z_running is real and has shape [num_candidates, dim]
         if torch.is_complex(current_latent_wave):
