@@ -430,6 +430,9 @@ class EmergentCognitiveSwarm(nn.Module):
                             decoded_chars.append(chr(char_code))
                     generated_text = "".join(decoded_chars)
                 
+                # Sanitize syntax-breaking characters (like non-breaking spaces and replacement characters)
+                generated_text = generated_text.replace("\xa0", " ").replace("\ufffd", "")
+                
                 # Before passing the materialized string to the sandbox, clamp the signature block
                 prefix_constraint = "def transform(input_grid):\n"
                 if not generated_text.strip().startswith("def transform"):
