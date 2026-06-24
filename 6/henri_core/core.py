@@ -176,7 +176,7 @@ class ContinuousPhaseRouter(nn.Module):
         
         # Tier 3: Tokyo-Style Precision-Weighted Langevin Balancing
         # noise variance is 2 * eta_t * temperature / (w_B + w_C + 1e-4)
-        noise_std = torch.sqrt((2.0 * eta_t * temperature) / (w_B_val + w_C_val + 1e-4))
+        noise_std = torch.sqrt((2.0 * eta_t * temperature) / (w_B_val + w_C_val + 1e-4) + 1e-12)
         zeta = torch.randn_like(z_t)
         noise_term = noise_std * zeta
         
@@ -322,7 +322,7 @@ class ThermoActiveFluidBlock(nn.Module):
         output_wave = self._hrr_bind(shaken_wave, self.output_binding_geometry)
         
         # Clamp beta_1 structurally to maintain contractive Banach envelope: beta_1 <= sqrt(1 - alpha_1^2)
-        max_beta = torch.sqrt((1.0 - self.alpha_1 ** 2).clamp(min=0.0))
+        max_beta = torch.sqrt((1.0 - self.alpha_1 ** 2).clamp(min=0.0) + 1e-12)
         beta_1_clamped = torch.minimum(self.beta_1, max_beta)
         
         # Theorem 1 Equation (2) - strictly pre-norm and NO post-normalization
