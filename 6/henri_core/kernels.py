@@ -56,7 +56,9 @@ if HAS_TRITON:
         
         # Execute hardware-fused phase rotation mod 256 (Simulating physical diffraction)
         # This replaces the slow, out-of-place complex floating point MATMUL allocations
-        out_wave = x_wave * tl.cos(w_phase) # Retain real-plane magnitude conservation
+        # Cast to float32 for tl.cos compatibility
+        cos_w = tl.cos(w_phase.to(tl.float32)).to(x_wave.dtype)
+        out_wave = x_wave * cos_w # Retain real-plane magnitude conservation
         
         # Stream the crystallized wave front directly out to the L3 cache line egress
         tl.store(out_ptr + pid_batch * stride_outb + offsets * stride_outd, out_wave, mask=mask)
