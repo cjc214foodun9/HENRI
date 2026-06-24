@@ -180,6 +180,11 @@ class ActiveExperimentationEngine:
         self.error_history = []
         self.superposition_wave = None
         self.playbook_wave = None
+        
+        # Initialize the agential thermostat Modulator Head
+        from henri_core.thermodynamics import AgentialLangevinThermostat
+        device = next(self.orchestrator.l3_router.parameters()).device if list(self.orchestrator.l3_router.parameters()) else torch.device("cpu")
+        self.thermostat = AgentialLangevinThermostat(dim=4096).to(device)
 
     def fetch_active_playbook_waves(self):
         if hasattr(self, 'playbook_wave') and self.playbook_wave is not None:
@@ -332,6 +337,7 @@ class ActiveExperimentationEngine:
             "provisional_prediction": None
         }
         # ------------------------------------------------------------------------
+        best_candidate = "def transform(input_grid):\n    return input_grid"
         
         revision_step = 0
         while True:
@@ -343,9 +349,21 @@ class ActiveExperimentationEngine:
                 print(f"[ENGINE] Time limit of {time_limit}s reached. Engaging Fallback Egress...")
                 break
                 
-            stuck = self.is_stuck_in_basin()
-            temp = 1.35 if stuck else 0.70
-            inject_noise = stuck
+            # Step 1: Extract the current raw continuous thought wave state
+            current_thought_wave = self.project_code_to_wave(best_candidate)
+            if current_thought_wave.dim() == 1:
+                current_thought_wave = current_thought_wave.unsqueeze(0)
+
+            # Step 2: Query HENRI's internal thermostat to decide on noise injection
+            zone_c_lexicon = self.orchestrator.database.get_cached_canonical_lexicon_tensor()
+            zone_c_lexicon = zone_c_lexicon.to(device=current_thought_wave.device, dtype=current_thought_wave.dtype)
+            agential_noise, applied_voltage = self.thermostat.calculate_agential_perturbation(
+                active_wave_state=current_thought_wave,
+                zone_c_lexicon=zone_c_lexicon
+            )
+            
+            temp = 0.70 + (applied_voltage / 3.5) * 0.65
+            inject_noise = (applied_voltage > 0.5)
             
             # Compile current Playbook constraints into an axiomatic wave
             playbook_wave = self.orchestrator.compile_playbook_to_wave(playbook_dict)
@@ -374,6 +392,15 @@ class ActiveExperimentationEngine:
                     playbook_wave = (superposition / mags).reshape(playbook_wave.shape)
                 else:
                     playbook_wave = self.superposition_wave
+            
+            # Step 3: Superimpose the predicted noise burst straight onto the active playbook trajectory
+            # This physically shakes the latent space to unlock previously unverified vectors mid-flight
+            if applied_voltage > 0.0 and playbook_wave is not None:
+                agential_noise = agential_noise.to(device=playbook_wave.device, dtype=playbook_wave.dtype)
+                playbook_wave = torch.nn.functional.normalize(
+                    playbook_wave + agential_noise.reshape(playbook_wave.shape), 
+                    p=2, dim=-1
+                )
             
             # 2. Parallel Monte Carlo Generation: fire swarm to generate parallel hypotheses
             remaining = time_limit - (time.time() - start_time)

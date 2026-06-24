@@ -6,7 +6,7 @@ from .core import (
     ProprietaryHENRICore,
     UnitaryLinearLayer,
 )
-from .thermodynamics import NaturalInductionLoss, DivergentMaster
+from .thermodynamics import NaturalInductionLoss, AgentialLangevinThermostat, DivergentMaster
 from .egress import QuantizedEgressAssembler
 from .database import HenriTimescaleConnector
 
@@ -18,6 +18,7 @@ __all__ = [
     "ProprietaryHENRICore",
     "UnitaryLinearLayer",
     "NaturalInductionLoss",
+    "AgentialLangevinThermostat",
     "DivergentMaster",
     "QuantizedEgressAssembler",
     "HenriTimescaleConnector",

@@ -70,6 +70,90 @@ class NaturalInductionLoss(nn.Module):
 
         return total_free_energy
 
+import math
+
+class AgentialLangevinThermostat(nn.Module):
+    """
+    Replaces the scripted IFTTT DivergentMaster. Gives HENRI agential control
+    over Langevin noise injection by analyzing spectral resonance profiles mid-flight
+    and generating precise, localized phase-angle perturbations.
+    """
+    def __init__(self, dim=4096, num_channels=256, hidden_dim=128):
+        super().__init__()
+        self.dim = dim
+        self.num_channels = num_channels
+        self.num_bands = dim // num_channels # 16 spatial expert bands
+        
+        # Learned network to predict noise bursts based on internal cognitive friction
+        self.resonance_analyzer = nn.Sequential(
+            nn.Linear(self.num_bands, hidden_dim),
+            nn.GELU(),
+            nn.Linear(hidden_dim, self.num_bands * 2), # Outputs both Burst Timing (Gate) and Intensity (Sigma)
+            nn.Tanh()
+        )
+
+    def calculate_agential_perturbation(self, active_wave_state, zone_c_lexicon):
+        """
+        Senses localized logic locks and decides exactly how much noise to inject 
+        and when to burst it to prevent continuous decoherence.
+        
+        Args:
+            active_wave_state: [Batch, 4096] (Current phase vector in Zn domain)
+            zone_c_lexicon: [Num_Axioms, 4096] (Canonical reference baseplate)
+        """
+        device = active_wave_state.device
+        dtype = active_wave_state.dtype
+        batch_size = active_wave_state.size(0)
+
+        # Step 1: Measure real-time spectral resonance across the 16 spatial bands
+        # Reshape to isolate the 16 expert channels firing 256 spectral teeth each
+        reshaped_wave = active_wave_state.reshape(batch_size, self.num_bands, self.num_channels)
+        reshaped_lexicon = zone_c_lexicon.reshape(-1, self.num_bands, self.num_channels)
+        
+        # Calculate localized inner products to map channel-specific coherence
+        # Shape: [Batch, Num_Bands]
+        spectral_coherence = torch.mean(
+            F.cosine_similarity(reshaped_wave.unsqueeze(1), reshaped_lexicon.unsqueeze(0), dim=-1),
+            dim=1
+        )
+
+        # Step 2: Project coherence profiles through the learned thermostat head
+        if spectral_coherence.dtype == torch.bfloat16:
+            # Linear layer might expect float32 or bfloat16 depending on casting
+            # Convert to self.resonance_analyzer[0].weight.dtype to ensure compatibility
+            self.resonance_analyzer = self.resonance_analyzer.to(device=device, dtype=spectral_coherence.dtype)
+        
+        modulation_payload = self.resonance_analyzer(spectral_coherence) # [Batch, Num_Bands * 2]
+        
+        # Separate the raw decision gates (timing) from the continuous intensities (sigma)
+        burst_gate, burst_intensity = torch.chunk(modulation_payload, 2, dim=-1)
+        
+        # Apply sigmoid activation to the gate to enforce a sharp, non-linear burst threshold
+        # If the gate is low, no noise passes. If it snaps open, it releases a localized flash.
+        activation_gate = torch.sigmoid(burst_gate * 10.0)
+        
+        # Map intensity bounded uniformly to safe operational hardware ranges [0, 3.5V]
+        target_sigma = (torch.relu(burst_intensity) * 3.5) * activation_gate
+
+        # Step 3: Materialize the localized phase-scrambling noise field
+        # Expand the 16-band sigma targets back out to the full 4096 dimension
+        expanded_sigma = target_sigma.repeat_interleave(self.num_channels, dim=-1)
+        
+        # Generate raw Gaussian noise coordinates matching the packed register state
+        raw_noise = torch.randn_like(active_wave_state)
+        
+        # Synthesize the final agential phase-burst tensor
+        # Noise is scaled natively by the model's active decision boundaries
+        agential_noise_burst = raw_noise * expanded_sigma
+        
+        # Log the targeted intervention parameters for system telemetry
+        mean_applied_voltage = float(target_sigma.mean().item())
+        if mean_applied_voltage > 0.5:
+            print(f"[COGNITIVE THERMOSTAT] Localized Logic Lock sensed. Injected {mean_applied_voltage:.4f}V Agential Phase-Burst.")
+
+        return agential_noise_burst, mean_applied_voltage
+
+
 class DivergentMaster:
     """
     Thermodynamic Controller for the 7B HENRI Core.
@@ -137,3 +221,4 @@ class DivergentMaster:
 
     def get_temperature(self) -> float:
         return self.current_T
+
