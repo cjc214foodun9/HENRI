@@ -13,8 +13,8 @@ os.environ["GGML_OPENCL_DISABLE"] = "1"
 
 # Add paths to sys.path: prioritizing the 6/ folder for unified cognitive engine imports
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(PROJECT_DIR)
-sys.path.append(os.path.join(PROJECT_DIR, "6"))
+sys.path.insert(0, os.path.join(PROJECT_DIR, "6"))
+sys.path.insert(0, PROJECT_DIR)
 
 from cognitive_swarm import HenriCognitiveSwarmOrchestrator
 
@@ -85,6 +85,19 @@ def main():
     print("            HENRI COGNITIVE SWARM ARC-AGI-2 BENCHMARK ENGINE         ")
     print("=====================================================================")
     
+    # Run the Unified System Integrity Auditor to verify core and sandbox before running benchmark
+    print("[SYSTEM] Running Unified System Integrity Suite...")
+    try:
+        from unify_system_integrity import HenriSystemIntegrityAuditor
+        auditor = HenriSystemIntegrityAuditor()
+        success = auditor.run_global_integrity_suite()
+        if not success:
+            print("[FATAL] Unified System Integrity check failed. Aborting benchmark run.")
+            sys.exit(1)
+    except Exception as e:
+        print(f"[FATAL] Failed to run Unified System Integrity Suite: {e}")
+        sys.exit(1)
+        
     # 1. Setup Database Connection URL fallback
     db_url = os.environ.get("DATABASE_URL")
     if not db_url:

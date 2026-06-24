@@ -413,7 +413,7 @@ class L3SwarmRouter(nn.Module):
             if tensor is not None and tensor.is_complex():
                 # Determine device from applying fn to a dummy tensor
                 try:
-                    dummy = torch.complex(torch.ones(1), torch.ones(1))
+                    dummy = torch.ones(1, dtype=torch.float32)
                     import warnings
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")

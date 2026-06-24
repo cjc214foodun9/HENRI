@@ -244,50 +244,81 @@ class ActiveExperimentationEngine:
             
         return psi_candidate_focused.flatten()
 
-    def run_repl_sandbox(self, code_payload, training_cases, test_mode=False):
-        import copy
-        sandbox_globals = {}
-        
-        common_imports = (
-            "import math\n"
-            "import collections\n"
-            "from collections import defaultdict, deque, Counter\n"
-            "import itertools\n"
-            "import copy\n"
-            "import numpy as np\n"
-            "import torch\n"
-            "import torch.nn as torch_nn\n"
-            "import wosx\n"
-        )
-        full_code = common_imports + code_payload
-        
-        try:
-            exec(full_code, sandbox_globals)
-            if 'transform' not in sandbox_globals:
-                return 0.0, "Execution Error: Function 'transform' not defined."
-            transform_func = sandbox_globals['transform']
-            
-            if test_mode:
-                # CRITICAL FIX: Deep-copy the input grid to prevent in-place memory corruption
-                safe_input = copy.deepcopy(training_cases[0]['input'])
-                prediction = transform_func(safe_input)
-                return 1.0, prediction
-            
-            passed = 0
-            for case in training_cases:
-                # CRITICAL FIX: Deep-copy the input grid to prevent in-place memory corruption
-                safe_input = copy.deepcopy(case['input'])
-                expected_output = case['output']
-                
-                # Execute transformation on the isolated memory block
-                if transform_func(safe_input) == expected_output:
-                    passed += 1
-                    
-            if passed == len(training_cases):
-                return 1.0, "All training cases passed."
-            return (passed / len(training_cases)), f"Failed. Passed {passed}/{len(training_cases)}."
-            
-        except Exception as e:
+    def run_repl_sandbox(self, code_payload, training_cases, test_mode=False):  
+        import copy  
+        import numpy as np  
+        import torch  
+        sandbox_globals = {}  
+          
+        common_imports = (  
+            "import math\n"  
+            "import collections\n"  
+            "from collections import defaultdict, deque, Counter\n"  
+            "import itertools\n"  
+            "import copy\n"  
+            "import numpy as np\n"  
+            "import torch\n"  
+            "import torch.nn as torch_nn\n"  
+            "import wosx\n"  
+        )  
+        full_code = common_imports + code_payload  
+          
+        try:  
+            exec(full_code, sandbox_globals)  
+            if 'transform' not in sandbox_globals:  
+                return 0.0, "Execution Error: Function 'transform' not defined."  
+            transform_func = sandbox_globals['transform']  
+              
+            def safe_dynamic_execute(input_grid):  
+                """Safely tries multi-type ingestion pathways to prevent slicing and attribute crashes."""  
+                # Pathway A: Try execution as a pure standard Python list  
+                try:  
+                    res = transform_func(copy.deepcopy(input_grid))  
+                    if hasattr(res, "tolist"): return res.tolist()  
+                    if isinstance(res, np.ndarray): return res.tolist()  
+                    return res  
+                except Exception:  
+                    # Pathway B: Fallback to an optimized NumPy array wrapper  
+                    try:  
+                        res = transform_func(np.array(input_grid))  
+                        if hasattr(res, "tolist"): return res.tolist()  
+                        if isinstance(res, np.ndarray): return res.tolist()  
+                        return res  
+                    except Exception:  
+                        # Pathway C: Fallback to an unflattened PyTorch tensor wrapper  
+                        try:  
+                            res = transform_func(torch.tensor(input_grid))  
+                            if hasattr(res, "tolist"): return res.tolist()  
+                            return res  
+                        except Exception as final_backend_exception:  
+                            raise final_backend_exception
+
+            if test_mode:  
+                safe_input = training_cases[0]['input']  
+                prediction = safe_dynamic_execute(safe_input)  
+                return 1.0, prediction  
+              
+            passed = 0  
+            for case in training_cases:  
+                safe_input = case['input']  
+                expected_output = case['output']  
+                  
+                # Execute the candidate across the type-casting sieve  
+                actual_output = safe_dynamic_execute(safe_input)  
+                  
+                # Normalize expected output type arrays if necessary  
+                if hasattr(expected_output, "tolist"):  
+                    expected_output = expected_output.tolist()  
+                  
+                # Perform an ironclad structural value comparison  
+                if actual_output == expected_output:  
+                    passed += 1  
+                      
+            if passed == len(training_cases):  
+                return 1.0, "All training cases passed."  
+            return (passed / len(training_cases)), f"Failed. Passed {passed}/{len(training_cases)}."  
+              
+        except Exception as e:  
             return 0.0, f"Execution Error: {str(e)}"
 
     def evaluate_candidate(self, pure_code: str, train_cases: list) -> tuple:
@@ -359,10 +390,8 @@ class ActiveExperimentationEngine:
                 vocab_vals = list(self.orchestrator.hopfield.vocabulary.values())
                 lexicon_list = []
                 for v in vocab_vals:
-                    if torch.is_complex(v):
-                        lexicon_list.append(torch.real(v))
-                    else:
-                        lexicon_list.append(v)
+                    v_real = torch.real(v) if torch.is_complex(v) else v
+                    lexicon_list.append(v_real.detach().cpu())
                 zone_c_lexicon = torch.stack(lexicon_list)
             else:
                 zone_c_lexicon = torch.randn(10, 4096)

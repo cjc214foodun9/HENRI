@@ -1,0 +1,44 @@
+name: Project HENRI Continuous Integrity Pipeline
+
+on:  
+  push:  
+    branches: [ main ]  
+  pull_request:  
+    branches: [ main ]
+
+jobs:  
+  audit_and_deploy:  
+    runs-on: ubuntu-latest  
+      
+    steps:  
+    - name: Checkout Active Source Code  
+      uses: actions/checkout@v4
+
+    - name: Setup Pipeline Authentication  
+      run: |  
+        mkdir -p ~/.ssh  
+        echo "${{ secrets.VAST_AI_SSH_KEY }}" > ~/.ssh/id_rsa  
+        chmod 600 ~/.ssh/id_rsa
+
+    - name: Execute Remote Substrate Synchronization  
+      run: |  
+        # Rsync or copy verified source code changes directly onto the remote server footprint  
+        scp -P 32785 -o StrictHostKeyChecking=no -r ./6 root@ssh1.vast.ai:/workspace/HENRI/  
+        scp -P 32785 -o StrictHostKeyChecking=no ./unify_system_integrity.py root@ssh1.vast.ai:/workspace/HENRI/
+
+    - name: Trigger Unified System Integrity Suite  
+      run: |  
+        # Run the single cohesive integrity harness natively inside the remote container  
+        ssh -p 32785 -o StrictHostKeyChecking=no root@ssh1.vast.ai \
+          "export DATABASE_URL=${{ secrets.DB_URL }} && /venv/main/bin/python /workspace/HENRI/unify_system_integrity.py"
+
+    - name: Download Telemetry Metrics Report  
+      if: always()  
+      run: |  
+        scp -P 32785 -o StrictHostKeyChecking=no root@ssh1.vast.ai:/workspace/HENRI/system_integrity_report.json ./
+
+    - name: Archive System Integrity Artifacts  
+      uses: actions/upload-artifact@v4  
+      with:  
+        name: henri-telemetry-ledger  
+        path: ./system_integrity_report.json

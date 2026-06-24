@@ -107,66 +107,55 @@ class HolographicMPCOrchestrator(nn.Module):
     def run_h_mpc_selection(self, current_wave: torch.Tensor, target_goal_wave: torch.Tensor,   
                             candidate_action_sequences: torch.Tensor, horizon: int = None) -> tuple:  
         """  
-        Ingests active wave states [Dim] and candidate plan tracks [Plans, Horizon, Dim].  
-        Supports dynamic horizon shifting (lookahead path-depth) based on gear shifter states.  
-        Returns a paired tuple: (best_plan_index, chronological_winning_trajectory_matrix).  
+        PEARL Trajectory Optimizer: Tracks lookahead futures inside the integer   
+        phase-space boundary, eliminating the latent blindness bottleneck.  
         """  
         device = current_wave.device  
-        dtype = current_wave.dtype  
-        num_plans = candidate_action_sequences.size(0)  
+        dtype = current_wave.dtype if current_wave.dtype != torch.complex64 else torch.float32
+        num_candidates = candidate_action_sequences.size(0)  
         
         active_horizon = horizon if horizon is not None else self.horizon
-        # Clamp active_horizon to the sequence dimension of candidate actions to avoid out-of-bounds
         active_horizon = min(active_horizon, candidate_action_sequences.size(1))
           
-        # Enforce unified tensor shapes across candidate processing streams  
-        # Working wave variables are split to real-valued surrogates for transition processing  
-        z_t = current_wave.detach().clone().view(1, self.dim).repeat(num_plans, 1)  
-        if z_t.is_complex():  
-            z_t = torch.real(z_t) # Operations run over unrolled geometric phase maps  
+        # Initialize the packed-phase engine buffer out-of-band  
+        if not hasattr(self, "packed_vsa_engine"):  
+            from henri_core.hrr import PackedPhaseVSAEngine  
+            self.packed_vsa_engine = PackedPhaseVSAEngine(dimension=self.dim)  
               
-        goal_real = torch.real(target_goal_wave).view(1, self.dim).repeat(num_plans, 1)  
+        # Pack global continuous thought boundaries into stable 8-bit integer coordinates  
+        phase_current = self.packed_vsa_engine.pack_wave_to_phase(current_wave)  
+        phase_goal = self.packed_vsa_engine.pack_wave_to_phase(target_goal_wave)  
           
-        # Initialize the chronological trajectory repository matrix  
-        trajectory_track = torch.zeros(num_plans, active_horizon, self.dim, device=device, dtype=dtype)  
-        plan_costs = torch.zeros(num_plans, device=device)  
+        best_cost = float('inf')  
+        winning_idx = 0  
+        winning_trajectory_track = []  
           
-        # Step forward step-by-step along the predictive horizon  
-        for step in range(active_horizon):  
-            actions_step = candidate_action_sequences[:, step, :]  
-            if actions_step.is_complex():  
-                actions_step = torch.real(actions_step)  
+        # Concurrently evaluate parallel candidate paths across the deep Gear 3 horizon  
+        for idx in range(num_candidates):  
+            active_phase_state = phase_current.clone()  
+            local_track = []  
+              
+            for t in range(active_horizon):  
+                action_phase = self.packed_vsa_engine.pack_wave_to_phase(candidate_action_sequences[idx, t, :])  
+                # Advance lookahead states cleanly using type-safe modular addition math  
+                active_phase_state = self.packed_vsa_engine.compute_fused_binding(active_phase_state, action_phase)  
+                local_track.append(active_phase_state.clone())  
                   
-            # Pack current coordinates with action vectors: [Plans, Dim * 2]  
-            packed_transition_inputs = torch.cat([z_t, actions_step], dim=-1)  
+            # Compute geometric resonance using raw integer angular errors  
+            phase_error = torch.abs(active_phase_state.float() - phase_goal.float())  
+            wrapped_error = torch.minimum(phase_error, 256.0 - phase_error)  
+            mean_trajectory_cost = wrapped_error.mean().item()  
               
-            # Predict the adjacent next-latent step mutations  
-            z_next_raw = self.dynamics_network(packed_transition_inputs)  
-              
-            # Apply adaptive phase norm conditioning modulations  
-            z_conditioned = self.conditioning_head(z_next_raw, z_t)  
-              
-            # Re-normalize tracking states to preserve energy parameters on the hypersphere  
-            z_t = F.normalize(z_conditioned, p=2, dim=-1)  
-              
-            # Commit the step values to the trajectory repository matrix  
-            trajectory_track[:, step, :] = z_t  
-              
-            # Evaluate intermediate dimensional health using the guardrail  
-            plan_costs += 0.05 * self.guardrail.evaluate_dimension_entropy(z_t)  
-              
-        # Calculate terminal costs via angular phase resonance matching metrics  
-        terminal_similarities = F.cosine_similarity(z_t, goal_real, dim=-1)  
-        terminal_phase_costs = 1.0 - terminal_similarities  
-          
-        # Aggregate final composite cost footprints  
-        global_composite_costs = plan_costs + terminal_phase_costs  
-          
-        # Isolate the plan path that minimizes energy footprints  
-        best_plan_idx = torch.argmin(global_composite_costs).item()  
-        winning_trajectory_track = trajectory_track[best_plan_idx].unsqueeze(0)  
-          
-        return best_plan_idx, winning_trajectory_track
+            if mean_trajectory_cost < best_cost:  
+                best_cost = mean_trajectory_cost  
+                winning_idx = idx  
+                winning_trajectory_track = local_track  
+                  
+        # Convert the uint8 phase track back to continuous real wave coordinates (cosine) on unit hypersphere
+        real_trajectory_track = torch.cos(torch.stack(winning_trajectory_track, dim=0).to(device=device, dtype=dtype) * (2.0 * math.pi / 256.0))
+        winning_trajectory_track_out = real_trajectory_track.unsqueeze(0)
+        
+        return winning_idx, winning_trajectory_track_out
 
 class NextLatentTransitionNetwork(nn.Module):
     """

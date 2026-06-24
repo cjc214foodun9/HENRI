@@ -333,7 +333,11 @@ class NonAutoregressiveCanvasSampler(nn.Module):
             42,  # *
             47,  # /
             33,  # !
-            34, 39  # " '
+            34, 39,  # " '
+            44,  # ,
+            60, 62,  # < >
+            123, 125,  # { }
+            37   # %
         ])
         
         valid_chars_base = torch.zeros(256, dtype=torch.bool, device=device)

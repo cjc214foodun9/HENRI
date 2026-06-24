@@ -77,8 +77,7 @@ export DATABASE_URL=postgresql://postgres:password@127.0.0.1:5432/henri
 cd /workspace/HENRI
 /venv/main/bin/python 6/init_local_db_4096.py
 
-echo "=== STEP 7: Run HENRI Substrate & Reasoning Verification ==="
-/venv/main/bin/python verify_henri_substrate.py
-/venv/main/bin/python verify_reasoning.py
+echo "=== STEP 7: Run HENRI Unified System Integrity Audits ==="
+/venv/main/bin/python unify_system_integrity.py
 
 echo "=== remote setup completed successfully! ==="

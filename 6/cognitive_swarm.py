@@ -56,7 +56,15 @@ from hopfield_cleanup import HopfieldSemanticCleanup
 from boundary_validator import BoundaryAxiomValidator
 from universal_repl import UniversalREPL
 from memory_cache import CachedHRRMemoryEngine
-from telemetry_server import telemetry_register, NonBlockingTelemetryServer
+try:
+    from telemetry_server import telemetry_register, NonBlockingTelemetryServer
+    HAS_TELEMETRY = True
+except ImportError:
+    HAS_TELEMETRY = False
+    class DummyTelemetryRegister:
+        def update(self, *args, **kwargs):
+            pass
+    telemetry_register = DummyTelemetryRegister()
 
 from emergent_topological_manifold import EmergentManifold
 from autotelic_cognitive_engine import IMGEP_Manager
@@ -1478,6 +1486,8 @@ class HenriCognitiveSwarmOrchestrator:
 
     def start_telemetry_server(self):
         """Starts the telemetry server on port 8000 if not already running."""
+        if not HAS_TELEMETRY:
+            return
         if not hasattr(self, "telemetry_server") or self.telemetry_server is None:
             self.telemetry_server = NonBlockingTelemetryServer(host='0.0.0.0', port=8000)
             self.telemetry_server.start()
@@ -2905,24 +2915,50 @@ class HolographicMPCOrchestrator(torch.nn.Module):
     def run_h_mpc_selection(self, current_wave: torch.Tensor, target_goal_wave: torch.Tensor,   
                              candidate_action_sequences: torch.Tensor, horizon=16) -> tuple:  
         """  
-        PEARL Trajectory Optimizer: Tracks lookahead futures inside the speculative
-        latent drafting engine using F_theta transition rollouts.
+        PEARL Trajectory Optimizer: Tracks lookahead futures inside the integer   
+        phase-space boundary, eliminating the latent blindness bottleneck.  
         """  
-        device = current_wave.device
+        device = current_wave.device  
         dtype = current_wave.dtype if current_wave.dtype != torch.complex64 else torch.float32
+        num_candidates = candidate_action_sequences.size(0)  
+          
+        # Initialize the packed-phase engine buffer out-of-band  
+        if not hasattr(self, "packed_vsa_engine"):  
+            from henri_core.hrr import PackedPhaseVSAEngine  
+            self.packed_vsa_engine = PackedPhaseVSAEngine(dimension=self.dim)  
+              
+        # Pack global continuous thought boundaries into stable 8-bit integer coordinates  
+        phase_current = self.packed_vsa_engine.pack_wave_to_phase(current_wave)  
+        phase_goal = self.packed_vsa_engine.pack_wave_to_phase(target_goal_wave)  
+          
+        best_cost = float('inf')  
+        winning_idx = 0  
+        winning_trajectory_track = []  
+          
+        # Concurrently evaluate parallel candidate paths across the deep Gear 3 horizon  
+        for idx in range(num_candidates):  
+            active_phase_state = phase_current.clone()  
+            local_track = []  
+              
+            for t in range(horizon):  
+                action_phase = self.packed_vsa_engine.pack_wave_to_phase(candidate_action_sequences[idx, t, :])  
+                # Advance lookahead states cleanly using type-safe modular addition math  
+                active_phase_state = self.packed_vsa_engine.compute_fused_binding(active_phase_state, action_phase)  
+                local_track.append(active_phase_state.clone())  
+                  
+            # Compute geometric resonance using raw integer angular errors  
+            phase_error = torch.abs(active_phase_state.float() - phase_goal.float())  
+            wrapped_error = torch.minimum(phase_error, 256.0 - phase_error)  
+            mean_trajectory_cost = wrapped_error.mean().item()  
+              
+            if mean_trajectory_cost < best_cost:  
+                best_cost = mean_trajectory_cost  
+                winning_idx = idx  
+                winning_trajectory_track = local_track  
+                  
+        # Convert the uint8 phase track back to continuous real wave coordinates (cosine) on unit hypersphere
+        real_trajectory_track = torch.cos(torch.stack(winning_trajectory_track, dim=0).to(device=device, dtype=dtype) * (2.0 * math.pi / 256.0))
+        self.winning_jepa_track = real_trajectory_track.unsqueeze(0)
         
-        from henri_core.h_mpc_steering import LatentSpeculativeDraftEngine
-        draft_engine = LatentSpeculativeDraftEngine(dim=self.dim, horizon=horizon).to(device=device, dtype=dtype)
-        
-        zone_c_lexicon = self.database.get_cached_canonical_lexicon_tensor().to(device=device, dtype=dtype)
-        
-        winning_idx, pristine_jepa_track = draft_engine.draft_speculative_horizons(
-            current_latent_wave=current_wave,
-            candidate_token_sequences=candidate_action_sequences,
-            transition_network=self.nextlat_transition_net,
-            zone_c_lexicon=zone_c_lexicon
-        )
-        
-        self.winning_jepa_track = pristine_jepa_track
-        print(f"[H-MPC SPECULATION] Best Plan Index: {winning_idx} selected via speculative latent drafting.")  
+        print(f"[H-MPC SPECULATION] Best Plan Index: {winning_idx} selected via speculative packed phase routing (Min Cost: {best_cost:.4f}).")  
         return winning_idx, self.winning_jepa_track
