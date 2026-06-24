@@ -1239,7 +1239,7 @@ class HenriCognitiveSwarmOrchestrator:
         Orchestration Handler: Pipes the final lowest-entropy trajectory vector (complex HRR wave)
         straight into the guidance head of the NonAutoregressiveCanvasSampler.
         """
-        from diffusion_canvas import NonAutoregressiveCanvasSampler
+        from henri_core.diffusion_canvas import NonAutoregressiveCanvasSampler
         import torch.nn as nn
         import os
         import sys
@@ -1306,17 +1306,24 @@ class HenriCognitiveSwarmOrchestrator:
             import gc; gc.collect(); torch.cuda.empty_cache()
             
             # Rehydrate the exact trained linear projection layer on CPU first, then move to GPU
-            translation_head = nn.Linear(hidden_dim, vocab_size, bias=False).to(dtype=torch.bfloat16)
+            has_bias = (checkpoint_translation_head_state_dict is not None and "bias" in checkpoint_translation_head_state_dict)
+            translation_head = nn.Linear(hidden_dim, vocab_size, bias=has_bias).to(dtype=torch.bfloat16)
             if checkpoint_translation_head_state_dict is not None:
                 try:
                     translation_head.load_state_dict(checkpoint_translation_head_state_dict)
                     print("[SUCCESS] Transduction vocabulary layer fully aligned with continuous core weights.")
                 except Exception as lsd_err:
                     print(f"[WARNING] Failed to load translation head state dict: {lsd_err}. Reinitializing.")
-                    nn.init.orthogonal_(translation_head.weight)
+                    with torch.no_grad():
+                        temp_th = torch.empty(translation_head.weight.shape, dtype=torch.float32)
+                        nn.init.orthogonal_(temp_th)
+                        translation_head.weight.copy_(temp_th.to(dtype=torch.bfloat16))
             else:
                 print("[WARNING] No trained translation state found. Falling back to orthogonal init.")
-                nn.init.orthogonal_(translation_head.weight)
+                with torch.no_grad():
+                    temp_th = torch.empty(translation_head.weight.shape, dtype=torch.float32)
+                    nn.init.orthogonal_(temp_th)
+                    translation_head.weight.copy_(temp_th.to(dtype=torch.bfloat16))
                 
             translation_head = translation_head.to(device=device).eval()
             del checkpoint_translation_head_state_dict

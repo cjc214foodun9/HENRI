@@ -181,7 +181,7 @@ class EmergentCognitiveSwarm(nn.Module):
         device = self.router.w_down.weight.device
         
         # Resolve/import model components
-        from diffusion_canvas import NonAutoregressiveCanvasSampler
+        from henri_core.diffusion_canvas import NonAutoregressiveCanvasSampler
         from henri_core.egress import QuantizedEgressAssembler
         from henri_core.core import ProprietaryHENRICore
         
@@ -416,10 +416,14 @@ class EmergentCognitiveSwarm(nn.Module):
                 
                 # Convert character arrays directly back to python text strings using the GPT-2 Tokenizer
                 try:
-                    from transformers import GPT2Tokenizer
+                    from transformers import AutoTokenizer
                     parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                    local_tok_dir = os.path.join(parent_dir, "gpt2_tokenizer_local")
-                    tokenizer = GPT2Tokenizer.from_pretrained(local_tok_dir) if os.path.exists(local_tok_dir) else GPT2Tokenizer.from_pretrained('gpt2')
+                    if vocab_size == 32000:
+                        local_tok_dir = os.path.join(parent_dir, "llama_tokenizer_local")
+                        tokenizer = AutoTokenizer.from_pretrained(local_tok_dir)
+                    else:
+                        local_tok_dir = os.path.join(parent_dir, "gpt2_tokenizer_local")
+                        tokenizer = AutoTokenizer.from_pretrained(local_tok_dir) if os.path.exists(local_tok_dir) else AutoTokenizer.from_pretrained('gpt2')
                     generated_text = tokenizer.decode(token_ids)
                 except Exception as tok_err:
                     print(f"[SWARM WARNING] Tokenizer decode failed: {tok_err}. Falling back to character mapping.")

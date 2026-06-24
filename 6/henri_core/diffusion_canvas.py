@@ -176,10 +176,14 @@ class NonAutoregressiveCanvasSampler(nn.Module):
         mask_code = torch.zeros(vocab_size, dtype=torch.float32)  
           
         try:  
-            from transformers import GPT2Tokenizer  
-            parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  
-            local_tok_dir = os.path.join(parent_dir, "gpt2_tokenizer_local")  
-            tokenizer = GPT2Tokenizer.from_pretrained(local_tok_dir) if os.path.exists(local_tok_dir) else GPT2Tokenizer.from_pretrained('gpt2')  
+            from transformers import AutoTokenizer  
+            parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  
+            if vocab_size == 32000:
+                local_tok_dir = os.path.join(parent_dir, "llama_tokenizer_local")
+                tokenizer = AutoTokenizer.from_pretrained(local_tok_dir)
+            else:
+                local_tok_dir = os.path.join(parent_dir, "gpt2_tokenizer_local")  
+                tokenizer = AutoTokenizer.from_pretrained(local_tok_dir) if os.path.exists(local_tok_dir) else AutoTokenizer.from_pretrained('gpt2')  
               
             # Scada / Robotics Crosstalk Terms  
             forbidden_keywords = ["scada", "actuator", "gripper", "torque", "vulkan", "valve",   
