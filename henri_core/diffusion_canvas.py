@@ -105,6 +105,30 @@ class ConsistencyCanvasCrystallizer(nn.Module):
             final_crystallized_manifold = c_skip_2 * x_mid + c_out_2 * score_out_2
             
         return final_crystallized_manifold
+class TokenLevelFSMDecoderGate(nn.Module):
+    """
+    Intercepts the language decoding head at the logit layer during crystallization.
+    Forces absolute character compliance with the Python AST grammar schema.
+    """
+    def __init__(self, vocab_size=256):
+        super().__init__()
+        self.vocab_size = vocab_size
+
+    def enforce_ast_rigidity(self, raw_logits, active_fsm_mask):
+        """
+        Applies a hard mathematical constraint to the model's prediction distribution.
+        
+        Args:
+            raw_logits: [Batch, Vocab_Size] (Raw tensor outputs from the decoder head)
+            active_fsm_mask: [Batch, Vocab_Size] (Binary byte mask from python.gbnf)
+        """
+        # Convert the active character mask to a strict logit penalty vector
+        # Valid tokens (1) receive 0 penalty; Invalid tokens (0) are pushed to negative infinity
+        penalty = (1.0 - active_fsm_mask.to(raw_logits.dtype)) * -1e9
+        
+        # Superimpose the syntax constraint straight onto the hardware register
+        bounded_logits = raw_logits + penalty
+        return bounded_logits
 
 class NonAutoregressiveCanvasSampler(nn.Module):  
     """  
@@ -262,35 +286,64 @@ class NonAutoregressiveCanvasSampler(nn.Module):
         open_braces = {40, 91, 123}
         close_braces = {41, 93, 125}
         
-        # Precompute constants to avoid device transfers in the loop
-        valid_chars_base = torch.ones(256, dtype=torch.bool, device=device)
-        for c in range(256):
-            if not (32 <= c <= 126 or c in (9, 10, 13)):
-                valid_chars_base[c] = False
+        # Strict Python AST/GBNF character whitelist outside strings
+        python_fsm_whitelist = set(range(97, 123))  # a-z
+        python_fsm_whitelist.update(range(65, 91))   # A-Z
+        python_fsm_whitelist.update(range(48, 58))   # 0-9
+        python_fsm_whitelist.update([
+            95,  # _
+            32,  # space
+            10,  # \n
+            13,  # \r
+            40, 41,  # ( )
+            91, 93,  # [ ]
+            123, 125, # { }
+            58,  # :
+            44,  # ,
+            46,  # .
+            61,  # =
+            43,  # +
+            45,  # -
+            42,  # *
+            47,  # /
+            37,  # %
+            60, 62,  # < >
+            33,  # !
+            34, 39  # " '
+        ])
+        
+        valid_chars_base = torch.zeros(256, dtype=torch.bool, device=device)
+        for c in python_fsm_whitelist:
+            valid_chars_base[c] = True
+            
+        decoder_gate = TokenLevelFSMDecoderGate(vocab_size=vocab_size).to(device)
                 
         for i in range(sequence_length):
-            valid_chars = valid_chars_base.clone()
-            
-            # Apply FSM constraints to the 256 possible ASCII byte values
             if open_quote is not None:
-                # Inside string literal: disallow newlines unless escaped
+                # Inside string literal: allow all printable ASCII, disallow newlines unless escaped
+                valid_chars = torch.ones(256, dtype=torch.bool, device=device)
+                for c in range(256):
+                    if not (32 <= c <= 126 or c in (9, 10, 13)):
+                        valid_chars[c] = False
                 if not escape_active:
                     valid_chars[10] = False
                     valid_chars[13] = False
                 
-                # If we are at the last token, we must force-close the open quote
+                # If we are at the last token, force close the quote
                 remaining_tokens = sequence_length - 1 - i
                 if remaining_tokens == 0:
                     valid_chars[:] = False
                     valid_chars[open_quote] = True
             else:
-                # Outside a string literal
+                # Outside string literal: use strict whitelist
+                valid_chars = valid_chars_base.clone()
+                
                 # Cannot close a brace that doesn't match the top of the stack
                 for close_c, open_c in brace_map.items():
                     if not brace_stack or brace_stack[-1] != open_c:
                         valid_chars[close_c] = False
                 
-                # If running out of tokens, force close the open braces in order
+                # If running out of tokens, force close open braces
                 remaining_tokens = sequence_length - 1 - i
                 if remaining_tokens < len(brace_stack):
                     target_close = None
@@ -306,11 +359,18 @@ class NonAutoregressiveCanvasSampler(nn.Module):
             repeats = (vocab_size + 255) // 256
             mask_vocab = valid_chars.repeat(repeats)[:vocab_size]
             
-            # Retrieve energy at position i
-            energy_i = energy_all[i].clone()
-            energy_i[~mask_vocab] = float('inf')
+            # Format active_fsm_mask for the gate (1.0 for valid, 0.0 for invalid)
+            active_fsm_mask = mask_vocab.to(dtype=torch.float32).unsqueeze(0)
             
-            selected_token = torch.argmin(energy_i).item()
+            # Retrieve logits (negative of energy) at position i
+            # raw_logits shape: [1, vocab_size]
+            raw_logits = -energy_all[i].unsqueeze(0)
+            
+            # Apply the FSM gate constraint
+            bounded_logits = decoder_gate.enforce_ast_rigidity(raw_logits, active_fsm_mask)
+            
+            # Select token with the highest bounded logit (argmax)
+            selected_token = torch.argmax(bounded_logits).item()
             winning_tokens.append(selected_token)
             
             # Update FSM state based on the chosen character
