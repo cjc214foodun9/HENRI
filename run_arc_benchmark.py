@@ -1,5 +1,9 @@
 import os
 import sys
+
+# Configure PyTorch CUDA Memory Allocator to prevent long-term VRAM fragmentation
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
 import time
 import json
 import torch
@@ -109,16 +113,28 @@ def main():
         print(f"[SYSTEM] Using configured DATABASE_URL: {db_url}")
 
     # 2. Load ARC Evaluation Tasks with fallback resolution
-    eval_dir = Path(PROJECT_DIR) / "ARC-AGI-2" / "data" / "evaluation"
-    if not eval_dir.exists():
-        eval_dir = Path(PROJECT_DIR) / "archive" / "ARC-AGI-2-main" / "data" / "evaluation"
+    use_training = False
+    for arg in sys.argv:
+        if arg == "--use-training":
+            use_training = True
+
+    if use_training:
+        eval_dir = Path(PROJECT_DIR) / "ARC-AGI-2" / "data" / "training"
+        if not eval_dir.exists():
+            eval_dir = Path(PROJECT_DIR) / "archive" / "ARC-AGI-2-main" / "data" / "training"
+        dir_name = "training"
+    else:
+        eval_dir = Path(PROJECT_DIR) / "ARC-AGI-2" / "data" / "evaluation"
+        if not eval_dir.exists():
+            eval_dir = Path(PROJECT_DIR) / "archive" / "ARC-AGI-2-main" / "data" / "evaluation"
+        dir_name = "evaluation"
         
     if not eval_dir.exists():
-        print(f"[ERROR] ARC Evaluation folder not found at: {eval_dir}")
+        print(f"[ERROR] ARC {dir_name.capitalize()} folder not found at: {eval_dir}")
         sys.exit(1)
         
     task_files = sorted(list(eval_dir.glob("*.json")))
-    print(f"[SYSTEM] Found {len(task_files)} public evaluation tasks.")
+    print(f"[SYSTEM] Found {len(task_files)} public {dir_name} tasks.")
     
     max_test_tasks = len(task_files)
     for i, arg in enumerate(sys.argv):

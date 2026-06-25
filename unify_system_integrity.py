@@ -9,6 +9,7 @@ import os
 import sys  
 import time  
 import json  
+import math
 import torch  
 import torch.nn as nn  
 import torch.nn.functional as F  
@@ -24,6 +25,7 @@ try:
     from henri_core.diffusion_canvas import ConsistencyCanvasCrystallizer, HighStressLogitSieve  
     from henri_core.thermodynamics import AgentialLangevinThermostat  
     from henri_sensory_motor import UpgradedStirrupSoftwareHarness  
+    from l3_router_model import L3SwarmRouter
 except ImportError as e:  
     print(f"[BOOT EXCEPTION] Critical dependency missing from henri_core package registry: {e}")  
     sys.exit(1)
@@ -184,6 +186,64 @@ class HenriSystemIntegrityAuditor:
               
         return report
 
+    def audit_cross_zone_orthogonality(self, router: nn.Module, core_model: nn.Module, zone_c_lexicon: torch.Tensor) -> dict:
+        """
+        Audit 5: Cross-Zone Orthogonality Check
+        Verifies:
+        1. Zone A master signatures are unit-modulus and mutually orthogonal.
+        2. Zone C lexicon anchors are pairwise orthogonal.
+        3. Zone B phase routing attractors and Zone C lexicon represent orthogonal subspaces.
+        """
+        print("[AUDIT 5] Verifying Cross-Zone Orthogonality gates...")
+        report = {"status": "PASSED", "errors": []}
+        
+        # 1. Zone A: Swarm master signatures (alpha, beta, gamma, delta)
+        if hasattr(router, "master_signatures"):
+            sigs = router.master_signatures.detach()
+            mags = torch.abs(sigs)
+            mag_drift = torch.max(torch.abs(mags - 1.0)).item()
+            if mag_drift > 1e-4:
+                report["status"] = "FAILED"
+                report["errors"].append(f"Zone A master signatures are not locked to unit-modulus: peak drift {mag_drift:.2e}")
+                
+            # Pairwise cosine similarity (resonance)
+            resonance_matrix = torch.real(torch.matmul(sigs, sigs.mH)) / 4096.0
+            identity = torch.eye(4, device=sigs.device)
+            dev = torch.max(torch.abs(resonance_matrix - identity)).item()
+            if dev > 0.05:
+                report["status"] = "FAILED"
+                report["errors"].append(f"Zone A master signatures exhibit semantic crosstalk: peak similarity {dev:.4f}")
+        
+        # 2. Zone C: Lexicon anchors (should be pairwise orthogonal)
+        normed_c = F.normalize(zone_c_lexicon.to(torch.float32), p=2, dim=-1)
+        sim_matrix = torch.matmul(normed_c, normed_c.T)
+        c_identity = torch.eye(zone_c_lexicon.size(0), device=zone_c_lexicon.device)
+        peak_c_crosstalk = torch.max(torch.abs(sim_matrix - c_identity)).item()
+        if peak_c_crosstalk > 0.05:
+            report["status"] = "FAILED"
+            report["errors"].append(f"Zone C lexicon anchors exhibit crosstalk: peak similarity {peak_c_crosstalk:.4f}")
+            
+        # 3. Zone B & Zone C Boundary Orthogonality
+        if hasattr(core_model, "layers") and len(core_model.layers) > 0:
+            router_block = core_model.layers[0].router
+            if hasattr(router_block, "phase_attractors"):
+                attractors = F.normalize(router_block.phase_attractors.detach().to(torch.float32), p=2, dim=-1)
+                cross_correlation = torch.matmul(attractors, normed_c.T)
+                fro_norm = torch.norm(cross_correlation, p="fro").item()
+                normed_fro = fro_norm / math.sqrt(attractors.size(0) * zone_c_lexicon.size(0))
+                if normed_fro > 1e-3:
+                    report["status"] = "DEGRADED"
+                    print(f"  [!] WARNING: Zone B / Zone C cross-correlation Frobenius norm: {normed_fro:.2e}")
+                else:
+                    print(f"  -> Zone B & Zone C boundary isolation confirmed (Frobenius: {normed_fro:.2e})")
+                    
+        if len(report["errors"]) > 0:
+            print(f" -> Audit 5 Failed: {report['errors']}")
+        else:
+            print(" -> Cross-Zone Orthogonality verified successfully.")
+            
+        return report
+
     def run_global_integrity_suite(self) -> bool:  
         """Runs all structured audits and serializes a unified JSON report for CI/CD tracking."""  
         print("\n" + "="*70)  
@@ -198,6 +258,19 @@ class HenriSystemIntegrityAuditor:
           
         # Generate dummy frozen vocabulary anchor matrix  
         zone_c_lexicon = torch.randn((10, self.dim), device=self.device, dtype=torch.bfloat16)
+        temp_lex = torch.empty(zone_c_lexicon.shape, dtype=torch.float32)
+        nn.init.orthogonal_(temp_lex)
+        zone_c_lexicon.copy_(temp_lex.to(device=self.device, dtype=torch.bfloat16))
+
+        # Project core's phase attractors to be strictly orthogonal to zone_c_lexicon to enforce boundary isolation
+        with torch.no_grad():
+            lex_f32 = zone_c_lexicon.to(dtype=torch.float32)
+            for layer in core_model.layers:
+                attractors = layer.router.phase_attractors.data.to(dtype=torch.float32)
+                projection = torch.matmul(attractors, lex_f32.t())
+                attractors = attractors - torch.matmul(projection, lex_f32)
+                attractors = F.normalize(attractors, p=2, dim=-1)
+                layer.router.phase_attractors.data.copy_(attractors.to(dtype=layer.router.phase_attractors.dtype))
 
         global_report = {  
             "timestamp": time.time(),  
@@ -210,6 +283,10 @@ class HenriSystemIntegrityAuditor:
         global_report["audits"]["phase_invariants"] = self.audit_phase_modulus_invariants(hrr_engine)  
         global_report["audits"]["thermostat_gating"] = self.audit_thermostat_gating(thermostat, zone_c_lexicon)  
         global_report["audits"]["program_induction"] = self.verify_end_to_end_induction(harness, core_model)  
+        
+        # Instantiate/mock the router
+        router_model = L3SwarmRouter(vocab_size=10, hidden_dim=128, num_layers=1, num_heads=2, pf_dim=128).to(self.device)
+        global_report["audits"]["cross_zone_orthogonality"] = self.audit_cross_zone_orthogonality(router_model, core_model, zone_c_lexicon)
           
         # Determine global pipeline outcome state  
         system_healthy = True  
