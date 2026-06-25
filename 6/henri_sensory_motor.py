@@ -4,9 +4,37 @@ Component: Unified "Stirrup" Robotic Agentic Testing Harness
 Author: Joseph Valentine (Bespoke Architecture Core)
 Date: 2026-06-17
 
-Unifies continuous high-dimensional vector algebra (VSA), TAME bioelectric 
-morphological control, and Yann LeCun's JEPA predictive lookahead rollouts into 
-a fully differentiable straight-through motor-actuation engine.
+========================================================================================
+                                 METAPHOR & DOCUMENTATION INDEX
+========================================================================================
+This module uses terms from control theory, physical robotics (e.g., SE(3) translation/
+rotation, motor actuators), and TAME bioelectric models. 
+
+IT DOES NOT INTERFACE WITH ANY PHYSICAL ROBOTIC HARDWARE.
+
+Instead, this file implements a software-agent execution engine mapping 4096-D 
+continuous wave spaces to local file system and REPL interactions:
+
+1. METAPHOR MAPPING:
+   * "translation/rotation" (SE(3)) -> Workspace state encoding (active file context,
+     cursor coordinates, and search setpoints).
+   * "motor actions/actuators" -> Tools available to the software developer agent
+     (e.g., Workspace Read File, Workspace Write Patch, Run Python REPL, Run Tests).
+   * "robotic simulation/rollout" -> Lookahead dry-runs of commands inside an isolated
+     local sandbox process to verify success prior to execution.
+
+2. SYSTEM INTEGRATION:
+   * Connection to the Real World (Sensory-Motor Integration):
+     While design documents outline connecting to physical actuators to navigate spaces
+     and manipulate tools in real-time, the current system implements sensory-motor
+     integration entirely as a software tool execution harness. The "real world" of HENRI
+     is the coding workspace, and its "sensors/actuators" are the REPL and file systems.
+   * Shared Knowledge Attractor Grid (Zone C Database Scaling):
+     Every successful run is logged via the Stirrup telemetry logger into the Zone C
+     TimescaleDB hypertable registry. This database stores successful parameter wave 
+     configurations ("light chords") which allow concurrent swarms of HENRI instances
+     to instantly retrieve pre-solved solutions.
+========================================================================================
 """
 
 import os

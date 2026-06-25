@@ -129,6 +129,21 @@ try:
                 if "already a hypertable" not in str(e).lower():
                     print(f"[WARNING] hypertable creation stirrup_telemetry_ledger: {e}")
             
+            print("[*] Setting up TimescaleDB compression policies (12-hour window)...")
+            for table in ['thermodynamic_ledger', 'gemma_latent_history', 'stirrup_telemetry_ledger']:
+                try:
+                    cur.execute(f"ALTER TABLE {table} SET (timescaledb.compress);")
+                    cur.execute(f"SELECT add_compression_policy('{table}', INTERVAL '12 hours', if_not_exists => true);")
+                    print(f"[+] Compression policy configured for {table}.")
+                except Exception as comp_err:
+                    if "already exists" not in str(comp_err).lower() and "already has" not in str(comp_err).lower() and "already enabled" not in str(comp_err).lower():
+                        try:
+                            cur.execute(f"SELECT add_compression_policy('{table}', INTERVAL '12 hours');")
+                            print(f"[+] Compression policy configured for {table} (fallback).")
+                        except Exception as comp_err2:
+                            if "already exists" not in str(comp_err2).lower() and "already has" not in str(comp_err2).lower():
+                                print(f"[WARNING] Failed to enable compression policy for {table}: {comp_err2}")
+            
             print("[*] Creating StreamingDiskANN index via vectorscale for 4096D hrr_canonical_lexicon...")
             try:
                 cur.execute("""

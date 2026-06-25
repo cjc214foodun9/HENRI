@@ -139,6 +139,7 @@ class EmergentCognitiveSwarm(nn.Module):
         print(f"\n--- [SWARM HYPOTHESIS GENERATED] ---\n{text}\n-------------------------------------\n")
         return text, alpha_routing
 
+    @torch.no_grad()
     def generate_parallel_hypotheses(self, task_dict, playbook_wave, playbook_dict=None, temperature=0.7, inject_noise=False, num_candidates=16, early_stopping_callback=None, start_time=None, time_limit=None):
         """
         Generates a batch of parallel hypotheses across the swarm in coordinated 64-token micro-epochs.
@@ -181,6 +182,12 @@ class EmergentCognitiveSwarm(nn.Module):
         device = self.router.w_down.weight.device
         
         # Resolve/import model components
+        vocab_size = 32000
+        if hasattr(self.orchestrator, 'l3_router') and self.orchestrator.l3_router is not None:
+            vocab_size = getattr(self.orchestrator.l3_router, 'vocab_size', 32000)
+        elif hasattr(self.orchestrator, '_diffusion_translation_head') and self.orchestrator._diffusion_translation_head is not None:
+            vocab_size = self.orchestrator._diffusion_translation_head.out_features
+            
         from henri_core.diffusion_canvas import NonAutoregressiveCanvasSampler
         from henri_core.egress import QuantizedEgressAssembler
         from henri_core.core import ProprietaryHENRICore
@@ -194,12 +201,22 @@ class EmergentCognitiveSwarm(nn.Module):
             
             checkpoint = None
             if os.path.exists(core_path):
-                print(f"[SWARM] Loading checkpoint to CPU to conserve GPU VRAM...")
+                print(f"[SWARM] Loading checkpoint to CPU to conserve GPU VRAM from: {core_path}")
                 try:
                     checkpoint = torch.load(core_path, map_location='cpu')
                 except Exception as load_err:
                     print(f"[SWARM] Error loading checkpoint: {load_err}")
                     checkpoint = None
+            else:
+                print(f"[WARNING] Checkpoint {core_path} not found.")
+                fallback_path = os.path.join(parent_dir, "henri_core_final_scaled.pt")
+                if os.path.exists(fallback_path):
+                    print(f" -> Falling back to baseline scaled weights: {fallback_path}")
+                    try:
+                        checkpoint = torch.load(fallback_path, map_location='cpu')
+                    except Exception as fallback_err:
+                        print(f"[SWARM ERROR] Failed loading fallback checkpoint: {fallback_err}")
+                        checkpoint = None
 
             if checkpoint is not None and isinstance(checkpoint, dict) and "config" in checkpoint:
                 cfg = checkpoint["config"]
@@ -350,8 +367,15 @@ class EmergentCognitiveSwarm(nn.Module):
                 candidate_action_sequences=candidate_action_sequences.to(device=device),
                 horizon=horizon
             )
-            winning_wave = candidate_action_sequences[winning_idx][-1] # use terminal state (keep original complex form)
+            winning_wave = candidate_action_sequences[winning_idx][-1].clone() # use terminal state (keep original complex form)
             jl_guard = getattr(self.orchestrator.h_mpc, 'jl_guard', None)
+            
+            # Explicitly delete large trajectory tensor and purge GPU cache memory
+            del candidate_action_sequences
+            import gc
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
         # Generate parallel candidate outputs
         for idx in range(num_candidates):
@@ -410,7 +434,9 @@ class EmergentCognitiveSwarm(nn.Module):
                     guidance_scale=active_guidance,
                     winning_jepa_track=winning_jepa_track,
                     jl_guard=jl_guard,
-                    domain_tag=domain_tag
+                    domain_tag=domain_tag,
+                    intent_flag=task_dict.get("intent_flag", "CONVERSATION"),
+                    playbook_wave=playbook_wave
                 )
                 token_ids = target_tokens[0].tolist()
                 

@@ -133,28 +133,58 @@ class TokenLevelFSMDecoderGate(nn.Module):
 
 class HighStressLogitSieve(nn.Module):
     """
-    Intercepts the token selection layer to permanently filter out high-entropy 
-    character soup during extreme thermodynamic stress phases.
+    Projects continuous complex wavefront channels back into discrete token spaces
+    while applying hard syntax filters to mitigate lexical hallucinations.
+    Also supports lexical rigidity enforcement during crystallization.
     """
-    def __init__(self, vocab_size=256):
+    def __init__(self, d_wave_or_head=4096, vocabulary_size=32000, temperature=0.05, vocab_size=None):
         super().__init__()
-        self.vocab_size = vocab_size
+        self.temperature = temperature
+        
+        # Resolve vocabulary size
+        if vocab_size is not None:
+            self.vocab_size = vocab_size
+        elif isinstance(d_wave_or_head, nn.Module):
+            self.translation_head = d_wave_or_head
+            self.vocab_size = self.translation_head.out_features
+        else:
+            self.vocab_size = vocabulary_size
 
+        # Resolve d_wave and initialize decoder head if not wrapping
+        if isinstance(d_wave_or_head, nn.Module):
+            self.decoder_head = d_wave_or_head
+        else:
+            d_wave = d_wave_or_head if not isinstance(d_wave_or_head, nn.Module) else 4096
+            self.decoder_head = nn.Linear(d_wave, self.vocab_size, bias=False)
+            nn.init.orthogonal_(self.decoder_head.weight, gain=1.0)
+            
     def enforce_lexical_rigidity(self, raw_logits, compiled_python_fsm_mask):
-        """
-        Slashes the probability of non-AST-compliant character tokens down to absolute zero.
-        
-        Args:
-            raw_logits: [Batch, Vocab_Size] (Raw continuous embeddings from decoder)
-            compiled_python_fsm_mask: [Batch, Vocab_Size] (1 for valid characters, 0 for invalid noise)
-        """
-        # Create a hard penalty mask (-1e9 for invalid syntax transitions)
         syntax_penalty = (1.0 - compiled_python_fsm_mask.to(raw_logits.dtype)) * -1e9
+        return raw_logits + syntax_penalty
+
+    def forward(self, processed_wavefront, active_syntax_mask=None):
+        if torch.is_complex(processed_wavefront):
+            features = processed_wavefront.real
+        else:
+            features = processed_wavefront
+            
+        if hasattr(self.decoder_head, 'in_features') and self.decoder_head.in_features == features.size(-1) * 2:
+            features = torch.cat([features, torch.zeros_like(features)], dim=-1)
+            
+        raw_logits = self.decoder_head(features)
         
-        # Superimpose the structural mask directly onto the hardware registers
-        # This physically prevents the decoder from outputting junk ASCII strings
-        constrained_logits = raw_logits + syntax_penalty
-        return constrained_logits
+        if active_syntax_mask is not None:
+            sieve_penalty = torch.full_like(raw_logits, -1e9)
+            conditioned_logits = torch.where(active_syntax_mask, raw_logits, sieve_penalty)
+        else:
+            conditioned_logits = raw_logits
+            
+        polarized_scores = F.softmax(conditioned_logits / self.temperature, dim=-1)
+        winning_token_ids = torch.argmax(polarized_scores, dim=-1)
+        confidence_weights = torch.max(polarized_scores, dim=-1).values
+        
+        return conditioned_logits, winning_token_ids, confidence_weights
+
 
 
 class NonAutoregressiveCanvasSampler(nn.Module):  
@@ -171,10 +201,34 @@ class NonAutoregressiveCanvasSampler(nn.Module):
           
         vocab_size = self.translation_head.out_features  
           
+        # Resolve hidden dimension from translation head or core model parameters
+        for p in self.core.parameters():
+            self.hidden_dim = p.shape[-1]
+            break
+        if hasattr(self.translation_head, "in_features"):
+            self.hidden_dim = self.translation_head.in_features
+
         # 1. Compile Invariant Domain Masks  
         mask_scada = torch.zeros(vocab_size, dtype=torch.float32)  
         mask_code = torch.zeros(vocab_size, dtype=torch.float32)  
-          
+        mask_conv = torch.zeros(vocab_size, dtype=torch.float32)
+
+        # Conversational phrases database
+        conversational_phrases = [
+            "Therefore, we can", "However, the", "In this case,", "As shown in",
+            "We can see that", "For example,", "It is important to", "Note that the",
+            "In order to", "On the other hand,", "This implies that", "Consequently, the",
+            "Furthermore, we", "In addition,", "Specifically, the", "As a result,",
+            "To achieve this,", "Based on the", "According to the", "In summary,",
+            "Indeed, the", "Moreover, we", "Specifically, we", "Thus, we have",
+            "This means that", "It follows that", "To do this,", "To show that",
+            "In particular,", "Clearly, the", "We assume that", "Let us define",
+            "It is clear that", "This suggests that", "In contrast,", "Alternatively,"
+        ]
+        phrase_anchors = []
+        phrase_to_vocab = torch.zeros(len(conversational_phrases), vocab_size, dtype=torch.float32)
+        tokenizer = None
+
         try:  
             from transformers import AutoTokenizer  
             parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  
@@ -192,7 +246,14 @@ class NonAutoregressiveCanvasSampler(nn.Module):
               
             # Non-Python Structural Character Noise Filter  
             python_keywords = ["def", "return", "import", "from", "for", "if", "else", "elif", "while", "try", "except", "with", "as", "pass", "in", "not", "and", "or", "is", "lambda", "class"]  
-              
+            
+            # Conversational forbidden pattern list for open_conversation_mask
+            conversation_forbidden_patterns = [
+                "<|", "|>", "def ", "class ", "import ", "lambda ", "self.", "__init__",
+                "==", "src=", "href=", "http", "www.", ".py", "sys.argv", "import os",
+                "[", "]", "{", "}", "  ", "\t"
+            ]
+
             for idx in range(vocab_size):  
                 token_str = tokenizer.decode([idx]).lower()  
                 # Populate SCADA block walls  
@@ -200,24 +261,53 @@ class NonAutoregressiveCanvasSampler(nn.Module):
                     mask_scada[idx] = float('inf')  
                   
                 # Populate Non-Python constraints for strict code-generation blocks  
-                # Blocks noisy punctuation fragments that break the abstract syntax tree  
                 if not any(token_str.strip().startswith(kw) or token_str.strip() in ["", "(", ")", "[", "]", "{", "}", ":", ",", "=", "+", "-", "*", "/", "_", ".", "\n"] for kw in python_keywords):  
                     if len(token_str.strip()) > 3 and not token_str.strip().isidentifier():  
                         mask_code[idx] = 1000.0  # Apply heavy penalization energy barrier  
+
+                # Populate Conversation constraints to filter out structural code/GBNF noise and raw brackets
+                if any(pat in token_str for pat in conversation_forbidden_patterns):
+                    mask_conv[idx] = 1000.0
+                elif token_str.strip() in ["[", "]", "{", "}", "(", ")", "<", ">", "_", "=", "+", "*", "/"]:
+                    mask_conv[idx] = 1000.0
                           
-            print(f"[CANVAS MASK] Dynamic Matrix Compiled. SCADA Bounds: {torch.isinf(mask_scada).sum().item()} | Code Constraints: {(mask_code > 0).sum().item()}")  
+            # Project conversational phrases into wave anchors
+            for p_idx, phrase in enumerate(conversational_phrases):
+                ids = tokenizer.encode(phrase, add_special_tokens=False)
+                valid_ids = [idx for idx in ids if idx < vocab_size]
+                if valid_ids:
+                    phrase_to_vocab[p_idx, valid_ids] = 1.0 / len(valid_ids)
+                    with torch.no_grad():
+                        weights = self.translation_head.weight[valid_ids].to(torch.float32)
+                        phrase_vec = weights.mean(dim=0)
+                        phrase_vec = F.normalize(phrase_vec, p=2, dim=-1)
+                        phrase_anchors.append(phrase_vec)
+
+            print(f"[CANVAS MASK] Dynamic Matrix Compiled. SCADA Bounds: {torch.isinf(mask_scada).sum().item()} | Code Constraints: {(mask_code > 0).sum().item()} | Conv Constraints: {(mask_conv > 0).sum().item()}")  
         except Exception as e:  
             print(f"[CANVAS MASK] Warning: Tokenizer compilation fallback: {e}")  
               
         device = next(self.core.parameters()).device if list(self.core.parameters()) else torch.device("cpu")  
         self.register_buffer("scada_robotics_mask", mask_scada.to(device))  
         self.register_buffer("strict_python_mask", mask_code.to(device))  
-        self.register_buffer("open_conversation_mask", torch.zeros(vocab_size, device=device))
+        self.register_buffer("open_conversation_mask", mask_conv.to(device))
+
+        # Project conversational phrases into buffer
+        if len(phrase_anchors) > 0:
+            phrase_anchors_tensor = torch.stack(phrase_anchors)
+            phrase_to_vocab_tensor = phrase_to_vocab
+        else:
+            phrase_anchors_tensor = torch.zeros(1, self.hidden_dim)
+            phrase_to_vocab_tensor = torch.zeros(1, vocab_size)
+
+        self.register_buffer("phrase_anchors", phrase_anchors_tensor.to(device))
+        self.register_buffer("phrase_to_vocab", phrase_to_vocab_tensor.to(device))
 
     @torch.no_grad()  
     def crystallize_motif(self, swarm_trajectory: torch.Tensor, sequence_length: int = 512,   
                            guidance_scale: float = 4.5, winning_jepa_track: torch.Tensor = None,   
-                           jl_guard: nn.Module = None, domain_tag: str = None, intent_flag: str = "CONVERSATION") -> torch.Tensor:  
+                           jl_guard: nn.Module = None, domain_tag: str = None, intent_flag: str = "CONVERSATION",
+                           playbook_wave: torch.Tensor = None) -> torch.Tensor:  
         """  
         Denoises a raw random phase canvas globally into structured token configurations.  
         Utilizes intent_flag ("CONVERSATION", "CODE", "RESEARCH") to select vocabulary masks.  
@@ -232,7 +322,7 @@ class NonAutoregressiveCanvasSampler(nn.Module):
             break
 
         # Inwardly resolve backward-compatible parameters to intent keys
-        if domain_tag == "ARC_Task":
+        if domain_tag == "ARC_Task" or (domain_tag is not None and domain_tag.startswith("ARC_Task")):
             intent_flag = "CODE"
         elif domain_tag is not None and "research" in domain_tag.lower():
             intent_flag = "RESEARCH"
@@ -261,6 +351,28 @@ class NonAutoregressiveCanvasSampler(nn.Module):
                 target_goal_wave = padded
             else:
                 target_goal_wave = target_goal_wave[:, :self.hidden_dim]
+
+        # Direct Memory-to-Expression Chording: Blend Context Wave with Heuristic Playbook Wave
+        if playbook_wave is not None:
+            playbook_real = torch.real(playbook_wave) if torch.is_complex(playbook_wave) else playbook_wave
+            playbook_real = playbook_real.to(device=device, dtype=model_dtype)
+            if playbook_real.ndim == 1:
+                playbook_real = playbook_real.unsqueeze(0)
+            elif playbook_real.ndim == 3:
+                playbook_real = playbook_real.mean(dim=1)
+            
+            # Align playbook dimension to hidden dimension
+            if playbook_real.shape[-1] != self.hidden_dim:
+                if playbook_real.shape[-1] < self.hidden_dim:
+                    padded_pb = torch.zeros(playbook_real.shape[0], self.hidden_dim, device=device, dtype=model_dtype)
+                    padded_pb[:, :playbook_real.shape[-1]] = playbook_real
+                    playbook_real = padded_pb
+                else:
+                    playbook_real = playbook_real[:, :self.hidden_dim]
+            
+            # Superpose Context Wave and Playbook Wave into the Interference Wave
+            target_goal_wave = target_goal_wave + playbook_real
+            target_goal_wave = F.normalize(target_goal_wave, p=2, dim=-1)
 
         # Use 2-step chording consistency crystallizer
         consistency_engine = ConsistencyCanvasCrystallizer(
@@ -325,6 +437,22 @@ class NonAutoregressiveCanvasSampler(nn.Module):
             else:  # CONVERSATION  
                 energy_all = energy_all + self.open_conversation_mask.view(1, vocab_size)
 
+        # Apply Phrase-Level Semantic Projection when intent_flag is CONVERSATION
+        if intent_flag == "CONVERSATION":
+            # Compute cosine similarity between trajectory and phrase anchors
+            canvas_norm = F.normalize(canvas, p=2, dim=-1)
+            phrase_anchors_norm = F.normalize(self.phrase_anchors, p=2, dim=-1)
+            # sim shape: [sequence_length, num_phrases]
+            sim = torch.matmul(canvas_norm[0].to(torch.float32), phrase_anchors_norm.to(torch.float32).t())
+            # Project similarity back to vocab space
+            phrase_bias = torch.matmul(sim, self.phrase_to_vocab.to(torch.float32))
+            
+            # Add supportive logit bias to guide the crystallization
+            if not use_holographic_fallback:
+                raw_logits_all = raw_logits_all + 5.0 * phrase_bias.unsqueeze(0)
+            else:
+                energy_all = energy_all - 5.0 * phrase_bias
+
         # Token-by-token crystallization with FSM grammar masking
         winning_tokens = []
         open_quote = None  # None, or character code
@@ -367,52 +495,9 @@ class NonAutoregressiveCanvasSampler(nn.Module):
         for c in python_fsm_whitelist:
             valid_chars_base[c] = True
             
-        sieve = HighStressLogitSieve(vocab_size=vocab_size).to(device)
+        sieve = HighStressLogitSieve(d_wave_or_head=self.translation_head, vocab_size=vocab_size).to(device)
                 
         for i in range(sequence_length):
-            if open_quote is not None:
-                # Inside string literal: allow all printable ASCII, disallow newlines unless escaped
-                valid_chars = torch.ones(256, dtype=torch.bool, device=device)
-                for c in range(256):
-                    if not (32 <= c <= 126 or c in (9, 10, 13)):
-                        valid_chars[c] = False
-                if not escape_active:
-                    valid_chars[10] = False
-                    valid_chars[13] = False
-                
-                # If we are at the last token, force close the quote
-                remaining_tokens = sequence_length - 1 - i
-                if remaining_tokens == 0:
-                    valid_chars[:] = False
-                    valid_chars[open_quote] = True
-            else:
-                # Outside string literal: use strict whitelist
-                valid_chars = valid_chars_base.clone()
-                
-                # Cannot close a brace that doesn't match the top of the stack
-                for close_c, open_c in brace_map.items():
-                    if not brace_stack or brace_stack[-1] != open_c:
-                        valid_chars[close_c] = False
-                
-                # If running out of tokens, force close open braces
-                remaining_tokens = sequence_length - 1 - i
-                if remaining_tokens < len(brace_stack):
-                    target_close = None
-                    for close_c, open_c in brace_map.items():
-                        if open_c == brace_stack[-1]:
-                            target_close = close_c
-                            break
-                    if target_close is not None:
-                        valid_chars[:] = False
-                        valid_chars[target_close] = True
- 
-            # Project 256-D mask to vocab_size via repeating/indexing
-            repeats = (vocab_size + 255) // 256
-            mask_vocab = valid_chars.repeat(repeats)[:vocab_size]
-            
-            # Format active_fsm_mask for the gate (1.0 for valid, 0.0 for invalid)
-            active_fsm_mask = mask_vocab.to(dtype=torch.float32).unsqueeze(0)
-            
             # Retrieve logits at position i
             # raw_logits shape: [1, vocab_size]
             if not use_holographic_fallback:
@@ -420,35 +505,83 @@ class NonAutoregressiveCanvasSampler(nn.Module):
             else:
                 raw_logits = -energy_all[i].unsqueeze(0)
             
-            # Select token with the highest logit
-            if not use_holographic_fallback:
-                # For trained translation head, decode tokens directly to preserve semantic structure
+            if intent_flag == "CONVERSATION":
+                # For fluent conversation, bypass character whitelisting and select tokens directly
                 selected_token = torch.argmax(raw_logits).item()
             else:
-                # Apply the FSM gate constraint
-                bounded_logits = sieve.enforce_lexical_rigidity(raw_logits, active_fsm_mask)
-                selected_token = torch.argmax(bounded_logits).item()
+                if open_quote is not None:
+                    # Inside string literal: allow all printable ASCII, disallow newlines unless escaped
+                    valid_chars = torch.ones(256, dtype=torch.bool, device=device)
+                    for c in range(256):
+                        if not (32 <= c <= 126 or c in (9, 10, 13)):
+                            valid_chars[c] = False
+                    if not escape_active:
+                        valid_chars[10] = False
+                        valid_chars[13] = False
+                    
+                    # If we are at the last token, force close the quote
+                    remaining_tokens = sequence_length - 1 - i
+                    if remaining_tokens == 0:
+                        valid_chars[:] = False
+                        valid_chars[open_quote] = True
+                else:
+                    # Outside string literal: use strict whitelist
+                    valid_chars = valid_chars_base.clone()
+                    
+                    # Cannot close a brace that doesn't match the top of the stack
+                    for close_c, open_c in brace_map.items():
+                        if not brace_stack or brace_stack[-1] != open_c:
+                            valid_chars[close_c] = False
+                    
+                    # If running out of tokens, force close open braces
+                    remaining_tokens = sequence_length - 1 - i
+                    if remaining_tokens < len(brace_stack):
+                        target_close = None
+                        for close_c, open_c in brace_map.items():
+                            if open_c == brace_stack[-1]:
+                                target_close = close_c
+                                break
+                        if target_close is not None:
+                            valid_chars[:] = False
+                            valid_chars[target_close] = True
+      
+                # Project 256-D mask to vocab_size via repeating/indexing
+                repeats = (vocab_size + 255) // 256
+                mask_vocab = valid_chars.repeat(repeats)[:vocab_size]
+                
+                # Format active_fsm_mask for the gate (1.0 for valid, 0.0 for invalid)
+                active_fsm_mask = mask_vocab.to(dtype=torch.float32).unsqueeze(0)
+                
+                # Select token with the highest logit
+                if not use_holographic_fallback:
+                    # For trained translation head, decode tokens directly to preserve semantic structure
+                    selected_token = torch.argmax(raw_logits).item()
+                else:
+                    # Apply the FSM gate constraint
+                    bounded_logits = sieve.enforce_lexical_rigidity(raw_logits, active_fsm_mask)
+                    selected_token = torch.argmax(bounded_logits).item()
+                
+                # Update FSM state based on the chosen character
+                chosen_char = selected_token % 256
+                if open_quote is not None:
+                    if escape_active:
+                        escape_active = False
+                    else:
+                        if chosen_char == 92:  # Backslash '\'
+                            escape_active = True
+                        elif chosen_char == open_quote:
+                            open_quote = None  # Closed
+                else:
+                    if chosen_char in (34, 39):  # " or '
+                        open_quote = chosen_char
+                    elif chosen_char in open_braces:
+                        brace_stack.append(chosen_char)
+                    elif chosen_char in close_braces:
+                        if brace_stack and brace_stack[-1] == brace_map[chosen_char]:
+                            brace_stack.pop()
+
             winning_tokens.append(selected_token)
             
-            # Update FSM state based on the chosen character
-            chosen_char = selected_token % 256
-            if open_quote is not None:
-                if escape_active:
-                    escape_active = False
-                else:
-                    if chosen_char == 92:  # Backslash '\'
-                        escape_active = True
-                    elif chosen_char == open_quote:
-                        open_quote = None  # Closed
-            else:
-                if chosen_char in (34, 39):  # " or '
-                    open_quote = chosen_char
-                elif chosen_char in open_braces:
-                    brace_stack.append(chosen_char)
-                elif chosen_char in close_braces:
-                    if brace_stack and brace_stack[-1] == brace_map[chosen_char]:
-                        brace_stack.pop()
-                        
         winning_tokens_tensor = torch.tensor(winning_tokens, dtype=torch.long, device=device)
         return winning_tokens_tensor.unsqueeze(0)
 
@@ -474,6 +607,8 @@ class BirkhoffTopologicalLoss(nn.Module):
 
         total_loss = (self.alpha * loss_score) + (self.beta * loss_entropy_C) + (self.eta * loss_roughness_TV)  
         return total_loss, {"loss_score_mse": loss_score.item(), "complexity_entropy_C": loss_entropy_C.item(), "roughness_TV_O": loss_roughness_TV.item(), "birkhoff_measure_estimate": (1.0 / (loss_entropy_C.item() + loss_roughness_TV.item() + epsilon))}
+
+
 
 def run_phase_4_validation():  
     print("=== INITIALIZING HENRI PHASE 4: DIFFUSION CANVAS VALIDATION ===")  
@@ -517,6 +652,21 @@ def run_phase_4_validation():
     print(f"[MANIFOLD] Crystallized token matrix shape footprint: {winning_tokens.shape}")  
     assert winning_tokens.shape == torch.Size([1, 128]), "Fatal: Canvas relaxation altered sequence dimensions!"  
     print("[SUCCESS] Parallel relaxation completed without structural layout drift.")
+
+    # 2b. Test Conversation mode with Phrase Projections and Chording
+    mock_playbook_wave = torch.randn(1, 4096, device=device)
+    print("[DATA INFRASTRUCTURE] Launching conversational cosinespace relaxation check over 128 tokens...")
+    winning_conv_tokens = sampler.crystallize_motif(
+        swarm_trajectory=mock_trajectory,
+        sequence_length=128,
+        winning_jepa_track=mock_jepa_track,
+        jl_guard=jl_guard,
+        intent_flag="CONVERSATION",
+        playbook_wave=mock_playbook_wave
+    )
+    print(f"[MANIFOLD] Conversational crystallized token matrix shape: {winning_conv_tokens.shape}")
+    assert winning_conv_tokens.shape == torch.Size([1, 128]), "Fatal: Conversation relaxation altered sequence dimensions!"
+    print("[SUCCESS] Conversation mode and chording verified.")
 
     # 3. Evaluate Birkhoff Loss Matrix Gradient Flow  
     mock_pred = torch.randn(2, 64, 4096, device=device, requires_grad=True)  

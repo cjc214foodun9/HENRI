@@ -478,9 +478,36 @@ class HenriCognitiveSwarmOrchestrator:
                 lora_path=lora_file
             )
 
+        # 4. Resolve vocab size dynamically from checkpoint configuration if available
+        vocab_size = 32000
+        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        core_path = os.path.join(parent_dir, "henri_core_final.pt")
+        if not os.path.exists(core_path):
+            core_path = "henri_core_final.pt"
+        if os.path.exists(core_path):
+            print(f"[INIT] Reading checkpoint from: {core_path}")
+            try:
+                # Use CPU load to prevent memory allocations
+                checkpoint = torch.load(core_path, map_location='cpu')
+                if checkpoint is not None and isinstance(checkpoint, dict) and "config" in checkpoint:
+                    vocab_size = checkpoint["config"].get("vocab_size", 32000)
+            except Exception:
+                pass
+        else:
+            print(f"[WARNING] Checkpoint {core_path} not found. Attempting fallback.")
+            fallback_path = os.path.join(parent_dir, "henri_core_final_scaled.pt")
+            if os.path.exists(fallback_path):
+                print(f" -> Found fallback scaled weights at: {fallback_path}")
+                try:
+                    checkpoint = torch.load(fallback_path, map_location='cpu')
+                    if checkpoint is not None and isinstance(checkpoint, dict) and "config" in checkpoint:
+                        vocab_size = checkpoint["config"].get("vocab_size", 32000)
+                except Exception:
+                    pass
+
         # 4. Initialize L3 Cache Router & Translator (pinned to Cores 4-7)
         self.l3_router = L3SwarmRouter(
-            vocab_size=262144, 
+            vocab_size=vocab_size, 
             hidden_dim=1024, 
             num_layers=2, 
             num_heads=4, 
@@ -570,6 +597,22 @@ class HenriCognitiveSwarmOrchestrator:
         self.swarm_fabric = EmergentCognitiveSwarm(self.gen_model, self.l3_router)
         self.swarm_fabric.orchestrator = self
         self.active_lora_adapter = None
+
+        # 14. Initialize Database Connection Pool
+        self.db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:5433/henri")
+        try:
+            import psycopg_pool
+            self.db_pool = psycopg_pool.ConnectionPool(
+                conninfo=self.db_url,
+                min_size=2,
+                max_size=10,
+                timeout=5.0,
+                open=True
+            )
+            print(f"[DATABASE] Connection pool initialized successfully to {self.db_url}")
+        except Exception as pool_err:
+            self.db_pool = None
+            print(f"[DATABASE WARNING] Failed to initialize connection pool: {pool_err}")
 
         # 14. Initialize Grounded Stirrup Robotics Harness
         self.stirrup = StirrupRoboticHarness(db_url=self.synaptic_manager.db_url).to(device=self.optical_core.device)
@@ -1260,12 +1303,22 @@ class HenriCognitiveSwarmOrchestrator:
         checkpoint = None
         
         if os.path.exists(core_path):
-            print(f"[INIT] Loading checkpoint to CPU to conserve GPU VRAM...")
+            print(f"[INIT] Loading checkpoint to CPU to conserve GPU VRAM from: {core_path}")
             try:
                 checkpoint = torch.load(core_path, map_location='cpu')
             except Exception as load_err:
                 print(f"[INIT] Error loading checkpoint: {load_err}")
                 checkpoint = None
+        else:
+            print(f"[WARNING] Checkpoint {core_path} not found. Checking fallback scaled core...")
+            fallback_path = os.path.join(parent_dir, "henri_core_final_scaled.pt")
+            if os.path.exists(fallback_path):
+                print(f" -> Loading fallback scaled weights from: {fallback_path}")
+                try:
+                    checkpoint = torch.load(fallback_path, map_location='cpu')
+                except Exception as fallback_err:
+                    print(f"[INIT ERROR] Failed loading fallback checkpoint: {fallback_err}")
+                    checkpoint = None
                  
         if checkpoint is not None and isinstance(checkpoint, dict) and "config" in checkpoint:
             # Extract configuration coordinates directly from the saved footprint
@@ -1482,6 +1535,14 @@ class HenriCognitiveSwarmOrchestrator:
             self.timed_loop_thread.join(timeout=2.0)
         print("[SWARM LOOP] Timed loop stopped.")
         
+        # Close database connection pool
+        if hasattr(self, "db_pool") and self.db_pool:
+            try:
+                self.db_pool.close()
+                print("[DATABASE] Connection pool closed.")
+            except Exception as e:
+                print(f"[DATABASE WARNING] Failed to close connection pool: {e}")
+        
         # Stop lookahead prefetcher
         if hasattr(self, "prefetcher") and self.prefetcher:
             self.prefetcher.stop()
@@ -1555,9 +1616,11 @@ class HenriCognitiveSwarmOrchestrator:
 
         # 4. Aggressive Garbage Collection and VRAM Purging
         import gc
+        gc.collect()
         collected = gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
             torch.cuda.reset_peak_memory_stats()
             
         print(f"[SYSTEM] Manifold flushed. GC cleared {collected} objects.")
@@ -1607,7 +1670,8 @@ class HenriCognitiveSwarmOrchestrator:
                 
                 # Insert into hrr_canonical_lexicon table
                 try:
-                    with psycopg.connect(db_url, connect_timeout=3) as conn:
+                    conn_ctx = self.db_pool.connection() if (hasattr(self, 'db_pool') and self.db_pool is not None) else psycopg.connect(db_url, connect_timeout=3)
+                    with conn_ctx as conn:
                         with conn.cursor() as cur:
                             cur.execute(
                                 """
@@ -1680,7 +1744,8 @@ class HenriCognitiveSwarmOrchestrator:
         concept_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, label + "_" + str(hash(code))))
         
         try:
-            with psycopg.connect(db_url, connect_timeout=3) as conn:
+            conn_ctx = self.db_pool.connection() if (hasattr(self, 'db_pool') and self.db_pool is not None) else psycopg.connect(db_url, connect_timeout=3)
+            with conn_ctx as conn:
                 with conn.cursor() as cur:
                     cur.execute(
                         """
@@ -1694,64 +1759,127 @@ class HenriCognitiveSwarmOrchestrator:
         except Exception as e:
             print(f"[HARVEST WARNING] Failed to persist sub-axiom in DB: {e}")
 
-    def prefetch_mastered_sub_axioms(self):
+    def query_nearest_attractors(self, query_wave: torch.Tensor, k: int = 5) -> list:
+        """
+        Queries the nearest pre-solved attractors from the Zone C TimescaleDB
+        using pgvector's cosine distance operator.
+        """
+        import psycopg
+        import numpy as np
+        
+        db_url = self.db_url
+        query_np = query_wave.detach().cpu().numpy()
+        
+        from henri_contract import complex_to_db, DIMS
+        
+        if np.iscomplexobj(query_np):
+            vector_str = complex_to_db(query_np, DIMS.hrr_dim)
+        else:
+            if query_np.shape[-1] == DIMS.hrr_dim:
+                query_np = np.concatenate([query_np, np.zeros_like(query_np)], axis=-1)
+            vector_str = "[" + ",".join(map(str, query_np.flatten().tolist())) + "]"
+
+        results = []
+        try:
+            conn_ctx = self.db_pool.connection() if (hasattr(self, 'db_pool') and self.db_pool is not None) else psycopg.connect(db_url, connect_timeout=3)
+            with conn_ctx as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT semantic_label, domain_tag, raw_text, (hrr_wavefront <=> %s::vector) AS distance, hrr_wavefront
+                        FROM hrr_canonical_lexicon
+                        ORDER BY hrr_wavefront <=> %s::vector
+                        LIMIT %s;
+                        """,
+                        (vector_str, vector_str, k)
+                    )
+                    rows = cur.fetchall()
+                    from henri_contract import db_to_complex
+                    for row in rows:
+                        results.append({
+                            "label": row[0],
+                            "domain": row[1],
+                            "text": row[2],
+                            "distance": float(row[3]) if row[3] is not None else 1.0,
+                            "wave": db_to_complex(row[4], DIMS.hrr_dim) if row[4] is not None else None
+                        })
+        except Exception as e:
+            print(f"[DATABASE WARNING] Nearest attractors query failed: {e}")
+            
+        return results
+
+    def prefetch_mastered_sub_axioms(self, query_wave: torch.Tensor = None):
         """
         Instantly pre-fetches mastered sub-axiom visual primitives from TimescaleDB
         and loads them into the Hopfield Network vocabulary.
         Also loads dynamic sub-axiom weights into persistent expert streams (14 and 15).
+        If query_wave is provided, it does a nearest-neighbor lookup to pre-fetch the 5 closest attractors.
         """
         import psycopg
         import os
         import sys
         
         db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:5433/henri")
-        print("[PREFETCH] Pre-fetching mastered sub-axiom primitives from database...")
         
         root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if root_dir not in sys.path:
             sys.path.append(root_dir)
         from henri_contract import db_to_complex, DIMS
         
-        try:
-            with psycopg.connect(db_url, connect_timeout=3) as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        """
-                        SELECT semantic_label, hrr_wavefront, raw_text
-                        FROM hrr_canonical_lexicon
-                        WHERE domain_tag = 'sub-axiom';
-                        """
-                    )
-                    rows = cur.fetchall()
-                    prefetched_count = 0
-                    for row in rows:
-                        label, vec_str, code = row[0], row[1], row[2]
-                        wave_complex = db_to_complex(vec_str, DIMS.hrr_dim)
-                        wave_tensor = torch.tensor(wave_complex, dtype=torch.complex64)
-                        
-                        mags = torch.abs(wave_tensor)
-                        mags = torch.clamp(mags, min=1e-8)
-                        self.hopfield.register_concept(label, wave_tensor / mags)
-                        
-                        # Load dynamic sub-axiom weights into streams 14 and 15
-                        stream_idx = self.num_streams - 2 + (prefetched_count % 2)
-                        with torch.no_grad():
-                            # Rehydrate weights for the persistent expert streams
-                            self.lora_managers[stream_idx].lora_A.normal_(0.0, 0.02)
-                            self.lora_managers[stream_idx].lora_B.zero_()
-                            # Inject persistent sub-axiom representation into the weights matrix
-                            wave_real = torch.real(wave_tensor).to(self.lora_managers[stream_idx].lora_A.device).to(self.lora_managers[stream_idx].lora_A.dtype)
-                            self.lora_managers[stream_idx].lora_A[:, 0] = wave_real * 0.1
-                            self.lora_managers[stream_idx].save_weights()
-                            
-                        prefetched_count += 1
-                        
-                    if prefetched_count > 0:
-                        print(f"[PREFETCH SUCCESS] Successfully loaded {prefetched_count} sub-axiom primitives into Hopfield Network and persistent expert streams.")
-                    else:
-                        print("[PREFETCH] No persistent sub-axioms found in database registry.")
-        except Exception as e:
-            print(f"[PREFETCH WARNING] Failed to pre-fetch sub-axioms from DB: {e}")
+        if query_wave is not None:
+            print(f"[PREFETCH] Dynamic query: pre-fetching 5 nearest attractors for query wave...")
+            nearest = self.query_nearest_attractors(query_wave, k=5)
+            rows = []
+            for item in nearest:
+                from henri_contract import complex_to_db
+                vec_str = complex_to_db(item["wave"], DIMS.hrr_dim) if item["wave"] is not None else None
+                rows.append((item["label"], vec_str, item["text"]))
+        else:
+            print("[PREFETCH] Pre-fetching mastered sub-axiom primitives from database...")
+            rows = []
+            try:
+                conn_ctx = self.db_pool.connection() if (hasattr(self, 'db_pool') and self.db_pool is not None) else psycopg.connect(db_url, connect_timeout=3)
+                with conn_ctx as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            """
+                            SELECT semantic_label, hrr_wavefront, raw_text
+                            FROM hrr_canonical_lexicon
+                            WHERE domain_tag = 'sub-axiom';
+                            """
+                        )
+                        rows = cur.fetchall()
+            except Exception as e:
+                print(f"[PREFETCH WARNING] Failed to pre-fetch sub-axioms from DB: {e}")
+                rows = []
+
+        prefetched_count = 0
+        for row in rows:
+            label, vec_str, code = row[0], row[1], row[2]
+            if vec_str is None:
+                continue
+            wave_complex = db_to_complex(vec_str, DIMS.hrr_dim)
+            wave_tensor = torch.tensor(wave_complex, dtype=torch.complex64)
+            
+            mags = torch.abs(wave_tensor)
+            mags = torch.clamp(mags, min=1e-8)
+            self.hopfield.register_concept(label, wave_tensor / mags)
+            
+            # Load dynamic sub-axiom weights into streams 14 and 15
+            stream_idx = self.num_streams - 2 + (prefetched_count % 2)
+            with torch.no_grad():
+                self.lora_managers[stream_idx].lora_A.normal_(0.0, 0.02)
+                self.lora_managers[stream_idx].lora_B.zero_()
+                wave_real = torch.real(wave_tensor).to(self.lora_managers[stream_idx].lora_A.device).to(self.lora_managers[stream_idx].lora_A.dtype)
+                self.lora_managers[stream_idx].lora_A[:, 0] = wave_real * 0.1
+                self.lora_managers[stream_idx].save_weights()
+                
+            prefetched_count += 1
+            
+        if prefetched_count > 0:
+            print(f"[PREFETCH SUCCESS] Successfully loaded {prefetched_count} sub-axiom primitives into Hopfield Network and persistent expert streams.")
+        else:
+            print("[PREFETCH] No persistent sub-axioms found/loaded.")
 
     def save_wave_to_db(self, name: str, wave: torch.Tensor, domain_tag: str = "wosx_pde_axiom"):
         import uuid
@@ -1768,7 +1896,8 @@ class HenriCognitiveSwarmOrchestrator:
             vector_str = complex_to_db(wave_np, DIMS.hrr_dim)
             concept_hash = str(uuid.uuid5(uuid.NAMESPACE_DNS, name))
             
-            with psycopg.connect(db_url, connect_timeout=3) as conn:
+            conn_ctx = self.db_pool.connection() if (hasattr(self, 'db_pool') and self.db_pool is not None) else psycopg.connect(db_url, connect_timeout=3)
+            with conn_ctx as conn:
                 with conn.cursor() as cur:
                     conn.autocommit = True
                     cur.execute(
@@ -1861,7 +1990,8 @@ class HenriCognitiveSwarmOrchestrator:
         
         db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:5433/henri")
         try:
-            with psycopg.connect(db_url, connect_timeout=3) as conn:
+            conn_ctx = self.db_pool.connection() if (hasattr(self, 'db_pool') and self.db_pool is not None) else psycopg.connect(db_url, connect_timeout=3)
+            with conn_ctx as conn:
                 with conn.cursor() as cur:
                     cur.execute(
                         """
@@ -2018,7 +2148,8 @@ class HenriCognitiveSwarmOrchestrator:
 
             db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:5433/henri")
             try:
-                with psycopg.connect(db_url, connect_timeout=3) as conn:
+                conn_ctx = self.db_pool.connection() if (hasattr(self, 'db_pool') and self.db_pool is not None) else psycopg.connect(db_url, connect_timeout=3)
+                with conn_ctx as conn:
                     with conn.cursor() as cur:
                         cur.execute(
                             """
@@ -2084,7 +2215,8 @@ class HenriCognitiveSwarmOrchestrator:
         if labels_to_fetch:
             db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:password@localhost:5433/henri")
             try:
-                with psycopg.connect(db_url, connect_timeout=3) as conn:
+                conn_ctx = self.db_pool.connection() if (hasattr(self, 'db_pool') and self.db_pool is not None) else psycopg.connect(db_url, connect_timeout=3)
+                with conn_ctx as conn:
                     with conn.cursor() as cur:
                         for label in labels_to_fetch:
                             cur.execute(
@@ -2159,6 +2291,7 @@ class HenriCognitiveSwarmOrchestrator:
         
         self.last_routing_weights = None
         skipped_salient_waves = []
+        skipped_salient_cands = []
         
         for cand in candidate_scores:
             if cand['similarity'] < threshold:
@@ -2182,14 +2315,17 @@ class HenriCognitiveSwarmOrchestrator:
                 candidate_wave = self.active_block_embeddings.get(cand['label'])
                 if candidate_wave is not None:
                     skipped_salient_waves.append(candidate_wave)
+                    skipped_salient_cands.append(cand)
         
         if skipped_salient_waves:
-            print(f"  - Superposition of {len(skipped_salient_waves)} skipped salient context waves for MoE routing.")
+            print(f"  - Selecting dominant skipped salient context wave for MoE routing (preventing phase cancellation).")
             with torch.no_grad():
-                # Stack and sum the 4096-D continuous waves
-                superposition_wave = torch.sum(torch.stack(skipped_salient_waves), dim=0)
-                # Compute MoE weights based on the combined semantic intent
-                # We unsqueeze to batch size 1: [1, 4096]
+                # Avoid phase cancellation by selecting the highest-coherence wave instead of sum-averaging
+                best_cand = max(skipped_salient_cands, key=lambda x: x['similarity'])
+                superposition_wave = self.active_block_embeddings.get(best_cand['label'])
+                if superposition_wave is None:
+                    superposition_wave = skipped_salient_waves[0]
+                # Compute MoE weights based on the dominant semantic intent
                 self.last_routing_weights = self.l3_router.compute_routing_weights(superposition_wave.unsqueeze(0), temperature=0.8).squeeze(0)
 
         return prompt

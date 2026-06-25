@@ -225,6 +225,7 @@ class ActiveExperimentationEngine:
         except Exception as e:
             print(f"[KV CACHE SWAP] Warning: KV-cache sync failed: {e}")
 
+    @torch.no_grad()
     def project_code_to_wave(self, candidate_code: str) -> torch.Tensor:
         """Projects candidate code to 4096-D complex wave state."""
         device = next(self.orchestrator.l3_router.parameters()).device
@@ -331,6 +332,7 @@ class ActiveExperimentationEngine:
         passed_cases = int(score * total_cases)
         return passed_cases, total_cases, feedback
 
+    @torch.no_grad()
     def execute_task_manifold(self, task_dict, time_limit=1200, domain_tag="ARC_Task"):
         """
         Coordinates the Parallel Evolutionary Wave-Search Architecture with 
@@ -351,7 +353,13 @@ class ActiveExperimentationEngine:
         
         # Pre-fetch mastered sub-axiom visual primitives from TimescaleDB
         if hasattr(self.orchestrator, "prefetch_mastered_sub_axioms"):
-            self.orchestrator.prefetch_mastered_sub_axioms()
+            try:
+                # Compile initial playbook to wave to act as the query vector
+                initial_playbook_wave = self.orchestrator.compile_playbook_to_wave(playbook_dict)
+                self.orchestrator.prefetch_mastered_sub_axioms(query_wave=initial_playbook_wave)
+            except Exception as e:
+                print(f"[ENGINE WARNING] Dynamic pre-fetch failed: {e}. Falling back to default pre-fetch.")
+                self.orchestrator.prefetch_mastered_sub_axioms()
         
         from run_arc_benchmark import build_arc_prompt
         task_prompt, _ = build_arc_prompt(task_dict)
@@ -370,6 +378,7 @@ class ActiveExperimentationEngine:
         # ------------------------------------------------------------------------
         best_candidate = "def transform(input_grid):\n    return input_grid"
         
+        stuck_high_energy_turns = 0
         revision_step = 0
         while True:
             revision_step += 1
@@ -386,23 +395,102 @@ class ActiveExperimentationEngine:
                 current_thought_wave = current_thought_wave.unsqueeze(0)
 
             # Step 2: Query HENRI's internal thermostat to decide on noise injection
-            if hasattr(self.orchestrator, 'hopfield') and self.orchestrator.hopfield.vocabulary:
-                vocab_vals = list(self.orchestrator.hopfield.vocabulary.values())
-                lexicon_list = []
-                for v in vocab_vals:
-                    v_real = torch.real(v) if torch.is_complex(v) else v
-                    lexicon_list.append(v_real.detach().cpu())
+            # Query the public.zone_c_resonant_hypersphere using complex_hypersphere_resonance FFI
+            import psycopg
+            import os
+            db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:password@127.0.0.1:5432/henri")
+            
+            # Map domain tag to DB domain
+            domain_map = {
+                "ARC_Task": "Agential Retraining",
+                "ARC": "Agential Retraining",
+                "Agential Retraining": "Agential Retraining",
+                "Condensed Matter Physics": "Condensed Matter Physics",
+                "Topology": "Topology",
+                "Wave Mechanics": "Wave Mechanics",
+                "Basal Biocomputation": "Basal Biocomputation",
+                "Information Theory": "Information Theory",
+                "Esoteric Philosophy": "Esoteric Philosophy",
+                "Quantum Optics": "Quantum Optics",
+                "Fluid Dynamics": "Fluid Dynamics",
+                "Mixed-Signal Silicon": "Mixed-Signal Silicon",
+                "Category Theory": "Category Theory"
+            }
+            db_domain = domain_map.get(domain_tag, "Agential Retraining")
+            
+            # Extract real and imaginary lists for SQL FFI
+            wave_flat = current_thought_wave.flatten()
+            r_list = torch.real(wave_flat).tolist()
+            i_list = torch.imag(wave_flat).tolist()
+            
+            lexicon_list = []
+            max_resonance_score = 0.0
+            
+            try:
+                with psycopg.connect(db_url, connect_timeout=3) as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT real_phases, imag_phases, complex_hypersphere_resonance(real_phases, imag_phases, %s::real[], %s::real[]) AS resonance_score
+                            FROM public.zone_c_resonant_hypersphere
+                            WHERE domain = %s
+                            ORDER BY resonance_score DESC
+                            LIMIT 1024;
+                        """, (r_list, i_list, db_domain))
+                        rows = cur.fetchall()
+                        
+                        for row in rows:
+                            real_p, imag_p, score = row[0], row[1], row[2]
+                            max_resonance_score = max(max_resonance_score, score)
+                            
+                            # Rehydrate vector to torch tensor
+                            r_tensor = torch.tensor(real_p, dtype=torch.float32)
+                            i_tensor = torch.tensor(imag_p, dtype=torch.float32)
+                            c_vec = torch.complex(r_tensor, i_tensor)
+                            lexicon_list.append(torch.real(c_vec).detach().cpu())
+            except Exception as e:
+                print(f"[ENGINE DB RETRIEVAL WARNING] Failed to fetch from resonant hypersphere: {e}")
+            
+            if lexicon_list:
                 zone_c_lexicon = torch.stack(lexicon_list)
+                print(f"[ENGINE DB RETRIEVAL] Loaded {len(lexicon_list)} attractors from public.zone_c_resonant_hypersphere. Max resonance score: {max_resonance_score:.4f}")
             else:
-                zone_c_lexicon = torch.randn(10, 4096)
+                # Fallback to Hopfield vocabulary if DB query fails or is empty
+                if hasattr(self.orchestrator, 'hopfield') and self.orchestrator.hopfield.vocabulary:
+                    vocab_vals = list(self.orchestrator.hopfield.vocabulary.values())
+                    for v in vocab_vals:
+                        v_real = torch.real(v) if torch.is_complex(v) else v
+                        lexicon_list.append(v_real.detach().cpu())
+                    zone_c_lexicon = torch.stack(lexicon_list)
+                else:
+                    zone_c_lexicon = torch.randn(10, 4096)
+            
             zone_c_lexicon = zone_c_lexicon.to(device=current_thought_wave.device, dtype=current_thought_wave.dtype)
+            
+            # Prevent Catastrophic Topological Domain Lock
+            # 1. Track linewidth drift delta_phi
+            if not hasattr(self, 'prev_wave'):
+                self.prev_wave = None
+            if self.prev_wave is not None:
+                # Phase angle difference between consecutive turns
+                phase_diff = torch.angle(current_thought_wave * torch.conj(self.prev_wave))
+                delta_phi = torch.mean(torch.abs(phase_diff)).item()
+                print(f"[LINEWIDTH AUDIT] Linewidth drift delta_phi: {delta_phi:.6f}")
+            self.prev_wave = current_thought_wave.clone()
+            
+            # 2. Avoid cosine similarity > 0.15 in Zone C:
+            # If maximum resonance score (cosine similarity) exceeds 0.15, trigger preventive thermal fluctuation
+            force_noise_injection = False
+            if max_resonance_score > 0.15:
+                print(f"[DOMAIN LOCK WARNING] Cosine similarity in Zone C is {max_resonance_score:.4f} > 0.15. Triggering preventive thermal fluctuation.")
+                force_noise_injection = True
+                
             agential_noise, applied_voltage = self.thermostat.calculate_agential_perturbation(
                 active_wave_state=current_thought_wave,
                 zone_c_lexicon=zone_c_lexicon
             )
             
             temp = 0.70 + (applied_voltage / 3.5) * 0.65
-            inject_noise = (applied_voltage > 0.5)
+            inject_noise = (applied_voltage > 0.5) or force_noise_injection
             
             # Compile current Playbook constraints into an axiomatic wave
             playbook_wave = self.orchestrator.compile_playbook_to_wave(playbook_dict)
@@ -424,13 +512,8 @@ class ActiveExperimentationEngine:
             
             # Blend superposition wave from elite candidates of the last turn
             if self.superposition_wave is not None:
-                if playbook_wave is not None:
-                    # Sum wave states into active interference pattern
-                    superposition = playbook_wave.flatten() + self.superposition_wave.flatten()
-                    mags = torch.abs(superposition).clamp(min=1e-8)
-                    playbook_wave = (superposition / mags).reshape(playbook_wave.shape)
-                else:
-                    playbook_wave = self.superposition_wave
+                # Select the superposition wave directly to prevent destructive linear averaging cancellation
+                playbook_wave = self.superposition_wave.reshape(playbook_wave.shape) if playbook_wave is not None else self.superposition_wave
             
             # Step 3: Superimpose the predicted noise burst straight onto the active playbook trajectory
             # This physically shakes the latent space to unlock previously unverified vectors mid-flight
@@ -504,6 +587,11 @@ class ActiveExperimentationEngine:
             )
             
             # --- STIRRUP ROBOTIC HARNESS GROUNDING CHECK ---
+            # NOTE: "Robotic" refers metaphorically to the software tool-use agent. 
+            # This check uses the Stirrup harness to evaluate the sequence of software actions 
+            # (such as file reads/writes and REPL execution) in a simulated, sandboxed dry-run 
+            # before selecting the candidate. Successful trajectories are logged to the 
+            # TimescaleDB hypertable registry (Shared Knowledge Attractor Grid).
             if hasattr(self.orchestrator, "stirrup") and self.orchestrator.stirrup is not None and len(candidate_batch) > 0:
                 print(f"[STIRRUP] Grounding candidate batch of size {len(candidate_batch)} via sensory-motor harness...")
                 try:
@@ -706,16 +794,10 @@ class ActiveExperimentationEngine:
                 
             self.error_history.append(best_feedback)
             
-            # Selection & Superposition of top 2 candidates for next turn steering
+            # Selection of top candidate trajectory (preventing linear phase cancellation)
             top_candidates = [c for c in scored_candidates if c[2] > 0 and c[3] is not None][:2]
-            if len(top_candidates) >= 2:
-                print("[ENGINE] Superposing top 2 candidate trajectories...")
-                wave_1 = self.project_code_to_wave(top_candidates[0][0])
-                wave_2 = self.project_code_to_wave(top_candidates[1][0])
-                superposition = wave_1 + wave_2
-                mags = torch.abs(superposition).clamp(min=1e-8)
-                self.superposition_wave = superposition / mags
-            elif len(top_candidates) == 1:
+            if len(top_candidates) >= 1:
+                print("[ENGINE] Selecting top-1 candidate trajectory (preventing linear phase cancellation)...")
                 self.superposition_wave = self.project_code_to_wave(top_candidates[0][0])
             else:
                 self.superposition_wave = None
@@ -728,6 +810,31 @@ class ActiveExperimentationEngine:
                 
             playbook_dict = self.orchestrator.curate_playbook(playbook_dict, insight)
             print("[ENGINE] Playbook curated.")
+
+            # Track high-energy error reflection loop anomaly (Topological Logic Lock)
+            current_error_val = 0.0
+            if valid_candidates:
+                current_error_val = winner_error_energy
+            else:
+                # If no valid candidate, treat as maximum error
+                current_error_val = 999.0
+            
+            # Error Energy > 0.80 corresponds to E_reflect > 80.0 a.u.
+            if current_error_val > 0.80:
+                stuck_high_energy_turns += 1
+                print(f"[ANOMALY AUDIT] High-energy reflection detected ({current_error_val:.4f} > 0.80). Stuck count: {stuck_high_energy_turns}/50")
+            else:
+                stuck_high_energy_turns = 0
+
+            if stuck_high_energy_turns > 50:
+                print(f"\n[ANOMALY TRIGGER] Topological Logic Lock detected for task {domain_tag} (>50 turns stuck in high-energy reflection loop). Truncating context thread.")
+                self.orchestrator.flush_cognitive_manifold()
+                # Reset search state to escape the lock
+                stuck_high_energy_turns = 0
+                best_candidate = "def transform(input_grid):\n    return input_grid"
+                self.superposition_wave = None
+                playbook_dict = self.orchestrator.initialize_empty_playbook()
+
             
         # --- TIMEOUT OVERDRIVE RELEASE: Submit the single best-scoring provisional answer ---
         if global_best_candidate_tracker["provisional_prediction"] is not None:
