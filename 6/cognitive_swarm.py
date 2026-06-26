@@ -93,8 +93,28 @@ class HenriEmbeddingGenerator:
     Unified in-memory text-to-vector projection layer for the HENRI architecture.
     Generates deterministic embeddings and handles tokenization/completions without GGUF/llama_cpp dependencies.
     """
-    def __init__(self, latent_dim=4096):
+    def __init__(self, latent_dim=4096, tokenizer_path="llama_tokenizer_local/tokenizer.json"):
         self.latent_dim = latent_dim
+        self.tokenizer = None
+        self.vocab_size = 32000
+        
+        # Try to resolve path relative to package root if needed
+        resolved_path = tokenizer_path
+        if not os.path.exists(resolved_path):
+            parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            resolved_path = os.path.join(parent_dir, tokenizer_path)
+            
+        try:
+            from tokenizers import Tokenizer
+            if os.path.exists(resolved_path):
+                self.tokenizer = Tokenizer.from_file(resolved_path)
+                self.vocab_size = self.tokenizer.get_vocab_size()
+                print(f"[HENRI ENGINE] Loaded local tokenizer from {resolved_path} (vocab_size={self.vocab_size}).")
+            else:
+                print(f"[HENRI WARNING] Tokenizer file not found at {resolved_path}. Falling back to ASCII char mapping.")
+        except ImportError:
+            print("[HENRI WARNING] tokenizers package not installed. Falling back to ASCII char mapping.")
+            
         print(f"[HENRI ENGINE] Initialized HenriEmbeddingGenerator (dim={self.latent_dim}).")
 
     def __call__(self, prompt: str, *args, **kwargs) -> dict:
@@ -119,9 +139,25 @@ class HenriEmbeddingGenerator:
         return {"data": [{"embedding": embedding}]}
 
     def tokenize(self, text_bytes: bytes, **kwargs) -> list:
-        if isinstance(text_bytes, str):
-            text_bytes = text_bytes.encode('utf-8', errors='ignore')
-        return [ord(c) for c in text_bytes.decode('utf-8', errors='ignore')]
+        if isinstance(text_bytes, bytes):
+            text = text_bytes.decode('utf-8', errors='ignore')
+        else:
+            text = str(text_bytes)
+            
+        if self.tokenizer is not None:
+            try:
+                return self.tokenizer.encode(text).ids
+            except Exception:
+                pass
+        return [ord(c) for c in text]
+
+    def tokenize_text(self, text: str) -> list:
+        if self.tokenizer is not None:
+            try:
+                return self.tokenizer.encode(text).ids
+            except Exception:
+                pass
+        return [ord(c) for c in text]
 
     def create_chat_completion(self, messages, max_tokens=128, temperature=0.7, **kwargs):
         prompt = messages[-1]["content"]
@@ -917,6 +953,8 @@ class HenriCognitiveSwarmOrchestrator:
         complex_actuation = torch.complex(action_real, action_imag)
 
         bypassed_physical = False
+        generated_text = ""
+        executed_output_text = ""
 
         # 5. Hardware Bypass & Empirical Assimilation Logic
         if max_disagreement >= 0.02:
@@ -950,25 +988,85 @@ class HenriCognitiveSwarmOrchestrator:
             next_real, next_imag = h_cft.real, h_cft.imag
             structured_next_state = torch.cat([next_real, next_imag], dim=-1).unsqueeze(0).detach()
 
-            # ASSIMILATE ONLY ON TRUE GROUND TRUTH
-            for prop in proposed_experiments:
-                agent = prop['agent']
-                concept_hash = str(agent.current_concept_focus)
-                metrics = agent.assimilate_results(
-                    structured_state, winning_action, structured_next_state, prop['goal_state'], concept_hash
-                )
-                
-                # Record empirical observation
-                agent.scientist.empirical_observations.append((winning_action, structured_next_state))
-                if len(agent.scientist.empirical_observations) % 5 == 0:
-                    agent.scientist.run_discovery_cycle(structured_next_state)
-
-                # If learning progress stalls, shift Vygotskian focus (curriculum climbing)
-                if metrics["learning_progress"] < 0.01:
-                    agent.current_concept_focus = (
-                        (agent.current_concept_focus[0] + 1) % 10,
-                        (agent.current_concept_focus[1] + 1) % 10
+            # Egress Canvas Crystallization and REPL Sandbox check
+            if is_valid:
+                print(f"[+] Sagnac Boundary Verified. Sagnac Delta: {error_energy:.4f}. Crystallizing wavefront...")
+                try:
+                    # 1. Pipe the continuous trajectory straight to the Non-Autoregressive Diffusion Sampler
+                    crystallized_tokens = self.pipe_trajectory_to_diffusion_sampler(
+                        trajectory_vector=truth_tensor,
+                        sequence_length=512,
+                        guidance_scale=4.5
                     )
+                    
+                    # 2. Decode token IDs back to human-readable string
+                    if self.base_model.tokenizer is not None:
+                        try:
+                            generated_text = self.base_model.tokenizer.decode(crystallized_tokens[0].tolist())
+                        except Exception as e:
+                            print(f"[CANVAS] Tokenizer decode failed: {e}. Falling back to ASCII char decoding.")
+                            generated_text = "".join([chr(tid) if tid < 128 else "" for tid in crystallized_tokens[0].tolist()])
+                    else:
+                        generated_text = "".join([chr(tid) if tid < 128 else "" for tid in crystallized_tokens[0].tolist()])
+                        
+                    # 3. Statefully execute any code blocks in the stateful REPL sandbox
+                    if "<|python_begin" in generated_text and "<|python_end|>" in generated_text:
+                        idx_begin = generated_text.find("<|python_begin")
+                        idx_end = generated_text.find("<|python_end|>")
+                        idx_close_bracket = generated_text.find("|>", idx_begin)
+                        
+                        if idx_close_bracket != -1 and idx_close_bracket < idx_end:
+                            code_block = generated_text[idx_close_bracket + 2 : idx_end].strip()
+                            print(f"\n[REPL SANDBOX - Stream 0] Executing block in stateful REPL...")
+                            
+                            res = self.repl.execute_block(code_block)
+                            stdout = res["stdout"].strip()
+                            stderr = res["stderr"].strip()
+                            
+                            output_content = stdout if res["success"] else f"Error: {stderr or res['error_message']}"
+                            output_tag = f"\n<|output_begin|>\n{output_content}\n<|output_end|>\n"
+                            generated_text = generated_text[:idx_end + len("<|python_end|>")] + output_tag + generated_text[idx_end + len("<|python_end|>"):]
+                            print(f"[REPL SANDBOX - Stream 0] Output: {output_content[:60]}...")
+                            
+                            executed_output_text = output_content
+                            
+                            if not res["success"]:
+                                is_valid = False
+                                veto_reason = f"REPL Sandbox execution error: {res['error_message'] or stderr}"
+                                error_energy = 0.9
+                                print(f"[!] REPL SANDBOX VETO: {veto_reason}")
+                    else:
+                        if "scada" in target_label.lower():
+                            is_valid = False
+                            veto_reason = "Aletheia Verification Veto: No Python code block generated in the crystallized output."
+                            error_energy = 0.9
+                            print(f"[!] REPL SANDBOX VETO: {veto_reason}")
+                except Exception as egress_err:
+                    print(f"[!] Egress crystallization/REPL validation failed: {egress_err}")
+                    is_valid = False
+                    veto_reason = f"REPL Sandbox exception: {egress_err}"
+                    error_energy = 0.9
+
+            if is_valid:
+                # ASSIMILATE ONLY ON TRUE GROUND TRUTH
+                for prop in proposed_experiments:
+                    agent = prop['agent']
+                    concept_hash = str(agent.current_concept_focus)
+                    metrics = agent.assimilate_results(
+                        structured_state, winning_action, structured_next_state, prop['goal_state'], concept_hash
+                    )
+                    
+                    # Record empirical observation
+                    agent.scientist.empirical_observations.append((winning_action, structured_next_state))
+                    if len(agent.scientist.empirical_observations) % 5 == 0:
+                        agent.scientist.run_discovery_cycle(structured_next_state)
+
+                    # If learning progress stalls, shift Vygotskian focus (curriculum climbing)
+                    if metrics["learning_progress"] < 0.01:
+                        agent.current_concept_focus = (
+                            (agent.current_concept_focus[0] + 1) % 10,
+                            (agent.current_concept_focus[1] + 1) % 10
+                        )
         else:
             # BYPASS PHYSICAL HARDWARE (The Epistemic Clutch)
             # Use the mean prediction of the swarm to simulate the next state
@@ -1056,6 +1154,10 @@ class HenriCognitiveSwarmOrchestrator:
             
             print(f"[+] Hopfield Cleanup Resolved: Concept '{best_concept}' (Confidence: {confidence * 100:.2f}%)")
             
+            if bypassed_physical:
+                generated_text = f"[BYPASSED] Consensus concept: {best_concept}"
+                executed_output_text = ""
+                
             # --- CENTROID DRIFT ANCHORING ---
             winner_idx = self.l3_router.update_expert_centroids(truth_tensor)
             print(f"[ANCHOR] Wave converged! Centroid of expert {winner_idx} drifted toward this concept topology.")
@@ -1095,7 +1197,9 @@ class HenriCognitiveSwarmOrchestrator:
                 "concept": best_concept,
                 "confidence": confidence,
                 "error": error_energy,
-                "trajectory_vector": clean_wave
+                "trajectory_vector": clean_wave,
+                "raw_text": generated_text,
+                "executed_text": executed_output_text
             }
 
     def pipe_trajectory_to_diffusion_sampler(self, trajectory_vector, sequence_length=512, guidance_scale=4.5, num_diffusion_steps=2):
