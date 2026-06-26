@@ -60,6 +60,23 @@ def verify_thermodynamic_shaking():
     assert diff > 0.0, "Langevin Heat failed to perturb phase mask weights."
     print(" -> [PASS] Thermal variance successfully reshapes local BTO topology.")
 
+def verify_full_resolution_emulation():
+    print("[TEST 5] Verifying Full-Resolution 6324x6324 Emulation & Lazy Instantiation...")
+    from zone_b_emulator import HenriOpticalCoreD2NN
+    core = HenriOpticalCoreD2NN(num_channels=4096, device='cpu')
+    
+    # Generate 6324x6324 complex wavefront and target manifold
+    test_wave = torch.randn((6324, 6324), dtype=torch.complex64)
+    target_wave = torch.randn((6324, 6324), dtype=torch.complex64)
+    
+    with torch.no_grad():
+        truth, delta, energy = core(test_wave, target_wave)
+        
+    assert core.full_res_emulator is not None, "Full-resolution emulator was not lazily initialized!"
+    assert truth.shape == (6324, 6324), f"Expected shape (6324, 6324), got {truth.shape}"
+    assert delta.shape == (6324, 6324), f"Expected shape (6324, 6324), got {delta.shape}"
+    print(" -> [PASS] Lazily initialized 6324x6324 emulator and propagated wavefront successfully.")
+
 if __name__ == "__main__":
     print("=====================================================================")
     print("           BOOTING HENRI ZONE B OPTICAL CORE VERIFICATION            ")
@@ -68,4 +85,5 @@ if __name__ == "__main__":
     verify_interferometric_accuracy()
     verify_loss_and_autograd()
     verify_thermodynamic_shaking()
+    verify_full_resolution_emulation()
     print("\n[SUCCESS] Zone B Core conforms to continuous-time wave constraints.")

@@ -167,45 +167,44 @@ class ZoneBPhysicalEmulator:
                     psi_candidate_focused = torch.mean(psi_candidate_focused, dim=0)
                 psi_candidate_focused = psi_candidate_focused.reshape(psi_candidate_focused.shape[:-1] + (64, 64))
             else:
+                # In standard mode, query memory cache and blend history in 4096-D space, then generate 6324x6324 wave
+                token_activation = torch.polar(torch.ones_like(h_7b_lora), h_7b_lora)
+                
+                # Query memory cache and blend history
+                retrieved_wave = self.orchestrator.memory_engines[0].retrieve_from_cache(query_key=token_activation)
+                retrieved_wave = retrieved_wave.to(token_activation.device)
+                blended_complex = token_activation + retrieved_wave
+                
+                h_7b_resolved = torch.angle(blended_complex)
+                
                 # Replicate candidate activation across all 16 streams to create [16, 1, gemma_dim]
-                activations_stack = h_7b_lora.unsqueeze(0).unsqueeze(0).repeat(16, 1, 1)
+                activations_stack = h_7b_resolved.unsqueeze(0).unsqueeze(0).repeat(16, 1, 1)
                 psi_candidate, _, _ = self.orchestrator.l3_router(activations=activations_stack)
-                
-                # Apply lens downsampling
-                N = psi_candidate.size(-1)
-                x = torch.linspace(-1.0, 1.0, N, device=psi_candidate.device)
-                y = torch.linspace(-1.0, 1.0, N, device=psi_candidate.device)
-                X, Y = torch.meshgrid(x, y, indexing='ij')
-                lens_phase = -50.0 * (X**2 + Y**2)
-                lens = torch.polar(torch.ones_like(lens_phase), lens_phase)
-                
-                wave_lensed = psi_candidate.squeeze(0) * lens
-                focal_plane = torch.fft.fft2(wave_lensed, norm='ortho')
-                focal_plane_shifted = torch.fft.fftshift(focal_plane)
-                
-                start = (N - 64) // 2
-                end = start + 64
-                focused_64 = focal_plane_shifted[start:end, start:end]
-                
-                mags = torch.abs(focused_64).clamp(min=1e-8)
-                psi_candidate_focused = focused_64 / mags
+                psi_candidate_resolved = psi_candidate.squeeze(0) # shape [6324, 6324]
 
             # 3. Fire the wave in Zone B
             target_vector = self.orchestrator.hopfield.vocabulary.get(target_label)
             if target_vector is None:
                 target_vector = self.orchestrator.get_stream_address(0)
                 
-            target_np = target_vector.detach().cpu().numpy().astype(np.complex64)
-            psi_candidate_flat = psi_candidate_focused.flatten()
-            
-            # Query memory cache and blend history
-            retrieved_wave = self.orchestrator.memory_engines[0].retrieve_from_cache(query_key=psi_candidate_flat)
-            retrieved_wave = retrieved_wave.to(psi_candidate_flat.device)
-            blended_focused = psi_candidate_flat + retrieved_wave
-            blended_mags = torch.abs(blended_focused).clamp(min=1e-8)
-            psi_candidate_resolved = blended_focused / blended_mags
-            
-            psi_cand_np = psi_candidate_resolved.detach().cpu().numpy().astype(np.complex64)
+            if is_symbolic:
+                target_np = target_vector.detach().cpu().numpy().astype(np.complex64)
+                psi_candidate_flat = psi_candidate_focused.flatten()
+                
+                # Query memory cache and blend history
+                retrieved_wave = self.orchestrator.memory_engines[0].retrieve_from_cache(query_key=psi_candidate_flat)
+                retrieved_wave = retrieved_wave.to(psi_candidate_flat.device)
+                blended_focused = psi_candidate_flat + retrieved_wave
+                blended_mags = torch.abs(blended_focused).clamp(min=1e-8)
+                psi_candidate_resolved = blended_focused / blended_mags
+                psi_cand_np = psi_candidate_resolved.detach().cpu().numpy().astype(np.complex64)
+            else:
+                # Re-tile the target vector to 6324x6324
+                target_activations = torch.angle(target_vector)
+                activations_stack_tgt = target_activations.unsqueeze(0).unsqueeze(0).repeat(16, 1, 1)
+                global_target, _, _ = self.orchestrator.l3_router(activations=activations_stack_tgt)
+                target_np = global_target.squeeze(0).detach().cpu().numpy().astype(np.complex64)
+                psi_cand_np = psi_candidate_resolved.detach().cpu().numpy().astype(np.complex64)
 
             truth_np, delta_np, alignment = self.orchestrator.optical_core.forward(
                 hr_wavefront=psi_cand_np,
@@ -214,7 +213,13 @@ class ZoneBPhysicalEmulator:
             )
 
             # 4. Boundary Validation
-            truth_tensor = torch.tensor(truth_np, dtype=torch.complex64, device=self.orchestrator.optical_core.device)
+            truth_tensor_full = torch.tensor(truth_np, dtype=torch.complex64, device=self.orchestrator.optical_core.device)
+            if truth_tensor_full.numel() == 6324 * 6324:
+                surviving_trajectory = torch.angle(truth_tensor_full[:64, :64]).flatten()[:4096]
+                truth_tensor = torch.polar(torch.ones_like(surviving_trajectory), surviving_trajectory)
+            else:
+                truth_tensor = truth_tensor_full
+                
             is_valid, veto_reason, error_energy, h_cft = self.orchestrator.boundary_validator.validate_boundary(truth_tensor)
             
             if not is_valid:
@@ -228,6 +233,7 @@ class HenriOpticalCoreD2NN(nn.Module):
     """
     Wrapper around ZoneBEmulator that handles 1D 4096-D vector inputs/outputs 
     and handles NumPy to PyTorch conversion.
+    Supports both 4096-D (64x64) and 6324x6324 inputs dynamically.
     """
     def __init__(self, num_channels=4096, num_layers=5, device='cpu'):
         super().__init__()
@@ -236,9 +242,12 @@ class HenriOpticalCoreD2NN(nn.Module):
         self.N = int(math.sqrt(num_channels))  # 64 for 4096
         res_scale = self.N / 6324.0
         self.emulator = ZoneBEmulator(resolution_scale=res_scale, device=device)
+        self.full_res_emulator = None
         
     def apply_langevin_noise(self, langevin_heat: float):
         self.emulator.set_microheaters(langevin_heat)
+        if self.full_res_emulator is not None:
+            self.full_res_emulator.set_microheaters(langevin_heat)
         
     def forward(self, hr_wavefront, target_manifold, langevin_heat=0.0):
         if isinstance(hr_wavefront, np.ndarray):
@@ -251,14 +260,22 @@ class HenriOpticalCoreD2NN(nn.Module):
         else:
             target_tensor = target_manifold.to(device=self.device, dtype=torch.complex64)
             
-        wave_tensor = wave_tensor.view(self.N, self.N)
-        target_tensor = target_tensor.view(self.N, self.N)
-        
-        truth, delta, energy = self.emulator(wave_tensor, target_tensor, langevin_heat)
+        if wave_tensor.numel() == 6324 * 6324:
+            if self.full_res_emulator is None:
+                self.full_res_emulator = ZoneBEmulator(resolution_scale=1.0, device=wave_tensor.device)
+                self.full_res_emulator.eval()
+            wave_tensor = wave_tensor.view(6324, 6324)
+            target_tensor = target_tensor.view(6324, 6324)
+            truth, delta, energy = self.full_res_emulator(wave_tensor, target_tensor, langevin_heat)
+        else:
+            wave_tensor = wave_tensor.view(self.N, self.N)
+            target_tensor = target_tensor.view(self.N, self.N)
+            truth, delta, energy = self.emulator(wave_tensor, target_tensor, langevin_heat)
         
         return (
             truth.detach().cpu().numpy(),
             delta.detach().cpu().numpy(),
             energy.item()
         )
+
 

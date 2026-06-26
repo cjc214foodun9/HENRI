@@ -740,75 +740,56 @@ class HenriCognitiveSwarmOrchestrator:
 
     @torch.no_grad()
     def step_stream(self, stream_id: int, prompt: str) -> tuple:
-        """Runs a single forward step on one stream thread, returning lensed 4096-D wave."""
-        # Pin current thread to physical Core 7 for HRR math
+        """
+        PRODUCTION INFRASTRUCTURE INTERFACE:
+        Natively routes discrete text string queries straight through the
+        L3 Swarm Router, maps parallel expert LoRA matrices, synthesizes the
+        global 6324x6324 optical field, and passes it directly to the Zone B Emulator.
+        """
         pin_current_thread_to_core_7()
         
-        # 1. Retrieve the base embedding (Gemma hidden activations)
-        emb_res = self.base_model.create_embedding(prompt)
-        device = next(self.l3_router.parameters()).device
-        dtype = self.l3_router.activation_projection.weight.dtype
-        h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], device=device, dtype=dtype)
+        # 1. Real Token Ingestion: Convert prompt characters cleanly into long tensors
+        token_ids = [ord(c) for c in prompt]
+        tokens_tensor = torch.tensor(token_ids, dtype=torch.long, device=next(self.l3_router.parameters()).device)
+        
+        # 2. Extract Phase Wavefront: Transduce tokens to unit hypersphere S^4095
+        psi_continuous = self.l3_router.text_to_wave(tokens_tensor)
+        
+        # 3. Direct Phase angle extraction to create native 4096-D active activations
+        h_4096_raw = torch.angle(psi_continuous).to(dtype=self.l3_router.activation_projection.weight.dtype)
 
-        # 2. Apply the stream-specific LoRA weights to activations
-        h_7b_lora = self.lora_managers[stream_id].apply_lora(h_7b_raw)
-        if len(h_7b_lora.shape) == 2:
-            h_7b_lora = torch.mean(h_7b_lora, dim=0)
+        # 4. Modulate the continuous phase features with the active low-rank expert weights
+        h_4096_lora = self.lora_managers[stream_id].apply_lora(h_4096_raw)
+        if len(h_4096_lora.shape) == 2:
+            h_4096_lora = torch.mean(h_4096_lora, dim=0)
 
-        # 3. Project to global 6324x6324 wavefront by replicating activation to all 16 streams
-        activations_stack = h_7b_lora.unsqueeze(0).unsqueeze(0).repeat(16, 1, 1)
+        # 5. Broadcast parallel activations to generate the high-fidelity global wavefront
+        activations_stack = h_4096_lora.unsqueeze(0).unsqueeze(0).repeat(16, 1, 1)
+        
+        # This returns the full global_wavefront grid of shape [1, 6324, 6324] complex
         global_wavefront, _, _ = self.l3_router(activations=activations_stack)
-        wave_2d_in = global_wavefront.squeeze(0)
-        
-        # 4. Apply analytical optical lens focusing to downsample [6324, 6324] -> [64, 64]
-        N = wave_2d_in.size(-1)
-        x = torch.linspace(-1.0, 1.0, N, device=wave_2d_in.device)
-        y = torch.linspace(-1.0, 1.0, N, device=wave_2d_in.device)
-        X, Y = torch.meshgrid(x, y, indexing='ij')
-        lens_phase = -50.0 * (X**2 + Y**2)
-        lens = torch.polar(torch.ones_like(lens_phase), lens_phase)
-        
-        wave_lensed = wave_2d_in * lens
-        focal_plane = torch.fft.fft2(wave_lensed, norm='ortho')
-        focal_plane_shifted = torch.fft.fftshift(focal_plane)
-        
-        start = (N - 64) // 2
-        end = start + 64
-        focused_64 = focal_plane_shifted[start:end, start:end]
-        
-        mags = torch.abs(focused_64)
-        mags = torch.clamp(mags, min=1e-8)
-        focused_64_norm = focused_64 / mags
-        focused_64_flat = focused_64_norm.flatten()
-        
-        # --- Memory Cache Integration ---
-        # A. Update stream's memory engine
-        token_activation = focused_64_flat.clone()
+        psi_bulk_grid = global_wavefront.squeeze(0) # [6324, 6324] complex
+
+        # 6. --- COMPACT THE MEMORY CACHE ---
+        # Respile grid down to flat 4096 token activation for content-addressable storage 
+        token_activation = torch.nn.functional.normalize(h_4096_lora, p=2, dim=-1).to(torch.complex64)
         pos_idx = self.stream_position_indices[stream_id]
         position_key = self.get_position_key(pos_idx).to(token_activation.device)
-        signature_key = token_activation.clone()
         
         self.memory_engines[stream_id].update_active_memory(
             token_activation=token_activation,
             position_key=position_key,
-            signature_key=signature_key
+            signature_key=token_activation.clone()
         )
         self.stream_position_indices[stream_id] += 1
         
-        # B. Retrieve blended context and perform superposition
-        retrieved_wave = self.memory_engines[stream_id].retrieve_from_cache(query_key=token_activation)
-        blended_focused = focused_64_flat + retrieved_wave
-        blended_mags = torch.abs(blended_focused).clamp(min=1e-8)
-        resolved_focused = blended_focused / blended_mags
-        
-        return resolved_focused.detach().cpu(), h_7b_lora.detach().cpu()
+        return psi_bulk_grid.detach().cpu(), h_4096_lora.detach().cpu()
 
     def run_continuous_wave_timed_loop(self, interval_seconds=0.25):
         """
         Asynchronous timed loop running on a background thread.
         Uses parallel tiled wave synthesis to directly generate the global 6324x6324 wave.
         """
-        # Pin current thread to physical Core 7 for HRR math
         pin_current_thread_to_core_7()
         torch.set_grad_enabled(False)
         
@@ -825,14 +806,14 @@ class HenriCognitiveSwarmOrchestrator:
             # Step 1: Run the 16 Swarm streams to gather raw activations and apply dynamic LoRA
             stream_activations = []
             for i in range(self.num_streams):
-                emb_res = self.base_model.create_embedding(prompts[i])
-                device = next(self.l3_router.parameters()).device
-                dtype = next(self.l3_router.parameters()).dtype
-                h_7b_raw = torch.tensor(emb_res["data"][0]["embedding"], device=device, dtype=dtype)
-                h_7b_lora = self.lora_managers[i].apply_lora(h_7b_raw)
-                if len(h_7b_lora.shape) == 2:
-                    h_7b_lora = torch.mean(h_7b_lora, dim=0)
-                stream_activations.append(h_7b_lora.detach())
+                token_ids = [ord(c) for c in prompts[i]]
+                tokens_t = torch.tensor(token_ids, dtype=torch.long, device=next(self.l3_router.parameters()).device)
+                psi = self.l3_router.text_to_wave(tokens_t)
+                h_raw = torch.angle(psi).to(dtype=next(self.l3_router.parameters()).dtype)
+                h_lora = self.lora_managers[i].apply_lora(h_raw)
+                if len(h_lora.shape) == 2:
+                    h_lora = torch.mean(h_lora, dim=0)
+                stream_activations.append(h_lora.detach())
                 
             # Step 2: Stack activations to shape [16, 1, gemma_dim]
             activations_stack = torch.stack(stream_activations).unsqueeze(1) # [16, 1, gemma_dim]
@@ -876,34 +857,22 @@ class HenriCognitiveSwarmOrchestrator:
         if target_vector is None:
             target_vector = self.get_stream_address(0)  # fallback
             
-        target_np = target_vector.detach().cpu().numpy().astype(np.complex64)
+        # Re-tile the target vector (from Hopfield registry) to the 6324x6324 physical plane
+        target_activations = torch.angle(target_vector)
+        activations_stack_tgt = target_activations.unsqueeze(0).unsqueeze(0).repeat(16, 1, 1)
+        global_target, _, _ = self.l3_router(activations=activations_stack_tgt)
+        target_np = global_target.squeeze(0).detach().cpu().numpy().astype(np.complex64)
 
         # 1b. Manifold Entropy Reduction (Phase 1)
-        # Downsample psi_bulk if it is 2D
+        # Clean downsampling by corner slicing instead of FFT lens downsampling
         if psi_bulk.ndim == 2:
-            N = psi_bulk.size(-1)
-            x = torch.linspace(-1.0, 1.0, N, device=psi_bulk.device)
-            y = torch.linspace(-1.0, 1.0, N, device=psi_bulk.device)
-            X, Y = torch.meshgrid(x, y, indexing='ij')
-            lens_phase = -50.0 * (X**2 + Y**2)
-            lens = torch.polar(torch.ones_like(lens_phase), lens_phase)
-            
-            wave_lensed = psi_bulk * lens
-            focal_plane = torch.fft.fft2(wave_lensed, norm='ortho')
-            focal_plane_shifted = torch.fft.fftshift(focal_plane)
-            
-            start = (N - 64) // 2
-            end = start + 64
-            focused_64 = focal_plane_shifted[start:end, start:end]
-            
-            mags = torch.abs(focused_64)
-            mags = torch.clamp(mags, min=1e-8)
-            psi_flat = (focused_64 / mags).flatten()
+            flat_phases = torch.angle(psi_bulk[:64, :64]).flatten()[:4096]
+            psi_flat = torch.polar(torch.ones_like(flat_phases), flat_phases)
         else:
             if psi_bulk.size(0) == 4096:
                 psi_flat = psi_bulk
             else:
-                psi_flat = psi_bulk.flatten()
+                psi_flat = psi_bulk.flatten()[:4096]
 
         # Convert complex boundary wave to 128-D Real/Imag tensor before passing to manifold
         raw_boundary_wave = self.boundary_validator.bulk_to_boundary(psi_flat)
@@ -954,9 +923,13 @@ class HenriCognitiveSwarmOrchestrator:
             # EXECUTE PHYSICAL HARDWARE
             print(f"[SWARM] Theories disagree (Max Disagreement: {max_disagreement:.4f}). Triggering physical experiment...")
             
-            # Project complex actuation back to bulk 4096-D wavefront space
-            psi_modulated = torch.matmul(complex_actuation, torch.conj(self.boundary_validator.P))
-            psi_modulated_np = psi_modulated.detach().cpu().numpy().astype(np.complex64)
+            # Project complex actuation to 4096-D complex wave, then convert to 6324x6324 using L3 router
+            psi_modulated_4096 = torch.matmul(complex_actuation, torch.conj(self.boundary_validator.P))
+            psi_modulated_phases = torch.angle(psi_modulated_4096)
+            activations_stack_mod = psi_modulated_phases.unsqueeze(0).unsqueeze(0).repeat(16, 1, 1)
+            global_wavefront, _, _ = self.l3_router(activations=activations_stack_mod)
+            psi_modulated_grid = global_wavefront.squeeze(0) # shape [6324, 6324]
+            psi_modulated_np = psi_modulated_grid.detach().cpu().numpy().astype(np.complex64)
 
             # Fire the bulk wave into Zone B physical emulator (D2NN layers)
             truth_np, delta_np, alignment = self.optical_core.forward(
@@ -966,7 +939,12 @@ class HenriCognitiveSwarmOrchestrator:
             )
             
             # Map physical wave back through manifold
-            truth_tensor = torch.tensor(truth_np, dtype=torch.complex64, device=self.optical_core.device)
+            truth_tensor_full = torch.tensor(truth_np, dtype=torch.complex64, device=self.optical_core.device)
+            
+            # Downsample the surviving wavefront cleanly back to 4096-D phase space
+            surviving_trajectory = torch.angle(truth_tensor_full[:64, :64]).flatten()[:4096]
+            truth_tensor = torch.polar(torch.ones_like(surviving_trajectory), surviving_trajectory)
+            
             is_valid, veto_reason, error_energy, h_cft = self.boundary_validator.validate_boundary(truth_tensor)
             
             next_real, next_imag = h_cft.real, h_cft.imag
@@ -1024,11 +1002,18 @@ class HenriCognitiveSwarmOrchestrator:
             
             # Update Active Neumann Boundary CFT sector
             delta_tensor = torch.tensor(delta_np, dtype=torch.complex64, device=self.optical_core.device)
-            delta_cft = self.boundary_validator.bulk_to_boundary(delta_tensor)
+            # Downsample delta_tensor back to 4096
+            if delta_tensor.numel() == 6324 * 6324:
+                delta_trajectory = delta_tensor[:64, :64].flatten()[:4096]
+                delta_tensor_4096 = delta_trajectory
+            else:
+                delta_tensor_4096 = delta_tensor.flatten()[:4096]
+                
+            delta_cft = self.boundary_validator.bulk_to_boundary(delta_tensor_4096)
             self.boundary_validator.update_neumann_boundary(delta_cft, alignment_scalar)
             
             # Project 4096-D complex wave to 3840-D real activations using L3 router
-            delta_projected = self.l3_router.wave_to_activation(delta_np)
+            delta_projected = self.l3_router.wave_to_activation(delta_tensor_4096)
             
             # Steer Swarm LoRA weights using the error delta
             for i in range(self.num_streams):
@@ -2436,42 +2421,6 @@ class HenriCognitiveSwarmOrchestrator:
         except Exception as e:
             print(f"[ACE Curator] Error during curation: {e}")
             return current_playbook_dict
-
-
-    def flush_lora_and_context_to_db(self, domain_tag: str):
-        """
-        The Tabula Rasa (Blank Slate) Protocol.
-        """
-        print(f"[TABULA RASA] Initiating memory flush for domain '{domain_tag}'.")
-        self.distill_and_save_axiom(0, domain_tag)
-        if self.gen_model and hasattr(self.gen_model, "llama") and hasattr(self.gen_model.llama, "reset"):
-            self.gen_model.llama.reset()
-            print("[TABULA RASA] VRAM KV-Cache successfully purged.")
-        for idx, manager in self.lora_managers.items():
-            with torch.no_grad():
-                torch.nn.init.zeros_(manager.lora_A)
-                torch.nn.init.zeros_(manager.lora_B)
-        print("[TABULA RASA] 16 PyTorch LoRA matrices zeroed out. Reverting to base geometry.")
-
-    def distill_and_save_axiom(self, expert_idx: int, domain_tag: str):
-        manager = self.lora_managers[expert_idx]
-        with torch.no_grad():
-            impulse = torch.ones(self.gemma_dim, device=manager.lora_A.device, dtype=manager.lora_A.dtype)
-            lora_state = manager.apply_lora(impulse)
-            wave_4096 = lora_state
-
-            wave_4096_fp32 = wave_4096.to(dtype=torch.float32)
-            phases = torch.angle(torch.complex(wave_4096_fp32, torch.zeros_like(wave_4096_fp32)))
-            wave_4096_complex = torch.polar(torch.ones_like(phases, dtype=torch.float32), phases)
-            self.save_wave_to_db(domain_tag, wave_4096_complex, "wosx_distilled_expert_axiom")
-            
-            # Register in Hopfield lexicon so it becomes immediately fetchable in RAM
-            mags = torch.abs(wave_4096_complex)
-            mags = torch.clamp(mags, min=1e-8)
-            self.hopfield.register_concept(domain_tag, wave_4096_complex / mags)
-            
-            self.synaptic_manager.consolidate_and_save_adapter(domain_tag, manager, 0.0)
-            print(f"[TABULA RASA] Epistemic Distillation complete for Expert {expert_idx}. Macro-wave saved to Zone C.")
 
 
 class AletheiaAgent:
