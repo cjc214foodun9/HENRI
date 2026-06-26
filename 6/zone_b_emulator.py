@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import math
+import numpy as np
 
 class AngularSpectrumPropagator(nn.Module):
     """
@@ -221,3 +222,43 @@ class ZoneBPhysicalEmulator:
                 return False, feedback, error_energy, truth_tensor, delta_np
             
             return True, "Dirichlet boundaries verified. Sagnac alignment achieved.", error_energy, truth_tensor, delta_np
+
+
+class HenriOpticalCoreD2NN(nn.Module):
+    """
+    Wrapper around ZoneBEmulator that handles 1D 4096-D vector inputs/outputs 
+    and handles NumPy to PyTorch conversion.
+    """
+    def __init__(self, num_channels=4096, num_layers=5, device='cpu'):
+        super().__init__()
+        self.num_channels = num_channels
+        self.device = device
+        self.N = int(math.sqrt(num_channels))  # 64 for 4096
+        res_scale = self.N / 6324.0
+        self.emulator = ZoneBEmulator(resolution_scale=res_scale, device=device)
+        
+    def apply_langevin_noise(self, langevin_heat: float):
+        self.emulator.set_microheaters(langevin_heat)
+        
+    def forward(self, hr_wavefront, target_manifold, langevin_heat=0.0):
+        if isinstance(hr_wavefront, np.ndarray):
+            wave_tensor = torch.tensor(hr_wavefront, dtype=torch.complex64, device=self.device)
+        else:
+            wave_tensor = hr_wavefront.to(device=self.device, dtype=torch.complex64)
+            
+        if isinstance(target_manifold, np.ndarray):
+            target_tensor = torch.tensor(target_manifold, dtype=torch.complex64, device=self.device)
+        else:
+            target_tensor = target_manifold.to(device=self.device, dtype=torch.complex64)
+            
+        wave_tensor = wave_tensor.view(self.N, self.N)
+        target_tensor = target_tensor.view(self.N, self.N)
+        
+        truth, delta, energy = self.emulator(wave_tensor, target_tensor, langevin_heat)
+        
+        return (
+            truth.detach().cpu().numpy(),
+            delta.detach().cpu().numpy(),
+            energy.item()
+        )
+

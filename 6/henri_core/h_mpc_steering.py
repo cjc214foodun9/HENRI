@@ -153,7 +153,9 @@ class HolographicMPCOrchestrator(nn.Module):
                   
         # Convert the uint8 phase track back to continuous real wave coordinates (cosine) on unit hypersphere
         real_trajectory_track = torch.cos(torch.stack(winning_trajectory_track, dim=0).to(device=device, dtype=dtype) * (2.0 * math.pi / 256.0))
+        real_trajectory_track = F.normalize(real_trajectory_track, p=2, dim=-1)
         winning_trajectory_track_out = real_trajectory_track.unsqueeze(0)
+
         
         return winning_idx, winning_trajectory_track_out
 
@@ -248,14 +250,23 @@ def run_phase_3_validation():
       
     # 2. Forge Boundary Conditions (Initial Wave and Target Goal Wave)  
     g_cpu = torch.Generator(device="cpu").manual_seed(1234)  
-    current_wave = F.normalize(torch.randn(4096, generator=g_cpu), p=2, dim=-1).to(device)  
-    target_goal = F.normalize(torch.randn(4096, generator=g_cpu), p=2, dim=-1).to(device)  
+    current_angles = (torch.rand(4096, generator=g_cpu) * 2 * math.pi) - math.pi
+    target_angles = (torch.rand(4096, generator=g_cpu) * 2 * math.pi) - math.pi
+    
+    current_wave = torch.polar(torch.ones(4096), current_angles).to(device)
+    target_goal = torch.polar(torch.ones(4096), target_angles).to(device)
       
     # 3. Create 8 Mock Action Plans (Plan Index 2 is engineered to achieve high resonance)  
-    candidate_actions = (torch.randn(8, 16, 4096, generator=g_cpu) * 0.1).to(device)  
+    candidate_actions = torch.polar(
+        torch.ones(8, 16, 4096),
+        (torch.rand(8, 16, 4096, generator=g_cpu) * 2 * math.pi) - math.pi
+    ).to(device)
       
     # Injection of specific, low-entropy target coordinates into Plan 2  
-    candidate_actions[2] = torch.real(target_goal).unsqueeze(0).repeat(16, 1) * 10.0  
+    diff_angles = torch.remainder(target_angles - current_angles, 2 * math.pi)
+    step_angles = diff_angles / 16.0
+    for t in range(16):
+        candidate_actions[2, t] = torch.polar(torch.ones(4096), step_angles).to(device)
       
     print(f"[DATA INFRASTRUCTURE] Evaluating {candidate_actions.size(0)} parallel candidate paths over a 16-step horizon...")  
       
@@ -266,14 +277,14 @@ def run_phase_3_validation():
     print(f"[MANIFOLD] Selected Plan Index: {best_idx}")  
     print(f"[MANIFOLD] Chronological Trajectory Track Shape footprint: {trajectory_track.shape}")  
       
-    assert best_idx == 2, "Fatal: H-MPC pipeline failed to select the minimum-energy trajectory track!"  
+    assert best_idx == 2, f"Fatal: H-MPC pipeline failed to select the minimum-energy trajectory track! Got {best_idx}"  
     assert trajectory_track.shape == torch.Size([1, 16, 4096]), "Fatal: Chronological tracking matrix breached horizon boundaries!"  
       
     # Verify strict energy conservation across all steps along the lookahead path  
     for step in range(16):  
         step_norm = torch.norm(trajectory_track[0, step, :], p=2, dim=-1).item()  
         deviation = abs(step_norm - 1.0)  
-        assert deviation < 1e-5, f"Fatal: Horizon step {step} broken! Hyperspherical boundary constraint violated."  
+        assert deviation < 1e-5, f"Fatal: Horizon step {step} broken! Hyperspherical boundary constraint violated. Got norm {step_norm}"  
           
     print("[SUCCESS] Continuous path-space trajectory invariants secured.")  
     print("=== PHASE 3 CHRONOLOGICAL LOOKAHEAD PLANNING INTERFACE SECURED ===")

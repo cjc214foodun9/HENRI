@@ -33,25 +33,8 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "6"))
 
 from dynamic_lora import DynamicLoraManager
 from l3_router_model import L3SwarmRouter
-import gguf
-
-def extract_gemma_embeddings(gemma_model_path):
-    print(f"[SYNC] Extracting embeddings from {gemma_model_path}...")
-    reader = gguf.GGUFReader(gemma_model_path)
-    for tensor in reader.tensors:
-        if tensor.name == "token_embd.weight":
-            return torch.tensor(tensor.data, dtype=torch.float32).reshape(tensor.shape.tolist()[1], tensor.shape.tolist()[0])
-    raise ValueError("token_embd.weight not found in GGUF")
-
-def sync_vocab_matrices(gemma_model_path, l3_router):
-    print("[SYNC] Extracting Gemma 4 vocabulary matrix...")
-    gemma_embeddings = extract_gemma_embeddings(gemma_model_path)
-    
-    with torch.no_grad():
-        l3_router.token_embedding.weight.copy_(gemma_embeddings)
-        l3_router.token_embedding.weight.requires_grad = False
-    print("[SYNC] Vocabulary matrix physically hardwired.")
-from zone_b import HenriOpticalCoreD2NN
+from henri_core.h_mpc_steering import HolographicMPCOrchestrator, JITSUiteSIGRegGuardrail, ThermoActiveAdaLNBlock
+from zone_b_emulator import HenriOpticalCoreD2NN
 from hopfield_cleanup import HopfieldSemanticCleanup
 from boundary_validator import BoundaryAxiomValidator
 from universal_repl import UniversalREPL
@@ -105,82 +88,6 @@ def pin_current_thread_to_core_7():
         except Exception as e:
             pass
 
-class LookaheadExpertPrefetcher:
-    """
-    Asynchronously prefetches chunks of the model file into physical RAM (OS Page Cache)
-    to mask NVMe-to-RAM page fault latency during token generation cycles.
-    """
-    def __init__(self, model_path, file_size):
-        self.model_path = model_path
-        self.file_size = file_size
-        self.prefetch_queue = queue.Queue()
-        self.stop_event = threading.Event()
-        self.prefetch_thread = None
-        
-        if os.path.exists(model_path):
-            self.prefetch_thread = threading.Thread(target=self._prefetch_worker, daemon=True)
-            self.prefetch_thread.start()
-
-    def _prefetch_worker(self):
-        try:
-            # Open GGUF file in binary read mode
-            fd = os.open(self.model_path, os.O_RDONLY | getattr(os, 'O_BINARY', 0))
-        except Exception as e:
-            print(f"[PREFETCH] Failed to open model file for reading: {e}")
-            return
-            
-        while not self.stop_event.is_set():
-            try:
-                # Wait for prefetch requests (offset, size)
-                item = self.prefetch_queue.get(timeout=0.1)
-                offset, size = item
-                
-                # Align offset and size to 64KB boundary for Windows performance
-                offset = (offset // 65536) * 65536
-                size = ((size + 65535) // 65536) * 65536
-                
-                if offset + size > self.file_size:
-                    size = self.file_size - offset
-                
-                if size > 0:
-                    # Perform file read to populate OS cache
-                    os.lseek(fd, offset, os.SEEK_SET)
-                    bytes_to_read = size
-                    while bytes_to_read > 0 and not self.stop_event.is_set():
-                        chunk_size = min(4 * 1024 * 1024, bytes_to_read)
-                        _ = os.read(fd, chunk_size)
-                        bytes_to_read -= chunk_size
-                self.prefetch_queue.task_done()
-            except queue.Empty:
-                continue
-            except Exception as e:
-                pass
-                
-        try:
-            os.close(fd)
-        except:
-            pass
-
-    def trigger_prefetch_for_experts(self, token_ids):
-        """
-        Translates projected expert selections/token IDs into file block offsets
-        and pushes them to the prefetch queue.
-        """
-        if not os.path.exists(self.model_path) or self.file_size <= 0:
-            return
-            
-        for tok in token_ids:
-            expert_id = hash(tok) % 8
-            block_size = 50 * 1024 * 1024  # 50 MB block
-            offset = int((self.file_size * 0.2) + expert_id * (self.file_size * 0.08) + (tok % 10) * block_size)
-            if offset + block_size <= self.file_size:
-                self.prefetch_queue.put((offset, block_size))
-
-    def stop(self):
-        self.stop_event.set()
-        if self.prefetch_thread and self.prefetch_thread.is_alive():
-            self.prefetch_thread.join(timeout=1.0)
-
 class HenriEmbeddingGenerator:
     """
     Unified in-memory text-to-vector projection layer for the HENRI architecture.
@@ -204,8 +111,11 @@ class HenriEmbeddingGenerator:
         }
 
     def create_embedding(self, prompt: str) -> dict:
+        # Deterministic unit-modulus phase-based projection
+        # Avoids Gaussian random vector generator and aligns with the 4096-D phase space
         rng = np.random.default_rng(seed=hash(prompt) & 0xffffffff)
-        embedding = rng.normal(loc=0.0, scale=0.02, size=self.latent_dim).tolist()
+        phases = rng.uniform(low=-math.pi, high=math.pi, size=self.latent_dim)
+        embedding = np.cos(phases).tolist()
         return {"data": [{"embedding": embedding}]}
 
     def tokenize(self, text_bytes: bytes, **kwargs) -> list:
@@ -458,7 +368,6 @@ class HenriCognitiveSwarmOrchestrator:
             except Exception as e:
                 print(f"[HARDWARE] Warning: Failed to adjust Windows working set size: {e}")
 
-        self.prefetcher = None
         self.is_mock = False # Run in full production mode
 
         # Initialize the embedding and chat completion generator for the production model
@@ -677,74 +586,6 @@ class HenriCognitiveSwarmOrchestrator:
                 
         return blended_A, blended_B
 
-    def serialize_to_ggml_format(self, blended_A, blended_B, out_path):
-        """
-        Serializes blended PyTorch weights into GGUF format mapping to the base model's attention keys.
-        """
-        import gguf
-        
-        # Read base model shapes using GGUFReader to handle non-uniform GQA layers dynamically
-        tensor_shapes = {}
-        try:
-            reader = gguf.GGUFReader(self.model_path)
-            for tensor in reader.tensors:
-                if "attn_q.weight" in tensor.name or "attn_v.weight" in tensor.name:
-                    tensor_shapes[tensor.name] = tensor.shape.tolist()
-        except Exception as e:
-            print(f"[ENGINE] Warning: GGUFReader failed to read base model shapes: {e}. Defaulting to standard dimensions.")
-            # Fallback to standard Gemma 12B layer shapes
-            for i in range(48):
-                tensor_shapes[f"blk.{i}.attn_q.weight"] = [3840, 4096]
-                tensor_shapes[f"blk.{i}.attn_v.weight"] = [3840, 2048]
-
-        # Initialize GGUFWriter
-        writer = gguf.GGUFWriter(out_path, arch="gemma4")
-        writer.add_type(gguf.GGUFType.ADAPTER)
-        writer.add_string(gguf.Keys.Adapter.TYPE, "lora")
-        writer.add_float32(gguf.Keys.Adapter.LORA_ALPHA, 16.0)
-
-        # Convert tensors to CPU numpy float32
-        blended_A_cpu = blended_A.cpu().to(torch.float32)
-        blended_B_cpu = blended_B.cpu().to(torch.float32)
-        
-        rank = 16
-        for name, shape in tensor_shapes.items():
-            # GGUF shapes are stored as [cols, rows] (i.e. [dim_out, dim_in])
-            dim_out, dim_in = shape[0], shape[1]
-            
-            # Map blended tensors to GGUF lora_a and lora_b shapes:
-            # lora_a GGUF: [dim_out, rank] -> NumPy: (rank, dim_out)
-            # lora_b GGUF: [rank, dim_in] -> NumPy: (dim_in, rank)
-            
-            # Slice/pad blended_B (shape [rank, gemma_dim]) to (rank, dim_out)
-            if dim_out == self.gemma_dim:
-                lora_a_np = blended_B_cpu.numpy()
-            elif dim_out < self.gemma_dim:
-                lora_a_np = blended_B_cpu[:, :dim_out].numpy()
-            else:
-                padded = torch.zeros(rank, dim_out)
-                padded[:, :self.gemma_dim] = blended_B_cpu
-                lora_a_np = padded.numpy()
-                
-            # Slice/pad blended_A (shape [gemma_dim, rank]) to (dim_in, rank)
-            if dim_in == self.gemma_dim:
-                lora_b_np = blended_A_cpu.numpy()
-            elif dim_in < self.gemma_dim:
-                lora_b_np = blended_A_cpu[:dim_in, :].numpy()
-            else:
-                padded = torch.zeros(dim_in, rank)
-                padded[:self.gemma_dim, :] = blended_A_cpu
-                lora_b_np = padded.numpy()
-
-            # Add to writer
-            writer.add_tensor(f"{name}.lora_a", lora_a_np)
-            writer.add_tensor(f"{name}.lora_b", lora_b_np)
-
-        writer.write_header_to_file()
-        writer.write_kv_data_to_file()
-        writer.write_tensors_to_file()
-        writer.close()
-
     def apply_blended_lora_to_gemma(self, blended_A, blended_B):
         """Dynamic GGUF LoRA injection bypassed in pure PyTorch mode."""
         pass
@@ -903,11 +744,6 @@ class HenriCognitiveSwarmOrchestrator:
         # Pin current thread to physical Core 7 for HRR math
         pin_current_thread_to_core_7()
         
-        # Trigger predictive prefetch for upcoming tokens
-        if self.prefetcher:
-            pseudo_tokens = [ord(c) for c in prompt[:10]]
-            self.prefetcher.trigger_prefetch_for_experts(pseudo_tokens)
-            
         # 1. Retrieve the base embedding (Gemma hidden activations)
         emb_res = self.base_model.create_embedding(prompt)
         device = next(self.l3_router.parameters()).device
@@ -1442,7 +1278,7 @@ class HenriCognitiveSwarmOrchestrator:
             translation_head = translation_head.to(device=device, dtype=torch.bfloat16).eval()
 
         if not hasattr(self, 'h_mpc') or self.h_mpc is None:
-            self.h_mpc = HolographicMPCOrchestrator(core_model, dim=hidden_dim).to(device=device, dtype=torch.bfloat16)
+            self.h_mpc = HolographicMPCOrchestrator(dim=hidden_dim).to(device=device, dtype=torch.bfloat16)
             self.h_mpc.orchestrator = self
 
         # 5. Initialize or retrieve the cached Non-Autoregressive Canvas Sampler
@@ -1489,26 +1325,10 @@ class HenriCognitiveSwarmOrchestrator:
 
 
     def save_router_centroids(self):
-        try:
-            os.makedirs("archive", exist_ok=True)
-            torch.save(self.l3_router.expert_centroids, "archive/l3_router_centroids.bin")
-            print("[SYSTEM] Saved expert centroids to archive/l3_router_centroids.bin")
-        except Exception as e:
-            print(f"[SYSTEM] Warning: Failed to save expert centroids: {e}")
+        pass
 
     def load_router_centroids(self):
-        path = "archive/l3_router_centroids.bin"
-        if os.path.exists(path):
-            try:
-                loaded = torch.load(path, map_location="cpu")
-                if loaded.shape == self.l3_router.expert_centroids.shape:
-                    with torch.no_grad():
-                        self.l3_router.expert_centroids.copy_(loaded)
-                    print(f"[SYSTEM] Loaded expert centroids from {path}")
-                else:
-                    print(f"[SYSTEM] Warning: Shape mismatch for expert centroids in {path}")
-            except Exception as e:
-                print(f"[SYSTEM] Warning: Failed to load expert centroids: {e}")
+        pass
 
     def start_swarm_loop(self, initial_prompts, interval=0.25, target_label="SCADA_Pressure_Control"):
         """Starts the timed background loop."""
@@ -1543,9 +1363,7 @@ class HenriCognitiveSwarmOrchestrator:
             except Exception as e:
                 print(f"[DATABASE WARNING] Failed to close connection pool: {e}")
         
-        # Stop lookahead prefetcher
-        if hasattr(self, "prefetcher") and self.prefetcher:
-            self.prefetcher.stop()
+
         
         # Shutdown telemetry server gracefully
         if hasattr(self, "telemetry_server") and self.telemetry_server:
@@ -2341,24 +2159,20 @@ class HenriCognitiveSwarmOrchestrator:
             for content in content_list:
                 rule_text = f"{section}: {content}"
                 
-                # 1. Embed the rule using the CPU embedding engine (Output: 3840-D)
+                # 1. Embed the rule directly into 4096-D wave space
                 emb_res = self.base_model.create_embedding(rule_text)
-                embedding_3840 = emb_res["data"][0]["embedding"]
-                device = self.l3_router.w_down.weight.device
-                dtype = self.l3_router.w_down.weight.dtype
-                embedding_tensor = torch.tensor(embedding_3840, dtype=dtype, device=device)
+                embedding_4096 = emb_res["data"][0]["embedding"]
+                device = next(self.l3_router.parameters()).device
+                dtype = next(self.l3_router.parameters()).dtype
+                embedding_tensor = torch.tensor(embedding_4096, dtype=dtype, device=device)
                 
-                # Mean pool if the embedding is a sequence of token vectors (shape [seq_len, 3840])
+                # Mean pool if the embedding is a sequence of token vectors (shape [seq_len, 4096])
                 if embedding_tensor.ndim == 2:
                     embedding_tensor = torch.mean(embedding_tensor, dim=0)
                 elif embedding_tensor.ndim == 3: # Handle any batch dimensions
                     embedding_tensor = torch.mean(embedding_tensor.view(-1, embedding_tensor.shape[-1]), dim=0)
                 
-                # 2. Project 3840-D back up to the 4096-D Continuous Wave Space
-                # Since w_down is orthogonal, its transpose (weight matrix) acts as the perfect inverse rotation
-                wave_4096 = torch.matmul(embedding_tensor, self.l3_router.w_down.weight.T)
-                
-                rule_embeddings.append(wave_4096.cpu())
+                rule_embeddings.append(embedding_tensor.cpu())
           
         if not rule_embeddings:
             return None
@@ -2410,7 +2224,8 @@ class HenriCognitiveSwarmOrchestrator:
         ACE Neurosymbolic Compilation: Compiles textual rules into a 4096-D wave.
         """
         rule_waves = []
-        w_down_matrix = self.l3_router.w_down.weight.T # Transpose to project from 3840 to 4096
+        device = next(self.l3_router.parameters()).device
+        dtype = next(self.l3_router.parameters()).dtype
         
         for section, content in playbook_sections.items():
             # Support both lists and single strings
@@ -2420,20 +2235,16 @@ class HenriCognitiveSwarmOrchestrator:
                 
                 # Embed rule via CPU-mmap instance
                 emb_response = self.reflector_model.create_embedding(rule_text)
-                device = w_down_matrix.device
-                g_rule = torch.tensor(emb_response["data"][0]["embedding"], dtype=w_down_matrix.dtype, device=device)
+                g_rule = torch.tensor(emb_response["data"][0]["embedding"], dtype=dtype, device=device)
                 if g_rule.ndim == 2:
                     g_rule = torch.mean(g_rule, dim=0)
                 elif g_rule.ndim == 3:
                     g_rule = torch.mean(g_rule.view(-1, g_rule.shape[-1]), dim=0)
                 
-                # Inverse orthogonal projection: Spin 3840-D back up to 4096-D continuous wave topology
-                psi_rule = torch.matmul(g_rule, w_down_matrix)
-                rule_waves.append(psi_rule)
+                rule_waves.append(g_rule)
                 
         if not rule_waves:
-            device = w_down_matrix.device
-            return torch.zeros(self.hrr_dim, device=device)
+            return torch.zeros(self.hrr_dim, device=device, dtype=dtype)
             
         # Superposition: Merge all active guidelines into a single interference pattern
         compiled_wave = torch.sum(torch.stack(rule_waves), dim=0)
@@ -2646,16 +2457,8 @@ class HenriCognitiveSwarmOrchestrator:
         manager = self.lora_managers[expert_idx]
         with torch.no_grad():
             impulse = torch.ones(self.gemma_dim, device=manager.lora_A.device, dtype=manager.lora_A.dtype)
-            lora_state_3840 = manager.apply_lora(impulse)
-            device = self.l3_router.w_down.weight.device
-            target_dtype = self.l3_router.w_down.weight.dtype
-            
-            # Using the transpose .T as explicitly requested to project from 3840 to 4096-D
-            try:
-                wave_4096 = torch.matmul(lora_state_3840.to(device=device, dtype=target_dtype), self.l3_router.w_down.weight.T)
-            except Exception as e:
-                print(f"[TABULA RASA] Explicit transpose projection failed: {e}. Attempting fallback.")
-                wave_4096 = torch.matmul(lora_state_3840.to(device=device, dtype=target_dtype), self.l3_router.w_down.weight)
+            lora_state = manager.apply_lora(impulse)
+            wave_4096 = lora_state
 
             wave_4096_fp32 = wave_4096.to(dtype=torch.float32)
             phases = torch.angle(torch.complex(wave_4096_fp32, torch.zeros_like(wave_4096_fp32)))
@@ -2946,162 +2749,4 @@ class AletheiaAgent:
         return candidate, max_revisions, "TIMEOUT"
 
 
-class ThermoActiveAdaLNBlock(torch.nn.Module):  
-    """  
-    HENRI Explicit Conditioning Module: Uses AdaLN-zero parameters to modulate  
-    expert phase transitions without corrupting continuous vector coordinates.  
-    """  
-    def __init__(self, dim=4096):  
-        super().__init__()  
-        self.dim = dim  
-        self.adaLN_modulation = torch.nn.Sequential(  
-            torch.nn.SiLU(),  
-            torch.nn.Linear(dim, 6 * dim, bias=True)  
-        )  
-        # Initialize to zero so the block functions as a clean identity mapping at step zero  
-        torch.nn.init.constant_(self.adaLN_modulation[-1].weight, 0.0)  
-        torch.nn.init.constant_(self.adaLN_modulation[-1].bias, 0.0)
-
-    def forward(self, x, condition_wave):  
-        # Partition the conditioning vector into 6 distinct parametric dimensions  
-        mods = self.adaLN_modulation(condition_wave).chunk(6, dim=-1)  
-        shift_phase, scale_phase, gate_phase, shift_mlp, scale_mlp, gate_mlp = mods  
-          
-        # Modulate phase space states before passing to fluid experts  
-        x_norm = torch.nn.functional.normalize(x, p=2, dim=-1)  
-        modulated_state = x_norm * (1.0 + scale_phase) + shift_phase  
-          
-        return x + gate_phase * torch.nn.functional.normalize(modulated_state, p=2, dim=-1)
-
-
-class JITSUiteSIGRegGuardrail(torch.nn.Module):  
-    """  
-    Information Maximization Engine: Leverages the Epps-Pulley statistic to  
-    veto candidate rollouts that collapse or saturate 4096-D phase space dimensions.  
-    """  
-    def __init__(self, knots=17, num_proj=512, dim=4096):  
-        super().__init__()  
-        self.num_proj = num_proj  
-        self.dim = dim  
-          
-        # Initialize analytical Gaussian evaluation points/knots  
-        t_vals = torch.linspace(0, 3, knots, dtype=torch.float32)  
-        dt = 3 / (knots - 1)  
-        weights = torch.full((knots,), 2 * dt, dtype=torch.float32)  
-        weights[[0, -1]] = dt  
-        phi_window = torch.exp(-t_vals.square() / 2.0)  
-          
-        self.register_buffer("t", t_vals)  
-        self.register_buffer("phi", phi_window)  
-        self.register_buffer("weights", weights * phi_window)
-
-    def evaluate_feature_obstruction(self, rollout_batch: torch.Tensor) -> torch.Tensor:  
-        """  
-        rollout_batch shape: [BatchSize, Dim] (Extracted pre-normalized trajectories)  
-        """  
-        # Generate random unit-modulus 1D projection axes  
-        A = torch.randn(self.dim, self.num_proj, device=rollout_batch.device, dtype=rollout_batch.dtype)  
-        A = A / (A.norm(p=2, dim=0, keepdim=True) + 1e-8)  
-          
-        # Project high-dimensional trajectories down to 1D slices  
-        sliced_projections = torch.matmul(rollout_batch, A).unsqueeze(-1) # [B, N_proj, 1]  
-        x_t = sliced_projections * self.t.to(dtype=rollout_batch.dtype) # [B, N_proj, Knots]  
-          
-        # Compute empirical distance to analytical isotropic Gaussian distribution  
-        err = (x_t.cos().mean(dim=0) - self.phi.to(dtype=rollout_batch.dtype)).square() + x_t.sin().mean(dim=0).square()  
-        statistic = torch.matmul(err, self.weights.to(dtype=rollout_batch.dtype)) * float(rollout_batch.size(0))  
-          
-        return statistic.mean()
-
-
-class HolographicMPCOrchestrator(torch.nn.Module):  
-    """  
-    H-MPC Pipeline: Integrates forward-rolling dynamics with an angular phase   
-    resonance cost function and a SIGReg dimension-collapse guardrail.  
-    """  
-    def __init__(self, core_dynamics_network, dim=4096):  
-        super().__init__()  
-        self.dynamics = core_dynamics_network # Pinned ProprietaryHENRICore transition network  
-        self.dim = dim  
-        self.guardrail = JITSUiteSIGRegGuardrail(dim=dim)  
-        self.conditioning_layer = ThermoActiveAdaLNBlock(dim=dim)
-        
-        # Protect VSA phase-space metrics by projecting high-dimensional waves (4096-D)
-        # down to low-dimensional substrates (1024-D core dimension)
-        from henri_pearl_aligner import JohnsonLindenstraussGuard
-        self.jl_guard = JohnsonLindenstraussGuard(global_dim=4096, core_dim=dim)
-        
-        # Instantiate speculative transition network and draft engine
-        from henri_core.h_mpc_steering import NextLatentTransitionNetwork, LatentSpeculativeDraftEngine
-        self.nextlat_transition_net = NextLatentTransitionNetwork(dim=dim)
-        
-        # Database reference proxy
-        self.__dict__['database'] = self
-
-    def get_cached_canonical_lexicon_tensor(self):
-        device = next(self.parameters()).device if list(self.parameters()) else torch.device("cpu")
-        dtype = next(self.parameters()).dtype if list(self.parameters()) else torch.float32
-        
-        # Retrieve clean concept waves from Hopfield vocabulary if available
-        if hasattr(self, 'orchestrator') and hasattr(self.orchestrator, 'hopfield') and self.orchestrator.hopfield.vocabulary:
-            vocab_vals = list(self.orchestrator.hopfield.vocabulary.values())
-            lexicon_list = []
-            for v in vocab_vals:
-                if torch.is_complex(v):
-                    lexicon_list.append(torch.real(v).to(device=device, dtype=dtype))
-                else:
-                    lexicon_list.append(v.to(device=device, dtype=dtype))
-            return torch.stack(lexicon_list)
-            
-        return torch.randn(10, self.dim, device=device, dtype=dtype)
-
-    def run_h_mpc_selection(self, current_wave: torch.Tensor, target_goal_wave: torch.Tensor,   
-                             candidate_action_sequences: torch.Tensor, horizon=16) -> tuple:  
-        """  
-        PEARL Trajectory Optimizer: Tracks lookahead futures inside the integer   
-        phase-space boundary, eliminating the latent blindness bottleneck.  
-        """  
-        device = current_wave.device  
-        dtype = current_wave.dtype if current_wave.dtype != torch.complex64 else torch.float32
-        num_candidates = candidate_action_sequences.size(0)  
-          
-        # Initialize the packed-phase engine buffer out-of-band  
-        if not hasattr(self, "packed_vsa_engine"):  
-            from henri_core.hrr import PackedPhaseVSAEngine  
-            self.packed_vsa_engine = PackedPhaseVSAEngine(dimension=self.dim)  
-              
-        # Pack global continuous thought boundaries into stable 8-bit integer coordinates  
-        phase_current = self.packed_vsa_engine.pack_wave_to_phase(current_wave)  
-        phase_goal = self.packed_vsa_engine.pack_wave_to_phase(target_goal_wave)  
-          
-        best_cost = float('inf')  
-        winning_idx = 0  
-        winning_trajectory_track = []  
-          
-        # Concurrently evaluate parallel candidate paths across the deep Gear 3 horizon  
-        for idx in range(num_candidates):  
-            active_phase_state = phase_current.clone()  
-            local_track = []  
-              
-            for t in range(horizon):  
-                action_phase = self.packed_vsa_engine.pack_wave_to_phase(candidate_action_sequences[idx, t, :])  
-                # Advance lookahead states cleanly using type-safe modular addition math  
-                active_phase_state = self.packed_vsa_engine.compute_fused_binding(active_phase_state, action_phase)  
-                local_track.append(active_phase_state.clone())  
-                  
-            # Compute geometric resonance using raw integer angular errors  
-            phase_error = torch.abs(active_phase_state.float() - phase_goal.float())  
-            wrapped_error = torch.minimum(phase_error, 256.0 - phase_error)  
-            mean_trajectory_cost = wrapped_error.mean().item()  
-              
-            if mean_trajectory_cost < best_cost:  
-                best_cost = mean_trajectory_cost  
-                winning_idx = idx  
-                winning_trajectory_track = local_track  
-                  
-        # Convert the uint8 phase track back to continuous real wave coordinates (cosine) on unit hypersphere
-        real_trajectory_track = torch.cos(torch.stack(winning_trajectory_track, dim=0).to(device=device, dtype=dtype) * (2.0 * math.pi / 256.0))
-        self.winning_jepa_track = real_trajectory_track.unsqueeze(0)
-        
-        print(f"[H-MPC SPECULATION] Best Plan Index: {winning_idx} selected via speculative packed phase routing (Min Cost: {best_cost:.4f}).")  
-        return winning_idx, self.winning_jepa_track
+# Duplicated VSA blocks removed in favor of canonical imports from henri_core footprint

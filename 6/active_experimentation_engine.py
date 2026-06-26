@@ -1,8 +1,20 @@
+import sys
 import torch
 import torch.nn as torch_nn
 import torch.nn.functional as F
 import collections
 from typing import List, Callable, Dict, Any
+
+def safe_print(msg: Any):
+    try:
+        msg_str = str(msg).replace('\x00', '')
+        encoding = sys.stdout.encoding or 'ascii'
+        print(msg_str.encode(encoding, errors='replace').decode(encoding))
+    except Exception:
+        try:
+            print(msg_str.encode('ascii', errors='replace').decode('ascii'))
+        except Exception:
+            pass
 
 class ExperimentDesigner(torch_nn.Module):
     """
@@ -170,11 +182,15 @@ class ActiveExperimentationEngine:
         from zone_b_emulator import ZoneBPhysicalEmulator
         from dynamic_lora import DynamicLoRAEngine
         from entropic_survival_engine import EntropicSurvivalEngine
+        from hybrid_arc_engine import HybridArcReasoningEngine
+        from henri_telemetry_harness import HenriTelemetryHarness
         
         self.inductor = ProgramInductor(state_dim=128)
         self.emulator = ZoneBPhysicalEmulator(self.orchestrator)
         self.lora_engine = DynamicLoRAEngine()
         self.entropic_engine = EntropicSurvivalEngine(num_experts=self.orchestrator.num_streams)
+        self.hybrid_engine = HybridArcReasoningEngine(wave_core=self.emulator)
+        self.telemetry_harness = HenriTelemetryHarness(dim=4096)
         
         # Track errors in history for stagnation/basin escape
         self.error_history = []
@@ -249,6 +265,33 @@ class ActiveExperimentationEngine:
         import copy  
         import numpy as np  
         import torch  
+        
+        # --- HYBRID REGIME INTERCEPT ---
+        if hasattr(self, 'hybrid_engine'):
+            directives = self.hybrid_engine.parse_symbolic_reasoning(code_payload)
+            if directives is not None:
+                print(f"[HYBRID ENGINE INTERCEPT] Routing to Rigid NumPy Slicing Engine (directives: {directives})")
+                try:
+                    if test_mode:
+                        test_in = training_cases[0]['input']
+                        pred = self.hybrid_engine.execute_rigid_slice(test_in, directives)
+                        return 1.0, pred
+                    else:
+                        passed = 0
+                        for case in training_cases:
+                            out_grid = self.hybrid_engine.execute_rigid_slice(case['input'], directives)
+                            expected = case['output']
+                            if hasattr(expected, "tolist"):
+                                expected = expected.tolist()
+                            if out_grid == expected:
+                                passed += 1
+                        if passed == len(training_cases):
+                            return 1.0, "All training cases passed via NumPy Slicing."
+                        return (passed / len(training_cases)), f"Failed. Passed {passed}/{len(training_cases)}."
+                except Exception as e:
+                    print(f"[HYBRID ENGINE WARNING] NumPy Execution failed: {e}. Falling back to standard sandbox.")
+        # --------------------------------
+        
         sandbox_globals = {}  
           
         common_imports = (  
@@ -332,6 +375,32 @@ class ActiveExperimentationEngine:
         passed_cases = int(score * total_cases)
         return passed_cases, total_cases, feedback
 
+    def report_telemetry(self, best_candidate: str, start_time: float, sagnac_deltas_history: list):
+        """
+        Calculates and prints physics-native benchmark telemetry (AST-Topo, Sagnac, Epiplexity).
+        """
+        if not hasattr(self, 'telemetry_harness') or self.telemetry_harness is None:
+            return
+        
+        elapsed_time = max(time.time() - start_time, 1e-4)
+        canonical = "def transform(input_grid):\n    return input_grid"
+        
+        ast_topo = self.telemetry_harness.calculate_ast_topo(best_candidate, canonical)
+        v_sr = self.telemetry_harness.calculate_sagnac_velocity(sagnac_deltas_history, len(sagnac_deltas_history))
+        epiplexity = self.telemetry_harness.calculate_epiplexity_density(best_candidate, elapsed_time)
+        
+        print("\n" + "="*55)
+        print("          HENRI CORE PHYSICS-NATIVE TELEMETRY REPORT          ")
+        print("="*55)
+        print(f"  AST-Topo (Phase Linewidth Retention Gamma_phi): {ast_topo['gamma_phi']:.6f} ({ast_topo['status']})")
+        if ast_topo.get('error'):
+            print(f"    Error details: {ast_topo['error']}")
+        print(f"  Sagnac Relaxation Velocity (V_sr):             {v_sr:.6f} rad/turn")
+        print(f"  Epiplexity Complexity Metric:                  {epiplexity['epiplexity']:.6f}")
+        print(f"  Joules Expended (Simulated):                   {epiplexity['joules_expended']:.6f} J")
+        print(f"  Epiplexity Density per Joule (E_J):            {epiplexity['e_j']:.6f} / Joule")
+        print("="*55 + "\n")
+
     @torch.no_grad()
     def execute_task_manifold(self, task_dict, time_limit=1200, domain_tag="ARC_Task"):
         """
@@ -367,6 +436,7 @@ class ActiveExperimentationEngine:
         self.error_history = []
         self.superposition_wave = None
         self.best_sandbox_accuracy = 0.0
+        sagnac_deltas_history = []
         
         # --- NEW ACCUMULATION REGISTER: Best-effort trajectory fallback cache ---
         global_best_candidate_tracker = {
@@ -642,7 +712,7 @@ class ActiveExperimentationEngine:
                         })
                     
                 except Exception as stirrup_err:
-                    print(f"[STIRRUP] Grounding check encountered an error: {stirrup_err}")
+                    safe_print(f"[STIRRUP] Grounding check encountered an error: {stirrup_err}")
             # -----------------------------------------------
             
             scored_candidates = []
@@ -651,7 +721,7 @@ class ActiveExperimentationEngine:
                 # 3. Inductive Generalization Guard (AST Sieve)
                 is_syntax_valid, pure_code_or_err = self.inductor.verify_syntax(candidate)
                 if not is_syntax_valid:
-                    print(f"[ENGINE] Syntax check failed: {pure_code_or_err}")
+                    safe_print(f"[ENGINE] Syntax check failed: {pure_code_or_err}")
                     scored_candidates.append((candidate, None, 0.0, None, 999.0, pure_code_or_err, alpha_routing, None))
                     continue
                     
@@ -659,7 +729,7 @@ class ActiveExperimentationEngine:
                 
                 is_generalized, guard_feedback = self.inductor.assert_generalization(pure_code)
                 if not is_generalized:
-                    print(f"[ENGINE] Generalization check failed: {guard_feedback}")
+                    safe_print(f"[ENGINE] Generalization check failed: {guard_feedback}")
                     # Store as invalid (None truth_tensor)
                     scored_candidates.append((candidate, None, 0.0, None, 999.0, guard_feedback, alpha_routing, None))
                     continue
@@ -667,7 +737,7 @@ class ActiveExperimentationEngine:
                 # 4. The Physical Sagnac Veto: evaluate wavefront in Zone B emulator
                 wave_valid, physical_feedback, error_energy, truth_tensor, delta_np = self.emulator.evaluate_wavefront(pure_code, target_label="SCADA_Pressure_Control")
                 if not wave_valid and domain_tag != "ARC_Task":
-                    print(f"[ENGINE] Physical wave check failed: {physical_feedback}")
+                    safe_print(f"[ENGINE] Physical wave check failed: {physical_feedback}")
                     # Store as invalid but keep the truth_tensor/error_energy for drift
                     scored_candidates.append((candidate, pure_code, 0.0, truth_tensor, error_energy, physical_feedback, alpha_routing, delta_np))
                     continue
@@ -731,6 +801,7 @@ class ActiveExperimentationEngine:
                         self.orchestrator.save_router_centroids()
                         self.orchestrator.lora_managers[winner_idx].save_weights()
                         
+                        self.report_telemetry(pure_code, start_time, sagnac_deltas_history)
                         self.orchestrator.flush_lora_and_context_to_db(domain_tag=domain_tag)
                         return test_pred, revision_step, "SUCCESS"
                     else:
@@ -819,6 +890,8 @@ class ActiveExperimentationEngine:
                 # If no valid candidate, treat as maximum error
                 current_error_val = 999.0
             
+            sagnac_deltas_history.append(current_error_val if current_error_val != 999.0 else 1.0)
+            
             # Error Energy > 0.80 corresponds to E_reflect > 80.0 a.u.
             if current_error_val > 0.80:
                 stuck_high_energy_turns += 1
@@ -840,9 +913,11 @@ class ActiveExperimentationEngine:
         if global_best_candidate_tracker["provisional_prediction"] is not None:
             print(f"\n[THERMODYNAMIC EVACUATION] Hard cap reached. Releasing best-effort trajectory candidate.")
             print(f" -> Retained Accuracy Tier: {global_best_candidate_tracker['score'] * 100:.2f}% validation coverage.")
+            self.report_telemetry(global_best_candidate_tracker["pure_code"], start_time, sagnac_deltas_history)
             self.orchestrator.flush_lora_and_context_to_db(domain_tag=domain_tag)
             return global_best_candidate_tracker["provisional_prediction"], revision_step, "SUCCESS_BEST_EFFORT"
         # ------------------------------------------------------------------------------------
         
+        self.report_telemetry(best_candidate, start_time, sagnac_deltas_history)
         self.orchestrator.flush_lora_and_context_to_db(domain_tag=domain_tag)
         return None, revision_step, "FAILED"
