@@ -519,11 +519,11 @@ def run_hdf5_pretraining(args):
     
     # Initialize the 32-layer, 16-expert unrolled (looped_recurrent=False) core model directly on GPU in bfloat16
     print("[INIT] Initializing 485M per-expert unrolled core model directly on GPU in bfloat16...")
-    orig_default_dtype = torch.get_default_dtype()
-    torch.set_default_dtype(torch.bfloat16)
     try:
+        orig_default_dtype = torch.get_default_dtype()
+        torch.set_default_dtype(torch.bfloat16)
         with torch.device(device):
-            core_model = ProprietaryHENRICore(dim=4096, depth=32, num_fluid_states=16, looped_recurrent=False)
+            core_model = ProprietaryHENRICore(dim=4096, depth=32, num_fluid_states=1, looped_recurrent=False)
     finally:
         torch.set_default_dtype(orig_default_dtype)
     core_model.gradient_checkpointing = True
@@ -660,7 +660,7 @@ def run_hdf5_pretraining(args):
         "config": {
             "dim": 4096,
             "depth": 32,
-            "num_fluid_states": 16,
+            "num_fluid_states": 1,
             "vocab_size": 32000
         },
         "model_state_dict": core_model.state_dict()

@@ -214,16 +214,16 @@ def check_and_initialize_lean_checkpoint():
             checkpoint = torch.load(core_path, map_location='cpu')
             config = checkpoint.get("config", {})
             depth = config.get("depth", 32)
-            fluid_states = config.get("num_fluid_states", 16)
-            if depth == 32 and fluid_states == 16:
+            fluid_states = config.get("num_fluid_states", 1)
+            if depth == 32 and fluid_states == 1:
                 need_init = False
                 print(f"[CHECKPOINT] Existing looped core checkpoint verified: depth={depth}, fluid_states={fluid_states}.")
         except Exception:
             pass
             
     if need_init:
-        print("[CHECKPOINT] Legacy or missing checkpoint detected. Initializing looped 32-layer, 16-expert core...")
-        core_model = ProprietaryHENRICore(dim=4096, depth=32, num_fluid_states=16, looped_recurrent=True)
+        print("[CHECKPOINT] Legacy or missing checkpoint detected. Initializing looped 32-layer, 1-expert core...")
+        core_model = ProprietaryHENRICore(dim=4096, depth=32, num_fluid_states=1, looped_recurrent=True)
         translation_head = nn.Linear(4096, 32000, bias=False)
         nn.init.orthogonal_(translation_head.weight)
         
@@ -231,7 +231,7 @@ def check_and_initialize_lean_checkpoint():
             "config": {
                 "dim": 4096,
                 "depth": 32,
-                "num_fluid_states": 16,
+                "num_fluid_states": 1,
                 "vocab_size": 32000
             },
             "model_state_dict": core_model.state_dict(),
