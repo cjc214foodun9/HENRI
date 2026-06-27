@@ -627,7 +627,9 @@ def run_hdf5_pretraining(args):
                     
                 # Update expert phase-shift weights using complex outer product EP rule
                 wavefront_real = torch.real(wavefront).to(dtype=torch.bfloat16)
-                grad_W = (torch.matmul(torch.real(core_out_pos).t(), wavefront_real) - torch.matmul(torch.real(core_out_neg).t(), wavefront_real)) / (2.0 * beta)
+                pos_real = torch.real(core_out_pos).to(dtype=torch.bfloat16)
+                neg_real = torch.real(core_out_neg).to(dtype=torch.bfloat16)
+                grad_W = (torch.matmul(pos_real.t(), wavefront_real) - torch.matmul(neg_real.t(), wavefront_real)) / (2.0 * beta)
                 mean_grad_W = grad_W / wavefront.size(0)
                 
                 for layer in core_model.layers:
