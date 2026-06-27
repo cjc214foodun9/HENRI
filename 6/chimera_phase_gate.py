@@ -54,19 +54,17 @@ class HenriChimeraPhaseGating(nn.Module):
         # CONTINUOUS RELAXATION LOOP (Euler-Maruyama ODE Step)  
         # =========================================================================  
         for _ in range(timesteps):  
-            # Compute circular phase differences: theta_j - theta_i  
-            # [Batch, 4096, 1] - [Batch, 1, 4096] -> [Batch, 4096, 4096]  
-            phase_diff = theta.unsqueeze(2) - theta.unsqueeze(1)  
-              
-            # Apply the Sakaguchi phase lag modulation across the interaction field  
-            modulated_interaction = torch.sin(phase_diff - self.alpha)  
-              
-            # Compute total non-local coupling pull via batch matrix multiplication  
-            # [Batch, 4096, 4096] x [4096, 4096] matrix broadcast -> [Batch, 4096]  
-            coupling_pull = torch.bmm(  
-                modulated_interaction.to(dtype=self.spatial_kernel.dtype),   
-                self.spatial_kernel.unsqueeze(0).repeat(batch_size, 1, 1).to(device)  
-            ).diagonal(dim1=-2, dim2=-1)  
+            # Compute coupling pull using trigonometric identity factorization:
+            # sin(theta_i - theta_j - alpha) = sin(theta_i - alpha)cos(theta_j) - cos(theta_i - alpha)sin(theta_j)
+            # This drops O(N^2) memory footprint to O(N) and executes in microseconds!
+            S = torch.sin(theta).to(dtype=self.spatial_kernel.dtype)
+            C = torch.cos(theta).to(dtype=self.spatial_kernel.dtype)
+            K_sin = torch.matmul(S, self.spatial_kernel.t())
+            K_cos = torch.matmul(C, self.spatial_kernel.t())
+            
+            S_lag = torch.sin(theta - self.alpha).to(dtype=self.spatial_kernel.dtype)
+            C_lag = torch.cos(theta - self.alpha).to(dtype=self.spatial_kernel.dtype)
+            coupling_pull = S_lag * K_cos - C_lag * K_sin
               
             # Generate stochastic space-dependent Langevin noise vectors  
             langevin_noise = torch.randn_like(theta) * torch.sqrt(2.0 * temperature_field * dt)  

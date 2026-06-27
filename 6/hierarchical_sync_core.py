@@ -73,12 +73,14 @@ class HenriHierarchicalSyncCore(nn.Module):
                 # -----------------------------------------------------------------  
                 # TIER 1: Micro-Oscillator Phase Relaxation  
                 # -----------------------------------------------------------------  
-                # Compute pairwise phase differences: theta_j - theta_i  
-                phase_diff = theta_current.unsqueeze(2) - theta_current.unsqueeze(1) # [Batch, 4096, 4096]  
-                  
-                # Calculate internal coupling force field  
-                coupling_force = torch.matmul(torch.sin(phase_diff), K_l.t())  
-                coupling_pull = coupling_force.diagonal(dim1=-2, dim2=-1) / self.N # [Batch, 4096]  
+                # Compute coupling pull using trigonometric identity factorization:
+                # sin(theta_i - theta_j) = sin(theta_i)cos(theta_j) - cos(theta_i)sin(theta_j)
+                # This drops O(N^2) memory footprint to O(N) and executes in microseconds!
+                S = torch.sin(theta_current)
+                C = torch.cos(theta_current)
+                K_sin = torch.matmul(S, K_l.t())
+                K_cos = torch.matmul(C, K_l.t())
+                coupling_pull = (S * K_cos - C * K_sin) / self.N
                   
                 # Inject stochastic Langevin thermal kinetics from the Divergent Master  
                 langevin_noise = torch.randn_like(theta_current) * torch.sqrt(torch.tensor(2.0 * temperature * dt, device=device))  
