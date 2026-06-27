@@ -460,6 +460,14 @@ class ProprietaryHENRICore(nn.Module):
             z_current = x.clone()
         z_current = z_current.to(dtype=self.layers[0].beta_1.dtype)
         
+        # Transduce complex target attractors to the real phase domain
+        if zone_c_attractor is not None:
+            if torch.is_complex(zone_c_attractor):
+                zone_c_attractor = torch.angle(zone_c_attractor)
+            elif zone_c_attractor.ndim == 3 and zone_c_attractor.size(-1) == 2:
+                zone_c_attractor = torch.atan2(zone_c_attractor[..., 1], zone_c_attractor[..., 0])
+            zone_c_attractor = zone_c_attractor.to(dtype=self.layers[0].beta_1.dtype)
+        
         # Ensure we have expert_activations of shape [Batch, 16]
         if expert_activations is None:
             # We can use the first layer's router to get initial routing activations
