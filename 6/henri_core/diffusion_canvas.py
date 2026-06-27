@@ -171,6 +171,7 @@ class HighStressLogitSieve(nn.Module):
         if hasattr(self.decoder_head, 'in_features') and self.decoder_head.in_features == features.size(-1) * 2:
             features = torch.cat([features, torch.zeros_like(features)], dim=-1)
             
+        features = features.to(dtype=self.decoder_head.weight.dtype)
         raw_logits = self.decoder_head(features)
         
         if active_syntax_mask is not None:
