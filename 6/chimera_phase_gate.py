@@ -64,7 +64,7 @@ class HenriChimeraPhaseGating(nn.Module):
             # Compute total non-local coupling pull via batch matrix multiplication  
             # [Batch, 4096, 4096] x [4096, 4096] matrix broadcast -> [Batch, 4096]  
             coupling_pull = torch.bmm(  
-                modulated_interaction,   
+                modulated_interaction.to(dtype=self.spatial_kernel.dtype),   
                 self.spatial_kernel.unsqueeze(0).repeat(batch_size, 1, 1).to(device)  
             ).diagonal(dim1=-2, dim2=-1)  
               
