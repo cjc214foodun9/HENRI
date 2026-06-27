@@ -2,22 +2,24 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.fft
+import math
 from henri_core.kernels import fused_circular_conv
 
 def fast_orthogonal_init(tensor, gain=1.0):
     orig_dtype = tensor.dtype
     orig_device = tensor.device
     
-    # Force float32 on CPU to prevent QR factorization errors on bfloat16 CPU
-    temp_tensor = torch.empty(tensor.shape, device='cpu', dtype=torch.float32)
+    # Run on GPU if available to be super fast!
+    dev = 'cuda' if torch.cuda.is_available() else 'cpu'
+    temp_tensor = torch.empty(tensor.shape, device=dev, dtype=torch.float32)
     
     rows = temp_tensor.size(0)
     cols = temp_tensor.numel() // rows
     
     if rows == 4096 and cols == 4096:
         with torch.no_grad():
-            A_rand = torch.randn(16, 16, device='cpu', dtype=torch.float32)
-            B_rand = torch.randn(256, 256, device='cpu', dtype=torch.float32)
+            A_rand = torch.randn(16, 16, device=dev, dtype=torch.float32)
+            B_rand = torch.randn(256, 256, device=dev, dtype=torch.float32)
             A, _ = torch.linalg.qr(A_rand)
             B, _ = torch.linalg.qr(B_rand)
             C = torch.kron(A, B)
@@ -334,104 +336,199 @@ class ThermoActiveFluidBlock(nn.Module):
             
         return final_wave, local_free_energy
 
+def quantize_nvfp4(x: torch.Tensor) -> torch.Tensor:
+    # 1-2-1 bit float format has 1 sign bit, 2 exponent bits, 1 mantissa bit
+    # S = [0.0, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0] and their negatives
+    orig_device = x.device
+    orig_dtype = x.dtype
+    
+    x_f32 = x.to(torch.float32)
+    sign = torch.sign(x_f32)
+    abs_x = torch.abs(x_f32)
+    
+    vals = torch.tensor([0.0, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0], device=orig_device)
+    
+    # Broadcast subtraction to find closest matching bins
+    shape = abs_x.shape
+    abs_x_flat = abs_x.view(-1, 1)
+    dists = torch.abs(abs_x_flat - vals.unsqueeze(0))
+    indices = torch.argmin(dists, dim=-1)
+    
+    quantized_flat = vals[indices] * sign.view(-1)
+    return quantized_flat.view(shape).to(dtype=orig_dtype)
+
+def quantize_complex_nvfp4(x: torch.Tensor) -> torch.Tensor:
+    if torch.is_complex(x):
+        real_q = quantize_nvfp4(x.real)
+        imag_q = quantize_nvfp4(x.imag)
+        return torch.complex(real_q, imag_q)
+    else:
+        return quantize_nvfp4(x)
+
 class ProprietaryHENRICore(nn.Module):
     """
-    The 7B Parameter Optoelectronic Reasoning Engine
+    The Optoelectronic Reasoning Engine
+    Supports both 8.59B legacy configuration and the new 100M disaggregated looped recurrent swarm.
     """
-    def __init__(self, dim=4096, depth=32, num_fluid_states=16, max_loops=10, fp_threshold=0.1):
+    def __init__(self, dim=4096, depth=32, num_fluid_states=16, max_loops=10, fp_threshold=0.1, looped_recurrent=True):
         super().__init__()
+        self.dim = dim
         self.depth = depth
         self.max_loops = max_loops
         self.fp_threshold = fp_threshold
-        self.layers = nn.ModuleList([ThermoActiveFluidBlock(dim, num_fluid_states, depth=depth) for _ in range(depth)])
+        self.looped_recurrent = looped_recurrent
+        
+        # Initialize Three-Tier Nested Kuramoto Synchronization Grid
+        import sys
+        import os
+        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if parent_dir not in sys.path:
+            sys.path.append(parent_dir)
+        from hierarchical_sync_core import HenriHierarchicalSyncCore
+        from chimera_phase_gate import HenriChimeraPhaseGating
+        self.hierarchical_sync = HenriHierarchicalSyncCore(num_oscillators=dim, num_layers=depth, num_experts=num_fluid_states)
+        self.chimera_gate = HenriChimeraPhaseGating(num_oscillators=dim)
+        
+        # Instantiate layers. If looped_recurrent, we will only use self.layers[0] recursively to keep parameter size compact (~100M).
+        num_layers_to_instantiate = 1 if self.looped_recurrent else depth
+        self.layers = nn.ModuleList([ThermoActiveFluidBlock(dim, num_fluid_states, depth=depth) for _ in range(num_layers_to_instantiate)])
         self.final_layer_norm = nn.LayerNorm(dim)
         self.gradient_checkpointing = False
+        
+        # Depth-wise 2D convolution for localized spatial grid coordinate bias (3x3 kernel)
+        # Assuming channels = 1. Handles the 2D grid dimensions based on dim.
+        self.depthwise_conv = nn.Conv2d(
+            in_channels=1,
+            out_channels=1,
+            kernel_size=3,
+            padding=1,
+            bias=False
+        )
+        nn.init.dirac_(self.depthwise_conv.weight)
 
-    def forward(self, x: torch.Tensor, zone_c_attractor: torch.Tensor, temperature: float):
+    def apply_depthwise_conv(self, x: torch.Tensor) -> torch.Tensor:
+        # Reshapes wave vector to spatial grid and applies 2D depthwise convolution
+        orig_shape = x.shape
+        is_3d = (x.ndim == 3)
+        if is_3d:
+            batch, seq_len, dim = x.shape
+            x_flat = x.reshape(batch * seq_len, dim)
+        else:
+            x_flat = x
+            dim = x.shape[-1]
+            
+        if dim == 4096:
+            grid = x_flat.view(-1, 1, 64, 64)
+        elif dim == 2048:
+            grid = x_flat.view(-1, 1, 32, 64)
+        elif dim == 1024:
+            grid = x_flat.view(-1, 1, 32, 32)
+        else:
+            h = int(math.sqrt(dim))
+            w = dim // h
+            if h * w == dim:
+                grid = x_flat.view(-1, 1, h, w)
+            else:
+                return x # Skip if cannot reshape cleanly
+                
+        orig_dtype = grid.dtype
+        conv_dtype = self.depthwise_conv.weight.dtype
+        grid_conv = grid.to(dtype=conv_dtype)
+        conv_out = self.depthwise_conv(grid_conv).to(dtype=orig_dtype)
+        res = conv_out.view(orig_shape)
+        return F.normalize(res, p=2, dim=-1)
+
+    def forward(self, x: torch.Tensor, zone_c_attractor: torch.Tensor, temperature: float, expert_activations: torch.Tensor = None, nudge_context: torch.Tensor = None):
         """
         x: Ingested HRR wave vector, shape (batch, seq_len, dim) or (batch, dim)
         zone_c_attractor: Target Attractor from TimescaleDB, shape (batch, dim)
         temperature: Langevin heat injected by thermostat
+        expert_activations: Continuous activations from MoE experts (e.g. from routing_weights or dummy)
+        nudge_context: Phase nudge pull vector [Batch, 4096] (for Equilibrium Propagation)
         """
         # Handle shape for energy accumulator
         is_3d = (x.ndim == 3)
         batch_size = x.shape[0]
         seq_len = x.shape[1] if is_3d else 1
         
-        # Thermal Quenching during inference: freeze Langevin noise completely if not training
-        temp_val = temperature if self.training else 0.0
+        # Extract initial phase angles from the complex input wavefront to work in the real phase domain
+        if torch.is_complex(x):
+            z_current = torch.angle(x)
+        elif x.ndim == 3 and x.size(-1) == 2:
+            z_current = torch.atan2(x[..., 1], x[..., 0])
+        else:
+            z_current = x.clone()
+        z_current = z_current.to(dtype=self.layers[0].beta_1.dtype)
         
-        z_current = x.clone()
+        # Ensure we have expert_activations of shape [Batch, 16]
+        if expert_activations is None:
+            # We can use the first layer's router to get initial routing activations
+            first_router = self.layers[0].router
+            # Cast input to match router parameter dtype
+            first_router_in = z_current.mean(dim=1) if is_3d else z_current
+            expert_activations = first_router(first_router_in)
         total_system_energy = torch.zeros(batch_size, seq_len, device=x.device, dtype=x.dtype) if is_3d else torch.zeros(batch_size, device=x.device, dtype=x.dtype)
         
-        first_router = self.layers[0].router
-        
-        # FPOPT: Damped Relaxation Map with Adaptive Step Size (eta)
-        eta_val = torch.ones(batch_size, seq_len, 1, device=x.device, dtype=x.dtype) if is_3d else torch.ones(batch_size, 1, device=x.device, dtype=x.dtype)
-        prev_r_i = None
-        
-        for loop_idx in range(self.max_loops):
-            z_in = z_current.clone()
+        # Let's run the 32 continuous diffractive layers unrolling block
+        for step_idx in range(self.depth):
+            previous_wave = z_current
+            layer = self.layers[0] if self.looped_recurrent else self.layers[step_idx]
             
-            # Unroll the 32 layers
-            current_wave = z_in
-            for layer in self.layers:
-                previous_wave = current_wave
+            # Apply 2D Depthwise convolution at the start of the unrolling loop
+            if step_idx == 0:
+                z_current = self.apply_depthwise_conv(z_current)
                 
-                if getattr(self, "gradient_checkpointing", False) and self.training:
-                    # Wrap forward pass of block in checkpoint
-                    def create_checkpoint_fn(block):
-                        def checkpoint_fn(c_wave, p_wave, z_attractor, t_val):
-                            return block(c_wave, p_wave, z_attractor, t_val.item())
-                        return checkpoint_fn
+            # Forward pass through the active fluid layer (computes phase shifts on the experts)
+            if getattr(self, "gradient_checkpointing", False) and self.training:
+                def create_checkpoint_fn(block):
+                    def checkpoint_fn(c_wave, p_wave, z_attractor, t_val):
+                        return block(c_wave, p_wave, z_attractor, t_val.item())
+                    return checkpoint_fn
 
-                    # temp_val must be a tensor to work with torch.utils.checkpoint
-                    temp_tensor = torch.tensor(temp_val, device=x.device, requires_grad=False)
-                    current_wave, local_energy = torch.utils.checkpoint.checkpoint(
-                        create_checkpoint_fn(layer),
-                        current_wave,
-                        previous_wave,
-                        zone_c_attractor,
-                        temp_tensor,
-                        use_reentrant=False
-                    )
-                else:
-                    current_wave, local_energy = layer(current_wave, previous_wave, zone_c_attractor, temp_val)
-                    
-                # Accumulate precision-weighted moving average of local free energy across macro-loops
-                total_system_energy += local_energy / (loop_idx + 1)
+                temp_tensor = torch.tensor(temperature, device=x.device, requires_grad=False)
+                z_current, local_energy = torch.utils.checkpoint.checkpoint(
+                    create_checkpoint_fn(layer),
+                    z_current,
+                    previous_wave,
+                    zone_c_attractor,
+                    temp_tensor,
+                    use_reentrant=False
+                )
+            else:
+                z_current, local_energy = layer(z_current, previous_wave, zone_c_attractor, temperature)
             
-            z_out = current_wave
+            # Accumulate variational free energy
+            total_system_energy += local_energy
             
-            # Theorem 1 Equation (3) input injection executed BEFORE checking the relative residual condition
-            alpha_2 = first_router.alpha_2
-            beta_2 = self.layers[0].beta_2
-            z_proposed = alpha_2 * z_out + beta_2 * x
-            z_proposed = F.normalize(z_proposed, p=2, dim=-1)
+        # Meso-to-Macro / Settle phase landscape via Kuramoto Hierarchical Sync
+        z_2d = z_current.mean(dim=1) if is_3d else z_current
+        sync_wave, layer_order_params, zone_phases = self.hierarchical_sync(
+            z_2d, expert_activations, timesteps=50, dt=0.02, temperature=temperature, nudge_context=nudge_context
+        )
+        
+        # Spatial Chimera Phase Gating (Rigor/Flux split)
+        sync_wave_unrolled = torch.stack([sync_wave.real, sync_wave.imag], dim=-1)
+        chimera_wave_unrolled, r_rigor, r_flux = self.chimera_gate(
+            sync_wave_unrolled, timesteps=80, dt=0.03, flux_temperature=temperature
+        )
+        chimera_wave = torch.complex(chimera_wave_unrolled[..., 0], chimera_wave_unrolled[..., 1])
+        
+        # Keep the telemetry parameters accessible on self
+        self.latest_R_macro = sum(layer_order_params) / len(layer_order_params) if layer_order_params else 1.0
+        self.latest_r_rigor = r_rigor.mean().item()
+        self.latest_r_flux = r_flux.mean().item()
+        self.latest_zone_phases = zone_phases.detach()
+        
+        # Reshape back to original shape
+        if is_3d:
+            final_output = chimera_wave.unsqueeze(1).repeat(1, x.shape[1], 1)
+        else:
+            final_output = chimera_wave
             
-            # Compute relative infinity norm residual of proposed update
-            diff_proposed = z_proposed - z_in
-            r_i = torch.norm(diff_proposed, p=float('inf'), dim=-1, keepdim=True) / (torch.norm(z_proposed, p=float('inf'), dim=-1, keepdim=True) + 1e-8)
-            
-            # Dynamic Step-Size Adjustment: if residual stalls, decrease eta_val geometrically
-            if prev_r_i is not None:
-                stalled = (r_i >= prev_r_i * 0.99) # Stall: less than 1% improvement
-                eta_val = torch.where(stalled, eta_val * 0.8, eta_val)
-            
-            # Apply Damped Relaxation Map
-            z_next_loop = eta_val * z_proposed + (1.0 - eta_val) * z_in
-            z_next_loop = F.normalize(z_next_loop, p=2, dim=-1)
-            
-            # Recompute residual for final convergence check
-            diff_final = z_next_loop - z_in
-            r_i_final = torch.norm(diff_final, p=float('inf'), dim=-1, keepdim=True) / (torch.norm(z_next_loop, p=float('inf'), dim=-1, keepdim=True) + 1e-8)
-            
-            converged = (r_i_final < self.fp_threshold).all()
-            z_current = z_next_loop
-            prev_r_i = r_i # track proposed residual for next iteration stall check
-            
-            if converged and not self.training:
-                break
-            
-        final_output = self.final_layer_norm(z_current)
+        final_output = F.normalize(final_output, p=2, dim=-1)
+        
+        # final LayerNorm (apply to real/imag separately to support ComplexFloat)
+        norm_real = self.final_layer_norm(final_output.real.to(dtype=self.layers[0].beta_1.dtype))
+        norm_imag = self.final_layer_norm(final_output.imag.to(dtype=self.layers[0].beta_1.dtype))
+        final_output = torch.complex(norm_real.float(), norm_imag.float())
         return final_output, total_system_energy.mean()

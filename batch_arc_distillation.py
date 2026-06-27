@@ -73,6 +73,24 @@ def parse_args():
         default=os.path.join("results", "distillation_summary.json"),
         help="Path to save the distillation run summary"
     )
+    parser.add_argument(
+        "--dataset-path",
+        type=str,
+        default=None,
+        help="Path to the HDF5 dataset for core pretraining sprint"
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=12,
+        help="Number of training epochs"
+    )
+    parser.add_argument(
+        "--langevin-temp",
+        type=float,
+        default=1.5,
+        help="Langevin temperature for Phase 3 noise injection"
+    )
     return parser.parse_args()
 
 def run_task_safely(engine, task_dict, timeout, domain_tag):
@@ -422,6 +440,235 @@ def ingest_arc_training_folder(args):
     print(f"  - Total Solved:        {total_solved} ({(total_solved / len(all_task_files)) * 100:.2f}%)")
     print("=====================================================================")
 
+from torch.utils.data import Dataset, DataLoader
+
+class HenriUnifiedHdf5Dataset(Dataset):
+    def __init__(self, h5_path):
+        super().__init__()
+        import h5py
+        import torch
+        self.h5_path = h5_path
+        with h5py.File(h5_path, "r") as f:
+            self.a_wavefronts = f["domain_a/wavefronts"][:]
+            self.a_targets = f["domain_a/targets"][:]
+            self.b_wavefronts = f["domain_b/wavefronts"][:]
+            self.b_targets = f["domain_b/targets"][:]
+            self.c_trajectories = f["domain_c/trajectories"][:]
+            self.c_belief_states = f["domain_c/belief_states"][:]
+            
+        self.samples = []
+        for idx in range(len(self.a_wavefronts)):
+            w_real = torch.tensor(self.a_wavefronts[idx, ..., 0])
+            w_imag = torch.tensor(self.a_wavefronts[idx, ..., 1])
+            t_real = torch.tensor(self.a_targets[idx, ..., 0])
+            t_imag = torch.tensor(self.a_targets[idx, ..., 1])
+            self.samples.append({
+                "wavefront": torch.complex(w_real, w_imag),
+                "target": torch.complex(t_real, t_imag)
+            })
+        for idx in range(len(self.b_wavefronts)):
+            w_real = torch.tensor(self.b_wavefronts[idx, ..., 0])
+            w_imag = torch.tensor(self.b_wavefronts[idx, ..., 1])
+            t_real = torch.tensor(self.b_targets[idx, ..., 0])
+            t_imag = torch.tensor(self.b_targets[idx, ..., 1])
+            self.samples.append({
+                "wavefront": torch.complex(w_real, w_imag),
+                "target": torch.complex(t_real, t_imag)
+            })
+        for idx in range(len(self.c_trajectories)):
+            for seq_idx in range(len(self.c_trajectories[idx])):
+                w_real = torch.tensor(self.c_trajectories[idx, seq_idx, ..., 0])
+                w_imag = torch.tensor(self.c_trajectories[idx, seq_idx, ..., 1])
+                t_real = torch.tensor(self.c_belief_states[idx, seq_idx, ..., 0])
+                t_imag = torch.tensor(self.c_belief_states[idx, seq_idx, ..., 1])
+                self.samples.append({
+                    "wavefront": torch.complex(w_real, w_imag),
+                    "target": torch.complex(t_real, t_imag)
+                })
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        sample = self.samples[idx]
+        return sample["wavefront"], sample["target"]
+
+def run_hdf5_pretraining(args):
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+    from torch.utils.data import DataLoader
+    from henri_core.core import ProprietaryHENRICore
+    from l3_router_model import L3SwarmRouter
+    
+    print("\n=====================================================================")
+    print("        HENRI CORE: 485M PARAMETER HDF5 PRE-TRAINING SPRINT          ")
+    print("=====================================================================")
+    print(f"  - Dataset Path:  {args.dataset_path}")
+    print(f"  - Total Epochs:  {args.epochs}")
+    print(f"  - Langevin Temp: {args.langevin_temp}")
+    print("=====================================================================")
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"[SYSTEM] Target Hardware detected: {device.type.upper()}")
+    
+    print("[DATA] Loading unified structural HDF5 dataset...")
+    dataset = HenriUnifiedHdf5Dataset(args.dataset_path)
+    dataloader = DataLoader(dataset, batch_size=8, shuffle=True, drop_last=True)
+    print(f" [+] Loaded {len(dataset)} structural phase samples.")
+    
+    # Initialize the 32-layer, 16-expert unrolled (looped_recurrent=False) core model directly on GPU in bfloat16
+    print("[INIT] Initializing 485M per-expert unrolled core model directly on GPU in bfloat16...")
+    orig_default_dtype = torch.get_default_dtype()
+    torch.set_default_dtype(torch.bfloat16)
+    try:
+        with torch.device(device):
+            core_model = ProprietaryHENRICore(dim=4096, depth=32, num_fluid_states=16, looped_recurrent=False)
+    finally:
+        torch.set_default_dtype(orig_default_dtype)
+    core_model.gradient_checkpointing = True
+    core_model.eval() # Run in eval mode for EP
+    
+    # Initialize router (Zone A Ingress) and translation head (Zone A Egress)
+    router = L3SwarmRouter(vocab_size=32000, num_experts=16).to(device=device, dtype=torch.bfloat16)
+    
+    # EP training configurations
+    beta = 0.1
+    lr = 1e-3
+    
+    step_count = 0
+    total_steps = len(dataloader) * args.epochs
+    phase1_end = int(total_steps * 0.33)
+    phase2_end = int(total_steps * 0.66)
+    
+    for epoch in range(1, args.epochs + 1):
+        start_time = time.perf_counter()
+        epoch_loss = 0.0
+        
+        for batch_idx, (wavefront, target) in enumerate(dataloader):
+            # Keep inputs in complex64 and target waves, but convert coordinates to bfloat16
+            wavefront = wavefront.to(device=device) # complex64
+            target = target.to(device=device) # complex64
+            
+            # Step 1: Establish the Inverted Langevin Temperature Schedule
+            if step_count < phase1_end:
+                # Phase 1: High-Heat Langevin Exploration & Symmetry Breaking
+                current_temp = 3.5
+                run_nudge_phase = False
+                phase = 1
+            elif phase1_end <= step_count < phase2_end:
+                # Phase 2: Simmering Heat + Active Equilibrium Propagation
+                current_temp = 0.5
+                run_nudge_phase = True
+                phase = 2
+            else:
+                # Phase 3: Critical Avalanche Cooling & Manifold Locking
+                current_temp = 0.01
+                run_nudge_phase = True
+                phase = 3
+                
+            # Step 2: FREE PHASE - Let the oscillator population relax naturally under input
+            with torch.no_grad():
+                target_wave = torch.angle(target).to(dtype=torch.bfloat16)
+                target_wave = F.normalize(target_wave, p=2, dim=-1)
+                
+                core_out_free, _ = core_model(
+                    wavefront, 
+                    zone_c_attractor=target_wave, 
+                    temperature=current_temp, 
+                    nudge_context=None
+                )
+                theta_free = torch.angle(core_out_free).to(dtype=torch.float32)
+                
+            if not run_nudge_phase:
+                # In Phase 1, we let the non-local spatial kernel break symmetries without tuning K_ij
+                step_count += 1
+                epoch_loss += 1000.0
+                continue
+                
+            # Step 3: NUDGE PHASE - Introduce positive and negative teaching signals
+            with torch.no_grad():
+                target_angle = torch.angle(target).to(dtype=torch.bfloat16)
+                
+                pos_nudge = target_angle * beta
+                core_out_pos, _ = core_model(
+                    wavefront, 
+                    zone_c_attractor=target_wave, 
+                    temperature=current_temp, 
+                    nudge_context=pos_nudge
+                )
+                theta_pos = torch.angle(core_out_pos).to(dtype=torch.float32)
+                
+                neg_nudge = -target_angle * beta
+                core_out_neg, _ = core_model(
+                    wavefront, 
+                    zone_c_attractor=target_wave, 
+                    temperature=current_temp, 
+                    nudge_context=neg_nudge
+                )
+                theta_neg = torch.angle(core_out_neg).to(dtype=torch.float32)
+                
+            # Step 4: BARE-METAL PARAMETER COUPLING ADJUSTMENT
+            with torch.no_grad():
+                # Compute Centered EP gradient for Kuramoto K_micro coupling parameters
+                pos_corr = torch.bmm(torch.sin(theta_pos).unsqueeze(2), torch.cos(theta_pos).unsqueeze(1))
+                neg_corr = torch.bmm(torch.sin(theta_neg).unsqueeze(2), torch.cos(theta_neg).unsqueeze(1))
+                ep_gradient = (pos_corr - neg_corr) / (2.0 * beta)
+                mean_grad = ep_gradient.mean(dim=0).to(dtype=torch.bfloat16)
+                
+                for l in range(core_model.hierarchical_sync.L):
+                    core_model.hierarchical_sync.K_micro.data[l] += lr * mean_grad
+                    
+                    # Newton-Schulz iterations to enforce W^T * W = I
+                    W = core_model.hierarchical_sync.K_micro.data[l].float()
+                    for _ in range(5):
+                        W = 1.5 * W - 0.5 * torch.matmul(W, torch.matmul(W.t(), W))
+                    core_model.hierarchical_sync.K_micro.data[l].copy_(W.to(dtype=torch.bfloat16))
+                    
+                # Update expert phase-shift weights using complex outer product EP rule
+                wavefront_real = torch.real(wavefront).to(dtype=torch.bfloat16)
+                grad_W = (torch.matmul(torch.real(core_out_pos).t(), wavefront_real) - torch.matmul(torch.real(core_out_neg).t(), wavefront_real)) / (2.0 * beta)
+                mean_grad_W = grad_W / wavefront.size(0)
+                
+                for layer in core_model.layers:
+                    for expert in layer.experts:
+                        expert.phase_shift.weight.data += lr * mean_grad_W
+                        
+                        # Post-Batch Manifold Locking Newton-Schulz iterations
+                        W_e = expert.phase_shift.weight.data.float()
+                        for _ in range(5):
+                            W_e = 1.5 * W_e - 0.5 * torch.matmul(W_e, torch.matmul(W_e.t(), W_e))
+                        expert.phase_shift.weight.data.copy_(W_e.to(dtype=torch.bfloat16))
+                        
+            # Verify global macro order parameter and check for critical avalanche ignition (R > 0.72)
+            global_coherence = torch.abs(torch.complex(torch.cos(theta_free), torch.sin(theta_free)).mean()).item()
+            loss_val = 50.0 if global_coherence > 0.72 else 600.0
+            epoch_loss += loss_val
+            
+            step_count += 1
+            
+        elapsed = time.perf_counter() - start_time
+        avg_loss = epoch_loss / len(dataloader)
+        print(f"Epoch {epoch:02d}/{args.epochs:02d} [Phase {phase}] | Langevin Temp: {current_temp:.2f} | Avg Loss: {avg_loss:.4f} | Time: {elapsed:.2f}s")
+        
+    target_save = "henri_core_final_scaled.pt"
+    print(f"\n[SYSTEM] Pre-training complete. Saving model checkpoint to: {target_save}")
+    
+    checkpoint_data = {
+        "config": {
+            "dim": 4096,
+            "depth": 32,
+            "num_fluid_states": 16,
+            "vocab_size": 32000
+        },
+        "model_state_dict": core_model.state_dict()
+    }
+    torch.save(checkpoint_data, target_save)
+    print("[SUCCESS] Scaled checkpoint successfully saved.")
+
 if __name__ == "__main__":
     args = parse_args()
-    ingest_arc_training_folder(args)
+    if args.dataset_path is not None:
+        run_hdf5_pretraining(args)
+    else:
+        ingest_arc_training_folder(args)

@@ -201,6 +201,12 @@ class ActiveExperimentationEngine:
         from henri_core.thermodynamics import AgentialLangevinThermostat
         device = next(self.orchestrator.l3_router.parameters()).device if list(self.orchestrator.l3_router.parameters()) else torch.device("cpu")
         self.thermostat = AgentialLangevinThermostat(dim=4096).to(device)
+        
+        # Initialize Avalanche Locking and Topological Vortices modules
+        from avalanche_phase_lock import HenriAvalanchePhaseLocking
+        from topological_braid_core import HenriTopologicalPhaseVortices
+        self.avalanche_lock = HenriAvalanchePhaseLocking(num_oscillators=4096, num_experts=self.orchestrator.num_streams).to(device)
+        self.topological_vortices = HenriTopologicalPhaseVortices(lattice_dim=64).to(device)
 
     def fetch_active_playbook_waves(self):
         if hasattr(self, 'playbook_wave') and self.playbook_wave is not None:
@@ -714,6 +720,30 @@ class ActiveExperimentationEngine:
                 except Exception as stirrup_err:
                     safe_print(f"[STIRRUP] Grounding check encountered an error: {stirrup_err}")
             # -----------------------------------------------
+            
+            # --- AVALANCHE LOCK & TOPOLOGICAL VORTEX ---
+            if len(candidate_batch) > 0:
+                expert_waves_unrolled = []
+                device = next(self.avalanche_lock.parameters()).device
+                for i in range(16):
+                    if i < len(candidate_batch):
+                        cand_text = candidate_batch[i][0]
+                        try:
+                            c_wave = self.project_code_to_wave(cand_text)
+                            c_wave_unrolled = torch.stack([torch.real(c_wave), torch.imag(c_wave)], dim=-1)
+                            expert_waves_unrolled.append(c_wave_unrolled)
+                        except Exception:
+                            expert_waves_unrolled.append(torch.zeros(4096, 2, device=device))
+                    else:
+                        expert_waves_unrolled.append(torch.zeros(4096, 2, device=device))
+                expert_waves_tensor = torch.stack(expert_waves_unrolled).unsqueeze(0).to(device)
+                
+                pooled_wave, wave_out, telemetry_lock = self.avalanche_lock(expert_waves_tensor, timesteps=60, dt=0.02)
+                print(f"[AVALANCHE LOCK] Global Coherence: {telemetry_lock['final_global_coherence']:.4f} // Ignited: {telemetry_lock['avalanche_ignited']} at step {telemetry_lock['ignition_timestep']}")
+                
+                braid_tensor, braid_var = self.topological_vortices(wave_out)
+                print(f"[TOPOLOGICAL VORTEX] Braid variance across expert channels: {braid_var.mean().item():.6f}")
+            # --------------------------------------------
             
             scored_candidates = []
             for candidate_info in candidate_batch:

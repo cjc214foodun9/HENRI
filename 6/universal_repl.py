@@ -259,6 +259,21 @@ class UniversalREPL:
         self.console.locals["__builtins__"] = builtins.__dict__
         self.console.locals["print"] = print
         
+        # Intercept and redirect numpy to cupy if available to run strictly on GPU
+        try:
+            import cupy as cp
+            try:
+                from cupyx.gcp.ndarray import torch_allocator
+                cp.cuda.set_allocator(torch_allocator)
+            except Exception:
+                pass
+            sys.modules['numpy'] = cp
+            self.console.locals["np"] = cp
+            self.console.locals["numpy"] = cp
+            self.console.locals["cp"] = cp
+        except ImportError:
+            pass
+        
         pre_imports = [
             ("import numpy as np", "numpy"),
             ("import jax.numpy as jnp", "jax"),

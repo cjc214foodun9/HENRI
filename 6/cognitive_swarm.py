@@ -583,6 +583,12 @@ class HenriCognitiveSwarmOrchestrator:
         if not hasattr(self, "gear_bridge"):
             from dynamic_gear_shifter import AdaptiveSwarmOrchestratorBridge
             self.gear_bridge = AdaptiveSwarmOrchestratorBridge(self)
+            
+        # Initialize Retrocausal Lookahead Prefetcher
+        from retrocausal_prefetch import HenriRetrocausalPrefetcher
+        self.retro_prefetcher = HenriRetrocausalPrefetcher(dim=hrr_dim, num_zones=3, phase_lock_boundary=1.42)
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.retro_prefetcher.to(device)
 
     def to(self, device, dtype=None):
         if hasattr(self, 'l3_router') and self.l3_router is not None:
@@ -611,6 +617,8 @@ class HenriCognitiveSwarmOrchestrator:
         if hasattr(self, 'stirrup') and self.stirrup is not None:
             if hasattr(self.stirrup, 'to'):
                 self.stirrup.to(device=device, dtype=torch.float32)
+        if hasattr(self, 'retro_prefetcher') and self.retro_prefetcher is not None:
+            self.retro_prefetcher.to(device)
         return self
 
     @torch.no_grad()
@@ -1248,7 +1256,11 @@ class HenriCognitiveSwarmOrchestrator:
         if not os.path.exists(core_path):
             core_path = os.path.join(parent_dir, "henri_core_final.pt")
             
-        device = next(self.optical_core.emulator.parameters()).device if list(self.optical_core.emulator.parameters()) else torch.device("cpu")
+        if hasattr(self.optical_core, "emulator") and self.optical_core.emulator is not None:
+            params = list(self.optical_core.emulator.parameters())
+        else:
+            params = list(self.optical_core.parameters())
+        device = next(iter(params)).device if params else torch.device("cpu")
         checkpoint = None
         
         if os.path.exists(core_path):
@@ -1361,7 +1373,7 @@ class HenriCognitiveSwarmOrchestrator:
                     print(f"[ORCHESTRATOR] Warning: Failed to parse legacy state dict: {e}. Using defaults.")
                     state_dict = None
             else:
-                print(f"[ORCHESTRATOR] Warning: Pre-trained core weights checkpoint not found or corrupt at {core_path}. Initializing tabula rasa 8.59B model.")
+                print(f"[ORCHESTRATOR] Warning: Pre-trained core weights checkpoint not found or corrupt at {core_path}.")
                 
             # Set default dtype to bfloat16 to instantiate directly in low-precision and prevent OOM
             orig_default_dtype = torch.get_default_dtype()
@@ -1759,6 +1771,28 @@ class HenriCognitiveSwarmOrchestrator:
         
         if query_wave is not None:
             print(f"[PREFETCH] Dynamic query: pre-fetching 5 nearest attractors for query wave...")
+            
+            # --- RUN RETROCAUSAL PREFETCHER ---
+            try:
+                device = self.retro_prefetcher.zone_clocks.device
+                w_comp = query_wave.to(device)
+                w_unrolled = torch.stack([w_comp.real, w_comp.imag], dim=-1)
+                if w_unrolled.ndim == 2:
+                    w_unrolled = w_unrolled.unsqueeze(0) # [1, 4096, 2]
+                
+                if not hasattr(self, "prev_prefetch_wave"):
+                    self.prev_prefetch_wave = torch.zeros_like(w_unrolled)
+                
+                context_coord = torch.zeros_like(w_unrolled)
+                
+                wave_out, telemetry_retro = self.retro_prefetcher(w_unrolled, self.prev_prefetch_wave, context_coord)
+                self.prev_prefetch_wave = w_unrolled.clone()
+                
+                print(f"[RETRO PREFETCH] R_macro: {telemetry_retro['global_coherence_R']:.4f} // Linewidth drift: {telemetry_retro['phase_linewidth_drift']:.6f} // DMA Triggered: {telemetry_retro['dma_prefetch_triggered']}")
+            except Exception as prefetch_err:
+                print(f"[RETRO PREFETCH WARNING] Retro prefetch check failed: {prefetch_err}")
+            # ----------------------------------
+            
             nearest = self.query_nearest_attractors(query_wave, k=5)
             rows = []
             for item in nearest:

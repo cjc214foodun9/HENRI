@@ -113,14 +113,18 @@ def flash_circular_convolution(feature: torch.Tensor, coordinate: torch.Tensor) 
         feat_f32 = feature.to(dtype=torch.float32)
         coord_f32 = coordinate.to(dtype=torch.float32)
         
-        feat_fft = torch.fft.fft(feat_f32, dim=-1)
-        coord_fft = torch.fft.fft(coord_f32, dim=-1)
-        
-        modulated = feat_fft * coord_fft
-        out = torch.fft.ifft(modulated, dim=-1)
-        
         if not (torch.is_complex(feature) or torch.is_complex(coordinate)):
-            out = out.real
+            feat_fft = torch.fft.rfft(feat_f32, dim=-1)
+            coord_fft = torch.fft.rfft(coord_f32, dim=-1)
+            
+            modulated = feat_fft * coord_fft
+            out = torch.fft.irfft(modulated, n=feature.shape[-1], dim=-1)
+        else:
+            feat_fft = torch.fft.fft(feat_f32, dim=-1)
+            coord_fft = torch.fft.fft(coord_f32, dim=-1)
+            
+            modulated = feat_fft * coord_fft
+            out = torch.fft.ifft(modulated, dim=-1)
             
         return out.to(dtype=orig_dtype)
 
