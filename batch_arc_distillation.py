@@ -529,6 +529,18 @@ def run_hdf5_pretraining(args):
     core_model.gradient_checkpointing = True
     core_model.eval() # Run in eval mode for EP
     
+    print("[OPTIMIZATION] Initiating full-graph compilation context...")
+    try:
+        core_model = torch.compile(core_model, mode="max-autotune", fullgraph=True)
+        print("[SUCCESS] Substrate compiled under fullgraph=True (max-autotune).")
+    except Exception as compile_err:
+        print(f"[WARNING] Strict full-graph compilation failed: {compile_err}. Falling back to reduce-overhead mode...")
+        try:
+            core_model = torch.compile(core_model, mode="reduce-overhead")
+            print("[SUCCESS] Substrate compiled under reduce-overhead mode.")
+        except Exception as compile_err_fallback:
+            print(f"[WARNING] Fallback compilation failed: {compile_err_fallback}. Proceeding in eager mode.")
+    
     # Initialize router (Zone A Ingress) and translation head (Zone A Egress)
     router = L3SwarmRouter(vocab_size=32000, num_experts=16).to(device=device, dtype=torch.bfloat16)
     
