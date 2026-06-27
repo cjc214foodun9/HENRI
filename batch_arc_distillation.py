@@ -523,7 +523,7 @@ def run_hdf5_pretraining(args):
         orig_default_dtype = torch.get_default_dtype()
         torch.set_default_dtype(torch.bfloat16)
         with torch.device(device):
-            core_model = ProprietaryHENRICore(dim=4096, depth=32, num_fluid_states=1, looped_recurrent=False)
+            core_model = ProprietaryHENRICore(dim=4096, depth=32, num_fluid_states=16, looped_recurrent=True)
     finally:
         torch.set_default_dtype(orig_default_dtype)
     core_model.gradient_checkpointing = True
@@ -660,7 +660,7 @@ def run_hdf5_pretraining(args):
         "config": {
             "dim": 4096,
             "depth": 32,
-            "num_fluid_states": 1,
+            "num_fluid_states": 16,
             "vocab_size": 32000
         },
         "model_state_dict": core_model.state_dict()
