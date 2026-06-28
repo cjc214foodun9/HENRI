@@ -15,6 +15,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 from sqlalchemy import create_engine, text
 
 # Enforce strict mixed-precision allocations and register protections
@@ -167,15 +168,31 @@ class HenriDiffusionCanvasSampler:
         else:
             return "def transform(grid):\n    malformed_junk_Unicode_⁴⁴"
 
-def execute_repl_sandbox(crystallized_code, task_id):
+def execute_repl_sandbox(crystallized_code, task_id, test_input, test_output):
     if "malformed_junk" in crystallized_code:
         return False, "SyntaxError: Topological Clipping Leak"
     try:
-        local_scope = {}
+        local_scope = {"np": np}
         exec(crystallized_code, globals(), local_scope)
-        if "transform" in local_scope:
-            return True, "Execution verified compile-clean."
-        return False, "RuntimeError: Missing transform handle."
+        if "transform" not in local_scope:
+            return False, "RuntimeError: Missing transform handle."
+        
+        in_arr = np.array(test_input)
+        out_arr = np.array(test_output)
+        
+        predicted_arr = local_scope["transform"](in_arr)
+        if predicted_arr is None:
+            return False, "RuntimeError: transform returned None."
+        if not isinstance(predicted_arr, np.ndarray):
+            predicted_arr = np.array(predicted_arr)
+            
+        if predicted_arr.shape != out_arr.shape:
+            return False, f"Incorrect Shape: expected {out_arr.shape}, got {predicted_arr.shape}"
+            
+        if np.array_equal(predicted_arr, out_arr):
+            return True, "Execution verified correct."
+        else:
+            return False, "Incorrect Output: mismatch with ground truth grid."
     except Exception as e:
         return False, f"Runtime Exception: {str(e)}"
 
@@ -255,13 +272,13 @@ def execute_test_time_adaptive_benchmark():
         
         # Gather pre-adaptation baseline loss metrics over the puzzle demonstration space
         with torch.no_grad():
-            demo_in = torch.tensor(train_examples[0]["input"], dtype=torch.int32, device=device)
-            demo_out = torch.tensor(train_examples[0]["output"], dtype=torch.int32, device=device)
-            theta_demo_in = transducer(demo_in)
-            theta_demo_target = transducer(demo_out)
-            mock_acts = torch.ones(1, 16, device=device, dtype=torch.bfloat16)
+            demo_in = torch.tensor(train_examples[0]["input"], dtype=torch.int32, device=device).clone().detach()
+            demo_out = torch.tensor(train_examples[0]["output"], dtype=torch.int32, device=device).clone().detach()
+            theta_demo_in = transducer(demo_in).clone().detach()
+            theta_demo_target = transducer(demo_out).clone().detach()
+            mock_acts = torch.ones(1, 16, device=device, dtype=torch.bfloat16).clone().detach()
             
-            theta_free_pre = compiled_core(phase_angles=theta_demo_in, expert_activations=mock_acts, nudge_context=None, temperature=0.5).clone()
+            theta_free_pre = compiled_core(phase_angles=theta_demo_in, expert_activations=mock_acts, nudge_context=None, temperature=0.5).clone().detach()
             
             complex_centroid_pre = torch.complex(
                 torch.cos(theta_free_pre).float(),
@@ -276,8 +293,8 @@ def execute_test_time_adaptive_benchmark():
                 grid_out = torch.tensor(example["output"], dtype=torch.int32, device=device)
                 
                 with torch.no_grad():
-                    theta_in = transducer(grid_in)
-                    theta_target = transducer(grid_out)
+                    theta_in = transducer(grid_in).clone().detach()
+                    theta_target = transducer(grid_out).clone().detach()
                     
                     # Positive nudge pass (+beta tracking field)
                     theta_pos = compiled_core(
@@ -285,7 +302,7 @@ def execute_test_time_adaptive_benchmark():
                         expert_activations=mock_acts,
                         nudge_context=theta_target,
                         temperature=0.5
-                    ).clone()
+                    ).clone().detach()
                     
                     # Negative nudge pass (-beta tracking correction)
                     theta_neg = compiled_core(
@@ -293,7 +310,7 @@ def execute_test_time_adaptive_benchmark():
                         expert_activations=mock_acts,
                         nudge_context=(theta_target + torch.pi) % (2 * torch.pi),
                         temperature=0.5
-                    ).clone()
+                    ).clone().detach()
                     
                     # Calculate spatial outer-product phase correlation gradients
                     pos_corr = torch.bmm(torch.sin(theta_pos).unsqueeze(2), torch.cos(theta_pos).unsqueeze(1))
@@ -316,7 +333,7 @@ def execute_test_time_adaptive_benchmark():
                 expert_activations=mock_acts,
                 nudge_context=None,
                 temperature=0.5
-            ).clone()
+            ).clone().detach()
             
             complex_centroid_post = torch.complex(
                 torch.cos(theta_free_post).float(),
@@ -328,11 +345,12 @@ def execute_test_time_adaptive_benchmark():
         # TARGET TEST CASE INFERENCE
         # --------------------------------=================================
         test_case = task_data["test"][0]
-        grid_test_in = torch.tensor(test_case["input"], dtype=torch.int32, device=device)
-        theta_test_novel = transducer(grid_test_in)
+        grid_test_in = torch.tensor(test_case["input"], dtype=torch.int32, device=device).clone().detach()
+        theta_test_novel = transducer(grid_test_in).clone().detach()
         
-        # Ingest guiding field from database
-        guiding_field = query_resonant_sub_axioms(theta_test_novel)
+        # Ingest guiding field from database - COMMENTED OUT to force zero-shot reasoning
+        # guiding_field = query_resonant_sub_axioms(theta_test_novel)
+        guiding_field = None
         
         # Run forward pass at absolute zero temperature (T = 0.01)
         with torch.no_grad():
@@ -341,7 +359,7 @@ def execute_test_time_adaptive_benchmark():
                 expert_activations=mock_acts,
                 nudge_context=guiding_field,
                 temperature=0.01
-            ).clone()
+            ).clone().detach()
             
             # Compute live macro order metrics parameter R_macro
             complex_centroid = torch.complex(
@@ -352,17 +370,19 @@ def execute_test_time_adaptive_benchmark():
             
         # Crystallize and execute
         crystallized_program = canvas.forward(theta_test_settled)
-        success_flag, sandbox_msg = execute_repl_sandbox(crystallized_program, task_id)
+        success_flag, sandbox_msg = execute_repl_sandbox(
+            crystallized_code=crystallized_program,
+            task_id=task_id,
+            test_input=test_case["input"],
+            test_output=test_case["output"]
+        )
         
         status_str = "SUCCESS" if success_flag else "FAILED"
         if success_flag:
             passed_count += 1
         total_count += 1
         
-        print(f"{task_id:<15} | {initial_loss:.6f} | {post_loss:.6f} | {R_macro:.6f} | {status_str}")
-        
-        if total_count >= 40:
-            break
+        print(f"{task_id:<15} | {initial_loss:.6f} | {post_loss:.6f} | {R_macro:.6f} | {status_str:<12} | {sandbox_msg}")
             
     print("=" * 80)
     print(f"Zero-Shot Test-Time Adaptive Accuracy: {passed_count}/{total_count} ({passed_count/total_count*100:.2f}%)")
