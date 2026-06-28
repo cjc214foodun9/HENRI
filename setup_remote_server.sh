@@ -67,8 +67,9 @@ echo "=== STEP 4: Install Python Build Dependencies ==="
 CMAKE_ARGS="-DGGML_CUDA=on -DLLAMA_CUDA=on" /venv/main/bin/python -m pip install llama-cpp-python --no-cache-dir
 
 echo "=== STEP 5: Compile and Install wosx Bindings ==="
-# Build and install wosx directly from GitHub with GPU/CUDA/Vulkan support enabled
-/venv/main/bin/python -m pip install git+https://github.com/nv-tlabs/wosx.git --config-settings=cmake.define.WOSX_ENABLE_GPU_SUPPORT=ON
+cd /workspace/HENRI/lib_physics
+unzip -o wosx.zip
+/venv/main/bin/python -m pip install ./wosx --config-settings=cmake.define.WOSX_ENABLE_GPU_SUPPORT=ON
 
 echo "=== STEP 6: Initialize Database Schema ==="
 export DATABASE_URL=postgresql://postgres:password@127.0.0.1:5432/henri

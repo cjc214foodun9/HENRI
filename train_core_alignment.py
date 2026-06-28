@@ -452,9 +452,10 @@ def main():
             
             # Composite objective formulation: L_total = alpha * L_FreeEnergy + beta * L_NextLat + gamma * L_Birkhoff
             loss_ce = criterion(logits.view(-1, vocab_size), tokens.view(-1))
-            loss_free_energy = compute_kan_obstruction_loss(core_out)
-            loss_next_lat = F.mse_loss(transition_net(core_out[:, :-1, :]), core_out[:, 1:, :])
-            loss_birkhoff = compute_birkhoff_loss(logits, core_out)
+            core_out_real = torch.real(core_out).to(dtype=torch.bfloat16)
+            loss_free_energy = compute_kan_obstruction_loss(core_out_real)
+            loss_next_lat = F.mse_loss(transition_net(core_out_real[:, :-1, :]), core_out_real[:, 1:, :])
+            loss_birkhoff = compute_birkhoff_loss(logits, core_out_real)
             
             loss = 0.5 * loss_ce + 0.3 * loss_free_energy + 0.3 * loss_next_lat + 0.4 * loss_birkhoff
             loss.backward()
@@ -504,8 +505,9 @@ def main():
             logits, _, _ = sieve(core_out)
             
             loss_ce = criterion(logits.view(-1, vocab_size), tokens.view(-1))
-            loss_next_lat = F.mse_loss(transition_net(core_out[:, :-1, :]), core_out[:, 1:, :])
-            loss_birkhoff = compute_birkhoff_loss(logits, core_out)
+            core_out_real = torch.real(core_out).to(dtype=torch.bfloat16)
+            loss_next_lat = F.mse_loss(transition_net(core_out_real[:, :-1, :]), core_out_real[:, 1:, :])
+            loss_birkhoff = compute_birkhoff_loss(logits, core_out_real)
             
             loss = 0.5 * loss_ce + 0.3 * loss_free_energy + 0.3 * loss_next_lat + 0.4 * loss_birkhoff
             loss.backward()
