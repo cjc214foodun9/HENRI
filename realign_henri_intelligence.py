@@ -27,6 +27,41 @@ if DB_URL.startswith("postgresql://"):
 db_engine = create_engine(DB_URL)
 
 # =========================================================================
+# 0. CONTINUOUS METRIC SPATIAL ENCODER
+# =========================================================================
+
+class HenriContinuousSpatialEncoder(nn.Module):
+    def __init__(self, d_geo=2048, max_grid=30):
+        super().__init__()
+        self.d_geo = d_geo
+        # Fixed, non-learnable frequency scales representing metric dimensions on CPU
+        self.register_buffer("w_y", torch.randn(d_geo) * 0.1)
+        self.register_buffer("w_x", torch.randn(d_geo) * 0.1)
+        
+    def forward(self, y: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
+        """
+        Computes continuous phase vectors over coordinates.
+        y, x shapes: [Batch, NumObjects] or [NumObjects] or scalar Tensors
+        Returns: complex unit phasors of shape (..., d_geo)
+        """
+        # Ensure we work with float tensors for frequency operations
+        y_f = y.to(dtype=torch.float32)
+        x_f = x.to(dtype=torch.float32)
+        
+        if y_f.dim() == 0:
+            phase_y = y_f * self.w_y
+            phase_x = x_f * self.w_x
+        elif y_f.dim() == 1:
+            phase_y = y_f.unsqueeze(-1) * self.w_y.unsqueeze(0)
+            phase_x = x_f.unsqueeze(-1) * self.w_x.unsqueeze(0)
+        else:
+            phase_y = y_f.unsqueeze(-1) * self.w_y.unsqueeze(0).unsqueeze(0)
+            phase_x = x_f.unsqueeze(-1) * self.w_x.unsqueeze(0).unsqueeze(0)
+            
+        total_phase = phase_y + phase_x
+        return torch.complex(torch.cos(total_phase).float(), torch.sin(total_phase).float())
+
+# =========================================================================
 # 1. OBJECT-CENTRIC SPECTRUM TRANSDUCTION (LAYER ZERO)
 # =========================================================================
 
@@ -41,18 +76,16 @@ class HenriObjectCentricTransducer(nn.Module):
         self.d_wave = d_wave
         self.max_objects = max_objects
         
-        # Pristine orthogonal basis anchors representing conceptual invariants on CPU in float32
-        color_basis = torch.empty(num_colors, d_wave, dtype=torch.float32, device="cpu")
-        size_basis = torch.empty(30 * 30, d_wave, dtype=torch.float32, device="cpu")
-        centroid_basis = torch.empty(30, 30, d_wave, dtype=torch.float32, device="cpu")
+        # Spatial Subspace: d_geo = 2048
+        self.spatial_encoder = HenriContinuousSpatialEncoder(d_geo=2048)
         
+        # Identity Subspace: d_id = 1024. Orthonormal color basis anchors on CPU in float32
+        color_basis = torch.empty(num_colors, 1024, dtype=torch.float32, device="cpu")
         torch.nn.init.orthogonal_(color_basis)
-        torch.nn.init.orthogonal_(size_basis)
-        torch.nn.init.orthogonal_(centroid_basis.view(-1, d_wave))
-        
         self.register_buffer("color_anchors", color_basis.to(dtype=torch.bfloat16))
-        self.register_buffer("size_anchors", size_basis.to(dtype=torch.bfloat16))
-        self.register_buffer("centroid_anchors", centroid_basis.to(dtype=torch.bfloat16))
+        
+        # Operator Subspace: d_op = 1024. Continuous size mapping frequency scales
+        self.register_buffer("w_size", torch.randn(1024) * 0.1)
 
     def _extract_connected_components(self, grid):
         """Standard bare-metal 4-connectivity labeling pass."""
@@ -108,15 +141,29 @@ class HenriObjectCentricTransducer(nn.Module):
             mean_y = int(np.mean(ys)) % 30
             mean_x = int(np.mean(xs)) % 30
             
-            # Fetch invariant basis components
-            c_vec = self.color_anchors[color_val]
-            s_vec = self.size_anchors[size_val]
-            pos_vec = self.centroid_anchors[mean_y, mean_x]
+            # 1. Encode Operator Subspace (0-1023): Continuous size
+            size_tensor = torch.tensor(float(size_val), device=grid_tensor.device)
+            size_phase = size_tensor.unsqueeze(-1) * self.w_size.to(device=grid_tensor.device)
+            op_real = torch.cos(size_phase).to(dtype=torch.bfloat16)
+            op_imag = torch.sin(size_phase).to(dtype=torch.bfloat16)
             
-            # Bind features using spectral phase combinations (Lossless FHRR Superposition)
-            combined_phase = torch.atan2(s_vec, c_vec) + torch.atan2(pos_vec, c_vec)
-            bulk_real += torch.cos(combined_phase)
-            bulk_imag += torch.sin(combined_phase)
+            # 2. Encode Identity Subspace (1024-2047): Color anchors
+            id_real = self.color_anchors[color_val]
+            id_imag = torch.zeros_like(id_real)
+            
+            # 3. Encode Spatial Subspace (2048-4095): Centroid coordinates y, x
+            y_tensor = torch.tensor(float(mean_y), device=grid_tensor.device)
+            x_tensor = torch.tensor(float(mean_x), device=grid_tensor.device)
+            geo_phasor = self.spatial_encoder(y_tensor, x_tensor)
+            geo_real = geo_phasor.real.to(dtype=torch.bfloat16)
+            geo_imag = geo_phasor.imag.to(dtype=torch.bfloat16)
+            
+            # Assemble fibers
+            obj_real = torch.cat([op_real, id_real, geo_real], dim=-1)
+            obj_imag = torch.cat([op_imag, id_imag, geo_imag], dim=-1)
+            
+            bulk_real += obj_real
+            bulk_imag += obj_imag
               
         phase_out = torch.atan2(bulk_imag, bulk_real).unsqueeze(0) # Shape: [1, 4096]
         return phase_out
@@ -127,11 +174,10 @@ class HenriObjectCentricTransducer(nn.Module):
 
 class HenriProgramSynthesisDecoder(nn.Module):
     """
-    Replaces the crude scalar mean_angle check with an expressive token projection layer.
-    Maps high-dimensional settled phase wavefront configurations directly to a structured
-    sequence of code operations inside a Domain-Specific Language (DSL).
+    Simultaneously decodes discrete token options (opcodes) and continuous parameters
+    from the partitioned wave state channels.
     """
-    def __init__(self, d_wave=4096, vocab_size=12):
+    def __init__(self, d_wave=4096, vocab_size=12, max_param_val=30):
         super().__init__()
         self.d_wave = d_wave
         self.vocab_size = vocab_size
@@ -143,41 +189,64 @@ class HenriProgramSynthesisDecoder(nn.Module):
             2: "    objs = find_objects(grid)\n",  
             3: "    if len(objs) == 0: return grid\n",  
             4: "    target = objs[0]\n",  
-            5: "    grid[target == True] = ", # Requires color value appending  
-            6: "    return np.rot90(grid, k=1)\n",  
+            5: "    grid[target == True] = {color}\n",  
+            6: "    return np.rot90(grid, k={param})\n",  
             7: "    return np.fliplr(grid)\n",  
-            8: "    return repeat_grid_pattern(grid, factor=2)\n",  
+            8: "    return repeat_grid_pattern(grid, factor={param})\n",  
             9: "    return crop_to_enclosure(grid)\n",  
             10: "    return grid\n",  
             11: "    # Trajectory collapsed due to high entropic stress\n"  
         }
         
-        # Linear translation projection matrix mapping wave coordinates to token spaces
-        self.token_projection = nn.Linear(d_wave, vocab_size, bias=False)
+        # Multi-Head projections from separated subspaces
+        self.op_proj = nn.Linear(1024, vocab_size, bias=False)
+        self.color_proj = nn.Linear(1024, 16, bias=False)  # Up to 16 colors
+        
+        # Parameter value regressor (offsets, scales)
+        self.param_decoder = nn.Sequential(
+            nn.Linear(2048, 512),
+            nn.GELU(),
+            nn.Linear(512, max_param_val)
+        )
 
     def forward(self, settled_phases, context_color_hint=1):
         """Translates the volumetric wave state into an execution code block tree."""
         # Unroll the wavefront phase geometry into raw activation fields
         wave_features = torch.cos(settled_phases) + torch.sin(settled_phases)
-        logits = self.token_projection(wave_features).squeeze(0) # Shape: [vocab_size]
+        wave_features = wave_features.squeeze(0) # Shape: [4096]
         
-        probabilities = F.softmax(logits.float(), dim=-1)
-        top_tokens = torch.argsort(probabilities, descending=True).tolist()
+        # Segment bulk wavefront features into independent fibers
+        op_subspace = wave_features[0:1024]
+        id_subspace = wave_features[1024:2048]
+        geo_subspace = wave_features[2048:4096]
+        
+        # Compute projection outputs
+        op_logits = self.op_proj(op_subspace.unsqueeze(0)).squeeze(0)
+        color_logits = self.color_proj(id_subspace.unsqueeze(0)).squeeze(0)
+        param_logits = self.param_decoder(geo_subspace.unsqueeze(0)).squeeze(0)
+        
+        # Argmax classification
+        op_idx = torch.argmax(F.softmax(op_logits.float(), dim=-1)).item()
+        color_val = torch.argmax(F.softmax(color_logits.float(), dim=-1)).item()
+        
+        # Quantize spatial parameters
+        param_val = torch.argmax(F.softmax(param_logits.float(), dim=-1)).item()
+        param_val = max(1, min(param_val, 4)) # Constrain parameter values to legal range [1, 4]
         
         # Begin program synthesis crystallization block
         code_str = self.dsl_vocab[0] # Inject standard function signature entry
         
-        # Dynamic extraction cascade constructs the program string step-by-step
-        primary_action = top_tokens[0]
-        
-        if primary_action in [6, 7, 8, 9, 10]:
-            # Direct macro transformation paths
-            code_str += "    " + self.dsl_vocab[primary_action]
+        if op_idx in [6, 8]:
+            # Parametric transformations
+            action_line = self.dsl_vocab[op_idx].format(param=param_val)
+            code_str += "    " + action_line
+        elif op_idx in [7, 9, 10]:
+            # Non-parametric transformations
+            code_str += "    " + self.dsl_vocab[op_idx]
         else:
-            # Complex nested object-level manipulation tracks
+            # Complex nested object manipulation
             code_str += self.dsl_vocab[1] + self.dsl_vocab[2] + self.dsl_vocab[3] + self.dsl_vocab[4]
-            # Inject adaptive target parameters discovered during the forwardpass
-            code_str += self.dsl_vocab[5] + f"{context_color_hint}\n"
+            code_str += self.dsl_vocab[5].format(color=color_val)
             code_str += "    return grid\n"
             
         return code_str

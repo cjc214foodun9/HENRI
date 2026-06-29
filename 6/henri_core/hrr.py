@@ -168,3 +168,28 @@ class PackedInt8HolographicEngine(nn.Module):
         
         # Step 4: Average across the hyperdimensional channels to extract final scalar scores
         return torch.mean(resonance_contributions, dim=-1)
+
+
+class HenriContinuousSpatialEncoder(nn.Module):
+    def __init__(self, d_geo=2048, max_grid=30):
+        super().__init__()
+        self.d_geo = d_geo
+        # Fixed, non-learnable frequency scales representing metric dimensions on CPU
+        self.register_buffer("w_y", torch.randn(d_geo) * 0.1)
+        self.register_buffer("w_x", torch.randn(d_geo) * 0.1)
+        
+    def forward(self, y: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
+        """
+        Computes continuous phase vectors over coordinates.
+        y, x shapes: [Batch, NumObjects] or [NumObjects]
+        Returns: complex unit phasors of shape (..., d_geo)
+        """
+        if y.dim() == 1:
+            phase_y = y.unsqueeze(-1) * self.w_y.unsqueeze(0)
+            phase_x = x.unsqueeze(-1) * self.w_x.unsqueeze(0)
+        else:
+            phase_y = y.unsqueeze(-1) * self.w_y.unsqueeze(0).unsqueeze(0)
+            phase_x = x.unsqueeze(-1) * self.w_x.unsqueeze(0).unsqueeze(0)
+            
+        total_phase = phase_y + phase_x
+        return torch.complex(torch.cos(total_phase).float(), torch.sin(total_phase).float())
