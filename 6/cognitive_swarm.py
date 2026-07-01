@@ -33,6 +33,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "6"))
 
 from dynamic_lora import DynamicLoraManager
 from l3_router_model import L3SwarmRouter
+from dialogue_ingress import HenriDialogueIngress
 from henri_core.h_mpc_steering import HolographicMPCOrchestrator, JITSUiteSIGRegGuardrail, ThermoActiveAdaLNBlock
 from zone_b_emulator import ZoneBEmulator
 from hopfield_cleanup import HopfieldSemanticCleanup
@@ -391,6 +392,10 @@ class HenriCognitiveSwarmOrchestrator:
         # 0. Synaptic Consolidation Manager
         self.synaptic_manager = SynapticConsolidationManager()
         
+        # 0b. Ingress Subspace Partitioning & Routing
+        self.dialogue_ingress = HenriDialogueIngress(hrr_dim=self.hrr_dim)
+        self.stream_should_route = {i: False for i in range(num_streams)}
+        
         # 1. Core Pinning & Affinity setup
         self.set_core_affinity()
 
@@ -552,7 +557,7 @@ class HenriCognitiveSwarmOrchestrator:
 
         # 13. Initialize the Swarm Fabric
         from emergent_cognitive_swarm import EmergentCognitiveSwarm
-        self.swarm_fabric = EmergentCognitiveSwarm(self.gen_model, self.l3_router)
+        self.swarm_fabric = EmergentCognitiveSwarm(self.l3_router, self.gen_model)
         self.swarm_fabric.orchestrator = self
         self.active_lora_adapter = None
 
@@ -620,6 +625,91 @@ class HenriCognitiveSwarmOrchestrator:
         if hasattr(self, 'retro_prefetcher') and self.retro_prefetcher is not None:
             self.retro_prefetcher.to(device)
         return self
+
+    def load_pretrained_weights(self, checkpoint_path: str, device: str = "cpu"):
+        """
+        Loads pre-trained model weights from the checkpoint file, realigning 
+        forensic keys (K_micro, spatial_kernel, thermal_mask, fluid_context_router)
+        to the active wave core and L3 router.
+        """
+        import torch
+        print(f"[RE-ALIGNMENT] Ingesting weights from {checkpoint_path}...")
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location=device)
+        except Exception as e:
+            print(f"[RE-ALIGNMENT ERROR] Failed to load checkpoint: {e}")
+            return False
+
+        state_dict = checkpoint["model_state_dict"] if (isinstance(checkpoint, dict) and "model_state_dict" in checkpoint) else checkpoint
+
+        # Align keys based on target buffers/parameters
+        aligned_core_dict = {}
+        aligned_router_dict = {}
+        aligned_head_dict = {}
+
+        for key, value in state_dict.items():
+            aligned_key = key
+            
+            # Kuramoto coupling: K_micro -> hierarchical_sync.K_micro
+            if "K_micro" in key:
+                aligned_key = "hierarchical_sync.K_micro"
+            # Spatial diffractive phase mask: spatial_kernel -> chimera_gate.spatial_kernel
+            elif "spatial_kernel" in key:
+                aligned_key = "chimera_gate.spatial_kernel"
+            # Langevin thermal mask: thermal_mask -> chimera_gate.thermal_mask
+            elif "thermal_mask" in key:
+                aligned_key = "chimera_gate.thermal_mask"
+            # L3 Router projection: fluid_context_router.weight -> activation_projection.weight
+            elif "fluid_context_router.weight" in key:
+                aligned_key = "activation_projection.weight"
+            
+            # Sort into the corresponding sub-dict
+            if aligned_key in ["activation_projection.weight"]:
+                aligned_router_dict[aligned_key] = value
+            elif "translation_head" in key:
+                head_key = key.replace("translation_head.", "")
+                aligned_head_dict[head_key] = value
+            else:
+                aligned_core_dict[aligned_key] = value
+
+        # Load into the core model
+        if hasattr(self, '_diffusion_core_model') and self._diffusion_core_model is not None:
+            # Cast keys to target parameters' precision/device
+            for k, v in list(aligned_core_dict.items()):
+                if k in self._diffusion_core_model.state_dict():
+                    target_param = self._diffusion_core_model.state_dict()[k]
+                    aligned_core_dict[k] = v.to(dtype=target_param.dtype, device=target_param.device)
+            missing, unexpected = self._diffusion_core_model.load_state_dict(aligned_core_dict, strict=False)
+            print(f"[RE-ALIGNMENT] Loaded core_model state dict. Missing keys: {len(missing)}, Unexpected keys: {len(unexpected)}")
+            
+            # Lock the experts to the Stiefel manifold immediately
+            if hasattr(self._diffusion_core_model, 'orthonormalize_experts'):
+                self._diffusion_core_model.orthonormalize_experts()
+                print("[RE-ALIGNMENT] Björck-Newton iterations completed. Invariant manifolds locked.")
+        else:
+            print("[RE-ALIGNMENT WARNING] _diffusion_core_model is not initialized. Core weights not loaded.")
+
+        # Load into the L3 router
+        if hasattr(self, 'l3_router') and self.l3_router is not None:
+            for k, v in list(aligned_router_dict.items()):
+                if k in self.l3_router.state_dict():
+                    target_param = self.l3_router.state_dict()[k]
+                    aligned_router_dict[k] = v.to(dtype=target_param.dtype, device=target_param.device)
+            if "activation_projection.weight" in aligned_router_dict and hasattr(self.l3_router, 'init_orthogonal_bridge'):
+                self.l3_router.init_orthogonal_bridge()
+            missing, unexpected = self.l3_router.load_state_dict(aligned_router_dict, strict=False)
+            print(f"[RE-ALIGNMENT] Loaded l3_router state dict. Missing keys: {len(missing)}, Unexpected keys: {len(unexpected)}")
+
+        # Load into the translation head
+        if hasattr(self, '_diffusion_translation_head') and self._diffusion_translation_head is not None:
+            for k, v in list(aligned_head_dict.items()):
+                if k in self._diffusion_translation_head.state_dict():
+                    target_param = self._diffusion_translation_head.state_dict()[k]
+                    aligned_head_dict[k] = v.to(dtype=target_param.dtype, device=target_param.device)
+            self._diffusion_translation_head.load_state_dict(aligned_head_dict, strict=False)
+            print("[RE-ALIGNMENT] Loaded translation head state dict.")
+
+        return True
 
     @torch.no_grad()
     def blend_moe_loras(self, lora_managers, routing_weights):
@@ -818,8 +908,15 @@ class HenriCognitiveSwarmOrchestrator:
         # 2. Extract Phase Wavefront: Transduce tokens to unit hypersphere S^4095
         psi_continuous = self.l3_router.text_to_wave(tokens_tensor)
         
+        # Phase Sub-Space Partitioning
+        chat_wave, code_wave, should_route = self.dialogue_ingress.partition_complex_wave(psi_continuous)
+        active_wave = code_wave if should_route.any() else chat_wave
+        
+        # Update thread routing registry
+        self.stream_should_route[stream_id] = bool(should_route.any().item())
+        
         # 3. Direct Phase angle extraction to create native 4096-D active activations
-        h_4096_raw = torch.angle(psi_continuous).to(dtype=self.l3_router.activation_projection.weight.dtype)
+        h_4096_raw = torch.angle(active_wave).to(dtype=self.l3_router.activation_projection.weight.dtype)
 
         # 4. Modulate the continuous phase features with the active low-rank expert weights
         h_4096_lora = self.lora_managers[stream_id].apply_lora(h_4096_raw)
@@ -898,6 +995,18 @@ class HenriCognitiveSwarmOrchestrator:
             time.sleep(sleep_time)
 
     @torch.no_grad()
+    def downsample_telemetry_wave(self, psi_bulk: torch.Tensor) -> torch.Tensor:
+        """
+        Downsamples the high-resolution 6324x6324 complex wave to a 64x64 intensity matrix
+        directly on the GPU using adaptive max pooling. Bypasses PCIe transfer bottlenecks.
+        """
+        with torch.no_grad():
+            intensity = (psi_bulk.real ** 2) + (psi_bulk.imag ** 2)
+            intensity_unsqueezed = intensity.unsqueeze(0).unsqueeze(0)
+            downsampled = torch.nn.functional.adaptive_max_pool2d(intensity_unsqueezed, (64, 64))
+            return downsampled.squeeze(0).squeeze(0)
+
+    @torch.no_grad()
     def process_next_wave(self, target_label="SCADA_Pressure_Control") -> dict:
         """
         Pulls the constructed bulk wave, runs physical Zone B emulation,
@@ -912,6 +1021,9 @@ class HenriCognitiveSwarmOrchestrator:
         tick = payload["tick"]
         psi_bulk = payload["psi_bulk"]
         activations = payload["activations"]
+
+        # GPU Telemetry Down-Sampler
+        telemetry_wavefront = self.downsample_telemetry_wave(psi_bulk)
 
         print(f"\n--- [COGNITIVE CYCLE TICK {tick}] Intercepting Wavefront ---")
 
@@ -1174,7 +1286,8 @@ class HenriCognitiveSwarmOrchestrator:
                 "status": "VETOED",
                 "reason": veto_reason,
                 "heat": langevin_heat,
-                "error": error_energy
+                "error": error_energy,
+                "telemetry_wavefront": telemetry_wavefront.detach().cpu().numpy().tolist()
             }
         else:
             # 4. Success state: Hopfield Network semantic cleanup back into English
@@ -1231,7 +1344,8 @@ class HenriCognitiveSwarmOrchestrator:
                 "error": error_energy,
                 "trajectory_vector": clean_wave,
                 "raw_text": generated_text,
-                "executed_text": executed_output_text
+                "executed_text": executed_output_text,
+                "telemetry_wavefront": telemetry_wavefront.detach().cpu().numpy().tolist()
             }
 
     def pipe_trajectory_to_diffusion_sampler(self, trajectory_vector, sequence_length=512, guidance_scale=4.5, num_diffusion_steps=2):
@@ -1305,7 +1419,29 @@ class HenriCognitiveSwarmOrchestrator:
 
             # Load the state dict on CPU
             print("[INIT] Loading model state dict on CPU...")
-            core_model.load_state_dict(checkpoint["model_state_dict"], strict=False)
+            # Realign keys (e.g. K_micro, spatial_kernel, thermal_mask) to correct modules in core_model
+            model_sd = checkpoint["model_state_dict"]
+            aligned_model_sd = {}
+            for key, value in model_sd.items():
+                aligned_key = key
+                if "K_micro" in key:
+                    aligned_key = "hierarchical_sync.K_micro"
+                elif "spatial_kernel" in key:
+                    aligned_key = "chimera_gate.spatial_kernel"
+                elif "thermal_mask" in key:
+                    aligned_key = "chimera_gate.thermal_mask"
+                elif "fluid_context_router.weight" in key:
+                    # fluid_context_router.weight belongs to l3_router, skip loading into core_model
+                    continue
+                aligned_model_sd[aligned_key] = value
+
+            # Cast parameters to match target precision before loading
+            for k, v in list(aligned_model_sd.items()):
+                if k in core_model.state_dict():
+                    target_param = core_model.state_dict()[k]
+                    aligned_model_sd[k] = v.to(dtype=target_param.dtype)
+
+            core_model.load_state_dict(aligned_model_sd, strict=False)
             
             # Extract translation head state dict from checkpoint before deleting checkpoint
             checkpoint_translation_head_state_dict = checkpoint.get("translation_head_state_dict")
@@ -1388,7 +1524,25 @@ class HenriCognitiveSwarmOrchestrator:
             core_model = core_model.to(device=device).eval()
             if state_dict is not None:
                 try:
-                    core_model.load_state_dict(state_dict, strict=False)
+                    aligned_legacy_sd = {}
+                    for key, value in state_dict.items():
+                        aligned_key = key
+                        if "K_micro" in key:
+                            aligned_key = "hierarchical_sync.K_micro"
+                        elif "spatial_kernel" in key:
+                            aligned_key = "chimera_gate.spatial_kernel"
+                        elif "thermal_mask" in key:
+                            aligned_key = "chimera_gate.thermal_mask"
+                        elif "fluid_context_router.weight" in key:
+                            continue
+                        aligned_legacy_sd[aligned_key] = value
+                    
+                    for k, v in list(aligned_legacy_sd.items()):
+                        if k in core_model.state_dict():
+                            target_param = core_model.state_dict()[k]
+                            aligned_legacy_sd[k] = v.to(dtype=target_param.dtype)
+
+                    core_model.load_state_dict(aligned_legacy_sd, strict=False)
                     print("[ORCHESTRATOR] Successfully loaded pre-trained core weights from legacy state dict.")
                 except Exception as e:
                     print(f"[ORCHESTRATOR] Warning: Failed to load legacy core weights state dict: {e}")
@@ -1450,10 +1604,28 @@ class HenriCognitiveSwarmOrchestrator:
 
 
     def save_router_centroids(self):
-        pass
+        try:
+            parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            save_path = os.path.join(parent_dir, "archive", "expert_centroids.pt")
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            torch.save(self.l3_router.expert_centroids, save_path)
+            print(f"[DATABASE] Saved expert centroids to {save_path}")
+        except Exception as e:
+            print(f"[DATABASE WARNING] Failed to save expert centroids: {e}")
 
     def load_router_centroids(self):
-        pass
+        try:
+            parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            load_path = os.path.join(parent_dir, "archive", "expert_centroids.pt")
+            if os.path.exists(load_path):
+                centroids = torch.load(load_path, map_location='cpu')
+                self.l3_router.expert_centroids.copy_(centroids.to(device=self.l3_router.expert_centroids.device))
+                print(f"[DATABASE] Loaded expert centroids from {load_path}")
+            else:
+                print("[DATABASE] No pre-saved expert centroids found. Utilizing default orthogonal initialization.")
+        except Exception as e:
+            print(f"[DATABASE WARNING] Failed to load expert centroids: {e}")
+
 
     def start_swarm_loop(self, initial_prompts, interval=0.25, target_label="SCADA_Pressure_Control"):
         """Starts the timed background loop."""

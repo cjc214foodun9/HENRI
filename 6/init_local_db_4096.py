@@ -187,7 +187,7 @@ try:
                 print("[*] Seeding hrr_canonical_lexicon with Zone C axioms in 4096D...")
                 try:
                     import sys
-                    sys.path.append(r"c:\Users\chan\Desktop\henri-ground-zero")
+                    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
                     from physics_manifold import (
                         CODATA_CONSTANTS,
                         QUDT_QUANTITY_KINDS,

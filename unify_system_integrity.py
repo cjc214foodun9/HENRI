@@ -161,9 +161,11 @@ class HenriSystemIntegrityAuditor:
         class MockOrchestrator:  
             def __init__(self, device):  
                 self.num_streams = 16  
+                self.hrr_dim = 4096
                 self.l3_router = nn.Module()  
                 # Mock a minimal router parameter tensor channel  
                 self.l3_router.dummy_param = nn.Parameter(torch.zeros(1, device=device))  
+
           
         orchestrator = MockOrchestrator(self.device)  
         engine = ActiveExperimentationEngine(orchestrator)  

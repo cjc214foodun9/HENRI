@@ -1,8 +1,10 @@
 # Unified Three-Tier Nested Kuramoto Synchronization Grid for Project HENRI
 
+import math
 import torch  
 import torch.nn as nn  
 import torch.nn.functional as F
+
 
 class HenriHierarchicalSyncCore(nn.Module):  
     def __init__(self, num_oscillators=4096, num_layers=32, num_experts=16):  
@@ -133,3 +135,79 @@ class HenriHierarchicalSyncCore(nn.Module):
 
 def sorted_phases_to_wavefront(synchronized_wavefront):
     return synchronized_wavefront
+
+class HenriThermodynamicFPRM(nn.Module):
+    def __init__(self, d_wave=4096, num_experts=16):
+        super().__init__()
+        self.d_wave = d_wave
+        self.num_experts = num_experts
+        self.K_shared = nn.Parameter(torch.randn(d_wave, d_wave) * 0.02)
+
+    def execute_ptrm_relaxation_step(self, theta: torch.Tensor, freq_weights: torch.Tensor, step_idx: int):
+        """
+        Implements Probabilistic Tiny Recursive Model dynamics in the phase domain.
+        Proactively injects step-wise Langevin variance to map alternative trajectories.
+        """
+        # Calculate localized coupling torque across the frequency teeth
+        coupling_torque = torch.matmul(torch.sin(theta), freq_weights)
+        
+        # Compute the instantaneous global phase-locking order parameter (R)
+        # High phase dispersion (low R) scales the thermal noise organically
+        r_norm = torch.abs(torch.exp(1j * theta).mean(dim=-1, keepdim=True))
+        dynamic_temperature = 1.8 * (1.0 - r_norm)
+        
+        # Inject noise directly into the phase angle domain, preserving the unit modulus
+        phase_langevin_noise = torch.randn_like(theta) * dynamic_temperature
+        
+        # Step-wise state update wrapped cleanly modulo 2*pi
+        theta_next = (theta + 0.15 * coupling_torque + phase_langevin_noise) % (2 * math.pi)
+        return theta_next
+        
+    def forward(self, initial_wave: torch.Tensor, max_loops: int = 24, fp_thresh: float = 0.996):
+        """
+        initial_wave shape: [Batch, num_experts, d_wave] complex phasors
+        """
+        batch_size = initial_wave.size(0)
+        theta = torch.angle(initial_wave) # Extract clean phase [B, E, d_wave]
+        
+        for step in range(max_loops):
+            old_theta = theta.clone()
+            
+            # Step-wise state update wrapped cleanly modulo 2*pi
+            theta = self.execute_ptrm_relaxation_step(theta, self.K_shared, step)
+            
+            # Fixed-Point Convergence Halting Verification
+            with torch.no_grad():
+                delta_alignment = F.cosine_similarity(torch.sin(theta), torch.sin(old_theta), dim=-1).mean()
+                if delta_alignment > fp_thresh:
+                    # Avoid print statement to prevent log spam during distillation
+                    break
+                    
+        return torch.complex(torch.cos(theta), torch.sin(theta))
+
+class HenriParametricTokenHead(nn.Module):
+    def __init__(self, d_wave=4096, vocab_size=256):
+        super().__init__()
+        # Decoupled projection paths to bridge the binary keyhole bottleneck
+        self.op_decoder = nn.Linear(1024, vocab_size, bias=False)      # Op-Code Subspace
+        self.color_decoder = nn.Linear(1024, 10, bias=False)          # Identity Subspace
+        self.spatial_decoder = nn.Sequential(                         # Spatial Parameter Subspace
+            nn.Linear(2048, 512),
+            nn.GELU(),
+            nn.Linear(512, 30) # Maps to maximum 30x30 ARC matrix index constraints
+        )
+        
+    def forward(self, settled_wave: torch.Tensor):
+        wave_angles = torch.angle(settled_wave)
+        
+        # Lossless fiber breakout of the hypervector channels
+        psi_op = wave_angles[..., 0:1024]
+        psi_id = wave_angles[..., 1024:2048]
+        psi_geo = wave_angles[..., 2048:4096]
+        
+        return {
+            "op_logits": self.op_decoder(psi_op),
+            "color_logits": self.color_decoder(psi_id),
+            "param_logits": self.spatial_decoder(psi_geo)
+        }
+

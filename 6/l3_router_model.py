@@ -126,6 +126,10 @@ class L3SwarmRouter(nn.Module):
         # 4b. Tiled Transducer Head: Projects 16 streams to global 6324x6324 grid
         self.tiled_transducer = TiledTransducerHead(hidden_dim=hidden_dim, tile_resolution=1581)
         
+        # Define and register expert_centroids on S^4095
+        centroids_init = torch.rand(num_experts, hopfield_dim) * 2.0 * math.pi
+        self.register_buffer("expert_centroids", centroids_init)
+        
         # Initialize parameters
         self._init_weights()
 
@@ -176,18 +180,64 @@ class L3SwarmRouter(nn.Module):
         return self.wave_to_activation(h_wave)
 
     def compute_routing_weights(self, h_wave: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:
-        """Uniform routing fallback for backward compatibility."""
-        batch_size = h_wave.shape[0] if h_wave.ndim > 1 else 1
-        device = h_wave.device
-        return torch.ones(batch_size, self.num_experts, device=device) / self.num_experts
+        """
+        Computes dynamic routing weights by measuring true mathematical phase
+        resonance between the active wavefront and expert anchor centroids.
+        Bypasses the uniform averaging bottleneck.
+        """
+        if h_wave.ndim == 1:
+            h_wave = h_wave.unsqueeze(0)
+            
+        # Isolate phase angles to insulate calculations from amplitude noise
+        # Cast to match the centroids buffer precision (e.g. bfloat16)
+        wave_phases = torch.angle(h_wave).to(dtype=self.expert_centroids.dtype)  # Shape: [Batch, 4096]
+        
+        # Expects self.expert_centroids buffer of shape: [NumExperts, 4096]
+        # Compute pairwise cosine alignment matrix over phase-space fields
+        # [Batch, 4096] x [4096, NumExperts] -> [Batch, NumExperts]
+        resonance_logits = torch.matmul(torch.sin(wave_phases), torch.sin(self.expert_centroids.t()))
+        
+        # Project to probability space via temperature-scaled softmax
+        return F.softmax(resonance_logits / temperature, dim=-1)
 
     @torch.no_grad()
-    def update_expert_centroids(self, h_wave: torch.Tensor):
-        return 0
+    def update_expert_centroids(self, h_wave: torch.Tensor) -> int:
+        """
+        Identifies the winning expert and updates its centroid using momentum.
+        """
+        if h_wave.ndim == 1:
+            h_wave = h_wave.unsqueeze(0)
+        # Cast to match the centroids buffer precision
+        wave_phases = torch.angle(h_wave).to(dtype=self.expert_centroids.dtype)  # Shape: [Batch, 4096]
+        
+        # Calculate resonance with each expert centroid
+        # [Batch, 4096] x [4096, NumExperts] -> [Batch, NumExperts]
+        resonance_logits = torch.matmul(torch.sin(wave_phases), torch.sin(self.expert_centroids.t()))
+        winner_idx = torch.argmax(resonance_logits, dim=-1)[0].item()
+        
+        # Update the winning expert centroid using momentum
+        new_phases = wave_phases[0]
+        self.expert_centroids[winner_idx] = self.momentum * self.expert_centroids[winner_idx] + (1.0 - self.momentum) * new_phases
+        return winner_idx
 
     @torch.no_grad()
-    def measure_centroid_dispersion(self):
-        return 0.0
+    def measure_centroid_dispersion(self) -> float:
+        """
+        Calculates the actual geometric variance of your expert channels.
+        Acts as a functional gate against MoE representation collapse.
+        """
+        # Enforce strict L2 norm preservation on the hypersphere boundary
+        normalized_centroids = F.normalize(self.expert_centroids, p=2, dim=-1)
+        similarity_matrix = torch.matmul(normalized_centroids, normalized_centroids.t())
+        
+        # Isolate the upper triangular elements to calculate genuine mean overlap
+        triu_indices = torch.triu_indices(self.num_experts, self.num_experts, offset=1)
+        mean_overlap = similarity_matrix[triu_indices[0], triu_indices[1]].mean().item()
+        
+        # Dispersion tracks inversely to mutual similarity overlap
+        real_dispersion = 1.0 - max(0.0, mean_overlap)
+        return float(real_dispersion)
+
 
     def forward(self, tokens=None, activations=None):
         """

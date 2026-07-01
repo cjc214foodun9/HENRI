@@ -701,24 +701,78 @@
       </div>
     </div>
     
-    <!-- Right Pane: Telemetry and Step Trace -->
-    <div class="right-pane">
-      <div class="pane-header">
-        <h2><i class="fa-solid fa-microscope"></i> Swarm Brain Monitor</h2>
-        <button id="clear-trace-btn" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; display: none;" onclick="clearTrace()">
-          <i class="fa-solid fa-trash-can" style="margin-right: 4px;"></i> Clear Trace
-        </button>
-      </div>
+    <!-- Right Pane: Telemetry and Accessibility -->
+    <div class="right-pane" style="height: 100%; display: flex; flex-direction: column;">
       
-      <div class="brain-content" id="brain-content">
-        <div class="brain-placeholder" id="brain-placeholder">
-          <i class="fa-solid fa-microchip"></i>
-          <div>
-            <h4 style="margin-bottom: 4px; color: var(--text-main);">Gateway Standby</h4>
-            <p style="font-size: 0.85rem; max-width: 280px; margin: 0 auto;">Enter a query on the left. The gateway will dynamically route the request and output logs here.</p>
+      <!-- Top Section: Brain Monitor -->
+      <div class="brain-section" style="flex: 1.1; display: flex; flex-direction: column; overflow: hidden; border-bottom: 1px solid var(--border-panel);">
+        <div class="pane-header" style="border-bottom: 1px solid var(--border-panel);">
+          <h2><i class="fa-solid fa-microscope"></i> Swarm Brain Monitor</h2>
+          <button id="clear-trace-btn" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; display: none;" onclick="clearTrace()">
+            <i class="fa-solid fa-trash-can" style="margin-right: 4px;"></i> Clear Trace
+          </button>
+        </div>
+        <div class="brain-content" id="brain-content" style="flex: 1; padding: 20px; overflow-y: auto;">
+          <div class="brain-placeholder" id="brain-placeholder">
+            <i class="fa-solid fa-microchip"></i>
+            <div>
+              <h4 style="margin-bottom: 4px; color: var(--text-main);">Gateway Standby</h4>
+              <p style="font-size: 0.85rem; max-width: 280px; margin: 0 auto;">Enter a query on the left. The gateway will dynamically route the request and output logs here.</p>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Bottom Section: Accessibility Audit Suite -->
+      <div class="accessibility-section" style="flex: 0.9; display: flex; flex-direction: column; overflow: hidden; background: rgba(8, 12, 22, 0.25);">
+        <div class="pane-header" style="background: rgba(15, 23, 42, 0.25); border-bottom: 1px solid var(--border-panel);">
+          <h2><i class="fa-solid fa-universal-access" style="color: var(--secondary);"></i> Accessibility Audit Suite</h2>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; color: var(--text-main);">
+              <input type="checkbox" id="voiceover-toggle" style="accent-color: var(--secondary);"> VoiceOver Simulator
+            </label>
+          </div>
+        </div>
+        
+        <div class="accessibility-content" style="flex: 1; padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
+          <!-- VoiceOver output -->
+          <div class="accessibility-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-panel); border-radius: 10px; padding: 10px 14px;">
+            <h4 style="font-size: 0.8rem; color: var(--secondary); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; font-weight: 600;">
+              <i class="fa-solid fa-volume-high"></i> VoiceOver Screen Reader Output
+            </h4>
+            <div id="voiceover-speech-text" style="font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: #a5f3fc; background: rgba(0,0,0,0.4); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(20, 184, 166, 0.2); word-break: break-all;">
+              VoiceOver standby. Check checkbox to simulate screen reader narration.
+            </div>
+          </div>
+
+          <!-- WCAG Audit and Repair Log -->
+          <div class="accessibility-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-panel); border-radius: 10px; padding: 10px 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <h4 style="font-size: 0.8rem; color: var(--primary); display: flex; align-items: center; gap: 6px; font-weight: 600;">
+                <i class="fa-solid fa-circle-nodes"></i> Real-time WCAG Audit Logs
+              </h4>
+              <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-muted); user-select: none;">
+                <input type="checkbox" id="repair-toggle" checked style="accent-color: var(--primary);"> Show Repaired AXTree
+              </label>
+            </div>
+            
+            <div id="audit-violations" style="font-size: 0.78rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; align-items: center; gap: 6px; color: var(--accent-success);">
+                <i class="fa-solid fa-circle-check"></i> System idle. All controls compliant.
+              </div>
+            </div>
+          </div>
+
+          <!-- Active AXTree Explorer -->
+          <div class="accessibility-card" style="flex: 1; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-panel); border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; min-height: 120px;">
+            <h4 style="font-size: 0.8rem; color: var(--text-main); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; font-weight: 600;">
+              <i class="fa-solid fa-code"></i> Active AXTree Explorer
+            </h4>
+            <pre id="axtree-viewer" style="flex: 1; margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 0.74rem; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-panel); padding: 8px 10px; border-radius: 6px; overflow-y: auto; color: #38bdf8; max-height: 100%; white-space: pre-wrap;">Waiting for interaction...</pre>
+          </div>
+        </div>
+      </div>
+      
     </div>
     
   </div>
@@ -843,6 +897,17 @@
 
         renderTraceSteps(data.steps);
         appendMessage('bot', data.response);
+        
+        // Handle SDUI component compilation
+        if (data.compiled_sdui_html) {
+          appendSDUIMessage(data.compiled_sdui_html);
+        }
+
+        // Save data globally for toggle changes
+        window.lastActiveData = data;
+
+        // Update Accessibility Suite
+        updateAccessibilitySuite(data);
       } catch (err) {
         console.error(err);
         appendMessage('bot', `**Error:** Operation failed. ${err.message || 'Check terminal logs.'}`);
@@ -950,6 +1015,99 @@
       brainPlaceholder.style.display = 'flex';
       clearTraceBtn.style.display = 'none';
     }
+
+    function appendSDUIMessage(htmlContent) {
+      const sduiDiv = document.createElement('div');
+      sduiDiv.className = 'message bot';
+      sduiDiv.innerHTML = `
+        <div class="message-avatar" style="background: linear-gradient(135deg, var(--secondary), #0d9488); color: white;"><i class="fa-solid fa-window-maximize"></i></div>
+        <div class="message-content" style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(20, 184, 166, 0.35); border-top-left-radius: 2px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.35);">
+          <div style="font-size: 0.8rem; font-weight: 600; color: var(--secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-server"></i> Server-Driven UI (WCAG 2.2 Compliant)
+          </div>
+          <div class="compiled-sdui-container" style="color: var(--text-main); font-size: 0.95rem;">
+            ${htmlContent}
+          </div>
+        </div>
+      `;
+      chatHistory.appendChild(sduiDiv);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    function updateAccessibilitySuite(data) {
+      const voiceoverText = document.getElementById('voiceover-speech-text');
+      const auditViolations = document.getElementById('audit-violations');
+      const voiceoverToggle = document.getElementById('voiceover-toggle');
+      
+      // 1. Update VoiceOver text display
+      if (data.speech_announcement) {
+        voiceoverText.innerText = data.speech_announcement;
+        
+        // Speak if VoiceOver toggle is active
+        if (voiceoverToggle.checked) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(data.speech_announcement);
+          utterance.rate = 1.0;
+          window.speechSynthesis.speak(utterance);
+        }
+      } else {
+        voiceoverText.innerText = "VoiceOver standby.";
+      }
+
+      // 2. Render WCAG Audit report
+      auditViolations.innerHTML = '';
+      const rep = data.compliance_report;
+      
+      if (!rep || (rep.sc_1_1_1_violations.length === 0 && rep.sc_3_3_2_violations.length === 0)) {
+        auditViolations.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 6px; color: var(--accent-success);">
+            <i class="fa-solid fa-circle-check"></i> System compliant. No active violations.
+          </div>
+        `;
+      } else {
+        // Render SC 1.1.1 violations
+        rep.sc_1_1_1_violations.forEach(v => {
+          auditViolations.innerHTML += `
+            <div style="background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.25); border-radius: 6px; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px;">
+              <span style="color: #f87171; font-weight: 600;"><i class="fa-solid fa-circle-exclamation"></i> WCAG SC 1.1.1 Violation: Non-Text Content</span>
+              <span style="color: var(--text-muted); font-size: 0.74rem;">Node '${v.id}': ${v.name || 'Image'} has empty alt text.</span>
+              <span style="color: var(--secondary); font-size: 0.74rem; font-weight: 500;"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Bridge Repair: Auto-injected descriptive alt text.</span>
+            </div>
+          `;
+        });
+
+        // Render SC 3.3.2 violations
+        rep.sc_3_3_2_violations.forEach(v => {
+          auditViolations.innerHTML += `
+            <div style="background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.25); border-radius: 6px; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px;">
+              <span style="color: #f87171; font-weight: 600;"><i class="fa-solid fa-circle-exclamation"></i> WCAG SC 3.3.2 Violation: Labels or Instructions</span>
+              <span style="color: var(--text-muted); font-size: 0.74rem;">Input field '${v.id}' is missing a label name.</span>
+              <span style="color: var(--secondary); font-size: 0.74rem; font-weight: 500;"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Bridge Repair: Linked helper tags & injected accessible name.</span>
+            </div>
+          `;
+        });
+      }
+
+      // 3. Render AXTree JSON based on repair toggle
+      updateAXTreeViewer();
+    }
+
+    function updateAXTreeViewer() {
+      const axtreeViewer = document.getElementById('axtree-viewer');
+      const repairToggle = document.getElementById('repair-toggle');
+      const data = window.lastActiveData;
+
+      if (!data) return;
+
+      if (repairToggle.checked && data.repaired_axtree) {
+        axtreeViewer.innerText = JSON.stringify(data.repaired_axtree, null, 2);
+      } else if (data.axtree) {
+        axtreeViewer.innerText = JSON.stringify(data.axtree, null, 2);
+      }
+    }
+
+    // Set up toggle listener
+    document.getElementById('repair-toggle').addEventListener('change', updateAXTreeViewer);
   </script>
 </body>
 </html>

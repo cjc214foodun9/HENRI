@@ -102,6 +102,24 @@ def main():
         print(f"[FATAL] Failed to run Unified System Integrity Suite: {e}")
         sys.exit(1)
         
+    # Run the newly implemented System and Agentic Diagnostics
+    print("[SYSTEM] Running System-Level & Agentic Diagnostics Suite...")
+    try:
+        import pytest
+        exit_code = pytest.main([
+            "-v", 
+            os.path.join(PROJECT_DIR, "6", "test_system_diagnostics.py"),
+            os.path.join(PROJECT_DIR, "6", "test_agentic_diagnostics.py"),
+            "--junitxml=" + os.path.join(PROJECT_DIR, "archive", "diagnostics", "junit_report.xml")
+        ])
+        if exit_code != 0:
+            print(f"[FATAL] Diagnostics suite failed with exit code: {exit_code}. Aborting benchmark run.")
+            sys.exit(1)
+        print("[SYSTEM] Diagnostics suite passed successfully.")
+    except Exception as e:
+        print(f"[FATAL] Failed to execute diagnostics suite: {e}")
+        sys.exit(1)
+        
     # 1. Setup Database Connection URL fallback
     db_url = os.environ.get("DATABASE_URL")
     if not db_url:

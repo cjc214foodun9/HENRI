@@ -36,13 +36,16 @@ class AngularSpectrumPropagator(nn.Module):
     def forward(self, wave: torch.Tensor) -> torch.Tensor:
         # Reconstruct complex H on the wave's device (which is CPU)
         dev = wave.device
-        H = torch.complex(self.H_real.to(dev), self.H_imag.to(dev))
+        H = torch.complex(self.H_real.to(device=dev, dtype=torch.float32), self.H_imag.to(device=dev, dtype=torch.float32))
+        # Ensure wave is complex64
+        wave_c64 = wave.to(dtype=torch.complex64)
         # 1. Transform to spatial frequency domain via Orthonormal 2D FFT
-        wave_fft = torch.fft.fft2(wave, norm='ortho')
+        wave_fft = torch.fft.fft2(wave_c64, norm='ortho')
         # 2. Out-of-place multiplication ensures Autograd retains clean forward state access
         wave_fft_modulated = wave_fft * H
         # 3. Transform back to the physical spatial domain
-        return torch.fft.ifft2(wave_fft_modulated, norm='ortho')
+        out = torch.fft.ifft2(wave_fft_modulated, norm='ortho')
+        return out.to(dtype=wave.dtype)
 
 
 class OpticalD2NNLayer(nn.Module):
@@ -119,7 +122,35 @@ class ZoneBEmulator(nn.Module):
         for layer in self.layers:
             layer.inject_langevin_noise(langevin_heat)
 
-    def forward(self, wave: torch.Tensor, target_manifold: torch.Tensor, langevin_heat: float = 0.0):
+    def forward(self, wave=None, target_manifold=None, langevin_heat: float = 0.0, hr_wavefront=None):
+        # Support both 'wave' and 'hr_wavefront' keywords
+        if wave is None:
+            wave = hr_wavefront
+            
+        if wave is None:
+            raise ValueError("[!] ZoneBEmulator.forward: wave or hr_wavefront must be provided.")
+            
+        # Support numpy arrays
+        input_was_numpy = False
+        if isinstance(wave, np.ndarray):
+            input_was_numpy = True
+            wave = torch.tensor(wave, dtype=torch.complex64, device=self.device)
+        else:
+            wave = wave.to(device=self.device, dtype=torch.complex64)
+            
+        if isinstance(target_manifold, np.ndarray):
+            target_manifold = torch.tensor(target_manifold, dtype=torch.complex64, device=self.device)
+        else:
+            target_manifold = target_manifold.to(device=self.device, dtype=torch.complex64)
+
+        # Reshape to 2D N x N
+        if wave.numel() == 6324 * 6324:
+            wave = wave.view(6324, 6324)
+            target_manifold = target_manifold.view(6324, 6324)
+        else:
+            wave = wave.view(self.N, self.N)
+            target_manifold = target_manifold.view(self.N, self.N)
+
         # 1. Check if the Zone A Divergent Master is calling for a thermodynamic shake
         if langevin_heat > 0.0:
             self.set_microheaters(langevin_heat)
@@ -136,6 +167,12 @@ class ZoneBEmulator(nn.Module):
         # 4. Geometrically verify the resulting thought against the Zone C Axiom
         transmission_truth, reflection_delta, error_energy = self.sagnac_veto(current_wave, target_manifold)
         
+        if input_was_numpy:
+            return (
+                transmission_truth.detach().cpu().numpy(),
+                reflection_delta.detach().cpu().numpy(),
+                error_energy.item() if hasattr(error_energy, 'item') else error_energy
+            )
         return transmission_truth, reflection_delta, error_energy
 
 

@@ -52,7 +52,7 @@ class EmergentCognitiveSwarm(nn.Module):
                 alpha = torch.softmax(alpha + noise, dim=-1)
             alpha_routings.append(alpha)
             
-        device = self.router.w_down.weight.device
+        device = next(self.router.parameters()).device if list(self.router.parameters()) else torch.device("cpu")
         
         vocab_size = 32000
         if hasattr(self.orchestrator, 'l3_router') and self.orchestrator.l3_router is not None:
@@ -361,3 +361,91 @@ class EmergentCognitiveSwarm(nn.Module):
         )
         
         return raw_prompt
+
+class HenriGapJunctionSwarmSynchronizer(nn.Module):
+    def __init__(self, num_experts=16, d_wave=4096, alpha_anneal=0.15):
+        super().__init__()
+        self.num_experts = num_experts
+        self.d_wave = d_wave
+        self.alpha_anneal = alpha_anneal  # Scale of localized thermal perturbation
+        
+    @torch.no_grad()
+    def execute_sync_junction(self, lora_managers, resonance_scores):
+        """
+        lora_managers: dict or list of DynamicLoraManager
+        resonance_scores: tensor containing active alignment scalars bounded [0, 1]
+        """
+        # 1. Identify the high-coherence champion node
+        max_score, champion_idx = torch.max(resonance_scores, dim=0)
+        
+        # 2. Establish the activation gate threshold (e.g., 93.6% soft-match floor)
+        sync_gate_threshold = 0.935
+        
+        if max_score > sync_gate_threshold:
+            print(f"[GAP JUNCTION OPEN] Swarm Expert Node {champion_idx.item()} achieved critical coherence: {max_score.item():.4f}")
+            
+            # Isolate the winner's geometric weight signature (The Ephemeral Attractor)
+            champion_A = lora_managers[champion_idx.item()].lora_A.clone()
+            champion_B = lora_managers[champion_idx.item()].lora_B.clone()
+            
+            # 3. Broadcast clone to all other slots parallelly across the active stream
+            for e in range(self.num_experts):
+                if e == champion_idx.item():
+                    continue  # Protect the genetic lineage of the active champion
+                    
+                # Compute localized Langevin noise driven by the distance to perfect alignment
+                # Lagging heads receive a larger thermal shock to expand their exploration radius
+                stress_delta = 1.0 - resonance_scores[e].item()
+                thermal_variance = self.alpha_anneal * stress_delta
+                
+                # Phase-domain Langevin injection mask
+                langevin_shaker_A = torch.randn_like(champion_A) * thermal_variance
+                langevin_shaker_B = torch.randn_like(champion_B) * thermal_variance
+                
+                # Overwrite weight properties and deform viscoelastically into adjacent space
+                lora_managers[e].lora_A.copy_(champion_A + langevin_shaker_A)
+                lora_managers[e].lora_B.copy_(champion_B + langevin_shaker_B)
+                lora_managers[e].save_weights()
+                
+            print(f"[SUCCESS] Swarm syncytium locked. 15 nodes aligned to champion topology.")
+        else:
+            # Maintain independent parallel exploration paths if no head has unlocked a basin
+            pass
+            
+        return lora_managers
+
+    @torch.no_grad()
+    def synchronize_swarm_syncytium(self, expert_layers: nn.ModuleList, alignment_scores: torch.Tensor, alpha_anneal: float = 0.12):
+        """
+        Operationalizes Michael Levin's TAME framework within graphics hardware.
+        Clones high-resonance expert parameters across lagging nodes mid-flight.
+        """
+        # Identify the current champion node exploring the grid layout
+        max_resonance, champion_idx = torch.max(alignment_scores, dim=0)
+        
+        # Anchor floor matching your 93.6% validation sweet-spot
+        critical_coherence_gate = 0.935
+        
+        if max_resonance > critical_coherence_gate:
+            print(f"[GAP JUNCTION ENGAGED] Node {champion_idx.item()} reached attractor basin: {max_resonance.item():.4f}")
+            
+            # Isolate the winner's state-dict parameters
+            champion_state = expert_layers[champion_idx].state_dict()
+            
+            for e in range(len(expert_layers)):
+                if e == champion_idx:
+                    continue # Protect the winner's lineage from thermal distortion
+                    
+                # Calculate localized Langevin variance based on distance to excellence
+                # Trailing expert nodes receive a larger thermal perturbation to push them wider
+                stress_delta = 1.0 - alignment_scores[e].item()
+                thermal_variance = alpha_anneal * stress_delta
+                
+                # Clone parameters with phase-domain stochastic deformations
+                for key, param in expert_layers[e].named_parameters():
+                    if key in champion_state:
+                        noise_shaker = torch.randn_like(param) * thermal_variance
+                        param.copy_(champion_state[key] + noise_shaker)
+                        
+            print(f"[SUCCESS] Swarm sync complete. 15 expert topologies realigned to champion basin.")
+        return expert_layers

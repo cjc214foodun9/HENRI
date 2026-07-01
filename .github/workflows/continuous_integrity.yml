@@ -23,22 +23,34 @@ jobs:
     - name: Execute Remote Substrate Synchronization  
       run: |  
         # Rsync or copy verified source code changes directly onto the remote server footprint  
-        scp -P 32785 -o StrictHostKeyChecking=no -r ./6 root@ssh1.vast.ai:/workspace/HENRI/  
-        scp -P 32785 -o StrictHostKeyChecking=no ./unify_system_integrity.py root@ssh1.vast.ai:/workspace/HENRI/
+        scp -P ${{ secrets.VAST_PORT }} -o StrictHostKeyChecking=no -r ./6 root@${{ secrets.VAST_HOST }}:/workspace/HENRI/  
+        scp -P ${{ secrets.VAST_PORT }} -o StrictHostKeyChecking=no ./unify_system_integrity.py root@${{ secrets.VAST_HOST }}:/workspace/HENRI/
 
     - name: Trigger Unified System Integrity Suite  
       run: |  
         # Run the single cohesive integrity harness natively inside the remote container  
-        ssh -p 32785 -o StrictHostKeyChecking=no root@ssh1.vast.ai \
+        ssh -p ${{ secrets.VAST_PORT }} -o StrictHostKeyChecking=no root@${{ secrets.VAST_HOST }} \
           "export DATABASE_URL=${{ secrets.DB_URL }} && /venv/main/bin/python /workspace/HENRI/unify_system_integrity.py"
 
-    - name: Download Telemetry Metrics Report  
+    - name: Execute System and Agentic Diagnostics  
+      run: |  
+        # Run execution profilers and behavioral trace checks headlessly  
+        ssh -p ${{ secrets.VAST_PORT }} -o StrictHostKeyChecking=no root@${{ secrets.VAST_HOST }} \
+          "export DATABASE_URL=${{ secrets.DB_URL }} && /venv/main/bin/python -m pytest /workspace/HENRI/6/test_system_diagnostics.py /workspace/HENRI/6/test_agentic_diagnostics.py -v --junitxml=/workspace/HENRI/archive/diagnostics/junit_report.xml"
+
+    - name: Download Telemetry Metrics and Diagnostic Reports  
       if: always()  
       run: |  
-        scp -P 32785 -o StrictHostKeyChecking=no root@ssh1.vast.ai:/workspace/HENRI/system_integrity_report.json ./
+        scp -P ${{ secrets.VAST_PORT }} -o StrictHostKeyChecking=no root@${{ secrets.VAST_HOST }}:/workspace/HENRI/system_integrity_report.json ./ || true
+        scp -P ${{ secrets.VAST_PORT }} -o StrictHostKeyChecking=no root@${{ secrets.VAST_HOST }}:/workspace/HENRI/archive/diagnostics/junit_report.xml ./ || true
+        scp -P ${{ secrets.VAST_PORT }} -o StrictHostKeyChecking=no root@${{ secrets.VAST_HOST }}:/workspace/HENRI/6/archive/diagnostics/model_trace.pt.trace.json ./ || true
 
-    - name: Archive System Integrity Artifacts  
+    - name: Archive System Integrity & Diagnostics Artifacts  
+      if: always()  
       uses: actions/upload-artifact@v4  
       with:  
         name: henri-telemetry-ledger  
-        path: ./system_integrity_report.json
+        path: |  
+          ./system_integrity_report.json  
+          ./junit_report.xml  
+          ./model_trace.pt.trace.json  

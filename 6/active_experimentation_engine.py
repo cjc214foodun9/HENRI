@@ -1,9 +1,13 @@
 import sys
+import time
+import numpy as np
 import torch
 import torch.nn as torch_nn
 import torch.nn.functional as F
 import collections
 from typing import List, Callable, Dict, Any
+
+
 
 def safe_print(msg: Any):
     try:
@@ -207,6 +211,13 @@ class ActiveExperimentationEngine:
         from topological_braid_core import HenriTopologicalPhaseVortices
         self.avalanche_lock = HenriAvalanchePhaseLocking(num_oscillators=4096, num_experts=self.orchestrator.num_streams).to(device)
         self.topological_vortices = HenriTopologicalPhaseVortices(lattice_dim=64).to(device)
+        
+        # Initialize Probabilistic Tiny Recursive Model (PTRM) Fixed-Point Reasoner & Gap Junction Synchronizer
+        from hierarchical_sync_core import HenriThermodynamicFPRM
+        from emergent_cognitive_swarm import HenriGapJunctionSwarmSynchronizer
+        self.fprm = HenriThermodynamicFPRM(d_wave=self.orchestrator.hrr_dim, num_experts=self.orchestrator.num_streams).to(device)
+        self.gap_synchronizer = HenriGapJunctionSwarmSynchronizer(num_experts=self.orchestrator.num_streams, d_wave=self.orchestrator.hrr_dim, alpha_anneal=0.15).to(device)
+
 
     def fetch_active_playbook_waves(self):
         if hasattr(self, 'playbook_wave') and self.playbook_wave is not None:
@@ -469,6 +480,17 @@ class ActiveExperimentationEngine:
             current_thought_wave = self.project_code_to_wave(best_candidate)
             if current_thought_wave.dim() == 1:
                 current_thought_wave = current_thought_wave.unsqueeze(0)
+                
+            # Refine thought wave using the Next-Latent Fixed-Point Reasoner (FPRM)
+            try:
+                thought_wave_stacked = current_thought_wave.unsqueeze(1).repeat(1, self.orchestrator.num_streams, 1)
+                refined_wave_stacked = self.fprm(thought_wave_stacked, max_loops=24, fp_thresh=0.996)
+                # Collapse/pool back to [Batch, d_wave] by taking the mean phasor
+                current_thought_wave = refined_wave_stacked.mean(dim=1)
+                current_thought_wave = torch.nn.functional.normalize(current_thought_wave.to(torch.complex64), p=2, dim=-1)
+            except Exception as fprm_err:
+                print(f"[ENGINE WARNING] FPRM refinement encountered an error: {fprm_err}. Using baseline projection.")
+
 
             # Step 2: Query HENRI's internal thermostat to decide on noise injection
             # Query the public.zone_c_resonant_hypersphere using complex_hypersphere_resonance FFI
@@ -496,8 +518,11 @@ class ActiveExperimentationEngine:
             
             # Extract real and imaginary lists for SQL FFI
             wave_flat = current_thought_wave.flatten()
-            r_list = torch.real(wave_flat).tolist()
-            i_list = torch.imag(wave_flat).tolist()
+            
+            db_vec = np.empty(8192, dtype=np.float32)
+            db_vec[:4096] = torch.real(wave_flat).detach().cpu().numpy()
+            db_vec[4096:] = torch.imag(wave_flat).detach().cpu().numpy()
+            wavefront_str = "[" + ",".join(map(str, db_vec.tolist())) + "]"
             
             lexicon_list = []
             max_resonance_score = 0.0
@@ -506,29 +531,32 @@ class ActiveExperimentationEngine:
                 with psycopg.connect(db_url, connect_timeout=3) as conn:
                     with conn.cursor() as cur:
                         cur.execute("""
-                            SELECT real_phases, imag_phases, complex_hypersphere_resonance(real_phases, imag_phases, %s::real[], %s::real[]) AS resonance_score
-                            FROM public.zone_c_resonant_hypersphere
-                            WHERE domain = %s
-                            ORDER BY resonance_score DESC
+                            SELECT hrr_wavefront, 1.0 - (hrr_wavefront <=> %s::vector) AS resonance_score
+                            FROM public.hrr_canonical_lexicon
+                            ORDER BY hrr_wavefront <=> %s::vector ASC
                             LIMIT 1024;
-                        """, (r_list, i_list, db_domain))
+                        """, (wavefront_str, wavefront_str))
                         rows = cur.fetchall()
                         
                         for row in rows:
-                            real_p, imag_p, score = row[0], row[1], row[2]
+                            hrr_vector, score = row[0], row[1]
                             max_resonance_score = max(max_resonance_score, score)
                             
                             # Rehydrate vector to torch tensor
-                            r_tensor = torch.tensor(real_p, dtype=torch.float32)
-                            i_tensor = torch.tensor(imag_p, dtype=torch.float32)
+                            # pgvector returns a string or list. If it is a string like '[1,2,...]', parse it or cast it
+                            if isinstance(hrr_vector, str):
+                                hrr_vector = list(map(float, hrr_vector.strip('[]').split(',')))
+                            hrr_tensor = torch.tensor(hrr_vector, dtype=torch.float32)
+                            r_tensor = hrr_tensor[:4096]
+                            i_tensor = hrr_tensor[4096:]
                             c_vec = torch.complex(r_tensor, i_tensor)
                             lexicon_list.append(torch.real(c_vec).detach().cpu())
             except Exception as e:
-                print(f"[ENGINE DB RETRIEVAL WARNING] Failed to fetch from resonant hypersphere: {e}")
+                print(f"[ENGINE DB RETRIEVAL WARNING] Failed to fetch from hrr_canonical_lexicon: {e}")
             
             if lexicon_list:
                 zone_c_lexicon = torch.stack(lexicon_list)
-                print(f"[ENGINE DB RETRIEVAL] Loaded {len(lexicon_list)} attractors from public.zone_c_resonant_hypersphere. Max resonance score: {max_resonance_score:.4f}")
+                print(f"[ENGINE DB RETRIEVAL] Loaded {len(lexicon_list)} attractors from public.hrr_canonical_lexicon. Max resonance score: {max_resonance_score:.4f}")
             else:
                 # Fallback to Hopfield vocabulary if DB query fails or is empty
                 if hasattr(self.orchestrator, 'hopfield') and self.orchestrator.hopfield.vocabulary:
@@ -845,6 +873,29 @@ class ActiveExperimentationEngine:
             turn_best_score = max([c[2] for c in scored_candidates]) if scored_candidates else 0.0
             if turn_best_score > self.best_sandbox_accuracy:
                 self.best_sandbox_accuracy = turn_best_score
+
+            # Execute biophysical Gap Junction Swarm Synchronization (Prune & Clone)
+            try:
+                resonance_scores = torch.zeros(self.orchestrator.num_streams, device=current_thought_wave.device)
+                for idx, cand_info in enumerate(scored_candidates):
+
+                    if idx < self.orchestrator.num_streams:
+                        # cand_info[2] is the candidate's training score
+                        resonance_scores[idx] = cand_info[2]
+                self.gap_synchronizer.execute_sync_junction(
+                    self.orchestrator.lora_managers,
+                    resonance_scores
+                )
+                if hasattr(self.orchestrator, '_diffusion_core_model') and self.orchestrator._diffusion_core_model is not None:
+                    self.gap_synchronizer.synchronize_swarm_syncytium(
+                        self.orchestrator._diffusion_core_model.layers[0].experts,
+                        resonance_scores
+                    )
+                    if hasattr(self.orchestrator._diffusion_core_model, 'orthonormalize_experts'):
+                        self.orchestrator._diffusion_core_model.orthonormalize_experts()
+            except Exception as sync_err:
+                print(f"[ENGINE WARNING] Swarm Gap Junction Synchronization failed: {sync_err}")
+
 
             # 6. The Drift: Select winning candidate with lowest physical error energy
             valid_candidates = [c for c in scored_candidates if c[3] is not None] # c[3] is truth_tensor

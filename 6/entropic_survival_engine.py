@@ -1,5 +1,7 @@
+import numpy as np
 import torch
 import torch.nn.functional as F
+
 
 class EntropicSurvivalEngine:
     def __init__(self, num_experts=16, wave_dim=4096, survival_threshold=0.35):
@@ -73,10 +75,15 @@ class EntropicSurvivalEngine:
         if residual_wave is None:
             return
             
-        if isinstance(residual_wave, torch.Tensor) and torch.is_complex(residual_wave):
-            residual_wave = torch.cat([residual_wave.real, residual_wave.imag], dim=-1).to(torch.float32)
-        elif not isinstance(residual_wave, torch.Tensor):
-            residual_wave = torch.tensor(residual_wave, dtype=torch.float32)
+        if isinstance(residual_wave, np.ndarray):
+            residual_wave = torch.tensor(residual_wave)
+            
+        if torch.is_complex(residual_wave):
+            residual_wave = torch.cat([residual_wave.real.flatten(), residual_wave.imag.flatten()], dim=-1).to(torch.float32)
+        else:
+            residual_wave = residual_wave.flatten().to(torch.float32)
+
+
             
         # Sort experts by their entropic fitness
         ranked_indices = torch.argsort(fitness_scores, descending=True)

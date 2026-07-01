@@ -540,3 +540,15 @@ class ProprietaryHENRICore(nn.Module):
         norm_imag = self.final_layer_norm(final_output.imag.to(dtype=self.layers[0].beta_1.dtype))
         final_output = torch.complex(norm_real.float(), norm_imag.float())
         return final_output, total_system_energy.mean()
+
+    @torch.no_grad()
+    def orthonormalize_experts(self):
+        """
+        Applies Björck-Newton iterations to enforce Stiefel manifold invariants
+        on all expert linear layers across all fluid blocks.
+        """
+        for layer_block in self.layers:
+            if hasattr(layer_block, 'experts'):
+                for expert in layer_block.experts:
+                    if hasattr(expert, 'phase_shift') and hasattr(expert.phase_shift, 'force_unitary_manifold'):
+                        expert.phase_shift.force_unitary_manifold()
