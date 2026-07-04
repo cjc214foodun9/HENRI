@@ -1,0 +1,9 @@
+﻿data/
+__pycache__/
+*.zip
+*.h5
+*.bin
+*.pt
+*.pth
+.venv-backups/
+llama_tokenizer_local/

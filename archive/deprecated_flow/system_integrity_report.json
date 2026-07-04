@@ -1,0 +1,103 @@
+{
+  "timestamp": 1782457562.445287,
+  "environment": "Local_Config",
+  "audits": {
+    "manifold_orthogonality": {
+      "status": "PASSED",
+      "max_deviation": 4.328434442868456e-05,
+      "details": {
+        "layers.0.experts.0.phase_shift.weight": 4.052739677717909e-05,
+        "layers.0.experts.1.phase_shift.weight": 4.31896150985267e-05,
+        "layers.0.experts.2.phase_shift.weight": 4.223670839564875e-05,
+        "layers.0.experts.3.phase_shift.weight": 4.244156662025489e-05,
+        "layers.0.experts.4.phase_shift.weight": 3.9406873838743195e-05,
+        "layers.0.experts.5.phase_shift.weight": 3.9832153561292216e-05,
+        "layers.0.experts.6.phase_shift.weight": 4.1165942093357444e-05,
+        "layers.0.experts.7.phase_shift.weight": 4.1029768908629194e-05,
+        "layers.0.experts.8.phase_shift.weight": 4.2609066440491006e-05,
+        "layers.0.experts.9.phase_shift.weight": 4.10400825785473e-05,
+        "layers.0.experts.10.phase_shift.weight": 3.994518192484975e-05,
+        "layers.0.experts.11.phase_shift.weight": 4.0662253013579175e-05,
+        "layers.0.experts.12.phase_shift.weight": 4.3177249608561397e-05,
+        "layers.0.experts.13.phase_shift.weight": 4.112343958695419e-05,
+        "layers.0.experts.14.phase_shift.weight": 4.006639574072324e-05,
+        "layers.0.experts.15.phase_shift.weight": 4.136346251470968e-05,
+        "layers.1.experts.0.phase_shift.weight": 4.142084071645513e-05,
+        "layers.1.experts.1.phase_shift.weight": 4.048705886816606e-05,
+        "layers.1.experts.2.phase_shift.weight": 4.0394887037109584e-05,
+        "layers.1.experts.3.phase_shift.weight": 4.044528759550303e-05,
+        "layers.1.experts.4.phase_shift.weight": 4.015195372630842e-05,
+        "layers.1.experts.5.phase_shift.weight": 4.132075991947204e-05,
+        "layers.1.experts.6.phase_shift.weight": 3.91472021874506e-05,
+        "layers.1.experts.7.phase_shift.weight": 4.325222471379675e-05,
+        "layers.1.experts.8.phase_shift.weight": 4.242020077072084e-05,
+        "layers.1.experts.9.phase_shift.weight": 4.2493909859331325e-05,
+        "layers.1.experts.10.phase_shift.weight": 4.156519935349934e-05,
+        "layers.1.experts.11.phase_shift.weight": 4.017360333818942e-05,
+        "layers.1.experts.12.phase_shift.weight": 4.2247167584719136e-05,
+        "layers.1.experts.13.phase_shift.weight": 4.140041710343212e-05,
+        "layers.1.experts.14.phase_shift.weight": 4.087814886588603e-05,
+        "layers.1.experts.15.phase_shift.weight": 4.080170765519142e-05,
+        "layers.2.experts.0.phase_shift.weight": 4.140758028370328e-05,
+        "layers.2.experts.1.phase_shift.weight": 3.993383143097162e-05,
+        "layers.2.experts.2.phase_shift.weight": 4.0239148802356794e-05,
+        "layers.2.experts.3.phase_shift.weight": 4.102285311091691e-05,
+        "layers.2.experts.4.phase_shift.weight": 4.0495982830179855e-05,
+        "layers.2.experts.5.phase_shift.weight": 4.069918577442877e-05,
+        "layers.2.experts.6.phase_shift.weight": 4.182209158898331e-05,
+        "layers.2.experts.7.phase_shift.weight": 4.133164111408405e-05,
+        "layers.2.experts.8.phase_shift.weight": 3.967043448938057e-05,
+        "layers.2.experts.9.phase_shift.weight": 4.2430652683833614e-05,
+        "layers.2.experts.10.phase_shift.weight": 3.972705962951295e-05,
+        "layers.2.experts.11.phase_shift.weight": 4.0058632293948904e-05,
+        "layers.2.experts.12.phase_shift.weight": 4.261127833160572e-05,
+        "layers.2.experts.13.phase_shift.weight": 4.0159891796065494e-05,
+        "layers.2.experts.14.phase_shift.weight": 4.1732462705112994e-05,
+        "layers.2.experts.15.phase_shift.weight": 4.04385500587523e-05,
+        "layers.3.experts.0.phase_shift.weight": 4.1052822780329734e-05,
+        "layers.3.experts.1.phase_shift.weight": 4.035901292809285e-05,
+        "layers.3.experts.2.phase_shift.weight": 4.2402320104883984e-05,
+        "layers.3.experts.3.phase_shift.weight": 4.055293175042607e-05,
+        "layers.3.experts.4.phase_shift.weight": 4.2837054934352636e-05,
+        "layers.3.experts.5.phase_shift.weight": 3.915784691344015e-05,
+        "layers.3.experts.6.phase_shift.weight": 4.328434442868456e-05,
+        "layers.3.experts.7.phase_shift.weight": 4.0314112993655726e-05,
+        "layers.3.experts.8.phase_shift.weight": 4.1032206354429945e-05,
+        "layers.3.experts.9.phase_shift.weight": 4.0596518374513835e-05,
+        "layers.3.experts.10.phase_shift.weight": 4.235795859131031e-05,
+        "layers.3.experts.11.phase_shift.weight": 3.9778504287824035e-05,
+        "layers.3.experts.12.phase_shift.weight": 3.986640876973979e-05,
+        "layers.3.experts.13.phase_shift.weight": 3.9913076761877164e-05,
+        "layers.3.experts.14.phase_shift.weight": 3.9452392229577526e-05,
+        "layers.3.experts.15.phase_shift.weight": 4.1836210584733635e-05
+      }
+    },
+    "phase_invariants": {
+      "status": "PASSED",
+      "errors": []
+    },
+    "thermostat_gating": {
+      "status": "PASSED",
+      "telemetry": {
+        "applied_voltage": 0.036865234375,
+        "noise_shape": [
+          1,
+          4096
+        ]
+      }
+    },
+    "program_induction": {
+      "status": "PASSED",
+      "metrics": {
+        "passed_cases": 1,
+        "total_cases": 1,
+        "latency_ms": 11.310338973999023
+      }
+    },
+    "cross_zone_orthogonality": {
+      "status": "PASSED",
+      "errors": []
+    }
+  },
+  "system_healthy": true
+}
