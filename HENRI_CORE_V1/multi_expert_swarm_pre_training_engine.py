@@ -11,8 +11,11 @@ from typing import Tuple
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from viscoelastic_swarm_core_shared_baseplate import ProprietaryHENRICore
-
-from universal_thermodynamic_harness import OntologicalPhaseEncoder
+from triton_fused_physics import triton_fused_superposition, triton_fused_sagnac_veto_penalty
+from triton_fused_physics import triton_fused_superposition, triton_fused_sagnac_veto_penalty
+from holographic_egress_high_stress_logit_sieve import HolographicPhaseTransducer
+from holographic_vector_lifter import HolographicVectorLifter
+from data_foundry_compiler import StreamingDataFoundry
 
 class SwarmEgressTransducer(nn.Module):
     def __init__(self, dim: int = 4096, vocab_size: int = 32000):
@@ -28,35 +31,16 @@ class SwarmEgressTransducer(nn.Module):
         logits = self.projection(stabilized)
         return logits
 
-class SwarmProgramDataset(Dataset):
-    def __init__(self, num_samples: int = 1000, seq_len: int = 128, vocab_size: int = 32000):
-        self.num_samples = num_samples
-        self.seq_len = seq_len
-        self.vocab_size = vocab_size
-        self.high_valence_tokens = [100, 204, 512, 1024, 2048, 12, 34, 56, 78, 90, 112, 234, 567, 1011, 2022]
-
-    def __len__(self) -> int:
-        return self.num_samples
-
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        seq = np.zeros(self.seq_len, dtype=np.int64)
-        for i in range(self.seq_len):
-            if i % 8 == 0:
-                seq[i] = np.random.choice(self.high_valence_tokens[:5])
-            elif i % 12 == 0:
-                seq[i] = np.random.choice(self.high_valence_tokens[5:10])
-            else:
-                seq[i] = np.random.randint(0, self.vocab_size)
-        return torch.tensor(seq, dtype=torch.long), torch.tensor(seq, dtype=torch.long)
+# SwarmProgramDataset removed in favor of StreamingDataFoundry
 
 class FreshHENRIOrchestrator(nn.Module):
     def __init__(self, vocab_size=32000, dim=4096, num_experts=16):
         super().__init__()
-        self.l3_router = OntologicalPhaseEncoder(vocab_size=vocab_size, dim=dim)
+        self.l3_router = HolographicVectorLifter(vocab_size=vocab_size, dim=dim)
         self.core = ProprietaryHENRICore(dim=dim, num_layers=32, num_experts=num_experts)
 
     def encode_phase(self, inputs):
-        wave_real = self.l3_router(inputs)
+        wave_real = self.l3_router(inputs, relational_edges=None)
         return wave_real + 1j * torch.zeros_like(wave_real)
 
     def apply_viscoelastic_gradient_updates(self, lr=1e-3):
@@ -74,12 +58,14 @@ def run_swarm_egress_compilation(output_path: str = "henri_fresh_core.pt"):
     orchestrator = FreshHENRIOrchestrator(vocab_size=32000, dim=4096, num_experts=16)
     orchestrator.to(device)
     
-    egress_head = SwarmEgressTransducer(dim=4096, vocab_size=32000)
+    egress_head = HolographicPhaseTransducer(d_wave=4096, vocab_size=32000)
     egress_head.to(device)
 
-    dataset = SwarmProgramDataset(num_samples=1000, seq_len=128, vocab_size=32000)
-    data_loader = DataLoader(dataset, batch_size=2, shuffle=True)
+    dataset = StreamingDataFoundry(seq_len=64, vocab_size=32000, max_samples=1000)
+    data_loader = DataLoader(dataset, batch_size=1)
     criterion = nn.CrossEntropyLoss()
+    
+    steps_per_epoch = 1000 # Fix for IterableDataset length
 
     # PHASE 1: Fixed-Prism Swarm Pre-Alignment
     print("\n[PHASE 1] Initializing Fixed-Prism Swarm Pre-Alignment...")
@@ -98,34 +84,39 @@ def run_swarm_egress_compilation(output_path: str = "henri_fresh_core.pt"):
             optimizer_edge.zero_grad()
             
             complex_wave = orchestrator.encode_phase(inputs)
+            if complex_wave.dim() == 2:
+                complex_wave = complex_wave.unsqueeze(1).repeat(1, inputs.size(1), 1)
             batch_size, seq_len, dim = complex_wave.shape
             flat_wave = complex_wave.view(batch_size * seq_len, dim)
             
             # Create 16 parallel initial wavefronts [16, B, Dim]
             swarm_wavefronts = flat_wave.unsqueeze(0).repeat(16, 1, 1)
             
-            # Forward through ProprietaryHENRICore
-            consensus_wave = orchestrator.core(swarm_wavefronts)
-            
-            # Colimit
-            consensus_wave = consensus_wave.sum(dim=0)
-            consensus_wave = F.normalize(consensus_wave.real, p=2, dim=-1) + 1j * F.normalize(consensus_wave.imag, p=2, dim=-1)
+            # Forward through ProprietaryHENRICore and Triton Fused Superposition
+            expert_waves = orchestrator.core(swarm_wavefronts)
+            consensus_wave = triton_fused_superposition(expert_waves)
             
             logits = egress_head(consensus_wave)
             loss = criterion(logits, targets.view(-1))
             loss.backward()
             optimizer_edge.step()
             total_loss += loss.item()
+            if batch_idx >= steps_per_epoch - 1: break
+            
         epoch_time = time.time() - start_time
-        print(f" -> Epoch {epoch+1}/{epochs_phase1} | Avg Loss: {total_loss/len(data_loader):.6f} | Latency: {epoch_time:.2f}s")
+        total_loss /= steps_per_epoch
+        print(f" -> Epoch {epoch+1}/{epochs_phase1} | Avg Loss: {total_loss:.6f} | Latency: {epoch_time:.2f}s")
 
     # PHASE 2: Constrained Swarm descent
     print("\n[PHASE 2] Initializing Constrained Swarm Descent...")
+    del optimizer_edge
+    torch.cuda.empty_cache()
+    
     for param in orchestrator.core.parameters():
         param.requires_grad = True
 
     all_parameters = list(orchestrator.parameters()) + list(egress_head.parameters())
-    optimizer_all = torch.optim.AdamW(all_parameters, lr=2e-4, weight_decay=1e-2)
+    optimizer_all = torch.optim.AdamW(all_parameters, lr=2e-4, weight_decay=1e-2, foreach=False)
 
     epochs_phase2 = 5
     for epoch in range(epochs_phase2):
@@ -136,28 +127,36 @@ def run_swarm_egress_compilation(output_path: str = "henri_fresh_core.pt"):
             optimizer_all.zero_grad()
             
             complex_wave = orchestrator.encode_phase(inputs)
+            if complex_wave.dim() == 2:
+                complex_wave = complex_wave.unsqueeze(1).repeat(1, inputs.size(1), 1)
             batch_size, seq_len, dim = complex_wave.shape
             flat_wave = complex_wave.view(batch_size * seq_len, dim)
             swarm_wavefronts = flat_wave.unsqueeze(0).repeat(16, 1, 1)
             
-            consensus_wave = orchestrator.core(swarm_wavefronts).sum(dim=0)
-            consensus_wave = F.normalize(consensus_wave.real, p=2, dim=-1) + 1j * F.normalize(consensus_wave.imag, p=2, dim=-1)
+            expert_waves = orchestrator.core(swarm_wavefronts)
+            consensus_wave = triton_fused_superposition(expert_waves)
             
             # Sagnac Thermodynamic Veto Penalty
-            target_wave = orchestrator.encode_phase(targets).view(batch_size * seq_len, dim)
-            inner_product = torch.sum(consensus_wave * target_wave.conj(), dim=-1)
-            sagnac_penalty = (1.0 - torch.abs(inner_product)).mean()
+            target_wave_raw = orchestrator.encode_phase(targets)
+            if target_wave_raw.dim() == 2:
+                target_wave_raw = target_wave_raw.unsqueeze(1).repeat(1, targets.size(1), 1)
+            target_wave = target_wave_raw.view(batch_size * seq_len, dim)
+            
+            sagnac_penalty = triton_fused_sagnac_veto_penalty(consensus_wave, target_wave)
             
             logits = egress_head(consensus_wave)
             loss = criterion(logits, targets.view(-1)) + sagnac_penalty
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(all_parameters, 1.0)
             optimizer_all.step()
             total_loss += loss.item()
-            
-            orchestrator.core.bjorck_newton_orthonormalize(iterations=5)
+            if batch_idx >= steps_per_epoch - 1: break
 
+        orchestrator.core.bjorck_newton_orthonormalize(iterations=5)
+        orchestrator.l3_router.project_to_unit_modulus()
         epoch_time = time.time() - start_time
-        print(f" -> Epoch {epoch+1}/{epochs_phase2} | Avg Loss: {total_loss/len(data_loader):.6f} | Latency: {epoch_time:.2f}s")
+        total_loss /= steps_per_epoch
+        print(f" -> Epoch {epoch+1}/{epochs_phase2} | Avg Loss: {total_loss:.6f} | Latency: {epoch_time:.2f}s")
 
     # PHASE 3: Viscoelastic Swarm Relaxation
     print("\n[PHASE 3] Initializing Viscoelastic Swarm Relaxation...")
@@ -170,24 +169,30 @@ def run_swarm_egress_compilation(output_path: str = "henri_fresh_core.pt"):
             optimizer_all.zero_grad()
             
             complex_wave = orchestrator.encode_phase(inputs)
+            if complex_wave.dim() == 2:
+                complex_wave = complex_wave.unsqueeze(1).repeat(1, inputs.size(1), 1)
             batch_size, seq_len, dim = complex_wave.shape
             flat_wave = complex_wave.view(batch_size * seq_len, dim)
             swarm_wavefronts = flat_wave.unsqueeze(0).repeat(16, 1, 1)
             
-            consensus_wave = orchestrator.core(swarm_wavefronts).sum(dim=0)
-            consensus_wave = F.normalize(consensus_wave.real, p=2, dim=-1) + 1j * F.normalize(consensus_wave.imag, p=2, dim=-1)
+            expert_waves = orchestrator.core(swarm_wavefronts)
+            consensus_wave = triton_fused_superposition(expert_waves)
             
             logits = egress_head(consensus_wave)
             loss = criterion(logits, targets.view(-1))
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(all_parameters, 1.0)
             optimizer_all.step()
             
             orchestrator.apply_viscoelastic_gradient_updates(lr=1e-3)
-            orchestrator.core.bjorck_newton_orthonormalize(iterations=5)
             total_loss += loss.item()
+            if batch_idx >= steps_per_epoch - 1: break
 
+        orchestrator.core.bjorck_newton_orthonormalize(iterations=5)
+        orchestrator.l3_router.project_to_unit_modulus()
         epoch_time = time.time() - start_time
-        print(f" -> Epoch {epoch+1}/{epochs_phase3} | Avg Loss: {total_loss/len(data_loader):.6f} | Latency: {epoch_time:.2f}s")
+        total_loss /= steps_per_epoch
+        print(f" -> Epoch {epoch+1}/{epochs_phase3} | Avg Loss: {total_loss:.6f} | Latency: {epoch_time:.2f}s")
 
     print("\n[*] Serializing fresh core parameters...")
     torch.save({

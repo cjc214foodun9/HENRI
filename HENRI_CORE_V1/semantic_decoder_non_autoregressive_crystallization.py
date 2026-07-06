@@ -65,8 +65,8 @@ class SpectralGuidanceField(nn.Module):
         )
         self.structural_mixer = nn.Sequential(
             nn.Linear(dim, dim * 2),
-            nn.GLU(),
-            nn.Linear(dim * 2, dim)
+            nn.GLU(dim=-1),
+            nn.Linear(dim, dim)
         )
 
     def forward(self, noisy_canvas: torch.Tensor, target_wave: torch.Tensor, t: torch.Tensor):
@@ -88,6 +88,8 @@ class SpectralGuidanceField(nn.Module):
         return self.structural_mixer(guided_canvas)
 
 
+from cognitive_swarm_orchestrator import StiefelManifoldProjector
+
 class SemanticDecoder(nn.Module):
     """
     The Master Non-Autoregressive Reverse-Diffusion Engine.
@@ -99,6 +101,7 @@ class SemanticDecoder(nn.Module):
         self.diffusion_steps = diffusion_steps
         self.guidance_field = SpectralGuidanceField(dim=dim)
         self.cleanup_matrix = HopfieldCleanupMatrix(vocab_size=vocab_size, dim=dim)
+        self.manifold_validator = StiefelManifoldProjector()
 
     def _cosine_noise_schedule(self, t: torch.Tensor, s: float = 0.008):
         """Alpha-bar schedule leveraging stable Cosinespace degradation."""
@@ -114,6 +117,11 @@ class SemanticDecoder(nn.Module):
         batch_size = proposed_action_wave.size(0)
         device = proposed_action_wave.device
         
+        # [TOPOLOGICAL VALIDATION] Strictly enforce that the incoming logic wave 
+        # is a pristine Unitary matrix. Shattered geometries will instantly be 
+        # rejected or re-orthogonalized before entering the egress diffusion phase.
+        verified_wave = self.manifold_validator(proposed_action_wave)
+        
         # 1. Initialize Canvas of Absolute Thermodynamic Noise (Maximum Entropy)
         # Shape: [Batch, Seq_Len, 4096]
         canvas_xt = torch.randn(batch_size, sequence_length, self.dim, device=device)
@@ -128,8 +136,8 @@ class SemanticDecoder(nn.Module):
             alpha_bar_t = self._cosine_noise_schedule(t)
             alpha_bar_t_prev = self._cosine_noise_schedule(t_prev)
             
-            # Predict the noise / structural gradient
-            predicted_noise = self.guidance_field(canvas_xt, proposed_action_wave, t)
+            # Predict the noise / structural gradient using the validated wave
+            predicted_noise = self.guidance_field(canvas_xt, verified_wave, t)
             
             # Denoise step: Extrapolate x_0 (the clean geometric structure)
             x0_pred = (canvas_xt - torch.sqrt(1 - alpha_bar_t) * predicted_noise) / torch.sqrt(alpha_bar_t)
@@ -146,22 +154,3 @@ class SemanticDecoder(nn.Module):
         discrete_tokens, logit_probs = self.cleanup_matrix(canvas_xt)
         
         return discrete_tokens, logit_probs
-
-# --- Execution Harness ---
-if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"[ALETHEIA] Initializing Semantic Decoder (Non-Autoregressive) on {device}...")
-    
-    decoder = SemanticDecoder(dim=4096, vocab_size=32000, diffusion_steps=25).to(device)
-    
-    # Simulate a perfectly verified logic wave exiting the Zone B optical core
-    mock_action_wave = F.normalize(torch.randn(1, 4096, device=device), p=2, dim=-1)
-    
-    print("[CRYSTALLIZATION] Executing 25-step parallel Cosinespace relaxation...")
-    
-    # Crystallize an entire 512-token sequence in a single parallel drop
-    final_tokens, probabilities = decoder.crystallize_action(mock_action_wave, sequence_length=512)
-    
-    print(f"[SUCCESS] Wave collapsed. Final discrete sequence shape: {final_tokens.shape}")
-    print(f"[METRICS] Hopfield Matrix Mean Confidence: {torch.max(probabilities, dim=-1)[0].mean().item():.4f}")
-    print("[SYSTEM] Eradication of the autoregressive bottleneck complete.")

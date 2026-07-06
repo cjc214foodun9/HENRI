@@ -19,7 +19,7 @@ We will never train Zone B on facts. We train Zone B entirely on *structure*.
 
 ## **II. The Axiomatic Baseplate (What to embed in the Core)**
 
-To initialize the 16 fluid experts and the OntologicalPhaseEncoder, we must construct a highly curated, low-entropy dataset. This dataset does not contain Wikipedia articles. It contains the fundamental geometric boundaries of reality.
+To initialize the 16 fluid experts and the HolographicVectorLifter, we must construct a highly curated, low-entropy dataset. This dataset does not contain Wikipedia articles. It contains the fundamental geometric boundaries of reality.
 
 ### **1\. Formal Mathematics and Topology**
 
@@ -43,7 +43,7 @@ By training the 8.59B parameter core *exclusively* on these domains, we carve de
 
 ## **III. The Ontological Phase Manifold (O-VSA)**
 
-For HENRI to understand "niche topics" without memorizing them, we utilize the OntologicalPhaseEncoder defined in the UniversalThermodynamicHarness.
+For HENRI to understand "niche topics" without memorizing them, we utilize the HolographicVectorLifter defined in the UniversalThermodynamicHarness.
 
 We map the *relationships* between concepts on the ![][image4] hypersphere using Vector Symbolic Architectures (VSA).
 
@@ -58,7 +58,7 @@ We map a massive, hierarchical ontology (e.g., the Unified Medical Language Syst
 When a user asks HENRI an extremely niche question about a specific historical event or a newly discovered biological protein, HENRI does not rely on its internal weights. It relies on **Continuous-Time Test-Time Learning**.
 
 1. **MCP Ingestion:** The L3SwarmRouter reaches out via the Model Context Protocol (MCP) to an external database, enterprise vector store, or search API to retrieve the raw data regarding this niche topic.  
-2. **Holographic Transduction:** The OntologicalPhaseEncoder translates this raw JSON/Text data into a continuous phase wavefront. It anchors the new, unknown entities to the known invariant vectors in its ontology.  
+2. **Holographic Transduction:** The HolographicVectorLifter translates this raw JSON/Text data into a continuous phase wavefront. It anchors the new, unknown entities to the known invariant vectors in its ontology.  
 3. **Viscoelastic Creep:** The new knowledge is fired into the Zone B optical core as a proposed boundary condition. The core uses the WaveJEPATransitionNetwork to simulate how this new information interacts with the known laws of physics and logic.  
 4. **Resonance and Crystallization:** The 16 fluid experts physically yield to the new data, updating their own internal parameters mid-flight via Langevin heat injection. They achieve an isothermal phase-lock with the new knowledge.
 

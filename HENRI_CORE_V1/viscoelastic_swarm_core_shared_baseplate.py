@@ -105,18 +105,24 @@ class ProprietaryHENRICore(nn.Module):
 
     @torch.no_grad()
     def reset_parameters(self):
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         for param in self.shared_layers:
-            real_part = torch.randn(self.dim, self.dim)
-            imag_part = torch.randn(self.dim, self.dim)
+            real_part = torch.randn(self.dim, self.dim, device=device)
+            imag_part = torch.randn(self.dim, self.dim, device=device)
             X = torch.complex(real_part, imag_part)
             Q, _ = torch.linalg.qr(X) # Ensure strict orthogonality
-            param.copy_(Q)
+            param.copy_(Q.to(param.device))
 
     @torch.no_grad()
-    def bjorck_newton_orthonormalize(self, iterations: int = 5):
+    def bjorck_newton_orthonormalize(self, iterations: int = 5, eps: float = 1e-7):
         """Locks the 536M shared parameters to the Stiefel manifold to prevent energy decay."""
         for param in self.shared_layers:
             W = param.data
+            # Initial operator scaling bound to prevent NaN divergence during unconstrained descent
+            norm_val = torch.linalg.matrix_norm(W, ord=2)
+            if norm_val > 1.0 + eps:
+                W.div_(norm_val)
+                
             for _ in range(iterations):
                 W_H = W.conj().t()
                 W.copy_(1.5 * W - 0.5 * torch.matmul(torch.matmul(W, W_H), W))

@@ -6,7 +6,7 @@ import torch.nn.functional as F
 import numpy as np
 import psycopg
 
-from universal_thermodynamic_harness import OntologicalPhaseEncoder
+from holographic_vector_lifter import HolographicVectorLifter
 
 class SimpleTokenizer:
     def __init__(self, vocab_size=32000):
@@ -28,7 +28,7 @@ def execute_epistemic_seeding():
     }
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    encoder = OntologicalPhaseEncoder(vocab_size=32000, dim=4096).to(device)
+    encoder = HolographicVectorLifter(vocab_size=32000, dim=4096).to(device)
     tokenizer = SimpleTokenizer(vocab_size=32000)
     
     # 1. Gather all MD blueprints
@@ -58,16 +58,9 @@ def execute_epistemic_seeding():
                 continue
             
             # Truncate or pad to length 128 for the encoder? 
-            # OntologicalPhaseEncoder handles arbitrary lengths along seq_len, 
-            # wait, it does rfft over seq_len!
-            # Let's pad or truncate to 128 for consistency.
-            if len(tokens) < 128:
-                tokens = tokens + [0] * (128 - len(tokens))
-            else:
-                tokens = tokens[:128]
-                
+            # HolographicVectorLifter handles arbitrary lengths along seq_len, 
+            # we just need to add batch dimension.
             input_ids = torch.tensor([tokens], dtype=torch.long, device=device)
-            
             with torch.no_grad():
                 wave_complex = encoder(input_ids)[0]
                 

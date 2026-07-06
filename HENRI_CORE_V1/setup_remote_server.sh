@@ -61,7 +61,7 @@ sudo -u postgres psql -d henri -c "CREATE EXTENSION IF NOT EXISTS vector CASCADE
 
 echo "=== STEP 4: Install Python Build Dependencies ==="
 /venv/main/bin/python -m pip install --upgrade pip
-/venv/main/bin/python -m pip install scikit-build-core nanobind cmake gguf scipy openai python-dotenv pydantic fastapi uvicorn psycopg[binary] h5py transformers
+/venv/main/bin/python -m pip install scikit-build-core nanobind cmake gguf scipy openai python-dotenv pydantic fastapi uvicorn psycopg[binary] h5py transformers google-re2
 
 # Install llama-cpp-python compiled with CUDA acceleration
 CMAKE_ARGS="-DGGML_CUDA=on -DLLAMA_CUDA=on" /venv/main/bin/python -m pip install llama-cpp-python --no-cache-dir
