@@ -64,30 +64,41 @@ class FusedHolographicSuperposition(torch.autograd.Function):
         expert_waves: [num_experts, Batch, Dim] complex64
         """
         expert_waves = expert_waves.contiguous()
-        E, B, D = expert_waves.shape
-        out = torch.empty((B, D), dtype=torch.complex64, device=expert_waves.device)
-        norms = torch.empty((B,), dtype=torch.float32, device=expert_waves.device)
+        original_shape = expert_waves.shape
+        if expert_waves.dim() == 4:
+            E, B, S, D = expert_waves.shape
+            expert_waves_2d = expert_waves.view(E, B * S, D)
+            E, B_flat, D_flat = expert_waves_2d.shape
+        else:
+            E, B_flat, D_flat = expert_waves.shape
+            expert_waves_2d = expert_waves
+            
+        out = torch.empty((B_flat, D_flat), dtype=torch.complex64, device=expert_waves.device)
+        norms = torch.empty((B_flat,), dtype=torch.float32, device=expert_waves.device)
         
-        expert_real = torch.view_as_real(expert_waves) # [E, B, D, 2]
-        out_real = torch.view_as_real(out) # [B, D, 2]
+        expert_real = torch.view_as_real(expert_waves_2d) # [E, B_flat, D_flat, 2]
+        out_real = torch.view_as_real(out) # [B_flat, D_flat, 2]
         
         ctx.E = E
         if HAS_TRITON:
-            BLOCK_DIM = triton.next_power_of_2(D)
-            _holographic_superposition_fwd_kernel[(B,)](
+            BLOCK_DIM = triton.next_power_of_2(D_flat)
+            _holographic_superposition_fwd_kernel[(B_flat,)](
                 expert_real, out_real, norms,
-                E, D,
+                E, D_flat,
                 expert_real.stride(0), expert_real.stride(1), expert_real.stride(2),
                 out_real.stride(0), out_real.stride(1),
                 BLOCK_DIM=BLOCK_DIM
             )
         else:
             # Standard PyTorch fallback for Holographic Superposition
-            summed = expert_waves.sum(dim=0)
+            summed = expert_waves_2d.sum(dim=0)
             norm = torch.linalg.vector_norm(summed, dim=-1, keepdim=True)
             norm = norm.clamp(min=1e-8)
-            out = summed / norm
+            out = summed / norm.squeeze(-1)
             norms = norm.squeeze(-1)
+            
+        if expert_waves.dim() == 4:
+            out = out.view(B, S, D)
             
         ctx.save_for_backward(out, norms)
         return out

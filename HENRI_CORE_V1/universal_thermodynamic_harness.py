@@ -16,7 +16,6 @@ import psycopg
 import json
 import numpy as np
 
-from semantic_decoder_non_autoregressive_crystallization import SemanticDecoder
 from viscoelastic_swarm_core_shared_baseplate import ProprietaryHENRICore
 
 from holographic_vector_lifter import HolographicVectorLifter

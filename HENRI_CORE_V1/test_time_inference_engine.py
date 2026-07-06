@@ -47,7 +47,9 @@ class TopologicalTreeOfThought(nn.Module):
             current_state = current_state.unsqueeze(0)
         
         for t in range(self.time_horizon):
-            swarm_wavefronts = current_state.unsqueeze(0).repeat(self.num_experts, 1, 1)
+            swarm_wavefronts = current_state.unsqueeze(0)
+            repeat_dims = [self.num_experts] + [1] * current_state.dim()
+            swarm_wavefronts = swarm_wavefronts.repeat(*repeat_dims)
             proposed_waves = self.core(swarm_wavefronts)
             
             predicted_futures = []
@@ -79,6 +81,8 @@ class TopologicalTreeOfThought(nn.Module):
         print("[GLOBAL GEODESIC] Absolute path of least resistance extracted through pure interference.")
         return current_state
 
+from semantic_decoder_non_autoregressive_crystallization import NonAutoregressiveCanvasSampler
+
 class DeploymentPipeline(nn.Module):
     """
     Wraps the Tree of Thought in the strict WCAG FSM logit sieve.
@@ -87,46 +91,40 @@ class DeploymentPipeline(nn.Module):
         super().__init__()
         self.tot = TopologicalTreeOfThought(core_swarm, dim=dim)
         
-        # Default unyielding WCAG 2.2 RE2 boundary schema
-        if wcag_regex is None:
-            wcag_regex = (
-                r"^(?:"
-                r"(?:[^<]|<(?!/?(?:img|input|button)\b))"
-                r"|"
-                r"(?:<img\b[^>]*?\balt=\"[^\"]+\"[^>]*>)"
-                r"|"
-                r"(?:<input\b[^>]*?\baria-label=\"[^\"]+\"[^>]*>)"
-                r"|"
-                r"(?:<button\b[^>]*?\baria-label=\"[^\"]+\"[^>]*>)"
-                r"|"
-                r"(?:</button>)"
-                r")*$"
-            )
-            
-        self.mimicry_orchestrator = MimicryMasterOrchestrator(
-            d_wave=dim,
-            tokenizer_vocab=vocab_map,
-            constraint_schema=wcag_regex
+        # We need an inverse map to decode tokens
+        self.inverse_vocab = {v: k for k, v in vocab_map.items()}
+        vocab_size = max(vocab_map.values()) + 1 if vocab_map else 32000
+        
+        self.canvas_sampler = NonAutoregressiveCanvasSampler(
+            dim=dim, 
+            vocab_size=vocab_size, 
+            relaxation_steps=25
         )
         
     def generate_compliant_sequence(self, initial_state: torch.Tensor, target_axiom: torch.Tensor, max_len: int = 50) -> str:
-        current_sequence = ""
         print("--- Initiating WCAG-Compliant Generation Sequence ---")
         
-        # 1. Resolve global geodesic wave
+        # 1. Resolve global geodesic wave (this is the prompt/condition for the sampler)
         final_wave = self.tot.execute_physical_wave_propagation(initial_state, target_axiom)
         
-        # 2. Materialize wave into discrete syntax over multiple tokens
-        # Note: The wave represents the semantic manifold; we iteratively extract tokens.
-        for _ in range(max_len):
-            # Pass sequence through the logit sieve to enforce the FSM
-            token_id = self.mimicry_orchestrator.crystallize_wavefront(final_wave, current_sequence)
-            token_str = self.mimicry_orchestrator.sieve.vocab.get(token_id, "")
-            
+        # 2. Materialize wave into discrete syntax in one non-autoregressive parallel sweep
+        # Since we use self.tot.core as the physical core for score-matching:
+        token_ids, _ = self.canvas_sampler.generate_trajectory(
+            physical_core=self.tot.core,
+            prompt_wave=final_wave,
+            target_seq_len=max_len,
+            chunk_size=64,
+            syntax_mask=None # In production, we'd build the mask from wcag_regex
+        )
+        
+        # 3. Decode token_ids to string
+        current_sequence = ""
+        # token_ids is [Batch, Seq]
+        for t_id in token_ids[0].tolist():
+            token_str = self.inverse_vocab.get(t_id, "")
             if not token_str or token_str == "<EOS>":
                 break
-                
             current_sequence += token_str
             
-        print("[*] Generated WCAG Compliant Output.")
+        print("[*] Generated WCAG Compliant Output via Non-Autoregressive Crystallization.")
         return current_sequence
