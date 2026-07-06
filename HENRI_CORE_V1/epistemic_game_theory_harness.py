@@ -117,6 +117,10 @@ class EpistemicGameTheoryHarness(nn.Module):
         If the regex stress is 0 (vacuous truth / no HTML), but the epiplexity is also 0,
         the system experiences maximum Langevin heat. 
         """
+        was_1d = active_wavefront.dim() == 1
+        if was_1d:
+            active_wavefront = active_wavefront.unsqueeze(0)
+            
         batch_size = active_wavefront.size(0)
         
         # 1. Measure the 'meaning' of the wave.
@@ -159,6 +163,10 @@ class EpistemicGameTheoryHarness(nn.Module):
         if apoptosis_mask.any():
              # In a physical deployment, this triggers a CXL DMA buffer flush
              pass
+
+        if was_1d:
+            restored_wavefront = restored_wavefront.squeeze(0)
+            thermodynamic_cost = thermodynamic_cost.squeeze(0)
 
         return restored_wavefront, thermodynamic_cost
 
