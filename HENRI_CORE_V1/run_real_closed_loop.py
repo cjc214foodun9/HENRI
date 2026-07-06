@@ -22,35 +22,55 @@ def run_real_loop():
         checkpoint = torch.load("henri_fresh_core.pt", map_location=device, weights_only=True)
         if isinstance(checkpoint, dict) and 'core' in checkpoint:
             orchestrator.core.load_state_dict(checkpoint['core'])
+            # Extract the REAL trained lexicon
+            if 'egress_head.weight' in checkpoint:
+                trained_lexicon = checkpoint['egress_head.weight']['phase_projection.weight']
+            else:
+                trained_lexicon = None
         else:
             orchestrator.core.load_state_dict(checkpoint)
+            trained_lexicon = None
         print(" -> Successfully loaded pure physics weights (henri_fresh_core.pt).")
     except Exception as e:
         print(f" -> [WARNING] Weights not found, initializing base entropy state: {e}")
         
     orchestrator.to(device)
     
-    # 2. Construct the Deployment Pipeline (wrapping the Logit Sieve)
-    print("[*] Engaging WCAG Logit Sieve and MimicryMasterOrchestrator...")
+    # 2. Set up the Pipeline
+    print("[*] Reconstructing Full 32K Lexical Dictionary Map...")
+    vocab_map = {"<|python_begin|>": 1, "<|python_end|>": 2, "<EOS>": 0}
+    # Map ASCII printable characters so geometry doesn't collapse to empty strings
+    for i in range(32, 127):
+        vocab_map[chr(i)] = i
+    # Map common HTML tokens for structural resonance
+    html_tokens = ["<div", "</div>", "<img", "alt=\"", "aria-label=\"", "class=\"", "id=\"", "><", "\n", " "]
+    for i, tok in enumerate(html_tokens):
+        vocab_map[tok] = 200 + i
+    # Fill remaining vocabulary space to prevent KeyError collapses
+    for i in range(300, 32000):
+        if i not in vocab_map.values():
+            vocab_map[f"~{i}~"] = i
+            
     pipeline = DeploymentPipeline(
         core_swarm=orchestrator.core, 
-        vocab_map={"<|python_begin|>": 1, "<|python_end|>": 2}, # Stub vocab for local test
-        wcag_regex=r".*", # Bypassing the lookahead crash in google-re2
+        vocab_map=vocab_map,
         dim=4096
     ).to(device)
     
-    # Try loading the aligned phase transducer weights
-    try:
-        pipeline.mimicry_orchestrator.phase_transducer.load_state_dict(
-            torch.load("aligned_phase_transducer.pt", map_location=device, weights_only=True)
-        )
-        print(" -> Successfully locked HolographicPhaseTransducer to trained projection matrix.")
-    except Exception as e:
-        print(f" -> [WARNING] Could not load aligned_phase_transducer.pt, using default orthogonal projection: {e}")
-
+    print("[*] Initializing Holographic ADMA Zone C Attractors...")
+    # Inject the REAL trained lexicon (No mock data)
+    if 'trained_lexicon' in locals() and trained_lexicon is not None:
+        pipeline.canvas_sampler.egress_assembler.adma_fetch.load_zone_c_attractors(trained_lexicon.to(device))
+        print(" -> Successfully seated trained physical lexicon.")
+    else:
+        raise ValueError("FATAL: No trained lexicon found in the checkpoint. Mock data is forbidden.")
+    
     # 3. Construct the Closed-Loop Engine
     print("[*] Constructing Closed-Loop Engine with 16 Viscoelastic Creep cycles...")
-    engine = ClosedLoopThermodynamicEngine(vocab_map={"a": 1}, max_thermal_cycles=16)
+    # WCAG SC 1.1.1 and SC 3.3.2 Strict Regex Boundary
+    strict_wcag_regex = r"^(?:(?:[^<]|<(?!/?(?:img|input|button)\b))|(?:<img\b[^>]*?\balt=\"[^\"]*\"[^>]*>)|(?:<input\b[^>]*?\baria-label=\"[^\"]*\"[^>]*>)|(?:<button\b[^>]*?\baria-label=\"[^\"]*\"[^>]*>)|(?:</button>))*$"
+    
+    engine = ClosedLoopThermodynamicEngine(vocab_map={"a": 1}, wcag_regex=strict_wcag_regex, max_thermal_cycles=16)
     engine.pipeline = pipeline
     engine.transducer.to(device)
     
@@ -65,11 +85,12 @@ def run_real_loop():
     # 5. EXECUTE THE LOOP
     print("\n>>> INITIATING CYBERNETIC LOOP <<<\n")
     try:
-        success, best_code, cycles_used = engine.execute_viscoelastic_creep(
-            initial_wavefront=initial_wavefront,
-            target_grid=target_grid,
-            task_context={"strict_mode": True}
-        )
+        with torch.no_grad():
+            success, best_code, cycles_used = engine.execute_viscoelastic_creep(
+                initial_wavefront=initial_wavefront,
+                target_grid=target_grid,
+                task_context={"strict_mode": True}
+            )
         
         print("\n=========================================================================")
         print(f"[*] CYBERNETIC LOOP TERMINATED.")

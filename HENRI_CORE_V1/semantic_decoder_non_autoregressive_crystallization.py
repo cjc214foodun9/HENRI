@@ -73,8 +73,17 @@ class RightKanPullbackOrchestrator(nn.Module):
         """
         Detects topological obstructions (Sagnac Delta) between sequential chunks.
         """
+        # Ensure previous_micro_epoch has a sequence dimension
+        prev_epoch = previous_micro_epoch
+        while prev_epoch.dim() < 3:
+            prev_epoch = prev_epoch.unsqueeze(0)
+            
+        curr_epoch = current_micro_epoch
+        while curr_epoch.dim() < 3:
+            curr_epoch = curr_epoch.unsqueeze(0)
+            
         # A perfectly continuous thought should have high magnitude inner product
-        inner_product = torch.sum(previous_micro_epoch[:, -1, :] * current_micro_epoch[:, 0, :].conj(), dim=-1)
+        inner_product = torch.sum(prev_epoch[:, -1, :] * curr_epoch[:, 0, :].conj(), dim=-1)
         coherence = torch.abs(inner_product)
         sagnac_delta = 1.0 - coherence
         
