@@ -14,6 +14,7 @@ from typing import Tuple, Dict, Any, Optional
 from universal_repl import UniversalREPL
 from test_time_inference_engine import DeploymentPipeline
 from thermodynamic_sandbox_transducer import ThermodynamicSandboxTransducer
+from epistemic_game_theory_harness import EpistemicGameTheoryHarness
 
 class ClosedLoopThermodynamicEngine:
     """
@@ -27,6 +28,7 @@ class ClosedLoopThermodynamicEngine:
         self.pipeline = None 
         self.sandbox = UniversalREPL()
         self.transducer = ThermodynamicSandboxTransducer(d_wave=d_wave, base_temperature=0.4)
+        self.epistemic_harness = EpistemicGameTheoryHarness(dim=d_wave, base_temperature=0.4, sagnac_threshold=0.05).to('cuda' if torch.cuda.is_available() else 'cpu')
         
         # We constrain the loop to 16 cycles, matching the 16 fluid expert manifolds.
         self.max_thermal_cycles = max_thermal_cycles
@@ -83,37 +85,36 @@ class ClosedLoopThermodynamicEngine:
                 if sandbox_grid is not None and not isinstance(sandbox_grid, torch.Tensor):
                     sandbox_grid = torch.tensor(sandbox_grid, dtype=target_grid.dtype, device=target_grid.device)
             
-            # 4. Measure the physical failure and calculate the Sagnac Delta
-            heated_wavefront, telemetry = self.transducer(sandbox_grid, target_grid, active_wavefront)
-            
-            current_delta = telemetry["sagnac_delta"]
-            
-            # Cache the best-effort solution in case of terminal thermal exhaustion
-            if current_delta < lowest_sagnac_delta:
-                lowest_sagnac_delta = current_delta
-                best_effort_code = executable_code
-
-            # --- WCAG FUZZING CHECK ---
+            # --- WCAG FUZZING CHECK (EPISTEMIC GAME THEORY HARNESS) ---
             if self.wcag_regex:
                 if re.match(self.wcag_regex, crystallized_syntax):
-                    print(f"[*] [WCAG PASS] Output completely perfectly conforms to WCAG syntax boundaries at cycle {cycle}.")
-                    # Save the payload and break the loop instantly
+                    print(f"[*] [WCAG PASS] Raw syntax conforms to WCAG boundaries at cycle {cycle}.")
+                    regex_stress = torch.tensor(0.0, device=active_wavefront.device)
+                else:
+                    print(f"[*] [WCAG VIOLATION] Output violated WCAG boundary! Injecting syntax stress penalty.")
+                    regex_stress = torch.tensor(10.0, device=active_wavefront.device)
+                
+                # Apply Epistemic Game Theory Harness (forces density + compliance)
+                heated_wavefront, thermodynamic_cost = self.epistemic_harness(active_wavefront, regex_stress)
+                current_delta = thermodynamic_cost.item()
+                
+                if current_delta < self.epistemic_harness.sagnac_threshold:
+                    print(f"[SUCCESS] Absolute Topological Resonance achieved with high Epiplexity at cycle {cycle}.")
                     with open("wcag_compliant_ui.html", "w") as f:
                         f.write(crystallized_syntax)
                     return True, crystallized_syntax, cycle
                 else:
-                    print(f"[*] [WCAG VIOLATION] Output violated WCAG boundary! Injecting catastrophic Sagnac penalty.")
-                    wcag_passed = False
-                    # Override resonance and force massive heat
-                    current_delta = 9999.0
-                    heated_wavefront, telemetry = self.transducer(None, target_grid, active_wavefront)
-                    telemetry['langevin_heat'] = 100.0
-                    telemetry['resonance'] = False
-
-            # 5. Evaluate Resonance
-            if telemetry["resonance"]:
-                print(f"[SUCCESS] Absolute Topological Resonance achieved at cycle {cycle}.")
-                return True, executable_code, cycle
+                    telemetry = {"langevin_heat": current_delta, "resonance": False}
+                    
+            else:
+                # 4. Measure the physical failure and calculate the Sagnac Delta (Standard Sandbox Mode)
+                heated_wavefront, telemetry = self.transducer(sandbox_grid, target_grid, active_wavefront)
+                current_delta = telemetry["sagnac_delta"]
+                
+                # 5. Evaluate Resonance
+                if telemetry["resonance"]:
+                    print(f"[SUCCESS] Absolute Topological Resonance achieved at cycle {cycle}.")
+                    return True, executable_code, cycle
 
             print(f"[CYCLE {cycle:02d}] Logic/Syntax Lock Detected. Delta: {current_delta:.4f}. Injecting {telemetry['langevin_heat']:.4f} Langevin Heat.")
             
