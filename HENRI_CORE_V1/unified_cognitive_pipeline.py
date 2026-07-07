@@ -12,9 +12,9 @@ from scale_boundary_axioms import ZoneCTimescaleDBAxioms # Mocked/Interface for 
 class UnifiedCognitivePipeline(nn.Module):
     """
     The singular, unbroken thermodynamic execution graph for Project HENRI.
-    Eliminates Python-level orchestration fragmentation. The wavefront enters as 
-    discrete intent, traverses the Stiefel manifold as continuous physics, and 
-    collapses only upon achieving absolute geometric resonance.
+    Eliminates Python-level orchestration fragmentation and epistemic solipsism. 
+    The wavefront is strictly validated via physical homodyne interference against 
+    the true Target Axioms, not internal mock matrices.
     """
     def __init__(self, vocab_size=32000, dim=4096, spatial_resolution=256):
         super().__init__()
@@ -40,17 +40,13 @@ class UnifiedCognitivePipeline(nn.Module):
         # 4. Egress: The Comprehension ADC & Semantic Sieve
         self.semantic_cleanup = SemanticCleanupMatrix(vocab_size=vocab_size, dim=dim)
 
-    def _apply_newton_schulz_orthogonalization(self, W: torch.Tensor, steps: int = 3) -> torch.Tensor:
+    def compute_homodyne_interference(self, wave: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
-        Forces the wavefront and weight matrices strictly onto the Stiefel manifold.
-        Guarantees preservation of the unit modulus invariant.
+        Measures the absolute physical phase-lock divergence between the 
+        active thought-wave and the target universe axioms.
         """
-        norm = torch.norm(W, p=2)
-        if norm > 1.0:
-            W = W / norm
-        for _ in range(steps):
-            W = 1.5 * W - 0.5 * torch.matmul(W, torch.matmul(W.transpose(-2, -1), W))
-        return W
+        interference = torch.mean(wave * torch.conj(target), dim=-1)
+        return 1.0 - torch.abs(interference)
 
     def forward(self, token_ids: torch.Tensor, target_axioms_complex: torch.Tensor) -> tuple:
         """
@@ -86,8 +82,8 @@ class UnifiedCognitivePipeline(nn.Module):
         # Flatten the evolved spatial grid back to the 4096-D phase-space
         evolved_wavefront = evolved_grid.view(batch_size, self.dim)
         
-        # Apply Newton-Schulz to prevent representation saturation
-        evolved_wavefront = self._apply_newton_schulz_orthogonalization(evolved_wavefront)
+        # We allow the wave to flow freely without artificially crushing its semantic shape
+        # (Newton-Schulz projection excised)
 
         # =====================================================================
         # PHASE 3: THE SAGNAC VETO & THERMODYNAMIC ANNEALING
@@ -96,13 +92,12 @@ class UnifiedCognitivePipeline(nn.Module):
         # Reconstruct complex waveform for interference calculation
         evolved_complex = torch.complex(torch.cos(evolved_wavefront), torch.sin(evolved_wavefront))
         
-        # The Epistemic Harness calculates structural density (epiplexity) and applies the veto
-        # regex_stress_scalar is derived from the R_B decoherence in this unified pass
-        regex_stress_scalar = 1.0 - R_B 
+        # Rigid homodyne interference test against the actual target_axioms_complex
+        homodyne_stress_scalar = self.compute_homodyne_interference(evolved_complex, target_axioms_complex)
         
         annealed_complex_wave, final_langevin_heat = self.epistemic_harness(
             active_wavefront_complex=evolved_complex, 
-            regex_stress_scalar=regex_stress_scalar
+            regex_stress_scalar=homodyne_stress_scalar
         )
 
         # =====================================================================
@@ -120,9 +115,8 @@ class UnifiedCognitivePipeline(nn.Module):
 
         # Telemetry payload for the training loop
         telemetry = {
-            "Sagnac_Reflection_Energy": (1.0 - R_B.mean()).item(),
-            "Langevin_Heat_Integral": final_langevin_heat.mean().item(),
-            "Manifold_Drift": torch.norm(evolved_wavefront.transpose(-2, -1) @ evolved_wavefront - torch.eye(self.dim, device=evolved_wavefront.device)).item()
+            "Sagnac_Reflection_Energy": homodyne_stress_scalar.mean().item(),
+            "Langevin_Heat_Integral": final_langevin_heat.mean().item()
         }
 
         return clean_logits, telemetry
