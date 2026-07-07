@@ -27,7 +27,7 @@ class ClosedLoopThermodynamicEngine:
         # To keep the blueprint intact, we'll assume self.pipeline is set externally or injected.
         self.pipeline = None 
         self.sandbox = UniversalREPL()
-        self.transducer = ThermodynamicSandboxTransducer(d_wave=d_wave, base_temperature=0.4)
+        self.transducer = ThermodynamicSandboxTransducer(d_wave=d_wave, base_temperature=0.4).to('cuda' if torch.cuda.is_available() else 'cpu')
         self.epistemic_harness = EpistemicGameTheoryHarness(dim=d_wave, base_temperature=0.4, sagnac_threshold=0.05).to('cuda' if torch.cuda.is_available() else 'cpu')
         
         # We constrain the loop to 16 cycles, matching the 16 fluid expert manifolds.
