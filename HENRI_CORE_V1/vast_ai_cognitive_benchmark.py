@@ -64,7 +64,7 @@ def run_zero_shot_geometric_resonance():
     engine = ClosedLoopThermodynamicEngine(vocab_map=tokenizer.get_vocab(), max_thermal_cycles=16)
     engine.pipeline = pipeline
     
-    engine.pipeline.core.bjorck_newton_orthonormalize() # Enforce Stiefel stability before run
+    engine.pipeline.tot.core.bjorck_newton_orthonormalize() # Enforce Stiefel stability before run
     
     print("\n>>> INITIATING CYBERNETIC LOOP <<<\n")
     try:
@@ -83,7 +83,7 @@ def run_zero_shot_geometric_resonance():
         print("\n>>> FINAL CYBERNETIC TELEMETRY REPORT <<<")
         print("-------------------------------------------------------------------------")
         
-        final_drift = engine.pipeline.core.calculate_frobenius_drift()
+        final_drift = engine.pipeline.tot.core.calculate_frobenius_drift()
             
         print(f"1. Frobenius Drift:          {final_drift:.6f}  (Expected ≈ 0)")
         print(f"2. Sagnac Reflection Energy: {total_heat/cycles_used if cycles_used > 0 else 0:.6f}  (Final Epoch Avg)")
