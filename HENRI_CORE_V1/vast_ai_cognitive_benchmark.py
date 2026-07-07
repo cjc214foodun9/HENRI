@@ -55,10 +55,15 @@ def run_zero_shot_geometric_resonance():
     
     # 4. Boot the Physics Engine
     print("[*] Booting Continuous Wave Execution Engine (536M Physics Core)...")
-    engine = ClosedLoopThermodynamicEngine(max_thermal_cycles=16)
+    orchestrator = FreshHENRIOrchestrator(dim=4096, num_experts=16)
     
-    # Replace pipeline core if needed to use FreshHENRIOrchestrator for inference
-    # Note: If henri_fresh_core.pt is populated on Vast, it will load correctly here.
+    # We must construct the DeploymentPipeline to connect the core to the discrete vocab
+    from test_time_inference_engine import DeploymentPipeline
+    pipeline = DeploymentPipeline(core_swarm=orchestrator.core, vocab_map=tokenizer.get_vocab(), dim=4096).to(device)
+    
+    engine = ClosedLoopThermodynamicEngine(vocab_map=tokenizer.get_vocab(), max_thermal_cycles=16)
+    engine.pipeline = pipeline
+    
     engine.pipeline.core.bjorck_newton_orthonormalize() # Enforce Stiefel stability before run
     
     print("\n>>> INITIATING CYBERNETIC LOOP <<<\n")
