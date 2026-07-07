@@ -66,7 +66,7 @@ def run_zero_shot_geometric_resonance():
         print("[*] ADMA Context Loaded successfully.")
     except Exception as e:
         print(f"[!] Warning: Could not load real zone_c_timescaledb: {e}. Using simulated attractors.")
-        dummy = torch.randn(1024, 4096, device=device) + 1j * torch.randn(1024, 4096, device=device)
+        dummy = torch.randn(1024, 4096, device=device)
         pipeline.canvas_sampler.egress_assembler.adma_fetch.canonical_lexicon = F.normalize(dummy, p=2, dim=-1)
     
     engine = ClosedLoopThermodynamicEngine(vocab_map=tokenizer.get_vocab(), max_thermal_cycles=16)
