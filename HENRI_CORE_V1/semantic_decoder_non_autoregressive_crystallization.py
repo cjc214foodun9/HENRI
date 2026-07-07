@@ -22,12 +22,32 @@ class HolographicADMA(nn.Module):
         # Must be initialized via load_zone_c_attractors before use
         self.register_buffer('canonical_lexicon', None)
 
-    def load_zone_c_attractors(self, tensor_db: torch.Tensor):
+    def load_zone_c_attractors(self, db_source):
         """
         Ingest the true mathematical invariants from the HDF5/TimescaleDB structural playbooks.
-        Zero-copy memory map or direct buffer load.
+        Handles direct tensors, file paths, or quadrant dictionaries.
         """
-        self.register_buffer('canonical_lexicon', F.normalize(tensor_db, p=2, dim=-1))
+        if isinstance(db_source, str):
+            # Load from file path
+            db_source = torch.load(db_source, map_location='cpu', weights_only=True)
+            
+        if isinstance(db_source, dict):
+            # Flatten quadrant dictionary into a single lexicon tensor
+            all_tensors = []
+            for k, v in db_source.items():
+                if isinstance(v, list) and len(v) > 0:
+                    all_tensors.append(torch.stack(v))
+                elif isinstance(v, torch.Tensor):
+                    all_tensors.append(v)
+            if all_tensors:
+                tensor_db = torch.cat(all_tensors, dim=0)
+            else:
+                raise ValueError("Zone C Dictionary is empty.")
+        else:
+            tensor_db = db_source
+            
+        # Ensure it's on the correct device and normalized
+        self.register_buffer('canonical_lexicon', F.normalize(tensor_db.to(self.canonical_lexicon.device if hasattr(self, 'canonical_lexicon') and self.canonical_lexicon is not None else 'cpu'), p=2, dim=-1))
 
     def forward(self, active_wave: torch.Tensor) -> torch.Tensor:
         """
