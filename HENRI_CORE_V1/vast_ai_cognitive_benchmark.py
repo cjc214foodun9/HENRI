@@ -60,6 +60,15 @@ def run_zero_shot_geometric_resonance():
     from test_time_inference_engine import DeploymentPipeline
     pipeline = DeploymentPipeline(core_swarm=orchestrator.core, vocab_map=tokenizer.get_vocab(), dim=4096).to(device)
     
+    print("[*] Initializing Holographic ADMA Zone C Attractors...")
+    try:
+        pipeline.canvas_sampler.egress_assembler.adma_fetch.load_zone_c_attractors("zone_c_timescaledb.pt")
+        print("[*] ADMA Context Loaded successfully.")
+    except Exception as e:
+        print(f"[!] Warning: Could not load real zone_c_timescaledb: {e}. Using simulated attractors.")
+        dummy = torch.randn(1024, 4096, device=device) + 1j * torch.randn(1024, 4096, device=device)
+        pipeline.canvas_sampler.egress_assembler.adma_fetch.canonical_lexicon = F.normalize(dummy, p=2, dim=-1)
+    
     engine = ClosedLoopThermodynamicEngine(vocab_map=tokenizer.get_vocab(), max_thermal_cycles=16)
     engine.pipeline = pipeline
     
