@@ -89,14 +89,17 @@ class EpistemicGameTheoryHarness(nn.Module):
         # Enforce unit modulus invariant
         return F.normalize(bound_wave, p=2, dim=-1)
 
-    def calculate_epiplexity_density(self, active_wavefront: torch.Tensor) -> torch.Tensor:
+    def calculate_epiplexity_density(self, active_wavefront: torch.Tensor, dynamic_target_complex: torch.Tensor = None) -> torch.Tensor:
         """
         Sharpeye Lens: Measures the structural density of the wavefront. 
         A sequence of purely random ~ID~ tokens will possess no coherent phase relationship 
-        with the Zone C axioms, resulting in near-zero epiplexity.
+        with the Zone C axioms (or the dynamic unseen problem), resulting in near-zero epiplexity.
         """
-        # Reconstruct complex waveform from physical hardware
-        zone_c_complex = torch.complex(self.zone_c_axioms_real, self.zone_c_axioms_imag)
+        if dynamic_target_complex is not None:
+            zone_c_complex = dynamic_target_complex
+        else:
+            # Reconstruct complex waveform from physical hardware
+            zone_c_complex = torch.complex(self.zone_c_axioms_real, self.zone_c_axioms_imag)
         
         # Broadcast and bind active wave against all foundational axioms
         # [Batch, 1, 4096] * [1, Vocab, 4096] -> [Batch, Vocab, 4096]
@@ -111,7 +114,7 @@ class EpistemicGameTheoryHarness(nn.Module):
         
         return epiplexity_scalar
 
-    def apply_kuramoto_thermodynamic_veto(self, active_wavefront: torch.Tensor, regex_stress_scalar: torch.Tensor) -> torch.Tensor:
+    def apply_kuramoto_thermodynamic_veto(self, active_wavefront: torch.Tensor, regex_stress_scalar: torch.Tensor, dynamic_target_complex: torch.Tensor = None) -> torch.Tensor:
         """
         Transposes game theory into the physics of the Barium Titanate (BTO) phase masks.
         If the regex stress is 0 (vacuous truth / no HTML), but the epiplexity is also 0,
@@ -124,11 +127,14 @@ class EpistemicGameTheoryHarness(nn.Module):
         batch_size = active_wavefront.size(0)
         
         # 1. Measure the 'meaning' of the wave.
-        epiplexity = self.calculate_epiplexity_density(active_wavefront)
+        epiplexity = self.calculate_epiplexity_density(active_wavefront, dynamic_target_complex)
         
         # 2. Extract Phase Tensors for the Three-Tier Sync
-        # Simulating the BTO hardware phase, FHRR software phase, and Abstract axiom phase
-        zone_c_complex = torch.complex(self.zone_c_axioms_real, self.zone_c_axioms_imag).mean(dim=0)
+        if dynamic_target_complex is not None:
+            zone_c_complex = dynamic_target_complex.mean(dim=0)
+        else:
+            zone_c_complex = torch.complex(self.zone_c_axioms_real, self.zone_c_axioms_imag).mean(dim=0)
+            
         kuramoto_decoherence = self.kuramoto_sync.phase_lock(
             theta_hw=active_wavefront, # BTO substrate physical wave
             theta_sw=active_wavefront * epiplexity.unsqueeze(1), # Software FHRR meaning
@@ -170,7 +176,7 @@ class EpistemicGameTheoryHarness(nn.Module):
 
         return restored_wavefront, thermodynamic_cost
 
-    def forward(self, active_wavefront_complex: torch.Tensor, regex_stress_scalar: torch.Tensor):
+    def forward(self, active_wavefront_complex: torch.Tensor, regex_stress_scalar: torch.Tensor, dynamic_target_complex: torch.Tensor = None):
         """
         Intercepts the generation loop before crystallization.
         Forces the 16 fluid expert swarms to synchronize around high-density structural 
@@ -178,6 +184,7 @@ class EpistemicGameTheoryHarness(nn.Module):
         """
         restored_wave, active_heat = self.apply_kuramoto_thermodynamic_veto(
             active_wavefront=active_wavefront_complex, 
-            regex_stress_scalar=regex_stress_scalar
+            regex_stress_scalar=regex_stress_scalar,
+            dynamic_target_complex=dynamic_target_complex
         )
         return restored_wave, active_heat

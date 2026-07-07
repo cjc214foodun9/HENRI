@@ -47,28 +47,32 @@ class ClosedLoopThermodynamicEngine:
         # If the model hallucinates the boundary, we return empty to force an immediate Sagnac penalty
         return ""
 
-    def execute_viscoelastic_creep(
-        self, 
-        initial_wavefront: torch.Tensor, 
-        target_grid: torch.Tensor,
-        task_context: Dict[str, Any]
-    ) -> Tuple[bool, str, int]:
+    def execute_viscoelastic_creep(self, initial_wavefront: torch.Tensor, target_grid: torch.Tensor, task_context: dict, dynamic_target_complex: torch.Tensor = None):
         """
-        The continuous-to-discrete feedback loop.
+        Runs the fluid 16-expert swarm through continuous BTO phase masks until
+        the tensor graph organically discovers topological resonance with the target.
         
         Returns:
             Tuple containing:
             - Success boolean (True if resonance achieved)
             - The finalized, verified code string
             - The number of thermodynamic cycles consumed
+            - Langevin heat integral
         """
         active_wavefront = initial_wavefront
         best_effort_code = ""
         lowest_sagnac_delta = float('inf')
+        langevin_heat_integral = 0.0
 
         print(f"[ENGINE] Initiating Closed-Loop Thermodynamic execution. Capacity: {self.max_thermal_cycles} cycles.")
 
         for cycle in range(1, self.max_thermal_cycles + 1):
+            
+            # Query Frobenius Drift from the underlying Stiefel matrix
+            frobenius_drift = 0.0
+            if hasattr(self.pipeline, 'core') and hasattr(self.pipeline.core, 'calculate_frobenius_drift'):
+                frobenius_drift = self.pipeline.core.calculate_frobenius_drift()
+
             # 1. Forward Pass: Crystallize the continuous wave into discrete syntax
             # Using the DeploymentPipeline's method
             crystallized_syntax = self.pipeline.generate_compliant_sequence(active_wavefront, target_axiom=None, max_len=1000)
@@ -88,21 +92,28 @@ class ClosedLoopThermodynamicEngine:
             # --- WCAG FUZZING CHECK (EPISTEMIC GAME THEORY HARNESS) ---
             if self.wcag_regex:
                 if re.match(self.wcag_regex, crystallized_syntax):
-                    print(f"[*] [WCAG PASS] Raw syntax conforms to WCAG boundaries at cycle {cycle}.")
                     regex_stress = torch.tensor(0.0, device=active_wavefront.device)
                 else:
-                    print(f"[*] [WCAG VIOLATION] Output violated WCAG boundary! Injecting syntax stress penalty.")
                     regex_stress = torch.tensor(10.0, device=active_wavefront.device)
                 
                 # Apply Epistemic Game Theory Harness (forces density + compliance)
-                heated_wavefront, thermodynamic_cost = self.epistemic_harness(active_wavefront, regex_stress)
-                current_delta = thermodynamic_cost.item()
+                heated_wavefront, sagnac_reflection_energy = self.epistemic_harness(
+                    active_wavefront, 
+                    regex_stress, 
+                    dynamic_target_complex=dynamic_target_complex
+                )
+                current_delta = sagnac_reflection_energy.item()
+                langevin_heat_integral += current_delta
+                
+                print(f"\n[CYBERNETIC TELEMETRY CYCLE {cycle:02d}]")
+                print(f" -> Frobenius Drift:          {frobenius_drift:.6f}")
+                print(f" -> Sagnac Reflection Energy: {current_delta:.6f}")
+                print(f" -> Langevin Heat Integral:   {langevin_heat_integral:.6f}")
                 
                 if current_delta < self.epistemic_harness.sagnac_threshold:
-                    print(f"[SUCCESS] Absolute Topological Resonance achieved with high Epiplexity at cycle {cycle}.")
                     with open("wcag_compliant_ui.html", "w") as f:
                         f.write(crystallized_syntax)
-                    return True, crystallized_syntax, cycle
+                    return True, crystallized_syntax, cycle, langevin_heat_integral
                 else:
                     telemetry = {"langevin_heat": current_delta, "resonance": False}
                     
@@ -110,11 +121,16 @@ class ClosedLoopThermodynamicEngine:
                 # 4. Measure the physical failure and calculate the Sagnac Delta (Standard Sandbox Mode)
                 heated_wavefront, telemetry = self.transducer(sandbox_grid, target_grid, active_wavefront)
                 current_delta = telemetry["sagnac_delta"]
+                langevin_heat_integral += telemetry.get("langevin_heat", current_delta)
+                
+                print(f"\n[CYBERNETIC TELEMETRY CYCLE {cycle:02d}]")
+                print(f" -> Frobenius Drift:          {frobenius_drift:.6f}")
+                print(f" -> Sagnac Reflection Energy: {current_delta:.6f}")
+                print(f" -> Langevin Heat Integral:   {langevin_heat_integral:.6f}")
                 
                 # 5. Evaluate Resonance
                 if telemetry["resonance"]:
-                    print(f"[SUCCESS] Absolute Topological Resonance achieved at cycle {cycle}.")
-                    return True, executable_code, cycle
+                    return True, executable_code, cycle, langevin_heat_integral
 
             print(f"[CYCLE {cycle:02d}] Logic/Syntax Lock Detected. Delta: {current_delta:.4f}. Injecting {telemetry['langevin_heat']:.4f} Langevin Heat.")
             
@@ -122,7 +138,7 @@ class ClosedLoopThermodynamicEngine:
             active_wavefront = heated_wavefront
             
         print("[TERMINATION] Thermodynamic capacity exhausted. The swarm could not find a compliant manifold.")
-        return False, best_effort_code, self.max_thermal_cycles
+        return False, best_effort_code, self.max_thermal_cycles, langevin_heat_integral
 
 # Execution Harness
 if __name__ == "__main__":

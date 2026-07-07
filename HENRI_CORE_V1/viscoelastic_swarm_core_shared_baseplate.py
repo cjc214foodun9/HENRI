@@ -114,6 +114,20 @@ class ProprietaryHENRICore(nn.Module):
             param.copy_(Q.to(param.device))
 
     @torch.no_grad()
+    def calculate_frobenius_drift(self) -> float:
+        """
+        Computes the mean Frobenius norm deviation from the Stiefel Manifold identity matrix
+        ||W^T W - I||_F across all shared Platonic bulk layers.
+        """
+        drift = 0.0
+        I = torch.eye(self.dim, dtype=torch.complex64, device=self.shared_layers[0].device)
+        for W in self.shared_layers:
+            WTW = torch.matmul(W.conj().t(), W)
+            deviation = torch.norm(WTW - I, p='fro')
+            drift += deviation.item()
+        return drift / self.num_layers
+
+    @torch.no_grad()
     def bjorck_newton_orthonormalize(self, iterations: int = 5, eps: float = 1e-7):
         """Locks the 536M shared parameters to the Stiefel manifold to prevent energy decay."""
         for param in self.shared_layers:
