@@ -98,7 +98,7 @@ class DeploymentPipeline(nn.Module):
         self.canvas_sampler = NonAutoregressiveCanvasSampler(
             dim=dim, 
             vocab_size=vocab_size, 
-            relaxation_steps=25
+            relaxation_steps=1
         )
         
     def generate_compliant_sequence(self, initial_state: torch.Tensor, target_axiom: torch.Tensor, max_len: int = 50) -> str:
@@ -113,7 +113,7 @@ class DeploymentPipeline(nn.Module):
             physical_core=self.tot.core,
             prompt_wave=final_wave,
             target_seq_len=max_len,
-            chunk_size=64,
+            chunk_size=1000,
             syntax_mask=None # In production, we'd build the mask from wcag_regex
         )
         

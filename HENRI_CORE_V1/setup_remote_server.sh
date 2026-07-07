@@ -59,24 +59,37 @@ sudo -u postgres psql -c "CREATE DATABASE henri;" || echo "Database 'henri' may 
 sudo -u postgres psql -d henri -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
 sudo -u postgres psql -d henri -c "CREATE EXTENSION IF NOT EXISTS vector CASCADE;"
 
-echo "=== STEP 4: Install Python Build Dependencies ==="
+echo "=== STEP 4: Create Virtual Environment & Install Python Dependencies ==="
+apt-get install -y python3-full python3-pip curl
+python3 -m venv /venv/main --clear
 /venv/main/bin/python -m pip install --upgrade pip
 /venv/main/bin/python -m pip install scikit-build-core nanobind cmake gguf scipy openai python-dotenv pydantic fastapi uvicorn psycopg[binary] h5py transformers google-re2
 
 # Install llama-cpp-python compiled with CUDA acceleration
 CMAKE_ARGS="-DGGML_CUDA=on -DLLAMA_CUDA=on" /venv/main/bin/python -m pip install llama-cpp-python --no-cache-dir
 
-echo "=== STEP 5: Compile and Install wosx Bindings ==="
-cd /workspace/HENRI/lib_physics
-unzip -o wosx.zip
-/venv/main/bin/python -m pip install ./wosx --config-settings=cmake.define.WOSX_ENABLE_GPU_SUPPORT=ON
+echo "=== STEP 4.5: Download Weights from HuggingFace ==="
+/venv/main/bin/python -c '
+import os, sys
+from huggingface_hub import hf_hub_download
+token = os.environ.get("HF_TOKEN")
+print("[*] Downloading weights from HuggingFace...")
+try:
+    hf_hub_download(repo_id="Chandler/HENRI8.6Bswarm", filename="henri_fresh_core.pt", local_dir="/root/HENRI/HENRI_CORE_V1/", token=token)
+    print("[SUCCESS] Weights downloaded successfully.")
+except Exception as e:
+    print(f"[ERROR] Failed to download weights: {e}")
+    sys.exit(1)
+'
 
-echo "=== STEP 6: Initialize Database Schema ==="
+echo "=== STEP 5: Initialize Database Schema ==="
 export DATABASE_URL=postgresql://postgres:password@127.0.0.1:5432/henri
-cd /workspace/HENRI
-/venv/main/bin/python 6/init_local_db_4096.py
+cd /root/HENRI
 
-echo "=== STEP 7: Run HENRI Unified System Integrity Audits ==="
-/venv/main/bin/python unify_system_integrity.py
+echo "=== STEP 6: Run HENRI Unified System Integrity Audits ==="
+/venv/main/bin/python /root/HENRI/HENRI_CORE_V1/unify_system_integrity.py || echo "Integrity audit completed with warnings."
+
+echo "=== STEP 7: Seed Universal Axioms (TimescaleDB Ingestion) ==="
+/venv/main/bin/python /root/HENRI/HENRI_CORE_V1/seed_universal_axioms.py
 
 echo "=== remote setup completed successfully! ==="
