@@ -26,9 +26,8 @@ def run_zero_shot_geometric_resonance():
         chunk = [min(t, 31999) for t in tokens]
         token_tensor = torch.tensor(chunk, dtype=torch.long, device=device).unsqueeze(0)
         with torch.no_grad():
-            phasors = lifter(token_tensor)
-            bound_wavefront = torch.prod(phasors, dim=1).squeeze(0)
-            return F.normalize(bound_wavefront, p=2, dim=-1)
+            bound_wavefront = lifter(token_tensor).squeeze(0)
+            return bound_wavefront
 
     # 2. Formulate the Unseen Target Logic (Quadrant Beta Mapping)
     target_proof = (
