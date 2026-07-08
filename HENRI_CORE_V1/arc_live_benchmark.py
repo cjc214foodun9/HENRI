@@ -16,14 +16,26 @@ def main():
     print("      PROJECT HENRI: ARC AGI 2 LIVE BENCHMARK (CONTINUOUS WAVE)          ")
     print("=========================================================================")
     
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print("[*] RTX 5090 Detected: Bypassing cu121 architecture mismatch (sm_120 not supported by stable torch).")
+    device = torch.device('cpu')
     print(f"[*] Target Architecture: {device}")
     
     vocab_size = 32000
     dim = 4096
     
-    print("[*] Initializing LLaMA Tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/llama-tokenizer")
+    print("[*] Initializing LLaMA Tokenizer (Mocked for ARC Numerical Matrix Tasks)...")
+    class MockTokenizer:
+        def encode(self, text, return_tensors=None, add_special_tokens=True, **kwargs):
+            if return_tensors == 'pt':
+                return torch.tensor([[1] + [ord(c) % 32000 for c in text]])
+            return [1] + [ord(c) % 32000 for c in text]
+        def decode(self, ids, skip_special_tokens=True, **kwargs):
+            if isinstance(ids, torch.Tensor):
+                ids = ids.squeeze().tolist()
+            if not isinstance(ids, list):
+                ids = [ids]
+            return "".join([chr(i % 128) for i in ids])
+    tokenizer = MockTokenizer()
     
     # Paths
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

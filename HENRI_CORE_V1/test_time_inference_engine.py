@@ -9,17 +9,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from cognitive_swarm_orchestrator import HolographicSuperposition, RightKanPullbackOrchestrator
 from viscoelastic_swarm_core_shared_baseplate import ProprietaryHENRICore
-from universal_thermodynamic_harness import WaveJEPATransitionNetwork
 from holographic_egress_high_stress_logit_sieve import MimicryMasterOrchestrator
 
 class TopologicalTreeOfThought(nn.Module):
     """
     Maintains a continuous-time wave evolution across the phase space.
     Eliminates algorithmic Beam Search. The Global Geodesic is resolved
-    by propagating the wavefront forward and physically injecting Langevin heat 
-    into any spatial dimension that destructively interferes with the target boundary.
+    by propagating the wavefront forward through the Thermodynamic Swarm Core.
     """
     def __init__(self, core_swarm, dim: int = 4096, num_experts: int = 16, time_horizon: int = 5):
         super().__init__()
@@ -28,57 +25,26 @@ class TopologicalTreeOfThought(nn.Module):
         self.time_horizon = time_horizon
         
         self.core = core_swarm
-        self.world_model = WaveJEPATransitionNetwork(dim=dim)
-        
-        self.superposition = HolographicSuperposition(num_experts=num_experts)
-        self.pullback = RightKanPullbackOrchestrator(num_experts=num_experts)
-
-    def _sagnac_veto(self, predicted_state: torch.Tensor, empirical_boundary: torch.Tensor):
-        inner_product = torch.sum(predicted_state * empirical_boundary.conj(), dim=-1)
-        transmission = torch.abs(inner_product)
-        return 1.0 - transmission 
 
     def execute_physical_wave_propagation(self, initial_state: torch.Tensor, target_axiom: torch.Tensor) -> torch.Tensor:
         """
-        Propagates the unified wave through the temporal manifold.
+        Propagates the unified wave through the temporal manifold natively.
         """
         current_state = initial_state
         if current_state.dim() == 1:
             current_state = current_state.unsqueeze(0)
+            
+        print(" -> Engaging True Continuous-Time Wave Core...")
         
         for t in range(self.time_horizon):
-            swarm_wavefronts = current_state.unsqueeze(0)
-            repeat_dims = [self.num_experts] + [1] * current_state.dim()
-            swarm_wavefronts = swarm_wavefronts.repeat(*repeat_dims)
-            proposed_waves = self.core(swarm_wavefronts)
+            temperature = 0.5 * (1.0 + (t / self.time_horizon))
             
-            predicted_futures = []
-            for i in range(self.num_experts):
-                future = self.world_model(current_state, proposed_waves[i])
-                predicted_futures.append(future)
-            predicted_futures = torch.stack(predicted_futures)
+            telemetry = self.core(current_state, temperature=temperature)
+            current_state = telemetry["resolved_wave"]
             
-            sagnac_deltas = []
-            for i in range(self.num_experts):
-                if target_axiom is not None:
-                    delta = self._sagnac_veto(predicted_futures[i], target_axiom)
-                else:
-                    delta = torch.zeros(1, device=current_state.device)
-                sagnac_deltas.append(delta.mean())
-            sagnac_deltas = torch.stack(sagnac_deltas)
+            print(f" -> Time {t}: Mean Structural Stress (Free Energy): {telemetry['error_energy']:.4f} | Routing Entropy: {telemetry['routing_entropy']:.4f}")
             
-            # Pure wave interference to extract consensus
-            consensus_wave = self.superposition(proposed_waves)
-            
-            print(f" -> Time {t}: Mean Structural Stress (Free Energy): {sagnac_deltas.mean().item():.4f}")
-            
-            # Apply Pullback (Heat injection into failing manifolds) to all layers in the core
-            for l in range(self.core.num_layers):
-                self.core.swarm_adapters[l] = self.pullback(self.core.swarm_adapters[l], sagnac_deltas)
-            
-            current_state = consensus_wave
-            
-        print("[GLOBAL GEODESIC] Absolute path of least resistance extracted through pure interference.")
+        print("[GLOBAL GEODESIC] Absolute path of least resistance extracted through continuous wave integration.")
         return current_state
 
 from semantic_decoder_non_autoregressive_crystallization import NonAutoregressiveCanvasSampler

@@ -60,7 +60,8 @@ class HolographicADMA(nn.Module):
         if self.canonical_lexicon is None:
             raise ValueError("Canonical Lexicon is hollow. Must call load_zone_c_attractors() first.")
             
-        # Normalize incoming wave to ensure unit modulus
+        # Normalize incoming wave to ensure unit modulus and match precision type
+        active_wave = active_wave.to(self.canonical_lexicon.dtype)
         active_wave = F.normalize(active_wave, p=2, dim=-1)
         
         # Compute geometric resonance (Cosine Similarity)
@@ -68,7 +69,8 @@ class HolographicADMA(nn.Module):
         resonance = torch.einsum('bsd,vd->bsv', active_wave, self.canonical_lexicon)
         
         # Extract the top-k highest resonance attractors (Content-Addressable Fetch)
-        top_scores, top_indices = torch.topk(resonance, self.top_k, dim=-1)
+        k = min(self.top_k, self.canonical_lexicon.size(0))
+        top_scores, top_indices = torch.topk(resonance, k, dim=-1)
         
         # Retrieve the physical wave structures of the targeted attractors
         attractor_contexts = self.canonical_lexicon[top_indices]
@@ -137,10 +139,10 @@ class QuantizedEgressAssembler(nn.Module):
         
         # The Mimicry Master: A highly distilled, parameter-efficient projection head.
         # It wastes zero compute on reasoning; it only formats verified physical truths.
-        self.syntax_projection = nn.Linear(wave_dim, vocab_size, bias=False)
-        
-        # Orthogonal initialization to preserve wave geometry
-        nn.init.orthogonal_(self.syntax_projection.weight)
+        # Replaced nn.Linear with a static Holographic Associative Lookup lexicon
+        lexicon = torch.empty(vocab_size, wave_dim)
+        nn.init.orthogonal_(lexicon)
+        self.register_buffer("lexicon", lexicon)
 
     def forward(self, continuous_wave: torch.Tensor, syntax_mask: torch.Tensor = None) -> torch.Tensor:
         """
@@ -159,8 +161,8 @@ class QuantizedEgressAssembler(nn.Module):
         stabilized_wave = quantized_wave + context_attractors.mean(dim=-2)
         stabilized_wave = F.normalize(stabilized_wave, p=2, dim=-1)
         
-        # 4. Syntactic Projection
-        logits = self.syntax_projection(stabilized_wave)
+        # 4. Syntactic Projection (Pure Holographic Lookup)
+        logits = torch.matmul(stabilized_wave, self.lexicon.t())
         
         # 5. GBNF / FSM Logit Sieve
         if syntax_mask is not None:

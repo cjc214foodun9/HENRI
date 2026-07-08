@@ -46,7 +46,8 @@ class HolographicVectorLifter(nn.Module):
         orthogonal_phases = StiefelManifoldProjector.bjorck_newton_orthonormalize(raw_phases)
         
         # Lock parameters as unit-magnitude complex phasors: \Psi = e^{j\theta}
-        self.phase_lexicon = nn.Parameter(torch.polar(torch.ones_like(orthogonal_phases), orthogonal_phases))
+        # Use register_buffer instead of nn.Parameter to eliminate standard optimization vectors
+        self.register_buffer('phase_lexicon', torch.polar(torch.ones_like(orthogonal_phases), orthogonal_phases))
 
     @torch.no_grad()
     def project_to_unit_modulus(self):

@@ -6,7 +6,9 @@ import torch.nn.functional as F
 from holographic_vector_lifter import HolographicVectorLifter
 from ephaptic_kuramoto_bridge import HybridSynchronizationGrid
 from epistemic_game_theory_harness import EpistemicGameTheoryHarness
-from semantic_decoder_non_autoregressive_crystallization import QuantizedEgressAssembler
+from semantic_decoder_non_autoregressive_crystallization import SemanticCleanupMatrix
+from scale_boundary_axioms import ZoneCTimescaleDBAxioms # Mocked/Interface for immutable bounds
+
 class UnifiedCognitivePipeline(nn.Module):
     """
     The singular, unbroken thermodynamic execution graph for Project HENRI.
@@ -20,7 +22,7 @@ class UnifiedCognitivePipeline(nn.Module):
         self.spatial_resolution = spatial_resolution
         
         # 1. Ingress: Discrete to Continuous Waveform
-        self.holographic_lifter = HolographicVectorLifter(vocab_size=vocab_size, dim=dim)
+        self.holographic_lifter = HolographicVectorLifter(vocab_size=vocab_size, d_wave=dim)
         
         # 2. Physics Core: The BTO Crystal & Macro-Oscillator Sync
         self.ephaptic_kuramoto_core = HybridSynchronizationGrid(
@@ -29,6 +31,8 @@ class UnifiedCognitivePipeline(nn.Module):
         )
         
         # 3. Boundary Veto: The Sagnac Interferometer & Langevin Heat
+        # Note: We bypass the internal random axioms of the harness by feeding 
+        # the explicit homodyne stress scalar directly into the heating loop.
         self.epistemic_harness = EpistemicGameTheoryHarness(
             dim=dim, 
             base_temperature=0.4, 
@@ -36,20 +40,28 @@ class UnifiedCognitivePipeline(nn.Module):
         )
         
         # 4. Egress: The Comprehension ADC & Semantic Sieve
-        self.semantic_cleanup = QuantizedEgressAssembler(wave_dim=dim, vocab_size=vocab_size)
+        self.semantic_cleanup = SemanticCleanupMatrix(vocab_size=vocab_size, dim=dim)
 
-    def compute_homodyne_interference(self, wave: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    def compute_homodyne_interference(self, wave_a: torch.Tensor, wave_target: torch.Tensor) -> torch.Tensor:
         """
-        Measures the absolute physical phase-lock divergence between the 
-        active thought-wave and the target universe axioms.
+        The True Sagnac Veto: Computes the physical phase resonance between the 
+        generated hypothesis and the immutable Zone C target axiom. 
+        Returns a stress scalar (0.0 to 1.0) where 0.0 is perfect constructive resonance.
         """
-        interference = torch.mean(wave * torch.conj(target), dim=-1)
-        return 1.0 - torch.abs(interference)
+        # Element-wise complex conjugate multiplication (Holographic Unbinding)
+        interference_pattern = wave_a * wave_target.conj()
+        
+        # Macroscopic integration across the 4096-D phase plane
+        resonance_amplitude = torch.abs(interference_pattern.mean(dim=-1))
+        
+        # Geometric Stress: 1.0 (Total Destructive Mismatch) -> 0.0 (Perfect Constructive Lock)
+        geometric_stress = 1.0 - resonance_amplitude
+        return geometric_stress
 
     def forward(self, token_ids: torch.Tensor, target_axioms_complex: torch.Tensor) -> tuple:
         """
         The continuous execution flow. 
-        No arbitrary python loops. No discrete string verification mid-flight.
+        No arbitrary python loops. No self-fulfilling vacuous truths.
         """
         batch_size = token_ids.size(0)
 
@@ -59,9 +71,12 @@ class UnifiedCognitivePipeline(nn.Module):
         # =====================================================================
         initial_wavefront = self.holographic_lifter(token_ids) # [B, 4096]
         
-        # Reshape the phase angles to a spatial grid for the BTO physical simulation [B, 1, 64, 64]
+        # Normalize to strictly enforce Unit Modulus before entering the optics
+        initial_wavefront = F.normalize(initial_wavefront, p=2, dim=-1)
+        
+        # Reshape to spatial grid for the BTO physical simulation [B, 1, 64, 64]
         grid_dim = int(self.dim ** 0.5)
-        spatial_wave_grid = torch.angle(initial_wavefront).view(batch_size, 1, grid_dim, grid_dim)
+        spatial_wave_grid = initial_wavefront.view(batch_size, 1, grid_dim, grid_dim)
 
         # =====================================================================
         # PHASE 2: EPHAPTIC-KURAMOTO EVOLUTION
@@ -80,37 +95,41 @@ class UnifiedCognitivePipeline(nn.Module):
         # Flatten the evolved spatial grid back to the 4096-D phase-space
         evolved_wavefront = evolved_grid.view(batch_size, self.dim)
         
-        # We allow the wave to flow freely without artificially crushing its semantic shape
-        # (Newton-Schulz projection excised)
+        # Reconstruct complex waveform for precise interference calculations
+        evolved_complex = torch.complex(torch.cos(evolved_wavefront), torch.sin(evolved_wavefront))
+        evolved_complex = F.normalize(evolved_complex, p=2, dim=-1) # Preserve S^4095
 
         # =====================================================================
-        # PHASE 3: THE SAGNAC VETO & THERMODYNAMIC ANNEALING
+        # PHASE 3: THE TRUE SAGNAC VETO & THERMODYNAMIC ANNEALING
         # Check against immutable axioms; inject Langevin heat if locked
         # =====================================================================
-        # Reconstruct complex waveform for interference calculation
-        evolved_complex = torch.complex(torch.cos(evolved_wavefront), torch.sin(evolved_wavefront))
+        # Calculate the actual physical geometric distance between the thought 
+        # and the required universe boundary (Target Axiom).
+        true_sagnac_stress = self.compute_homodyne_interference(evolved_complex, target_axioms_complex)
         
-        # Rigid homodyne interference test against the actual target_axioms_complex
-        homodyne_stress_scalar = self.compute_homodyne_interference(evolved_complex, target_axioms_complex)
-        
+        # The Epistemic Harness injects heat strictly based on the failure to 
+        # match the external target, annihilating the solipsism loophole.
         annealed_complex_wave, final_langevin_heat = self.epistemic_harness(
             active_wavefront_complex=evolved_complex, 
-            regex_stress_scalar=homodyne_stress_scalar
+            regex_stress_scalar=true_sagnac_stress
         )
 
         # =====================================================================
         # PHASE 4: SEMANTIC CRYSTALLIZATION
         # Strip thermal noise and collapse back to discrete vocabulary
         # =====================================================================
-        # Provide the annealed complex wave directly to the Egress Assembler
-        # It handles the simulated 4-bit ADC quantization internally
-        self.semantic_cleanup.adma_fetch.load_zone_c_attractors(target_axioms_complex.real.float())
-        clean_logits = self.semantic_cleanup(annealed_complex_wave.unsqueeze(1))
+        # Provide the 4-bit quantized shadow of the wave to the cleanup matrix
+        # (Simulating the Comprehension ADCs)
+        noisy_vector = torch.cat([annealed_complex_wave.real, annealed_complex_wave.imag], dim=-1) # [B, 8192]
+        
+        # The cleanup matrix snaps the noisy physics back to absolute digital truth
+        clean_logits = self.semantic_cleanup(noisy_vector)
 
-        # Telemetry payload for the training loop
+        # Telemetry payload mapping true structural efficiency
         telemetry = {
-            "Sagnac_Reflection_Energy": homodyne_stress_scalar.mean().item(),
-            "Langevin_Heat_Integral": final_langevin_heat.mean().item()
+            "Sagnac_Reflection_Energy": true_sagnac_stress.mean().item(),
+            "Langevin_Heat_Integral": final_langevin_heat.mean().item(),
+            "Internal_Coherence_RB": R_B.mean().item() # Kept strictly for observation, not reward
         }
 
         return clean_logits, telemetry

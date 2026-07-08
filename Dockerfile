@@ -8,21 +8,37 @@ ENV PYTHONUNBUFFERED=1
 # Set the working directory
 WORKDIR /app
 
-# Install system dependencies, Python 3.10, and PostgreSQL
+# Install system dependencies, Python 3.10, and setup keys for PostgreSQL and TimescaleDB
 RUN apt-get update && apt-get install -y \
     software-properties-common \
     python3.10 \
     python3.10-venv \
     python3.10-dev \
     python3-pip \
-    postgresql \
-    postgresql-contrib \
     git \
     wget \
     curl \
     build-essential \
     cmake \
     libpq-dev \
+    gnupg \
+    lsb-release \
+    apt-transport-https \
+    ninja-build \
+    && mkdir -p /etc/apt/keyrings \
+    && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/keyrings/postgresql.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | tee /etc/apt/sources.list.d/pgdg.list \
+    && wget --quiet -O - https://packagecloud.io/timescale/timescaledb/gpgkey | gpg --dearmor -o /etc/apt/keyrings/timescaledb.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/timescaledb.gpg] https://packagecloud.io/timescale/timescaledb/ubuntu/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/timescaledb.list \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    postgresql-16 \
+    postgresql-contrib-16 \
+    timescaledb-2-postgresql-16 \
+    postgresql-16-pgvector \
+    libvulkan-dev \
+    libvulkan1 \
+    libx11-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up a virtual environment
@@ -32,7 +48,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Upgrade pip and install core high-speed GPU dependencies
 RUN pip install --upgrade pip
-RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+RUN pip install --no-cache-dir --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu124
 
 # Install standard engine dependencies
 RUN pip install --no-cache-dir \
@@ -61,12 +77,15 @@ COPY . /app/HENRI
 
 # Create an entrypoint script to automatically boot the database and run the engine
 RUN echo '#!/bin/bash\n\
+timescaledb-tune --yes --quiet || true\n\
 service postgresql start\n\
 # Wait for PostgreSQL to boot\n\
 sleep 3\n\
 # Setup database schema if it does not exist\n\
 su - postgres -c "psql -c \\"CREATE DATABASE henri;\\" || true"\n\
 su - postgres -c "psql -c \\"ALTER USER postgres WITH PASSWORD '\'password\'';\\""\n\
+su - postgres -c "psql -d henri -c \\"CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;\\""\n\
+su - postgres -c "psql -d henri -c \\"CREATE EXTENSION IF NOT EXISTS vector CASCADE;\\""\n\
 \n\
 # Setup connection string\n\
 export DATABASE_URL=postgresql://postgres:password@127.0.0.1:5432/henri\n\
@@ -83,8 +102,6 @@ if not os.path.exists('\''/app/HENRI/HENRI_CORE_V1/henri_fresh_core.pt'\'):\n\
 "\n\
 \n\
 # Execute Benchmark Pipeline\n\
-python /app/HENRI/HENRI_CORE_V1/unify_system_integrity.py\n\
-python /app/HENRI/HENRI_CORE_V1/seed_universal_axioms.py\n\
 exec python /app/HENRI/HENRI_CORE_V1/arc_live_benchmark.py\n\
 ' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
