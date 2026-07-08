@@ -86,10 +86,4 @@ echo "=== STEP 5: Initialize Database Schema ==="
 export DATABASE_URL=postgresql://postgres:password@127.0.0.1:5432/henri
 cd /root/HENRI
 
-echo "=== STEP 6: Run HENRI Unified System Integrity Audits ==="
-/venv/main/bin/python /root/HENRI/HENRI_CORE_V1/unify_system_integrity.py || echo "Integrity audit completed with warnings."
-
-echo "=== STEP 7: Seed Universal Axioms (TimescaleDB Ingestion) ==="
-/venv/main/bin/python /root/HENRI/HENRI_CORE_V1/seed_universal_axioms.py
-
 echo "=== remote setup completed successfully! ==="

@@ -30,7 +30,7 @@ jobs:
       run: |  
         # Run the cohesive pipeline natively inside the remote container  
         ssh -p ${{ secrets.VAST_PORT }} -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@${{ secrets.VAST_HOST }} \
-          "export DATABASE_URL=${{ secrets.DB_URL }} HF_TOKEN=${{ secrets.HF_READ_TOKEN }} HF_WRITE_TOKEN=${{ secrets.HF_WRITE_TOKEN }} && cd /root/HENRI && chmod +x ./fix_and_run.sh && ./fix_and_run.sh"
+          "export DATABASE_URL=${{ secrets.DB_URL }} HF_TOKEN=${{ secrets.HF_READ_TOKEN }} HF_WRITE_TOKEN=${{ secrets.HF_WRITE_TOKEN }} && cd /root/HENRI && chmod +x ./HENRI_CORE_V1/setup_remote_server.sh && ./HENRI_CORE_V1/setup_remote_server.sh && chmod +x ./fix_and_run.sh && ./fix_and_run.sh"
 
     - name: Download Telemetry Metrics and Diagnostic Reports  
       if: always()  

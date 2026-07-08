@@ -5,7 +5,7 @@ set -e
 export HF_TOKEN="${HF_TOKEN}"
 
 echo "[*] Installing torch..."
-/venv/main/bin/python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 --no-cache-dir
+/venv/main/bin/python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 --no-cache-dir
 
 echo "[*] Downloading weights..."
 /venv/main/bin/python -c '
