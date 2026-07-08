@@ -19,26 +19,26 @@ jobs:
         SSH_KEY: ${{ secrets.VAST_AI_SSH_KEY }}
       run: |  
         mkdir -p ~/.ssh  
-        echo "$SSH_KEY" > ~/.ssh/id_rsa  
-        chmod 600 ~/.ssh/id_rsa
+        echo "$SSH_KEY" > ~/.ssh/id_ed25519  
+        chmod 600 ~/.ssh/id_ed25519
 
     - name: Execute Remote Substrate Synchronization  
       run: |  
         # Rsync verified source code changes directly onto the remote server footprint  
         ssh -p 33683 -o StrictHostKeyChecking=no root@ssh2.vast.ai "mkdir -p /root/HENRI"
-        rsync -avz --exclude '.git' --exclude '.github' -e "ssh -p 33683 -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa" ./ root@ssh2.vast.ai:/root/HENRI/
+        rsync -avz --exclude '.git' --exclude '.github' -e "ssh -p 33683 -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519" ./ root@ssh2.vast.ai:/root/HENRI/
 
     - name: Trigger Unified Pipeline (Setup, Train, Benchmark, Upload)
       run: |  
         # Run the cohesive pipeline natively inside the remote container  
-        ssh -p 33683 -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@ssh2.vast.ai \
+        ssh -p 33683 -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 root@ssh2.vast.ai \
           "export DATABASE_URL=${{ secrets.DB_URL }} HF_TOKEN=${{ secrets.HF_READ_TOKEN }} HF_WRITE_TOKEN=${{ secrets.HF_WRITE_TOKEN }} && cd /root/HENRI && chmod +x ./HENRI_CORE_V1/setup_remote_server.sh && ./HENRI_CORE_V1/setup_remote_server.sh && chmod +x ./fix_and_run.sh && ./fix_and_run.sh"
 
     - name: Download Telemetry Metrics and Diagnostic Reports  
       if: always()  
       run: |  
-        scp -P 33683 -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@ssh2.vast.ai:/root/HENRI/system_integrity_report.json ./ || true
-        scp -P 33683 -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@ssh2.vast.ai:/root/HENRI/benchmark.log ./ || true
+        scp -P 33683 -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 root@ssh2.vast.ai:/root/HENRI/system_integrity_report.json ./ || true
+        scp -P 33683 -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 root@ssh2.vast.ai:/root/HENRI/benchmark.log ./ || true
 
     - name: Archive System Integrity & Diagnostics Artifacts  
       if: always()  
