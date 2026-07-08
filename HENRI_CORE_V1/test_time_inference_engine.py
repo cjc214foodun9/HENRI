@@ -53,7 +53,7 @@ class DeploymentPipeline(nn.Module):
     """
     Wraps the Tree of Thought in the strict WCAG FSM logit sieve.
     """
-    def __init__(self, core_swarm, vocab_map: dict, wcag_regex: str = None, dim: int = 4096):
+    def __init__(self, core_swarm, canonical_phase_lexicon: torch.Tensor, vocab_map: dict, wcag_regex: str = None, dim: int = 4096):
         super().__init__()
         self.tot = TopologicalTreeOfThought(core_swarm, dim=dim)
         
@@ -62,8 +62,8 @@ class DeploymentPipeline(nn.Module):
         vocab_size = max(vocab_map.values()) + 1 if vocab_map else 32000
         
         self.canvas_sampler = NonAutoregressiveCanvasSampler(
+            canonical_phase_lexicon=canonical_phase_lexicon,
             dim=dim, 
-            vocab_size=vocab_size, 
             relaxation_steps=1
         )
         

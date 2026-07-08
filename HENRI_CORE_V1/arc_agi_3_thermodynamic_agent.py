@@ -12,6 +12,7 @@ def main():
     print("      PROJECT HENRI: ARC AGI 3 LIVE AGENT (CONTINUOUS WAVE)              ")
     print("=========================================================================")
     
+    # Using CUDA (GPU)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"[*] Target Architecture: {device}")
     
@@ -29,7 +30,21 @@ def main():
     print("[*] Booting Unified Continuous Wave Execution Engine...")
     engine = UnifiedCognitivePipeline(vocab_size=vocab_size, dim=dim, spatial_resolution=64).to(device)
     
-    weights_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "arc_coherent_vectors.pt")
+    weights_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "henri_fresh_core.pt")
+    
+    if not os.path.exists(weights_path):
+        print(f"[*] Production weights not found at {weights_path}. Downloading 7GB core from HuggingFace...")
+        try:
+            from huggingface_hub import hf_hub_download
+            hf_hub_download(
+                repo_id="Chandler/HENRI8.6Bswarm", 
+                filename="henri_fresh_core.pt", 
+                local_dir=os.path.dirname(os.path.abspath(__file__)), 
+                token="HFAKUz2BkSyewRWxJX4KZaLy9rs5J5w"
+            )
+        except Exception as e:
+            print(f"[!] Warning: Failed to download weights. Error: {e}")
+            
     if os.path.exists(weights_path):
         print(f"[*] Loading Production Core Weights from {weights_path}...")
         try:
@@ -40,7 +55,8 @@ def main():
         except Exception as e:
             print(f"[!] Warning: Failed to load weights. Error: {e}")
     else:
-        print(f"[!] WARNING: Production weights not found at {weights_path}. Running with uninitialized physics core.")
+        print(f"[!] WARNING: Production weights still not found. Running with uninitialized physics core.")
+    
     
     print("[*] Initializing Canonical Target Axioms (Phase Zero)...")
     target_axioms_complex = torch.polar(

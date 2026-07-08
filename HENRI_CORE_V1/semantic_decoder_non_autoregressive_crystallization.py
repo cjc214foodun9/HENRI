@@ -4,82 +4,10 @@ import torch.nn.functional as F
 import math
 
 # =============================================================================
-# 1. HOLOGRAPHIC ASSOCIATIVE DMA (PREDICTIVE HASHING / ZONE C FETCH)
+# 1. NEW HOLOGRAPHIC ASSOCIATIVE DECODER (ZONE B -> ZONE A)
 # =============================================================================
 
-class HolographicADMA(nn.Module):
-    """
-    Content-addressable memory retrieval over the CXL 3.0 optical bus.
-    Uses the active HRR wave's geometry to pull structural playbooks from Zone C
-    in O(1) time without traditional index-based memory lookups.
-    """
-    def __init__(self, dim=4096, top_k_fetch=3):
-        super().__init__()
-        self.dim = dim
-        self.top_k = top_k_fetch
-        
-        # The Canonical Lexicon: A massive frozen tensor simulating the Zone C SSD
-        # Must be initialized via load_zone_c_attractors before use
-        self.register_buffer('canonical_lexicon', None)
-
-    def load_zone_c_attractors(self, db_source):
-        """
-        Ingest the true mathematical invariants from the HDF5/TimescaleDB structural playbooks.
-        Handles direct tensors, file paths, or quadrant dictionaries.
-        """
-        if isinstance(db_source, str):
-            # Load from file path
-            db_source = torch.load(db_source, map_location='cpu', weights_only=True)
-            
-        if isinstance(db_source, dict):
-            # Flatten quadrant dictionary into a single lexicon tensor
-            all_tensors = []
-            for k, v in db_source.items():
-                if isinstance(v, list) and len(v) > 0:
-                    all_tensors.append(torch.stack(v))
-                elif isinstance(v, torch.Tensor):
-                    all_tensors.append(v)
-            if all_tensors:
-                tensor_db = torch.cat(all_tensors, dim=0)
-            else:
-                raise ValueError("Zone C Dictionary is empty.")
-        else:
-            tensor_db = db_source
-            
-        # Ensure it's on the correct device and normalized
-        self.register_buffer('canonical_lexicon', F.normalize(tensor_db.to(self.canonical_lexicon.device if hasattr(self, 'canonical_lexicon') and self.canonical_lexicon is not None else 'cpu'), p=2, dim=-1))
-
-    def forward(self, active_wave: torch.Tensor) -> torch.Tensor:
-        """
-        Calculates the thermodynamic resonance between the active wave and the lexicon.
-        Args:
-            active_wave: [Batch, Sequence_Length, 4096]
-        Returns:
-            attractor_contexts: [Batch, Sequence_Length, top_k, 4096]
-        """
-        if self.canonical_lexicon is None:
-            raise ValueError("Canonical Lexicon is hollow. Must call load_zone_c_attractors() first.")
-            
-        # Normalize incoming wave to ensure unit modulus and match precision type
-        active_wave = active_wave.to(self.canonical_lexicon.dtype)
-        active_wave = F.normalize(active_wave, p=2, dim=-1)
-        
-        # Compute geometric resonance (Cosine Similarity)
-        # resonance: [Batch, Sequence_Length, Lexicon_Size]
-        resonance = torch.einsum('bsd,vd->bsv', active_wave, self.canonical_lexicon)
-        
-        # Extract the top-k highest resonance attractors (Content-Addressable Fetch)
-        k = min(self.top_k, self.canonical_lexicon.size(0))
-        top_scores, top_indices = torch.topk(resonance, k, dim=-1)
-        
-        # Retrieve the physical wave structures of the targeted attractors
-        attractor_contexts = self.canonical_lexicon[top_indices]
-        
-        return attractor_contexts
-
-# =============================================================================
-# 2. FUNCTORFLOW RIGHT KAN EXTENSION (MACRO-SEQUENCE GLUING)
-# =============================================================================
+from semantic_decoder_crystallization_head import HolographicAssociativeDecoder
 
 class RightKanPullbackOrchestrator(nn.Module):
     """
@@ -121,58 +49,7 @@ class RightKanPullbackOrchestrator(nn.Module):
         
         return current_micro_epoch
 
-# =============================================================================
-# 3. HOLOGRAPHIC EGRESS LAYER (WAVE-TO-TOKEN COLLAPSE)
-# =============================================================================
 
-class QuantizedEgressAssembler(nn.Module):
-    """
-    Simulates the Zone A 4-bit ADCs and the Mimicry Master. 
-    Discretizes the continuous HRR wave and decodes it into strict syntax.
-    """
-    def __init__(self, wave_dim=4096, vocab_size=32000):
-        super().__init__()
-        self.wave_dim = wave_dim
-        self.vocab_size = vocab_size
-        
-        self.adma_fetch = HolographicADMA(dim=wave_dim)
-        
-        # The Mimicry Master: A highly distilled, parameter-efficient projection head.
-        # It wastes zero compute on reasoning; it only formats verified physical truths.
-        # Replaced nn.Linear with a static Holographic Associative Lookup lexicon
-        lexicon = torch.empty(vocab_size, wave_dim)
-        nn.init.orthogonal_(lexicon)
-        self.register_buffer("lexicon", lexicon)
-
-    def forward(self, continuous_wave: torch.Tensor, syntax_mask: torch.Tensor = None) -> torch.Tensor:
-        """
-        Translates [Batch, Seq, 4096] physical wave into [Batch, Seq, Vocab_Size] logits.
-        """
-        # We clamp the pristine wave to simulate ADC discretization. 
-        # Project to real space for the egress dictionary.
-        real_wave = continuous_wave.real.float()
-        quantized_wave = torch.round(real_wave * 15.0) / 15.0
-        
-        # 2. Predictive Fetch: Pull structural playbooks to contextualize the blurry wave
-        context_attractors = self.adma_fetch(quantized_wave)
-        
-        # 3. Semantic Cleanup: Blend the primary wave with its nearest perfect attractors
-        # This strips away residual thermodynamic noise
-        stabilized_wave = quantized_wave + context_attractors.mean(dim=-2)
-        stabilized_wave = F.normalize(stabilized_wave, p=2, dim=-1)
-        
-        # 4. Syntactic Projection (Pure Holographic Lookup)
-        logits = torch.matmul(stabilized_wave, self.lexicon.t())
-        
-        # 5. GBNF / FSM Logit Sieve
-        if syntax_mask is not None:
-            logits = torch.where(syntax_mask, logits, torch.tensor(-1e9, device=logits.device))
-        
-        return logits
-
-# =============================================================================
-# 4. NON-AUTOREGRESSIVE DIFFUSION CANVAS SAMPLER
-# =============================================================================
 
 class ScoreFunctionWrapper(nn.Module):
     """
@@ -196,7 +73,8 @@ class ScoreFunctionWrapper(nn.Module):
             norm = torch.linalg.vector_norm(predicted_target, dim=-1, keepdim=True).clamp(min=1e-8)
             predicted_target = predicted_target / norm
         else:
-            predicted_target = self.core(canvas)
+            out = self.core(canvas, temperature=t)
+            predicted_target = out["resolved_wave"] if isinstance(out, dict) else out
             
         # The drift velocity points from the current canvas state towards the predicted origin
         drift_velocity = predicted_target - canvas
@@ -208,12 +86,12 @@ class NonAutoregressiveCanvasSampler(nn.Module):
     The orchestrator for Test-Time Adaptive Generalization.
     Transforms a latent noise canvas into a crystalline syntax matrix in a single parallel sweep.
     """
-    def __init__(self, dim=4096, vocab_size=32000, relaxation_steps=25):
+    def __init__(self, canonical_phase_lexicon: torch.Tensor, dim=4096, relaxation_steps=25):
         super().__init__()
         self.dim = dim
         self.relaxation_steps = relaxation_steps
         self.pullback_orchestrator = RightKanPullbackOrchestrator(dim=dim)
-        self.egress_assembler = QuantizedEgressAssembler(wave_dim=dim, vocab_size=vocab_size)
+        self.egress_assembler = HolographicAssociativeDecoder(canonical_phase_lexicon=canonical_phase_lexicon)
 
     def generate_trajectory(self, physical_core: nn.Module, prompt_wave: torch.Tensor, target_seq_len: int, chunk_size: int = 64, syntax_mask: torch.Tensor = None):
         """
@@ -256,8 +134,12 @@ class NonAutoregressiveCanvasSampler(nn.Module):
             else:
                 crystallized_wave = self.pullback_orchestrator(canvas, prompt_wave)
                 
-            # Wave-to-Token Collapse
-            logits = self.egress_assembler(crystallized_wave, syntax_mask=syntax_mask)
+            # Wave-to-Token Collapse using Phase Resonance
+            logits = self.egress_assembler(crystallized_wave)
+            
+            # Apply GBNF / FSM Logit Sieve
+            if syntax_mask is not None:
+                logits = torch.where(syntax_mask, logits, torch.tensor(-1e9, device=logits.device))
             
             # Apply deterministic Argmax to snap to exact syntax (Zero-Temperature execution)
             token_ids = torch.argmax(logits, dim=-1)
@@ -282,11 +164,12 @@ if __name__ == "__main__":
     
     # Mocking the physical core's score-matching output for validation
     class MockPhysicalCore(nn.Module):
-        def forward(self, canvas, condition, t):
-            return -canvas + condition # Simple geometric pull toward the condition
+        def forward(self, canvas, temperature=0.1):
+            return -canvas
             
     core = MockPhysicalCore().to(device)
-    sampler = NonAutoregressiveCanvasSampler(dim=dim).to(device)
+    mock_lexicon = torch.polar(torch.ones(32000, dim, device=device), torch.empty(32000, dim, device=device).uniform_(-math.pi, math.pi))
+    sampler = NonAutoregressiveCanvasSampler(canonical_phase_lexicon=mock_lexicon, dim=dim).to(device)
     
     mock_prompt_wave = F.normalize(torch.randn(batch_size, seq_len, dim, device=device), p=2, dim=-1)
     

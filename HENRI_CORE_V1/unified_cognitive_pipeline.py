@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from holographic_vector_lifter import HolographicVectorLifter
 from ephaptic_kuramoto_bridge import HybridSynchronizationGrid
 from epistemic_game_theory_harness import EpistemicGameTheoryHarness
-from semantic_decoder_non_autoregressive_crystallization import QuantizedEgressAssembler
+from semantic_decoder_crystallization_head import HolographicAssociativeDecoder
 class UnifiedCognitivePipeline(nn.Module):
     """
     The singular, unbroken thermodynamic execution graph for Project HENRI.
@@ -35,8 +35,10 @@ class UnifiedCognitivePipeline(nn.Module):
             sagnac_threshold=0.05
         )
         
-        # 4. Egress: The Comprehension ADC & Semantic Sieve
-        self.semantic_cleanup = QuantizedEgressAssembler(wave_dim=dim, vocab_size=vocab_size)
+        self.semantic_cleanup = HolographicAssociativeDecoder(
+            canonical_phase_lexicon=self.holographic_lifter.canonical_phase_lexicon,
+            dsp_temperature=0.05
+        )
 
     def compute_homodyne_interference(self, wave: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
@@ -102,9 +104,7 @@ class UnifiedCognitivePipeline(nn.Module):
         # PHASE 4: SEMANTIC CRYSTALLIZATION
         # Strip thermal noise and collapse back to discrete vocabulary
         # =====================================================================
-        # Provide the annealed complex wave directly to the Egress Assembler
-        # It handles the simulated 4-bit ADC quantization internally
-        self.semantic_cleanup.adma_fetch.load_zone_c_attractors(target_axioms_complex.real.float())
+        # It handles the simulated 4-bit ADC quantization internally and leverages geometric resonance
         clean_logits = self.semantic_cleanup(annealed_complex_wave.unsqueeze(1))
 
         # Telemetry payload for the training loop
