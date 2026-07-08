@@ -15,9 +15,11 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Setup Pipeline Authentication  
+      env:
+        SSH_KEY: ${{ secrets.VAST_AI_SSH_KEY }}
       run: |  
         mkdir -p ~/.ssh  
-        echo "${{ secrets.VAST_AI_SSH_KEY }}" > ~/.ssh/id_rsa  
+        echo "$SSH_KEY" > ~/.ssh/id_rsa  
         chmod 600 ~/.ssh/id_rsa
 
     - name: Execute Remote Substrate Synchronization  
