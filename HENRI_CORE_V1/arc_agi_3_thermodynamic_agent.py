@@ -1,0 +1,92 @@
+import os
+import sys
+import torch
+import arc_agi
+from arcengine import GameAction
+from unified_cognitive_pipeline import UnifiedCognitivePipeline
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+def main():
+    print("=========================================================================")
+    print("      PROJECT HENRI: ARC AGI 3 LIVE AGENT (CONTINUOUS WAVE)              ")
+    print("=========================================================================")
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"[*] Target Architecture: {device}")
+    
+    vocab_size = 32000
+    dim = 4096
+    
+    # Mocking Tokenizer for pure coordinate/action translations
+    class MockTokenizer:
+        def encode(self, text, return_tensors=None, add_special_tokens=True, **kwargs):
+            if return_tensors == 'pt':
+                return torch.tensor([[1] + [ord(c) % vocab_size for c in text]])
+            return [1] + [ord(c) % vocab_size for c in text]
+    tokenizer = MockTokenizer()
+    
+    print("[*] Booting Unified Continuous Wave Execution Engine...")
+    engine = UnifiedCognitivePipeline(vocab_size=vocab_size, dim=dim, spatial_resolution=64).to(device)
+    
+    print("[*] Initializing Canonical Target Axioms (Phase Zero)...")
+    target_axioms_complex = torch.polar(
+        torch.ones(1, dim, device=device),
+        torch.empty(1, dim, device=device).uniform_(-3.14159, 3.14159)
+    )
+
+    print("\n>>> INITIATING ARC-AGI-3 CYBERNETIC ARCADE <<<")
+    try:
+        arc = arc_agi.Arcade()
+        print("[*] ARC-AGI Toolkit successfully connected.")
+    except Exception as e:
+        print(f"[!] Critical Failure: Could not initialize arc_agi.Arcade(). Is arc-agi installed? {e}")
+        return
+
+    # Using the ls20 game as the primary testing environment
+    env_name = "ls20"
+    print(f"[*] Constructing Environment: {env_name}")
+    env = arc.make(env_name, render_mode="terminal")
+    
+    obs, info = env.reset()
+    
+    print(f"[*] Environment Initialized. Entering Thermodynamic Action Loop.")
+    
+    max_steps = 100
+    for step_idx in range(max_steps):
+        # 1. State Perception
+        # Flatten observation into a string buffer
+        obs_str = str(obs)
+        input_str = f"<|arc_state|>\n{obs_str}\n<|arc_end|>"
+        
+        # 2. Vector Lifting
+        tokens = tokenizer.encode(input_str, return_tensors='pt').to(device)
+        
+        # 3. Continuous Wave Processing
+        with torch.no_grad():
+            clean_logits, telemetry = engine(tokens, target_axioms_complex)
+            
+        # 4. Wave-to-Action Collapse
+        # The logits correspond to vocab_size. We map the strongest resonance to the GameAction space.
+        action_space = list(GameAction)
+        predicted_token_id = torch.argmax(clean_logits[0, -1, :]).item()
+        
+        action_idx = predicted_token_id % len(action_space)
+        action = action_space[action_idx]
+        
+        # 5. Execute Action
+        print(f"[STEP {step_idx}] Heat: {telemetry.get('Langevin_Heat_Integral', 0.0):.2f} | Reflection: {telemetry.get('Sagnac_Reflection_Energy', 1.0):.3f} | Action Triggered: {action.name}")
+        
+        obs, reward, done, truncated, info = env.step(action)
+        
+        if done or truncated:
+            print(f"\n[*] Episode Terminated. Final Scorecard:")
+            print(arc.get_scorecard())
+            break
+
+    print("\n=========================================================================")
+    print("[*] ARC-AGI-3 LIVE EVALUATION COMPLETE")
+    print("=========================================================================")
+
+if __name__ == "__main__":
+    main()
