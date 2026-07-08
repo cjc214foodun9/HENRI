@@ -29,6 +29,19 @@ def main():
     print("[*] Booting Unified Continuous Wave Execution Engine...")
     engine = UnifiedCognitivePipeline(vocab_size=vocab_size, dim=dim, spatial_resolution=64).to(device)
     
+    weights_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "arc_coherent_vectors.pt")
+    if os.path.exists(weights_path):
+        print(f"[*] Loading Production Core Weights from {weights_path}...")
+        try:
+            state_dict = torch.load(weights_path, map_location=device)
+            # If the file contains only the core or specific modules, we load strictly
+            engine.load_state_dict(state_dict, strict=False)
+            print("[*] Weights loaded successfully.")
+        except Exception as e:
+            print(f"[!] Warning: Failed to load weights. Error: {e}")
+    else:
+        print(f"[!] WARNING: Production weights not found at {weights_path}. Running with uninitialized physics core.")
+    
     print("[*] Initializing Canonical Target Axioms (Phase Zero)...")
     target_axioms_complex = torch.polar(
         torch.ones(1, dim, device=device),
