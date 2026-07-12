@@ -1,9 +1,10 @@
 import torch
 import torch.nn.functional as F
 from transformers import AutoTokenizer
-from datasets import load_dataset
 import os
-import math
+import json
+import glob
+from holographic_vector_lifter import HolographicVectorLifter
 from holographic_vector_lifter import HolographicVectorLifter
 
 class StreamingDataFoundry:
@@ -14,18 +15,23 @@ class StreamingDataFoundry:
     These are serialized to disk to act as the immutable Zone C TimescaleDB.
     """
     def __init__(self, vocab_size: int = 32000, dim: int = 4096, seq_len: int = 128, max_samples_per_quadrant: int = 500):
-        self.vocab_size = vocab_size
-        self.dim = dim
-        self.seq_len = seq_len
+        self.vocab_size = 32000
+        self.seq_len = 256
         self.max_samples = max_samples_per_quadrant
         
-        print("[FOUNDRY] Initializing hf-internal-testing/llama-tokenizer...")
-        self.tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/llama-tokenizer")
+        print("[FOUNDRY] Initializing Physical Mock Tokenizer...")
+        class MockTokenizer:
+            def __init__(self, vocab_size):
+                self.vocab_size = vocab_size
+            def encode(self, text, return_tensors=None, add_special_tokens=True, **kwargs):
+                return [1] + [ord(c) % self.vocab_size for c in text]
+        
+        self.tokenizer = MockTokenizer(self.vocab_size)
         
         print("[FOUNDRY] Initializing HolographicVectorLifter (Zone C Prism)...")
         # Ensure it is seeded deterministically so the lexical vectors are stable across runs
         torch.manual_seed(42)
-        self.lifter = HolographicVectorLifter(vocab_size=vocab_size, dim=dim)
+        self.lifter = HolographicVectorLifter(vocab_size=self.vocab_size, dim=4096)
         
         # Output DB
         self.zone_c_db = {
@@ -35,67 +41,60 @@ class StreamingDataFoundry:
             "delta": []
         }
 
-    def _process_stream(self, hf_path: str, split: str, text_column: str, quadrant_key: str):
-        print(f"[FOUNDRY] Mounting {hf_path} for Quadrant {quadrant_key.upper()}...")
-        try:
-            ds = load_dataset(hf_path, split=split, streaming=True)
-            samples = 0
+    def _process_arc_grid(self, text: str, quadrant_key: str, samples_count: list):
+        if samples_count[0] >= self.max_samples:
+            return
             
-            for row in ds:
-                if samples >= self.max_samples:
-                    break
-                    
-                text = row.get(text_column, "")
-                if not text:
-                    continue
-                    
-                tokens = self.tokenizer.encode(text, add_special_tokens=False)
+        tokens = self.tokenizer.encode(text, add_special_tokens=False)
+        
+        # Chunk into seq_len blocks
+        for i in range(0, len(tokens) - self.seq_len + 1, self.seq_len):
+            if samples_count[0] >= self.max_samples:
+                break
                 
-                # Chunk into seq_len blocks
-                for i in range(0, len(tokens) - self.seq_len + 1, self.seq_len):
-                    if samples >= self.max_samples:
-                        break
-                        
-                    chunk = tokens[i : i + self.seq_len]
-                    
-                    # Ensure all tokens are within the 32k boundary (LLaMA should be, but just in case)
-                    chunk = [min(t, self.vocab_size - 1) for t in chunk]
-                    
-                    token_tensor = torch.tensor(chunk, dtype=torch.long).unsqueeze(0) # [1, seq_len]
-                    
-                    # 1. Lift tokens into continuous complex phase angles
-                    with torch.no_grad():
-                        phasors = self.lifter(token_tensor) # [1, seq_len, 4096]
-                        
-                        # 2. Bind the sequence via frequency-domain circular convolution (element-wise product)
-                        # The phase angles sum together (modulo 2pi), meaning the entire sequence is 
-                        # losslessly compressed into a single 4096-D mathematical invariant.
-                        bound_wavefront = torch.prod(phasors, dim=1).squeeze(0) # [4096]
-                        
-                        # Normalize to ensure unit modulus invariants
-                        bound_wavefront = F.normalize(bound_wavefront, p=2, dim=-1)
-                        
-                        self.zone_c_db[quadrant_key].append(bound_wavefront)
-                        samples += 1
-                        
-            print(f"[FOUNDRY] Successfully seeded {samples} axiomatic wavefronts for Quadrant {quadrant_key.upper()}.")
+            chunk = tokens[i : i + self.seq_len]
+            chunk = [min(t, self.vocab_size - 1) for t in chunk]
+            token_tensor = torch.tensor(chunk, dtype=torch.long).unsqueeze(0)
             
-        except Exception as e:
-            print(f"[!] Critical Error pulling {hf_path}: {e}")
+            with torch.no_grad():
+                phasors = self.lifter(token_tensor)
+                bound_wavefront = torch.prod(phasors, dim=1).squeeze(0)
+                bound_wavefront = F.normalize(bound_wavefront, p=2, dim=-1)
+                
+                self.zone_c_db[quadrant_key].append(bound_wavefront)
+                samples_count[0] += 1
 
     def compile_zone_c_lexicon(self):
-        # Quadrant Alpha: Math/Physics
-        self._process_stream("open-web-math/open-web-math", "train", "text", "alpha")
+        print("[FOUNDRY] Parsing local ARC-AGI-2 JSON grid datasets...")
+        arc_data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ARC-AGI-2-main", "data", "training", "*.json")
+        json_files = glob.glob(arc_data_path)
         
-        # Quadrant Beta: Code/Logic
-        self._process_stream("HuggingFaceH4/CodeAlpaca_20K", "train", "completion", "beta")
+        if not json_files:
+            print(f"[!] No JSON files found at {arc_data_path}")
+            return
+            
+        print(f"[FOUNDRY] Found {len(json_files)} ARC grid files.")
         
-        # Quadrant Gamma: Science/Knowledge (wikipedia snippet or similar)
-        # We'll use a small fast dataset for testing if wikipedia is too heavy
-        self._process_stream("ag_news", "train", "text", "gamma") 
+        samples_count = [0]
         
-        # Quadrant Delta: Heuristics
-        self._process_stream("HuggingFaceFW/fineweb-edu", "train", "text", "delta")
+        for file_path in json_files:
+            if samples_count[0] >= self.max_samples * 4: # distribute across 4 quadrants
+                break
+                
+            with open(file_path, "r") as f:
+                data = json.load(f)
+                
+            for i, example in enumerate(data.get("train", [])):
+                in_grid = str(example.get("input", []))
+                out_grid = str(example.get("output", []))
+                text = f"INPUT: {in_grid} OUTPUT: {out_grid}"
+                
+                # We'll just distribute them round-robin across quadrants
+                quad_idx = samples_count[0] % 4
+                quad_keys = ["alpha", "beta", "gamma", "delta"]
+                quad_key = quad_keys[quad_idx]
+                
+                self._process_arc_grid(text, quad_key, samples_count)
         
         print("[FOUNDRY] Serializing Zone C Holographic Database...")
         db_path = "zone_c_timescaledb.pt"
@@ -111,5 +110,6 @@ class StreamingDataFoundry:
         print(f"[FOUNDRY] Zone C Database written to {db_path} (Static Dirichlet Boundaries).")
 
 if __name__ == "__main__":
-    foundry = StreamingDataFoundry(max_samples_per_quadrant=100) # Quick run for testing
+    # Max out the samples to extract as many structural grid tokens as possible
+    foundry = StreamingDataFoundry(max_samples_per_quadrant=5000)
     foundry.compile_zone_c_lexicon()

@@ -8,7 +8,6 @@ import time
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from viscoelastic_swarm_core_shared_baseplate import ProprietaryHENRICore
-from triton_fused_physics import triton_fused_superposition
 
 class ZoneCDataset(Dataset):
     """
@@ -40,11 +39,11 @@ class FreshHENRIOrchestrator(nn.Module):
     def __init__(self, dim=4096, num_experts=16):
         super().__init__()
         # The core is now purely a Prism of Logic. No Tokenizer. No Egress Head.
-        self.core = ProprietaryHENRICore(dim=dim, num_layers=32, num_experts=num_experts)
+        self.core = ProprietaryHENRICore(dim=dim, num_experts=num_experts)
 
     def apply_viscoelastic_gradient_updates(self, lr=1e-3):
-        for layer in self.core.swarm_adapters:
-            for expert in layer:
+        for expert in self.core.experts:
+            if hasattr(expert, 'apply_viscoelastic_update'):
                 expert.apply_viscoelastic_update(lr=lr)
 
 def inject_langevin_heat(wavefront: torch.Tensor, temperature: float = 0.8) -> torch.Tensor:
@@ -107,14 +106,11 @@ def run_swarm_egress_compilation(output_path: str = "henri_fresh_core.pt"):
             # 1. Generate chaotic input state via Langevin Heat
             chaotic_input = inject_langevin_heat(target_waves, temperature=1.0)
             
-            # 2. Replicate wavefront for the 16 experts: [16, B, Dim]
-            swarm_wavefronts = chaotic_input.unsqueeze(0).repeat(16, 1, 1)
+            # 2. Rotate wavefront through the Swarm Prism (which handles internal routing and superposition)
+            telemetry = orchestrator.core(chaotic_input, temperature=1.0)
             
-            # 3. Rotate wavefront through the Swarm Prism
-            expert_waves = orchestrator.core(swarm_wavefronts)
-            
-            # 4. Superpose expert outputs into a singular consensus vector
-            consensus_wave = triton_fused_superposition(expert_waves)
+            # 3. Extract the superposed consensus wave
+            consensus_wave = telemetry["resolved_wave"]
             
             # 5. Compute Phase-Resonance Loss (InfoNCE)
             loss = infonce_phase_resonance_loss(consensus_wave, target_waves)

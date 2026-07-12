@@ -14,7 +14,7 @@ class HolographicAssociativeDecoder(nn.Module):
         
         # We must ingest the EXACT same immutable memory tensor used by the Vector Lifter.
         # This enforces perfect symmetry; the swarm only has to solve the logic, not the translation.
-        if canonical_phase_lexicon.dtype not in [torch.complex64, torch.complex128]:
+        if canonical_phase_lexicon.dtype not in [torch.complex64, torch.complex64]:
             raise TypeError("[ALETHEIA FATAL] Lexicon must be a complex phase array to calculate wave resonance.")
             
         self.register_buffer("reference_lexicon", canonical_phase_lexicon)

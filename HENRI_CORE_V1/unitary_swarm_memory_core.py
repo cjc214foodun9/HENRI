@@ -37,12 +37,13 @@ class UnitaryPhaseExpert(nn.Module):
     def forward(self, wave: torch.Tensor) -> torch.Tensor:
         # wave shape: [Batch, Dim]
         # Rotate the vector: W_active = W + A*B^T
-        base_rotation = torch.matmul(wave, self.weight)
-        lora_deformation = torch.matmul(torch.matmul(wave, self.lora_A), self.lora_B)
+        dtype = wave.dtype
+        base_rotation = torch.matmul(wave, self.weight.to(dtype))
+        lora_deformation = torch.matmul(torch.matmul(wave, self.lora_A.to(dtype)), self.lora_B.to(dtype))
         
         rotated = base_rotation + lora_deformation
         # Apply intrinsic frequency shift
-        shifted = rotated + self.phase_shift
+        shifted = rotated + self.phase_shift.to(dtype)
         # Re-normalize to surface of the hypersphere to prevent energy leakage (Retraction Mapping)
         return F.normalize(shifted, p=2, dim=-1)
 
@@ -72,8 +73,10 @@ class TimescaleHolographicDMA(nn.Module):
 
         # Compute geometric resonance across the entire cached ledger
         # active_wave: [Batch, Dim], cache: [Num_Axioms, Dim]
-        resonance = torch.matmul(active_wave, self.active_axiom_cache.t())
-        
+        resonance = torch.matmul(active_wave, self.active_axiom_cache.to(active_wave.dtype).t())
+        if resonance.is_complex():
+            resonance = resonance.real
+            
         # Extract the highest resonating axioms (Top-K)
         weights, indices = torch.topk(resonance, k=top_k, dim=-1)
         
@@ -126,7 +129,7 @@ class ThermodynamicSwarmOrchestrator(nn.Module):
         # 2. Calculate Thermodynamic Resonance (Routing)
         # R_i = <wave, signature_i> / (||wave|| * ||signature_i||)
         resonance_scores = F.cosine_similarity(
-            incident_wave.unsqueeze(1), 
+            incident_wave.real.unsqueeze(1) if incident_wave.is_complex() else incident_wave.unsqueeze(1), 
             self.expert_signatures.unsqueeze(0), 
             dim=-1
         )

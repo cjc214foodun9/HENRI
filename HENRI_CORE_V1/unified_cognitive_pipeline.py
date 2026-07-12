@@ -7,6 +7,7 @@ from holographic_vector_lifter import HolographicVectorLifter
 from ephaptic_kuramoto_bridge import HybridSynchronizationGrid
 from epistemic_game_theory_harness import EpistemicGameTheoryHarness
 from semantic_decoder_crystallization_head import HolographicAssociativeDecoder
+from block_sparse_grassmannian_sieve import BlockSparseGrassmannianSieve
 class UnifiedCognitivePipeline(nn.Module):
     """
     The singular, unbroken thermodynamic execution graph for Project HENRI.
@@ -35,6 +36,8 @@ class UnifiedCognitivePipeline(nn.Module):
             sagnac_threshold=0.05
         )
         
+        
+        self.bsf_sieve = BlockSparseGrassmannianSieve(d_wave=dim, num_blocks=16, block_dim=dim//16, gamma=0.01)
         self.semantic_cleanup = HolographicAssociativeDecoder(
             canonical_phase_lexicon=self.holographic_lifter.canonical_phase_lexicon,
             dsp_temperature=0.05
@@ -59,7 +62,10 @@ class UnifiedCognitivePipeline(nn.Module):
         # PHASE 1: HOLOGRAPHIC INGRESS
         # Translate discrete tokens into FHRR spatial frequencies
         # =====================================================================
-        initial_wavefront = self.holographic_lifter(token_ids) # [B, 4096]
+        phasors = self.holographic_lifter(token_ids) # [B, seq_len, 4096]
+        # Bind the sequence into a single compressed holographic state via continuous wave interference
+        initial_wavefront = torch.prod(phasors, dim=1) 
+        initial_wavefront = F.normalize(initial_wavefront, p=2, dim=-1) # [B, 4096]
         
         # Reshape the phase angles to a spatial grid for the BTO physical simulation [B, 1, 64, 64]
         grid_dim = int(self.dim ** 0.5)
@@ -104,13 +110,24 @@ class UnifiedCognitivePipeline(nn.Module):
         # PHASE 4: SEMANTIC CRYSTALLIZATION
         # Strip thermal noise and collapse back to discrete vocabulary
         # =====================================================================
-        # It handles the simulated 4-bit ADC quantization internally and leverages geometric resonance
-        clean_logits = self.semantic_cleanup(annealed_complex_wave.unsqueeze(1))
+        # 1. Pass the noisy wave through the Block-Sparse Grassmannian Sieve
+        clean_wave, z_sparse, hardware_mask = self.bsf_sieve(annealed_complex_wave)
+        
+        # 2. Holographic phase resonance mapping to logits
+        clean_logits = self.semantic_cleanup(clean_wave.unsqueeze(1))
 
+        # 3. Hardware Metric: Log the active blocks to inform the TiN microheaters 
+        # which segments of the waveguide to drop to 0.0V
+        active_blocks_count = hardware_mask.sum(dim=-1).float().mean().item()
+        num_total_blocks = hardware_mask.size(-1)
+        
         # Telemetry payload for the training loop
         telemetry = {
             "Sagnac_Reflection_Energy": homodyne_stress_scalar.mean().item(),
-            "Langevin_Heat_Integral": final_langevin_heat.mean().item()
+            "Langevin_Heat_Integral": final_langevin_heat.mean().item(),
+            "BSF_Active_Blocks": active_blocks_count,
+            "BSF_Sparsity": 1.0 - (active_blocks_count / num_total_blocks),
+            "z_sparse": z_sparse # Routed for BSFThermodynamicLoss during adaptation
         }
 
-        return clean_logits, telemetry
+        return clean_logits, clean_wave, telemetry
