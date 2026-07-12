@@ -43,7 +43,7 @@ class HolographicSpatialPointer:
         return x, y
 
 
-from HENRI_V2.phylogenetic_memory import EngramStore
+from phylogenetic_memory import EngramStore
 
 async def run_arc_benchmark():
     logging.info("Initializing Thermodynamic Harness ARC-AGI-3 Client")
@@ -91,7 +91,6 @@ async def run_arc_benchmark():
     
     # Initialize the Holographic Cache Manager
     import sys
-    import os
     # Ensure HENRI_V2 is in path so we can import from it on vast.ai or local
     sys.path.append(os.path.join(os.path.dirname(__file__), "HENRI V2"))
     sys.path.append(os.path.join(os.path.dirname(__file__), "HENRI_V2"))
@@ -99,7 +98,7 @@ async def run_arc_benchmark():
     from holographic_cache_manager import HolographicCacheManager
     from phylogenetic_memory import EngramStore
     
-    dsn = "postgres://postgres:password@localhost:5432/henri"
+    dsn = os.environ.get("POSTGRES_DSN", "postgres://postgres:password@localhost:5432/henri")
     store = EngramStore(dsn)
     await store.initialize_schema()
     
