@@ -63,13 +63,16 @@ class ZoneCEpistemicIgnition:
                 pass # Already a hypertable
 
             # Create an HNSW index for high-speed, scalable cosine similarity ($L_2$ distance)
-            await conn.execute('''
-                CREATE INDEX IF NOT EXISTS henri_wavefront_hnsw_idx 
-                ON henri_canonical_lexicon USING hnsw (wavefront vector_cosine_ops)
-                WITH (m = 16, ef_construction = 64);
-            ''')
+            # NOTE: pgvector limits HNSW to 2000 dimensions. Our physics engine is 4096.
+            # We will rely on Exact Nearest Neighbor (Sequential Scan) which is perfectly fine 
+            # for the bounded scale of axiomatic laws in Zone C.
+            # await conn.execute('''
+            #     CREATE INDEX IF NOT EXISTS henri_wavefront_hnsw_idx 
+            #     ON henri_canonical_lexicon USING hnsw (wavefront vector_cosine_ops)
+            #     WITH (m = 16, ef_construction = 64);
+            # ''')
             
-            print("[ALETHEIA] Zone C Axiomatic Baseplate Provisioned and HNSW Index Locked.")
+            print("[ALETHEIA] Zone C Axiomatic Baseplate Provisioned (Exact Nearest Neighbor mode).")
 
     def _enforce_stiefel_manifold(self, vector: np.ndarray) -> np.ndarray:
         """
