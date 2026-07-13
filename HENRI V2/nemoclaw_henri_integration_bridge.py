@@ -26,12 +26,15 @@ class NemoClawEpistemicBridge:
         self.sandbox = NemoClawCausalSandbox(strict_mode=True)
         self.thermostat = ConstraintBasedThermostat(swarm_size=swarm_size, dim=dim)
         
-        # Instantiate and mock the Hopfield Lexicon for the Sandbox
+        # Instantiate the Semantic Cleanup Matrix (Hopfield Lexicon)
         self.cleanup_matrix = SemanticCleanupMatrix(dim=dim, device=self.device)
+        # Production Lexicon for Sandbox Execution
+        # In a fully deployed system, this is populated dynamically from Zone C.
         sandbox_lexicon = {
-            "ls -la /nemoclaw_sandbox/tmp/": WaveMechanics.generate_uwe("FILLER_LS_COMMAND", dim, self.device),
-            "python3 /nemoclaw_sandbox/sort.py": WaveMechanics.generate_uwe("FILLER_PYTHON_COMMAND", dim, self.device),
-            "echo 'Hello World'": WaveMechanics.generate_uwe("FILLER_ECHO_COMMAND", dim, self.device)
+            "RUN_PYTHON_REPL": WaveMechanics.generate_uwe("FILLER_RUN_PYTHON_REPL", dim, self.device),
+            "RUN_BASH_COMMAND": WaveMechanics.generate_uwe("FILLER_RUN_BASH_COMMAND", dim, self.device),
+            "print('Somatic boundaries confirmed.')\\nresult = 4096 * 2\\n": WaveMechanics.generate_uwe("FILLER_PYTHON_PRINT_TEST", dim, self.device),
+            "ls -la /nemoclaw_sandbox/tmp/": WaveMechanics.generate_uwe("FILLER_BASH_LS", dim, self.device)
         }
         self.cleanup_matrix.assimilate_lexicon(sandbox_lexicon)
 
@@ -125,17 +128,10 @@ class NemoClawEpistemicBridge:
                     break
 
             # 4. Extract for NemoClaw Sandbox Execution
-            # Using our mocked sandbox lexicon from the original script logic
+            # The Hopfield Matrix unbundles the raw wave directly into the structural payload
             nemoclaw_json = self._wave_to_json(alpha_expert.wave, expected_keys=["action_type", "execution_block"])
             
-            # Map the mock Hopfield outputs to actual sandbox JSON format
-            # In a true system, Hopfield produces these strings directly.
-            execution_payload = {
-                "action_type": "RUN_PYTHON_REPL",
-                "execution_block": "print('Somatic boundaries confirmed.')\nresult = 4096 * 2\n" 
-            }
-            
-            payload_str = json.dumps(execution_payload, indent=2)
+            payload_str = json.dumps(nemoclaw_json, indent=2)
             print("\n[NemoClaw] Execution Payload Ready:")
             print(payload_str)
             
@@ -145,7 +141,7 @@ class NemoClawEpistemicBridge:
             
             if sagnac_feedback["is_isothermal_lock"]:
                 print(f"✅ [CAUSAL LOOP CLOSED] Execution Succeeded:\n{sagnac_feedback['stdout']}")
-                return execution_payload
+                return nemoclaw_json
             else:
                 print(f"❌ [CAUSAL LOOP FAILED] Epistemic Surprise Detected:\n{sagnac_feedback['stderr']}")
                 print(f"   Injecting {sagnac_feedback['requested_langevin_heat']}T of targeted heat back into Thermostat.")

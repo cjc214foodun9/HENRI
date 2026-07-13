@@ -108,13 +108,16 @@ class NemoClawCausalSandbox:
 
         if not success:
             # Calculate Epistemic Surprise (Sagnac Error)
-            # In a full deployment, this string is hashed into a 4096D noise vector.
             print(f"[ALETHEIA VETO] Destructive Interference Detected: {error_trace.strip().split()[-1] if error_trace else 'Timeout'}")
             
             # Request high Langevin heat to shake the swarm out of the broken local minimum
             response["requested_langevin_heat"] = 3.5 
             
-            # Pseudorandom simulated error vector representing the phase mismatch
+            # Hash the error string to create a deterministic phase mismatch constraint
+            import hashlib
+            hasher = hashlib.sha256(error_trace.encode('utf-8'))
+            seed_val = int(hasher.hexdigest()[:8], 16)
+            np.random.seed(seed_val)
             error_vector = np.random.randn(DIMENSIONS)
             response["error_wavefront_delta"] = (error_vector / np.linalg.norm(error_vector)).tolist()
         else:
