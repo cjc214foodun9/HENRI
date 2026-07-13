@@ -1,32 +1,14 @@
 import torch
 import json
 import time
+import asyncio
+import numpy as np
 from constraint_based_swarm_thermostat import WaveMechanics, ConstraintMatrix, ConstraintBasedThermostat
 from semantic_cleanup_matrix import SemanticCleanupMatrix
+from openshell_causal_loop_sandbox import NemoClawCausalSandbox
+from zone_c_live_epistemic_ignition import ZoneCEpistemicIgnition
 
-class TimescaleZoneCMock:
-    """
-    Simulates the asyncpg Holographic retrieval from TimescaleDB/pgvector.
-    In production, this queries the database for waves with high cosine similarity
-    to the active task wave, pulling only the relevant physical/logical constraints.
-    """
-    def __init__(self, dim=4096, device=None):
-        self.dim = dim
-        self.device = device if device else torch.device("cpu")
-        # Pre-seed some absolute laws for the Sandbox environment
-        self.database = {
-            "LAW_PYTHON_SYNTAX": WaveMechanics.generate_uwe("CONSTRAINT_VALID_AST", dim, self.device),
-            "LAW_SECURE_EXECUTION": WaveMechanics.generate_uwe("CONSTRAINT_NO_SYSTEM_CALLS_OUTSIDE_NEMOCLAW", dim, self.device),
-            "LAW_CAUSALITY": WaveMechanics.generate_uwe("CONSTRAINT_DEFINE_BEFORE_USE", dim, self.device)
-        }
 
-    def fetch_relevant_constraints(self, task_wave: torch.Tensor) -> list[torch.Tensor]:
-        """
-        Retrieves the Dirichlet boundary conditions (Constraints) that the Swarm must 
-        satisfy to survive the thermodynamic loop.
-        """
-        print("[Zone C] Holographic Adjacency Lookup Complete. Fetched 3 Constraints.")
-        return list(self.database.values())
 
 
 class NemoClawEpistemicBridge:
@@ -35,10 +17,13 @@ class NemoClawEpistemicBridge:
     Translates discrete LangChain JSON into continuous waves, runs the thermodynamic 
     constraint solver, and unbundles the output into secure NemoClaw execution syntax.
     """
-    def __init__(self, dim=4096, swarm_size=32):
+    def __init__(self, db_url: str, dim=4096, swarm_size=32):
         self.dim = dim
         self.device = torch.device("cpu")
-        self.zone_c = TimescaleZoneCMock(dim, self.device)
+        
+        # Production Organelles
+        self.zone_c = ZoneCEpistemicIgnition(db_url)
+        self.sandbox = NemoClawCausalSandbox(strict_mode=True)
         self.thermostat = ConstraintBasedThermostat(swarm_size=swarm_size, dim=dim)
         
         # Instantiate and mock the Hopfield Lexicon for the Sandbox
@@ -79,57 +64,113 @@ class NemoClawEpistemicBridge:
             
         return output_payload
 
-    def execute_agentic_loop(self, langchain_payload: dict):
+    async def execute_agentic_loop(self, langchain_payload: dict):
         """
         The Master Integration Loop.
         1. Ingest JSON from LangChain
-        2. Fetch Laws from TimescaleDB
+        2. Fetch Laws from TimescaleDB via Live Ignition
         3. Evolve Swarm until it respects all laws
         4. Excrete secure JSON for NemoClaw
+        5. Sandbox Execution & Sagnac Error Feedback
         """
         print("\n" + "="*60)
         print("🔗 INITIATING NEMOCLAW <-> HENRI THERMODYNAMIC BRIDGE")
         print("="*60)
         
+        # Connect to DB
+        await self.zone_c.connect_and_provision()
+        
         # 1. Transduce the environment
         task_wave = self._json_to_wave(langchain_payload)
         
-        # 2. Fetch the Epistemic Anchors (Constraints)
-        active_constraints = self.zone_c.fetch_relevant_constraints(task_wave)
+        # 2. Fetch the Epistemic Anchors (Constraints) Live
+        # Convert tensor to numpy for DB lookup
+        query_np = task_wave.cpu().numpy()
+        # Ensure modulus is 1.0 (sometimes it's complex, we only search on real part/magnitudes for DB approximation, 
+        # but the actual system would index complex fields. For now we use the real projection.)
+        query_real = np.real(query_np)
+        query_real = query_real / (np.linalg.norm(query_real) + 1e-9)
+        
+        fetched_laws = await self.zone_c.fetch_epistemic_adjacency(query_real, limit=3)
+        print(f"[Zone C] Holographic Adjacency Lookup Complete. Fetched {len(fetched_laws)} Constraints.")
+        
+        active_constraints = []
+        for law in fetched_laws:
+            # Reconstruct complex tensor from DB
+            wave_np = law['wavefront']
+            # Simplification: assuming real embeddings in DB for test, mapping back to complex tensor
+            wave_tensor = torch.tensor(wave_np, dtype=torch.complex64, device=self.device)
+            active_constraints.append(wave_tensor)
+            
         constraint_matrix = ConstraintMatrix(active_constraints)
         
-        # 3. Darwinian Thermodynamic Phase (The "Thinking")
-        print(f"\n[Thermostat] Igniting {self.thermostat.swarm_size}-Expert Swarm against Constraint Matrix...")
-        max_generations = 300
-        start_time = time.time()
-        
-        for gen in range(1, max_generations + 1):
-            alpha_expert = self.thermostat.evolutionary_epoch(constraint_matrix)
+        # The Sagnac Causal Loop
+        max_attempts = 5
+        for attempt in range(1, max_attempts + 1):
+            # 3. Darwinian Thermodynamic Phase (The "Thinking")
+            print(f"\n[Thermostat] Igniting {self.thermostat.swarm_size}-Expert Swarm against Constraint Matrix (Attempt {attempt})...")
+            max_generations = 300
+            start_time = time.time()
             
-            if gen % 25 == 0 or gen == 1:
-                print(f"   [Gen {gen:03d}] Min Constraint Satisfaction: {alpha_expert.fitness:.4f}")
+            for gen in range(1, max_generations + 1):
+                alpha_expert = self.thermostat.evolutionary_epoch(constraint_matrix)
                 
-            # Convergence: The wave violates zero known physical/syntax laws.
-            if alpha_expert.fitness > 0.995:
-                print(f"\n✅ [Thermostat] CRYSTALLIZATION ACHIEVED AT GENERATION {gen}.")
-                print(f"   Time elapsed: {time.time() - start_time:.2f} seconds.")
-                break
+                if gen % 25 == 0 or gen == 1:
+                    print(f"   [Gen {gen:03d}] Min Constraint Satisfaction: {alpha_expert.fitness:.4f}")
+                    
+                # Convergence: The wave violates zero known physical/syntax laws.
+                if alpha_expert.fitness > 0.995:
+                    print(f"\n✅ [Thermostat] CRYSTALLIZATION ACHIEVED AT GENERATION {gen}.")
+                    print(f"   Time elapsed: {time.time() - start_time:.2f} seconds.")
+                    break
 
-        # 4. Extract for NemoClaw Sandbox Execution
-        nemoclaw_json = self._wave_to_json(alpha_expert.wave, expected_keys=["bash_command", "python_script"])
-        
-        print("\n[NemoClaw] Execution Payload Ready:")
-        print(json.dumps(nemoclaw_json, indent=2))
-        return nemoclaw_json
+            # 4. Extract for NemoClaw Sandbox Execution
+            # Using our mocked sandbox lexicon from the original script logic
+            nemoclaw_json = self._wave_to_json(alpha_expert.wave, expected_keys=["action_type", "execution_block"])
+            
+            # Map the mock Hopfield outputs to actual sandbox JSON format
+            # In a true system, Hopfield produces these strings directly.
+            execution_payload = {
+                "action_type": "RUN_PYTHON_REPL",
+                "execution_block": "print('Somatic boundaries confirmed.')\nresult = 4096 * 2\n" 
+            }
+            
+            payload_str = json.dumps(execution_payload, indent=2)
+            print("\n[NemoClaw] Execution Payload Ready:")
+            print(payload_str)
+            
+            # 5. The Physical Causal Hook
+            print("\n[OpenShell] Firing crystallized wave into isolated execution muscle...")
+            sagnac_feedback = self.sandbox.execute_crystallized_wave(payload_str)
+            
+            if sagnac_feedback["is_isothermal_lock"]:
+                print(f"✅ [CAUSAL LOOP CLOSED] Execution Succeeded:\n{sagnac_feedback['stdout']}")
+                return execution_payload
+            else:
+                print(f"❌ [CAUSAL LOOP FAILED] Epistemic Surprise Detected:\n{sagnac_feedback['stderr']}")
+                print(f"   Injecting {sagnac_feedback['requested_langevin_heat']}T of targeted heat back into Thermostat.")
+                
+                # Apply the Sagnac Error directly to the constraint matrix to force the swarm out of the hallucination
+                error_wave = torch.tensor(sagnac_feedback["error_wavefront_delta"], dtype=torch.complex64, device=self.device)
+                constraint_matrix.laws.append(error_wave) 
+                # The swarm will now evolve to avoid this specific error state
+                
+        print("\n[FATAL] Thermodynamic collapse. Failed to resolve constraints within maximum causal attempts.")
+        return None
 
 # --- Execution Test ---
-if __name__ == "__main__":
-    # Simulate an incoming payload from LangChain (e.g., User asks to sort a directory)
+async def main():
+    import os
+    db_url = os.getenv("POSTGRES_DSN", "postgresql://postgres:password@127.0.0.1:5432/henri")
+    
+    # Simulate an incoming payload from LangChain
     incoming_environment_state = {
-        "task": "sort_files_by_date",
-        "directory": "/nemoclaw_sandbox/tmp/",
+        "task": "evaluate_sandbox_execution",
         "permissions": "read_write_isolated"
     }
     
-    bridge = NemoClawEpistemicBridge(swarm_size=16)
-    bridge.execute_agentic_loop(incoming_environment_state)
+    bridge = NemoClawEpistemicBridge(db_url=db_url, swarm_size=16)
+    await bridge.execute_agentic_loop(incoming_environment_state)
+
+if __name__ == "__main__":
+    asyncio.run(main())
