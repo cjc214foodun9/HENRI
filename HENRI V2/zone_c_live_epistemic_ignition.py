@@ -43,13 +43,15 @@ class ZoneCEpistemicIgnition:
             
             # Establish the Axiomatic Baseplate Table
             await conn.execute(f'''
-                CREATE TABLE IF NOT EXISTS henri_canonical_lexicon (
-                    axiom_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                DROP TABLE IF EXISTS henri_canonical_lexicon;
+                CREATE TABLE henri_canonical_lexicon (
+                    axiom_id UUID DEFAULT gen_random_uuid(),
                     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     domain VARCHAR(128) NOT NULL,
                     epistemic_rigidity FLOAT NOT NULL,
                     payload JSONB NOT NULL,
-                    wavefront vector({DIMENSIONS}) NOT NULL
+                    wavefront vector({DIMENSIONS}) NOT NULL,
+                    PRIMARY KEY (axiom_id, timestamp)
                 );
             ''')
             
