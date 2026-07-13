@@ -33,8 +33,19 @@ class NemoClawEpistemicBridge:
         sandbox_lexicon = {
             "RUN_PYTHON_REPL": WaveMechanics.generate_uwe("FILLER_RUN_PYTHON_REPL", dim, self.device),
             "RUN_BASH_COMMAND": WaveMechanics.generate_uwe("FILLER_RUN_BASH_COMMAND", dim, self.device),
-            "print('Somatic boundaries confirmed.')\\nresult = 4096 * 2\\n": WaveMechanics.generate_uwe("FILLER_PYTHON_PRINT_TEST", dim, self.device),
-            "ls -la /nemoclaw_sandbox/tmp/": WaveMechanics.generate_uwe("FILLER_BASH_LS", dim, self.device)
+            "print": WaveMechanics.generate_uwe("FILLER_PRINT", dim, self.device),
+            "(": WaveMechanics.generate_uwe("FILLER_LPAREN", dim, self.device),
+            "'Somatic boundaries confirmed.'": WaveMechanics.generate_uwe("FILLER_STRING_1", dim, self.device),
+            ")": WaveMechanics.generate_uwe("FILLER_RPAREN", dim, self.device),
+            "\\n": WaveMechanics.generate_uwe("FILLER_NEWLINE", dim, self.device),
+            "result": WaveMechanics.generate_uwe("FILLER_RESULT", dim, self.device),
+            "=": WaveMechanics.generate_uwe("FILLER_EQUALS", dim, self.device),
+            "4096": WaveMechanics.generate_uwe("FILLER_4096", dim, self.device),
+            "*": WaveMechanics.generate_uwe("FILLER_MULTIPLY", dim, self.device),
+            "2": WaveMechanics.generate_uwe("FILLER_2", dim, self.device),
+            "ls": WaveMechanics.generate_uwe("FILLER_LS", dim, self.device),
+            "-la": WaveMechanics.generate_uwe("FILLER_LA", dim, self.device),
+            "/nemoclaw_sandbox/tmp/": WaveMechanics.generate_uwe("FILLER_TMP_DIR", dim, self.device)
         }
         self.cleanup_matrix.assimilate_lexicon(sandbox_lexicon)
 
@@ -51,20 +62,36 @@ class NemoClawEpistemicBridge:
             
         return superposition / (torch.abs(superposition) + 1e-9)
 
-    def _wave_to_json(self, wave: torch.Tensor, expected_keys: list) -> dict:
-        """Generative Unbundling (Egress) for NemoClaw"""
-        print("[Egress] Unbundling continuous wave into discrete execution JSON...")
+    def _wave_to_json(self, wave: torch.Tensor) -> dict:
+        """Generative Unbundling (Egress) for NemoClaw via Atomic Sequential Extraction"""
+        print("[Egress] Unbundling continuous Policy Wave into discrete AST tokens...")
         output_payload = {}
         
-        for key in expected_keys:
-            role_wave = WaveMechanics.generate_uwe(f"ROLE_{key.upper()}", self.dim, self.device)
-            extracted_filler = WaveMechanics.circular_unbind(wave, role_wave)
+        # Extract Action Type
+        role_action = WaveMechanics.generate_uwe("ROLE_ACTION_TYPE", self.dim, self.device)
+        extracted_action = WaveMechanics.circular_unbind(wave, role_action)
+        action_token, _, confidence = self.cleanup_matrix.snap_and_decode(extracted_action, beta=100.0)
+        output_payload["action_type"] = action_token
+        print(f"   -> Extracted Action Type '{action_token}' with Confidence: {confidence*100:.2f}%")
+        
+        # Extract Execution Block via Sequential AST Roles
+        execution_block = ""
+        max_ast_length = 20
+        for i in range(1, max_ast_length + 1):
+            role_ast = WaveMechanics.generate_uwe(f"ROLE_AST_{i}", self.dim, self.device)
+            extracted_ast = WaveMechanics.circular_unbind(wave, role_ast)
+            token, _, ast_confidence = self.cleanup_matrix.snap_and_decode(extracted_ast, beta=100.0)
             
-            # Hit the true SemanticCleanupMatrix (Hopfield)
-            crystallized_token, _, confidence = self.cleanup_matrix.snap_and_decode(extracted_filler, beta=100.0)
-            output_payload[key] = crystallized_token
-            print(f"   -> Extracted '{key}' with Hopfield Confidence: {confidence*100:.2f}%")
-            
+            if ast_confidence < 0.15:
+                break # Coherence dropped, sequence ended
+                
+            print(f"   -> Extracted AST Token [{i}]: '{token}' (Confidence: {ast_confidence*100:.2f}%)")
+            if token in ["(", ")", "\\n"]:
+                execution_block += token.replace("\\n", "\n")
+            else:
+                execution_block += token + " "
+                
+        output_payload["execution_block"] = execution_block.strip()
         return output_payload
 
     async def execute_agentic_loop(self, langchain_payload: dict):
@@ -116,12 +143,13 @@ class NemoClawEpistemicBridge:
             start_time = time.time()
             
             for gen in range(1, max_generations + 1):
-                alpha_expert = self.thermostat.evolutionary_epoch(constraint_matrix)
+                # Active Inference Transition: Pass Task Wave into Thermostat
+                alpha_expert = self.thermostat.evolutionary_epoch(task_wave, constraint_matrix)
                 
                 if gen % 25 == 0 or gen == 1:
                     print(f"   [Gen {gen:03d}] Min Constraint Satisfaction: {alpha_expert.fitness:.4f}")
                     
-                # Convergence: The wave violates zero known physical/syntax laws.
+                # Convergence: The FUTURE STATE violates zero known physical/syntax laws.
                 if alpha_expert.fitness > 0.995:
                     print(f"\n✅ [Thermostat] CRYSTALLIZATION ACHIEVED AT GENERATION {gen}.")
                     print(f"   Time elapsed: {time.time() - start_time:.2f} seconds.")
@@ -129,7 +157,7 @@ class NemoClawEpistemicBridge:
 
             # 4. Extract for NemoClaw Sandbox Execution
             # The Hopfield Matrix unbundles the raw wave directly into the structural payload
-            nemoclaw_json = self._wave_to_json(alpha_expert.wave, expected_keys=["action_type", "execution_block"])
+            nemoclaw_json = self._wave_to_json(alpha_expert.wave)
             
             payload_str = json.dumps(nemoclaw_json, indent=2)
             print("\n[NemoClaw] Execution Payload Ready:")

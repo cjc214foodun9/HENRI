@@ -34,19 +34,22 @@ class ConstraintMatrix:
     def __init__(self, constraints: list[torch.Tensor]):
         self.constraints = constraints
         
-    def evaluate_fitness(self, wave: torch.Tensor) -> float:
+    def evaluate_fitness(self, task_wave: torch.Tensor, policy_wave: torch.Tensor) -> float:
         """
-        Fitness is defined by the MINIMUM resonance across all constraints.
-        (A chain is only as strong as its weakest topological link).
-        If the wave violently violates even ONE law, fitness drops.
+        Wave-JEPA Active Inference: The policy wave is applied to the current task wave
+        via circular convolution to predict the Future State. The constraints evaluate 
+        this predicted Future State, NOT the policy directly.
         """
         if not self.constraints:
             return 1.0 # No constraints = absolute freedom (Maximum Entropy)
             
+        # The Transition Model: \Psi_{t+1} = \Psi_{task} \circledast \Psi_{policy}
+        future_state = WaveMechanics.circular_bind(task_wave, policy_wave)
+            
         resonances = []
         for constraint in self.constraints:
-            # Measure constructive phase interference
-            res = torch.real(torch.sum(wave.conj() * constraint)).item() / wave.shape[0]
+            # Measure constructive phase interference of the Future State against the Geometric Law
+            res = torch.real(torch.sum(future_state.conj() * constraint)).item() / future_state.shape[0]
             resonances.append(res)
             
         # The organism's fitness is bottlenecked by its most severe violation
@@ -90,10 +93,10 @@ class ConstraintBasedThermostat:
         self.device = torch.device("cpu")
         self.population = [EvolvingExpert(dim, self.device) for _ in range(swarm_size)]
 
-    def evolutionary_epoch(self, constraint_matrix: ConstraintMatrix) -> EvolvingExpert:
-        # 1. Evaluate Fitness against the Gauntlet of Laws
+    def evolutionary_epoch(self, task_wave: torch.Tensor, constraint_matrix: ConstraintMatrix) -> EvolvingExpert:
+        # 1. Evaluate Fitness via Active Inference (Project Future State against Gauntlet)
         for expert in self.population:
-            expert.fitness = constraint_matrix.evaluate_fitness(expert.wave)
+            expert.fitness = constraint_matrix.evaluate_fitness(task_wave, expert.wave)
             
         # 2. Sort by highest fitness (Least destructive interference)
         self.population.sort(key=lambda x: x.fitness, reverse=True)
@@ -128,10 +131,12 @@ if __name__ == "__main__":
     constraint_gauntlet = ConstraintMatrix([law_of_syntax, law_of_causality, law_of_logic])
     swarm_engine = ConstraintBasedThermostat(swarm_size=32)
     
-    # 2. The Darwinian Descent
+    # 2. The Darwinian Descent via Active Inference
     max_generations = 250
+    mock_task_wave = WaveMechanics.generate_uwe("CURRENT_ENVIRONMENT_STATE")
+    
     for gen in range(1, max_generations + 1):
-        alpha_expert = swarm_engine.evolutionary_epoch(constraint_gauntlet)
+        alpha_expert = swarm_engine.evolutionary_epoch(mock_task_wave, constraint_gauntlet)
         
         if gen % 20 == 0 or gen == 1:
             print(f"[Gen {gen:03d}] Min Constraint Satisfaction: {alpha_expert.fitness:.4f} "
