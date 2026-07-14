@@ -3,6 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
+import sys
+import os
+
+# Import bioactive modules from scratch directory
+sys.path.append(os.path.join(os.path.dirname(__file__), 'scratch'))
+from bioactive_thermodynamic_master import BioactiveThermodynamicMaster
+from grassmannian_kuramoto_init import GrassmannianKuramotoInitializer
 
 class FractionalBindingLayer(nn.Module):
     """
@@ -87,49 +94,34 @@ class DarwinianPhaseSwarm(nn.Module):
         super().__init__()
         self.num_experts = num_experts
         self.dim = dim
-        self.half_dim = (dim // 2) + 1
         
-        # 16 Experts: Initialize spectral phase angles [0, 2π)
-        # Shape: (16, half_dim) for rfft compatibility
-        initial_phases = torch.rand(num_experts, self.half_dim) * 2 * math.pi
+        # Bioactive Master & K Matrix
+        self.bio_master = BioactiveThermodynamicMaster(num_oscillators=dim, num_experts=num_experts)
+        self.register_buffer('K_matrix', GrassmannianKuramotoInitializer(d_ambient=dim, num_blocks=1024, block_dim=4).generate_block_sparse_coupling().float())
+        
+        # 16 Experts: Initialize spatial phase angles [0, 2π)
+        # Shape: (16, dim)
+        initial_phases = torch.rand(num_experts, dim) * 2 * math.pi
         self.expert_phases = nn.Parameter(initial_phases, requires_grad=False)
         
         # The permanent spatial Stiefel weights (The "Bone" matrix)
         self.spatial_bone = nn.Parameter(torch.eye(dim), requires_grad=False)
 
     def get_expert_wave(self, expert_idx: int) -> torch.Tensor:
-        """Constructs the spatial wave for an expert based purely on its spectral phase."""
+        """Constructs the spatial wave for an expert."""
         phase = self.expert_phases[expert_idx]
-        spectral_complex = torch.polar(torch.ones_like(phase), phase)
-        spatial_wave = torch.fft.irfft(spectral_complex, n=self.dim)
-        return spatial_wave
+        return torch.polar(torch.ones_like(phase), phase)
 
-    def mutate_phases(self, sagnac_errors: torch.Tensor):
+    def mutate_phases(self, target_wave: torch.Tensor, t_step: float) -> tuple[float, float, int]:
         """
-        Gradient-Free Darwinian Mutation:
-        Scouts (high error): Massive phase randomization.
-        Fine-Tuners (moderate error): Small phase jitter (Viscoelastic Creep).
-        Breeders (low error): Crossover dominant phase genes.
+        Executes the biological coupled relaxation step via BioactiveThermodynamicMaster.
         """
         with torch.no_grad():
-            sorted_idx = torch.argsort(sagnac_errors)
-            elite_idx = sorted_idx[0]
-            elite_phase = self.expert_phases[elite_idx].clone()
-            
-            # Crossover & Fine-Tune for top 50%
-            for i in range(1, self.num_experts // 2):
-                idx = sorted_idx[i]
-                mask = torch.rand_like(elite_phase) > 0.5
-                child_phase = torch.where(mask, elite_phase, self.expert_phases[idx])
-                # Viscoelastic Creep (small jitter)
-                jitter = (torch.rand_like(child_phase) - 0.5) * 0.1
-                self.expert_phases[idx].copy_((child_phase + jitter) % (2 * math.pi))
-                
-            # Massive Scout Mutation for bottom 50%
-            for i in range(self.num_experts // 2, self.num_experts):
-                idx = sorted_idx[i]
-                scout_mutation = torch.rand_like(elite_phase) * 2 * math.pi
-                self.expert_phases[idx].copy_(scout_mutation)
+            theta_new, T_eff, best_sagnac, best_idx = self.bio_master.execute_coupled_relaxation_step(
+                self.expert_phases, self.K_matrix, target_wave, t_step
+            )
+            self.expert_phases.copy_(theta_new)
+            return best_sagnac, T_eff, best_idx
 
     def crystallize_bone(self, winning_expert_idx: int):
         """
@@ -140,8 +132,9 @@ class DarwinianPhaseSwarm(nn.Module):
         winning_wave = self.get_expert_wave(winning_expert_idx)
         
         # Construct an outer product update mapping to push the bone matrix
-        # W_new = Retract(W_old + outer(wave, wave))
-        update_matrix = torch.outer(winning_wave, winning_wave)
+        # W_new = Retract(W_old + outer(real(wave), real(wave)))
+        winning_real = winning_wave.real
+        update_matrix = torch.outer(winning_real, winning_real)
         new_bone = self.spatial_bone + (0.1 * update_matrix)
         
         # Hard-lock using Newton-Schulz retraction
@@ -194,15 +187,10 @@ class PhaseSwarmOrchestrator:
         target_wave = boundary_axiom
         
         for epoch in range(max_epochs):
-            sagnac_errors = torch.zeros(swarm.num_experts)
-            for i in range(swarm.num_experts):
-                expert_wave = swarm.get_expert_wave(i)
-                # Phase Coherence
-                phase_coherence = torch.abs(torch.dot(expert_wave, target_wave))
-                sagnac_errors[i] = 1.0 - phase_coherence
-                
-            best_idx = torch.argmin(sagnac_errors).item()
-            best_error = sagnac_errors[best_idx].item()
+            t_step = epoch * 0.01 # Simulated continuous time
+            
+            # 1. Execute the biological coupled relaxation step
+            best_error, T_eff, best_idx = swarm.mutate_phases(target_wave, t_step)
             
             # Log telemetry
             if self.telemetry:
@@ -210,8 +198,8 @@ class PhaseSwarmOrchestrator:
                     task_id=task_id,
                     epoch=epoch,
                     sagnac_error=best_error,
-                    langevin_heat=0.0, # Gradient-free, heat is mutation size
-                    policy_action_decoded="DARWINIAN_MUTATION",
+                    langevin_heat=T_eff,
+                    policy_action_decoded="BIOACTIVE_RELAXATION",
                     is_isothermal_lock=(best_error < 0.05)
                 )
                 
@@ -219,8 +207,6 @@ class PhaseSwarmOrchestrator:
                 # Crystallization
                 swarm.crystallize_bone(best_idx)
                 return swarm.get_expert_wave(best_idx)
-                
-            swarm.mutate_phases(sagnac_errors)
             
         # Return best wave even if not perfectly locked
         best_idx = torch.argmin(sagnac_errors).item()
