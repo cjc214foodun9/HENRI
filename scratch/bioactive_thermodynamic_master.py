@@ -71,25 +71,25 @@ class BioactiveThermodynamicMaster(nn.Module):
         coherences = torch.abs(torch.sum(Ψ_pred * Psi_target_conj, dim=1) / self.N)
         sagnac_deltas = 1.0 - coherences
         
-        # We find the best expert
+        # We evaluate the Delayed Gratification based on the best expert
         best_expert_idx = torch.argmin(sagnac_deltas)
-        sagnac_delta = sagnac_deltas[best_expert_idx].item()
+        best_sagnac = sagnac_deltas[best_expert_idx].item()
         
         # 2. Determine agential Langevin temperature
-        is_delayed = self.evaluate_delayed_gratification(sagnac_delta)
+        is_delayed = self.evaluate_delayed_gratification(best_sagnac)
         
-        if sagnac_delta < self.e_floor:
+        if best_sagnac < self.e_floor:
             # Absolute crystalline lock achieved
             T_eff = 0.0
-        elif is_delayed and sagnac_delta <= self.e_ceil:
+        elif is_delayed and best_sagnac <= self.e_ceil:
             # Grant localized "biological luck" - apply low-level simmer instead of violent shock
             T_eff = self.compute_alpha_simmer(t_step)
-        elif sagnac_delta > self.e_ceil:
+        elif best_sagnac > self.e_ceil:
             # Absolute physical violation of reality: trigger Sagnac Veto and blast with heat
             T_eff = 2.5
         else:
             # Standard Langevin thermal update proportional to Sagnac delta
-            T_eff = 2.5 * math.tanh(sagnac_delta)
+            T_eff = 2.5 * math.tanh(best_sagnac)
             
         # 3. Compute continuous-time state update modulo 2pi
         # For multiple experts, theta is shape (num_experts, N)
@@ -113,4 +113,4 @@ class BioactiveThermodynamicMaster(nn.Module):
             dtheta_dt = self.omega + coupling_force + stochastic_noise
             theta_new[k] = (theta_k + dtheta_dt) % (2.0 * math.pi)
         
-        return theta_new, T_eff, sagnac_delta, best_expert_idx
+        return theta_new, T_eff, sagnac_deltas, best_expert_idx

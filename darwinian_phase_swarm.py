@@ -8,10 +8,10 @@ import os
 
 # Import bioactive modules from scratch directory
 sys.path.append(os.path.join(os.path.dirname(__file__), 'scratch'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'scratch'))
 from bioactive_thermodynamic_master import BioactiveThermodynamicMaster
 from grassmannian_kuramoto_init import GrassmannianKuramotoInitializer
-
-class FractionalBindingLayer(nn.Module):
+from oak_thermodynamic_engine import ThermodynamicCreditAssigner, SpectralOptionDelineator
     """
     ENGINEERING SPECIFICATION: PROJECT HENRI - FRACTIONAL COORDINATE BINDING
     Implements continuous-phase fractional binding in the spectral domain.
@@ -99,6 +99,9 @@ class DarwinianPhaseSwarm(nn.Module):
         self.bio_master = BioactiveThermodynamicMaster(num_oscillators=dim, num_experts=num_experts)
         self.register_buffer('K_matrix', GrassmannianKuramotoInitializer(d_ambient=dim, num_blocks=1024, block_dim=4).generate_block_sparse_coupling().float())
         
+        # OaK Thermodynamic Credit Assigner
+        self.credit_assigner = ThermodynamicCreditAssigner(temperature_beta=2.0)
+        
         # 16 Experts: Initialize spatial phase angles [0, 2π)
         # Shape: (16, dim)
         initial_phases = torch.rand(num_experts, dim) * 2 * math.pi
@@ -112,28 +115,43 @@ class DarwinianPhaseSwarm(nn.Module):
         phase = self.expert_phases[expert_idx]
         return torch.polar(torch.ones_like(phase), phase)
 
-    def mutate_phases(self, target_wave: torch.Tensor, t_step: float) -> tuple[float, float, int]:
+    def forward(self, input_wave: torch.Tensor) -> torch.Tensor:
         """
-        Executes the biological coupled relaxation step via BioactiveThermodynamicMaster.
+        The unamputated physics core for Epistemic Play.
+        The wave physically collides with the internal topology (the Stiefel bone matrix).
+        """
+        # Pass the wave through the structural topology of the network
+        with torch.no_grad():
+            output = torch.matmul(self.spatial_bone.to(input_wave.device, dtype=input_wave.dtype), input_wave)
+            return output / torch.abs(output)
+
+    def mutate_phases(self, target_wave: torch.Tensor, t_step: float):
+        """
+        Executes the biological coupled relaxation step via BioactiveThermodynamicMaster
+        and assigns credit via the ThermodynamicCreditAssigner.
+        Returns the optimal wave, weighted consensus wave, and best sagnac error.
         """
         with torch.no_grad():
-            theta_new, T_eff, best_sagnac, best_idx = self.bio_master.execute_coupled_relaxation_step(
+            theta_new, T_eff, sagnac_deltas, best_idx = self.bio_master.execute_coupled_relaxation_step(
                 self.expert_phases, self.K_matrix, target_wave, t_step
             )
             self.expert_phases.copy_(theta_new)
-            return best_sagnac, T_eff, best_idx
+            
+            # Construct all expert waves to evaluate OaK credit assignment
+            expert_waves = torch.stack([self.get_expert_wave(i) for i in range(self.num_experts)])
+            optimal_wave, consensus_wave, _ = self.credit_assigner(expert_waves, sagnac_deltas)
+            
+            best_sagnac = torch.min(sagnac_deltas).item()
+            
+            return optimal_wave, consensus_wave, best_sagnac, T_eff
 
-    def crystallize_bone(self, winning_expert_idx: int):
+    def crystallize_bone(self, consensus_wave: torch.Tensor):
         """
         Crystallization Step:
-        When Δ_Sagnac -> 0, project the winning phase mask back onto the spatial Stiefel weights.
+        When Δ_Sagnac -> 0, project the superposed consensus wave back onto the spatial Stiefel weights.
         """
-        print(f"[CRYSTALLIZATION] Locking Expert {winning_expert_idx} to Spatial Bone...")
-        winning_wave = self.get_expert_wave(winning_expert_idx)
-        
-        # Construct an outer product update mapping to push the bone matrix
-        # W_new = Retract(W_old + outer(real(wave), real(wave)))
-        winning_real = winning_wave.real
+        print(f"[CRYSTALLIZATION] Locking OaK Consensus Wave to Spatial Bone...")
+        winning_real = consensus_wave.real
         update_matrix = torch.outer(winning_real, winning_real)
         new_bone = self.spatial_bone + (0.1 * update_matrix)
         
@@ -147,6 +165,7 @@ class PhaseSwarmOrchestrator:
         self.dim = dim
         self.telemetry = telemetry_logger
         self.binder = FractionalBindingLayer(dim=dim)
+        self.delineator = SpectralOptionDelineator(dim=dim)
         
     def encode_grid_to_wave(self, grid: list[list[int]]) -> torch.Tensor:
         """Converts a 2D ARC grid into a fractionally bound spatial wave."""
@@ -178,36 +197,45 @@ class PhaseSwarmOrchestrator:
             
         return F.normalize(torch.stack(transformations).sum(dim=0), p=2, dim=-1)
 
-    def run_active_inference(self, task_id: str, task_wave: torch.Tensor, boundary_axiom: torch.Tensor, max_epochs: int = 200) -> torch.Tensor:
-        """Executes the Darwinian Phase Swarm optimization."""
+    def run_active_inference(self, task_id: str, task_wave: torch.Tensor, boundary_axiom: torch.Tensor, known_axioms: list, max_epochs: int = 1000000) -> torch.Tensor:
+        """Executes the Darwinian Phase Swarm optimization with Spectral Option Delineation."""
         swarm = DarwinianPhaseSwarm(dim=self.dim)
         
-        # We need to find a policy wave that satisfies: task_wave + policy = boundary_axiom
-        # Or more accurately, we just optimize phase to minimize Sagnac Error
-        target_wave = boundary_axiom
+        # 1. OaK Option Delineation
+        # Decompose the goal wave into orthogonal sub-harmonics if we have known axioms
+        if known_axioms:
+            axioms_tensor = torch.stack(known_axioms)
+            sub_options = self.delineator(boundary_axiom, axioms_tensor)
+        else:
+            sub_options = boundary_axiom.unsqueeze(0)
+            
+        print(f"[OaK] Delineated {sub_options.shape[0]} sub-options for Task {task_id}.")
         
-        for epoch in range(max_epochs):
-            t_step = epoch * 0.01 # Simulated continuous time
-            
-            # 1. Execute the biological coupled relaxation step
-            best_error, T_eff, best_idx = swarm.mutate_phases(target_wave, t_step)
-            
-            # Log telemetry
-            if self.telemetry:
-                self.telemetry.log_wave_state(
-                    task_id=task_id,
-                    epoch=epoch,
-                    sagnac_error=best_error,
-                    langevin_heat=T_eff,
-                    policy_action_decoded="BIOACTIVE_RELAXATION",
-                    is_isothermal_lock=(best_error < 0.05)
-                )
+        final_wave = None
+        for opt_idx, target_option in enumerate(sub_options):
+            print(f"[OaK] Executing Sub-Option {opt_idx+1}/{sub_options.shape[0]}...")
+            for epoch in range(max_epochs):
+                t_step = epoch * 0.01 # Simulated continuous time
                 
-            if best_error < 0.05:
-                # Crystallization
-                swarm.crystallize_bone(best_idx)
-                return swarm.get_expert_wave(best_idx)
-            
+                # Execute the biological coupled relaxation step and OaK credit assignment
+                optimal_wave, consensus_wave, best_error, T_eff = swarm.mutate_phases(target_option, t_step)
+                
+                # Log telemetry
+                if self.telemetry:
+                    self.telemetry.log_wave_state(
+                        task_id=f"{task_id}_OPT_{opt_idx}",
+                        epoch=epoch,
+                        sagnac_error=best_error,
+                        langevin_heat=T_eff,
+                        policy_action_decoded="OAK_THERMODYNAMIC_RELAXATION",
+                        is_isothermal_lock=(best_error < 0.05)
+                    )
+                    
+                if best_error < 0.05:
+                    # Crystallize the superposed consensus
+                    swarm.crystallize_bone(consensus_wave)
+                    final_wave = optimal_wave
+                    break
+                    
         # Return best wave even if not perfectly locked
-        best_idx = torch.argmin(sagnac_errors).item()
-        return swarm.get_expert_wave(best_idx)
+        return final_wave if final_wave is not None else optimal_wave

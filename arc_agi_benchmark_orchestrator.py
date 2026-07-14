@@ -11,8 +11,9 @@ topological laws mid-flight, and forces the network into physical resonance.
 
 import sys
 import json
-from darwinian_phase_swarm import PhaseSwarmOrchestrator
+from darwinian_phase_swarm import PhaseSwarmOrchestrator, DarwinianPhaseSwarm
 from thermodynamic_telemetry_logger import ThermodynamicTelemetry
+from oak_thermodynamic_engine import LangevinEpistemicPlayLoop
 
 try:
     import arc_agi
@@ -31,7 +32,14 @@ def execute_live_benchmark():
     telemetry = ThermodynamicTelemetry(session_name="darwinian_arc_production")
     orchestrator = PhaseSwarmOrchestrator(telemetry_logger=telemetry)
     
-    print(f"[ALETHEIA] Targets locked. Processing {len(environments)} environments natively.")
+    # OaK Epistemic Play Phase
+    print("\n[OaK] Initiating Langevin Epistemic Play (Autonomous Knowledge Discovery)...")
+    swarm_core = DarwinianPhaseSwarm(dim=4096)
+    play_engine = LangevinEpistemicPlayLoop(core_syncytium=swarm_core, dim=4096)
+    known_axioms = play_engine.execute_play_epoch(max_horizon=4096, heat_variance=0.5)
+    print(f"[OaK] Epistemic Play complete. Discovered {len(known_axioms)} structural invariants.")
+    
+    print(f"\n[ALETHEIA] Targets locked. Processing {len(environments)} environments natively.")
 
     for env_name in environments:
         print(f"\n--- INGESTING TOPOLOGY: {env_name} ---")
@@ -77,6 +85,7 @@ def execute_live_benchmark():
                 task_id=f"{env_name}_STEP_{step_count}",
                 task_wave=task_wave,
                 boundary_axiom=boundary_axiom,
+                known_axioms=known_axioms,
                 max_epochs=1000000
             )
             
