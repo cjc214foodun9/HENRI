@@ -8,10 +8,11 @@ import os
 
 # Import bioactive modules from scratch directory
 sys.path.append(os.path.join(os.path.dirname(__file__), 'scratch'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'scratch'))
 from bioactive_thermodynamic_master import BioactiveThermodynamicMaster
 from grassmannian_kuramoto_init import GrassmannianKuramotoInitializer
 from oak_thermodynamic_engine import ThermodynamicCreditAssigner, SpectralOptionDelineator
+
+class FractionalBindingLayer(nn.Module):
     """
     ENGINEERING SPECIFICATION: PROJECT HENRI - FRACTIONAL COORDINATE BINDING
     Implements continuous-phase fractional binding in the spectral domain.
