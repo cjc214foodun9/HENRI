@@ -13,7 +13,7 @@ import sys
 import json
 from darwinian_phase_swarm import PhaseSwarmOrchestrator, DarwinianPhaseSwarm
 from thermodynamic_telemetry_logger import ThermodynamicTelemetry
-from thermodynamic_oak_engine import LangevinEpistemicPlayLoop
+from oak_thermodynamic_engine import LangevinEpistemicPlayLoop
 
 try:
     import arc_agi
@@ -77,6 +77,7 @@ def execute_live_benchmark():
                 task_id=f"{env_name}_STEP_{step_count}",
                 task_wave=task_wave,
                 boundary_axiom=boundary_axiom,
+                zone_c_axioms=None,
                 max_epochs=1000000
             )
             

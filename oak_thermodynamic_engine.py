@@ -93,37 +93,64 @@ class LangevinEpistemicPlayLoop(nn.Module):
         self.syncytium = core_syncytium # RESOLUTION I: The full unamputated physics core
         self.dim = dim
 
-    def execute_play_epoch(self, heat_variance: float = 0.5):
+    def execute_play_epoch(self, target_axioms: torch.Tensor = None, heat_variance: float = 0.5):
         """
         Injects heat and searches for structural invariants.
-        Terminates dynamically upon isothermal phase-lock. Has no artificial boundary.
+        Terminates dynamically upon isothermal phase-lock.
+        Utilizes an Ornstein-Uhlenbeck process to anchor exploration to Zone C Free Lunches.
         """
-        # 1. Initialize a completely random, maximum-entropy state on the unit hypersphere
-        play_wave = torch.randn(self.dim, dtype=torch.cfloat, device='cuda')
-        play_wave = play_wave / torch.abs(play_wave)
+        # 1. Epistemic Anchoring: Start at the barycenter of known truths, not random chaos.
+        if target_axioms is not None and target_axioms.numel() > 0:
+            play_wave = torch.mean(target_axioms, dim=0)
+        else:
+            play_wave = torch.randn(self.dim, dtype=torch.cfloat, device='cuda')
+            
+        play_wave = play_wave / (torch.abs(play_wave) + 1e-9)
         
         discovered_invariants = []
+        step = 0
 
+        # The True Thermodynamic Loop (Halt on Equilibrium)
         while True:
-            # 2. Inject Langevin Noise (The "Play" mechanic / Biological Luck Factor)
+            # 2. Anisotropic Langevin Noise (The "Biological Luck Factor")
             noise = torch.randn_like(play_wave) * heat_variance
-            active_wave = play_wave + noise
-            active_wave = active_wave / torch.abs(active_wave) # Maintain Stiefel Manifold
             
-            # 3. Propagate through the unamputated physics core (Resolution I)
+            # 3. Restorative Drift (Ornstein-Uhlenbeck Friction)
+            # Pulls the wave back toward the nearest established invariant if it drifts into illogical space
+            if target_axioms is not None and target_axioms.numel() > 0:
+                # Hardware-accelerated dot product to find the closest topological anchor
+                similarities = torch.matmul(target_axioms.abs(), play_wave.abs().unsqueeze(1)).squeeze()
+                
+                # Handle dimension matching for single vs batch of axioms
+                if similarities.dim() == 0:
+                    best_axiom = target_axioms
+                else:
+                    best_axiom = target_axioms[torch.argmax(similarities)]
+                    
+                drift_force = (best_axiom - play_wave) * 0.15 # Elastic epistemic tether
+            else:
+                drift_force = 0.0
+
+            active_wave = play_wave + noise + drift_force
+            active_wave = active_wave / (torch.abs(active_wave) + 1e-9) # Maintain Stiefel Manifold
+            
+            # 4. Propagate through the unamputated physics core (Resolution I)
             settled_wave = self.syncytium(active_wave)
             
-            # 4. Measure Intrinsic Stability (Phase velocity)
+            # 5. Measure Intrinsic Stability (Phase velocity)
             # RESOLUTION II: Eradicating the Arbitrary Clock
             phase_delta = torch.norm(settled_wave - play_wave)
             
             if phase_delta < 1e-4:
-                # 5. Crystallize the Discovered Knowledge
-                # The system has found a universal geometric law without human prompting.
+                # 6. Crystallize the Discovered Knowledge
                 discovered_invariants.append(settled_wave.clone())
-                # Halt immediately. Thermodynamic equilibrium is achieved.
-                break
+                break # Thermodynamic equilibrium achieved
                 
             play_wave = settled_wave
+            step += 1
+            
+            # Physical failsafe: The hyper-volume limit of S^4095 ensures finite bounds
+            if step >= 4096:
+                break
             
         return discovered_invariants
