@@ -31,16 +31,6 @@ def execute_live_benchmark():
     
     telemetry = ThermodynamicTelemetry(session_name="darwinian_arc_production")
     orchestrator = PhaseSwarmOrchestrator(telemetry_logger=telemetry)
-    
-    # OaK Epistemic Play Phase
-    print("\n[ALETHEIA] Initiating Langevin Epistemic Play. Propagating through unamputated core_syncytium...")
-    swarm_core = DarwinianPhaseSwarm(dim=4096)
-    play_loop = LangevinEpistemicPlayLoop(core_syncytium=swarm_core, dim=4096)
-    
-    # Horizon rigidly capped at 4096. System will dynamically halt upon phase-lock.
-    known_axioms = play_loop.execute_play_epoch(max_steps=4096, heat_variance=0.8)
-    print(f"[ALETHEIA] Play Phase Terminated. Extracted {len(known_axioms)} structural invariants.")
-    
     print(f"\n[ALETHEIA] Targets locked. Processing {len(environments)} environments natively.")
 
     for env_name in environments:
@@ -87,7 +77,6 @@ def execute_live_benchmark():
                 task_id=f"{env_name}_STEP_{step_count}",
                 task_wave=task_wave,
                 boundary_axiom=boundary_axiom,
-                known_axioms=known_axioms,
                 max_epochs=1000000
             )
             

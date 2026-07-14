@@ -10,7 +10,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'scratch'))
 from bioactive_thermodynamic_master import BioactiveThermodynamicMaster
 from grassmannian_kuramoto_init import GrassmannianKuramotoInitializer
-from thermodynamic_oak_engine import ThermodynamicCreditAssigner, SpectralOptionDelineator
+from thermodynamic_oak_engine import ThermodynamicCreditAssigner, SpectralOptionDelineator, LangevinEpistemicPlayLoop
 
 class FractionalBindingLayer(nn.Module):
     """
@@ -204,9 +204,19 @@ class PhaseSwarmOrchestrator:
             
         return F.normalize(torch.stack(transformations).sum(dim=0), p=2, dim=-1)
 
-    def run_active_inference(self, task_id: str, task_wave: torch.Tensor, boundary_axiom: torch.Tensor, known_axioms: list, max_epochs: int = 1000000) -> torch.Tensor:
-        """Executes the Darwinian Phase Swarm optimization with Spectral Option Delineation."""
+    def run_active_inference(self, task_id: str, task_wave: torch.Tensor, boundary_axiom: torch.Tensor, max_epochs: int = 1000000) -> torch.Tensor:
+        """Executes the Darwinian Phase Swarm optimization with Spectral Option Delineation and Test-Time Epistemic Play."""
         swarm = DarwinianPhaseSwarm(dim=self.dim)
+        
+        # 0. Test-Time Learning (Dynamic Micro-Latent Space Exploration)
+        # We spawn an Epistemic Play session right here dynamically to map the immediate micro-latent space
+        # and extract invariants that are directly relevant to this specific step.
+        print(f"\n[OaK] Initiating In-Situ Test-Time Epistemic Play for Task {task_id}...")
+        play_engine = LangevinEpistemicPlayLoop(core_syncytium=swarm, dim=self.dim)
+        
+        # The play engine runs unboundedly until it discovers an invariant (or forever).
+        known_axioms = play_engine.execute_play_epoch(heat_variance=0.5)
+        print(f"[OaK] Test-Time Play Terminated. Extracted {len(known_axioms)} local invariants.")
         
         # 1. OaK Option Delineation
         # Decompose the goal wave into orthogonal sub-harmonics if we have known axioms

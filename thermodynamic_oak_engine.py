@@ -93,10 +93,10 @@ class LangevinEpistemicPlayLoop(nn.Module):
         self.syncytium = core_syncytium # RESOLUTION I: The full unamputated physics core
         self.dim = dim
 
-    def execute_play_epoch(self, max_steps: int = 4096, heat_variance: float = 0.5):
+    def execute_play_epoch(self, heat_variance: float = 0.5):
         """
         Injects heat and searches for structural invariants.
-        Terminates dynamically upon isothermal phase-lock.
+        Terminates dynamically upon isothermal phase-lock. Has no artificial boundary.
         """
         # 1. Initialize a completely random, maximum-entropy state on the unit hypersphere
         play_wave = torch.randn(self.dim, dtype=torch.cfloat, device='cuda')
@@ -104,7 +104,7 @@ class LangevinEpistemicPlayLoop(nn.Module):
         
         discovered_invariants = []
 
-        for step in range(max_steps):
+        while True:
             # 2. Inject Langevin Noise (The "Play" mechanic / Biological Luck Factor)
             noise = torch.randn_like(play_wave) * heat_variance
             active_wave = play_wave + noise
