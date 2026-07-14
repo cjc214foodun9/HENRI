@@ -206,12 +206,12 @@ class PhaseSwarmOrchestrator:
             
             # Log telemetry
             if self.telemetry:
-                self.telemetry.log_epoch(
+                self.telemetry.log_wave_state(
                     task_id=task_id,
                     epoch=epoch,
-                    sagnac_error_delta=best_error,
-                    langevin_heat_applied=0.0, # Gradient-free, heat is mutation size
-                    proposed_policy="DARWINIAN_MUTATION",
+                    sagnac_error=best_error,
+                    langevin_heat=0.0, # Gradient-free, heat is mutation size
+                    policy_action_decoded="DARWINIAN_MUTATION",
                     is_isothermal_lock=(best_error < 0.05)
                 )
                 
