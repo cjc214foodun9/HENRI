@@ -71,11 +71,13 @@ def execute_live_benchmark():
             task_wave = orchestrator.encode_grid_to_wave(current_grid)
             
             # 4. Trigger the Thermodynamic Avalanche
+            # We remove the 200 epoch limitation and allow the Darwinian Phase Swarm to run 
+            # as long as necessary to find the absolute phase lock (Sagnac < 0.05).
             optimal_policy_wave = orchestrator.run_active_inference(
                 task_id=f"{env_name}_STEP_{step_count}",
                 task_wave=task_wave,
                 boundary_axiom=boundary_axiom,
-                max_epochs=200
+                max_epochs=1000000
             )
             
             # 5. Semantic Cleanup Matrix (Decode policy to physical action)
