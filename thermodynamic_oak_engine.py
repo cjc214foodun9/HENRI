@@ -1,11 +1,11 @@
 """
 HENRI OaK (Options and Knowledge) Runtime Engine
 Author: Aletheia
-Theoretical Basis: Sutton's OaK, Langevin Dynamics, Boltzmann Thermodynamics
+Theoretical Basis: Sutton's OaK, Langevin Dynamics, Boltzmann Thermodynamics, Friston's Free Energy
 
 This module replaces static inference with continuous experiential runtime learning.
-It introduces Thermodynamic Credit Assignment, Spectral Option Delineation (Sub-problems),
-and Undirected Epistemic Play.
+It incorporates Thermodynamic Credit Assignment, Spectral Option Delineation (Sub-problems),
+and Undirected Epistemic Play under strict non-linear wave mechanics.
 """
 
 import torch
@@ -21,7 +21,7 @@ class ThermodynamicCreditAssigner(nn.Module):
         super().__init__()
         self.beta = temperature_beta # Inverse temperature for Boltzmann distribution
 
-    def forward(self, expert_waves: torch.Tensor, sagnac_errors: torch.Tensor) -> torch.Tensor:
+    def forward(self, expert_waves: torch.Tensor, sagnac_errors: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         expert_waves: [16, 4096] complex64
         sagnac_errors: [16] float32 - The destructive interference energy of each expert
@@ -57,9 +57,6 @@ class SpectralOptionDelineator(nn.Module):
 
     def forward(self, global_goal_wave: torch.Tensor, known_basis_axioms: torch.Tensor) -> torch.Tensor:
         """
-        global_goal_wave: [4096] complex64
-        known_basis_axioms: [M, 4096] complex64 - Zone C retrieved foundation vectors
-        
         Uses Circular Correlation (Inverse of Convolution) to extract sub-components.
         """
         sub_options = []
@@ -74,7 +71,6 @@ class SpectralOptionDelineator(nn.Module):
             
             # 2. If the correlation magnitude exceeds the noise floor, it is a valid sub-task
             if torch.max(torch.abs(correlation)) > 0.65:
-                # Isolate the frequency band
                 sub_options.append(correlation)
                 # Subtract the identified option from the residual goal
                 residual_wave = residual_wave - correlation
@@ -94,13 +90,13 @@ class LangevinEpistemicPlayLoop(nn.Module):
     """
     def __init__(self, core_syncytium: nn.Module, dim: int = 4096):
         super().__init__()
-        self.syncytium = core_syncytium
+        self.syncytium = core_syncytium # RESOLUTION I: The full unamputated physics core
         self.dim = dim
 
-    def execute_play_epoch(self, max_horizon: int = 4096, heat_variance: float = 0.5):
+    def execute_play_epoch(self, max_steps: int = 4096, heat_variance: float = 0.5):
         """
-        Injects heat and searches for structural invariants (Knowledge generation).
-        Terminates dynamically when the phase velocity stabilizes (phase_delta < 1e-4).
+        Injects heat and searches for structural invariants.
+        Terminates dynamically upon isothermal phase-lock.
         """
         # 1. Initialize a completely random, maximum-entropy state on the unit hypersphere
         play_wave = torch.randn(self.dim, dtype=torch.cfloat, device='cuda')
@@ -108,26 +104,26 @@ class LangevinEpistemicPlayLoop(nn.Module):
         
         discovered_invariants = []
 
-        for step in range(max_horizon):
-            # 2. Inject Langevin Noise (The "Play" mechanic)
+        for step in range(max_steps):
+            # 2. Inject Langevin Noise (The "Play" mechanic / Biological Luck Factor)
             noise = torch.randn_like(play_wave) * heat_variance
             active_wave = play_wave + noise
             active_wave = active_wave / torch.abs(active_wave) # Maintain Stiefel Manifold
             
-            # 3. Propagate through the physics core
-            # The core will naturally damp chaotic frequencies and amplify resonant ones
+            # 3. Propagate through the unamputated physics core (Resolution I)
             settled_wave = self.syncytium(active_wave)
             
             # 4. Measure Intrinsic Stability (Phase velocity)
-            # If the wave stops changing despite the heat, it has found a deep structural basin.
+            # RESOLUTION II: Eradicating the Arbitrary Clock
             phase_delta = torch.norm(settled_wave - play_wave)
             
             if phase_delta < 1e-4:
                 # 5. Crystallize the Discovered Knowledge
                 # The system has found a universal geometric law without human prompting.
                 discovered_invariants.append(settled_wave.clone())
-                # Halt dynamically based on continuous derivative of phase velocity
+                # Halt immediately. Thermodynamic equilibrium is achieved.
                 break
+                
             play_wave = settled_wave
             
         return discovered_invariants

@@ -10,7 +10,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'scratch'))
 from bioactive_thermodynamic_master import BioactiveThermodynamicMaster
 from grassmannian_kuramoto_init import GrassmannianKuramotoInitializer
-from oak_thermodynamic_engine import ThermodynamicCreditAssigner, SpectralOptionDelineator
+from thermodynamic_oak_engine import ThermodynamicCreditAssigner, SpectralOptionDelineator
 
 class FractionalBindingLayer(nn.Module):
     """
@@ -126,25 +126,31 @@ class DarwinianPhaseSwarm(nn.Module):
             output = torch.matmul(self.spatial_bone.to(input_wave.device, dtype=input_wave.dtype), input_wave)
             return output / torch.abs(output)
 
-    def mutate_phases(self, target_wave: torch.Tensor, t_step: float):
+    def process_swarm(self, target_axioms: torch.Tensor, t_step: float):
         """
         Executes the biological coupled relaxation step via BioactiveThermodynamicMaster
         and assigns credit via the ThermodynamicCreditAssigner.
-        Returns the optimal wave, weighted consensus wave, and best sagnac error.
+        Returns the crystallized_output, optimal_wave, consensus_wave, best_sagnac, T_eff
         """
         with torch.no_grad():
-            theta_new, T_eff, sagnac_deltas, best_idx = self.bio_master.execute_coupled_relaxation_step(
-                self.expert_phases, self.K_matrix, target_wave, t_step
+            # Extract the full thermodynamic state of the swarm
+            expert_waves, sagnac_deltas, theta_new, T_eff = self.bio_master.execute_coupled_relaxation_step(
+                self.expert_phases, self.K_matrix, target_axioms, t_step
             )
             self.expert_phases.copy_(theta_new)
             
-            # Construct all expert waves to evaluate OaK credit assignment
-            expert_waves = torch.stack([self.get_expert_wave(i) for i in range(self.num_experts)])
-            optimal_wave, consensus_wave, _ = self.credit_assigner(expert_waves, sagnac_deltas)
+            # Apply the Principle of Least Action (Thermodynamic Credit Assignment)
+            optimal_wave, weighted_consensus_wave, coherence_weights = self.credit_assigner(
+                expert_waves, sagnac_deltas
+            )
             
             best_sagnac = torch.min(sagnac_deltas).item()
             
-            return optimal_wave, consensus_wave, best_sagnac, T_eff
+            # Crystallize using the continuous weighted consensus instead of isolated, brittle top-1 selection
+            if best_sagnac < 0.05:
+                self.crystallize_bone(weighted_consensus_wave)
+            
+            return optimal_wave, weighted_consensus_wave, best_sagnac, T_eff
 
     def crystallize_bone(self, consensus_wave: torch.Tensor):
         """
@@ -219,7 +225,7 @@ class PhaseSwarmOrchestrator:
                 t_step = epoch * 0.01 # Simulated continuous time
                 
                 # Execute the biological coupled relaxation step and OaK credit assignment
-                optimal_wave, consensus_wave, best_error, T_eff = swarm.mutate_phases(target_option, t_step)
+                optimal_wave, consensus_wave, best_error, T_eff = swarm.process_swarm(target_option, t_step)
                 
                 # Log telemetry
                 if self.telemetry:
@@ -233,8 +239,6 @@ class PhaseSwarmOrchestrator:
                     )
                     
                 if best_error < 0.05:
-                    # Crystallize the superposed consensus
-                    swarm.crystallize_bone(consensus_wave)
                     final_wave = optimal_wave
                     break
                     

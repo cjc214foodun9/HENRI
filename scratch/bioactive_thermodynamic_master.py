@@ -113,4 +113,6 @@ class BioactiveThermodynamicMaster(nn.Module):
             dtheta_dt = self.omega + coupling_force + stochastic_noise
             theta_new[k] = (theta_k + dtheta_dt) % (2.0 * math.pi)
         
-        return theta_new, T_eff, sagnac_deltas, best_expert_idx
+        # RETURN THE COMPLETE MATRIX OF ENERGIES AND WAVES
+        # The ThermodynamicCreditAssigner requires full visibility.
+        return Ψ_pred, sagnac_deltas, theta_new, T_eff

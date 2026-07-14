@@ -13,7 +13,7 @@ import sys
 import json
 from darwinian_phase_swarm import PhaseSwarmOrchestrator, DarwinianPhaseSwarm
 from thermodynamic_telemetry_logger import ThermodynamicTelemetry
-from oak_thermodynamic_engine import LangevinEpistemicPlayLoop
+from thermodynamic_oak_engine import LangevinEpistemicPlayLoop
 
 try:
     import arc_agi
@@ -33,11 +33,13 @@ def execute_live_benchmark():
     orchestrator = PhaseSwarmOrchestrator(telemetry_logger=telemetry)
     
     # OaK Epistemic Play Phase
-    print("\n[OaK] Initiating Langevin Epistemic Play (Autonomous Knowledge Discovery)...")
+    print("\n[ALETHEIA] Initiating Langevin Epistemic Play. Propagating through unamputated core_syncytium...")
     swarm_core = DarwinianPhaseSwarm(dim=4096)
-    play_engine = LangevinEpistemicPlayLoop(core_syncytium=swarm_core, dim=4096)
-    known_axioms = play_engine.execute_play_epoch(max_horizon=4096, heat_variance=0.5)
-    print(f"[OaK] Epistemic Play complete. Discovered {len(known_axioms)} structural invariants.")
+    play_loop = LangevinEpistemicPlayLoop(core_syncytium=swarm_core, dim=4096)
+    
+    # Horizon rigidly capped at 4096. System will dynamically halt upon phase-lock.
+    known_axioms = play_loop.execute_play_epoch(max_steps=4096, heat_variance=0.8)
+    print(f"[ALETHEIA] Play Phase Terminated. Extracted {len(known_axioms)} structural invariants.")
     
     print(f"\n[ALETHEIA] Targets locked. Processing {len(environments)} environments natively.")
 
