@@ -97,7 +97,7 @@ class NewtonSchulzProjector:
         for _ in range(iterations):
             X_H = torch.conj(X.T)
             
-            if triton_available and X.dtype == torch.complex64:
+            if triton_available and X.dtype == torch.complex64 and X.is_cuda:
                 A = triton_complex_matmul(X_H, X)
                 update_term = 3.0 * I - A
                 X = triton_complex_matmul(X, update_term) / 2.0
