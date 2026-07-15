@@ -91,7 +91,7 @@ class NewtonSchulzProjector:
         except ImportError:
             triton_available = False
 
-        X = W / torch.max(torch.abs(W)) # pre-condition
+        X = W / (torch.norm(W, p='fro') + 1e-9) # strict spectral radius precondition
         I = torch.eye(W.shape[-1], device=W.device, dtype=W.dtype)
         
         for _ in range(iterations):
