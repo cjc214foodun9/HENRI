@@ -188,6 +188,9 @@ def triton_complex_matmul(A: torch.Tensor, B: torch.Tensor, a_hermitian=False) -
 
     C = torch.empty((M, N), dtype=torch.complex64, device=A.device)
 
+    A = A.resolve_conj()
+    B = B.resolve_conj()
+
     # Unbind staggered float32 pointers from the complex arrays
     A_r, A_i = torch.view_as_real(A).unbind(-1)
     B_r, B_i = torch.view_as_real(B).unbind(-1)
