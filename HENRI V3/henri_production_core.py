@@ -20,6 +20,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import List, Tuple, Dict, Any
+from triton_physics_kernels import triton_complex_matmul
 
 # Ensure strict hardware numerical execution
 torch.set_default_dtype(torch.complex64)
@@ -81,12 +82,15 @@ class UnitaryDiffractiveLayer(nn.Module):
         """
         Hard-locks the weight matrix onto the Stiefel manifold using iterative 
         Newton-Schulz polynomial mapping to preserve energy conservation.
+        Execution is offloaded to highly optimized Triton kernels for massive parallel scaling.
         """
         for _ in range(5):
             # W_{k+1} = 1.5 * W_k - 0.5 * W_k * W_k^H * W_k
             W_H = torch.conj(self.W.T)
-            W_product = torch.matmul(self.W, W_H)
-            self.W.copy_(1.5 * self.W - 0.5 * torch.matmul(W_product, self.W))
+            # Use FP64-simulated Triton kernels for massive parallel complex matrix multiplication
+            W_product = triton_complex_matmul(self.W, W_H)
+            W_update = triton_complex_matmul(W_product, self.W)
+            self.W.copy_(1.5 * self.W - 0.5 * W_update)
 
 
 class HopfieldCleanupNetwork:
