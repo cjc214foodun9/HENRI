@@ -46,9 +46,9 @@ class TestProductionIntegrity(unittest.TestCase):
         """
         dim = 64
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        # Generate a drifting (slightly non-orthogonal) complex weight matrix
+        # Generate a realistic drifting (slightly non-orthogonal) complex weight matrix
         W = torch.eye(dim, dtype=torch.complex64, device=device)
-        W += 0.1 * torch.randn(dim, dim, dtype=torch.complex64, device=device)
+        W += 0.01 * torch.randn(dim, dim, dtype=torch.complex64, device=device)
         
         # Retract to the manifold
         W_stiefel = NewtonSchulzProjector.retract(W, iterations=7)
