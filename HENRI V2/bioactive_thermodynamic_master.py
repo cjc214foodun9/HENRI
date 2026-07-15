@@ -116,3 +116,32 @@ class BioactiveThermodynamicMaster(nn.Module):
         # RETURN THE COMPLETE MATRIX OF ENERGIES AND WAVES
         # The ThermodynamicCreditAssigner requires full visibility.
         return Ψ_pred, sagnac_deltas, theta_new, T_eff
+
+    def map_gap_junction_to_egress(self, theta: torch.Tensor, lexicon_basis: torch.Tensor, T_eff: float) -> torch.Tensor:
+        """
+        Maps the continuous lateral gap-junction bioelectric potentials directly into the 
+        discrete logit crystallization sieve, breaking the 'mute brain' isolation.
+        
+        Args:
+            theta: (N,) or (num_experts, N) phase states
+            lexicon_basis: (vocab_size, N) complex canonical wave basis for vocabulary
+            T_eff: Effective Langevin Temperature
+        """
+        # Convert phase states to Unitary Wave Embeddings
+        Ψ_active = torch.polar(torch.ones_like(theta), theta)
+        
+        # Calculate continuous holographic interference pattern with all known tokens
+        Ψ_active_conj = torch.conj(Ψ_active)
+        
+        # Determine the bioelectric resonance logits
+        if Ψ_active_conj.dim() == 1:
+            resonance = torch.abs(torch.matmul(lexicon_basis, Ψ_active_conj)) / self.N
+        else:
+            resonance = torch.abs(torch.matmul(lexicon_basis, Ψ_active_conj.T)).T / self.N
+            
+        # The Sieve: Apply the inverse thermodynamic temperature to crystallize the logits
+        # When T_eff approaches 0 (crystalline lock), the logits sharpen to a delta function.
+        beta = 1.0 / (T_eff + 1e-4)
+        crystallized_logits = resonance * beta
+        
+        return crystallized_logits

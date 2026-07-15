@@ -60,14 +60,24 @@ class GrassmannianBlockSparseFeaturizer(nn.Module):
     def forward(self, z: torch.Tensor) -> torch.Tensor:
         z_out = torch.zeros_like(z)
         for c in range(self.num_blocks):
-            W_c = self.blocks[c] 
-            proj = torch.matmul(z, W_c)
-            z_out += torch.matmul(proj, W_c.T)
+            # Apply continuous Newton-Schulz retraction to halt parameter drift
+            W_c = NewtonSchulzProjector.retract(self.blocks[c])
+            # Reassign to parameter to maintain Stiefel structure across epochs
+            if self.training:
+                with torch.no_grad():
+                    self.blocks[c].copy_(W_c)
+                    
+            if z.dtype == torch.complex64:
+                proj = torch.matmul(z, torch.conj(W_c.T))
+                z_out += torch.matmul(proj, W_c)
+            else:
+                proj = torch.matmul(z, W_c)
+                z_out += torch.matmul(proj, W_c.T)
         return F.normalize(z_out, p=2, dim=-1)
 
 class NewtonSchulzProjector:
     """
-    Retracts a square matrix back onto the Stiefel Manifold (W^T W = I).
+    Retracts a square matrix back onto the Stiefel Manifold (W^H W = I).
     """
     @staticmethod
     def retract(W: torch.Tensor, iterations=5) -> torch.Tensor:
@@ -75,11 +85,27 @@ class NewtonSchulzProjector:
         if torch.max(torch.abs(W)) == 0.0:
             return W
             
+        try:
+            from triton_physics_kernels import triton_complex_matmul
+            triton_available = True
+        except ImportError:
+            triton_available = False
+
         X = W / torch.max(torch.abs(W)) # pre-condition
+        I = torch.eye(W.shape[-1], device=W.device, dtype=W.dtype)
+        
         for _ in range(iterations):
-            A = torch.matmul(X.T, X)
-            B = A.matmul(A)
-            X = X.matmul(3.0 * torch.eye(W.shape[-1], device=W.device) - A) / 2.0
+            X_H = torch.conj(X.T)
+            
+            if triton_available and X.dtype == torch.complex64:
+                A = triton_complex_matmul(X_H, X)
+                update_term = 3.0 * I - A
+                X = triton_complex_matmul(X, update_term) / 2.0
+            else:
+                A = torch.matmul(X_H, X)
+                update_term = 3.0 * I - A
+                X = torch.matmul(X, update_term) / 2.0
+                
         return X
 
 class DarwinianPhaseSwarm(nn.Module):

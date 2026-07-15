@@ -83,6 +83,30 @@ class StiefelManifoldProjector:
         return W_k
 
 
+class WirtingerComplexMatmul(torch.autograd.Function):
+    """
+    Implements exact Wirtinger Calculus derivatives for complex phase transformations.
+    Resolves the PyTorch autograd silent gradient breaks over non-differentiable masks.
+    """
+    @staticmethod
+    def forward(ctx, input_wave, weight_matrix):
+        ctx.save_for_backward(input_wave, weight_matrix)
+        return torch.matmul(input_wave, weight_matrix)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        input_wave, weight_matrix = ctx.saved_tensors
+        # Wirtinger Calculus gradients
+        grad_input = torch.matmul(grad_output, torch.conj(weight_matrix.T))
+        # Handle batched dimensions for weight gradient
+        if input_wave.dim() == 2:
+            grad_weight = torch.matmul(torch.conj(input_wave.T), grad_output)
+        else:
+            grad_weight = torch.matmul(torch.conj(input_wave).transpose(-1, -2), grad_output)
+            grad_weight = torch.sum(grad_weight, dim=0)
+        return grad_input, grad_weight
+
+
 class DiffractivePhaseMask(nn.Module):
     """
     A single BTO optical layer representing the frozen "Bone" logic gates.
@@ -110,12 +134,12 @@ class DiffractivePhaseMask(nn.Module):
     def forward(self, psi: torch.Tensor) -> torch.Tensor:
         # If cartilage exists, blend it with the frozen bone
         if self.lora_A is not None and self.lora_B is not None:
-            active_weight = self.weight + torch.matmul(self.lora_A, self.lora_B)
+            active_weight = self.weight + WirtingerComplexMatmul.apply(self.lora_A, self.lora_B)
             # Retract combined topology to maintain physical orthogonality
             active_weight = StiefelManifoldProjector.retract(active_weight, max_iters=2)
-            out = torch.matmul(psi, active_weight)
+            out = WirtingerComplexMatmul.apply(psi, active_weight)
         else:
-            out = torch.matmul(psi, self.weight)
+            out = WirtingerComplexMatmul.apply(psi, self.weight)
             
         return F.normalize(out, p=2, dim=-1)
 

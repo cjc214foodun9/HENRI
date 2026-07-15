@@ -77,8 +77,8 @@ class EngramStore:
 
     def _serialize_wave(self, complex_tensor: torch.Tensor) -> str:
         """
-        Normalizes the 4096-D PyTorch complex64 tensor to L2=1.0 and serializes 
-        it into an 8192-float array string for pgvector.
+        Normalizes the 4096-D PyTorch complex64 tensor to L2=1.0, quantizes it to INT8 
+        to bypass the Cache Wall, and serializes it into an 8192-int array string.
         Format: [Real0, Imag0, Real1, Imag1...]
         """
         assert complex_tensor.shape[-1] == 4096, "Expected 4096-D complex tensor"
@@ -92,24 +92,33 @@ class EngramStore:
         
         # Interleave real and imaginary components
         stacked = torch.stack((vec.real, vec.imag), dim=-1)
-        flat_real_array = stacked.view(-1).detach().cpu().numpy().astype(np.float32)
         
-        # Format string array required by pgvector: '[0.1, 0.2, ...]'
-        return '[' + ','.join(map(str, flat_real_array)) + ']'
+        # Quantize to INT8 range [-127, 127]
+        # Since vector is L2 normalized, max value is 1.0. We scale by 127.
+        flat_int_array = torch.round(stacked.view(-1) * 127.0).to(torch.int8).detach().cpu().numpy()
+        
+        # Format string array required by pgvector: '[12, -45, ...]'
+        return '[' + ','.join(map(str, flat_int_array)) + ']'
 
     def _deserialize_wave(self, vector_string: str) -> torch.Tensor:
         """
-        Maps an 8192-float pgvector string back into a PyTorch complex64 tensor [4096].
+        Maps an 8192-int pgvector string back into a PyTorch complex64 tensor [4096].
         """
         clean_str = vector_string.strip('[]')
-        float_array = np.array([float(x) for x in clean_str.split(',')], dtype=np.float32)
+        int_array = np.array([int(float(x)) for x in clean_str.split(',')], dtype=np.int8)
+        
+        # De-quantize: Divide by 127.0
+        float_array = int_array.astype(np.float32) / 127.0
         
         # Reshape to 4096 x 2
         interleaved = float_array.reshape(4096, 2)
         
-        # Project back to complex 128
+        # Project back to complex64
         complex_tensor = torch.tensor(interleaved[:, 0] + 1j * interleaved[:, 1], dtype=torch.complex64)
-        return complex_tensor
+        
+        # Re-normalize just in case quantization caused slight drift
+        norm = torch.norm(complex_tensor, p=2)
+        return complex_tensor / (norm + 1e-16)
 
     async def cache_survival_trait(self, context_hash: str, complex_tensor: torch.Tensor) -> None:
         """
@@ -156,6 +165,19 @@ class EngramStore:
                 })
                 
             return results
+
+    async def retrieve_ancestral_engram_batch(self, query_batch: torch.Tensor, hashes: List[str], k: int = 1) -> List[List[Dict[str, Any]]]:
+        """
+        Executes parallel Holographic Hash Cosine Distance searches to bypass serialization bottlenecks
+        during deep lookahead. `query_batch` is of shape [B, 4096].
+        """
+        tasks = []
+        for i in range(query_batch.size(0)):
+            # We can use the scalar fetch to run in parallel utilizing the asyncpg pool.
+            tasks.append(self.retrieve_ancestral_engram(query_batch[i], k=k))
+            
+        # Execute concurrently across the CXL bus
+        return await asyncio.gather(*tasks)
 
     async def close(self):
         """Clean shutdown of the database pool."""

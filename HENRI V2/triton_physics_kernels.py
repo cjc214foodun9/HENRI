@@ -204,3 +204,44 @@ def triton_complex_matmul(A: torch.Tensor, B: torch.Tensor, a_hermitian=False) -
         A_HERMITIAN=a_hermitian
     )
     return C
+
+
+# =============================================================================
+# ANGULAR SPECTRUM METHOD (ASM) - ZERO ALLOCATION BUFFER RECYCLING
+# =============================================================================
+def angular_spectrum_method_2d(psi_grid: torch.Tensor, z_distance: float, k: float = 1.0, 
+                               out_buffer: torch.Tensor = None) -> torch.Tensor:
+    """
+    Executes the Angular Spectrum Method (ASM) for wave propagation using zero-allocation 
+    FFT buffer recycling. Resolves VRAM fragmentation across 32 diffractive layers.
+    """
+    assert psi_grid.dtype == torch.complex64, "Wave grid must be complex64."
+    
+    # 1. In-place or cached buffer FFT
+    if out_buffer is None:
+        psi_fft = torch.fft.fft2(psi_grid)
+        out_buffer = psi_fft
+    else:
+        # Recycle the provided buffer
+        out_buffer.copy_(psi_grid)
+        torch.fft.fft2(out_buffer, out=out_buffer)
+        
+    B, H, W = out_buffer.shape
+    
+    # 2. Construct the exact phase transfer function H(fx, fy)
+    # We cache the transfer function globally to prevent reallocation per layer
+    if not hasattr(angular_spectrum_method_2d, "transfer_func") or angular_spectrum_method_2d.transfer_func.shape != (H, W):
+        fx = torch.fft.fftfreq(H, d=1.0, device=psi_grid.device)
+        fy = torch.fft.fftfreq(W, d=1.0, device=psi_grid.device)
+        FX, FY = torch.meshgrid(fx, fy, indexing='ij')
+        
+        argument = 1.0 - (FX/k)**2 - (FY/k)**2
+        # Evanescent waves are damped; propagating waves are phase-shifted
+        phase = k * z_distance * torch.sqrt(torch.clamp(argument, min=0.0))
+        angular_spectrum_method_2d.transfer_func = torch.polar(torch.ones_like(phase), phase).to(torch.complex64)
+        
+    # 3. Apply transfer function in the Fourier domain (in-place)
+    out_buffer.mul_(angular_spectrum_method_2d.transfer_func.unsqueeze(0))
+    
+    # 4. Inverse FFT back to spatial domain (in-place)
+    return torch.fft.ifft2(out_buffer, out=out_buffer)

@@ -1,0 +1,7 @@
+{"timestamp_ms": 3879.58, "task_id": "ARC_LS20_STEP_0", "epoch": 0, "sagnac_error_delta": 0.955719, "langevin_heat_applied": 1.826799, "proposed_policy": "EXPLORING_MORPHOSPACE", "is_isothermal_lock": false}
+{"timestamp_ms": 3880.52, "task_id": "ARC_LS20_STEP_0", "epoch": 1, "sagnac_error_delta": 0.388445, "langevin_heat_applied": 0.301778, "proposed_policy": "EXPLORING_MORPHOSPACE", "is_isothermal_lock": false}
+{"timestamp_ms": 3880.99, "task_id": "ARC_LS20_STEP_0", "epoch": 2, "sagnac_error_delta": 0.215623, "langevin_heat_applied": 0.0, "proposed_policy": "OPTIMAL_MOVE_FOUND", "is_isothermal_lock": true}
+{"timestamp_ms": 4482.79, "task_id": "ARC_LS20_STEP_1", "epoch": 0, "sagnac_error_delta": 0.215623, "langevin_heat_applied": 0.0, "proposed_policy": "OPTIMAL_MOVE_FOUND", "is_isothermal_lock": true}
+{"timestamp_ms": 5099.97, "task_id": "ARC_LS20_STEP_2", "epoch": 0, "sagnac_error_delta": 0.215623, "langevin_heat_applied": 0.0, "proposed_policy": "OPTIMAL_MOVE_FOUND", "is_isothermal_lock": true}
+{"timestamp_ms": 5713.04, "task_id": "ARC_LS20_STEP_3", "epoch": 0, "sagnac_error_delta": 0.215623, "langevin_heat_applied": 0.0, "proposed_policy": "OPTIMAL_MOVE_FOUND", "is_isothermal_lock": true}
+{"timestamp_ms": 6325.22, "task_id": "ARC_LS20_STEP_4", "epoch": 0, "sagnac_error_delta": 0.215623, "langevin_heat_applied": 0.0, "proposed_policy": "OPTIMAL_MOVE_FOUND", "is_isothermal_lock": true}
