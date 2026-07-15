@@ -15,6 +15,9 @@ from darwinian_phase_swarm import PhaseSwarmOrchestrator, DarwinianPhaseSwarm
 from thermodynamic_telemetry_logger import ThermodynamicTelemetry
 from oak_thermodynamic_engine import LangevinEpistemicPlayLoop
 from arc_agi_zone_c_seed import TopologicalDatasetCompiler
+import os
+import asyncio
+from phylogenetic_memory import EngramStore
 
 try:
     import arc_agi
@@ -22,6 +25,19 @@ try:
 except ImportError:
     print("[ALETHEIA FATAL] arc_agi package missing. The environment must be physically bound. Run `pip install arc-agi`")
     sys.exit(1)
+
+def store_engram_sync(task_id: str, wave):
+    async def _store():
+        dsn = os.environ.get("POSTGRES_DSN", "postgres://postgres:password@localhost:10100/henri")
+        temp_store = EngramStore(dsn)
+        await temp_store.initialize_schema()
+        await temp_store.cache_survival_trait(task_id, wave)
+        await temp_store.close()
+        
+    try:
+        asyncio.run(_store())
+    except Exception as e:
+        print(f"[ALETHEIA DB ERROR] Failed to persist invariant to TimescaleDB: {e}")
 
 def execute_live_benchmark():
     print("[ALETHEIA] Initializing Universal Thermodynamic Harness...")
@@ -87,6 +103,10 @@ def execute_live_benchmark():
                 zone_c_axioms=zone_c_axioms,
                 max_epochs=1000000
             )
+            
+            # Persist the discovered structural invariant natively to TimescaleDB
+            print(f"[ALETHEIA] Persisting Invariant for {env_name}_STEP_{step_count} to TimescaleDB...")
+            store_engram_sync(f"{env_name}_STEP_{step_count}", optimal_policy_wave)
             
             # 5. Semantic Cleanup Matrix (Decode policy to physical action)
             # Replaces the dictionary mock with a true physical egress action.
