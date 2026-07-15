@@ -6,8 +6,6 @@ import math
 import sys
 import os
 
-# Import bioactive modules from scratch directory
-sys.path.append(os.path.join(os.path.dirname(__file__), 'scratch'))
 from bioactive_thermodynamic_master import BioactiveThermodynamicMaster
 from grassmannian_kuramoto_init import GrassmannianKuramotoInitializer
 from oak_thermodynamic_engine import ThermodynamicCreditAssigner, SpectralOptionDelineator, LangevinEpistemicPlayLoop

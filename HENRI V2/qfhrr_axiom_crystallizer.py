@@ -24,7 +24,7 @@ class QuantizedAxiomCrystallizer:
         In qFHRR, orthogonality is established by drawing from a deterministic chaotic sequence.
         """
         # Seed 1000 for color mesh, Seed 2000 for spatial mesh to ensure invariant topology
-        self.color_combs = ChaoticHashGenerator.generate(1000, (10, DIMENSIONS), K_QUANTIZATION)
+        self.color_combs = ChaoticHashGenerator.generate(1000, (256, DIMENSIONS), K_QUANTIZATION)
         self.spatial_mesh = ChaoticHashGenerator.generate(2000, (900, DIMENSIONS), K_QUANTIZATION)
 
     def bind(self, wave_a: np.ndarray, wave_b: np.ndarray) -> np.ndarray:
