@@ -50,7 +50,7 @@ class TestProductionIntegrity(unittest.TestCase):
         W = torch.randn(dim, dim, dtype=torch.complex64, device=device)
         
         # Retract to the manifold
-        W_stiefel = NewtonSchulzProjector.retract(W, iterations=7)
+        W_stiefel = NewtonSchulzProjector.retract(W, iterations=15)
         
         # Verify Stiefel constraint: W^H W = I
         identity_approx = torch.matmul(torch.conj(W_stiefel.T), W_stiefel)
