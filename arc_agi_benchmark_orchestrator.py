@@ -14,6 +14,7 @@ import json
 from darwinian_phase_swarm import PhaseSwarmOrchestrator, DarwinianPhaseSwarm
 from thermodynamic_telemetry_logger import ThermodynamicTelemetry
 from oak_thermodynamic_engine import LangevinEpistemicPlayLoop
+from arc_agi_zone_c_seed import TopologicalDatasetCompiler
 
 try:
     import arc_agi
@@ -31,6 +32,12 @@ def execute_live_benchmark():
     
     telemetry = ThermodynamicTelemetry(session_name="darwinian_arc_production")
     orchestrator = PhaseSwarmOrchestrator(telemetry_logger=telemetry)
+    
+    print("\n[ALETHEIA] Compiling Zone C Topological Dataset...")
+    zone_c_compiler = TopologicalDatasetCompiler(dimension=4096)
+    zone_c_axioms = zone_c_compiler.generate_tripartite_dataset(num_samples=150).cuda()
+    print(f"[ALETHEIA] Extracted {zone_c_axioms.size(0)} deep structural invariants for Epistemic Anchoring.")
+    
     print(f"\n[ALETHEIA] Targets locked. Processing {len(environments)} environments natively.")
 
     for env_name in environments:
@@ -77,7 +84,7 @@ def execute_live_benchmark():
                 task_id=f"{env_name}_STEP_{step_count}",
                 task_wave=task_wave,
                 boundary_axiom=boundary_axiom,
-                zone_c_axioms=None,
+                zone_c_axioms=zone_c_axioms,
                 max_epochs=1000000
             )
             
