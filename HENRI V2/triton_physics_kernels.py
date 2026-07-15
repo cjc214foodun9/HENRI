@@ -175,25 +175,25 @@ def triton_complex_matmul(A: torch.Tensor, B: torch.Tensor, a_hermitian=False) -
     """
     assert A.dtype == torch.complex64 and B.dtype == torch.complex64
     
+    A = A.resolve_conj()
+    B = B.resolve_conj()
+    
+    # Unbind staggered float32 pointers from the complex arrays
+    A_r, A_i = torch.view_as_real(A).unbind(-1)
+    B_r, B_i = torch.view_as_real(B).unbind(-1)
+
     # If A is hermitian, it physically remains (K, M) in memory but we compute as (M, K)
     if a_hermitian:
         K, M = A.shape
-        stride_ak, stride_am = A.stride(0), A.stride(1)
+        stride_ak, stride_am = A_r.stride(0), A_r.stride(1)
     else:
         M, K = A.shape
-        stride_am, stride_ak = A.stride(0), A.stride(1)
+        stride_am, stride_ak = A_r.stride(0), A_r.stride(1)
 
     K_, N = B.shape
     assert K == K_, "Matrix inner dimensions must perfectly align."
 
     C = torch.empty((M, N), dtype=torch.complex64, device=A.device)
-
-    A = A.resolve_conj()
-    B = B.resolve_conj()
-
-    # Unbind staggered float32 pointers from the complex arrays
-    A_r, A_i = torch.view_as_real(A).unbind(-1)
-    B_r, B_i = torch.view_as_real(B).unbind(-1)
     C_r, C_i = torch.view_as_real(C).unbind(-1)
 
     grid = lambda META: (triton.cdiv(M, META['BLOCK_M']), triton.cdiv(N, META['BLOCK_N']))
