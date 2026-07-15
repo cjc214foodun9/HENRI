@@ -54,7 +54,7 @@ class TestProductionIntegrity(unittest.TestCase):
         
         # Verify Stiefel constraint: W^H W = I
         identity_approx = torch.matmul(torch.conj(W_stiefel.T), W_stiefel)
-        identity_true = torch.eye(dim, dtype=torch.complex64)
+        identity_true = torch.eye(dim, dtype=torch.complex64, device=device)
         
         error = torch.norm(identity_approx - identity_true, p='fro').item()
         
