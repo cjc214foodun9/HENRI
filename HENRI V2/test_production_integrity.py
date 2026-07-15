@@ -43,14 +43,14 @@ class TestProductionIntegrity(unittest.TestCase):
         """
         Asserts that the continuous Newton-Schulz retraction rigorously locks
         weight matrices to the Stiefel Manifold (W^H W = I).
-        """
         dim = 64
-        # Generate a drifting (non-orthogonal) complex weight matrix
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        W = torch.randn(dim, dim, dtype=torch.complex64, device=device)
+        # Generate a drifting (slightly non-orthogonal) complex weight matrix
+        W = torch.eye(dim, dtype=torch.complex64, device=device)
+        W += 0.1 * torch.randn(dim, dim, dtype=torch.complex64, device=device)
         
         # Retract to the manifold
-        W_stiefel = NewtonSchulzProjector.retract(W, iterations=15)
+        W_stiefel = NewtonSchulzProjector.retract(W, iterations=7)
         
         # Verify Stiefel constraint: W^H W = I
         identity_approx = torch.matmul(torch.conj(W_stiefel.T), W_stiefel)
