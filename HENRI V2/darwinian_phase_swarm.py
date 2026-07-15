@@ -91,21 +91,16 @@ class NewtonSchulzProjector:
         except ImportError:
             triton_available = False
 
-        X = W / (torch.norm(W, p='fro') + 1e-9) # strict spectral radius precondition
+        # Spectral norm precondition scales the matrix perfectly so max singular value = 1
+        X = W / (torch.linalg.matrix_norm(W, ord=2) + 1e-9)
         I = torch.eye(W.shape[-1], device=W.device, dtype=W.dtype)
         
         for _ in range(iterations):
             X_H = torch.conj(X.T)
+            A = torch.matmul(X_H, X)
+            update_term = 3.0 * I - A
+            X = torch.matmul(X, update_term) / 2.0
             
-            if triton_available and X.dtype == torch.complex64 and X.is_cuda:
-                A = triton_complex_matmul(X_H, X)
-                update_term = 3.0 * I - A
-                X = triton_complex_matmul(X, update_term) / 2.0
-            else:
-                A = torch.matmul(X_H, X)
-                update_term = 3.0 * I - A
-                X = torch.matmul(X, update_term) / 2.0
-                
         return X
 
 class DarwinianPhaseSwarm(nn.Module):
