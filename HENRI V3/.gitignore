@@ -1,0 +1,30 @@
+# Project HENRI Local Workspace Protection
+# Filters volatile runtime artifacts and diagnostic dumps.
+
+# PyTorch/CUDA Caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+
+# Local Model Weights & Diagnostic Dumps
+*.pt
+*.pth
+*.bin
+*.onnx
+output.txt
+henri_core_final.pt
+
+# Volatile Databases & OS Files
+.DS_Store
+Thumbs.db
+*.db
+*.sqlite
+001_init_hypertables.sql
+
+# Local Python Environment
+venv/
+env/
+.env
+```
