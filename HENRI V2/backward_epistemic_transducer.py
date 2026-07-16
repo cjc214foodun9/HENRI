@@ -33,11 +33,9 @@ class BackwardEpistemicTransducer:
         # Map to continuous phase-gradient using Inverse Discrete Fourier Transform (iDFT)
         phase_gradient = torch.fft.ifft(complex_signal)
         
-        # Reshape to match the wave topology [num_blocks, d_model]
-        phase_gradient = phase_gradient.view(self.num_blocks, self.d_model)
-        
-        # We return the magnitude projection to act as a localized error_mask for the AnisotropicThermostat
-        return torch.abs(phase_gradient)
+        # We return the magnitude projection, flattened to act as a localized error_mask for the AnisotropicThermostat
+        # Expected shape is [dimension] (e.g. 65536) to broadcast with experts_A[idx] shape [16, 65536]
+        return torch.abs(phase_gradient).view(-1)
 
     def generate_thermodynamic_repeller(self, falsified_wave: torch.Tensor) -> torch.Tensor:
         """
