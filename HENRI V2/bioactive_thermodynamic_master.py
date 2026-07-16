@@ -55,27 +55,27 @@ class BioactiveThermodynamicMaster(nn.Module):
             return True  # Delayed gratification is active; override rigid veto
         return False
 
-    def execute_coupled_relaxation_step(self, theta, K_matrix, Ψ_target, t_step):
+    def execute_coupled_relaxation_step(self, theta, K_matrix, Ψ_target, t_step, physics_core_fn):
         """
         Executes a single continuous-time Kuramoto coupled relaxation pass.
         Integrates the spontaneous Alpha rhythm and the viscoelastic delayed gratification sieve.
         """
-        # 1. Compute physical Sagnac delta
+        # 1. Propose state
         Ψ_pred = torch.polar(torch.ones_like(theta), theta)
-        # Using real part of mean(Psi_pred * conj(Psi_target)) for coherence magnitude
-        # Since theta is (num_experts, N) and target is (N), we compute dot product along dim 1
-        # To align with the user's pseudo-code, which expects a single phase mask per step, 
-        # but theta is batched for experts. Let's adapt it to batched execution.
         
-        Psi_target_conj = torch.conj(Ψ_target)
-        coherences = torch.abs(torch.sum(Ψ_pred * Psi_target_conj, dim=1) / self.N)
+        # 2. Evaluate physical coherence through the core bone matrix
+        Ψ_settled = physics_core_fn(Ψ_pred)
+        
+        # Sagnac error is now the physical structural resonance (how stable is this state in the topology?)
+        # We want Ψ_settled to equal Ψ_pred (i.e. eigenvector of the bone matrix)
+        coherences = torch.abs(torch.sum(Ψ_pred * torch.conj(Ψ_settled), dim=1) / self.N)
         sagnac_deltas = 1.0 - coherences
         
         # We evaluate the Delayed Gratification based on the best expert
         best_expert_idx = torch.argmin(sagnac_deltas)
         best_sagnac = sagnac_deltas[best_expert_idx].item()
         
-        # 2. Determine agential Langevin temperature
+        # 3. Determine agential Langevin temperature
         is_delayed = self.evaluate_delayed_gratification(best_sagnac)
         
         if best_sagnac < self.e_floor:
@@ -91,26 +91,24 @@ class BioactiveThermodynamicMaster(nn.Module):
             # Standard Langevin thermal update proportional to Sagnac delta
             T_eff = 2.5 * math.tanh(best_sagnac)
             
-        # 3. Compute continuous-time state update modulo 2pi
-        # For multiple experts, theta is shape (num_experts, N)
-        # dtheta/dt = omega + (1/N)*sum(K * sin(theta_j - theta_i)) + sqrt(2T)*noise
-        # Instead of all-to-all across experts, the K matrix couples dimensions *within* each expert.
-        # So theta_i is (N,) representing coordinates. 
-        # K_matrix is (N, N).
-        
-        # To compute sum(K_matrix * sin(theta_j - theta_i)), we can do this per expert:
+        # 4. Compute continuous-time state update modulo 2pi
         theta_new = torch.zeros_like(theta)
+        drift_phase = torch.angle(Ψ_target)
         
         for k in range(self.num_experts):
-            theta_k = theta[k] # (N,)
-            theta_grid_i = theta_k.unsqueeze(1) # (N, 1)
-            theta_grid_j = theta_k.unsqueeze(0) # (1, N)
-            phase_diffs = theta_grid_j - theta_grid_i # (N, N)
+            theta_k = theta[k]
+            theta_grid_i = theta_k.unsqueeze(1)
+            theta_grid_j = theta_k.unsqueeze(0)
+            phase_diffs = theta_grid_j - theta_grid_i
             
-            coupling_force = torch.sum(K_matrix * torch.sin(phase_diffs), dim=1) / self.N # (N,)
+            coupling_force = torch.sum(K_matrix * torch.sin(phase_diffs), dim=1) / self.N
+            
+            # The viscoelastic tether (spring logic) to the diving board
+            drift_force = self.kappa * torch.sin(drift_phase - theta_k)
+            
             stochastic_noise = torch.randn(self.N, device=self.device) * math.sqrt(2.0 * T_eff)
             
-            dtheta_dt = self.omega + coupling_force + stochastic_noise
+            dtheta_dt = self.omega + coupling_force + drift_force + stochastic_noise
             theta_new[k] = (theta_k + dtheta_dt) % (2.0 * math.pi)
         
         # RETURN THE COMPLETE MATRIX OF ENERGIES AND WAVES

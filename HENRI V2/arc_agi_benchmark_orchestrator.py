@@ -93,15 +93,14 @@ def execute_live_benchmark():
             current_grid = obs.frame[0].tolist()
             task_wave = orchestrator.encode_grid_to_wave(current_grid)
             
-            # 4. Trigger the Thermodynamic Avalanche
-            # We remove the 200 epoch limitation and allow the Darwinian Phase Swarm to run 
-            # as long as necessary to find the absolute phase lock (Sagnac < 0.05).
+            # We set a sensible limit of 500 epochs to allow the Darwinian Phase Swarm
+            # to gracefully skip unsolved problems rather than hanging indefinitely.
             optimal_policy_wave = orchestrator.run_active_inference(
                 task_id=f"{env_name}_STEP_{step_count}",
                 task_wave=task_wave,
                 boundary_axiom=boundary_axiom,
                 zone_c_axioms=zone_c_axioms,
-                max_epochs=1000000
+                max_epochs=500
             )
             
             # Persist the discovered structural invariant natively to TimescaleDB

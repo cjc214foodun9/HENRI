@@ -9,6 +9,7 @@ import os
 from bioactive_thermodynamic_master import BioactiveThermodynamicMaster
 from grassmannian_kuramoto_init import GrassmannianKuramotoInitializer
 from oak_thermodynamic_engine import ThermodynamicCreditAssigner, SpectralOptionDelineator, LangevinEpistemicPlayLoop
+from qfhrr_axiom_crystallizer import QuantizedAxiomCrystallizer
 
 class FractionalBindingLayer(nn.Module):
     """
@@ -142,10 +143,14 @@ class DarwinianPhaseSwarm(nn.Module):
         """
         # Pass the wave through the structural topology of the network
         with torch.no_grad():
-            output = torch.matmul(self.spatial_bone.to(input_wave.device, dtype=input_wave.dtype), input_wave)
-            return output / torch.abs(output)
+            bone = self.spatial_bone.to(input_wave.device, dtype=input_wave.dtype)
+            if input_wave.dim() == 1:
+                output = torch.matmul(bone, input_wave)
+            else:
+                output = torch.matmul(input_wave, bone.T)
+            return output / (torch.abs(output) + 1e-9)
 
-    def process_swarm(self, target_axioms: torch.Tensor, t_step: float):
+    def process_swarm(self, diving_board_wave: torch.Tensor, t_step: float):
         """
         Executes the biological coupled relaxation step via BioactiveThermodynamicMaster
         and assigns credit via the ThermodynamicCreditAssigner.
@@ -154,7 +159,7 @@ class DarwinianPhaseSwarm(nn.Module):
         with torch.no_grad():
             # Extract the full thermodynamic state of the swarm
             expert_waves, sagnac_deltas, theta_new, T_eff = self.bio_master.execute_coupled_relaxation_step(
-                self.expert_phases, self.K_matrix, target_axioms, t_step
+                self.expert_phases, self.K_matrix, diving_board_wave, t_step, self.forward
             )
             self.expert_phases.copy_(theta_new)
             
@@ -192,36 +197,27 @@ class PhaseSwarmOrchestrator:
         self.telemetry = telemetry_logger
         self.binder = FractionalBindingLayer(dim=dim)
         self.delineator = SpectralOptionDelineator(dim=dim)
+        self.qfhrr = QuantizedAxiomCrystallizer()
         
     def encode_grid_to_wave(self, grid: list[list[int]]) -> torch.Tensor:
-        """Converts a 2D ARC grid into a fractionally bound spatial wave."""
-        # Simple one-hot object identity base
-        obj_identity = F.normalize(torch.randn(self.dim), p=2, dim=0)
-        waves = []
-        for y, row in enumerate(grid):
-            for x, color in enumerate(row):
-                if color > 0: # Only bind foreground objects
-                    waves.append(self.binder.bind_coordinate(obj_identity, float(x), float(y)))
-                    
-        if len(waves) == 0:
-            return torch.zeros(self.dim)
-            
-        stacked = torch.stack(waves)
-        return F.normalize(stacked.sum(dim=0), p=2, dim=-1)
+        """Translates a discrete 2D ARC grid into a continuous-mapped 4096-D qFHRR state."""
+        # Use QuantizedAxiomCrystallizer to generate noise-free integer phase angles
+        q_wave = self.qfhrr.encode_grid_to_wave(grid)
+        # Map Z_256 integers to continuous phase [0, 2pi)
+        continuous_phase = (torch.tensor(q_wave, dtype=torch.float64) * 2 * math.pi) / 256.0
+        # Convert to polar wave tensor
+        wave = torch.polar(torch.ones_like(continuous_phase), continuous_phase)
+        return F.normalize(wave, p=2, dim=-1)
         
     def crystallize_boundary_axiom(self, train_pairs: list[dict]) -> torch.Tensor:
-        """Extracts the continuous affine transformation boundary."""
-        transformations = []
-        for pair in train_pairs:
-            wave_in = self.encode_grid_to_wave(pair['input'])
-            wave_out = self.encode_grid_to_wave(pair['output'])
-            # T = Y - X (phase shift in spatial domain)
-            transformations.append(wave_out - wave_in)
-            
-        if len(transformations) == 0:
-            return torch.zeros(self.dim)
-            
-        return F.normalize(torch.stack(transformations).sum(dim=0), p=2, dim=-1)
+        """Extracts the invariant topological rule using exact qFHRR math."""
+        # Use QuantizedAxiomCrystallizer to perfectly bundle and annihilate noise
+        q_axiom = self.qfhrr.crystallize_boundary_axiom(train_pairs)
+        # Map Z_256 integers back to continuous space for the Darwinian Phase Swarm
+        continuous_phase = (torch.tensor(q_axiom, dtype=torch.float64) * 2 * math.pi) / 256.0
+        # Convert to polar wave tensor
+        wave = torch.polar(torch.ones_like(continuous_phase), continuous_phase)
+        return F.normalize(wave, p=2, dim=-1)
 
     def run_active_inference(self, task_id: str, task_wave: torch.Tensor, boundary_axiom: torch.Tensor, zone_c_axioms: torch.Tensor = None, max_epochs: int = 1000000) -> torch.Tensor:
         """Executes the Darwinian Phase Swarm optimization with Spectral Option Delineation and Test-Time Epistemic Play."""
@@ -251,11 +247,18 @@ class PhaseSwarmOrchestrator:
         final_wave = None
         for opt_idx, target_option in enumerate(sub_options):
             print(f"[OaK] Executing Sub-Option {opt_idx+1}/{sub_options.shape[0]}...")
+            
+            # Anchor the swarm to the diving board (task_wave * target_option)
+            diving_board_wave = task_wave * target_option
+            diving_board_phase = torch.angle(diving_board_wave)
+            noise = torch.randn(swarm.num_experts, swarm.dim, device=diving_board_phase.device) * 0.5
+            swarm.expert_phases.data.copy_((diving_board_phase.unsqueeze(0) + noise) % (2 * math.pi))
+            
             for epoch in range(max_epochs):
                 t_step = epoch * 0.01 # Simulated continuous time
                 
                 # Execute the biological coupled relaxation step and OaK credit assignment
-                optimal_wave, consensus_wave, best_error, T_eff = swarm.process_swarm(target_option, t_step)
+                optimal_wave, consensus_wave, best_error, T_eff = swarm.process_swarm(diving_board_wave, t_step)
                 
                 # Log telemetry
                 if self.telemetry:
