@@ -88,10 +88,9 @@ class LangevinEpistemicPlayLoop(nn.Module):
     The system maps its own phase-space without a user-defined goal, looking for 
     naturally stable topological attractors to store as permanent knowledge.
     """
-    def __init__(self, core_syncytium: nn.Module, dim: int = 4096):
+    def __init__(self, core_syncytium: nn.Module):
         super().__init__()
         self.syncytium = core_syncytium # RESOLUTION I: The full unamputated physics core
-        self.dim = dim
 
     def execute_play_epoch(self, target_axioms: torch.Tensor = None, heat_variance: float = 0.5):
         """
@@ -103,9 +102,9 @@ class LangevinEpistemicPlayLoop(nn.Module):
         if target_axioms is not None and target_axioms.numel() > 0:
             play_wave = torch.mean(target_axioms, dim=0)
         else:
-            play_wave = torch.randn(self.dim, dtype=torch.cfloat, device='cuda')
+            play_wave = torch.randn(8192, 8, device='cuda')
             
-        play_wave = play_wave / (torch.abs(play_wave) + 1e-9)
+        play_wave = play_wave / (torch.norm(play_wave, p=2, dim=-1, keepdim=True) + 1e-9)
         
         discovered_invariants = []
         step = 0
@@ -119,7 +118,9 @@ class LangevinEpistemicPlayLoop(nn.Module):
             # Pulls the wave back toward the nearest established invariant if it drifts into illogical space
             if target_axioms is not None and target_axioms.numel() > 0:
                 # Hardware-accelerated dot product to find the closest topological anchor
-                similarities = torch.matmul(target_axioms.abs(), play_wave.abs().unsqueeze(1)).squeeze()
+                flat_axioms = target_axioms.view(target_axioms.shape[0], -1)
+                flat_play = play_wave.view(-1)
+                similarities = torch.matmul(flat_axioms.abs(), flat_play.abs())
                 
                 # Handle dimension matching for single vs batch of axioms
                 if similarities.dim() == 0:
@@ -130,26 +131,26 @@ class LangevinEpistemicPlayLoop(nn.Module):
                 drift_force = (best_axiom - play_wave) * 0.15 # Elastic epistemic tether
             else:
                 drift_force = 0.0
+                best_axiom = play_wave # Self-target
 
             active_wave = play_wave + noise + drift_force
-            active_wave = active_wave / (torch.abs(active_wave) + 1e-9) # Maintain Stiefel Manifold
+            active_wave = active_wave / (torch.norm(active_wave, p=2, dim=-1, keepdim=True) + 1e-9) # Maintain unit modulus
             
             # 4. Propagate through the unamputated physics core (Resolution I)
-            settled_wave = self.syncytium(active_wave)
+            # The Syncytium Orchestrator evaluates the wave against the boundary and returns Sagnac delta
+            sagnac_delta, active_experts, error_metrics = self.syncytium.process_active_reasoning_step(active_wave, best_axiom)
             
-            # 5. Measure Intrinsic Stability (Phase velocity)
-            # RESOLUTION II: Eradicating the Arbitrary Clock
-            phase_delta = torch.norm(settled_wave - play_wave)
-            
-            if phase_delta < 1e-4:
+            # 5. Measure Intrinsic Stability
+            # If the structural error approaches zero, the state is topologically stable
+            if sagnac_delta < 1e-4:
                 # 6. Crystallize the Discovered Knowledge
-                discovered_invariants.append(settled_wave.clone())
+                discovered_invariants.append(active_wave.clone())
                 break # Thermodynamic equilibrium achieved
                 
-            play_wave = settled_wave
+            play_wave = active_wave
             step += 1
             
-            # Physical failsafe: The hyper-volume limit of S^4095 ensures finite bounds
+            # Physical failsafe: The hyper-volume limit ensures finite bounds
             if step >= 4096:
                 break
             

@@ -434,94 +434,60 @@ class EngramStore:
             
             # TimescaleDB requires the partition key (timestamp) to be part of the primary key
             await conn.execute("""
-                CREATE TABLE IF NOT EXISTS phylogenetic_engrams (
+                CREATE TABLE IF NOT EXISTS phylogenetic_engrams_65536 (
                     id UUID DEFAULT gen_random_uuid(),
                     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     environmental_context_hash VARCHAR(256),
-                    engram_wave vector(8192),
+                    semantic_index vector(2000),
+                    engram_wave_bytes BYTEA,
                     PRIMARY KEY (id, timestamp)
                 );
             """)
             
             # Convert to TimescaleDB chronological hypertable
             await conn.execute("""
-                SELECT create_hypertable('phylogenetic_engrams', 'timestamp', if_not_exists => TRUE);
+                SELECT create_hypertable('phylogenetic_engrams_65536', 'timestamp', if_not_exists => TRUE);
             """)
             
             # Create HNSW index for rapid cosine distance queries in O(log N)
             await conn.execute("""
                 CREATE INDEX IF NOT EXISTS engram_wave_hnsw_idx 
-                ON phylogenetic_engrams USING hnsw (engram_wave vector_cosine_ops);
+                ON phylogenetic_engrams_65536 USING hnsw (semantic_index vector_cosine_ops);
             """)
             
         logger.info("Phylogenetic Schema Initialization Complete.")
 
-    def _serialize_wave(self, complex_tensor: torch.Tensor) -> str:
-        """
-        Normalizes the 4096-D PyTorch complex128 tensor to L2=1.0 and serializes 
-        it into an 8192-float array string for pgvector.
-        Format: [Real0, Imag0, Real1, Imag1...]
-        """
-        assert complex_tensor.shape[-1] == 4096, "Expected 4096-D complex tensor"
-        
-        # Flatten batch dimension if present
-        vec = complex_tensor.view(-1)
-        
-        # Strictly normalize L2=1.0 as the engram metric invariant
-        norm = torch.norm(vec, p=2)
-        vec = vec / (norm + 1e-16)
-        
-        # Interleave real and imaginary components
-        stacked = torch.stack((vec.real, vec.imag), dim=-1)
-        flat_real_array = stacked.view(-1).cpu().numpy().astype(np.float64)
-        
-        # Format string array required by pgvector: '[0.1, 0.2, ...]'
-        return '[' + ','.join(map(str, flat_real_array)) + ']'
+    def _compute_semantic_index(self, tensor: torch.Tensor) -> str:
+        import math
+        torch.manual_seed(42) # Consistent projection matrix across restarts
+        proj_matrix = torch.randn(2000, 65536, device=tensor.device) / math.sqrt(2000)
+        flat = tensor.view(-1).float()
+        proj = torch.matmul(proj_matrix, flat)
+        proj = proj / (torch.norm(proj) + 1e-12)
+        return '[' + ','.join(map(str, proj.cpu().numpy())) + ']'
 
-    def _deserialize_wave(self, vector_string: str) -> torch.Tensor:
-        """
-        Maps an 8192-float pgvector string back into a PyTorch complex128 tensor [4096].
-        """
-        clean_str = vector_string.strip('[]')
-        float_array = np.array([float(x) for x in clean_str.split(',')], dtype=np.float64)
-        
-        # Reshape to 4096 x 2
-        interleaved = float_array.reshape(4096, 2)
-        
-        # Project back to complex 128
-        complex_tensor = torch.tensor(interleaved[:, 0] + 1j * interleaved[:, 1], dtype=torch.complex128)
-        return complex_tensor
-
-    async def cache_survival_trait(self, context_hash: str, complex_tensor: torch.Tensor) -> None:
-        """
-        Serializes and inserts a stabilized wave trajectory (Engram) into the 
-        evolutionary lineage database.
-        """
+    async def cache_survival_trait(self, context_hash: str, tensor: torch.Tensor) -> None:
         await self._connect_with_backoff()
-        
-        vector_str = self._serialize_wave(complex_tensor)
+        import pickle
+        semantic_str = self._compute_semantic_index(tensor)
+        blob = pickle.dumps(tensor.cpu())
         
         async with self.pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO phylogenetic_engrams (environmental_context_hash, engram_wave)
-                VALUES ($1, $2::vector)
-            """, context_hash, vector_str)
+                INSERT INTO phylogenetic_engrams_65536 (environmental_context_hash, semantic_index, engram_wave_bytes)
+                VALUES ($1, $2::vector, $3)
+            """, context_hash, semantic_str, blob)
 
-    async def retrieve_ancestral_engram(self, query_complex_tensor: torch.Tensor, k: int = 1) -> List[Dict[str, Any]]:
-        """
-        Executes a Holographic Hash Cosine Distance search (<=>) on the pgvector index, 
-        returning the closest historical tensor mapped back into a PyTorch complex128 shape.
-        """
+    async def retrieve_ancestral_engram(self, query_tensor: torch.Tensor, k: int = 1):
         await self._connect_with_backoff()
-        
-        query_str = self._serialize_wave(query_complex_tensor)
+        import pickle
+        query_str = self._compute_semantic_index(query_tensor)
         
         async with self.pool.acquire() as conn:
-            # Query pgvector utilizing the <=> operator for Cosine Distance
             rows = await conn.fetch(f"""
-                SELECT id, timestamp, environmental_context_hash, engram_wave::text, 
-                       (engram_wave <=> $1::vector) as distance
-                FROM phylogenetic_engrams
+                SELECT id, timestamp, environmental_context_hash, engram_wave_bytes, 
+                       (semantic_index <=> $1::vector) as distance
+                FROM phylogenetic_engrams_65536
                 ORDER BY distance ASC
                 LIMIT $2
             """, query_str, k)
@@ -533,7 +499,7 @@ class EngramStore:
                     "timestamp": row["timestamp"],
                     "context_hash": row["environmental_context_hash"],
                     "distance": row["distance"],
-                    "engram_wave": self._deserialize_wave(row["engram_wave"])
+                    "engram_wave": pickle.loads(row["engram_wave_bytes"])
                 })
                 
             return results

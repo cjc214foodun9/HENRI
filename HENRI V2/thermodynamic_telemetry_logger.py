@@ -48,6 +48,30 @@ class ThermodynamicTelemetry:
             "is_isothermal_lock": is_isothermal_lock
         }
         
+        # Merge JSON-RPC 2.0 Contract payload if error metrics provided
+        if getattr(self, "current_error_metrics", None):
+            payload["rpc_telemetry"] = {
+                "jsonrpc": "2.0",
+                "id": f"tx_opine_convergence_{epoch}",
+                "method": "system.telemetry.anisotropic_creep_update",
+                "params": {
+                    "sagnac_state": {
+                        "global_coherence": 1.0 - min(self.current_error_metrics["sagnac_delta"], 1.0),
+                        "status": "ANISOTROPIC_LANGEVIN_INJECTION_ACTIVE" if not is_isothermal_lock else "ISOTHERMAL_LOCK"
+                    },
+                    "ontological_error_vector": {
+                        "primary_axis": self.current_error_metrics["primary_axis"],
+                        "phase_mismatch_magnitude": self.current_error_metrics["sagnac_delta"],
+                        "thermal_injection_target": "EXPERT_SWARM_07"
+                    },
+                    "ui_render_directives": {
+                        "canvas_color_shift": "#3B2F2F" if not is_isothermal_lock else "#2F3B2F",
+                        "focal_marker_color": "#C59B27" if not is_isothermal_lock else "#27C59B",
+                        "accessible_status_message": f"Sandbox execution failed due to {self.current_error_metrics['primary_axis']} anomaly. Isolating thermal creep." if not is_isothermal_lock else "Isothermal lock achieved."
+                    }
+                }
+            }
+        
         with open(self.log_file, 'a', encoding='utf-8') as f:
             f.write(json.dumps(payload) + '\n')
             

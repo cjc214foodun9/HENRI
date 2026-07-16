@@ -11,13 +11,16 @@ topological laws mid-flight, and forces the network into physical resonance.
 
 import sys
 import json
-from darwinian_phase_swarm import PhaseSwarmOrchestrator, DarwinianPhaseSwarm
+import torch
+from darwinian_phase_swarm import HenriSwarmOrchestrator
 from thermodynamic_telemetry_logger import ThermodynamicTelemetry
 from oak_thermodynamic_engine import LangevinEpistemicPlayLoop
 from arc_agi_zone_c_seed import TopologicalDatasetCompiler
+from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
 import os
 import asyncio
 from phylogenetic_memory import EngramStore
+from zone_c_database_initialization import initialize_zone_c
 
 try:
     import arc_agi
@@ -42,16 +45,30 @@ def store_engram_sync(task_id: str, wave):
 def execute_live_benchmark():
     print("[ALETHEIA] Initializing Universal Thermodynamic Harness...")
     
+    dsn = os.environ.get("POSTGRES_DSN", "postgres://postgres:password@localhost:10100/henri")
+    print("[ALETHEIA] Anchoring Zone C Boundaries...")
+    initialize_zone_c(dsn)
+    
     # 1. Connect to Exteroceptive Environment
     arcade = arc_agi.Arcade()
     environments = [env.game_id if hasattr(env, 'game_id') else env for env in arcade.available_environments]
     
     telemetry = ThermodynamicTelemetry(session_name="darwinian_arc_production")
-    orchestrator = PhaseSwarmOrchestrator(telemetry_logger=telemetry)
+    
+    # 4.3B Parameter Engine (65536 Dimensions)
+    orchestrator = HenriSwarmOrchestrator(num_experts=1024, d_model=65536, action_enum_class=GameAction).cuda()
+    tokenizer = O_VSA_IngressTokenizer(num_blocks=8192, vocab_size=256, device='cuda')
     
     print("\n[ALETHEIA] Compiling Zone C Topological Dataset...")
-    zone_c_compiler = TopologicalDatasetCompiler(dimension=4096)
+    zone_c_compiler = TopologicalDatasetCompiler(dimension=65536)
     zone_c_axioms = zone_c_compiler.generate_tripartite_dataset(num_samples=150).cuda()
+    # Reshape the complex axioms into Clifford format [8192, 8]
+    # Since TopologicalDatasetCompiler outputs complex, we map real->real, imag->imag (indices 0, 1)
+    clifford_axioms = torch.zeros(150, 8192, 8, device='cuda')
+    clifford_axioms[..., 0] = zone_c_axioms.view(150, 8192, 8).real.sum(-1)
+    clifford_axioms[..., 1] = zone_c_axioms.view(150, 8192, 8).imag.sum(-1)
+    clifford_axioms = clifford_axioms / (torch.norm(clifford_axioms, p=2, dim=-1, keepdim=True) + 1e-9)
+    zone_c_axioms = clifford_axioms
     print(f"[ALETHEIA] Extracted {zone_c_axioms.size(0)} deep structural invariants for Epistemic Anchoring.")
     
     print(f"\n[ALETHEIA] Targets locked. Processing {len(environments)} environments natively.")
@@ -75,7 +92,10 @@ def execute_live_benchmark():
         probe_obs = game.step(GameAction.ACTION1)
         state_1 = probe_obs.frame[0].tolist()
         
-        boundary_axiom = orchestrator.crystallize_boundary_axiom([{"input": state_0, "output": state_1}])
+        # Encode using the new pristine Clifford O-VSA Tokenizer
+        boundary_string = json.dumps([{"input": state_0, "output": state_1}])
+        boundary_axiom = tokenizer.encode(boundary_string).mean(dim=0)
+        boundary_axiom = boundary_axiom / (torch.norm(boundary_axiom, p=2, dim=-1, keepdim=True) + 1e-9)
         
         step_count = 0
         obs = game.step(GameAction.ACTION2) # Break symmetry
@@ -89,19 +109,34 @@ def execute_live_benchmark():
                 print(f"[ALETHEIA] Attractor Exhausted: {obs.state.name}")
                 break
                 
-            # Lift the current 2D spatial grid onto the Stiefel Manifold (Darwinian Fractional Binding)
+            # Lift the current 2D spatial grid onto the Clifford Stiefel Manifold
             current_grid = obs.frame[0].tolist()
-            task_wave = orchestrator.encode_grid_to_wave(current_grid)
+            task_string = json.dumps(current_grid)
+            task_wave = tokenizer.encode(task_string).mean(dim=0)
+            task_wave = task_wave / (torch.norm(task_wave, p=2, dim=-1, keepdim=True) + 1e-9)
             
-            # We set a sensible limit of 500 epochs to allow the Darwinian Phase Swarm
-            # to gracefully skip unsolved problems rather than hanging indefinitely.
-            optimal_policy_wave = orchestrator.run_active_inference(
-                task_id=f"{env_name}_STEP_{step_count}",
-                task_wave=task_wave,
-                boundary_axiom=boundary_axiom,
-                zone_c_axioms=zone_c_axioms,
-                max_epochs=500
-            )
+            print(f"\n[OaK] Initiating In-Situ Test-Time Epistemic Play for {env_name}_STEP_{step_count}...")
+            play_engine = LangevinEpistemicPlayLoop(core_syncytium=orchestrator)
+            known_axioms = play_engine.execute_play_epoch(target_axioms=zone_c_axioms, heat_variance=0.5)
+            
+            print(f"[OaK] Executing HenriSwarmOrchestrator Optimization...")
+            active_wave = task_wave.clone()
+            for epoch in range(500):
+                sagnac_delta, active_experts, error_metrics = orchestrator.process_active_reasoning_step(active_wave, boundary_axiom)
+                if telemetry:
+                    telemetry.current_error_metrics = error_metrics
+                    telemetry.log_wave_state(
+                        task_id=f"{env_name}_STEP_{step_count}",
+                        epoch=epoch,
+                        sagnac_error=sagnac_delta,
+                        langevin_heat=3.5 * sagnac_delta,
+                        policy_action_decoded="OAK_THERMODYNAMIC_RELAXATION",
+                        is_isothermal_lock=(sagnac_delta < 0.05)
+                    )
+                if sagnac_delta < 0.05:
+                    break
+            
+            optimal_policy_wave = active_wave
             
             # Persist the discovered structural invariant natively to TimescaleDB
             print(f"[ALETHEIA] Persisting Invariant for {env_name}_STEP_{step_count} to TimescaleDB...")
@@ -111,7 +146,8 @@ def execute_live_benchmark():
             # Replaces the dictionary mock with a true physical egress action.
             # Here we map the policy wave to one of the canonical GameActions deterministically.
             # A true physical lock yields a deterministic action response.
-            action = GameAction.ACTION1
+            action, coherence = orchestrator.decoder.decode_wave_to_action(optimal_policy_wave)
+            print(f"[ALETHEIA DECODER] Decoded action {action} with Sagnac Resonance {coherence:.4f}")
             
             try:
                 obs = game.step(action)

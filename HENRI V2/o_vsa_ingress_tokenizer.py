@@ -6,22 +6,23 @@ class O_VSA_IngressTokenizer:
     Project HENRI: O-VSA Ingress Layer & True Local Tokenizer
     Replaces chaotic phase hashing with rigorous orthogonal mapping.
     Maps discrete string input to Token IDs, and then onto pristine 
-    Unitary Wave Embeddings (UWE) on the S^(d-1) hypersphere.
+    Clifford Multivector Embeddings (CME) of shape [num_blocks, 8].
     """
-    def __init__(self, d: int = 4096, vocab_size: int = 256, device="cpu"):
-        self.d = d
+    def __init__(self, num_blocks: int = 8192, vocab_size: int = 256, device="cpu"):
+        self.num_blocks = num_blocks
         self.vocab_size = vocab_size
         self.device = device
         
-        # Pre-allocate perfectly orthogonal canonical basis waves for the vocabulary
-        # Z_k = e^(i * theta_k) where theta is uniformly distributed
-        angles = torch.rand(vocab_size, d, device=device) * 2 * math.pi
-        self.canonical_basis = torch.polar(torch.ones_like(angles), angles)
+        # Pre-allocate orthogonal canonical basis multivectors for the vocabulary
+        # Shape: [vocab_size, num_blocks, 8]
+        raw_basis = torch.randn(vocab_size, num_blocks, 8, device=device)
+        # Normalize to create unit-modulus Clifford multivectors (pure geometric states)
+        self.canonical_basis = raw_basis / torch.norm(raw_basis, p=2, dim=-1, keepdim=True)
 
     def encode(self, text: str) -> torch.Tensor:
         """
         Tokenizes text (character-level byte encoding) and returns the corresponding
-        Unitary Wave Embeddings of shape [seq_len, d]
+        Clifford Multivector Embeddings of shape [seq_len, num_blocks, 8]
         """
         # True Local Tokenizer: ASCII/Byte mapping
         token_ids = [min(ord(c), self.vocab_size - 1) for c in text]
