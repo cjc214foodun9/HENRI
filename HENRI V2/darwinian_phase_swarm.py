@@ -312,7 +312,7 @@ class HenriSwarmOrchestrator(nn.Module):
         self.decoder = HolographicActionDecoder(d_model=d_model, action_enum_class=action_enum_class)
         self.thermostat = AnisotropicThermostat(dimension=d_model)
 
-    def process_active_reasoning_step(self, active_wave: torch.Tensor, target_boundary: torch.Tensor) -> tuple:
+    def process_active_reasoning_step(self, active_wave: torch.Tensor, target_boundary: torch.Tensor, external_error_mask: torch.Tensor = None) -> tuple:
         """
         Processes a single forward step of the scaled core.
         Executes coupled syncytium relaxation, isolates active experts, and deforms 
@@ -336,6 +336,12 @@ class HenriSwarmOrchestrator(nn.Module):
         error_metrics["sagnac_delta"] = sagnac_delta
         
         error_mask = error_metrics["error_mask"] # Shape [65536]
+        
+        # Override with external physical error mask if transduced from sandbox
+        if external_error_mask is not None:
+            error_mask = external_error_mask
+            error_metrics["error_mask"] = external_error_mask
+        
         
         # 1. Update Coupled Syncytium Phases (Kuramoto bioelectric pass)
         updated_phases = self.syncytium.forward_syncytium_step(active_wave, sagnac_delta)

@@ -31,6 +31,26 @@ class O_VSA_IngressTokenizer:
         indices = torch.tensor(token_ids, dtype=torch.long, device=self.device)
         return self.canonical_basis[indices]
         
+    def dynamic_ontology_expansion(self) -> int:
+        """
+        Expands the lexicon size (row-wise expansion) by generating a novel, 
+        pseudo-orthogonal Clifford Multivector of shape [1, num_blocks, 8].
+        The manifold dimensionality (num_blocks) is strictly preserved.
+        Returns the new conceptual token ID.
+        """
+        # Generate novel pseudo-orthogonal basis vector
+        new_vector = torch.randn(1, self.num_blocks, 8, device=self.device)
+        new_vector = new_vector / torch.norm(new_vector, p=2, dim=-1, keepdim=True)
+        
+        # Append to the canonical basis
+        self.canonical_basis = torch.cat([self.canonical_basis, new_vector], dim=0)
+        
+        # Increment vocabulary size
+        new_id = self.vocab_size
+        self.vocab_size += 1
+        
+        return new_id
+
     def get_lexicon(self) -> dict:
         """
         Returns the categorical mapping of the canonical basis.
