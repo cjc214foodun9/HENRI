@@ -88,8 +88,8 @@ class QFHRRAxiomCrystallizer(nn.Module):
         preventing phase-linewidth broadening and causal leakage over deep temporal horizons.
         """
         if not self.zone_c_loaded:
-            print("Warning: Generating using isotropic random attractors. Epiplexity requires Zone C data loading.")
-            
+            print("[SAGNAC YIELD] Zone C Boundaries missing. Thermodynamic system freezing to maximum entropy. Cannot crystallize.")
+            return torch.tensor([], dtype=torch.long, device=self.device)
         active_wave = initial_wave
         generated_tokens = []
         num_chunks = (max_length + chunk_size - 1) // chunk_size
