@@ -277,7 +277,7 @@ class HenriSwarmOrchestrator(nn.Module):
         target_rev = target_boundary.clone()
         target_rev[..., [4, 5, 6]] *= -1.0 # Reverse bivectors
         geom_prod = self.clifford.geometric_product(active_wave.unsqueeze(0), target_rev.unsqueeze(0)).squeeze(0)
-        sagnac_coherence = (geom_prod[..., 0].sum() / self.num_blocks).item()
+        sagnac_coherence = geom_prod[..., 0].sum() / self.num_blocks
         true_sagnac_delta = 1.0 - sagnac_coherence
 
         sagnac_delta = true_sagnac_delta
@@ -294,45 +294,52 @@ class HenriSwarmOrchestrator(nn.Module):
 
         # 2. Voltage-Gating (Stress-Gated Morphogenetic Scaling)
         # Instead of a fixed top-k, compute becomes a fluid boundary scaling with physical stress.
-        global_phase = updated_phases.mean().item()
+        global_phase = updated_phases.mean()
         phase_coherence = torch.cos(updated_phases - global_phase)
         
+        # Tensorize changing scalars to prevent Inductor recompilation
+        sagnac_delta_tensor = sagnac_delta
+        t_shock_tensor = torch.tensor(t_shock_max, device=phase_coherence.device)
+        
         # Scale active gap junctions by squared Sagnac Delta.
-        # Low stress = highly localized (4 experts). High stress = wide syncytium recruitment.
-        recruitment_fraction = min(1.0, max(0.0, sagnac_delta ** 2))
-        k_active = max(4, int(self.num_experts * recruitment_fraction))
+        recruitment_fraction = torch.clamp(sagnac_delta_tensor ** 2, 0.0, 1.0)
+        k_active = torch.clamp((self.num_experts * recruitment_fraction).to(torch.int32), min=4)
         
         # Triton-Safe Static Soft Mask
         sorted_indices = torch.argsort(phase_coherence, descending=True)
         ranks = torch.empty_like(sorted_indices)
         ranks[sorted_indices] = torch.arange(self.num_experts, device=phase_coherence.device)
-        mask = (ranks < k_active).float().view(-1, 1, 1)
+        mask = (ranks < k_active.unsqueeze(-1)).float().view(-1, 1, 1)
 
         # 3. Viscoelastic Creep (Forward Error Diffusion via Dale's Principle)
-        if sagnac_delta > 0.05:
-            # Physical base temperature T_base = 0.01
-            T_base = 0.01
-            active_temperature = T_base + t_shock_max * (1.0 - math.exp(-sagnac_delta))
-            gamma = 0.05 # Substrate physical density constant
+        T_base = 0.01
+        active_temperature = T_base + t_shock_tensor * (1.0 - torch.exp(-sagnac_delta_tensor))
+        gamma = 0.05 # Substrate physical density constant
+        
+        stress_gate = (sagnac_delta_tensor > 0.05).float().view(-1, 1, 1)
+        effective_mask = mask * stress_gate
+        
+        with torch.no_grad():
+            # Forward Error Diffusion directly pushes the matrices.
+            p = self.syncytium.polarity.view(-1, 1, 1)
+            yielding_force = -gamma * sagnac_delta_tensor * p
             
-            with torch.no_grad():
-                # Forward Error Diffusion directly pushes the matrices.
-                p = self.syncytium.polarity.view(-1, 1, 1)
-                yielding_force = -gamma * sagnac_delta * p
+            # Memory-safe chunked noise generation to prevent eager-mode OOM
+            # Inductor handles static slicing effortlessly.
+            chunk_size = 32
+            for i in range(0, self.num_experts, chunk_size):
+                noise_A_chunk = torch.randn((chunk_size, 16, 65536), device=self.syncytium.experts_A.device) * active_temperature * error_mask.view(1, 1, -1)
+                noise_B_chunk = torch.randn((chunk_size, 16, 65536), device=self.syncytium.experts_B.device) * active_temperature * error_mask.view(1, 1, -1)
                 
-                # Anisotropic noise generation: Scaled by the localized error mask
-                noise_A = torch.randn_like(self.syncytium.experts_A) * active_temperature * error_mask.view(1, 1, -1)
-                noise_B = torch.randn_like(self.syncytium.experts_B) * active_temperature * error_mask.view(1, 1, -1)
-                
-                self.syncytium.experts_A.add_((yielding_force + noise_A) * mask)
-                self.syncytium.experts_B.add_((yielding_force + noise_B) * mask)
+                self.syncytium.experts_A[i:i+chunk_size].add_((yielding_force[i:i+chunk_size] + noise_A_chunk) * effective_mask[i:i+chunk_size])
+                self.syncytium.experts_B[i:i+chunk_size].add_((yielding_force[i:i+chunk_size] + noise_B_chunk) * effective_mask[i:i+chunk_size])
             
             # Enforce Riemannian retraction immediately post-creep to secure volume conservation
             self.syncytium.apply_stiefel_retraction()
             
         # 4. Thermodynamic Decay & Coherence Monitoring
         # Return sorted_indices for logging instead of a dynamic slice
-        return sagnac_delta, sorted_indices, {"sagnac_delta": sagnac_delta}
+        return sagnac_delta.item(), sorted_indices, {"sagnac_delta": sagnac_delta.item()}
 
 
 # =========================================================================
