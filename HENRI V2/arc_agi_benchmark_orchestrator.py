@@ -20,7 +20,7 @@ from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
 import os
 import asyncio
 from phylogenetic_memory import EngramStore
-from zone_c_database_initialization import initialize_zone_c
+from zone_c_agentic_database_initialization import AgenticZoneCInitializer
 
 try:
     import arc_agi
@@ -47,7 +47,8 @@ def execute_live_benchmark():
     
     dsn = os.environ.get("POSTGRES_DSN", "postgres://postgres:password@localhost:10100/henri")
     print("[ALETHEIA] Anchoring Zone C Boundaries...")
-    initialize_zone_c(dsn)
+    initializer = AgenticZoneCInitializer(dsn)
+    initializer.awaken_basal_memory()
     
     # 1. Connect to Exteroceptive Environment
     arcade = arc_agi.Arcade()
