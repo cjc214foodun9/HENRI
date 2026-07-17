@@ -267,7 +267,7 @@ class HenriSwarmOrchestrator(nn.Module):
         self.decoder = HolographicActionDecoder(d_model=d_model, action_enum_class=action_enum_class)
 
 
-    def process_active_reasoning_step(self, active_wave: torch.Tensor, target_boundary: torch.Tensor, external_error_mask: torch.Tensor = None) -> tuple:
+    def process_active_reasoning_step(self, active_wave: torch.Tensor, target_boundary: torch.Tensor, external_error_mask: torch.Tensor = None, t_shock_max: float = 0.5) -> tuple:
         """
         Processes a single forward step of the scaled core.
         Executes coupled syncytium relaxation, isolates active experts, and deforms 
@@ -302,33 +302,37 @@ class HenriSwarmOrchestrator(nn.Module):
         recruitment_fraction = min(1.0, max(0.0, sagnac_delta ** 2))
         k_active = max(4, int(self.num_experts * recruitment_fraction))
         
-        _, active_indices = torch.topk(phase_coherence, k=k_active)
+        # Triton-Safe Static Soft Mask
+        sorted_indices = torch.argsort(phase_coherence, descending=True)
+        ranks = torch.empty_like(sorted_indices)
+        ranks[sorted_indices] = torch.arange(self.num_experts, device=phase_coherence.device)
+        mask = (ranks < k_active).float().view(-1, 1, 1)
 
         # 3. Viscoelastic Creep (Forward Error Diffusion via Dale's Principle)
         if sagnac_delta > 0.05:
             # Physical base temperature T_base = 0.01
             T_base = 0.01
-            active_temperature = T_base + 0.5 * (1.0 - math.exp(-sagnac_delta))
+            active_temperature = T_base + t_shock_max * (1.0 - math.exp(-sagnac_delta))
             gamma = 0.05 # Substrate physical density constant
             
             with torch.no_grad():
-                for idx in active_indices:
-                    # Forward Error Diffusion directly pushes the matrices.
-                    # Yielding force driven purely by Sagnac error and substrate physical density
-                    p = self.syncytium.polarity[idx]
-                    yielding_force = -gamma * sagnac_delta * p
-                    
-                    # Anisotropic noise generation: Scaled by the localized error mask
-                    noise_A = torch.randn_like(self.syncytium.experts_A[idx]) * active_temperature * error_mask
-                    noise_B = torch.randn_like(self.syncytium.experts_B[idx]) * active_temperature * error_mask
-                    
-                    self.syncytium.experts_A[idx].add_(yielding_force + noise_A)
-                    self.syncytium.experts_B[idx].add_(yielding_force + noise_B)
+                # Forward Error Diffusion directly pushes the matrices.
+                p = self.syncytium.polarity.view(-1, 1, 1)
+                yielding_force = -gamma * sagnac_delta * p
+                
+                # Anisotropic noise generation: Scaled by the localized error mask
+                noise_A = torch.randn_like(self.syncytium.experts_A) * active_temperature * error_mask.view(1, 1, -1)
+                noise_B = torch.randn_like(self.syncytium.experts_B) * active_temperature * error_mask.view(1, 1, -1)
+                
+                self.syncytium.experts_A.add_((yielding_force + noise_A) * mask)
+                self.syncytium.experts_B.add_((yielding_force + noise_B) * mask)
             
             # Enforce Riemannian retraction immediately post-creep to secure volume conservation
             self.syncytium.apply_stiefel_retraction()
-
-        return sagnac_delta, active_indices, {"sagnac_delta": sagnac_delta}
+            
+        # 4. Thermodynamic Decay & Coherence Monitoring
+        # Return sorted_indices for logging instead of a dynamic slice
+        return sagnac_delta, sorted_indices, {"sagnac_delta": sagnac_delta}
 
 
 # =========================================================================

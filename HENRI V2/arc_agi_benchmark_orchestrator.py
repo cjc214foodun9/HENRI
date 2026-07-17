@@ -134,7 +134,9 @@ def execute_live_benchmark():
             MAX_SUBMISSIONS = 3
             
             while epoch < 10000:
-                sagnac_delta, active_experts, error_metrics = orchestrator.process_active_reasoning_step(active_wave, boundary_axiom, external_error_mask=continuous_error_mask)
+                import math
+                t_shock_max = 0.5 * math.exp(-5.0 * (epoch / 10000.0))
+                sagnac_delta, active_experts, error_metrics = orchestrator.process_active_reasoning_step(active_wave, boundary_axiom, external_error_mask=continuous_error_mask, t_shock_max=t_shock_max)
                 
                 # Asymptotic Detection: If delta stalls at a high value, puncture the Markov Blanket
                 if epoch > 0 and epoch % 50 == 0 and sagnac_delta > 0.15:
