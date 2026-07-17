@@ -60,14 +60,14 @@ class ThermodynamicTelemetry:
                         "status": "ANISOTROPIC_LANGEVIN_INJECTION_ACTIVE" if not is_isothermal_lock else "ISOTHERMAL_LOCK"
                     },
                     "ontological_error_vector": {
-                        "primary_axis": self.current_error_metrics["primary_axis"],
-                        "phase_mismatch_magnitude": self.current_error_metrics["sagnac_delta"],
+                        "primary_axis": self.current_error_metrics.get("primary_axis", "UNKNOWN"),
+                        "phase_mismatch_magnitude": self.current_error_metrics.get("sagnac_delta", 0.0),
                         "thermal_injection_target": "EXPERT_SWARM_07"
                     },
                     "ui_render_directives": {
                         "canvas_color_shift": "#3B2F2F" if not is_isothermal_lock else "#2F3B2F",
                         "focal_marker_color": "#C59B27" if not is_isothermal_lock else "#27C59B",
-                        "accessible_status_message": f"Sandbox execution failed due to {self.current_error_metrics['primary_axis']} anomaly. Isolating thermal creep." if not is_isothermal_lock else "Isothermal lock achieved."
+                        "accessible_status_message": f"Sandbox execution failed due to {self.current_error_metrics.get('primary_axis', 'UNKNOWN')} anomaly. Isolating thermal creep." if not is_isothermal_lock else "Isothermal lock achieved."
                     }
                 }
             }
