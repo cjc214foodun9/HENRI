@@ -13,61 +13,9 @@ import torch.fft as fft
 from product_clifford_product_kernel import ProductCliffordAlgebra3D
 
 # =========================================================================
-# I. ANISOTROPIC THERMOSTAT (OPINE-WORLD ERROR ISOLATION)
-# =========================================================================
-
-class AnisotropicThermostat:
-    """
-    Translates ontology-error-prioritization into continuous wave mechanics.
-    Instead of isotropic global heating, this thermostat localizes entropy
-    to the specific orthogonal phase-plane where the logic failed.
-    """
-    def __init__(self, dimension: int = 65536, base_temp: float = 0.01):
-        self.D = dimension
-        self.T_base = base_temp
-        self.kappa = 0.5 # Nonlinear scaling factor for thermal shock
-        
-    def _circular_convolution(self, wave_a: torch.Tensor, wave_b: torch.Tensor) -> torch.Tensor:
-        """Executes native semantic binding in the Fourier domain."""
-        return fft.ifft(fft.fft(wave_a) * fft.fft(wave_b))
-
-    def isolate_ontological_error(self, hypothesis_wave: torch.Tensor, target_axiom: torch.Tensor) -> dict:
-        """
-        Determines the specific dimensional axis of failure.
-        Provides a falsifiable measure of phase divergence.
-        """
-        # Calculate complex phase difference (Sagnac Delta)
-        phase_diff = torch.angle(hypothesis_wave) - torch.angle(target_axiom)
-        sagnac_delta = torch.norm(phase_diff, p=2).item()
-        
-        # Convolve error with target to map into ontological sub-space
-        error_wave = torch.exp(1j * phase_diff)
-        ontological_projection = self._circular_convolution(error_wave, torch.conj(target_axiom))
-        
-        # Identify peak divergence index (simplified orthogonal bounding)
-        peak_mismatch_idx = torch.argmax(torch.abs(ontological_projection)).item()
-        
-        # Determine specific failure domain (Bounded Claim: We map indices to known structural axes)
-        axis_map = {
-            0: "AFFINE_TRANSFORMATION_ROTATION",
-            1: "COLOR_TRANSLATION_FAILURE",
-            2: "OBJECT_BOUNDARY_VIOLATION"
-        }
-        primary_axis = axis_map.get(peak_mismatch_idx % 3, "TOPOLOGICAL_DECOHERENCE")
-        
-        return {
-            "sagnac_delta": sagnac_delta,
-            "primary_axis": primary_axis,
-            "error_mask": torch.abs(ontological_projection).to(torch.float32)
-        }
-
-# Contiguous memory layout optimization for high-density expert scaling
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-
-
-# =========================================================================
 # I. HIGH-PERFORMANCE SCALE-FREE GRAPH GENERATOR
 # =========================================================================
+
 
 class ScaleFreeGraphConstructor:
     """
@@ -141,6 +89,13 @@ class GapJunctionSwarmSyncytium(nn.Module):
         # Shape: [E, Rank, D] and [E, Rank, D]
         self.experts_A = nn.Parameter(torch.randn(num_experts, r_rank, d_model) * 0.01)
         self.experts_B = nn.Parameter(torch.randn(num_experts, r_rank, d_model) * 0.01)
+
+        # Biological Dale's Principle: 80% Excitatory, 20% Inhibitory
+        polarity = torch.ones(num_experts)
+        num_inhibitory = int(num_experts * 0.2)
+        inhibitory_indices = torch.randperm(num_experts)[:num_inhibitory]
+        polarity[inhibitory_indices] = -1.0
+        self.register_buffer("polarity", polarity)
 
         self.apply_stiefel_retraction()
 
@@ -310,7 +265,7 @@ class HenriSwarmOrchestrator(nn.Module):
         self.syncytium = GapJunctionSwarmSyncytium(num_experts=num_experts, d_model=d_model, r_rank=r_rank)
         self.clifford = ProductCliffordAlgebra3D(num_blocks=num_blocks)
         self.decoder = HolographicActionDecoder(d_model=d_model, action_enum_class=action_enum_class)
-        self.thermostat = AnisotropicThermostat(dimension=d_model)
+
 
     def process_active_reasoning_step(self, active_wave: torch.Tensor, target_boundary: torch.Tensor, external_error_mask: torch.Tensor = None) -> tuple:
         """
@@ -325,55 +280,55 @@ class HenriSwarmOrchestrator(nn.Module):
         sagnac_coherence = (geom_prod[..., 0].sum() / self.num_blocks).item()
         true_sagnac_delta = 1.0 - sagnac_coherence
 
-        # Cast to complex for anisotropic thermostat mask extraction
-        hypothesis_c = torch.complex(active_wave.view(-1), torch.zeros_like(active_wave.view(-1)))
-        target_c = torch.complex(target_boundary.view(-1), torch.zeros_like(target_boundary.view(-1)))
-        
-        error_metrics = self.thermostat.isolate_ontological_error(hypothesis_c, target_c)
-        
-        # Override the naive thermostat delta with the rigorous Clifford delta
         sagnac_delta = true_sagnac_delta
-        error_metrics["sagnac_delta"] = sagnac_delta
         
-        error_mask = error_metrics["error_mask"] # Shape [65536]
-        
-        # Override with external physical error mask if transduced from sandbox
+        # Override with external physical error mask if transduced from sandbox (Ontological Error Matrix)
         if external_error_mask is not None:
             error_mask = external_error_mask
-            error_metrics["error_mask"] = external_error_mask
-        
+        else:
+            # Fallback uniform heat if no sparse masking is provided
+            error_mask = torch.ones_like(active_wave.view(-1))
         
         # 1. Update Coupled Syncytium Phases (Kuramoto bioelectric pass)
         updated_phases = self.syncytium.forward_syncytium_step(active_wave, sagnac_delta)
 
-        # 2. Voltage-Gating: Select active experts based on localized phase lock
-        # Experts with phase angles closely aligned with the global phase are allowed to couple
+        # 2. Voltage-Gating (Stress-Gated Morphogenetic Scaling)
+        # Instead of a fixed top-k, compute becomes a fluid boundary scaling with physical stress.
         global_phase = updated_phases.mean().item()
         phase_coherence = torch.cos(updated_phases - global_phase)
         
-        # Select top-32 most resonant expert coordinates (the "Active Sub-graph")
-        # Rest of the 992 experts remain electrically isolated (0% VRAM / PCIe footprint)
-        _, active_indices = torch.topk(phase_coherence, k=32)
+        # Scale active gap junctions by squared Sagnac Delta.
+        # Low stress = highly localized (4 experts). High stress = wide syncytium recruitment.
+        recruitment_fraction = min(1.0, max(0.0, sagnac_delta ** 2))
+        k_active = max(4, int(self.num_experts * recruitment_fraction))
+        
+        _, active_indices = torch.topk(phase_coherence, k=k_active)
 
-        # 3. Viscoelastic Creep: Deform active experts' matrices mid-flight to relieve stress
-        if sagnac_delta > 0.15:
-            # Soft viscoelastic update step
-            learning_rate = 1e-4
-            active_temperature = self.thermostat.T_base + self.thermostat.kappa * (1.0 - math.exp(-sagnac_delta))
+        # 3. Viscoelastic Creep (Forward Error Diffusion via Dale's Principle)
+        if sagnac_delta > 0.05:
+            # Physical base temperature T_base = 0.01
+            T_base = 0.01
+            active_temperature = T_base + 0.5 * (1.0 - math.exp(-sagnac_delta))
+            gamma = 0.05 # Substrate physical density constant
             
             with torch.no_grad():
                 for idx in active_indices:
+                    # Forward Error Diffusion directly pushes the matrices.
+                    # Yielding force driven purely by Sagnac error and substrate physical density
+                    p = self.syncytium.polarity[idx]
+                    yielding_force = -gamma * sagnac_delta * p
+                    
                     # Anisotropic noise generation: Scaled by the localized error mask
                     noise_A = torch.randn_like(self.syncytium.experts_A[idx]) * active_temperature * error_mask
                     noise_B = torch.randn_like(self.syncytium.experts_B[idx]) * active_temperature * error_mask
                     
-                    self.syncytium.experts_A[idx].add_(-learning_rate * sagnac_delta + noise_A)
-                    self.syncytium.experts_B[idx].add_(-learning_rate * sagnac_delta + noise_B)
+                    self.syncytium.experts_A[idx].add_(yielding_force + noise_A)
+                    self.syncytium.experts_B[idx].add_(yielding_force + noise_B)
             
             # Enforce Riemannian retraction immediately post-creep to secure volume conservation
             self.syncytium.apply_stiefel_retraction()
 
-        return sagnac_delta, active_indices, error_metrics
+        return sagnac_delta, active_indices, {"sagnac_delta": sagnac_delta}
 
 
 # =========================================================================
@@ -406,7 +361,7 @@ def verify_biophysical_scaling():
     for step in range(3):
         start_step = time.perf_counter()
         
-        sagnac_delta, active_experts = orchestrator.process_active_reasoning_step(
+        sagnac_delta, active_experts, _ = orchestrator.process_active_reasoning_step(
             active_wave, target_boundary
         )
         

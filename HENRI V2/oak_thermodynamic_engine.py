@@ -11,6 +11,83 @@ and Undirected Epistemic Play under strict non-linear wave mechanics.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.fft as fft
+
+class OntologicalErrorMatrix:
+    """
+    Translates ontology-error-prioritization into continuous wave mechanics.
+    Instead of isotropic global heating, this isolates entropy
+    to the specific orthogonal phase-plane where the logic failed.
+    """
+    def __init__(self, dimension: int = 65536):
+        self.D = dimension
+        
+    def _circular_convolution(self, wave_a: torch.Tensor, wave_b: torch.Tensor) -> torch.Tensor:
+        """Executes native semantic binding in the Fourier domain."""
+        return fft.ifft(fft.fft(wave_a) * fft.fft(wave_b))
+
+    def isolate_ontological_error(self, hypothesis_wave: torch.Tensor, target_axiom: torch.Tensor) -> dict:
+        """
+        Determines the specific dimensional axis of failure.
+        """
+        phase_diff = torch.angle(hypothesis_wave) - torch.angle(target_axiom)
+        sagnac_delta = torch.norm(phase_diff, p=2).item()
+        
+        error_wave = torch.exp(1j * phase_diff)
+        ontological_projection = self._circular_convolution(error_wave, torch.conj(target_axiom))
+        
+        peak_mismatch_idx = torch.argmax(torch.abs(ontological_projection)).item()
+        
+        axis_map = {
+            0: "AFFINE_TRANSFORMATION_ROTATION",
+            1: "COLOR_TRANSLATION_FAILURE",
+            2: "OBJECT_BOUNDARY_VIOLATION"
+        }
+        primary_axis = axis_map.get(peak_mismatch_idx % 3, "TOPOLOGICAL_DECOHERENCE")
+        
+        return {
+            "sagnac_delta": sagnac_delta,
+            "primary_axis": primary_axis,
+            "error_mask": torch.abs(ontological_projection).to(torch.float32)
+        }
+
+class WaveOptionPredictor(nn.Module):
+    """
+    OaK Integration: Predicts Sustained Options instead of next-latent steps.
+    Generates a proposed sequence of wave-transformations and a predicted termination wave 
+    (the physical boundary condition where the option resolves).
+    """
+    def __init__(self, dim: int = 4096, max_steps: int = 5):
+        super().__init__()
+        self.dim = dim
+        self.max_steps = max_steps
+        
+        # Simple physical transformation basis (not learned via autograd, but deformed via creep)
+        self.trajectory_matrix = nn.Parameter(torch.randn(max_steps, dim) * 0.01)
+        self.termination_matrix = nn.Parameter(torch.randn(dim) * 0.01)
+        self.trajectory_matrix.requires_grad = False
+        self.termination_matrix.requires_grad = False
+
+    def forward(self, current_state_wave: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Returns:
+            proposed_trajectory: [max_steps, dim] sequence of wave transformations.
+            termination_wave: [dim] the physical boundary where the option ends.
+        """
+        state_fft = fft.fft(current_state_wave)
+        trajectory_fft = fft.fft(self.trajectory_matrix)
+        
+        proposed_trajectory = fft.ifft(state_fft.unsqueeze(0) * trajectory_fft)
+        
+        term_fft = fft.fft(self.termination_matrix)
+        termination_wave = fft.ifft(state_fft * term_fft)
+        
+        # Normalize to maintain unitary constraint
+        proposed_trajectory = proposed_trajectory / (torch.norm(proposed_trajectory, p=2, dim=-1, keepdim=True) + 1e-9)
+        termination_wave = termination_wave / (torch.norm(termination_wave, p=2, dim=-1, keepdim=True) + 1e-9)
+        
+        return proposed_trajectory, termination_wave
+
 
 class ThermodynamicCreditAssigner(nn.Module):
     """
@@ -137,8 +214,16 @@ class LangevinEpistemicPlayLoop(nn.Module):
             active_wave = active_wave / (torch.norm(active_wave, p=2, dim=-1, keepdim=True) + 1e-9) # Maintain unit modulus
             
             # 4. Propagate through the unamputated physics core (Resolution I)
+            # Ensure we calculate the exact ontological error mask first
+            error_matrix = OntologicalErrorMatrix(dimension=active_wave.numel())
+            hypothesis_c = torch.complex(active_wave.view(-1), torch.zeros_like(active_wave.view(-1)))
+            target_c = torch.complex(best_axiom.view(-1), torch.zeros_like(best_axiom.view(-1)))
+            
+            error_metrics = error_matrix.isolate_ontological_error(hypothesis_c, target_c)
+            sparse_mask = error_metrics["error_mask"]
+            
             # The Syncytium Orchestrator evaluates the wave against the boundary and returns Sagnac delta
-            sagnac_delta, active_experts, error_metrics = self.syncytium.process_active_reasoning_step(active_wave, best_axiom)
+            sagnac_delta, active_experts, sync_error_metrics = self.syncytium.process_active_reasoning_step(active_wave, best_axiom, external_error_mask=sparse_mask)
             
             # 5. Measure Intrinsic Stability
             # If the structural error approaches zero, the state is topologically stable
