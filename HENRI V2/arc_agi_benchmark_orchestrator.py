@@ -56,8 +56,13 @@ def execute_live_benchmark():
     
     telemetry = ThermodynamicTelemetry(session_name="darwinian_arc_production")
     
+    torch.backends.cudnn.benchmark = True
+    torch.set_float32_matmul_precision('high')
+    
     # 4.3B Parameter Engine (65536 Dimensions)
     orchestrator = HenriSwarmOrchestrator(num_experts=1024, d_model=65536, action_enum_class=GameAction).cuda()
+    # Explicitly compile the engine for Triton core acceleration
+    orchestrator = torch.compile(orchestrator, backend="inductor")
     tokenizer = O_VSA_IngressTokenizer(num_blocks=8192, vocab_size=256, device='cuda')
     
     print("\n[ALETHEIA] Compiling Zone C Topological Dataset...")
@@ -101,7 +106,7 @@ def execute_live_benchmark():
         step_count = 0
         obs = game.step(GameAction.ACTION2) # Break symmetry
         
-        while step_count < 10:
+        while True:
             if obs is None or not hasattr(obs, 'state'):
                 print(f"[ALETHEIA WARNING] Environment crashed or returned Null. Abandoning attractor.")
                 break
@@ -124,15 +129,21 @@ def execute_live_benchmark():
             active_wave = task_wave.clone()
             continuous_error_mask = None
             
-            for epoch in range(500):
+            epoch = 0
+            sandbox_probes = 0
+            MAX_SUBMISSIONS = 3
+            
+            while epoch < 10000:
                 sagnac_delta, active_experts, error_metrics = orchestrator.process_active_reasoning_step(active_wave, boundary_axiom, external_error_mask=continuous_error_mask)
                 
                 # Asymptotic Detection: If delta stalls at a high value, puncture the Markov Blanket
                 if epoch > 0 and epoch % 50 == 0 and sagnac_delta > 0.15:
-                    action, coherence = orchestrator.decoder.decode_wave_to_action(active_wave)
-                    try:
-                        print(f"[MARKOV BLANKET] Probabilistic asymptote reached. Executing discrete sandbox probe...")
-                        obs_sandbox = game.step(action)
+                    if sandbox_probes < MAX_SUBMISSIONS:
+                        sandbox_probes += 1
+                        action, coherence = orchestrator.decoder.decode_wave_to_action(active_wave)
+                        try:
+                            print(f"[MARKOV BLANKET] Probabilistic asymptote reached. Executing discrete sandbox probe ({sandbox_probes}/{MAX_SUBMISSIONS})...")
+                            obs_sandbox = game.step(action)
                         if obs_sandbox is not None and hasattr(obs_sandbox, 'frame') and len(obs_sandbox.frame) > 0:
                             # 1. Extract discrete spatial error mask
                             error_grid = torch.tensor(obs_sandbox.frame[0]).flatten().cuda()
@@ -170,6 +181,7 @@ def execute_live_benchmark():
                     )
                 if sagnac_delta < 0.05:
                     break
+                epoch += 1
             
             optimal_policy_wave = active_wave
             
