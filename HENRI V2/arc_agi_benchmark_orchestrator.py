@@ -144,30 +144,30 @@ def execute_live_benchmark():
                         try:
                             print(f"[MARKOV BLANKET] Probabilistic asymptote reached. Executing discrete sandbox probe ({sandbox_probes}/{MAX_SUBMISSIONS})...")
                             obs_sandbox = game.step(action)
-                        if obs_sandbox is not None and hasattr(obs_sandbox, 'frame') and len(obs_sandbox.frame) > 0:
-                            # 1. Extract discrete spatial error mask
-                            error_grid = torch.tensor(obs_sandbox.frame[0]).flatten().cuda()
-                            
-                            from backward_epistemic_transducer import BackwardEpistemicTransducer
-                            transducer = BackwardEpistemicTransducer()
-                            
-                            # 2. Transduce to continuous phase-gradient for Anisotropic Thermostat
-                            continuous_error_mask = transducer.transduce_discrete_error_to_gradient(error_grid)
-                            
-                            # 3. Generate Thermodynamic Repeller (Circular Convolution of complex conjugate)
-                            repeller = transducer.generate_thermodynamic_repeller(active_wave)
-                            
-                            # 4. Repel the wave from the falsified state
-                            active_wave = active_wave + repeller * 0.2
-                            active_wave = active_wave / (torch.norm(active_wave, p=2, dim=-1, keepdim=True) + 1e-9)
-                            
-                            # 5. Phase-Space Ontology Expansion if completely stuck
-                            if sagnac_delta > 0.5:
-                                new_token = tokenizer.dynamic_ontology_expansion()
-                                print(f"[ONTOLOGY EXPANSION] Generated novel orthogonal dimension. New Lexicon Size: {tokenizer.vocab_size}")
+                            if obs_sandbox is not None and hasattr(obs_sandbox, 'frame') and len(obs_sandbox.frame) > 0:
+                                # 1. Extract discrete spatial error mask
+                                error_grid = torch.tensor(obs_sandbox.frame[0]).flatten().cuda()
                                 
-                    except Exception as e:
-                        print(f"[SAGNAC VETO] Sandbox Reject during Epistemic Transduction: {e}")
+                                from backward_epistemic_transducer import BackwardEpistemicTransducer
+                                transducer = BackwardEpistemicTransducer()
+                                
+                                # 2. Transduce to continuous phase-gradient for Anisotropic Thermostat
+                                continuous_error_mask = transducer.transduce_discrete_error_to_gradient(error_grid)
+                                
+                                # 3. Generate Thermodynamic Repeller (Circular Convolution of complex conjugate)
+                                repeller = transducer.generate_thermodynamic_repeller(active_wave)
+                                
+                                # 4. Repel the wave from the falsified state
+                                active_wave = active_wave + repeller * 0.2
+                                active_wave = active_wave / (torch.norm(active_wave, p=2, dim=-1, keepdim=True) + 1e-9)
+                                
+                                # 5. Phase-Space Ontology Expansion if completely stuck
+                                if sagnac_delta > 0.5:
+                                    new_token = tokenizer.dynamic_ontology_expansion()
+                                    print(f"[ONTOLOGY EXPANSION] Generated novel orthogonal dimension. New Lexicon Size: {tokenizer.vocab_size}")
+                                    
+                        except Exception as e:
+                            print(f"[SAGNAC VETO] Sandbox Reject during Epistemic Transduction: {e}")
 
                 if telemetry:
                     telemetry.current_error_metrics = error_metrics
