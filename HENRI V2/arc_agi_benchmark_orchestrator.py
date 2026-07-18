@@ -135,8 +135,9 @@ def execute_live_benchmark():
             
             while epoch < 10000:
                 import math
-                t_shock_max = 0.5 * math.exp(-5.0 * (epoch / 10000.0))
-                sagnac_delta, active_experts, error_metrics = orchestrator.process_active_reasoning_step(active_wave, boundary_axiom, external_error_mask=continuous_error_mask, t_shock_max=t_shock_max)
+                t_shock_max_val = 0.5 * math.exp(-5.0 * (epoch / 10000.0))
+                t_shock_tensor = torch.tensor(t_shock_max_val, device=active_wave.device)
+                sagnac_delta, active_experts, error_metrics = orchestrator.process_active_reasoning_step(active_wave, boundary_axiom, external_error_mask=continuous_error_mask, t_shock_max=t_shock_tensor)
                 
                 # Asymptotic Detection: If delta stalls at a high value, puncture the Markov Blanket
                 if epoch > 0 and epoch % 50 == 0 and sagnac_delta > 0.15:

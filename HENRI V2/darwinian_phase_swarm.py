@@ -299,7 +299,7 @@ class HenriSwarmOrchestrator(nn.Module):
         
         # Tensorize changing scalars to prevent Inductor recompilation
         sagnac_delta_tensor = sagnac_delta
-        t_shock_tensor = torch.tensor(t_shock_max, device=phase_coherence.device)
+        t_shock_tensor = t_shock_max
         
         # Scale active gap junctions by squared Sagnac Delta.
         recruitment_fraction = torch.clamp(sagnac_delta_tensor ** 2, 0.0, 1.0)
