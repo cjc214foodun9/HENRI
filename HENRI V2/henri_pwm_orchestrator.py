@@ -91,31 +91,58 @@ class ViscoelasticOptimizer:
         with torch.no_grad():
             model.transition_matrix -= self.mu * grads
 
+import os
+from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
+
+try:
+    import arc_agi
+    from arcengine import GameAction
+except ImportError:
+    pass
+
 class HENRIPWMPipeline:
     """
     Orchestrates the continuous learning Physical World Model lifecycle.
     """
     def __init__(self):
-        self.transducer = HolographicTransducer()
-        self.jepa_core = WaveJEPA()
+        # We abandon the crude HolographicTransducer for the scale-invariant O-VSA Fractional Binding
+        self.transducer = O_VSA_IngressTokenizer(num_blocks=4096, vocab_size=256, device="cuda" if torch.cuda.is_available() else "cpu")
+        self.jepa_core = WaveJEPA(dimension=4096).to(self.transducer.device)
         self.sagnac_gate = SagnacInterferometer(tolerance_epsilon=0.1)
-        self.optimizer = ViscoelasticOptimizer()
+        self.optimizer = ViscoelasticOptimizer(learning_rate=0.01)
         self.telemetry_log = []
         
-        # Using a dummy connection string; replace with target TimescaleDB environment IP
+        dsn = os.environ.get("POSTGRES_DSN", "postgres://postgres:password@localhost:10100/henri")
         self.zone_c_logger = ThermodynamicTelemetryLogger(
-            db_conn_str="dbname=zone_c user=henri_admin host=localhost",
+            db_conn_str=dsn,
             batch_size=100
         )
 
-    def step(self, current_sensor_data: torch.Tensor, action_vector: torch.Tensor, empirical_next_state: torch.Tensor) -> Dict[str, Any]:
+    def step(self, current_grid: list[list[int]], action_vector: torch.Tensor, empirical_next_grid: list[list[int]]) -> Dict[str, Any]:
         """
         Executes a single step of the edge MLOps & drift adaptation pipeline.
         """
-        # 1. Transduce discrete sensors to continuous waves
-        state_wave = self.transducer.encode(current_sensor_data)
-        action_wave = self.transducer.encode(action_vector)
-        empirical_wave = self.transducer.encode(empirical_next_state)
+        # 1. Transduce discrete sensors to continuous waves (O-VSA Fractional Binding)
+        # Squeeze the batch dimension since O_VSA_IngressTokenizer returns [1, num_blocks, 8]
+        # We will reshape [num_blocks, 8] into [num_blocks * 8] or adapt WaveJEPA.
+        # Wait, WaveJEPA expects [dimension] size. If num_blocks=4096, we just flatten or use the first element?
+        # Actually, let's keep O_VSA output [1, 4096, 8] but WaveJEPA needs [4096] complex.
+        # Let's map O-VSA to a complex 4096 vector by taking real/imag parts.
+        state_wave_raw = self.transducer.encode_spatial_grid(current_grid).squeeze(0) # [4096, 8]
+        next_state_wave_raw = self.transducer.encode_spatial_grid(empirical_next_grid).squeeze(0) # [4096, 8]
+        
+        # Convert 8D Real to Complex (Real=sum(0..3), Imag=sum(4..7)) for the WaveJEPA core
+        state_wave = torch.complex(state_wave_raw[:, 0:4].sum(-1), state_wave_raw[:, 4:8].sum(-1))
+        state_wave = state_wave / (torch.norm(state_wave, p=2, dim=-1, keepdim=True) + 1e-9)
+        
+        empirical_wave = torch.complex(next_state_wave_raw[:, 0:4].sum(-1), next_state_wave_raw[:, 4:8].sum(-1))
+        empirical_wave = empirical_wave / (torch.norm(empirical_wave, p=2, dim=-1, keepdim=True) + 1e-9)
+        
+        # Action wave (using old transducer logic for the discrete action scalar)
+        action_tensor = action_vector.to(self.transducer.device)
+        phase_angles = action_tensor * np.pi
+        action_wave = torch.polar(torch.ones_like(phase_angles), phase_angles)
+        action_wave = action_wave / (torch.norm(action_wave, p=2, dim=-1, keepdim=True) + 1e-9)
 
         # 2. Forward Dynamics Prediction (Zone B)
         predicted_wave = self.jepa_core(state_wave, action_wave)
@@ -138,9 +165,13 @@ class HENRIPWMPipeline:
         }
         self.telemetry_log.append(log_entry)
         
+        # Convert predicted wave back to real/imag components for DB
+        predicted_wave_real = predicted_wave.real
+        predicted_wave_imag = predicted_wave.imag
+        
         self.zone_c_logger.log_trajectory(
             domain="Physical_World_Model",
-            subdomain="Hardware_in_the_Loop_Validation",
+            subdomain="ARC-AGI",
             concept_key=f"sagnac_eval_step_{len(self.telemetry_log)}",
             predicted_wave=predicted_wave,
             phase_delta=phase_delta.item(),
@@ -148,3 +179,46 @@ class HENRIPWMPipeline:
         )
         
         return log_entry
+
+def execute_live_pwm_training():
+    """
+    Main loop feeding highly structured, causally linked spatial data to the HENRIPWMPipeline.
+    """
+    print("[PWM] Initializing Continuous Wave-JEPA Pipeline...")
+    pipeline = HENRIPWMPipeline()
+    arcade = arc_agi.Arcade()
+    
+    environments = [env.game_id if hasattr(env, 'game_id') else env for env in arcade.available_environments]
+    
+    for env_name in environments[:5]: # Take first 5 for rapid verification
+        print(f"--- INGESTING CAUSAL TOPOLOGY: {env_name} ---")
+        try:
+            game = arcade.make(env_name)
+        except Exception as e:
+            continue
+            
+        obs = game.reset()
+        if obs is None or not hasattr(obs, 'frame') or len(obs.frame) == 0:
+            continue
+            
+        current_grid = obs.frame[0].tolist()
+        
+        # Execute causal steps
+        for step_idx in range(5):
+            action_choice = GameAction.ACTION1 # simplified for integration
+            action_tensor = torch.ones(4096) * (action_choice.value / 10.0)
+            
+            next_obs = game.step(action_choice)
+            if next_obs is None or not hasattr(next_obs, 'frame') or len(next_obs.frame) == 0:
+                break
+                
+            next_grid = next_obs.frame[0].tolist()
+            
+            # Feed geometric transitions directly into the wave core!
+            telemetry_res = pipeline.step(current_grid, action_tensor, next_grid)
+            print(f"[PWM] Step {step_idx}: Sagnac Delta={telemetry_res['phase_delta']:.4f} | Status={telemetry_res['status']}")
+            
+            current_grid = next_grid
+
+if __name__ == "__main__":
+    execute_live_pwm_training()

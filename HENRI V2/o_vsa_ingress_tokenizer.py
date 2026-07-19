@@ -43,8 +43,16 @@ class O_VSA_IngressTokenizer:
         """
         superposed_wave = torch.zeros(self.num_blocks, 4, 2, device=self.device)
         
+        height = len(grid)
+        width = len(grid[0]) if height > 0 else 1
+        
         for y, row in enumerate(grid):
+            # Normalize y to [-1.0, 1.0]. Avoid div by zero if grid is 1D.
+            norm_y = (2.0 * y / (height - 1)) - 1.0 if height > 1 else 0.0
             for x, val in enumerate(row):
+                # Normalize x to [-1.0, 1.0]
+                norm_x = (2.0 * x / (width - 1)) - 1.0 if width > 1 else 0.0
+                
                 # Ensure the value token is within our categorical vocabulary
                 token_id = min(val, self.vocab_size - 1)
                 val_vec = self.canonical_basis[token_id] # [num_blocks, 8]
@@ -53,8 +61,8 @@ class O_VSA_IngressTokenizer:
                 val_complex = val_vec.view(self.num_blocks, 4, 2)
                 theta_v = torch.atan2(val_complex[..., 1], val_complex[..., 0]) # [num_blocks, 4]
                 
-                # Apply Fractional Binding: Rotate Phase by X and Y coordinates
-                total_phase = theta_v + x * self.spatial_theta_x + y * self.spatial_theta_y
+                # Apply Scale-Invariant Fractional Binding: Rotate Phase by Normalized X and Y coordinates
+                total_phase = theta_v + norm_x * self.spatial_theta_x + norm_y * self.spatial_theta_y
                 
                 # Project back onto the complex unit circle
                 bound_complex = torch.stack([torch.cos(total_phase), torch.sin(total_phase)], dim=-1) # [num_blocks, 4, 2]
