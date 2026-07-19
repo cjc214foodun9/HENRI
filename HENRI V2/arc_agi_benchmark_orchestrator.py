@@ -13,7 +13,7 @@ import sys
 import json
 import torch
 from darwinian_phase_swarm import HenriSwarmOrchestrator
-from thermodynamic_telemetry_logger import ThermodynamicTelemetry
+from thermodynamic_telemetry_logger import ThermodynamicTelemetryLogger
 from oak_thermodynamic_engine import LangevinEpistemicPlayLoop
 from arc_agi_zone_c_seed import TopologicalDatasetCompiler
 from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
@@ -54,7 +54,7 @@ def execute_live_benchmark():
     arcade = arc_agi.Arcade()
     environments = [env.game_id if hasattr(env, 'game_id') else env for env in arcade.available_environments]
     
-    telemetry = ThermodynamicTelemetry(session_name="darwinian_arc_production")
+    telemetry = ThermodynamicTelemetryLogger(db_conn_str=dsn)
     
     torch.backends.cudnn.benchmark = True
     torch.set_float32_matmul_precision('high')
@@ -174,14 +174,13 @@ def execute_live_benchmark():
                             print(f"[SAGNAC VETO] Sandbox Reject during Epistemic Transduction: {e}")
 
                 if telemetry:
-                    telemetry.current_error_metrics = error_metrics
-                    telemetry.log_wave_state(
-                        task_id=f"{env_name}_STEP_{step_count}",
-                        epoch=epoch,
-                        sagnac_error=sagnac_delta,
-                        langevin_heat=3.5 * sagnac_delta,
-                        policy_action_decoded="OAK_THERMODYNAMIC_RELAXATION",
-                        is_isothermal_lock=(sagnac_delta < 0.05)
+                    telemetry.log_trajectory(
+                        domain="Physical_World_Model",
+                        subdomain="ARC-AGI",
+                        concept_key=f"{env_name}_STEP_{step_count}_EPOCH_{epoch}",
+                        predicted_wave=active_wave,
+                        phase_delta=sagnac_delta,
+                        is_valid=(sagnac_delta < 0.05)
                     )
                 if sagnac_delta < 0.05:
                     break
@@ -208,7 +207,7 @@ def execute_live_benchmark():
                 
             step_count += 1
 
-    telemetry.close()
+    telemetry.shutdown()
     
     # 6. Extract Epiplexity
     scorecard = arcade.get_scorecard()
