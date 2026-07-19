@@ -50,12 +50,12 @@ class AgenticZoneCInitializer:
             """)
 
             # 3. Spatiotemporal HNSW Indexing
-            # Enables bounded cosine-similarity search over the curved S^4095 manifold.
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS engram_phase_hnsw_idx 
-                ON zone_c_engrams USING hnsw (phase_vector vector_cosine_ops) 
-                WITH (m = 24, ef_construction = 128);
-            """)
+            # (Commented out: pgvector hnsw index is limited to 2000 dimensions. We rely on exact cosine similarity search instead.)
+            # cursor.execute("""
+            #     CREATE INDEX IF NOT EXISTS engram_phase_hnsw_idx 
+            #     ON zone_c_engrams USING hnsw (phase_vector vector_cosine_ops) 
+            #     WITH (m = 24, ef_construction = 128);
+            # """)
             
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS engram_domain_time_idx 
