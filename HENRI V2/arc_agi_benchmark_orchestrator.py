@@ -98,9 +98,12 @@ def execute_live_benchmark():
         probe_obs = game.step(GameAction.ACTION1)
         state_1 = probe_obs.frame[0].tolist()
         
-        # Encode using the new pristine Clifford O-VSA Tokenizer
-        boundary_string = json.dumps([{"input": state_0, "output": state_1}])
-        boundary_axiom = tokenizer.encode(boundary_string).mean(dim=0)
+        # Encode using Fractional Binding (O-VSA FHRR)
+        state_0_wave = tokenizer.encode_spatial_grid(state_0).squeeze(0)
+        state_1_wave = tokenizer.encode_spatial_grid(state_1).squeeze(0)
+        
+        # The boundary axiom is the phase difference (topological transition) between the states
+        boundary_axiom = state_1_wave - state_0_wave
         boundary_axiom = boundary_axiom / (torch.norm(boundary_axiom, p=2, dim=-1, keepdim=True) + 1e-9)
         
         step_count = 0
@@ -115,11 +118,9 @@ def execute_live_benchmark():
                 print(f"[ALETHEIA] Attractor Exhausted: {obs.state.name}")
                 break
                 
-            # Lift the current 2D spatial grid onto the Clifford Stiefel Manifold
+            # Lift the current 2D spatial grid onto the Clifford Stiefel Manifold using Fractional Binding
             current_grid = obs.frame[0].tolist()
-            task_string = json.dumps(current_grid)
-            task_wave = tokenizer.encode(task_string).mean(dim=0)
-            task_wave = task_wave / (torch.norm(task_wave, p=2, dim=-1, keepdim=True) + 1e-9)
+            task_wave = tokenizer.encode_spatial_grid(current_grid).squeeze(0)
             
             print(f"\n[OaK] Initiating In-Situ Test-Time Epistemic Play for {env_name}_STEP_{step_count}...")
             play_engine = LangevinEpistemicPlayLoop(core_syncytium=orchestrator)
