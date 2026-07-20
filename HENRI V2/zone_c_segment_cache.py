@@ -54,10 +54,17 @@ def wave_to_bytes(wave: torch.Tensor) -> bytes:
     return wave.detach().to(torch.float32).cpu().numpy().astype(np.float32).tobytes()
 
 
-def bytes_to_wave(buf: bytes, num_blocks: int) -> torch.Tensor:
+def bytes_to_wave(buf, num_blocks: int) -> torch.Tensor:
+    """Decode a bytea wave buffer back to [num_blocks, 8]. Tolerates
+    memoryview/bytes and validates the payload length."""
+    if isinstance(buf, memoryview):
+        buf = buf.tobytes()
+    expected = num_blocks * 8 * 4
+    if len(buf) != expected:
+        raise ValueError(f"engram bytea is {len(buf)} bytes, expected {expected} "
+                         f"(num_blocks={num_blocks}); schema/dim mismatch or corrupt row")
     arr = np.frombuffer(buf, dtype=np.float32)
-    wave = torch.from_numpy(arr.copy()).view(num_blocks, 8)
-    return wave
+    return torch.from_numpy(arr.copy()).view(num_blocks, 8)
 
 
 _PROJ_CACHE = {}
