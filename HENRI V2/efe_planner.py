@@ -158,6 +158,8 @@ class EFEPlanner(nn.Module):
         # exploitation kicks in as the model improves (not just on spread).
         self.loss_ema = 1.0  # start fully uncertain
         self.loss_ema_beta = 0.95
+        # Slow tracker of the worst (initial) loss for the adaptive floor.
+        self.loss_ema_peak = 1.0
 
         # Epistemic novelty memory: a small Hopfield store of recently
         # predicted outcome waves. Actions whose predictions land near an
@@ -168,6 +170,13 @@ class EFEPlanner(nn.Module):
     def update_model_accuracy(self, transition_loss: float):
         """EMA update of the dynamics model's observed error (T4)."""
         self.loss_ema = self.loss_ema_beta * self.loss_ema + (1 - self.loss_ema_beta) * transition_loss
+        # Peak tracks the highest error seen (starts at the initial error).
+        self.loss_ema_peak = max(self.loss_ema_peak, self.loss_ema)
+
+    def _accuracy_floor(self) -> float:
+        """Adaptive exploitation threshold: exploit once the model's error has
+        dropped ~10% below the worst error seen in this session."""
+        return self.loss_ema_peak - 0.1
 
     # -- value terms ------------------------------------------------------
 
@@ -275,10 +284,15 @@ class EFEPlanner(nn.Module):
         spread = results[-1]["efe"] - results[0]["efe"]
 
         # T4 accuracy-gated exploration: explore iff the dynamics model is
-        # still too inaccurate to trust its min-EFE ranking (loss_ema above
-        # the accuracy floor). As train_transition_step drives loss_ema down,
-        # the planner transitions from explore to exploit automatically.
-        accuracy_floor = explore_threshold if explore_threshold is not None else 0.5
+        # still too inaccurate to trust its min-EFE ranking. The floor is
+        # adaptive: exploit once the model has improved ~10% from its initial
+        # error (tracked as a slow EMA of the worst-seen loss), so the gate
+        # is reachable during a session instead of demanding an absolute
+        # accuracy the operator may take thousands of steps to reach.
+        if explore_threshold is not None:
+            accuracy_floor = explore_threshold
+        else:
+            accuracy_floor = self._accuracy_floor()
         if self.loss_ema > accuracy_floor and len(results) > 1:
             epistemic_best = max(results, key=lambda r: r["epistemic"])
             best = dict(epistemic_best, explored=True)

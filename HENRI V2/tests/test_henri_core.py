@@ -321,18 +321,21 @@ class TestCalibratedExploration:
         assert chosen["explored"] is False
 
     def test_explore_to_exploit_transition_as_model_learns(self, device):
-        # With high loss_ema the planner explores; once the model trains down
-        # (loss_ema drops), the SAME state should flip to exploitation.
+        # With high loss_ema (near peak) the planner explores; once the model
+        # trains down well below the adaptive floor, it flips to exploitation.
         from efe_planner import EFEPlanner
         p = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
         state = mk_wave((SCALE["num_blocks"], 8), device, 42)
         boundary = mk_wave((2, SCALE["num_blocks"], 8), device, 43)
         cands = [("A", mk_wave((SCALE["num_blocks"], 8), device, 44)),
                  ("B", mk_wave((SCALE["num_blocks"], 8), device, 45))]
-        p.loss_ema = 0.9  # bad model
+        # Peak error at init; loss_ema still at peak -> explore
+        p.loss_ema_peak = 1.0
+        p.loss_ema = 1.0
         _, _, _, chosen_hi = p.select_action(state, cands, boundary)
         assert chosen_hi["explored"] is True, "high loss_ema should explore"
-        p.loss_ema = 0.1  # learned
+        # Model learned: error far below the adaptive floor (peak - 0.1)
+        p.loss_ema = 0.1
         _, _, _, chosen_lo = p.select_action(state, cands, boundary)
         assert chosen_lo["explored"] is False, "low loss_ema should exploit"
 
@@ -345,6 +348,25 @@ class TestCalibratedExploration:
             orch.planner.train_transition_step(wave, action_w, target, lr=0.3)
         after = orch.planner.loss_ema
         assert after < before, "loss_ema did not track learning"
+
+    def test_adaptive_floor_opens_after_improvement(self, device):
+        # Simulate a session where the model improves >10% from its peak error:
+        # the gate should transition from explore to exploit.
+        from efe_planner import EFEPlanner
+        p = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
+        state = mk_wave((SCALE["num_blocks"], 8), device, 90)
+        boundary = mk_wave((2, SCALE["num_blocks"], 8), device, 91)
+        cands = [("A", mk_wave((SCALE["num_blocks"], 8), device, 92)),
+                 ("B", mk_wave((SCALE["num_blocks"], 8), device, 93))]
+        # Peak error 1.0 -> floor 0.9; with loss_ema at 0.95 still explore
+        p.loss_ema_peak = 1.0
+        p.loss_ema = 0.95
+        _, _, _, c1 = p.select_action(state, cands, boundary)
+        assert c1["explored"] is True
+        # Model improved below floor (0.85 < 0.9): exploit
+        p.loss_ema = 0.85
+        _, _, _, c2 = p.select_action(state, cands, boundary)
+        assert c2["explored"] is False
 
 
 class TestEpistemicNovelty:
