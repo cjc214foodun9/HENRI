@@ -280,10 +280,45 @@ def run():
         total = sum(action_counts.values())
         distinct = len(action_counts)
         print(f"  [env summary] actions: {action_counts} | distinct: {distinct}")
+        # Capture the scorecard id for this env's game session
+        try:
+            scid = getattr(game, "scorecard_id", None)
+            if scid:
+                tele.emit({"env": env_name, "scorecard_id": str(scid)})
+                print(f"  [scorecard] {scid}")
+        except Exception as e:
+            print(f"  [scorecard] capture failed: {e}")
 
     tele.close()
     if db_logger is not None:
         db_logger.shutdown()
+
+    # Final scorecard extraction: fetch the full scorecard for each env played
+    print(f"\n{'='*70}\n  FINAL SCORECARDS\n{'='*70}")
+    scorecard_ids = []
+    # Re-read the telemetry log to collect per-env scorecard ids
+    try:
+        with open(log_path) as fp:
+            for line in fp:
+                rec = json.loads(line)
+                if "scorecard_id" in rec:
+                    scorecard_ids.append((rec["env"], rec["scorecard_id"]))
+    except Exception as e:
+        print(f"  scorecard id collection failed: {e}")
+
+    final_scores = {}
+    for env_name, scid in scorecard_ids:
+        try:
+            sc = arcade.get_scorecard(scid)
+            d = sc.__dict__ if hasattr(sc, "__dict__") else {"raw": str(sc)}
+            final_scores[env_name] = d
+            print(f"  {env_name} [{scid[:8]}]: {d}")
+        except Exception as e:
+            print(f"  {env_name}: fetch failed: {e}")
+    if final_scores:
+        with open(log_path.replace(".jsonl", "_scorecards.json"), "w") as fp:
+            json.dump(final_scores, fp, indent=1, default=str)
+        print(f"  scorecards -> {log_path.replace('.jsonl', '_scorecards.json')}")
     print(f"\n[done] telemetry -> {log_path}")
 
 
