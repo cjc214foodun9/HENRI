@@ -367,8 +367,8 @@ class HenriSwarmOrchestrator(nn.Module):
         # Computed with torch.func.grad (functional, no persistent autograd
         # graph) to keep the [1024,1024] cdist + projections from pinning
         # several GiB of activations across the creep loop.
-        drift_A = torch.zeros_like(self.syncytium.experts_A)
-        drift_B = torch.zeros_like(self.syncytium.experts_B)
+        drift_A = None
+        drift_B = None
         if bool(stress_gate.any()):
             adj = self.syncytium.static_adjacency
             tau_c = self.syncytium.tau_c
@@ -385,23 +385,24 @@ class HenriSwarmOrchestrator(nn.Module):
             gA, gB = torch.func.grad(coupling_energy, argnums=(0, 1))(
                 self.syncytium.experts_A.detach(), self.syncytium.experts_B.detach()
             )
-            # Boundary resonance drift w.r.t. A's projection geometry is folded
-            # into the coupling term above; the scalar boundary delta still
-            # drives temperature and gating.
-            raw_A = -mu * gA
-            raw_B = -mu * gB
+            # IDBD + SwiftTD: per-expert adaptive step-size applied in place on
+            # the gradient tensors (no extra 4 GiB copies). Drift direction is
+            # the gradient; magnitude is the per-expert IDBD alpha, SwiftTD-bounded.
+            delta_scalar = float(sagnac_delta_tensor)
+            raw_A, raw_B = gA, gB  # reuse grad tensors in place
             del gA, gB
+            raw_A.mul_(-mu)
+            raw_B.mul_(-mu)
+            feat_A = raw_A.norm(dim=(1, 2)).view(-1, 1, 1)
+            feat_B = raw_B.norm(dim=(1, 2)).view(-1, 1, 1)
+            scale_A = self.syncytium.creep_ctrl_A.scaled_drift(delta_scalar, feat_A) / (feat_A + 1e-12)
+            scale_B = self.syncytium.creep_ctrl_B.scaled_drift(delta_scalar, feat_B) / (feat_B + 1e-12)
+            raw_A.mul_(scale_A)
+            raw_B.mul_(scale_B)
+            drift_A, drift_B = raw_A, raw_B
+            del feat_A, feat_B, scale_A, scale_B
             if active_wave.is_cuda:
                 torch.cuda.empty_cache()
-
-            # IDBD + SwiftTD: per-expert adaptive step-size, driven by each
-            # expert's drift norm as the feature signal. SwiftTD bounds the
-            # correction so no expert overshoots the error surface.
-            delta_scalar = float(sagnac_delta_tensor)
-            feat_A = raw_A.norm(dim=(1, 2), keepdim=False).view(-1, 1, 1)
-            feat_B = raw_B.norm(dim=(1, 2), keepdim=False).view(-1, 1, 1)
-            drift_A = self.syncytium.creep_ctrl_A.scaled_drift(delta_scalar, feat_A) * raw_A / (feat_A + 1e-12)
-            drift_B = self.syncytium.creep_ctrl_B.scaled_drift(delta_scalar, feat_B) * raw_B / (feat_B + 1e-12)
 
         with torch.no_grad():
             # Dale's-polarity modulated drift keeps excitatory/inhibitory sign structure
@@ -417,8 +418,10 @@ class HenriSwarmOrchestrator(nn.Module):
                 noise_A_chunk = torch.randn((n, r_rank, d_model), device=self.syncytium.experts_A.device) * noise_scale * error_mask.view(1, 1, -1)
                 noise_B_chunk = torch.randn((n, r_rank, d_model), device=self.syncytium.experts_B.device) * noise_scale * error_mask.view(1, 1, -1)
 
-                self.syncytium.experts_A[i:j].add_((drift_A[i:j] * p[i:j] + noise_A_chunk) * effective_mask[i:j])
-                self.syncytium.experts_B[i:j].add_((drift_B[i:j] * p[i:j] + noise_B_chunk) * effective_mask[i:j])
+                dA = drift_A[i:j] if drift_A is not None else 0.0
+                dB = drift_B[i:j] if drift_B is not None else 0.0
+                self.syncytium.experts_A[i:j].add_((dA * p[i:j] + noise_A_chunk) * effective_mask[i:j])
+                self.syncytium.experts_B[i:j].add_((dB * p[i:j] + noise_B_chunk) * effective_mask[i:j])
 
             # Enforce Riemannian retraction immediately post-creep to secure volume conservation
             self.syncytium.apply_stiefel_retraction()
