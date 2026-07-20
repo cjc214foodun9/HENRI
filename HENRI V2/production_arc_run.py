@@ -203,6 +203,11 @@ def run():
             )
             explored = bool(chosen.get("explored", False))
             hop_conf = chosen["efe"]  # chosen-candidate EFE as confidence proxy
+            loss_ema = orch.planner.loss_ema
+
+            # Epistemic novelty: record the chosen action's predicted outcome so
+            # repeating it later is discounted (breaks RESET-spam loops).
+            orch.planner.remember_outcome(chosen["predicted_wave"])
 
             # Environment step
             game_action = action if isinstance(action, GameAction) else GameAction.ACTION1
@@ -239,6 +244,7 @@ def run():
                 "efe_best": round(chosen["efe"], 6),
                 "efe_spread": round(efe_table[-1]["efe"] - efe_table[0]["efe"], 6),
                 "explored": explored,
+                "loss_ema": round(loss_ema, 6),
                 "transition_loss": round(transition_loss, 6) if transition_loss is not None else None,
                 "action": str(game_action),
                 "recall": recall_info,

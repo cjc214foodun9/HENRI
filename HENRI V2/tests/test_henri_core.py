@@ -310,15 +310,65 @@ class TestCalibratedExploration:
     def test_exploits_when_spread_low(self, device):
         from efe_planner import EFEPlanner
         p = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
+        p.loss_ema = 0.0  # accurate model -> exploit
         state = mk_wave((SCALE["num_blocks"], 8), device, 36)
         boundary = mk_wave((2, SCALE["num_blocks"], 8), device, 37)
         cands = [("A", mk_wave((SCALE["num_blocks"], 8), device, 38)),
                  ("B", mk_wave((SCALE["num_blocks"], 8), device, 39))]
-        # Force exploitation with an infinite threshold
         action, _, table, chosen = p.select_action(state, cands, boundary, explore_threshold=1e9)
         exploit_best = min(table, key=lambda r: r["efe"])["action"]
         assert action == exploit_best, "low spread should route to min-EFE action"
         assert chosen["explored"] is False
+
+    def test_explore_to_exploit_transition_as_model_learns(self, device):
+        # With high loss_ema the planner explores; once the model trains down
+        # (loss_ema drops), the SAME state should flip to exploitation.
+        from efe_planner import EFEPlanner
+        p = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
+        state = mk_wave((SCALE["num_blocks"], 8), device, 42)
+        boundary = mk_wave((2, SCALE["num_blocks"], 8), device, 43)
+        cands = [("A", mk_wave((SCALE["num_blocks"], 8), device, 44)),
+                 ("B", mk_wave((SCALE["num_blocks"], 8), device, 45))]
+        p.loss_ema = 0.9  # bad model
+        _, _, _, chosen_hi = p.select_action(state, cands, boundary)
+        assert chosen_hi["explored"] is True, "high loss_ema should explore"
+        p.loss_ema = 0.1  # learned
+        _, _, _, chosen_lo = p.select_action(state, cands, boundary)
+        assert chosen_lo["explored"] is False, "low loss_ema should exploit"
+
+    def test_loss_ema_updates_on_training(self, orch, device):
+        wave = mk_wave((SCALE["num_blocks"], 8), device, 46)
+        action_w = mk_wave((SCALE["num_blocks"], 8), device, 47)
+        target = mk_wave((SCALE["num_blocks"], 8), device, 48)
+        before = orch.planner.loss_ema
+        for _ in range(20):
+            orch.planner.train_transition_step(wave, action_w, target, lr=0.3)
+        after = orch.planner.loss_ema
+        assert after < before, "loss_ema did not track learning"
+
+
+class TestEpistemicNovelty:
+    def test_repeated_prediction_loses_novelty(self, device):
+        from efe_planner import EFEPlanner
+        p = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
+        # Seed the attractor store so entropy term is active
+        for i in range(4):
+            p.cleanup.store_engrams(mk_wave((1, SCALE["d_model"]), device, 50 + i))
+        outcome = mk_wave((1, SCALE["d_model"]), device, 60).view(-1)
+        v_first = p.epistemic_value(outcome).item()
+        p.remember_outcome(outcome)
+        v_second = p.epistemic_value(outcome).item()
+        assert v_second < v_first, "remembered outcome should lose epistemic value"
+
+    def test_novel_outcome_keeps_value(self, device):
+        from efe_planner import EFEPlanner
+        p = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
+        for i in range(4):
+            p.cleanup.store_engrams(mk_wave((1, SCALE["d_model"]), device, 70 + i))
+        seen = mk_wave((1, SCALE["d_model"]), device, 80).view(-1)
+        novel = mk_wave((1, SCALE["d_model"]), device, 81).view(-1)
+        p.remember_outcome(seen)
+        assert p.epistemic_value(novel).item() > p.epistemic_value(seen).item()
 
 
 # ---------------------------------------------------------------------------

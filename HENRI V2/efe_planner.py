@@ -153,6 +153,22 @@ class EFEPlanner(nn.Module):
         if action_engrams is not None:
             self.cleanup.store_engrams(action_engrams)
 
+        # T4: model-accuracy tracking. EMA of the transition loss; the
+        # exploration gate keys off how wrong the dynamics model is, so
+        # exploitation kicks in as the model improves (not just on spread).
+        self.loss_ema = 1.0  # start fully uncertain
+        self.loss_ema_beta = 0.95
+
+        # Epistemic novelty memory: a small Hopfield store of recently
+        # predicted outcome waves. Actions whose predictions land near an
+        # already-visited outcome yield less information (already explored).
+        self.novelty_memory = ContinuousHopfieldCleanup(dim=d_model, beta=8.0)
+        self.novelty_capacity = 256
+
+    def update_model_accuracy(self, transition_loss: float):
+        """EMA update of the dynamics model's observed error (T4)."""
+        self.loss_ema = self.loss_ema_beta * self.loss_ema + (1 - self.loss_ema_beta) * transition_loss
+
     # -- value terms ------------------------------------------------------
 
     def pragmatic_value(self, predicted_wave: torch.Tensor, boundary_axioms: torch.Tensor) -> torch.Tensor:
@@ -173,18 +189,51 @@ class EFEPlanner(nn.Module):
 
     def epistemic_value(self, predicted_wave: torch.Tensor) -> torch.Tensor:
         """
-        Information gain: entropy of the Hopfield retrieval distribution over
-        attractor engrams induced by the predicted wave. High entropy = the
-        prediction is spread across many attractors = high uncertainty about
-        outcome = potentially informative action. Returns scalar >= 0.
+        Information gain with novelty discounting.
+
+        Two terms:
+          (a) Retrieval entropy: uncertainty over which attractor the
+              prediction lands in (informative when spread).
+          (b) Novelty bonus: how far the prediction is from the novelty
+              memory of already-visited outcomes. Repeated predictions
+              (same action, same outcome) are discounted toward zero, so
+              exploration stops rewarding loops like RESET-spam.
+        Returns scalar >= 0.
         """
-        if self.cleanup.num_engrams() == 0:
-            return torch.tensor(0.0, device=predicted_wave.device)
         flat = predicted_wave.view(-1)
         flat = flat / (torch.norm(flat) + 1e-12)
-        _, weights = self.cleanup.retrieve(flat, return_weights=True)
-        w = weights.clamp(min=1e-12)
-        return -(w * torch.log(w)).sum()
+
+        entropy = torch.tensor(0.0, device=predicted_wave.device)
+        if self.cleanup.num_engrams() > 1:
+            # Soft-temperature retrieval for a meaningful entropy readout:
+            # the cleanup store's beta (sqrt d) is tuned for hard snapping and
+            # collapses the distribution to one-hot; epistemic uncertainty
+            # needs a spread, so recompute weights at a fixed soft temperature.
+            r = flat / (torch.norm(flat) + 1e-12)
+            sim = r @ self.cleanup.engrams.T
+            w = torch.softmax(sim / 0.1, dim=-1).clamp(min=1e-12)
+            entropy = -(w * torch.log(w)).sum()
+
+        novelty = torch.tensor(1.0, device=predicted_wave.device)
+        if self.novelty_memory.num_engrams() > 0:
+            # Distance to nearest remembered outcome: 1 - max raw cosine sim
+            r = flat / (torch.norm(flat) + 1e-12)
+            sim = (r @ self.novelty_memory.engrams.T).max()
+            novelty = (1.0 - sim).clamp(min=0.0)
+
+        return entropy * novelty
+
+    def remember_outcome(self, predicted_wave: torch.Tensor):
+        """Record a visited outcome wave so future identical predictions are
+        discounted as non-novel. Caps the memory at novelty_capacity by
+        rebuilding from the most recent entries (ring behavior via clear +
+        restore is handled by the Hopfield store's append)."""
+        flat = predicted_wave.view(-1)
+        flat = flat / (torch.norm(flat) + 1e-12)
+        self.novelty_memory.store_engrams(flat.unsqueeze(0))
+        # Enforce capacity: drop oldest by clearing and keeping the tail
+        if self.novelty_memory.num_engrams() > self.novelty_capacity:
+            self.novelty_memory.engrams = self.novelty_memory.engrams[-self.novelty_capacity:]
 
     # -- planning ---------------------------------------------------------
 
@@ -225,19 +274,17 @@ class EFEPlanner(nn.Module):
         best = results[0]
         spread = results[-1]["efe"] - results[0]["efe"]
 
-        if explore_threshold is None:
-            # Default: explore when the spread is a large fraction of the
-            # mean |EFE| — i.e. candidates are poorly separated.
-            mean_abs = sum(abs(r["efe"]) for r in results) / max(len(results), 1)
-            explore_threshold = 0.5 * mean_abs
-
-        if spread > explore_threshold and len(results) > 1:
-            # Confused: take the most informative action instead
+        # T4 accuracy-gated exploration: explore iff the dynamics model is
+        # still too inaccurate to trust its min-EFE ranking (loss_ema above
+        # the accuracy floor). As train_transition_step drives loss_ema down,
+        # the planner transitions from explore to exploit automatically.
+        accuracy_floor = explore_threshold if explore_threshold is not None else 0.5
+        if self.loss_ema > accuracy_floor and len(results) > 1:
             epistemic_best = max(results, key=lambda r: r["epistemic"])
-            best = epistemic_best
-            best = dict(best, explored=True)
+            best = dict(epistemic_best, explored=True)
         else:
             best = dict(best, explored=False)
+        explore_threshold = accuracy_floor
 
         best["spread"] = spread
         best["explore_threshold"] = explore_threshold
@@ -286,6 +333,8 @@ class EFEPlanner(nn.Module):
             self.transition.field_W -= lr * gW
             self.transition.block_residual -= lr * gR
             self.transition._retract()
+        # T4: track model accuracy so the exploration gate tightens as we learn.
+        self.update_model_accuracy(float(loss.detach()))
         return float(loss.detach())
 
     @torch.no_grad()
