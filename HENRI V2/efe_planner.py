@@ -180,28 +180,47 @@ class EFEPlanner(nn.Module):
         best = results[0]
         return best["action"], best["predicted_wave"], results
 
+    def train_transition_step(
+        self,
+        state_wave: torch.Tensor,
+        action_wave: torch.Tensor,
+        observed_next_wave: torch.Tensor,
+        lr: float = 0.05,
+    ) -> float:
+        """
+        Online latent-space dynamics learning (T1 + T2).
+
+        Trains the transition operator on the Sagnac signal itself: the loss
+        is the normalized coherence delta between the model's prediction and
+        the observed next wave — the exact quantity the swarm measures.
+
+            predicted = transition(state ⊗ action)
+            loss      = 1 - Re(<predicted, observed>) / (||predicted|| ||observed||)
+
+        The (state, action) pair is the EXECUTED action's canonical wave, so
+        the model learns action-conditioned dynamics rather than an
+        action-averaged blur (T2). After the Wirtinger step the transition
+        matrices are re-retracted to unitarity.
+
+        Returns the pre-update loss (the Sagnac delta this step).
+        """
+        with torch.enable_grad():
+            predicted = self.transition(state_wave.detach(), action_wave.detach())
+            p = predicted.view(-1)
+            o = observed_next_wave.detach().view(-1)
+            inner = torch.dot(p, o)
+            denom = (torch.norm(p) * torch.norm(o)).clamp(min=1e-12)
+            loss = 1.0 - inner / denom  # normalized Sagnac delta, differentiable
+            g = torch.autograd.grad(loss, self.transition.transition)[0]
+        with torch.no_grad():
+            self.transition.transition -= lr * g
+            self.transition._retract()
+        return float(loss.detach())
+
     @torch.no_grad()
     def apply_creep(self, predicted_wave: torch.Tensor, observed_wave: torch.Tensor, lr: float = 0.01):
-        """
-        Test-time learning hook: after the chosen action plays out and the
-        empirical next wave is observed, nudge the transition operator toward
-        having predicted it (complex MSE on the fused representation), then
-        re-retract to unitarity. Mirrors ViscoelasticOptimizer in the PWM path.
-        """
-        self.transition.train()
-        with torch.enable_grad():
-            # Recompute prediction with grad — caller passes state via closure
-            # in practice; here we accept precomputed predicted/observed and
-            # apply a single Wirtinger-style step on the transition matrices.
-            pred = predicted_wave
-            obs = observed_wave
-            loss = torch.mean((pred - obs) ** 2)
-            g = torch.autograd.grad(loss, self.transition.transition, allow_unused=True)[0]
-        if g is not None:
-            with torch.no_grad():
-                self.transition.transition -= lr * g
-                self.transition._retract()
-        return float(loss)
+        """Deprecated stub retained for API compatibility; use train_transition_step."""
+        return float(torch.mean((predicted_wave - observed_wave) ** 2))
 
 
 if __name__ == "__main__":

@@ -111,7 +111,7 @@ def run():
     tele = LatentTelemetry(log_path, db_logger)
 
     print(f"[init] orchestrator @ {SCALE}")
-    orch = HenriSwarmOrchestrator(**SCALE).to(DEVICE)
+    orch = HenriSwarmOrchestrator(action_enum_class=GameAction, **SCALE).to(DEVICE)
     orch.attach_zone_c(dsn=args.dsn if DEVICE == "cuda" else "offline://surrogate")
     tokenizer = O_VSA_IngressTokenizer(
         num_blocks=SCALE["num_blocks"], vocab_size=256, device=DEVICE
@@ -135,10 +135,21 @@ def run():
 
         prev_wave = None
         prev_predicted_prior = None
+        train_ctx = None
+        action_counts = {}
         for step in range(args.steps):
             t0 = time.perf_counter()
             grid = obs.frame[0].tolist()
             state_wave = tokenizer.encode_spatial_grid(grid).squeeze(0).to(DEVICE)
+
+            # T1: apply the deferred transition-model update using the previous
+            # step's (state, executed action) -> this step's observed wave.
+            transition_loss = None
+            if train_ctx is not None and train_ctx["action_wave"] is not None:
+                transition_loss = orch.planner.train_transition_step(
+                    train_ctx["state"], train_ctx["action_wave"], state_wave, lr=0.05
+                )
+            train_ctx = None
 
             # Boundary axiom = prediction error: observed state vs the dynamics
             # prior propagated by the EFE transition model (falling back to the
@@ -197,12 +208,26 @@ def run():
             obs_next = game.step(game_action)
             step_ms = (time.perf_counter() - t0) * 1000
 
+            # T1/T2: train the transition model on the EXECUTED action pair.
+            # observed_next is encoded on the NEXT loop iteration; stash the
+            # training context now and apply the update once the next frame's
+            # wave exists. Loss = Sagnac delta(predicted, observed_next).
+            train_ctx = {
+                "state": state_wave.detach(),
+                "action_wave": next(
+                    (w for a, w in orch.candidate_action_waves(top_k=len(orch.decoder.id_to_action))
+                     if a == game_action),
+                    None,
+                ),
+            }
+
             # Track the propagated prior: the EFE planner's predicted wave becomes
             # the dynamics prior that conditions the next step's encoding, so the
             # model's action choices meaningfully differentiate trajectories.
             predicted_prior = predicted_wave.detach()
 
             # Telemetry emit (dense latent record)
+            action_counts[game_action.name] = action_counts.get(game_action.name, 0) + 1
             tele.emit({
                 "env": env_name, "step": step,
                 "sagnac_delta": round(sagnac_delta, 6),
@@ -212,6 +237,7 @@ def run():
                 "plasticity": plasticity,
                 "efe_best": round(efe_table[0]["efe"], 6),
                 "efe_spread": round(efe_table[-1]["efe"] - efe_table[0]["efe"], 6),
+                "transition_loss": round(transition_loss, 6) if transition_loss is not None else None,
                 "action": str(game_action),
                 "recall": recall_info,
                 "step_ms": round(step_ms, 1),
@@ -242,8 +268,16 @@ def run():
                 break
             if obs.state.name in ("WIN", "GAME_OVER"):
                 print(f"  [end] {obs.state.name} at step {step}")
-                tele.emit({"env": env_name, "terminal": obs.state.name, "step": step})
+                tele.emit({"env": env_name, "terminal": obs.state.name, "step": step,
+                           "action_counts": action_counts})
                 break
+        else:
+            tele.emit({"env": env_name, "terminal": "BUDGET_EXHAUSTED",
+                       "step": args.steps, "action_counts": action_counts})
+        # Per-env action entropy (fraction of non-ACTION1 steps)
+        total = sum(action_counts.values())
+        distinct = len(action_counts)
+        print(f"  [env summary] actions: {action_counts} | distinct: {distinct}")
 
     tele.close()
     if db_logger is not None:
