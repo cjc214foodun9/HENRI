@@ -284,14 +284,21 @@ class HenriSwarmOrchestrator(nn.Module):
             waves.append((action, w_grid))
         return waves
 
-    def plan_action(self, active_wave: torch.Tensor, boundary_axioms: torch.Tensor, top_k: int = 4):
+    def plan_action(self, active_wave: torch.Tensor, boundary_axioms: torch.Tensor, top_k: int = 4,
+                    return_chosen: bool = False):
         """
         EFE action selection: score the top-k candidate actions by Expected
         Free Energy and return (action, predicted_wave, score_table).
+        With return_chosen=True, returns (action, predicted_wave, table, chosen).
         boundary_axioms: [N, num_blocks, 8] real waves.
         """
         candidates = self.candidate_action_waves(top_k=top_k)
-        return self.planner.select_action(active_wave, candidates, boundary_axioms)
+        action, predicted, table, chosen = self.planner.select_action(
+            active_wave, candidates, boundary_axioms
+        )
+        if return_chosen:
+            return action, predicted, table, chosen
+        return action, predicted, table
 
 
     def compute_free_energy(self, active_wave: torch.Tensor, target_boundary: torch.Tensor, lambda_boundary: float = 1.0) -> torch.Tensor:

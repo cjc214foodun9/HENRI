@@ -206,7 +206,11 @@ class EFEPlanner(nn.Module):
 
         best["spread"] = spread
         best["explore_threshold"] = explore_threshold
-        return best["action"], best["predicted_wave"], results
+        # Annotate which table entry was actually chosen so callers can see
+        # whether the returned action was the exploit or explore pick.
+        chosen = dict(best)
+        results = [dict(r, chosen=(r["action"] == chosen["action"])) for r in results]
+        return best["action"], best["predicted_wave"], results, chosen
 
     def train_transition_step(
         self,
@@ -278,7 +282,7 @@ if __name__ == "__main__":
         print(f"  action {s['action']}: EFE={s['efe']:+.4f} "
               f"(pragmatic={s['pragmatic']:.4f}, epistemic={s['epistemic']:.4f})")
 
-    best, pred, table = planner.select_action(state, [("A", act_a), ("B", act_b)], boundary)
+    best, pred, table, chosen = planner.select_action(state, [("A", act_a), ("B", act_b)], boundary)
     print(f"selected: {best}")
     assert best in ("A", "B")
     assert all(math.isfinite(s["efe"]) for s in table)

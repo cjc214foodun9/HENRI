@@ -286,9 +286,10 @@ class TestCalibratedExploration:
                  ("B", mk_wave((SCALE["num_blocks"], 8), device, 34)),
                  ("C", mk_wave((SCALE["num_blocks"], 8), device, 35))]
         # Force exploration with a zero threshold: any spread triggers epistemic pick
-        action, _, table = p.select_action(state, cands, boundary, explore_threshold=-1.0)
+        action, _, table, chosen = p.select_action(state, cands, boundary, explore_threshold=-1.0)
         epistemic_best = max(table, key=lambda r: r["epistemic"])["action"]
         assert action == epistemic_best, "high spread should route to epistemic action"
+        assert chosen["explored"] is True
 
     def test_exploits_when_spread_low(self, device):
         from efe_planner import EFEPlanner
@@ -298,9 +299,10 @@ class TestCalibratedExploration:
         cands = [("A", mk_wave((SCALE["num_blocks"], 8), device, 38)),
                  ("B", mk_wave((SCALE["num_blocks"], 8), device, 39))]
         # Force exploitation with an infinite threshold
-        action, _, table = p.select_action(state, cands, boundary, explore_threshold=1e9)
+        action, _, table, chosen = p.select_action(state, cands, boundary, explore_threshold=1e9)
         exploit_best = min(table, key=lambda r: r["efe"])["action"]
         assert action == exploit_best, "low spread should route to min-EFE action"
+        assert chosen["explored"] is False
 
 
 # ---------------------------------------------------------------------------

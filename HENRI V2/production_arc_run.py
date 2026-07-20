@@ -196,12 +196,13 @@ def run():
                 for k, v in orch.syncytium.creep_ctrl_A.plasticity_stats().items()
             }
 
-            # EFE action selection
+            # EFE action selection (T4: explore when the planner is confused)
             boundary_batch = boundary.unsqueeze(0)
-            action, predicted_wave, efe_table = orch.plan_action(
-                state_wave, boundary_batch, top_k=4
+            action, predicted_wave, efe_table, chosen = orch.plan_action(
+                state_wave, boundary_batch, top_k=4, return_chosen=True
             )
-            hop_conf = efe_table[0]["efe"]  # best EFE as confidence proxy
+            explored = bool(chosen.get("explored", False))
+            hop_conf = chosen["efe"]  # chosen-candidate EFE as confidence proxy
 
             # Environment step
             game_action = action if isinstance(action, GameAction) else GameAction.ACTION1
@@ -235,8 +236,9 @@ def run():
                 "free_energy": round(free_energy, 6),
                 "kuramoto_r": round(order_param, 6),
                 "plasticity": plasticity,
-                "efe_best": round(efe_table[0]["efe"], 6),
+                "efe_best": round(chosen["efe"], 6),
                 "efe_spread": round(efe_table[-1]["efe"] - efe_table[0]["efe"], 6),
+                "explored": explored,
                 "transition_loss": round(transition_loss, 6) if transition_loss is not None else None,
                 "action": str(game_action),
                 "recall": recall_info,
