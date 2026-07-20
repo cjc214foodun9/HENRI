@@ -227,3 +227,53 @@ class TestIDBDSwiftTD:
         for ctrl in (orch.syncytium.creep_ctrl_A, orch.syncytium.creep_ctrl_B):
             stats = ctrl.plasticity_stats()
             assert math.isfinite(stats["mean_alpha"]) and stats["mean_alpha"] > 0
+
+
+# ---------------------------------------------------------------------------
+# Zone C SegmentCache + Gated Residual Memory
+# ---------------------------------------------------------------------------
+
+class TestZoneCSegmentCache:
+    def _surrogate_cache(self, num_blocks):
+        from zone_c_segment_cache import SegmentCache, InProcessZoneCStore
+        return SegmentCache(store=InProcessZoneCStore(num_blocks), num_blocks=num_blocks)
+
+    def test_checkpoint_and_recall_roundtrip(self):
+        nb = 64
+        cache = self._surrogate_cache(nb)
+        torch.manual_seed(0)
+        w = torch.randn(nb, 8)
+        w = w / torch.norm(w, p=2, dim=-1, keepdim=True)
+        cache.checkpoint(w, "test", 0.1)
+        assert cache.store.count() == 1
+        out = cache.retrieve(w)
+        assert out["hits"] == 1
+        assert out["top_similarity"] > 0.99
+        assert out["conditioning_wave"].shape == (nb, 8)
+
+    def test_grm_gates_concentrate_on_nearest(self):
+        nb = 64
+        cache = self._surrogate_cache(nb)
+        torch.manual_seed(0)
+        waves = []
+        for i in range(3):
+            w = torch.randn(nb, 8)
+            w = w / torch.norm(w, p=2, dim=-1, keepdim=True)
+            cache.checkpoint(w, "test", 0.1 * i)
+            waves.append(w)
+        q = waves[2] + 0.05 * torch.randn(nb, 8)
+        q = q / torch.norm(q, p=2, dim=-1, keepdim=True)
+        out = cache.retrieve(q)
+        # dominant gate should be the most similar (most recently stored) engram
+        assert int(max(range(len(out["gates"])), key=lambda i: out["gates"][i])) == 0
+
+    def test_orchestrator_zone_c_integration(self, orch, device):
+        from zone_c_segment_cache import InProcessZoneCStore
+        orch._segment_cache = None
+        cache = orch.attach_zone_c(dsn="offline://surrogate")
+        assert isinstance(cache.store, InProcessZoneCStore)
+        wave = mk_wave((SCALE["num_blocks"], 8), device, 14)
+        orch.checkpoint_wave(wave.cpu(), "test", 0.1)
+        recalled = orch.recall_conditioning_wave(wave.cpu())
+        assert recalled is not None
+        assert recalled.shape == (SCALE["num_blocks"], 8)

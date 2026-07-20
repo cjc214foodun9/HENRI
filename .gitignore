@@ -7,3 +7,4 @@ __pycache__/
 *.pth
 .venv-backups/
 llama_tokenizer_local/
+telemetry_logs/

@@ -14,6 +14,7 @@ from product_clifford_product_kernel import ProductCliffordAlgebra3D
 from hopfield_cleanup import HopfieldActionDecoder
 from efe_planner import EFEPlanner
 from idbd_swifttd import AdaptiveCreepController
+from zone_c_segment_cache import SegmentCache
 
 # =========================================================================
 # I. HIGH-PERFORMANCE SCALE-FREE GRAPH GENERATOR
@@ -237,6 +238,35 @@ class HenriSwarmOrchestrator(nn.Module):
             for a in self.decoder.id_to_action.values()
         ])
         self.planner.cleanup.store_engrams(action_real)
+        # Zone C SegmentCache: long-term engram memory. Lazily connected on
+        # first use so construction never blocks on a database round-trip.
+        self._segment_cache = None
+        self._segment_cache_dsn = None
+
+    def attach_zone_c(self, dsn: str = None, top_k: int = 4, max_age_hours: float = 24.0):
+        """Connect the Zone C SegmentCache (TimescaleDB live, or surrogate)."""
+        self._segment_cache = SegmentCache.connect(
+            dsn=dsn, num_blocks=self.num_blocks, top_k=top_k, max_age_hours=max_age_hours
+        )
+        return self._segment_cache
+
+    @property
+    def segment_cache(self):
+        if self._segment_cache is None:
+            self.attach_zone_c(dsn=self._segment_cache_dsn)
+        return self._segment_cache
+
+    def checkpoint_wave(self, wave: torch.Tensor, domain: str, sagnac_stress: float):
+        """Persist the current wave as a Zone C engram checkpoint."""
+        return self.segment_cache.checkpoint(wave, domain, sagnac_stress)
+
+    def recall_conditioning_wave(self, query_wave: torch.Tensor):
+        """
+        GRM retrieval from Zone C: returns a gate-weighted conditioning wave
+        fused from the most relevant past engrams, or None if memory is empty.
+        Used to anchor the syncytium's relaxation with long-term context.
+        """
+        return self.segment_cache.retrieve(query_wave)["conditioning_wave"]
 
     def candidate_action_waves(self, top_k: int = 4):
         """
