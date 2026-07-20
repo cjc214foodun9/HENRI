@@ -59,10 +59,13 @@ class UnitaryWaveTransition(nn.Module):
         self.rank = rank
         self.d = num_blocks * block_dim
 
-        # Global field channel: V [d, r] and W [d, r], near-semi-unitary.
-        scale = 1.0 / math.sqrt(self.d)
+        # Global field channel: W [2d, r] reads the full complex fused wave
+        # (Re ‖ Im), V [d, r] broadcasts the r-dim global mode back onto the
+        # real block grid. This lets the FHRR phase content drive the field
+        # while the prediction stays a real, on-manifold wave.
+        scale = 1.0 / math.sqrt(2 * self.d)
         self.field_V = nn.Parameter(torch.randn(self.d, rank) * scale)
-        self.field_W = nn.Parameter(torch.randn(self.d, rank) * scale)
+        self.field_W = nn.Parameter(torch.randn(2 * self.d, rank) * scale)
 
         # Local residual: per-block near-unitary 8x8 matrices (the gap wiring).
         real = torch.eye(block_dim) + 0.01 * torch.randn(num_blocks, block_dim, block_dim)
@@ -111,9 +114,10 @@ class UnitaryWaveTransition(nn.Module):
         # Local gap-junction residual: per-block unitary transform.
         local = torch.einsum('bij,bj->bi', self.block_residual, fused)  # complex [B, 8]
 
-        # Global ephaptic field channel: integrate then broadcast (real part
-        # of the fused wave drives the field; field adds a real global mode).
-        fused_flat = fused.real.reshape(-1)  # [d]
+        # Global ephaptic field channel: integrate the full complex fused wave
+        # (Re ‖ Im, 2d wide) into the r-dim global mode, then broadcast onto
+        # the real block grid (d wide). FHRR phase content drives the field.
+        fused_flat = torch.cat([fused.real.reshape(-1), fused.imag.reshape(-1)])  # [2d]
         field_mode = self.field_W.T @ fused_flat          # [r]
         field = (self.field_V @ field_mode).view(self.num_blocks, self.block_dim)
 
