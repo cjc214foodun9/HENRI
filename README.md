@@ -1,6 +1,6 @@
-# **Project HENRI: Holographic Engine for Recursive Intelligence (v2.0)**
+# **Project HENRI: Holographic Engine for Nested & Recursive Intelligence**
 
-Project HENRI is a non-von Neumann world model and execution architecture designed to operate at the intersection of non-equilibrium wave mechanics, high-dimensional Vector Symbolic Architectures (VSA), and real-time thermodynamic relaxation. This repository contains the complete software-defined digital twin, emulation pathways, and kernel-space execution layers for Project HENRI.
+Project HENRI is a post-von Neumann world model and execution architecture designed to operate at the intersection of non-equilibrium wave mechanics, high-dimensional Vector Symbolic Architectures (VSA), and real-time continuous deep learning. This repository contains the complete software-defined digital twin, emulation pathways, and kernel-space execution layers for Project HENRI, intended to be natively evolved to a silicon photonic architecture.
 
 Unlike traditional sequence models that rely on discrete, autoregressive token prediction over flat probability distributions, HENRI represents information as continuous complex-valued wavefronts on a high-dimensional unit hypersphere. Optimization in HENRI is not achieved through backpropagation through time (BPTT), but via the physical relaxation of coupled phase oscillators toward low-entropy geometric attractors.
 
