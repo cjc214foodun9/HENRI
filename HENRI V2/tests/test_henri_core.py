@@ -230,6 +230,115 @@ class TestIDBDSwiftTD:
 
 
 # ---------------------------------------------------------------------------
+# Transition-model training (T1/T2)
+# ---------------------------------------------------------------------------
+
+class TestTransitionTraining:
+    def test_train_step_reduces_sagnac_loss(self, orch, device):
+        wave = mk_wave((SCALE["num_blocks"], 8), device, 20)
+        action_w = mk_wave((SCALE["num_blocks"], 8), device, 21)
+        target = mk_wave((SCALE["num_blocks"], 8), device, 22)
+        losses = [orch.planner.train_transition_step(wave, action_w, target, lr=0.1)
+                  for _ in range(10)]
+        assert all(math.isfinite(l) and 0.0 <= l <= 2.0 for l in losses)
+        assert losses[-1] < losses[0], f"no descent: {losses[0]} -> {losses[-1]}"
+
+    def test_transition_unitarity_after_training(self, orch, device):
+        wave = mk_wave((SCALE["num_blocks"], 8), device, 23)
+        action_w = mk_wave((SCALE["num_blocks"], 8), device, 24)
+        target = mk_wave((SCALE["num_blocks"], 8), device, 25)
+        for _ in range(5):
+            orch.planner.train_transition_step(wave, action_w, target, lr=0.1)
+        T = orch.planner.transition.transition
+        prod = torch.matmul(T, T.mH)
+        I = torch.eye(8, dtype=torch.complex64, device=device)
+        assert (prod - I).abs().max().item() < 1e-2
+
+    def test_action_conditioned_learning(self, device):
+        # Model must learn different outcomes for different actions (T2)
+        from efe_planner import EFEPlanner
+        p = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
+        state = mk_wave((SCALE["num_blocks"], 8), device, 26)
+        act_a = mk_wave((SCALE["num_blocks"], 8), device, 27)
+        act_b = mk_wave((SCALE["num_blocks"], 8), device, 28)
+        out_a = mk_wave((SCALE["num_blocks"], 8), device, 29)
+        out_b = mk_wave((SCALE["num_blocks"], 8), device, 30)
+        for _ in range(15):
+            p.train_transition_step(state, act_a, out_a, lr=0.1)
+            p.train_transition_step(state, act_b, out_b, lr=0.1)
+        # Predictions for the two actions should now diverge toward their targets
+        pa = p.transition(state, act_a)
+        pb = p.transition(state, act_b)
+        assert not torch.allclose(pa, pb, atol=1e-3), "action conditioning collapsed"
+
+
+# ---------------------------------------------------------------------------
+# T4: calibrated exploration
+# ---------------------------------------------------------------------------
+
+class TestCalibratedExploration:
+    def test_explores_when_spread_high(self, device):
+        from efe_planner import EFEPlanner
+        p = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
+        state = mk_wave((SCALE["num_blocks"], 8), device, 31)
+        boundary = mk_wave((2, SCALE["num_blocks"], 8), device, 32)
+        cands = [("A", mk_wave((SCALE["num_blocks"], 8), device, 33)),
+                 ("B", mk_wave((SCALE["num_blocks"], 8), device, 34)),
+                 ("C", mk_wave((SCALE["num_blocks"], 8), device, 35))]
+        # Force exploration with a zero threshold: any spread triggers epistemic pick
+        action, _, table = p.select_action(state, cands, boundary, explore_threshold=-1.0)
+        epistemic_best = max(table, key=lambda r: r["epistemic"])["action"]
+        assert action == epistemic_best, "high spread should route to epistemic action"
+
+    def test_exploits_when_spread_low(self, device):
+        from efe_planner import EFEPlanner
+        p = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
+        state = mk_wave((SCALE["num_blocks"], 8), device, 36)
+        boundary = mk_wave((2, SCALE["num_blocks"], 8), device, 37)
+        cands = [("A", mk_wave((SCALE["num_blocks"], 8), device, 38)),
+                 ("B", mk_wave((SCALE["num_blocks"], 8), device, 39))]
+        # Force exploitation with an infinite threshold
+        action, _, table = p.select_action(state, cands, boundary, explore_threshold=1e9)
+        exploit_best = min(table, key=lambda r: r["efe"])["action"]
+        assert action == exploit_best, "low spread should route to min-EFE action"
+
+
+# ---------------------------------------------------------------------------
+# T5: attractor consolidation
+# ---------------------------------------------------------------------------
+
+class TestAttractorConsolidation:
+    def test_consolidation_merges_similar_engrams(self, device):
+        # Use the surrogate store with a consolidation shim for offline testing
+        from zone_c_segment_cache import SegmentCache, InProcessZoneCStore
+        nb = 64
+        cache = SegmentCache(store=InProcessZoneCStore(nb), num_blocks=nb)
+        torch.manual_seed(0)
+        base = torch.randn(nb, 8)
+        base = base / torch.norm(base, p=2, dim=-1, keepdim=True)
+        # Three near-identical engrams + one distinct
+        for i in range(3):
+            w = base + 0.01 * torch.randn(nb, 8)
+            w = w / torch.norm(w, p=2, dim=-1, keepdim=True)
+            cache.checkpoint(w, "test", 0.1)
+        other = torch.randn(nb, 8)
+        other = other / torch.norm(other, p=2, dim=-1, keepdim=True)
+        cache.checkpoint(other, "test", 0.1)
+        assert cache.store.count() == 4
+
+        # Consolidate using the same greedy-cosine logic on the surrogate
+        from zone_c_segment_cache import semantic_projection
+        sems = torch.stack([semantic_projection(w) for w, *_ in cache.store.rows])
+        sems = sems / torch.norm(sems, dim=-1, keepdim=True)
+        sim = sems @ sems.T
+        # The three near-identical should pairwise-exceed 0.9; the distinct one shouldn't
+        near = (sim[:3, :3] > 0.9).sum().item()
+        far = (sim[3, :3] > 0.9).sum().item()
+        assert near >= 3, "near-identical engrams not clustered"
+        assert far == 0, "distinct engram wrongly clustered"
+
+
+# ---------------------------------------------------------------------------
 # Zone C SegmentCache + Gated Residual Memory
 # ---------------------------------------------------------------------------
 

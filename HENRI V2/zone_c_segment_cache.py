@@ -204,6 +204,84 @@ class TimescaleZoneCStore(ZoneCStore):
                 cur.execute("SELECT count(*) FROM phylogenetic_engrams_65536")
                 return int(cur.fetchone()[0])
 
+    def consolidate_attractors(self, cosine_threshold: float = 0.95, dry_run: bool = False) -> dict:
+        """
+        T5 — Thermodynamic attractor consolidation.
+
+        Clusters stored engrams whose semantic_index cosine exceeds the
+        threshold and merges each cluster into a single strengthened
+        attractor: the mean wave (renormalized), with a resonance weight
+        equal to the cluster size. Merged sources are deleted — the
+        hypertable prunes toward canonical low-entropy attractors instead of
+        accumulating redundant engrams.
+
+        Returns {"clusters": N, "merged": M, "kept": K}.
+        """
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, semantic_index, engram_wave_bytes FROM phylogenetic_engrams_65536"
+                )
+                rows = cur.fetchall()
+        if len(rows) < 2:
+            return {"clusters": 0, "merged": 0, "kept": len(rows)}
+
+        ids = [r[0] for r in rows]
+        def _parse_sem(v):
+            if isinstance(v, str):
+                return np.fromstring(v.strip("[]"), sep=",", dtype=np.float32)
+            if isinstance(v, (bytes, memoryview)):
+                return np.fromstring(bytes(v).decode().strip("[]"), sep=",", dtype=np.float32)
+            return np.array(v, dtype=np.float32)
+        sems = np.stack([_parse_sem(r[1]) for r in rows])
+        waves = [r[2] for r in rows]
+
+        # Greedy cosine clustering over semantic indices
+        sems_t = torch.from_numpy(sems)
+        sems_t = sems_t / (torch.norm(sems_t, dim=-1, keepdim=True) + 1e-9)
+        sim = sems_t @ sems_t.T
+        n = len(rows)
+        assigned = [False] * n
+        clusters = []
+        for i in range(n):
+            if assigned[i]:
+                continue
+            members = [j for j in range(n) if not assigned[j] and sim[i, j] >= cosine_threshold]
+            for j in members:
+                assigned[j] = True
+            clusters.append(members)
+
+        merged = sum(len(c) - 1 for c in clusters if len(c) > 1)
+        if dry_run:
+            return {"clusters": len(clusters), "merged": merged, "kept": n - merged}
+
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                for members in clusters:
+                    if len(members) == 1:
+                        continue
+                    # Mean wave -> strengthened attractor
+                    cluster_waves = torch.stack([
+                        bytes_to_wave(waves[j], self.num_blocks) for j in members
+                    ])
+                    attractor = cluster_waves.mean(dim=0)
+                    attractor = attractor / (torch.norm(attractor, p=2, dim=-1, keepdim=True) + 1e-9)
+                    # Keep the first member's id as the canonical attractor
+                    keep_id = ids[members[0]]
+                    drop_ids = [ids[j] for j in members[1:]]
+                    sem = semantic_projection(attractor)
+                    sem_list = "[" + ",".join(f"{v:.6f}" for v in sem.tolist()) + "]"
+                    cur.execute(
+                        "UPDATE phylogenetic_engrams_65536 SET semantic_index = %s::vector, engram_wave_bytes = %s WHERE id = %s",
+                        (sem_list, self._psycopg.Binary(wave_to_bytes(attractor)), keep_id),
+                    )
+                    cur.execute(
+                        "DELETE FROM phylogenetic_engrams_65536 WHERE id = ANY(%s)",
+                        (drop_ids,),
+                    )
+            conn.commit()
+        return {"clusters": len(clusters), "merged": merged, "kept": n - merged}
+
 
 # ---------------------------------------------------------------------------
 # Gated Residual Memory retrieval
@@ -236,6 +314,12 @@ class SegmentCache:
     def checkpoint(self, wave: torch.Tensor, domain: str, sagnac_stress: float) -> str:
         """Store a wave checkpoint into Zone C."""
         return self.store.write_engram(wave, domain, sagnac_stress)
+
+    def consolidate(self, cosine_threshold: float = 0.95, dry_run: bool = False) -> dict:
+        """T5 attractor consolidation (TimescaleDB store only)."""
+        if hasattr(self.store, "consolidate_attractors"):
+            return self.store.consolidate_attractors(cosine_threshold, dry_run)
+        return {"clusters": 0, "merged": 0, "kept": self.store.count()}
 
     def retrieve(self, query_wave: torch.Tensor) -> dict:
         """

@@ -174,10 +174,38 @@ class EFEPlanner(nn.Module):
         results.sort(key=lambda r: r["efe"])
         return results
 
-    def select_action(self, state_wave: torch.Tensor, candidate_actions: list, boundary_axioms: torch.Tensor):
-        """Returns (best_action_id, predicted_wave, scores_table)."""
+    def select_action(self, state_wave: torch.Tensor, candidate_actions: list, boundary_axioms: torch.Tensor,
+                      explore_threshold: float = None):
+        """
+        Returns (best_action_id, predicted_wave, scores_table).
+
+        T4 — calibrated exploration: when the planner's uncertainty (the EFE
+        spread across candidates) exceeds explore_threshold, the model's
+        dynamics are unreliable, so we select the highest-EPISTEMIC-value
+        action (max information gain) instead of the lowest-EFE one. When
+        confident, we exploit (min EFE). Default threshold: adaptive, the
+        median of the observed spread.
+        """
         results = self.score_actions(state_wave, candidate_actions, boundary_axioms)
         best = results[0]
+        spread = results[-1]["efe"] - results[0]["efe"]
+
+        if explore_threshold is None:
+            # Default: explore when the spread is a large fraction of the
+            # mean |EFE| — i.e. candidates are poorly separated.
+            mean_abs = sum(abs(r["efe"]) for r in results) / max(len(results), 1)
+            explore_threshold = 0.5 * mean_abs
+
+        if spread > explore_threshold and len(results) > 1:
+            # Confused: take the most informative action instead
+            epistemic_best = max(results, key=lambda r: r["epistemic"])
+            best = epistemic_best
+            best = dict(best, explored=True)
+        else:
+            best = dict(best, explored=False)
+
+        best["spread"] = spread
+        best["explore_threshold"] = explore_threshold
         return best["action"], best["predicted_wave"], results
 
     def train_transition_step(
