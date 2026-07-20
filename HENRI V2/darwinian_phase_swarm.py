@@ -423,8 +423,10 @@ class HenriSwarmOrchestrator(nn.Module):
             del gA, gB
             raw_A.mul_(-mu)
             raw_B.mul_(-mu)
-            feat_A = raw_A.norm(dim=(1, 2)).view(-1, 1, 1)
-            feat_B = raw_B.norm(dim=(1, 2)).view(-1, 1, 1)
+            # Normalized per-expert feature: RMS drift magnitude (scale-invariant
+            # across d_model) so IDBD meta-learning engages at production dims.
+            feat_A = raw_A.norm(dim=(1, 2)).div_(math.sqrt(raw_A[0].numel())).view(-1, 1, 1)
+            feat_B = raw_B.norm(dim=(1, 2)).div_(math.sqrt(raw_B[0].numel())).view(-1, 1, 1)
             scale_A = self.syncytium.creep_ctrl_A.scaled_drift(delta_scalar, feat_A) / (feat_A + 1e-12)
             scale_B = self.syncytium.creep_ctrl_B.scaled_drift(delta_scalar, feat_B) / (feat_B + 1e-12)
             raw_A.mul_(scale_A)

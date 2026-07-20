@@ -134,19 +134,25 @@ def run():
             continue
 
         prev_wave = None
+        prev_predicted_prior = None
         for step in range(args.steps):
             t0 = time.perf_counter()
             grid = obs.frame[0].tolist()
             state_wave = tokenizer.encode_spatial_grid(grid).squeeze(0).to(DEVICE)
 
-            # Boundary axiom = topological transition from previous state
-            if prev_wave is not None:
+            # Boundary axiom = prediction error: observed state vs the dynamics
+            # prior propagated by the EFE transition model (falling back to the
+            # raw inter-frame transition before the first prediction exists).
+            if prev_predicted_prior is not None:
+                boundary = state_wave - prev_predicted_prior
+            elif prev_wave is not None:
                 boundary = state_wave - prev_wave
-                boundary = boundary / (torch.norm(boundary, p=2, dim=-1, keepdim=True) + 1e-9)
             else:
                 boundary = state_wave.clone()
+            boundary = boundary / (torch.norm(boundary, p=2, dim=-1, keepdim=True) + 1e-9)
 
-            # Zone C recall (conditioning) on schedule
+            # Zone C recall (conditioning) on schedule; blend the recalled
+            # long-term engram into the active wave to bias relaxation.
             recalled = None
             recall_info = {"hits": 0}
             if step % RECALL_EVERY == 0:
@@ -157,6 +163,10 @@ def run():
                                "gates": [round(g, 4) for g in res.get("gates", [])]}
                 if recalled is not None:
                     recalled = recalled.to(DEVICE)
+                    # Memory-conditioned state: partial blend toward the recalled
+                    # attractor (keeps the live observation dominant).
+                    state_wave = 0.7 * state_wave + 0.3 * recalled
+                    state_wave = state_wave / (torch.norm(state_wave, p=2, dim=-1, keepdim=True) + 1e-9)
 
             # Swarm relaxation with SGLD creep
             sagnac_delta = None
@@ -186,6 +196,11 @@ def run():
             game_action = action if isinstance(action, GameAction) else GameAction.ACTION1
             obs_next = game.step(game_action)
             step_ms = (time.perf_counter() - t0) * 1000
+
+            # Track the propagated prior: the EFE planner's predicted wave becomes
+            # the dynamics prior that conditions the next step's encoding, so the
+            # model's action choices meaningfully differentiate trajectories.
+            predicted_prior = predicted_wave.detach()
 
             # Telemetry emit (dense latent record)
             tele.emit({
@@ -220,6 +235,7 @@ def run():
                   f"| act {game_action.name} | recall {recall_info['hits']} | {step_ms:.0f}ms")
 
             prev_wave = state_wave
+            prev_predicted_prior = predicted_prior
             obs = obs_next
             if obs is None or not getattr(obs, "state", None):
                 print("  [end] null observation")
