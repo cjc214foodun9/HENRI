@@ -189,10 +189,11 @@ class TimescaleZoneCStore(ZoneCStore):
                            EXTRACT(EPOCH FROM (now() - timestamp)) / 3600.0 AS age_hours
                     FROM phylogenetic_engrams_65536
                     WHERE timestamp > now() - (%s || ' hours')::interval
+                      AND octet_length(engram_wave_bytes) = %s
                     ORDER BY semantic_index <=> %s::vector
                     LIMIT %s
                     """,
-                    (q_list, float(max_age_hours), q_list, int(top_k)),
+                    (q_list, float(max_age_hours), self.num_blocks * 8 * 4, q_list, int(top_k)),
                 )
                 rows = cur.fetchall()
         return [(bytes_to_wave(r[0], self.num_blocks), float(r[1]), float(r[2])) for r in rows]
