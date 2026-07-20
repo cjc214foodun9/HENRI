@@ -181,7 +181,7 @@ class TimescaleZoneCStore(ZoneCStore):
                            1 - (semantic_index <=> %s::vector) AS similarity,
                            EXTRACT(EPOCH FROM (now() - timestamp)) / 3600.0 AS age_hours
                     FROM phylogenetic_engrams_65536
-                    WHERE timestamp > now() - make_interval(hours => %s)
+                    WHERE timestamp > now() - (%s || ' hours')::interval
                     ORDER BY semantic_index <=> %s::vector
                     LIMIT %s
                     """,
