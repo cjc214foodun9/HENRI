@@ -114,14 +114,19 @@ class GapJunctionSwarmSyncytium(nn.Module):
         for param in (self.experts_A, self.experts_B):
             # Cholesky-based symmetric orthogonalization:
             #   A <- L^{-1} A where L L^T = A A^T  =>  (L^{-1} A)(L^{-1} A)^T = I
-            aat = torch.bmm(param, param.transpose(-2, -1))
-            # Jitter guards against numerical rank deficiency
-            jitter = 1e-6 * torch.eye(self.r_rank, device=param.device).unsqueeze(0)
-            L = torch.linalg.cholesky(aat + jitter)
-            inv_L = torch.linalg.solve_triangular(
-                L, torch.eye(self.r_rank, device=param.device).unsqueeze(0).expand_as(L), upper=False
-            )
-            param.copy_(torch.bmm(inv_L, param))
+            # Chunked over experts to bound the bmm workspace on large swarms.
+            eye = torch.eye(self.r_rank, device=param.device)
+            chunk = 256
+            for i in range(0, self.num_experts, chunk):
+                j = min(i + chunk, self.num_experts)
+                p = param[i:j]
+                aat = torch.bmm(p, p.transpose(-2, -1))
+                jitter = 1e-6 * eye.unsqueeze(0)
+                L = torch.linalg.cholesky(aat + jitter)
+                inv_L = torch.linalg.solve_triangular(
+                    L, eye.unsqueeze(0).expand(j - i, -1, -1), upper=False
+                )
+                param[i:j].copy_(torch.bmm(inv_L, p))
 
     def compute_dynamic_conductance(self, active_wave: torch.Tensor) -> torch.Tensor:
         """
@@ -311,29 +316,35 @@ class HenriSwarmOrchestrator(nn.Module):
 
         # --- SGLD drift: grad of free energy w.r.t. expert matrices -----------
         # The experts enter F through the gap-junction conductance they induce.
-        # We differentiate F(psi, W) w.r.t. (experts_A, experts_B) with a fresh
-        # graph each step; only active experts receive a meaningful gradient.
+        # Computed with torch.func.grad (functional, no persistent autograd
+        # graph) to keep the [1024,1024] cdist + projections from pinning
+        # several GiB of activations across the creep loop.
         drift_A = torch.zeros_like(self.syncytium.experts_A)
         drift_B = torch.zeros_like(self.syncytium.experts_B)
         if bool(stress_gate.any()):
-            with torch.enable_grad():
-                A = self.syncytium.experts_A.detach().requires_grad_(True)
-                B = self.syncytium.experts_B.detach().requires_grad_(True)
-                # Rebuild conductance from differentiable expert projections.
-                projections = torch.matmul(A, active_wave.view(-1))
-                dist_matrix = torch.cdist(projections.unsqueeze(0), projections.unsqueeze(0), p=2).squeeze(0)
-                conductance = self.syncytium.static_adjacency * torch.exp(-(dist_matrix ** 2) / self.syncytium.tau_c)
-                # Effective free energy: boundary resonance term, plus a coupling
-                # term over the conductance graph, plus a symmetric regularizer
-                # tying B to A's geometry (B parameterizes the transpose map and
-                # would otherwise receive no drift signal).
-                F_boundary = 0.5 * (1.0 - self.sagnac_coherence(active_wave, target_boundary)) ** 2
+            adj = self.syncytium.static_adjacency
+            tau_c = self.syncytium.tau_c
+            wave_flat = active_wave.view(-1).detach()
+
+            def coupling_energy(A, B):
+                projections = torch.matmul(A, wave_flat)
+                sq = torch.cdist(projections.unsqueeze(0), projections.unsqueeze(0), p=2).squeeze(0) ** 2
+                conductance = adj * torch.exp(-sq / tau_c)
                 F_coupling = 0.5 * (conductance ** 2).mean()
-                F_sym = 0.5 * ((torch.matmul(B, active_wave.view(-1)) - projections.detach()) ** 2).mean()
-                F_total = F_boundary + F_coupling + 0.01 * F_sym
-                gA, gB = torch.autograd.grad(F_total, [A, B], retain_graph=False)
+                F_sym = 0.5 * ((torch.matmul(B, wave_flat) - projections.detach()) ** 2).mean()
+                return F_coupling + 0.01 * F_sym
+
+            gA, gB = torch.func.grad(coupling_energy, argnums=(0, 1))(
+                self.syncytium.experts_A.detach(), self.syncytium.experts_B.detach()
+            )
+            # Boundary resonance drift w.r.t. A's projection geometry is folded
+            # into the coupling term above; the scalar boundary delta still
+            # drives temperature and gating.
             drift_A = -mu * gA
             drift_B = -mu * gB
+            del gA, gB
+            if active_wave.is_cuda:
+                torch.cuda.empty_cache()
 
         with torch.no_grad():
             # Dale's-polarity modulated drift keeps excitatory/inhibitory sign structure
