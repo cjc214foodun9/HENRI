@@ -51,6 +51,10 @@ class ContinuousHopfieldCleanup(nn.Module):
         if waves.is_complex():
             waves = torch.view_as_real(waves).reshape(waves.shape[0], -1)
         waves = waves.to(self.engrams.device, torch.float32)
+        assert waves.shape[-1] == self.dim, (
+            f"Engram dim {waves.shape[-1]} != cleanup dim {self.dim}; "
+            "store complex [M, dim/2] or real [M, dim] waves."
+        )
         waves = F.normalize(waves, p=2, dim=-1)
         if self.engrams.numel() == 0:
             self.engrams = waves

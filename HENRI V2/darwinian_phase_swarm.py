@@ -12,6 +12,7 @@ import torch.nn.functional as F
 import torch.fft as fft
 from product_clifford_product_kernel import ProductCliffordAlgebra3D
 from hopfield_cleanup import HopfieldActionDecoder
+from efe_planner import EFEPlanner
 
 # =========================================================================
 # I. HIGH-PERFORMANCE SCALE-FREE GRAPH GENERATOR
@@ -214,6 +215,42 @@ class HenriSwarmOrchestrator(nn.Module):
         self.syncytium = GapJunctionSwarmSyncytium(num_experts=num_experts, d_model=d_model, r_rank=r_rank)
         self.clifford = ProductCliffordAlgebra3D(num_blocks=num_blocks)
         self.decoder = HolographicActionDecoder(d_model=d_model, action_enum_class=action_enum_class)
+        # EFE action planner: scores top-k candidate action waves by Expected
+        # Free Energy (pragmatic surprise vs epistemic information gain) by
+        # propagating each through the unitary transition operator.
+        self.planner = EFEPlanner(num_blocks=num_blocks, d_model=d_model)
+        # Seed the planner's retrieval store with the decoder's action waves,
+        # flattened to real width d_model to match the planner's store.
+        action_real = torch.stack([
+            torch.view_as_real(self.decoder.get_action_wave(a)).reshape(-1)[:d_model]
+            for a in self.decoder.id_to_action.values()
+        ])
+        self.planner.cleanup.store_engrams(action_real)
+
+    def candidate_action_waves(self, top_k: int = 4):
+        """
+        Returns the top-k (action, action_wave) candidates from the decoder's
+        engram store, reshaped to [num_blocks, 8] Clifford waves.
+        """
+        waves = []
+        n = min(top_k, len(self.decoder.id_to_action))
+        for idx in range(n):
+            action = self.decoder.id_to_action[idx]
+            w = self.decoder.get_action_wave(action)  # complex [d_model]
+            w_real = torch.view_as_real(w).reshape(-1)[: self.d_model]
+            w_grid = w_real.view(self.num_blocks, 8)
+            w_grid = w_grid / (torch.norm(w_grid, p=2, dim=-1, keepdim=True) + 1e-9)
+            waves.append((action, w_grid))
+        return waves
+
+    def plan_action(self, active_wave: torch.Tensor, boundary_axioms: torch.Tensor, top_k: int = 4):
+        """
+        EFE action selection: score the top-k candidate actions by Expected
+        Free Energy and return (action, predicted_wave, score_table).
+        boundary_axioms: [N, num_blocks, 8] real waves.
+        """
+        candidates = self.candidate_action_waves(top_k=top_k)
+        return self.planner.select_action(active_wave, candidates, boundary_axioms)
 
 
     def compute_free_energy(self, active_wave: torch.Tensor, target_boundary: torch.Tensor, lambda_boundary: float = 1.0) -> torch.Tensor:
