@@ -228,10 +228,10 @@ class TimescaleZoneCStore(ZoneCStore):
 
         ids = [r[0] for r in rows]
         def _parse_sem(v):
-            if isinstance(v, str):
-                return np.fromstring(v.strip("[]"), sep=",", dtype=np.float32)
             if isinstance(v, (bytes, memoryview)):
-                return np.fromstring(bytes(v).decode().strip("[]"), sep=",", dtype=np.float32)
+                v = bytes(v).decode()
+            if isinstance(v, str):
+                return np.array([float(x) for x in v.strip("[]").split(",")], dtype=np.float32)
             return np.array(v, dtype=np.float32)
         sems = np.stack([_parse_sem(r[1]) for r in rows])
         waves = [r[2] for r in rows]
