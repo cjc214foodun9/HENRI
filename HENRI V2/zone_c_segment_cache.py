@@ -253,7 +253,7 @@ class TimescaleZoneCStore(ZoneCStore):
         sems_t = torch.from_numpy(sems)
         sems_t = sems_t / (torch.norm(sems_t, dim=-1, keepdim=True) + 1e-9)
         sim = sems_t @ sems_t.T
-        n = len(rows)
+        n = len(valid_idx)  # cluster over the filtered (decodable) rows only
         assigned = [False] * n
         clusters = []
         for i in range(n):
