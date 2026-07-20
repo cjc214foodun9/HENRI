@@ -97,6 +97,11 @@ class AdaptiveCreepController:
         Full pipeline: IDBD meta-update -> per-parameter alpha -> SwiftTD bound.
         delta: scalar Sagnac error for this step. raw_drift: -mu * grad F.
         """
+        # Lazy device sync: controllers are created before .to(device) moves the
+        # parent module, so migrate state on first drift call.
+        if self.idbd.beta.device != raw_drift.device:
+            self.idbd.beta = self.idbd.beta.to(raw_drift.device)
+            self.idbd.h = self.idbd.h.to(raw_drift.device)
         alpha = self.idbd.update(delta, raw_drift)
         drift = alpha * raw_drift
         return self.swifttd.apply(alpha, drift, self.idbd)
