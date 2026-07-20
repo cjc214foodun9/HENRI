@@ -13,6 +13,7 @@ import torch.fft as fft
 from product_clifford_product_kernel import ProductCliffordAlgebra3D
 from hopfield_cleanup import HopfieldActionDecoder
 from efe_planner import EFEPlanner
+from idbd_swifttd import AdaptiveCreepController
 
 # =========================================================================
 # I. HIGH-PERFORMANCE SCALE-FREE GRAPH GENERATOR
@@ -98,6 +99,16 @@ class GapJunctionSwarmSyncytium(nn.Module):
         inhibitory_indices = torch.randperm(num_experts)[:num_inhibitory]
         polarity[inhibitory_indices] = -1.0
         self.register_buffer("polarity", polarity)
+
+        # Per-expert adaptive step-size controllers (IDBD + SwiftTD) for the
+        # SGLD creep: one scalar step-size per expert keeps state tiny while
+        # letting stable experts crystallize and volatile ones stay plastic.
+        self.creep_ctrl_A = AdaptiveCreepController(
+            (num_experts, 1, 1), device=self.experts_A.device
+        )
+        self.creep_ctrl_B = AdaptiveCreepController(
+            (num_experts, 1, 1), device=self.experts_B.device
+        )
 
         self.apply_stiefel_retraction()
 
@@ -377,11 +388,20 @@ class HenriSwarmOrchestrator(nn.Module):
             # Boundary resonance drift w.r.t. A's projection geometry is folded
             # into the coupling term above; the scalar boundary delta still
             # drives temperature and gating.
-            drift_A = -mu * gA
-            drift_B = -mu * gB
+            raw_A = -mu * gA
+            raw_B = -mu * gB
             del gA, gB
             if active_wave.is_cuda:
                 torch.cuda.empty_cache()
+
+            # IDBD + SwiftTD: per-expert adaptive step-size, driven by each
+            # expert's drift norm as the feature signal. SwiftTD bounds the
+            # correction so no expert overshoots the error surface.
+            delta_scalar = float(sagnac_delta_tensor)
+            feat_A = raw_A.norm(dim=(1, 2), keepdim=False).view(-1, 1, 1)
+            feat_B = raw_B.norm(dim=(1, 2), keepdim=False).view(-1, 1, 1)
+            drift_A = self.syncytium.creep_ctrl_A.scaled_drift(delta_scalar, feat_A) * raw_A / (feat_A + 1e-12)
+            drift_B = self.syncytium.creep_ctrl_B.scaled_drift(delta_scalar, feat_B) * raw_B / (feat_B + 1e-12)
 
         with torch.no_grad():
             # Dale's-polarity modulated drift keeps excitatory/inhibitory sign structure

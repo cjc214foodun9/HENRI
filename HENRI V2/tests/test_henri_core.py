@@ -189,3 +189,41 @@ class TestEFEPlanner:
         I = torch.eye(8, dtype=torch.complex64, device=device)
         err = (prod - I).abs().max().item()
         assert err < 1e-3
+
+
+# ---------------------------------------------------------------------------
+# IDBD + SwiftTD adaptive step-sizes
+# ---------------------------------------------------------------------------
+
+class TestIDBDSwiftTD:
+    def test_alpha_grows_on_persistent_gradient(self, device):
+        from idbd_swifttd import AdaptiveCreepController
+        ctrl = AdaptiveCreepController((16, 1, 1), meta_theta=0.1, device=device)
+        consistent = torch.ones(16, 1, 1, device=device) * 0.01
+        for _ in range(100):
+            ctrl.scaled_drift(1.0, consistent)
+        assert ctrl.plasticity_stats()["max_alpha"] > 0.05
+
+    def test_alpha_stable_at_zero_error(self, device):
+        from idbd_swifttd import AdaptiveCreepController
+        ctrl = AdaptiveCreepController((16, 1, 1), device=device)
+        for _ in range(50):
+            ctrl.scaled_drift(0.0, torch.randn(16, 1, 1, device=device) * 0.01)
+        assert abs(ctrl.plasticity_stats()["mean_alpha"] - 0.05) < 1e-3
+
+    def test_swifttd_bounds_overshoot(self, device):
+        from idbd_swifttd import AdaptiveCreepController
+        ctrl = AdaptiveCreepController((16, 1, 1), device=device)
+        big = torch.ones(16, 1, 1, device=device) * 100.0
+        bounded = ctrl.scaled_drift(1.0, big)
+        assert bounded.abs().max().item() < big.abs().max().item()
+
+    def test_swarm_creep_uses_adaptive_stepsizes(self, orch, device):
+        wave = mk_wave((SCALE["num_blocks"], 8), device, 12)
+        target = mk_wave((SCALE["num_blocks"], 8), device, 13)
+        for _ in range(3):
+            orch.process_active_reasoning_step(wave, target, t_shock_max=torch.tensor(0.5, device=device))
+        # Controllers exist and hold finite per-expert step-sizes
+        for ctrl in (orch.syncytium.creep_ctrl_A, orch.syncytium.creep_ctrl_B):
+            stats = ctrl.plasticity_stats()
+            assert math.isfinite(stats["mean_alpha"]) and stats["mean_alpha"] > 0
