@@ -84,7 +84,7 @@ class ViscoelasticOptimizer:
     def apply_creep(self, model: WaveJEPA, predicted: torch.Tensor, target: torch.Tensor):
         """
         In-situ gradient update during the live session to adapt to physical drift.
-        Equation: dW/dt = -\mu \nabla_{W} F
+        Equation: dW/dt = -mu * grad_W F
         """
         # Complex MSE acts as proxy for Variational Free Energy
         loss = torch.mean(torch.abs(predicted - target)**2)
