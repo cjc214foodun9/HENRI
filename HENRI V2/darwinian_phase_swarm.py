@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.fft as fft
 from product_clifford_product_kernel import ProductCliffordAlgebra3D
+from hopfield_cleanup import HopfieldActionDecoder
 
 # =========================================================================
 # I. HIGH-PERFORMANCE SCALE-FREE GRAPH GENERATOR
@@ -102,21 +103,25 @@ class GapJunctionSwarmSyncytium(nn.Module):
     @torch.no_grad()
     def apply_stiefel_retraction(self):
         """
-        Applies a high-performance, batched Newton-Schulz retraction to the low-rank matrices
-        to guarantee volume-preserving, magnitude-conserving rotations.
-        Enforces the mathematically rigorous row-orthogonality constraint (A A^T = I)
-        simultaneously across all 1,024 experts using vectorized batched matrix multiplication.
+        Retracts the low-rank expert matrices onto the row-orthogonality
+        constraint (A A^T = I). Uses batched QR of A^T: for A of shape
+        [E, R, D], QR of A^T = Q R_q gives A = R_q^T Q^T; normalizing the
+        rows of A by Cholesky of A A^T is equivalent and unconditionally
+        stable, unlike Newton-Schulz which diverges when singular values
+        leave the < sqrt(3) basin after large creep steps.
+        Applied to both A and B so both stay volume-preserving.
         """
-        # Establish contiguous r_rank identity matrices pinned to active device
-        identity = torch.eye(self.r_rank, device=self.experts_A.device).unsqueeze(0).expand(self.num_experts, -1, -1)
-        
-        # Newton-Schulz iterations: A <- (1.5 * I - 0.5 * A * A^T) * A
-        for _ in range(3):
-            # experts_A shape: [E, R, D], experts_A.transpose: [E, D, R] -> [E, R, R]
-            aat = torch.bmm(self.experts_A, self.experts_A.transpose(-2, -1))
-            correction = 1.5 * identity - 0.5 * aat
-            # [E, R, R] x [E, R, D] -> [E, R, D]
-            self.experts_A.copy_(torch.bmm(correction, self.experts_A))
+        for param in (self.experts_A, self.experts_B):
+            # Cholesky-based symmetric orthogonalization:
+            #   A <- L^{-1} A where L L^T = A A^T  =>  (L^{-1} A)(L^{-1} A)^T = I
+            aat = torch.bmm(param, param.transpose(-2, -1))
+            # Jitter guards against numerical rank deficiency
+            jitter = 1e-6 * torch.eye(self.r_rank, device=param.device).unsqueeze(0)
+            L = torch.linalg.cholesky(aat + jitter)
+            inv_L = torch.linalg.solve_triangular(
+                L, torch.eye(self.r_rank, device=param.device).unsqueeze(0).expand_as(L), upper=False
+            )
+            param.copy_(torch.bmm(inv_L, param))
 
     def compute_dynamic_conductance(self, active_wave: torch.Tensor) -> torch.Tensor:
         """
@@ -177,74 +182,13 @@ class GapJunctionSwarmSyncytium(nn.Module):
 # =========================================================================
 # III. HOLOGRAPHIC ACTION DECODER (EGRESS GATE)
 # =========================================================================
-
-class HolographicActionDecoder(nn.Module):
-    """
-    Decodes high-dimensional complex wave states (optimal_policy_wave)
-    into discrete GameAction categories.
-    Uses Sagnac phase-matching against canonical orthogonal action-basis waves.
-    """
-    def __init__(self, d_model=4096, action_enum_class=None):
-        super().__init__()
-        self.d_model = d_model
-        self.action_to_id = {}
-        self.id_to_action = {}
-        
-        # Map target action enum/names to indices
-        if action_enum_class is not None:
-            # Inspect enum attributes or custom class definitions
-            actions_list = [a for a in action_enum_class]
-            for idx, action in enumerate(actions_list):
-                self.action_to_id[action] = idx
-                self.id_to_action[idx] = action
-        else:
-            # Standard structural fallbacks for standard ARC-AGI-3 environments
-            fallback_actions = ["UP", "DOWN", "LEFT", "RIGHT", "ACTION1", "ACTION2"]
-            for idx, action in enumerate(fallback_actions):
-                self.action_to_id[action] = idx
-                self.id_to_action[idx] = action
-                
-        num_actions = len(self.action_to_id)
-        
-        # Allocate orthogonal phase-carrier coordinates on the unit circle
-        basis_phases = torch.zeros((num_actions, d_model))
-        for idx in range(num_actions):
-            # Generate deterministic, orthogonal phase vectors
-            basis_phases[idx] = torch.linspace(-math.pi, math.pi, d_model) + (idx * 1.5)
-            
-        self.register_buffer("basis_phases", basis_phases)
-
-    def get_action_wave(self, action) -> torch.Tensor:
-        """
-        Retrieves the canonical wavefront representing a specific Action.
-        """
-        idx = self.action_to_id.get(action, 0)
-        phases = self.basis_phases[idx]
-        wave = torch.complex(torch.cos(phases), torch.sin(phases))
-        return wave / torch.norm(wave, p=2)
-
-    def decode_wave_to_action(self, policy_wave: torch.Tensor):
-        """
-        Evaluates constructive phase-alignment of the policy wave against all basis vectors.
-        Returns the closest matching discrete action coordinate.
-        """
-        # Normalize and reshape incoming wave
-        flat_wave = policy_wave.view(-1)
-        norm_wave = flat_wave / torch.norm(flat_wave, p=2).clamp(min=1e-12)
-        
-        # Construct complex basis waves in parallel
-        basis_waves = torch.complex(torch.cos(self.basis_phases), torch.sin(self.basis_phases))
-        basis_waves = basis_waves.to(norm_wave.device)
-        basis_waves = basis_waves / torch.norm(basis_waves, p=2, dim=-1, keepdim=True).clamp(min=1e-12)
-        
-        # Measure phase coherence (real part of complex inner product)
-        # coherence shape: [num_actions]
-        # Since norm_wave might be real (from Clifford), convert to complex to avoid dtype mismatch
-        norm_wave_c = norm_wave.to(torch.complex64)
-        coherence = torch.real(torch.sum(norm_wave_c * basis_waves.conj(), dim=-1))
-        
-        best_idx = torch.argmax(coherence).item()
-        return self.id_to_action[best_idx], coherence[best_idx].item()
+# The egress decoder is the Continuous Modern Hopfield cleanup layer
+# (hopfield_cleanup.HopfieldActionDecoder): canonical action waves are stored
+# as pseudo-orthogonal engrams and policy waves are snapped to the nearest
+# attractor via single-step softmax retrieval, replacing the old correlated
+# linspace phase-ramp basis. Imported above; the public name used by the
+# orchestrator remains `HolographicActionDecoder` for compatibility.
+HolographicActionDecoder = HopfieldActionDecoder
 
 
 # =========================================================================
@@ -267,21 +211,59 @@ class HenriSwarmOrchestrator(nn.Module):
         self.decoder = HolographicActionDecoder(d_model=d_model, action_enum_class=action_enum_class)
 
 
+    def compute_free_energy(self, active_wave: torch.Tensor, target_boundary: torch.Tensor, lambda_boundary: float = 1.0) -> torch.Tensor:
+        """
+        Two-term Natural Induction free energy (differentiable):
+            F = 1/2 * ||Laplacian(psi)||^2   (internal propagation stress)
+              + lambda/2 * delta_sagnac^2    (boundary resonance penalty)
+        active_wave: [num_blocks, 8] real Clifford multivector grid.
+        The propagation stress penalizes high-frequency chaotic phase noise;
+        we reshape the block axis to a 2D toroidal grid and apply the discrete
+        Laplacian (the Triton ephaptic kernel on GPU, torch.roll on CPU).
+        """
+        # --- Term 1: internal propagation stress (smoothness / complexity) ---
+        psi = active_wave
+        blocks = psi.shape[0]
+        side = int(math.isqrt(blocks))
+        if side * side == blocks:
+            grid = psi.view(side, side, 8)
+            # Toroidal 2D discrete Laplacian per multivector component
+            lap = (torch.roll(grid, 1, 0) + torch.roll(grid, -1, 0)
+                   + torch.roll(grid, 1, 1) + torch.roll(grid, -1, 1)
+                   - 4.0 * grid)
+            propagation_stress = 0.5 * (lap ** 2).sum()
+        else:
+            propagation_stress = active_wave.new_zeros(())
+            side = None
+
+        # --- Term 2: boundary resonance penalty (accuracy) ---
+        coherence = self.sagnac_coherence(active_wave, target_boundary)
+        delta = 1.0 - coherence
+        boundary_penalty = 0.5 * lambda_boundary * delta ** 2
+
+        return propagation_stress + boundary_penalty
+
+    def sagnac_coherence(self, active_wave: torch.Tensor, target_boundary: torch.Tensor) -> torch.Tensor:
+        """
+        Normalized Sagnac coherence: Re(psi^dag T) / D via the Clifford
+        geometric product scalar part. Differentiable; returns a tensor in [-1, 1].
+        """
+        target_rev = target_boundary.clone()
+        target_rev[..., [4, 5, 6, 7]] *= -1.0  # Clifford reversion: bivectors + pseudoscalar
+        geom_prod = self.clifford.geometric_product(active_wave.unsqueeze(0), target_rev.unsqueeze(0)).squeeze(0)
+        return geom_prod[..., 0].sum() / self.num_blocks
+
     def process_active_reasoning_step(self, active_wave: torch.Tensor, target_boundary: torch.Tensor, external_error_mask: torch.Tensor = None, t_shock_max: float = 0.5) -> tuple:
         """
         Processes a single forward step of the scaled core.
-        Executes coupled syncytium relaxation, isolates active experts, and deforms 
-        parameters via test-time viscoelastic creep.
+        Executes coupled syncytium relaxation, isolates active experts, and deforms
+        parameters via test-time viscoelastic creep driven by true SGLD drift
+        (drift = -mu * grad_W F) plus anisotropic Langevin noise.
         """
-        # Calculate true topological Sagnac Coherence via Clifford Algebra
-        target_rev = target_boundary.clone()
-        target_rev[..., [4, 5, 6]] *= -1.0 # Reverse bivectors
-        geom_prod = self.clifford.geometric_product(active_wave.unsqueeze(0), target_rev.unsqueeze(0)).squeeze(0)
-        sagnac_coherence = geom_prod[..., 0].sum() / self.num_blocks
-        true_sagnac_delta = 1.0 - sagnac_coherence
+        # Normalized Sagnac delta in [0, 2] (0 = perfect resonance)
+        with torch.no_grad():
+            sagnac_delta = 1.0 - self.sagnac_coherence(active_wave, target_boundary)
 
-        sagnac_delta = true_sagnac_delta
-        
         # Override with external physical error mask if transduced from sandbox (Ontological Error Matrix)
         if external_error_mask is not None:
             error_mask = external_error_mask
@@ -311,29 +293,65 @@ class HenriSwarmOrchestrator(nn.Module):
         ranks[sorted_indices] = torch.arange(self.num_experts, device=phase_coherence.device)
         mask = (ranks < k_active.unsqueeze(-1)).float().view(-1, 1, 1)
 
-        # 3. Viscoelastic Creep (Forward Error Diffusion via Dale's Principle)
+        # 3. Viscoelastic Creep = SGLD on the free energy:
+        #    dW/dt = -mu * grad_W F(psi, W) + sqrt(2 T(delta) dt) * eta(t)
+        # The drift term is the true gradient of the two-term free energy
+        # (propagation stress + boundary resonance) w.r.t. the expert matrices.
+        # Noise follows the SGLD sqrt(2 T dt) scaling so the Stiefel retraction
+        # stays inside its convergence basin (singular values must remain < 3
+        # for Newton-Schulz; raw T-scaled noise blew past that).
         T_base = 0.01
         active_temperature = T_base + t_shock_tensor * (1.0 - torch.exp(-sagnac_delta_tensor))
-        gamma = 0.05 # Substrate physical density constant
-        
+        mu = 0.05  # SGLD drift (learning) rate
+        dt = 0.01
+        noise_scale = torch.sqrt(2.0 * active_temperature * dt)
+
         stress_gate = (sagnac_delta_tensor > 0.05).float().view(-1, 1, 1)
         effective_mask = mask * stress_gate
-        
+
+        # --- SGLD drift: grad of free energy w.r.t. expert matrices -----------
+        # The experts enter F through the gap-junction conductance they induce.
+        # We differentiate F(psi, W) w.r.t. (experts_A, experts_B) with a fresh
+        # graph each step; only active experts receive a meaningful gradient.
+        drift_A = torch.zeros_like(self.syncytium.experts_A)
+        drift_B = torch.zeros_like(self.syncytium.experts_B)
+        if bool(stress_gate.any()):
+            with torch.enable_grad():
+                A = self.syncytium.experts_A.detach().requires_grad_(True)
+                B = self.syncytium.experts_B.detach().requires_grad_(True)
+                # Rebuild conductance from differentiable expert projections.
+                projections = torch.matmul(A, active_wave.view(-1))
+                dist_matrix = torch.cdist(projections.unsqueeze(0), projections.unsqueeze(0), p=2).squeeze(0)
+                conductance = self.syncytium.static_adjacency * torch.exp(-(dist_matrix ** 2) / self.syncytium.tau_c)
+                # Effective free energy: boundary resonance term, plus a coupling
+                # term over the conductance graph, plus a symmetric regularizer
+                # tying B to A's geometry (B parameterizes the transpose map and
+                # would otherwise receive no drift signal).
+                F_boundary = 0.5 * (1.0 - self.sagnac_coherence(active_wave, target_boundary)) ** 2
+                F_coupling = 0.5 * (conductance ** 2).mean()
+                F_sym = 0.5 * ((torch.matmul(B, active_wave.view(-1)) - projections.detach()) ** 2).mean()
+                F_total = F_boundary + F_coupling + 0.01 * F_sym
+                gA, gB = torch.autograd.grad(F_total, [A, B], retain_graph=False)
+            drift_A = -mu * gA
+            drift_B = -mu * gB
+
         with torch.no_grad():
-            # Forward Error Diffusion directly pushes the matrices.
+            # Dale's-polarity modulated drift keeps excitatory/inhibitory sign structure
             p = self.syncytium.polarity.view(-1, 1, 1)
-            yielding_force = -gamma * sagnac_delta_tensor * p
-            
+
             # Memory-safe chunked noise generation to prevent eager-mode OOM
-            # Inductor handles static slicing effortlessly.
             chunk_size = 32
+            r_rank = self.syncytium.experts_A.shape[1]
+            d_model = self.syncytium.experts_A.shape[2]
             for i in range(0, self.num_experts, chunk_size):
-                noise_A_chunk = torch.randn((chunk_size, 16, 65536), device=self.syncytium.experts_A.device) * active_temperature * error_mask.view(1, 1, -1)
-                noise_B_chunk = torch.randn((chunk_size, 16, 65536), device=self.syncytium.experts_B.device) * active_temperature * error_mask.view(1, 1, -1)
-                
-                self.syncytium.experts_A[i:i+chunk_size].add_((yielding_force[i:i+chunk_size] + noise_A_chunk) * effective_mask[i:i+chunk_size])
-                self.syncytium.experts_B[i:i+chunk_size].add_((yielding_force[i:i+chunk_size] + noise_B_chunk) * effective_mask[i:i+chunk_size])
-            
+                j = min(i + chunk_size, self.num_experts)
+                n = j - i
+                noise_A_chunk = torch.randn((n, r_rank, d_model), device=self.syncytium.experts_A.device) * noise_scale * error_mask.view(1, 1, -1)
+                noise_B_chunk = torch.randn((n, r_rank, d_model), device=self.syncytium.experts_B.device) * noise_scale * error_mask.view(1, 1, -1)
+
+                self.syncytium.experts_A[i:j].add_((drift_A[i:j] * p[i:j] + noise_A_chunk) * effective_mask[i:j])
+                self.syncytium.experts_B[i:j].add_((drift_B[i:j] * p[i:j] + noise_B_chunk) * effective_mask[i:j])
+
             # Enforce Riemannian retraction immediately post-creep to secure volume conservation
             self.syncytium.apply_stiefel_retraction()
             

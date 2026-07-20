@@ -61,12 +61,15 @@ class SagnacInterferometer:
 
     def verify(self, predicted_wave: torch.Tensor, empirical_wave: torch.Tensor) -> Tuple[bool, torch.Tensor]:
         """
-        Measures constructive vs destructive interference.
-        Returns boolean approval and the scalar energy delta.
+        Normalized Sagnac coherence: delta = 1 - Re(<pred, emp>) / (||pred|| ||emp||).
+        Bounded in [0, 2]; 0 = perfect constructive resonance.
         """
-        # Calculate L2 norm of the complex difference (phase error)
-        phase_delta = torch.norm(predicted_wave - empirical_wave, p=2, dim=-1)
-        
+        p = predicted_wave.flatten()
+        e = empirical_wave.flatten()
+        inner = torch.real(torch.vdot(p, e))
+        denom = (torch.norm(p) * torch.norm(e)).clamp(min=1e-12)
+        phase_delta = 1.0 - inner / denom
+
         # If delta is small, waves resonate (True). If large, they cancel (False).
         is_resonant = (phase_delta < self.epsilon).item()
         return is_resonant, phase_delta

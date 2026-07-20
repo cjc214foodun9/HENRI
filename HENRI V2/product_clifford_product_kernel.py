@@ -77,9 +77,12 @@ class ProductCliffordAlgebra3D(nn.Module):
         # 1. Compute R * State
         half_transformed = self.geometric_product(rotor_wave, state_wave)
         
-        # 2. Compute rotor reversion R_reverse: reverse the sign of bivectors (indices 4, 5, 6)
+        # 2. Compute rotor reversion R_reverse: reverse the sign of bivectors
+        #    (grades 2: indices 4, 5, 6) and the trivector pseudoscalar
+        #    (grade 3: index 7). Reversion of grade-k blades carries sign
+        #    (-1)^{k(k-1)/2}: vectors keep sign, bivectors and trivector flip.
         rotor_reversion = rotor_wave.clone()
-        rotor_reversion[:, :, [4, 5, 6]] *= -1.0
+        rotor_reversion[:, :, [4, 5, 6, 7]] *= -1.0
         
         # 3. Compute (R * State) * R_reverse
         transformed_state = self.geometric_product(half_transformed, rotor_reversion)
