@@ -35,28 +35,56 @@ class UnitaryWaveTransition(nn.Module):
     """
     Action-conditioned forward dynamics in latent wave space.
 
-    predicted = U * (state ⊗ action), where ⊗ is circular convolution
-    (FHRR binding) and U is a Stiefel-constrained complex matrix acting on
-    the flattened wave. To keep memory tractable at d=65536, U is factored
-    as a block-diagonal operator over the [num_blocks, 8] Clifford grid:
-    one 8x8 complex matrix per block, shared structure via a low-rank core.
+    Low-rank coupled operator (ephaptic field + gap-junction residual):
+
+        predicted = V (W^dag fused)   [global field channel, rank r]
+                  + R_block fused     [local block-diagonal residual]
+
+    The global field channel integrates the whole wave into an r-dim
+    bottleneck (W^dag: r x d) and broadcasts it back (V: d x r), giving every
+    block access to every other block's state — the cross-block coupling a
+    pure block-diagonal operator structurally cannot represent. The local
+    residual R_block preserves the per-block unitary wiring.
+
+    Both channels keep Stiefel/unitary structure: V is column-semi-unitary,
+    R_block is per-block unitary, so predictions stay near the manifold.
+    Sample complexity to identify the field channel is O(r), independent of
+    d — learnable online within a single env episode.
     """
 
-    def __init__(self, num_blocks: int = 8192, block_dim: int = 8):
+    def __init__(self, num_blocks: int = 8192, block_dim: int = 8, rank: int = 64):
         super().__init__()
         self.num_blocks = num_blocks
         self.block_dim = block_dim
-        # Per-block complex transition matrices, initialized near-unitary
+        self.rank = rank
+        self.d = num_blocks * block_dim
+
+        # Global field channel: V [d, r] and W [d, r], near-semi-unitary.
+        scale = 1.0 / math.sqrt(self.d)
+        self.field_V = nn.Parameter(torch.randn(self.d, rank) * scale)
+        self.field_W = nn.Parameter(torch.randn(self.d, rank) * scale)
+
+        # Local residual: per-block near-unitary 8x8 matrices (the gap wiring).
         real = torch.eye(block_dim) + 0.01 * torch.randn(num_blocks, block_dim, block_dim)
         imag = 0.01 * torch.randn(num_blocks, block_dim, block_dim)
-        self.transition = nn.Parameter(torch.complex(real, imag))
+        self.block_residual = nn.Parameter(torch.complex(real, imag))
+
         self._retract()
 
     @torch.no_grad()
     def _retract(self):
-        """Project each block matrix toward unitarity via QR of the complex matrix."""
-        Q, _ = torch.linalg.qr(self.transition)
-        self.transition.copy_(Q)
+        """Project parameters toward their manifold constraints."""
+        # V -> column-orthonormal (semi-unitary): QR of the [d, r] real matrix.
+        Qv, _ = torch.linalg.qr(self.field_V, mode="reduced")
+        self.field_V.copy_(Qv)
+        # Residual -> per-block unitary.
+        Qb, _ = torch.linalg.qr(self.block_residual)
+        self.block_residual.copy_(Qb)
+
+    # Backward-compat alias used by EFEPlanner tests / training hooks.
+    @property
+    def transition(self):
+        return self.block_residual
 
     def bind(self, state_wave: torch.Tensor, action_wave: torch.Tensor) -> torch.Tensor:
         """
@@ -79,10 +107,17 @@ class UnitaryWaveTransition(nn.Module):
         Returns predicted next wave [num_blocks, 8] real, unit-norm per block.
         """
         fused = self.bind(state_wave, action_wave)  # [blocks, 8] complex
-        # Block-diagonal unitary transition: einsum over per-block 8x8 matrices
-        predicted = torch.einsum('bij,bj->bi', self.transition, fused)
-        predicted_real = torch.cat([predicted.real, predicted.imag], dim=-1)[..., :8] \
-            if predicted.shape[-1] != 8 else predicted.real
+
+        # Local gap-junction residual: per-block unitary transform.
+        local = torch.einsum('bij,bj->bi', self.block_residual, fused)  # complex [B, 8]
+
+        # Global ephaptic field channel: integrate then broadcast (real part
+        # of the fused wave drives the field; field adds a real global mode).
+        fused_flat = fused.real.reshape(-1)  # [d]
+        field_mode = self.field_W.T @ fused_flat          # [r]
+        field = (self.field_V @ field_mode).view(self.num_blocks, self.block_dim)
+
+        predicted_real = local.real + field
         # Normalize per block to stay on the manifold
         out = predicted_real / (torch.norm(predicted_real, p=2, dim=-1, keepdim=True) + 1e-9)
         return out
@@ -243,9 +278,13 @@ class EFEPlanner(nn.Module):
             inner = torch.dot(p, o)
             denom = (torch.norm(p) * torch.norm(o)).clamp(min=1e-12)
             loss = 1.0 - inner / denom  # normalized Sagnac delta, differentiable
-            g = torch.autograd.grad(loss, self.transition.transition)[0]
+            params = [self.transition.field_V, self.transition.field_W,
+                      self.transition.block_residual]
+            gV, gW, gR = torch.autograd.grad(loss, params)
         with torch.no_grad():
-            self.transition.transition -= lr * g
+            self.transition.field_V -= lr * gV
+            self.transition.field_W -= lr * gW
+            self.transition.block_residual -= lr * gR
             self.transition._retract()
         return float(loss.detach())
 

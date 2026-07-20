@@ -184,11 +184,27 @@ class TestEFEPlanner:
     def test_transition_unitarity(self, device):
         nb = SCALE["num_blocks"]
         t = UnitaryWaveTransition(num_blocks=nb).to(device)
-        # Each block matrix should be (near-)unitary after retraction
-        prod = torch.matmul(t.transition, t.transition.mH)
+        # Residual: per-block unitary
+        prod = torch.matmul(t.block_residual, t.block_residual.mH)
         I = torch.eye(8, dtype=torch.complex64, device=device)
-        err = (prod - I).abs().max().item()
-        assert err < 1e-3
+        assert (prod - I).abs().max().item() < 1e-3
+        # Field V: column-semi-unitary
+        V = t.field_V
+        gram = V.T @ V
+        Iv = torch.eye(t.rank, device=device)
+        assert (gram - Iv).abs().max().item() < 1e-3
+
+    def test_cross_block_coupling(self, device):
+        nb = SCALE["num_blocks"]
+        t = UnitaryWaveTransition(num_blocks=nb).to(device)
+        s1 = mk_wave((nb, 8), device, 40)
+        a = mk_wave((nb, 8), device, 41)
+        s2 = s1.clone()
+        s2[0] = torch.randn(8, device=device)
+        s2[0] = s2[0] / torch.norm(s2[0])
+        o1, o2 = t(s1, a), t(s2, a)
+        diff = (o1[min(5, nb - 1)] - o2[min(5, nb - 1)]).abs().max().item()
+        assert diff > 1e-6, "no cross-block coupling (block-diagonal regression)"
 
 
 # ---------------------------------------------------------------------------
