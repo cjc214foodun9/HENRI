@@ -234,7 +234,20 @@ class TimescaleZoneCStore(ZoneCStore):
                 return np.array([float(x) for x in v.strip("[]").split(",")], dtype=np.float32)
             return np.array(v, dtype=np.float32)
         sems = np.stack([_parse_sem(r[1]) for r in rows])
-        waves = [r[2] for r in rows]
+
+        # Only rows whose bytea payload decodes cleanly to the expected wave
+        # shape participate in consolidation; legacy/corrupt rows are skipped
+        # (left untouched) rather than aborting the whole job.
+        expected_bytes = self.num_blocks * 8 * 4
+        valid_idx = [i for i, r in enumerate(rows) if len(bytes(r[2])) == expected_bytes]
+        skipped = len(rows) - len(valid_idx)
+        if skipped:
+            print(f"[T5] skipping {skipped} undecodable legacy rows")
+        if len(valid_idx) < 2:
+            return {"clusters": 0, "merged": 0, "kept": len(rows), "skipped": skipped}
+        ids = [ids[i] for i in valid_idx]
+        sems = sems[valid_idx]
+        waves = [bytes(r[2]) for r in [rows[i] for i in valid_idx]]
 
         # Greedy cosine clustering over semantic indices
         sems_t = torch.from_numpy(sems)
@@ -253,7 +266,8 @@ class TimescaleZoneCStore(ZoneCStore):
 
         merged = sum(len(c) - 1 for c in clusters if len(c) > 1)
         if dry_run:
-            return {"clusters": len(clusters), "merged": merged, "kept": n - merged}
+            return {"clusters": len(clusters), "merged": merged,
+                    "kept": len(rows) - merged, "skipped": skipped}
 
         with self._connect() as conn:
             with conn.cursor() as cur:
@@ -280,7 +294,8 @@ class TimescaleZoneCStore(ZoneCStore):
                         (drop_ids,),
                     )
             conn.commit()
-        return {"clusters": len(clusters), "merged": merged, "kept": n - merged}
+        return {"clusters": len(clusters), "merged": merged,
+                "kept": len(rows) - merged, "skipped": skipped}
 
 
 # ---------------------------------------------------------------------------
