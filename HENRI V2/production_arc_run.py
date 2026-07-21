@@ -157,6 +157,14 @@ def run():
         K_HORIZON = 5
         reset_buffer = []
 
+        # ABLATION: T1-hold isolation (ABLATE_T1_HOLD=1). Holds the deferred
+        # transition update after every RESET (curation ON) while the entire
+        # retroactive apparatus is neutered (no buffer, no nu judgment, no
+        # replays). If RESET compresses to ~20% again, training-set curation
+        # is confirmed as the driver and the retroactive machinery reduces to
+        # one line: "don't train on reset transitions."
+        ABLATE_T1_HOLD = os.environ.get("ABLATE_T1_HOLD", "0") == "1"
+
         def resolve_reset(entry, nu, current_step):
             """Retroactively assign valence to a buffered RESET transition."""
             entry["resolved"] = True
@@ -213,7 +221,8 @@ def run():
             # an unjudged reset trajectory.
             transition_loss = None
             if (train_ctx is not None and train_ctx["action_wave"] is not None
-                    and not train_ctx.get("pending_reset")):
+                    and not train_ctx.get("pending_reset")
+                    and not train_ctx.get("skip_training")):
                 # NL Level 1 (fast): surprise-modulated per-step SGLD, now
                 # valence-gated (Wire B planner-side: success crystallizes,
                 # failure stays plastic but refuses to consolidate).
@@ -345,11 +354,14 @@ def run():
                     None,
                 ),
                 "pending_reset": game_action.name == "RESET",
+                # Ablation flag: hold the deferred T1 update after a RESET
+                # (curation) without any retroactive judgment machinery.
+                "skip_training": ABLATE_T1_HOLD and game_action.name == "RESET",
             }
             # Buffer the RESET for retroactive judgment: store the triple
             # (state, action_wave, predicted outcome). The observed next wave
             # is filled in on the NEXT loop iteration before resolution.
-            if game_action.name == "RESET":
+            if game_action.name == "RESET" and not ABLATE_T1_HOLD:
                 reset_buffer.append({
                     "step": step,
                     "state": state_wave.detach(),
