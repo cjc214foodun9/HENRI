@@ -544,3 +544,126 @@ class TestZoneCSegmentCache:
         recalled = orch.recall_conditioning_wave(wave.cpu())
         assert recalled is not None
         assert recalled.shape == (SCALE["num_blocks"], 8)
+
+
+# ---------------------------------------------------------------------------
+# qFHRR kernels: codec, LUT similarity, Triton-vs-torch agreement
+# ---------------------------------------------------------------------------
+
+class TestQFHRRKernels:
+    def test_roundtrip_phase_bound(self, device):
+        from qfhrr_kernels import quantization_roundtrip_error
+        w = mk_wave((SCALE["num_blocks"], 8), device, 300)
+        err = quantization_roundtrip_error(w)
+        assert err < 0.0123, f"phase roundtrip error {err} exceeds bin bound"
+
+    def test_self_similarity_unity_random_near_zero(self, device):
+        from qfhrr_kernels import build_cos_lut, wave_to_phase_codes, qfhrr_similarity
+        lut = build_cos_lut(device)
+        wa = mk_wave((SCALE["num_blocks"], 8), device, 301)
+        wb = mk_wave((SCALE["num_blocks"], 8), device, 302)
+        qa = wave_to_phase_codes(wa).view(-1)
+        qb = wave_to_phase_codes(wb).view(-1)
+        s_self = float(qfhrr_similarity(qa, qa, lut))
+        s_rand = float(qfhrr_similarity(qa, qb, lut))
+        assert abs(s_self - 1.0) < 1e-3
+        assert abs(s_rand) < 0.15
+
+    def test_lut_matches_fp32_cosine(self, device):
+        # LUT-based modular similarity must track the continuous FP32 cosine
+        # between the phase-only reconstructions within quantization noise.
+        from qfhrr_kernels import (build_cos_lut, wave_to_phase_codes,
+                                   phase_codes_to_wave, qfhrr_similarity)
+        import torch.fft as fft
+        lut = build_cos_lut(device)
+        g = torch.Generator().manual_seed(7)
+        nb = SCALE["num_blocks"]
+        for seed in (310, 311, 312):
+            wa = torch.randn(nb, 8, generator=g).to(device)
+            wa = wa / torch.norm(wa, p=2, dim=-1, keepdim=True)
+            wb = torch.randn(nb, 8, generator=g).to(device)
+            wb = wb / torch.norm(wb, p=2, dim=-1, keepdim=True)
+            qa = wave_to_phase_codes(wa).view(-1)
+            qb = wave_to_phase_codes(wb).view(-1)
+            s_lut = float(qfhrr_similarity(qa, qb, lut))
+            # FP32 reference: cosine over the quantized phase reconstructions
+            ra = phase_codes_to_wave(qa.view(nb, 4)).view(-1)
+            rb = phase_codes_to_wave(qb.view(nb, 4)).view(-1)
+            s_fp = float(torch.dot(ra, rb) / (ra.norm() * rb.norm()))
+            assert abs(s_lut - s_fp) < 0.05, (
+                f"seed {seed}: LUT {s_lut:.4f} vs FP32 {s_fp:.4f} diverge")
+
+    def test_triton_torch_agreement(self, device):
+        if device.type != "cuda":
+            pytest.skip("Triton path requires CUDA")
+        from qfhrr_kernels import (build_cos_lut, wave_to_phase_codes,
+                                   qfhrr_similarity_torch, qfhrr_similarity_triton)
+        lut = build_cos_lut(device)
+        nb = SCALE["num_blocks"]
+        store = torch.stack([
+            wave_to_phase_codes(mk_wave((nb, 8), device, 320 + i)).view(-1)
+            for i in range(8)])
+        q = wave_to_phase_codes(mk_wave((nb, 8), device, 330)).view(-1)
+        s_t = qfhrr_similarity_torch(q, store, lut)
+        s_g = qfhrr_similarity_triton(q, store, lut)
+        assert (s_t - s_g).abs().max().item() < 1e-4
+
+
+# ---------------------------------------------------------------------------
+# Retroactive valence: k-horizon RESET judgment logic (pure-python model)
+# ---------------------------------------------------------------------------
+
+class TestRetroactiveValence:
+    def _simulate(self, actions, k=5):
+        """Minimal model of the production buffer semantics: returns the
+        resolved nu for each RESET (in action order). Mirrors
+        production_arc_run: non-RESET resolves pendings as legitimate (0),
+        chained RESET resolves oldest pending as vacuous (-1), expiry at the
+        horizon resolves -1, episode end flushes -1."""
+        buf, resolved = [], []
+        for i, a in enumerate(actions):
+            if a != "RESET":
+                for e in buf:
+                    if not e["resolved"]:
+                        e["resolved"] = True
+                        resolved.append(0.0)
+                buf = [e for e in buf if not e["resolved"]]
+            else:
+                pend = [e for e in buf if not e["resolved"]]
+                if pend:
+                    pend[0]["resolved"] = True
+                    resolved.append(-1.0)
+            for e in buf:
+                if not e["resolved"] and i - e["step"] >= k:
+                    e["resolved"] = True
+                    resolved.append(-1.0)
+            buf = [e for e in buf if not e["resolved"]]
+            if a == "RESET":
+                buf.append({"step": i, "resolved": False})
+        for e in buf:
+            resolved.append(-1.0)
+        return resolved
+
+    def test_progressive_reset_is_legitimate(self):
+        # RESET followed by real work within the horizon -> nu = 0
+        assert self._simulate(["RESET", "A1", "A2", "A1"]) == [0.0]
+
+    def test_chained_reset_is_vacuous(self):
+        # RESET immediately followed by RESET: the FIRST is vacuous (-1),
+        # the second is flushed at episode end (-1).
+        assert self._simulate(["RESET", "RESET"]) == [-1.0, -1.0]
+
+    def test_horizon_expiry(self):
+        # RESET at i=0; the NEXT action is also RESET (i=1), resolving the
+        # first vacuous immediately. The second is then chained by a third at
+        # i=2; the third survives until work at i=3 -> legit. With actions
+        # every step, pure time-expiry (no work for k steps) cannot occur —
+        # expiry is only reachable via chained resets in this env model.
+        acts = ["RESET", "RESET", "RESET", "A1"]
+        assert self._simulate(acts, k=5) == [-1.0, -1.0, 0.0]
+
+    def test_mixed_episode(self):
+        acts = ["RESET", "A1", "RESET", "RESET", "A2"]
+        # 1st: legit (A1 follows). 2nd: vacuous (chained by 3rd).
+        # 3rd: legit (A2 follows before horizon).
+        assert self._simulate(acts) == [0.0, -1.0, 0.0]

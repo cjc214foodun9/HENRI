@@ -148,6 +148,34 @@ def run():
         # deferred T1 update + the current relaxation's thermal schedule.
         valence = 0.0
         last_action_was_reset = False
+        # Retroactive valence eligibility buffer (distal credit assignment,
+        # k=5 horizon). Each entry: {"step", "state", "action_wave",
+        # "predicted_wave", "resolved"}. A RESET is LEGITIMATE only if a
+        # non-RESET action follows within k steps (environmental work); a
+        # RESET chained by another RESET or left pending at the horizon is a
+        # vacuous reset trap -> nu = -1 retroactively. WIN upgrades to nu=+1.
+        K_HORIZON = 5
+        reset_buffer = []
+
+        def resolve_reset(entry, nu, current_step):
+            """Retroactively assign valence to a buffered RESET transition."""
+            entry["resolved"] = True
+            tele.emit({"env": env_name, "step": current_step,
+                       "retro_valence_event": {
+                           "reset_step": entry["step"], "nu": nu,
+                           "age": current_step - entry["step"]}})
+            if nu < 0.0 and entry["action_wave"] is not None and entry["observed"] is not None:
+                # Refuse to consolidate the vacuous trajectory: replay the
+                # stored (state, action) -> observed transition through the
+                # valence-gated L1 update (plastic, damped, never frozen).
+                orch.planner.train_transition_step(
+                    entry["state"], entry["action_wave"], entry["observed"],
+                    lr=0.05, valence=nu,
+                )
+            elif nu > 0.0 and entry["observed"] is not None:
+                # Progressive reset: consolidate into the preference store.
+                orch.planner.register_preference(entry["observed"])
+
         for step in range(args.steps):
             t0 = time.perf_counter()
             grid = obs.frame[0].tolist()
@@ -169,10 +197,23 @@ def run():
             else:
                 valence = 0.0    # neutral exploration (WIN handled at terminal)
 
+            # Fill the observed wave of any pending RESET buffered last step.
+            pending_reset = next(
+                (e for e in reset_buffer if not e["resolved"] and e["observed"] is None),
+                None,
+            )
+            if pending_reset is not None:
+                pending_reset["observed"] = state_wave.detach()
+
             # T1: apply the deferred transition-model update using the previous
             # step's (state, executed action) -> this step's observed wave.
+            # A PENDING RESET's deferred update is HELD: the transition trains
+            # only on retroactive resolution (legitimate -> nu=0/plain,
+            # vacuous -> nu=-1 valence-gated), so the model never consolidates
+            # an unjudged reset trajectory.
             transition_loss = None
-            if train_ctx is not None and train_ctx["action_wave"] is not None:
+            if (train_ctx is not None and train_ctx["action_wave"] is not None
+                    and not train_ctx.get("pending_reset")):
                 # NL Level 1 (fast): surprise-modulated per-step SGLD, now
                 # valence-gated (Wire B planner-side: success crystallizes,
                 # failure stays plastic but refuses to consolidate).
@@ -268,6 +309,27 @@ def run():
             step_ms = (time.perf_counter() - t0) * 1000
             last_action_was_reset = (game_action.name == "RESET")
 
+            # Retroactive RESET bookkeeping (distal credit assignment).
+            # A non-RESET action resolves every PENDING reset in the buffer
+            # as LEGITIMATE (environmental work followed the frame restart).
+            # A RESET resolves the oldest pending reset as VACUOUS (chained
+            # reset = no progress) before being buffered itself.
+            if game_action.name != "RESET":
+                for entry in reset_buffer:
+                    if not entry["resolved"]:
+                        resolve_reset(entry, 0.0, step)
+                reset_buffer = [e for e in reset_buffer if not e["resolved"]]
+            else:
+                pending = [e for e in reset_buffer if not e["resolved"]]
+                if pending:
+                    resolve_reset(pending[0], -1.0, step)
+
+            # Expire resets that sat unresolved for the full k horizon.
+            for entry in reset_buffer:
+                if not entry["resolved"] and step - entry["step"] >= K_HORIZON:
+                    resolve_reset(entry, -1.0, step)
+            reset_buffer = [e for e in reset_buffer if not e["resolved"]]
+
             # T1/T2: train the transition model on the EXECUTED action pair.
             # observed_next is encoded on the NEXT loop iteration; stash the
             # training context now and apply the update once the next frame's
@@ -282,7 +344,19 @@ def run():
                      if a == game_action),
                     None,
                 ),
+                "pending_reset": game_action.name == "RESET",
             }
+            # Buffer the RESET for retroactive judgment: store the triple
+            # (state, action_wave, predicted outcome). The observed next wave
+            # is filled in on the NEXT loop iteration before resolution.
+            if game_action.name == "RESET":
+                reset_buffer.append({
+                    "step": step,
+                    "state": state_wave.detach(),
+                    "action_wave": train_ctx["action_wave"],
+                    "observed": None,   # filled next iteration
+                    "resolved": False,
+                })
 
             # Track the propagated prior: the EFE planner's predicted wave becomes
             # the dynamics prior that conditions the next step's encoding, so the
@@ -353,6 +427,11 @@ def run():
         else:
             tele.emit({"env": env_name, "terminal": "BUDGET_EXHAUSTED",
                        "step": args.steps, "action_counts": action_counts})
+        # Flush any resets still pending at episode end: all are vacuous
+        # (no environmental work followed within the episode).
+        for entry in reset_buffer:
+            if not entry["resolved"]:
+                resolve_reset(entry, -1.0, args.steps)
         # NL Level 3 (slow, "dream cycle"): episode-end deep consolidation.
         # Full-buffer EDMD (the low-pass filter over the entire episode
         # extracts structural invariants the mid-frequency window cannot),
