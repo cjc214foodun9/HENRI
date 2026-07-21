@@ -482,19 +482,31 @@ class EFEPlanner(nn.Module):
         # Memory: O(N*d) for C plus O(2d*r) for the product — ~130 MB total
         # at production scale instead of 32 GiB.
         K = X @ X.T + ridge * N * torch.eye(N, device=device, dtype=X.dtype)
-        L = torch.linalg.cholesky(K)
-        C = torch.cholesky_solve(Y, L)  # [N, d]
-        Uc, Sc, Vch = torch.linalg.svd(C, full_matrices=False)
-        # Available rank is min(N, d) — with a small buffer (N < r) the
-        # truncated operator is genuinely rank-N, not rank-r. Keep the V
-        # side at its solved width and zero the unused field_V columns;
-        # field_W matches column-for-column so the product is exact.
-        k = min(self.transition.rank, Sc.numel())
-        # Rank-k truncation of W = X^T Uc Sc Vc^T.
-        self.transition.field_V.zero_()
-        self.transition.field_V[:, :k].copy_(Vch[:k, :].T.contiguous())
-        self.transition.field_W.zero_()
-        self.transition.field_W[:, :k].copy_((X.T @ Uc[:, :k]) * Sc[:k])
+        # fp32 Gram matrices from near-duplicate buffer rows (RESET loops)
+        # can be rank-deficient past the ridge lift; escalate jitter on
+        # failure instead of dying. K is N x N (<= 4096), retries are free.
+        C = None
+        for jitter_mult in (1.0, 10.0, 100.0, 1000.0):
+            try:
+                L = torch.linalg.cholesky(
+                    K + (jitter_mult - 1.0) * ridge * N
+                    * torch.eye(N, device=device, dtype=X.dtype))
+                C = torch.cholesky_solve(Y, L)  # [N, d]
+                break
+            except torch._C._LinAlgError:
+                continue
+        if C is not None:
+            Uc, Sc, Vch = torch.linalg.svd(C, full_matrices=False)
+            # Available rank is min(N, d) — with a small buffer (N < r) the
+            # truncated operator is genuinely rank-N, not rank-r. Keep the V
+            # side at its solved width and zero the unused field_V columns;
+            # field_W matches column-for-column so the product is exact.
+            k = min(self.transition.rank, Sc.numel())
+            # Rank-k truncation of W = X^T Uc Sc Vc^T.
+            self.transition.field_V.zero_()
+            self.transition.field_V[:, :k].copy_(Vch[:k, :].T.contiguous())
+            self.transition.field_W.zero_()
+            self.transition.field_W[:, :k].copy_((X.T @ Uc[:, :k]) * Sc[:k])
 
         # Residual: absorb what the field channel cannot, staying per-block
         # unitary via projected gradient + retraction. The step must be small:
