@@ -58,6 +58,12 @@ CHECKPOINT_EVERY = 10    # persist engram every N steps
 EDMD_EVERY = 16          # NL Level 2: mid-frequency EDMD fit every K steps
 EDMD_WINDOW = 64         # rolling buffer depth for the mid-frequency fit
 
+# Phase 2: constraint boundary channel (option a, additive). When set, the
+# invariant-subspace projection residual is appended as a second boundary
+# axiom row. Default OFF so the default path stays byte-identical to run 11
+# for clean A/B (staged-change convention).
+CONSTRAINT_AXIOM = os.environ.get("CONSTRAINT_AXIOM", "0") == "1"
+
 
 # ---------------------------------------------------------------------------
 # Telemetry
@@ -262,7 +268,19 @@ def run():
             }
 
             # EFE action selection (T4: explore when the planner is confused)
-            boundary_batch = boundary.unsqueeze(0)
+            # Boundary channel population: row 0 is the per-frame prediction
+            # residual (the proven RESET-curation driver — kept). When the
+            # Phase 2 constraint channel is enabled AND the first L2 fit has
+            # extracted the invariant subspace, row 1 is the off-manifold
+            # projection residual (what the dynamics can't represent). Rows
+            # are appended, never substituted (option a: channel-additive).
+            axiom_rows = [boundary]
+            if CONSTRAINT_AXIOM:
+                c_row = orch.planner.constraint_boundary_row(state_wave)
+                if c_row is not None:
+                    axiom_rows.append(c_row)
+            boundary_batch = torch.stack(axiom_rows)
+            n_axiom_rows = len(axiom_rows)
             action, predicted_wave, efe_table, chosen = orch.plan_action(
                 state_wave, boundary_batch, top_k=4, return_chosen=True
             )
@@ -320,6 +338,7 @@ def run():
                 "preference_store_size": orch.planner.preference_store.num_engrams(),
                 "action": str(game_action),
                 "recall": recall_info,
+                "n_axiom_rows": n_axiom_rows,
                 "step_ms": round(step_ms, 1),
             })
             # Wave-level hypertable log (downsampled for DB volume)

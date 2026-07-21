@@ -210,6 +210,26 @@ class EFEPlanner(nn.Module):
         # Peak tracks the highest error seen (starts at the initial error).
         self.loss_ema_peak = max(self.loss_ema_peak, self.loss_ema)
 
+    def constraint_boundary_row(self, state_wave: torch.Tensor):
+        """Phase 2 constraint channel (option a, additive): the component of
+        state_wave lying OUTSIDE the fitted invariant subspace, as a
+        [num_blocks, 8] boundary-axiom row.
+
+            row = normalize(state − P_inv state),  P_inv = V Vᵀ
+
+        where V = axiom_constraint ([rank, d] unit rows). Large row ⇒ the
+        observed state carries structure the learned dynamics cannot
+        represent (off-manifold); small ⇒ the state lives inside the
+        discovered physics. Returns None when no constraint has been
+        extracted yet (pre-first-fit)."""
+        if self.axiom_constraint.numel() == 0:
+            return None
+        V = self.axiom_constraint.to(state_wave.device)       # [rank, d]
+        s = state_wave.detach().reshape(-1)                    # [d]
+        proj = V.T @ (V @ s)                                  # P_inv s
+        resid = (s - proj).view_as(state_wave)
+        return resid / (torch.norm(resid, p=2, dim=-1, keepdim=True) + 1e-9)
+
     def _accuracy_floor(self) -> float:
         """Adaptive exploitation threshold: exploit once the model's error has
         dropped ~10% below the worst error seen in this session."""

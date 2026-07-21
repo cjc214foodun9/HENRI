@@ -422,6 +422,30 @@ class TestSpectralAxioms:
         assert not hasattr(p, "axiom_veto")
         assert not hasattr(p, "_prev_veto_basis")
 
+    def test_constraint_boundary_row(self, device):
+        # Phase 2 (option a): the boundary row is the normalized component of
+        # the state OUTSIDE the invariant subspace — orthogonal to every
+        # constraint direction, correct shape, None pre-first-fit.
+        p, Vt, Wt = self._plant(device)
+        NB, D = SCALE["num_blocks"], SCALE["d_model"]
+        state = mk_wave((NB, 8), device, 8000)
+        # Pre-first-fit: no constraint extracted -> None (row not appended).
+        assert p.constraint_boundary_row(state) is None
+        S, A, T = self._window(p, Vt, Wt, 16, 8100, device)
+        p.train_transition_batch(S, A, T, iters=1)
+        row = p.constraint_boundary_row(state)
+        assert row is not None
+        assert row.shape == (NB, 8)
+        # Per-block unit norm (normalize per block, as all boundaries are).
+        norms = row.norm(dim=-1)
+        assert (norms - 1.0).abs().max().item() < 1e-3
+        # The row must be (near-)orthogonal to the invariant subspace: its
+        # projection back onto the constraint frame has ~zero energy.
+        flat = row.reshape(-1)
+        proj_energy = float((p.axiom_constraint.to(device) @ flat).norm())
+        assert proj_energy < 0.1 * float(flat.norm()), \
+            f"constraint row leaks into invariant subspace ({proj_energy})"
+
 
 # ---------------------------------------------------------------------------
 # T4: calibrated exploration
