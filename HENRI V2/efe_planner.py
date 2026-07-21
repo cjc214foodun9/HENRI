@@ -485,13 +485,16 @@ class EFEPlanner(nn.Module):
         L = torch.linalg.cholesky(K)
         C = torch.cholesky_solve(Y, L)  # [N, d]
         Uc, Sc, Vch = torch.linalg.svd(C, full_matrices=False)
-        r = self.transition.rank
-        # Rank-r truncation of W = X^T Uc Sc Vc^T: field_V = Vc (orthonormal,
-        # right singular vectors), field_W = X^T Uc Sc (full singular values
-        # on the input side — the forward field_V @ field_W^T then equals the
-        # truncated operator exactly).
-        self.transition.field_V.copy_(Vch[:r, :].T.contiguous())      # [d, r]
-        self.transition.field_W.copy_((X.T @ Uc[:, :r]) * Sc[:r])     # [2d, r]
+        # Available rank is min(N, d) — with a small buffer (N < r) the
+        # truncated operator is genuinely rank-N, not rank-r. Keep the V
+        # side at its solved width and zero the unused field_V columns;
+        # field_W matches column-for-column so the product is exact.
+        k = min(self.transition.rank, Sc.numel())
+        # Rank-k truncation of W = X^T Uc Sc Vc^T.
+        self.transition.field_V.zero_()
+        self.transition.field_V[:, :k].copy_(Vch[:k, :].T.contiguous())
+        self.transition.field_W.zero_()
+        self.transition.field_W[:, :k].copy_((X.T @ Uc[:, :k]) * Sc[:k])
 
         # Residual: absorb what the field channel cannot, staying per-block
         # unitary via projected gradient + retraction. The step must be small:
