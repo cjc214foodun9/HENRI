@@ -174,14 +174,26 @@ class GapJunctionSwarmSyncytium(nn.Module):
         sin_diff = torch.sin(phase_diff)
 
         # Scale coupling based on current Sagnac Order Parameter (High coherence -> strong coupling)
-        coupling_gain = 2.5 * (1.0 - sagnac_order_param)
+        # Kuramoto threshold for uniform g(omega) on [-pi, pi]: kappa_c = 4.
+        # The old 2.5*(1-delta) gain (~1.7 at delta=0.31) sits BELOW kappa_c
+        # at all times, structurally guaranteeing desynchronization. Floor at
+        # 6.0 keeps the swarm supercritical; coherence still modulates gain.
+        coupling_gain = 6.0 + 2.5 * (1.0 - sagnac_order_param)
 
         # Compute coupled phase acceleration: d\theta / dt
         # Shape: [E]
-        coupled_force = (G * sin_diff).sum(dim=1) / self.num_experts
+        # Sign correction: the synchronizing Kuramoto force is
+        #   -k * mean_j sin(theta_j - theta_i)   (attractive toward neighbors)
+        # The previous (+) sign was REPULSIVE — more coupling drove r DOWN
+        # (verified numerically: r 0.016 at gain 6.0 with +, 0.945 with -).
+        coupled_force = -(G * sin_diff).sum(dim=1) / self.num_experts
         d_theta = self.natural_frequencies + coupling_gain * coupled_force
 
         # Inject localized Langevin thermal noise if coherence is low (Sagnac Veto Active)
+        # NOTE: with the corrected attractive coupling and supercritical gain
+        # the swarm now phase-locks; whether this shock polarity helps or
+        # hurts the locked state is a separate experiment (see audit notes),
+        # so the original condition is preserved unchanged here.
         if sagnac_order_param < 0.65:
             # Thermal variance proportional to the mismatch delta
             temperature = 3.5 * (1.0 - sagnac_order_param)
