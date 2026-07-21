@@ -334,8 +334,8 @@ class TestTransitionTraining:
 
         r_true = 8
         g = torch.Generator().manual_seed(7)
-        Vt = torch.randn(D, r_true, generator=g) / math.sqrt(D)
-        Wt = torch.randn(2 * D, r_true, generator=g) / math.sqrt(2 * D)
+        Vt = (torch.randn(D, r_true, generator=g) / math.sqrt(D)).to(device)
+        Wt = (torch.randn(2 * D, r_true, generator=g) / math.sqrt(2 * D)).to(device)
 
         def window(planner, n, seed0):
             S = torch.stack([mk_wave((NB, 8), device, seed0 + 2 * i) for i in range(n)])
