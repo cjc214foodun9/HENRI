@@ -187,6 +187,11 @@ class EFEPlanner(nn.Module):
         self.preference_capacity = 256
         self.beta_pragmatic = 1.0
 
+        # EDMD fit diagnostics (Phase 0: cd82 L2 instability characterization).
+        # Populated by train_transition_batch on every fit; read-only record
+        # of the solved spectrum and Gram conditioning, no behavior change.
+        self.last_edmd_diagnostics = {}
+
     def update_model_accuracy(self, transition_loss: float):
         """EMA update of the dynamics model's observed error (T4)."""
         self.loss_ema = self.loss_ema_beta * self.loss_ema + (1 - self.loss_ema_beta) * transition_loss
@@ -539,11 +544,19 @@ class EFEPlanner(nn.Module):
         # Memory: O(N*d) for C plus O(2d*r) for the product — ~130 MB total
         # at production scale instead of 32 GiB.
         K = X @ X.T + ridge * N * torch.eye(N, device=device, dtype=X.dtype)
+        # Gram conditioning BEFORE any jitter escalation: the ratio of the
+        # largest to smallest eigenvalue of the raw Gram. Near-duplicate
+        # buffer rows (RESET loops) collapse the small eigenvalues; the log10
+        # condition number is the instability leading indicator for cd82.
+        gram_eigs = torch.linalg.eigvalsh(K)
+        gram_cond = float(gram_eigs.max() / gram_eigs.min().clamp(min=1e-30))
         # fp32 Gram matrices from near-duplicate buffer rows (RESET loops)
         # can be rank-deficient past the ridge lift; escalate jitter on
         # failure instead of dying. K is N x N (<= 4096), retries are free.
         C = None
+        jitter_tier = -1
         for jitter_mult in (1.0, 10.0, 100.0, 1000.0):
+            jitter_tier += 1
             try:
                 L = torch.linalg.cholesky(
                     K + (jitter_mult - 1.0) * ridge * N
@@ -565,6 +578,29 @@ class EFEPlanner(nn.Module):
             self.transition.field_W.zero_()
             self.transition.field_W[:, :k].copy_((X.T @ Uc[:, :k]) * Sc[:k])
 
+        # Spectral diagnostics: the solved coefficient spectrum (Sc near 1
+        # marks near-invariant modes — candidate axioms, Phase 1), Gram
+        # conditioning, jitter tier, and the pre/post-fit loss delta — the
+        # cd82 instability leading indicators.
+        if C is not None:
+            self.last_edmd_diagnostics = {
+                "n_samples": int(N),
+                "gram_cond_log10": round(math.log10(max(gram_cond, 1e-30)), 3),
+                "jitter_tier": jitter_tier,
+                "cholesky_failed": False,
+                "sc_top8": [round(float(s), 4) for s in Sc[:8]],
+                "sc_rank": int((Sc > 1e-6 * Sc.max()).sum()),
+                "pre_loss": round(pre_loss, 6),
+            }
+        else:
+            self.last_edmd_diagnostics = {
+                "n_samples": int(N),
+                "gram_cond_log10": round(math.log10(max(gram_cond, 1e-30)), 3),
+                "jitter_tier": jitter_tier,
+                "cholesky_failed": True,
+                "pre_loss": round(pre_loss, 6),
+            }
+
         # Residual: absorb what the field channel cannot, staying per-block
         # unitary via projected gradient + retraction. The step must be small:
         # the field channel is already solved to near-optimality on the batch,
@@ -583,6 +619,8 @@ class EFEPlanner(nn.Module):
                     # singular-value amplitudes the EDMD solve just stored.
                     self.transition._retract(residual_only=True)
 
+        post_loss = self._batch_sagnac_loss(states, actions, observed_nexts)
+        self.last_edmd_diagnostics["post_loss"] = round(float(post_loss), 6)
         self.update_model_accuracy(pre_loss)
         return pre_loss
 

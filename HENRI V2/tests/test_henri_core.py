@@ -291,6 +291,31 @@ class TestTransitionTraining:
         pb = p.transition(state, act_b)
         assert not torch.allclose(pa, pb, atol=1e-3), "action conditioning collapsed"
 
+    def test_edmd_batch_fit_populates_diagnostics(self, device):
+        # Phase 0 instrumentation: train_transition_batch must record the
+        # solved spectrum, Gram conditioning, jitter tier, and the
+        # pre/post-fit loss delta on every successful fit.
+        from efe_planner import EFEPlanner
+        p = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
+        N = 12
+        states = torch.stack([mk_wave((SCALE["num_blocks"], 8), device, 100 + i) for i in range(N)])
+        actions = torch.stack([mk_wave((SCALE["num_blocks"], 8), device, 200 + i) for i in range(N)])
+        # Low-rank target: observed = transition of the SAME operator applied
+        # to each (state, action) pair, so the fit is well-posed.
+        nexts = torch.stack([p.transition(states[i], actions[i]) for i in range(N)])
+        pre = p.train_transition_batch(states, actions, nexts, iters=1)
+        diag = p.last_edmd_diagnostics
+        assert diag, "diagnostics not populated"
+        assert diag["n_samples"] == N
+        assert diag["cholesky_failed"] is False
+        assert diag["jitter_tier"] >= 0
+        assert math.isfinite(diag["gram_cond_log10"])
+        assert len(diag["sc_top8"]) == min(8, N)
+        assert all(math.isfinite(s) and s >= 0.0 for s in diag["sc_top8"])
+        assert 1 <= diag["sc_rank"] <= N
+        assert diag["pre_loss"] == round(pre, 6)
+        assert "post_loss" in diag and math.isfinite(diag["post_loss"])
+
 
 # ---------------------------------------------------------------------------
 # T4: calibrated exploration
