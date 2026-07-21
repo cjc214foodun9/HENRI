@@ -53,6 +53,8 @@ else:
 RELAX_STEPS = 8          # swarm relaxation iterations per environment step
 RECALL_EVERY = 5         # recall Zone C conditioning every N steps
 CHECKPOINT_EVERY = 10    # persist engram every N steps
+EDMD_EVERY = 16          # NL Level 2: mid-frequency EDMD fit every K steps
+EDMD_WINDOW = 64         # rolling buffer depth for the mid-frequency fit
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +139,7 @@ def run():
         prev_predicted_prior = None
         train_ctx = None
         action_counts = {}
+        edmd_buffer = []  # (state, action_wave, observed_next) triples
         for step in range(args.steps):
             t0 = time.perf_counter()
             grid = obs.frame[0].tolist()
@@ -146,9 +149,26 @@ def run():
             # step's (state, executed action) -> this step's observed wave.
             transition_loss = None
             if train_ctx is not None and train_ctx["action_wave"] is not None:
+                # NL Level 1 (fast): surprise-modulated per-step SGLD.
                 transition_loss = orch.planner.train_transition_step(
                     train_ctx["state"], train_ctx["action_wave"], state_wave, lr=0.05
                 )
+                # Accumulate the triple for the slower consolidation levels.
+                edmd_buffer.append((train_ctx["state"], train_ctx["action_wave"],
+                                    state_wave))
+                # NL Level 2 (mid-frequency): EDMD fit over the rolling window
+                # at strict chunk boundaries (i ≡ 0 mod K, HOPE CMS style).
+                if len(edmd_buffer) % EDMD_EVERY == 0:
+                    window = edmd_buffer[-EDMD_WINDOW:]
+                    edmd_loss = orch.planner.train_transition_batch(
+                        torch.stack([t[0] for t in window]),
+                        torch.stack([t[1] for t in window]),
+                        torch.stack([t[2] for t in window]),
+                    )
+                    print(f"  [edmd-L2] step {step}: window {len(window)} "
+                          f"batch loss {edmd_loss:.4f}")
+                    tele.emit({"env": env_name, "step": step, "edmd_L2_loss":
+                               round(edmd_loss, 6), "edmd_L2_window": len(window)})
             train_ctx = None
 
             # Boundary axiom = prediction error: observed state vs the dynamics
@@ -282,6 +302,44 @@ def run():
         else:
             tele.emit({"env": env_name, "terminal": "BUDGET_EXHAUSTED",
                        "step": args.steps, "action_counts": action_counts})
+        # NL Level 3 (slow, "dream cycle"): episode-end deep consolidation.
+        # Full-buffer EDMD (the low-pass filter over the entire episode
+        # extracts structural invariants the mid-frequency window cannot),
+        # then persist the solved transition operator itself to Zone C as a
+        # recoverable engram — future sessions inherit the dynamics, not
+        # just the states (HOPE systems consolidation analog).
+        if len(edmd_buffer) >= 8:
+            L3_loss = orch.planner.train_transition_batch(
+                torch.stack([t[0] for t in edmd_buffer]),
+                torch.stack([t[1] for t in edmd_buffer]),
+                torch.stack([t[2] for t in edmd_buffer]),
+            )
+            # Persist the solved operator itself as a recoverable artifact —
+            # the Zone C engram store holds fixed [num_blocks, 8] wave
+            # payloads, not 25 MB operators, so the field channel goes to a
+            # local .pt (restorable via planner.load_field_channel_wave) and
+            # Zone C gets a marker engram recording the consolidation event.
+            os.makedirs("field_channel_checkpoints", exist_ok=True)
+            fc_path = os.path.join(
+                "field_channel_checkpoints",
+                f"field_channel_{env_name}_{tele.run_id}.pt")
+            torch.save({
+                "wave": orch.planner.field_channel_wave(),
+                "env": env_name, "l3_loss": L3_loss,
+                "buffer_size": len(edmd_buffer),
+                "scale": SCALE,
+            }, fc_path)
+            try:
+                orch.checkpoint_wave(edmd_buffer[-1][2].cpu(),
+                                    domain=f"arc3/{env_name}/field_channel_consolidated",
+                                    sagnac_stress=L3_loss)
+            except Exception as e:
+                print(f"  [edmd-L3] Zone C marker failed ({e}); artifact kept")
+            print(f"  [edmd-L3] episode consolidation: {len(edmd_buffer)} triples, "
+                  f"batch loss {L3_loss:.4f}, operator -> {fc_path}")
+            tele.emit({"env": env_name, "edmd_L3_loss": round(L3_loss, 6),
+                       "edmd_L3_buffer": len(edmd_buffer),
+                       "field_channel_path": fc_path})
         # Per-env action entropy (fraction of non-ACTION1 steps)
         total = sum(action_counts.values())
         distinct = len(action_counts)

@@ -189,6 +189,35 @@ class EFEPlanner(nn.Module):
         dropped ~10% below the worst error seen in this session."""
         return self.loss_ema_peak - 0.1
 
+    # -- deep consolidation (NL Level 3: field channel persistence) --------
+
+    def field_channel_wave(self) -> torch.Tensor:
+        """Pack the transition operator (field_W, field_V, residual) into a
+        single wave-shaped tensor for Zone C engram storage."""
+        t = self.transition
+        return torch.cat([
+            t.field_W.detach().reshape(-1).cpu(),
+            t.field_V.detach().reshape(-1).cpu(),
+            t.block_residual.detach().real.reshape(-1).cpu(),
+            t.block_residual.detach().imag.reshape(-1).cpu(),
+        ])
+
+    @torch.no_grad()
+    def load_field_channel_wave(self, wave: torch.Tensor):
+        """Inverse of field_channel_wave: restore the operator from a wave."""
+        t = self.transition
+        d, r, B, b = t.d, t.rank, t.num_blocks, t.block_dim
+        nW, nV, nR = 2 * d * r, d * r, B * b * b
+        wave = wave.detach().cpu().float()
+        assert wave.numel() >= nW + nV + 2 * nR, (
+            f"field channel wave too short: {wave.numel()} < {nW + nV + 2 * nR}")
+        dev = t.field_V.device
+        t.field_W.copy_(wave[:nW].reshape(2 * d, r).to(dev))
+        t.field_V.copy_(wave[nW:nW + nV].reshape(d, r).to(dev))
+        re = wave[nW + nV:nW + nV + nR].reshape(B, b, b)
+        im = wave[nW + nV + nR:nW + nV + 2 * nR].reshape(B, b, b)
+        t.block_residual.copy_(torch.complex(re, im).to(dev))
+
     # -- value terms ------------------------------------------------------
 
     def pragmatic_value(self, predicted_wave: torch.Tensor, boundary_axioms: torch.Tensor) -> torch.Tensor:
@@ -327,9 +356,10 @@ class EFEPlanner(nn.Module):
         action_wave: torch.Tensor,
         observed_next_wave: torch.Tensor,
         lr: float = 0.05,
+        surprise_modulate: bool = True,
     ) -> float:
         """
-        Online latent-space dynamics learning (T1 + T2).
+        Online latent-space dynamics learning (T1 + T2), fast NL level.
 
         Trains the transition operator on the Sagnac signal itself: the loss
         is the normalized coherence delta between the model's prediction and
@@ -342,6 +372,13 @@ class EFEPlanner(nn.Module):
         the model learns action-conditioned dynamics rather than an
         action-averaged blur (T2). After the Wirtinger step the transition
         matrices are re-retracted to unitarity.
+
+        Surprise modulation (Titans fast-memory analog): the normalized
+        Sagnac delta IS an associative-surprise signal, so the effective
+        learning rate is scaled by it — lr_eff = lr * (0.25 + delta/2),
+        bounded to [0.25x, 1.25x] lr. High-surprise transitions get
+        high-plasticity updates; already-predictable transitions barely
+        move the weights (matching the paper's gradient-magnitude gate).
 
         Returns the pre-update loss (the Sagnac delta this step).
         """
@@ -356,9 +393,14 @@ class EFEPlanner(nn.Module):
                       self.transition.block_residual]
             gV, gW, gR = torch.autograd.grad(loss, params)
         with torch.no_grad():
-            self.transition.field_V -= lr * gV
-            self.transition.field_W -= lr * gW
-            self.transition.block_residual -= lr * gR
+            if surprise_modulate:
+                delta = float(loss.detach())
+                lr_eff = lr * min(1.25, 0.25 + 0.5 * delta)
+            else:
+                lr_eff = lr
+            self.transition.field_V -= lr_eff * gV
+            self.transition.field_W -= lr_eff * gW
+            self.transition.block_residual -= lr_eff * gR
             self.transition._retract()
         # T4: track model accuracy so the exploration gate tightens as we learn.
         self.update_model_accuracy(float(loss.detach()))
