@@ -316,6 +316,53 @@ class TestTransitionTraining:
         assert diag["pre_loss"] == round(pre, 6)
         assert "post_loss" in diag and math.isfinite(diag["post_loss"])
 
+    def test_edmd_damped_swapin_converges_across_windows(self, device):
+        # Task 0.3 regression: hard swap-in lets disjoint-window fits replace
+        # each other (subspace overlap ~0.35 at N=16, no accumulation). The
+        # damped update must CONVERGE: sequential fits on disjoint windows
+        # from the SAME dynamics raise the fit-to-fit subspace overlap
+        # monotonically-ish and end well above the undamped baseline.
+        from efe_planner import EFEPlanner
+        NB, D = SCALE["num_blocks"], SCALE["d_model"]
+
+        def truth(planner, s, a):
+            fused = planner.transition.bind(s, a)
+            x = torch.cat([fused.real.reshape(-1), fused.imag.reshape(-1)])
+            y = Vt @ (Wt.T @ x)
+            y = y.view(NB, 8) + 0.3 * s
+            return y / torch.norm(y, p=2, dim=-1, keepdim=True)
+
+        r_true = 8
+        g = torch.Generator().manual_seed(7)
+        Vt = torch.randn(D, r_true, generator=g) / math.sqrt(D)
+        Wt = torch.randn(2 * D, r_true, generator=g) / math.sqrt(2 * D)
+
+        def window(planner, n, seed0):
+            S = torch.stack([mk_wave((NB, 8), device, seed0 + 2 * i) for i in range(n)])
+            A = torch.stack([mk_wave((NB, 8), device, seed0 + 2 * i + 1) for i in range(n)])
+            T = torch.stack([truth(planner, S[i], A[i]) for i in range(n)])
+            return S, A, T
+
+        p = EFEPlanner(num_blocks=NB, d_model=D).to(device)
+        overlaps = []
+        prev_V = None
+        for w in range(4):
+            S, A, T = window(p, 16, 5000 + 100 * w)
+            p.train_transition_batch(S, A, T, iters=1, blend=0.5)
+            V = p.transition.field_V.detach()
+            if prev_V is not None:
+                Q1, _ = torch.linalg.qr(prev_V[:, :16])
+                Q2, _ = torch.linalg.qr(V[:, :16])
+                overlaps.append(float(torch.linalg.matrix_norm(Q1.T @ Q2, ord=2)))
+            prev_V = V.clone()
+        # Convergence: with blending, inter-fit overlap jumps from the
+        # undamped drift regime (~0.35 at N=16) to a sustained plateau far
+        # above it. Once blended, fits agree on a shared subspace instead
+        # of swapping window-specific memorizers.
+        assert min(overlaps) > 0.6, \
+            f"damped fits still drifting: {overlaps}"
+        assert overlaps[-1] > 0.6, f"terminal overlap too low: {overlaps}"
+
 
 # ---------------------------------------------------------------------------
 # T4: calibrated exploration

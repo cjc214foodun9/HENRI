@@ -477,6 +477,7 @@ class EFEPlanner(nn.Module):
         iters: int = 3,
         ridge: float = 1e-4,
         update_residual: bool = True,
+        blend: float = 0.5,
     ) -> float:
         """
         Batched EDMD-style transition training over a Koopman dictionary.
@@ -505,6 +506,16 @@ class EFEPlanner(nn.Module):
         retraction).
 
         All tensors are stacked [N, num_blocks, 8] real Clifford waves.
+
+        Damped swap-in (cd82 fix, Task 0.3): small-N fits are
+        underdetermined — disjoint windows from identical dynamics yield
+        V-subspaces overlapping only ~0.35 at N=16 (ad-hoc replication,
+        rising 0.48 @ N=32, 0.66 @ N=64). A hard replacement swaps in a
+        window-specific memorizer and destroys L1-accumulated structure.
+        The field channel is therefore BLENDED:
+            field ← blend·new + (1−blend)·old, then re-retracted.
+        blend=1.0 recovers the old hard-swap behavior.
+
         Returns the mean pre-fit batch Sagnac loss (the quantity minimized).
         """
         N = states.shape[0]
@@ -572,11 +583,19 @@ class EFEPlanner(nn.Module):
             # side at its solved width and zero the unused field_V columns;
             # field_W matches column-for-column so the product is exact.
             k = min(self.transition.rank, Sc.numel())
-            # Rank-k truncation of W = X^T Uc Sc Vc^T.
-            self.transition.field_V.zero_()
-            self.transition.field_V[:, :k].copy_(Vch[:k, :].T.contiguous())
-            self.transition.field_W.zero_()
-            self.transition.field_W[:, :k].copy_((X.T @ Uc[:, :k]) * Sc[:k])
+            # Rank-k truncation of W = X^T Uc Sc Vc^T, solved into temporaries
+            # so the damped swap-in can blend against the incumbent field.
+            new_V = torch.zeros_like(self.transition.field_V)
+            new_V[:, :k].copy_(Vch[:k, :].T.contiguous())
+            new_W = torch.zeros_like(self.transition.field_W)
+            new_W[:, :k].copy_((X.T @ Uc[:, :k]) * Sc[:k])
+            # Damped swap-in: blend solved field with the incumbent, then
+            # re-orthonormalize the V side (blend leaves the manifold).
+            self.transition.field_V.mul_(1.0 - blend).add_(new_V, alpha=blend)
+            self.transition.field_W.mul_(1.0 - blend).add_(new_W, alpha=blend)
+            if blend < 1.0:
+                Qv, _ = torch.linalg.qr(self.transition.field_V, mode="reduced")
+                self.transition.field_V.copy_(Qv)
 
         # Spectral diagnostics: the solved coefficient spectrum (Sc near 1
         # marks near-invariant modes — candidate axioms, Phase 1), Gram
