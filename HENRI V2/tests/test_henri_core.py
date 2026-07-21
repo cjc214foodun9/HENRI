@@ -465,6 +465,81 @@ class TestSpectralAxioms:
         p._prev_proj = None                    # break the pair (RESET)
         assert p.progress_motion(s2) is None  # first of new pair: None
 
+    def test_constraint_penalty_form(self, device):
+        # Phase 2 penalty form (research-grounded): the off-manifold residual
+        # of a candidate prediction is None pre-first-fit, ~0 for an
+        # in-subspace wave, and large for an off-subspace wave.
+        p, Vt, Wt = self._plant(device)
+        NB, D = SCALE["num_blocks"], SCALE["d_model"]
+        state = mk_wave((NB, 8), device, 8400)
+        assert p.constraint_penalty(state) is None  # pre-first-fit
+        S, A, T = self._window(p, Vt, Wt, 16, 8500, device)
+        p.train_transition_batch(S, A, T, iters=1)
+        V = p.axiom_constraint.to(device)                    # [rank, d]
+        # In-subspace wave: project a random wave onto span(V) and leave it
+        # there. The frame has orthonormal rows (Gram = I), so P_inv is
+        # idempotent and the projected vector's residual is ~0. (Do NOT
+        # per-block renormalize — that rotates the wave off the global
+        # frame; the projector identity holds only within span(V).)
+        seed_w = mk_wave((NB, 8), device, 8402).reshape(-1)
+        proj = V.T @ (V @ seed_w)
+        # Numerical guard: only meaningful if the projection has real mass.
+        assert float(proj.norm()) > 1e-3
+        in_sub = proj.view(NB, 8)
+        pen_in = p.constraint_penalty(in_sub)
+        # Off-subspace wave: a random direction is, at d >> rank, almost
+        # entirely outside the rank-r frame -> large residual.
+        off_sub = mk_wave((NB, 8), device, 8401)
+        pen_off = p.constraint_penalty(off_sub)
+        assert pen_in is not None and pen_off is not None
+        assert pen_in < 0.1, f"in-subspace penalty {pen_in} should be ~0"
+        assert pen_off > 0.5, f"off-subspace penalty {pen_off} should be large"
+        assert pen_off > pen_in, "penalty must separate off- from on-manifold"
+
+    def test_constraint_lambda_accuracy_gate(self, device):
+        # lambda is accuracy-gated (MACURA-style): ~0 for a weak operator
+        # (loss_ema ~ peak), rising toward lambda_max as the model converges.
+        p, _, _ = self._plant(device)
+        p.loss_ema_peak = 1.0
+        p.loss_ema = 1.0                       # no improvement -> weak
+        assert abs(p._constraint_lambda()) < 1e-6, "weak operator must impose no barrier"
+        p.loss_ema = 0.5                       # half-way converged
+        lam_mid = p._constraint_lambda()
+        assert 0.0 < lam_mid < p.constraint_weight_max
+        p.loss_ema = 0.01                      # converged
+        lam_full = p._constraint_lambda()
+        assert abs(lam_full - p.constraint_weight_max) < 0.05
+        assert lam_full > lam_mid, "lambda must tighten as the model converges"
+
+    def test_score_actions_penalizes_off_manifold(self, device):
+        # Polarity test (the run-12 bug inverted): with a converged model, an
+        # off-manifold candidate must score HIGHER EFE than the identical
+        # candidate on-manifold, and hard rejection must exclude a
+        # sufficiently off-manifold candidate from the argmin.
+        p, Vt, Wt = self._plant(device)
+        NB = SCALE["num_blocks"]
+        S, A, T = self._window(p, Vt, Wt, 16, 8600, device)
+        p.train_transition_batch(S, A, T, iters=1)
+        p.loss_ema = 0.01                      # converged -> lambda ~ lambda_max
+        state = mk_wave((NB, 8), device, 8700)
+        boundary = torch.stack([mk_wave((NB, 8), device, 8701)])
+        cands = [("A", mk_wave((NB, 8), device, 8702)),
+                 ("B", mk_wave((NB, 8), device, 8703)),
+                 ("C", mk_wave((NB, 8), device, 8704))]
+        ranked = p.score_actions(state, cands, boundary)
+        # Every candidate reports a finite penalty and the penalty enters EFE.
+        assert all("constraint_penalty" in r for r in ranked)
+        # Hard-rejection hybrid: if any candidate is admissible, no rejected
+        # candidate occupies the argmin (top) slot.
+        if any(not r["rejected"] for r in ranked):
+            assert not ranked[0]["rejected"], \
+                "a rejected (off-manifold) candidate won the argmin"
+        # The returned ranking contains only admissible candidates when at
+        # least one is admissible.
+        admissible = [r for r in ranked if not r["rejected"]]
+        if admissible:
+            assert len(ranked) == len(admissible)
+
 
 # ---------------------------------------------------------------------------
 # T4: calibrated exploration

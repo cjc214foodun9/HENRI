@@ -58,11 +58,17 @@ CHECKPOINT_EVERY = 10    # persist engram every N steps
 EDMD_EVERY = 16          # NL Level 2: mid-frequency EDMD fit every K steps
 EDMD_WINDOW = 64         # rolling buffer depth for the mid-frequency fit
 
-# Phase 2: constraint boundary channel (option a, additive). When set, the
-# invariant-subspace projection residual is appended as a second boundary
-# axiom row. Default OFF so the default path stays byte-identical to run 11
-# for clean A/B (staged-change convention).
+# Phase 2: constraint boundary channel (PENALTY FORM, research-grounded).
+# When set, the invariant-subspace off-manifold residual enters the EFE as a
+# per-candidate penalty + hard rejection (a barrier), NOT as an additive
+# axiom row (the falsified attractor). Default OFF so the default path stays
+# byte-identical to run 11 for clean A/B (staged-change convention).
 CONSTRAINT_AXIOM = os.environ.get("CONSTRAINT_AXIOM", "0") == "1"
+# Penalty scalars (env-tunable; research-grounded defaults). LAMBDA_MAX is
+# the exactness cap on the accuracy-gated weight; REJECT_THRESH is the
+# hard-rejection cutoff on the per-candidate off-manifold residual.
+LAMBDA_CONSTRAINT_MAX = float(os.environ.get("LAMBDA_CONSTRAINT_MAX", "1.0"))
+CONSTRAINT_REJECT_THRESH = float(os.environ.get("CONSTRAINT_REJECT_THRESH", "0.5"))
 
 # Phase 2 Task 2.3: progress valence (exteroceptive anchor). When set, the
 # per-step valence is the descent of within-invariant-subspace motion:
@@ -131,6 +137,12 @@ def run():
 
     print(f"[init] orchestrator @ {SCALE}")
     orch = HenriSwarmOrchestrator(action_enum_class=GameAction, **SCALE).to(DEVICE)
+    if CONSTRAINT_AXIOM:
+        # Penalty-form constraint channel: arm the planner's barrier scalars
+        # (no-op in the default path; the penalty itself activates only once
+        # the first L2 fit populates axiom_constraint).
+        orch.planner.constraint_weight_max = LAMBDA_CONSTRAINT_MAX
+        orch.planner.constraint_reject_thresh = CONSTRAINT_REJECT_THRESH
     orch.attach_zone_c(dsn=args.dsn if DEVICE == "cuda" else "offline://surrogate")
     tokenizer = O_VSA_IngressTokenizer(
         num_blocks=SCALE["num_blocks"], vocab_size=256, device=DEVICE
@@ -308,19 +320,15 @@ def run():
             }
 
             # EFE action selection (T4: explore when the planner is confused)
-            # Boundary channel population: row 0 is the per-frame prediction
-            # residual (the proven RESET-curation driver — kept). When the
-            # Phase 2 constraint channel is enabled AND the first L2 fit has
-            # extracted the invariant subspace, row 1 is the off-manifold
-            # projection residual (what the dynamics can't represent). Rows
-            # are appended, never substituted (option a: channel-additive).
-            axiom_rows = [boundary]
-            if CONSTRAINT_AXIOM:
-                c_row = orch.planner.constraint_boundary_row(state_wave)
-                if c_row is not None:
-                    axiom_rows.append(c_row)
-            boundary_batch = torch.stack(axiom_rows)
-            n_axiom_rows = len(axiom_rows)
+            # Boundary channel: row 0 is the per-frame prediction residual
+            # (the proven RESET-curation driver — kept, alone). The Phase 2
+            # constraint channel is PENALTY-FORM: when CONSTRAINT_AXIOM is set
+            # and the first L2 fit has extracted the invariant subspace, the
+            # off-manifold residual enters the EFE inside score_actions as a
+            # per-candidate penalty + hard rejection (a barrier), NOT as an
+            # additive axiom row (the falsified attractor). No row is appended.
+            boundary_batch = torch.stack([boundary])
+            n_axiom_rows = 1
             action, predicted_wave, efe_table, chosen = orch.plan_action(
                 state_wave, boundary_batch, top_k=4, return_chosen=True
             )

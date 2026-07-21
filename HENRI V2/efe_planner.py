@@ -149,12 +149,20 @@ class EFEPlanner(nn.Module):
         action_engrams: torch.Tensor = None,
         epistemic_weight: float = 1.0,
         pragmatic_weight: float = 1.0,
+        constraint_weight_max: float = 1.0,
+        constraint_reject_thresh: float = 0.5,
     ):
         super().__init__()
         self.num_blocks = num_blocks
         self.d_model = d_model
         self.epistemic_weight = epistemic_weight
         self.pragmatic_weight = pragmatic_weight
+        # Phase 2 penalty-form constraint channel (research-grounded, see
+        # constraint_penalty). lambda_max is the exactness cap; the reject
+        # threshold is the hard-rejection hybrid (per-candidate residual
+        # above it excludes the candidate from the argmin outright).
+        self.constraint_weight_max = constraint_weight_max
+        self.constraint_reject_thresh = constraint_reject_thresh
 
         self.transition = UnitaryWaveTransition(num_blocks=num_blocks)
         # Retrieval store over predicted waves (real Clifford waves of width
@@ -261,6 +269,46 @@ class EFEPlanner(nn.Module):
         if prev is None:
             return None
         return float((proj - prev).norm())
+
+    def _constraint_lambda(self) -> float:
+        """Accuracy-gated penalty weight (research: MACURA arXiv:2405.19014).
+
+        The constraint-defining object (the EDMD invariant subspace V) is
+        LEARNED and nonstationary, so the barrier must tighten as the model
+        converges, not sit at a fixed strength:
+
+            lambda = lambda_max * clip(1 - loss_ema / loss_ema_peak, 0, 1)
+
+        Weak operator (loss_ema ~ peak) -> lambda ~ 0 (no barrier from a
+        rank-limited, possibly-noise subspace at the first fit); converged
+        operator -> lambda -> lambda_max (the exactness cap, arXiv:2102.13632).
+        """
+        if self.loss_ema_peak <= 0.0:
+            return 0.0
+        frac = 1.0 - (self.loss_ema / self.loss_ema_peak)
+        return self.constraint_weight_max * min(max(frac, 0.0), 1.0)
+
+    def constraint_penalty(self, predicted_wave: torch.Tensor):
+        """Off-manifold residual of a CANDIDATE prediction (penalty form).
+
+            penalty(a) = || predicted_a - P_inv predicted_a ||
+
+        Research grounding (2026-07-21 sprint): raw L2, NOT Mahalanobis —
+        inverse-spectrum weighting amplifies the least-confident directions
+        (Ren et al. RMD, arXiv:2106.09022), the opposite of intent. Within
+        the Koopman/EDMD literature the multi-step error bound accumulates
+        raw, uniformly-weighted L2 off-manifold residuals (arXiv:2603.15091).
+        This replaces the falsified additive boundary row (a similarity
+        bonus = attractor toward decoherence) with a barrier: states the
+        learned dynamics cannot have caused carry higher EFE (chance-
+        constrained AIF, arXiv:2102.08792). Returns None pre-first-fit.
+        """
+        if self.axiom_constraint.numel() == 0:
+            return None
+        V = self.axiom_constraint.to(predicted_wave.device)   # [rank, d]
+        p = predicted_wave.detach().reshape(-1)               # [d]
+        proj = V.T @ (V @ p)                                 # P_inv p
+        return float((p - proj).norm())
 
     def _accuracy_floor(self) -> float:
         """Adaptive exploitation threshold: exploit once the model's error has
@@ -395,22 +443,41 @@ class EFEPlanner(nn.Module):
         """
         candidate_actions: list of (action_id, action_wave[num_blocks, 8]).
         Returns list of dicts sorted by EFE ascending (best first).
+
+        Phase 2 penalty-form constraint channel (research-grounded): each
+        candidate's predicted wave pays an off-manifold penalty
+        +lambda * ||pred - P_inv pred|| (barrier, not goal), and candidates
+        whose residual exceeds constraint_reject_thresh are HARD-REJECTED
+        (we do not rank the model where it is definitionally invalid — the
+        penalty + rejection hybrid, arXiv:2101.06067). lambda is accuracy-
+        gated (weak operator imposes no barrier from a noise subspace).
         """
+        lam = self._constraint_lambda()
         results = []
         for action_id, action_wave in candidate_actions:
             predicted = self.transition(state_wave, action_wave)
             pragmatic = self.pragmatic_value(predicted, boundary_axioms)
             epistemic = self.epistemic_value(predicted)
-            efe = self.pragmatic_weight * pragmatic - self.epistemic_weight * epistemic
+            penalty = self.constraint_penalty(predicted)
+            penalty = 0.0 if penalty is None else penalty
+            efe = (self.pragmatic_weight * pragmatic
+                   - self.epistemic_weight * epistemic
+                   + lam * penalty)
             results.append({
                 "action": action_id,
                 "efe": efe.item(),
                 "pragmatic": pragmatic.item(),
                 "epistemic": epistemic.item(),
+                "constraint_penalty": penalty,
+                "rejected": penalty > self.constraint_reject_thresh,
                 "predicted_wave": predicted,
             })
-        results.sort(key=lambda r: r["efe"])
-        return results
+        # Hard-rejection hybrid: drop off-manifold candidates from the argmin
+        # unless every candidate is off-manifold (fall back to penalty-ranked).
+        admissible = [r for r in results if not r["rejected"]]
+        ranked = admissible if admissible else results
+        ranked.sort(key=lambda r: r["efe"])
+        return ranked
 
     def select_action(self, state_wave: torch.Tensor, candidate_actions: list, boundary_axioms: torch.Tensor,
                       explore_threshold: float = None):
