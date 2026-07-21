@@ -473,27 +473,25 @@ class EFEPlanner(nn.Module):
         Y = observed_nexts.reshape(N, d)  # [N, d]
 
         # EDMD / ridge least-squares for the linear readout on the dictionary.
-        # DUAL (Woodbury) form: W = X^T (X X^T + ridge*N*I)^{-1} Y.
-        # The primal normal equations need G in R^{2d x 2d} = 64 GiB at
-        # d=65536 — physically impossible on a 32 GiB card; the dual Gram is
-        # N x N (64x64 here), mathematically identical, and the intended
-        # kernel-ridge solve. Verified: same solution to float tolerance.
+        # DUAL (Woodbury) form: W = X^T (X X^T + ridge*N*I)^{-1} Y = X^T C.
+        # The full W is [2d, d] = 32 GiB at d=65536 — never form it. Since
+        # W = X^T (Uc Sc Vc^T), its rank-r truncation follows from the thin
+        # SVD of the N x d coefficient matrix C = Uc Sc Vc^T alone:
+        #   field_V = Vc[:, :r]           (orthonormal right singular vecs)
+        #   field_W = X^T Uc[:, :r] Sc[:r]  (one N-row contraction, [2d, r])
+        # Memory: O(N*d) for C plus O(2d*r) for the product — ~130 MB total
+        # at production scale instead of 32 GiB.
         K = X @ X.T + ridge * N * torch.eye(N, device=device, dtype=X.dtype)
         L = torch.linalg.cholesky(K)
-        coef = torch.cholesky_solve(Y, L)  # [N, d]
-        W_full = X.T @ coef  # [2d, d]
-
-        # Rank-r SVD truncation -> field channel factors. W_full ≈ U S Vh,
-        # and the forward operator is field_V @ field_W^T, so set
-        # field_W = U S (input side, 2d coords) and field_V = Vh^T (already
-        # column-orthonormal: rows of Vh are orthonormal). Scale the split
-        # sqrt-wise so each factor stays O(1) and the residual-refit gradient
-        # steps remain well-conditioned.
-        U, S, Vh = torch.linalg.svd(W_full, full_matrices=False)
+        C = torch.cholesky_solve(Y, L)  # [N, d]
+        Uc, Sc, Vch = torch.linalg.svd(C, full_matrices=False)
         r = self.transition.rank
-        sqS = S[:r].sqrt()
-        self.transition.field_W.copy_(U[:, :r] * sqS)
-        self.transition.field_V.copy_(Vh[:r, :].T.contiguous() * sqS)
+        # Rank-r truncation of W = X^T Uc Sc Vc^T: field_V = Vc (orthonormal,
+        # right singular vectors), field_W = X^T Uc Sc (full singular values
+        # on the input side — the forward field_V @ field_W^T then equals the
+        # truncated operator exactly).
+        self.transition.field_V.copy_(Vch[:r, :].T.contiguous())      # [d, r]
+        self.transition.field_W.copy_((X.T @ Uc[:, :r]) * Sc[:r])     # [2d, r]
 
         # Residual: absorb what the field channel cannot, staying per-block
         # unitary via projected gradient + retraction. The step must be small:
