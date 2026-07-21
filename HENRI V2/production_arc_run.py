@@ -50,7 +50,9 @@ if DEVICE == "cuda":
 else:
     SCALE = dict(num_experts=64, d_model=512, r_rank=8, num_blocks=64)
 
-RELAX_STEPS = 8          # swarm relaxation iterations per environment step
+RELAX_STEPS = 32         # swarm relaxation iterations per environment step
+                         # (r collapses to ~0.01 within 8 steps = under-relaxed;
+                         # 32 gives the wave the full non-equilibrium budget)
 RECALL_EVERY = 5         # recall Zone C conditioning every N steps
 CHECKPOINT_EVERY = 10    # persist engram every N steps
 EDMD_EVERY = 16          # NL Level 2: mid-frequency EDMD fit every K steps
