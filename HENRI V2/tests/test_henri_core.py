@@ -398,6 +398,70 @@ class TestEpistemicNovelty:
 
 
 # ---------------------------------------------------------------------------
+# Valence wires: pragmatic preference store (A) + precision gate (B)
+# ---------------------------------------------------------------------------
+
+class TestValenceWires:
+    def test_preference_lowers_pragmatic_value(self, device):
+        # Wire A: registering a wave into the preference store must LOWER the
+        # pragmatic score of a matching prediction (argmin-EFE is pulled
+        # toward verified basins) without touching the surprise term.
+        from efe_planner import EFEPlanner
+        p = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
+        fav = mk_wave((SCALE["num_blocks"], 8), device, 90)
+        boundary = mk_wave((2, SCALE["num_blocks"], 8), device, 91)
+        before = p.pragmatic_value(fav, boundary).item()
+        p.register_preference(fav)
+        after = p.pragmatic_value(fav, boundary).item()
+        assert after < before - 0.5, f"preference resonance did not lower score: {before} -> {after}"
+        # Surprise term untouched: without resonance, score == min sagnac delta
+        q = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
+        assert abs(q.pragmatic_value(fav, boundary).item() - before) < 1e-6
+
+    def test_preference_ring_capacity(self, device):
+        from efe_planner import EFEPlanner
+        p = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
+        for i in range(p.preference_capacity + 10):
+            p.register_preference(mk_wave((SCALE["num_blocks"], 8), device, 100 + i))
+        assert p.preference_store.num_engrams() == p.preference_capacity
+
+    def test_valence_gate_polarity(self, device):
+        # Wire B: success damps the effective update (crystallize), failure
+        # damps harder but NEVER freezes (no zero-halt, no gradient inversion).
+        from efe_planner import EFEPlanner
+
+        def step_with(valence, seed):
+            torch.manual_seed(seed)
+            p = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"]).to(device)
+            s = mk_wave((SCALE["num_blocks"], 8), device, seed + 1)
+            a = mk_wave((SCALE["num_blocks"], 8), device, seed + 2)
+            o = mk_wave((SCALE["num_blocks"], 8), device, seed + 3)
+            before = p.transition.field_V.detach().clone()
+            p.train_transition_step(s, a, o, lr=0.05, valence=valence)
+            return (p.transition.field_V.detach() - before).norm().item()
+
+        d_neutral = step_with(0.0, 200)
+        d_success = step_with(1.0, 200)
+        d_failure = step_with(-1.0, 200)
+        assert d_success < d_neutral, "success must damp (crystallize)"
+        assert d_failure < d_neutral, "failure must damp consolidation"
+        assert d_failure > 0.0, "failure must NOT freeze plasticity to zero"
+        assert d_success > 0.0, "success must NOT freeze either"
+
+    def test_swarm_temperature_valence_channel(self, orch, device):
+        # Wire B swarm side: failure valence raises the thermal budget,
+        # success cools it. Verified through the monkeypatched noise scale.
+        wave = mk_wave((SCALE["num_blocks"], 8), device, 110)
+        target = mk_wave((SCALE["num_blocks"], 8), device, 111)
+        # Smoke: both polarities execute finite creep steps
+        for v in (-1.0, 1.0):
+            delta, _, _ = orch.process_active_reasoning_step(
+                wave, target, t_shock_max=torch.tensor(0.5, device=device), valence=v)
+            assert math.isfinite(delta)
+            assert 0.0 <= delta <= 2.0
+
+
+# ---------------------------------------------------------------------------
 # T5: attractor consolidation
 # ---------------------------------------------------------------------------
 

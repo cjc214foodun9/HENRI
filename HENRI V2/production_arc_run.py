@@ -138,23 +138,52 @@ def run():
             continue
 
         prev_wave = None
+        prev_raw_wave = None
         prev_predicted_prior = None
         train_ctx = None
         action_counts = {}
         edmd_buffer = []  # (state, action_wave, observed_next) triples
+        # Wire B valence: outcome signal for the LAST executed action,
+        # computed when the next observation arrives and consumed by the
+        # deferred T1 update + the current relaxation's thermal schedule.
+        valence = 0.0
+        last_action_was_reset = False
         for step in range(args.steps):
             t0 = time.perf_counter()
             grid = obs.frame[0].tolist()
             state_wave = tokenizer.encode_spatial_grid(grid).squeeze(0).to(DEVICE)
+            raw_wave = state_wave  # pre-blend; recall blending mutates below
+
+            # Valence extraction from observable outcome signals (no
+            # teleology: only deltas the environment actually reports).
+            # Compare against the PRE-BLEND raw observation wave — recall
+            # blending mutates state_wave below and would fake a frame change.
+            frame_changed = (
+                prev_raw_wave is None
+                or not torch.allclose(state_wave, prev_raw_wave, atol=1e-5)
+            )
+            if last_action_was_reset and not frame_changed:
+                valence = -1.0   # null action: RESET with no state change
+            elif last_action_was_reset and frame_changed:
+                valence = 0.0    # legitimate RESET (new puzzle instance)
+            else:
+                valence = 0.0    # neutral exploration (WIN handled at terminal)
 
             # T1: apply the deferred transition-model update using the previous
             # step's (state, executed action) -> this step's observed wave.
             transition_loss = None
             if train_ctx is not None and train_ctx["action_wave"] is not None:
-                # NL Level 1 (fast): surprise-modulated per-step SGLD.
+                # NL Level 1 (fast): surprise-modulated per-step SGLD, now
+                # valence-gated (Wire B planner-side: success crystallizes,
+                # failure stays plastic but refuses to consolidate).
                 transition_loss = orch.planner.train_transition_step(
-                    train_ctx["state"], train_ctx["action_wave"], state_wave, lr=0.05
+                    train_ctx["state"], train_ctx["action_wave"], state_wave,
+                    lr=0.05, valence=valence,
                 )
+                # Wire A: consolidate favorable trajectories into the
+                # pragmatic preference store.
+                if valence > 0.0:
+                    orch.planner.register_preference(state_wave)
                 # Accumulate the triple for the slower consolidation levels.
                 edmd_buffer.append((train_ctx["state"], train_ctx["action_wave"],
                                     state_wave))
@@ -201,12 +230,14 @@ def run():
                     state_wave = 0.7 * state_wave + 0.3 * recalled
                     state_wave = state_wave / (torch.norm(state_wave, p=2, dim=-1, keepdim=True) + 1e-9)
 
-            # Swarm relaxation with SGLD creep
+            # Swarm relaxation with SGLD creep (valence drives the thermal
+            # schedule: failure heats, success cools)
             sagnac_delta = None
             for _ in range(RELAX_STEPS):
                 sagnac_delta, _, _ = orch.process_active_reasoning_step(
                     state_wave, boundary,
                     t_shock_max=torch.tensor(0.5, device=DEVICE),
+                    valence=valence,
                 )
 
             # Latent metrics
@@ -235,11 +266,15 @@ def run():
             game_action = action if isinstance(action, GameAction) else GameAction.ACTION1
             obs_next = game.step(game_action)
             step_ms = (time.perf_counter() - t0) * 1000
+            last_action_was_reset = (game_action.name == "RESET")
 
             # T1/T2: train the transition model on the EXECUTED action pair.
             # observed_next is encoded on the NEXT loop iteration; stash the
             # training context now and apply the update once the next frame's
             # wave exists. Loss = Sagnac delta(predicted, observed_next).
+            # Subtraction-tautology guard: training is deferred one step and
+            # always against the OBSERVED wave, never the planner's own
+            # prediction in the same step.
             train_ctx = {
                 "state": state_wave.detach(),
                 "action_wave": next(
@@ -268,6 +303,8 @@ def run():
                 "explored": explored,
                 "loss_ema": round(loss_ema, 6),
                 "transition_loss": round(transition_loss, 6) if transition_loss is not None else None,
+                "valence": valence,
+                "preference_store_size": orch.planner.preference_store.num_engrams(),
                 "action": str(game_action),
                 "recall": recall_info,
                 "step_ms": round(step_ms, 1),
@@ -290,6 +327,7 @@ def run():
                   f"| r {order_param:.3f} | EFE {efe_table[0]['efe']:+.3f} "
                   f"| act {game_action.name} | recall {recall_info['hits']} | {step_ms:.0f}ms")
 
+            prev_raw_wave = raw_wave
             prev_wave = state_wave
             prev_predicted_prior = predicted_prior
             obs = obs_next
@@ -297,9 +335,20 @@ def run():
                 print("  [end] null observation")
                 break
             if obs.state.name in ("WIN", "GAME_OVER"):
+                # Terminal valence: WIN is the strongest favorable signal —
+                # consolidate the final trajectory into the preference store
+                # and mark valence for the deferred T1 update.
+                if obs.state.name == "WIN":
+                    valence = 1.0
+                    orch.planner.register_preference(state_wave)
+                    if train_ctx is not None and train_ctx["action_wave"] is not None:
+                        orch.planner.train_transition_step(
+                            train_ctx["state"], train_ctx["action_wave"],
+                            state_wave, lr=0.05, valence=1.0,
+                        )
                 print(f"  [end] {obs.state.name} at step {step}")
                 tele.emit({"env": env_name, "terminal": obs.state.name, "step": step,
-                           "action_counts": action_counts})
+                           "valence": valence, "action_counts": action_counts})
                 break
         else:
             tele.emit({"env": env_name, "terminal": "BUDGET_EXHAUSTED",

@@ -361,7 +361,7 @@ class HenriSwarmOrchestrator(nn.Module):
         geom_prod = self.clifford.geometric_product(active_wave.unsqueeze(0), target_rev.unsqueeze(0)).squeeze(0)
         return geom_prod[..., 0].sum() / self.num_blocks
 
-    def process_active_reasoning_step(self, active_wave: torch.Tensor, target_boundary: torch.Tensor, external_error_mask: torch.Tensor = None, t_shock_max: float = 0.5) -> tuple:
+    def process_active_reasoning_step(self, active_wave: torch.Tensor, target_boundary: torch.Tensor, external_error_mask: torch.Tensor = None, t_shock_max: float = 0.5, valence: float = 0.0) -> tuple:
         """
         Processes a single forward step of the scaled core.
         Executes coupled syncytium relaxation, isolates active experts, and deforms
@@ -410,6 +410,15 @@ class HenriSwarmOrchestrator(nn.Module):
         # for Newton-Schulz; raw T-scaled noise blew past that).
         T_base = 0.01
         active_temperature = T_base + t_shock_tensor * (1.0 - torch.exp(-sagnac_delta_tensor))
+        # Wire B (valence thermal channel, swarm side): failure valence
+        # (nu < 0) injects anisotropic heat to destabilize a failed-trajectory
+        # attractor (the Dark Room shaker); success (nu > 0) cools toward
+        # T_base, crystallizing the verified state. Neutral leaves the
+        # surprise-driven schedule untouched.
+        if valence < 0.0:
+            active_temperature = active_temperature + 0.5 * (-valence)
+        elif valence > 0.0:
+            active_temperature = active_temperature / (1.0 + valence)
         mu = 0.05  # SGLD drift (learning) rate
         dt = 0.01
         noise_scale = torch.sqrt(2.0 * active_temperature * dt)

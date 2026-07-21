@@ -178,6 +178,15 @@ class EFEPlanner(nn.Module):
         self.novelty_memory = ContinuousHopfieldCleanup(dim=d_model, beta=8.0)
         self.novelty_capacity = 256
 
+        # Wire A (pragmatic prior): Hopfield store of waves from historically
+        # favorable transitions (valence v > 0). p(o|m) = exp(V(s)) in the
+        # FEP formulation — resonance with this store is the prior-preference
+        # term of the pragmatic value, warping EFE drift toward verified
+        # basins. Real waves, ring-capped like the novelty memory.
+        self.preference_store = ContinuousHopfieldCleanup(dim=d_model, beta=8.0)
+        self.preference_capacity = 256
+        self.beta_pragmatic = 1.0
+
     def update_model_accuracy(self, transition_loss: float):
         """EMA update of the dynamics model's observed error (T4)."""
         self.loss_ema = self.loss_ema_beta * self.loss_ema + (1 - self.loss_ema_beta) * transition_loss
@@ -221,10 +230,21 @@ class EFEPlanner(nn.Module):
     # -- value terms ------------------------------------------------------
 
     def pragmatic_value(self, predicted_wave: torch.Tensor, boundary_axioms: torch.Tensor) -> torch.Tensor:
-        """
-        Expected surprise: normalized Sagnac delta of the predicted wave
-        against boundary axioms. boundary_axioms: [N, num_blocks, 8].
-        Returns scalar in [0, 2].
+        """Pragmatic term of the EFE: surprise minus prior-preference resonance.
+
+        FEP decomposition (bank-conformant): the pragmatic value of a policy
+        is the KL divergence between predicted outcomes and prior preferences
+        p(o|m) = exp(V(s)). Implemented as
+
+            pragmatic = min_a sagnac_delta(predicted, axiom_a)
+                        - beta_pragmatic * max_resonance(predicted, prefs)
+
+        The first term is expected surprise against boundary axioms [0, 2];
+        the second is geometric resonance with the preference store of
+        historically favorable transition waves [0, 1]. Resonance with a
+        verified-successful outcome LOWERS the score (argmin wins), pulling
+        the drift toward favorable basins without touching the epistemic
+        term. boundary_axioms: [N, num_blocks, 8]. Returns scalar.
         """
         p = predicted_wave.view(-1)
         p = p / (torch.norm(p) + 1e-12)
@@ -234,7 +254,23 @@ class EFEPlanner(nn.Module):
             a = a / (torch.norm(a) + 1e-12)
             inner = torch.dot(p, a)  # real waves: plain inner product
             deltas.append(1.0 - inner)
-        return torch.stack(deltas).min()  # closest axiom governs
+        surprise = torch.stack(deltas).min()  # closest axiom governs
+
+        resonance = torch.zeros((), device=predicted_wave.device)
+        if self.preference_store.num_engrams() > 0:
+            sim = p @ self.preference_store.engrams.T
+            resonance = sim.max().clamp(min=0.0)
+        return surprise - self.beta_pragmatic * resonance
+
+    def register_preference(self, predicted_wave: torch.Tensor):
+        """Consolidate a favorable transition's predicted wave into the
+        preference store (called by the orchestrator when valence > 0).
+        Ring-capped at preference_capacity, oldest dropped first."""
+        flat = predicted_wave.view(-1)
+        flat = flat / (torch.norm(flat) + 1e-12)
+        self.preference_store.store_engrams(flat.unsqueeze(0))
+        if self.preference_store.num_engrams() > self.preference_capacity:
+            self.preference_store.engrams = self.preference_store.engrams[-self.preference_capacity:]
 
     def epistemic_value(self, predicted_wave: torch.Tensor) -> torch.Tensor:
         """
@@ -357,6 +393,7 @@ class EFEPlanner(nn.Module):
         observed_next_wave: torch.Tensor,
         lr: float = 0.05,
         surprise_modulate: bool = True,
+        valence: float = 0.0,
     ) -> float:
         """
         Online latent-space dynamics learning (T1 + T2), fast NL level.
@@ -380,6 +417,21 @@ class EFEPlanner(nn.Module):
         high-plasticity updates; already-predictable transitions barely
         move the weights (matching the paper's gradient-magnitude gate).
 
+        Wire B (valence precision gate, dopaminergic polarity): valence
+        nu in [-1, 1] scales precision (inverse temperature) of the
+        prediction error. Success (nu > 0) cools the thermostat — the
+        update crystallizes the verified trajectory with a DAMPED rate.
+        Failure (nu < 0) keeps the surprise-gated rate plastic (the system
+        must NOT consolidate the failed trajectory, but per the Titans
+        saturation warning it must NOT freeze either — the heat lives in
+        the swarm's Langevin schedule, which receives the same valence).
+        Neutral (nu = 0) leaves the surprise gate untouched.
+
+            lr_eff = lr * (0.25 + delta/2) * 1/(1 + nu)   for nu > 0
+                   = lr * (0.25 + delta/2) * (1 + nu)^2   for nu < 0
+        clamped to (0, 1.25x lr]. The (1+nu)^2 failure branch damps
+        consolidation quadratically without a hard zero-halt.
+
         Returns the pre-update loss (the Sagnac delta this step).
         """
         with torch.enable_grad():
@@ -398,6 +450,11 @@ class EFEPlanner(nn.Module):
                 lr_eff = lr * min(1.25, 0.25 + 0.5 * delta)
             else:
                 lr_eff = lr
+            if valence > 0.0:
+                lr_eff /= (1.0 + valence)       # crystallize: damped update
+            elif valence < 0.0:
+                lr_eff *= (1.0 + valence) ** 2  # failed trajectory: damp
+                lr_eff = max(lr_eff, 1e-4 * lr)  # never fully freeze
             self.transition.field_V -= lr_eff * gV
             self.transition.field_W -= lr_eff * gW
             self.transition.block_residual -= lr_eff * gR
