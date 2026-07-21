@@ -52,7 +52,7 @@ class UnitaryWaveTransition(nn.Module):
     d — learnable online within a single env episode.
     """
 
-    def __init__(self, num_blocks: int = 8192, block_dim: int = 8, rank: int = 64):
+    def __init__(self, num_blocks: int = 8192, block_dim: int = 8, rank: int = 128):
         super().__init__()
         self.num_blocks = num_blocks
         self.block_dim = block_dim
