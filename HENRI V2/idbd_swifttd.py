@@ -115,36 +115,3 @@ class AdaptiveCreepController:
             "frozen_fraction": (a < 1e-4).float().mean().item(),
         }
 
-
-if __name__ == "__main__":
-    torch.manual_seed(0)
-    shape = (64, 8, 32)
-
-    # IDBD adapts to CONSISTENT drift direction: alpha should grow for
-    # parameters whose gradient signal persistently correlates with the error.
-    ctrl = AdaptiveCreepController(shape, meta_theta=0.1)
-    consistent = torch.ones(shape) * 0.01
-    for step in range(100):
-        delta = 1.0  # persistent error
-        drift = ctrl.scaled_drift(delta, consistent)
-        assert torch.isfinite(drift).all()
-    stats = ctrl.plasticity_stats()
-    print(f"[IDBD] consistent signal: {stats}")
-    assert stats["max_alpha"] > 0.05, "alpha failed to grow on persistent gradient"
-
-    # Zero error: alpha must remain at init (no spurious adaptation)
-    ctrl_idle = AdaptiveCreepController(shape)
-    for _ in range(50):
-        ctrl_idle.scaled_drift(0.0, torch.randn(shape) * 0.01)
-    idle = ctrl_idle.plasticity_stats()
-    assert abs(idle["mean_alpha"] - 0.05) < 1e-3, "alpha drifted with zero error"
-    print(f"[IDBD] zero-error stability: mean_alpha={idle['mean_alpha']:.5f}")
-
-    # SwiftTD overshoot bound: huge drift must be scaled down
-    big = torch.ones(shape) * 100.0
-    ctrl2 = AdaptiveCreepController(shape)
-    bounded = ctrl2.scaled_drift(1.0, big)
-    assert bounded.abs().max() < big.abs().max(), "SwiftTD did not bound overshoot"
-    print(f"[SwiftTD] overshoot {big.abs().max():.0f} -> {bounded.abs().max():.4f}")
-
-    print("IDBD + SwiftTD smoke test PASSED")

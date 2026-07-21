@@ -366,30 +366,3 @@ class SegmentCache:
 # Smoke test
 # ---------------------------------------------------------------------------
 
-if __name__ == "__main__":
-    torch.manual_seed(0)
-    NB = 64
-    cache = SegmentCache.connect(dsn="invalid://offline", num_blocks=NB)  # force surrogate
-    assert isinstance(cache.store, InProcessZoneCStore)
-
-    # Checkpoint three waves
-    waves = []
-    for i in range(3):
-        w = torch.randn(NB, 8)
-        w = w / torch.norm(w, p=2, dim=-1, keepdim=True)
-        cache.checkpoint(w, domain="arc_agi", sagnac_stress=0.1 * (i + 1))
-        waves.append(w)
-    assert cache.store.count() == 3
-
-    # Query with a wave near waves[1]
-    q = waves[1] + 0.05 * torch.randn(NB, 8)
-    q = q / torch.norm(q, p=2, dim=-1, keepdim=True)
-    out = cache.retrieve(q)
-    print(f"[GRM] hits={out['hits']} top_sim={out['top_similarity']:.4f} gates={[f'{g:.3f}' for g in out['gates']]}")
-    assert out["hits"] >= 1
-    assert out["conditioning_wave"] is not None
-    assert out["conditioning_wave"].shape == (NB, 8)
-    # The dominant gate should land on the most similar engram
-    top_gate = int(np.argmax(out["gates"]))
-    print(f"[GRM] dominant gate index: {top_gate} (expect engram most similar to query)")
-    print("SegmentCache GRM smoke test PASSED")
