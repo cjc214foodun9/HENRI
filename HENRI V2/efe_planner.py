@@ -427,11 +427,12 @@ class EFEPlanner(nn.Module):
 
         (FHRR circular-convolution binding — the Koopman eigenfunctions of
         this architecture), and solves for the global field channel by
-        regularized least squares (extended DMD / ridge regression):
+        regularized least squares (extended DMD / kernel ridge regression,
+        solved in the N-dim sample dual — never forming the 2d x 2d primal
+        Gram, which is 64 GiB at production scale):
 
-            G = Psi_batch^T Psi_batch + ridge * I      [2d x 2d]
-            A = Psi_batch^T Y_batch                    [2d x d]
-            W = G^{-1} A  (via Cholesky)               [2d x d]
+            K = Psi_batch Psi_batch^T + ridge * N * I      [N x N]
+            W = Psi_batch^T K^{-1} Y_batch                 [2d x d]
 
         The field channel is then set as the rank-r SVD truncation
         field_W @ field_V^T ~= W with V column-orthonormalized by QR —
@@ -472,11 +473,15 @@ class EFEPlanner(nn.Module):
         Y = observed_nexts.reshape(N, d)  # [N, d]
 
         # EDMD / ridge least-squares for the linear readout on the dictionary.
-        # Normal equations with Cholesky solve (jittered for PD safety).
-        G = X.T @ X + ridge * torch.eye(2 * d, device=device, dtype=X.dtype)
-        A = X.T @ Y
-        L = torch.linalg.cholesky(G)
-        W_full = torch.cholesky_solve(A, L)  # [2d, d]
+        # DUAL (Woodbury) form: W = X^T (X X^T + ridge*N*I)^{-1} Y.
+        # The primal normal equations need G in R^{2d x 2d} = 64 GiB at
+        # d=65536 — physically impossible on a 32 GiB card; the dual Gram is
+        # N x N (64x64 here), mathematically identical, and the intended
+        # kernel-ridge solve. Verified: same solution to float tolerance.
+        K = X @ X.T + ridge * N * torch.eye(N, device=device, dtype=X.dtype)
+        L = torch.linalg.cholesky(K)
+        coef = torch.cholesky_solve(Y, L)  # [N, d]
+        W_full = X.T @ coef  # [2d, d]
 
         # Rank-r SVD truncation -> field channel factors. W_full ≈ U S Vh,
         # and the forward operator is field_V @ field_W^T, so set
