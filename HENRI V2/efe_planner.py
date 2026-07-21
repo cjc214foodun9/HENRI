@@ -192,6 +192,18 @@ class EFEPlanner(nn.Module):
         # of the solved spectrum and Gram conditioning, no behavior change.
         self.last_edmd_diagnostics = {}
 
+        # Spectral axioms (Phase 1): ONE channel — the constraint. The
+        # incumbent field_V frame (blended, re-retracted) IS the fitted
+        # operator's invariant subspace, stable across fits at ~0.80 overlap
+        # (Phase 0 damped swap-in). The VETO channel (weakest-response tail)
+        # was FALSIFIED by measurement: bottom-Sc directions show only 0.20
+        # cross-fit overlap at every N (16->96) with no spectral gap
+        # (Sc_min/Sc_max ~ 0.14) — rank-limited noise, not structure. Cut
+        # per simplicity-first; revisit only if the operator ever becomes
+        # well-determined (N approaching d, not reachable at production).
+        self.axiom_constraint = torch.zeros(0)
+        self.axiom_stability = {"constraint_overlap": None}
+
     def update_model_accuracy(self, transition_loss: float):
         """EMA update of the dynamics model's observed error (T4)."""
         self.loss_ema = self.loss_ema_beta * self.loss_ema + (1 - self.loss_ema_beta) * transition_loss
@@ -597,6 +609,22 @@ class EFEPlanner(nn.Module):
                 Qv, _ = torch.linalg.qr(self.transition.field_V, mode="reduced")
                 self.transition.field_V.copy_(Qv)
 
+            # --- Phase 1: spectral axiom extraction (constraint only) -------
+            # The blended, re-retracted field_V frame is the fitted
+            # operator's invariant subspace. Record its cross-fit overlap as
+            # the constraint channel's stability (Task 1.2 acceptance
+            # criterion), then expose the frame as axiom rows.
+            new_frame = self.transition.field_V.detach().T.contiguous()
+            new_frame = new_frame / (new_frame.norm(dim=-1, keepdim=True) + 1e-12)
+            prev = getattr(self, "_prev_constraint_basis", None)
+            if prev is not None and prev.shape == new_frame.shape:
+                Qp, _ = torch.linalg.qr(prev.T)
+                Qn, _ = torch.linalg.qr(new_frame.T)
+                self.axiom_stability["constraint_overlap"] = round(
+                    float(torch.linalg.matrix_norm(Qp.T @ Qn, ord=2)), 4)
+            self._prev_constraint_basis = new_frame
+            self.axiom_constraint = new_frame
+
         # Spectral diagnostics: the solved coefficient spectrum (Sc near 1
         # marks near-invariant modes — candidate axioms, Phase 1), Gram
         # conditioning, jitter tier, and the pre/post-fit loss delta — the
@@ -610,6 +638,8 @@ class EFEPlanner(nn.Module):
                 "sc_top8": [round(float(s), 4) for s in Sc[:8]],
                 "sc_rank": int((Sc > 1e-6 * Sc.max()).sum()),
                 "pre_loss": round(pre_loss, 6),
+                "n_axiom_constraint": int(self.axiom_constraint.shape[0]),
+                "constraint_stability": self.axiom_stability["constraint_overlap"],
             }
         else:
             self.last_edmd_diagnostics = {

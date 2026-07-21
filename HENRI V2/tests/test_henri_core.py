@@ -365,6 +365,65 @@ class TestTransitionTraining:
 
 
 # ---------------------------------------------------------------------------
+# Phase 1: spectral axiom extraction (constraint channel + stability record)
+# ---------------------------------------------------------------------------
+
+class TestSpectralAxioms:
+    def _plant(self, device):
+        from efe_planner import EFEPlanner
+        NB, D = SCALE["num_blocks"], SCALE["d_model"]
+        g = torch.Generator().manual_seed(11)
+        Vt = (torch.randn(D, 8, generator=g) / math.sqrt(D)).to(device)
+        Wt = (torch.randn(2 * D, 8, generator=g) / math.sqrt(2 * D)).to(device)
+        return EFEPlanner(num_blocks=NB, d_model=D).to(device), Vt, Wt
+
+    def _window(self, p, Vt, Wt, n, seed0, device):
+        NB = SCALE["num_blocks"]
+        def truth(s, a):
+            fused = p.transition.bind(s, a)
+            x = torch.cat([fused.real.reshape(-1), fused.imag.reshape(-1)])
+            y = Vt @ (Wt.T @ x)
+            y = y.view(NB, 8) + 0.3 * s
+            return y / torch.norm(y, p=2, dim=-1, keepdim=True)
+        S = torch.stack([mk_wave((NB, 8), device, seed0 + 2 * i) for i in range(n)])
+        A = torch.stack([mk_wave((NB, 8), device, seed0 + 2 * i + 1) for i in range(n)])
+        T = torch.stack([truth(S[i], A[i]) for i in range(n)])
+        return S, A, T
+
+    def test_extraction_populates_constraint_channel(self, device):
+        p, Vt, Wt = self._plant(device)
+        S, A, T = self._window(p, Vt, Wt, 16, 7000, device)
+        p.train_transition_batch(S, A, T, iters=1)
+        D = SCALE["d_model"]
+        # Constraint channel = blended field frame (rank rows, d wide), unit rows.
+        assert p.axiom_constraint.shape == (p.transition.rank, D)
+        norms = p.axiom_constraint.norm(dim=-1)
+        assert (norms - 1.0).abs().max().item() < 1e-3
+        assert p.last_edmd_diagnostics["n_axiom_constraint"] == p.transition.rank
+
+    def test_constraint_stability_recorded_across_fits(self, device):
+        # Task 1.2: cross-fit overlap of the constraint subspace is recorded
+        # and, with the damped swap-in, sits in the converged regime (>0.6)
+        # for same-dynamics windows.
+        p, Vt, Wt = self._plant(device)
+        S1, A1, T1 = self._window(p, Vt, Wt, 16, 7100, device)
+        p.train_transition_batch(S1, A1, T1, iters=1)
+        assert p.axiom_stability["constraint_overlap"] is None  # first fit: no baseline
+        S2, A2, T2 = self._window(p, Vt, Wt, 16, 7200, device)
+        p.train_transition_batch(S2, A2, T2, iters=1)
+        stab = p.axiom_stability["constraint_overlap"]
+        assert stab is not None, "second fit did not record constraint overlap"
+        assert stab > 0.6, f"constraint subspace unstable across fits ({stab})"
+
+    def test_veto_channel_removed(self, device):
+        # The veto channel was falsified by measurement (bottom-Sc overlap
+        # 0.20 at all N, no spectral gap). The planner must NOT carry it.
+        p, _, _ = self._plant(device)
+        assert not hasattr(p, "axiom_veto")
+        assert not hasattr(p, "_prev_veto_basis")
+
+
+# ---------------------------------------------------------------------------
 # T4: calibrated exploration
 # ---------------------------------------------------------------------------
 
