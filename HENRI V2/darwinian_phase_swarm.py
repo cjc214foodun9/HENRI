@@ -186,7 +186,13 @@ class GapJunctionSwarmSyncytium(nn.Module):
         #   -k * mean_j sin(theta_j - theta_i)   (attractive toward neighbors)
         # The previous (+) sign was REPULSIVE — more coupling drove r DOWN
         # (verified numerically: r 0.016 at gain 6.0 with +, 0.945 with -).
-        coupled_force = -(G * sin_diff).sum(dim=1) / self.num_experts
+        # Degree-normalized Kuramoto force: mean over each node's ACTUAL
+        # coupled neighbors, not the whole population. G is the sparse BA
+        # skeleton gated by projection similarity (~8 effective edges/node);
+        # dividing by num_experts dilutes the per-node coupling ~128x below
+        # the supercritical gain the (all-to-all) simulation assumed.
+        deg = G.sum(dim=1).clamp(min=1e-6)
+        coupled_force = -(G * sin_diff).sum(dim=1) / deg
         d_theta = self.natural_frequencies + coupling_gain * coupled_force
 
         # Inject localized Langevin thermal noise if coherence is low (Sagnac Veto Active)
