@@ -446,6 +446,25 @@ class TestSpectralAxioms:
         assert proj_energy < 0.1 * float(flat.norm()), \
             f"constraint row leaks into invariant subspace ({proj_energy})"
 
+    def test_progress_motion(self, device):
+        # Task 2.3: within-invariant motion observable. None pre-first-fit and
+        # on the first pair; a real state change yields m > 0; an identical
+        # state yields m = 0 (no self-motion); breaking the pair yields None.
+        p, Vt, Wt = self._plant(device)
+        NB = SCALE["num_blocks"]
+        s1 = mk_wave((NB, 8), device, 8200)
+        assert p.progress_motion(s1) is None  # pre-first-fit: no subspace
+        S, A, T = self._window(p, Vt, Wt, 16, 8300, device)
+        p.train_transition_batch(S, A, T, iters=1)
+        assert p.progress_motion(s1) is None  # first of pair: no previous
+        m_same = p.progress_motion(s1)        # identical state: no motion
+        assert m_same is not None and m_same < 1e-4, f"self-motion {m_same}"
+        s2 = mk_wave((NB, 8), device, 8201)
+        m_move = p.progress_motion(s2)        # different state: motion
+        assert m_move is not None and m_move > 1e-4, f"no motion {m_move}"
+        p._prev_proj = None                    # break the pair (RESET)
+        assert p.progress_motion(s2) is None  # first of new pair: None
+
 
 # ---------------------------------------------------------------------------
 # T4: calibrated exploration

@@ -230,6 +230,38 @@ class EFEPlanner(nn.Module):
         resid = (s - proj).view_as(state_wave)
         return resid / (torch.norm(resid, p=2, dim=-1, keepdim=True) + 1e-9)
 
+    def project_invariant(self, state_wave: torch.Tensor):
+        """P_inv(state) = V Vᵀ state — the within-invariant-subspace
+        component of the wave (flat [d]). None when no constraint extracted.
+        Shared by the boundary row and the progress-valence observable."""
+        if self.axiom_constraint.numel() == 0:
+            return None
+        V = self.axiom_constraint.to(state_wave.device)
+        s = state_wave.detach().reshape(-1)
+        return V.T @ (V @ s)
+
+    def progress_motion(self, state_wave: torch.Tensor):
+        """Exteroceptive progress observable (Task 2.3, bank-anchored):
+        within-invariant-subspace motion between consecutive OBSERVED states,
+
+            m_t = || P_inv(state_t) − P_inv(state_{t−1}) ||
+
+        Motion the learned physics ADMITS (jitter and RESET novelty spikes
+        land largely off-manifold — they inflate the projection residual,
+        not m). Computed from observed frames only; no internal surprise
+        deltas, satisfying the bank's exteroceptive-anchoring verdict.
+        Returns m_t (float) or None when no subspace exists yet (pre-first-
+        fit) or on the first call of a pair (no previous state)."""
+        proj = self.project_invariant(state_wave)
+        if proj is None:
+            self._prev_proj = None
+            return None
+        prev = getattr(self, "_prev_proj", None)
+        self._prev_proj = proj
+        if prev is None:
+            return None
+        return float((proj - prev).norm())
+
     def _accuracy_floor(self) -> float:
         """Adaptive exploitation threshold: exploit once the model's error has
         dropped ~10% below the worst error seen in this session."""

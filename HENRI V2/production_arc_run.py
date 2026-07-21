@@ -64,6 +64,15 @@ EDMD_WINDOW = 64         # rolling buffer depth for the mid-frequency fit
 # for clean A/B (staged-change convention).
 CONSTRAINT_AXIOM = os.environ.get("CONSTRAINT_AXIOM", "0") == "1"
 
+# Phase 2 Task 2.3: progress valence (exteroceptive anchor). When set, the
+# per-step valence is the descent of within-invariant-subspace motion:
+# nu = clip(EMA_slow(m) - EMA_fast(m), -1, 1), m = motion the learned
+# physics admits. Requires the constraint subspace (no-op pre-first-fit).
+# Default OFF so the default path stays byte-identical to run 11.
+PROGRESS_VALENCE = os.environ.get("PROGRESS_VALENCE", "0") == "1"
+PV_FAST_BETA = 0.75        # EMA_fast horizon ~4 steps
+PV_SLOW_BETA = 0.9375      # EMA_slow horizon ~16 steps (EDMD cadence)
+
 
 # ---------------------------------------------------------------------------
 # Telemetry
@@ -154,6 +163,13 @@ def run():
         # deferred T1 update + the current relaxation's thermal schedule.
         valence = 0.0
         last_action_was_reset = False
+        # Progress-valence EMA state (Task 2.3): per-episode fast/slow
+        # baselines of within-invariant motion; None until the first m.
+        pv_fast = None
+        pv_slow = None
+        # Break any cross-episode motion pair on the planner (a new episode's
+        # first frame must not pair with the previous episode's last).
+        orch.planner._prev_proj = None
         # Reset-transition curation (run-10 ablation result): the deferred T1
         # update is HELD after every RESET, permanently. Run 9's retroactive
         # nu-judgment apparatus (k=5 eligibility buffer, replays, preference
@@ -182,6 +198,30 @@ def run():
                 valence = 0.0    # legitimate RESET (new puzzle instance)
             else:
                 valence = 0.0    # neutral exploration (WIN handled at terminal)
+
+            # Task 2.3: progress valence (exteroceptive, bank-anchored).
+            # m = within-invariant-subspace motion between consecutive
+            # observed states (motion the learned physics admits). nu =
+            # tanh(EMA_fast(m) - EMA_slow(m)): positive when traversal is
+            # running above its slow baseline (doing work), negative when
+            # stalled. RESET novelty spikes land off-manifold and do not
+            # move m, so the signal cannot be gamed by the null action.
+            # Overrides the frame-change valence only when the invariant
+            # subspace exists (post-first-fit) and the flag is set.
+            # RESET-hygiene: the step after a RESET is a NEW puzzle frame —
+            # pairing it with the pre-reset state would inject a fake motion
+            # spike, so the motion pair is broken (m=None) across a RESET.
+            motion = None
+            if PROGRESS_VALENCE:
+                if last_action_was_reset:
+                    orch.planner._prev_proj = None  # break the pair
+                motion = orch.planner.progress_motion(state_wave)
+                if motion is not None:
+                    pv_fast = (PV_FAST_BETA * pv_fast + (1 - PV_FAST_BETA) * motion
+                               if pv_fast is not None else motion)
+                    pv_slow = (PV_SLOW_BETA * pv_slow + (1 - PV_SLOW_BETA) * motion
+                               if pv_slow is not None else motion)
+                    valence = math.tanh(pv_fast - pv_slow)
 
             # T1: apply the deferred transition-model update using the previous
             # step's (state, executed action) -> this step's observed wave.
@@ -335,6 +375,7 @@ def run():
                 "loss_ema": round(loss_ema, 6),
                 "transition_loss": round(transition_loss, 6) if transition_loss is not None else None,
                 "valence": valence,
+                "motion": round(motion, 6) if motion is not None else None,
                 "preference_store_size": orch.planner.preference_store.num_engrams(),
                 "action": str(game_action),
                 "recall": recall_info,
