@@ -1,5 +1,50 @@
-# HENRI — Project Handoff: From Physics Stability to Task-Solving ML
-*Written 2026-07-22, end of Phase 3 build. Read this first.*
+# HENRI — Project Handoff: Phase 3.1 — PEARL Repair + Telemetry Analysis
+*Written 2026-07-22, end of Phase 3.1 build. Read this first.*
+
+## Phase 3.0 Results (λ_goal sweep, 3 ARM × 3 envs)
+
+| ARM | λ_goal | Goal distance trend | EFE mean | Pref max | Rejection | Score |
+|---|---|---|---|---|---|---|
+| ARM1 | 0.0 | 0.0 always (disabled) | −0.005 | 33 | 0% | 0.0 |
+| ARM2 | 1.0 | 0.95→0.66 ↓ | +1.20 | 35 | 0% | 0.0 |
+| ARM3 | 3.0 | 0.99→0.73 ↓ | +3.11 | 23 | 0% | 0.0 |
+
+**Key findings:**
+- Goal-conditioning WORKS — goal_distance decreases over steps (ARM2/ARM3)
+- But identity goal wave is REPULSIVE — higher λ_goal inflates EFE (system punished for leaving start state)
+- Constraint channel is NO-OP — 0% rejection across all 287 steps (penalties ≤0.35, well below 0.5 threshold)
+- Preference store fills to 23-35 entries at β=10.0 — mechanism functional
+- Scores remain 0.0 — goal wave must be meaningful (example output, not identity)
+
+## Phase 3.1 Changes (commit `962e7a4`)
+
+### PEARL Repair Integration
+- `efe_planner.py`: Added `pearl_repair()` method — preference-blend rejected candidate predictions
+- `score_actions()`: Rejected candidates repaired → re-scored → can become admissible
+- `residual_type` field: ACCEPTED_CLEAN / ACCEPTED_PEARL_REPAIRED / REJECTED_REPAIR_FAILED / REJECTED_NO_PREFS
+- `production_arc_run.py`: `residual_type` emitted in per-step telemetry
+
+### Zombie Code Cleanup
+- `henri_pwm_orchestrator.py` → `_archive/orphans/` (HANDOFF fallacy #7)
+- Test import updated to archive path
+
+### Suite
+- 51 passed, 1 skipped (CPU) — all green
+
+## Next Priorities (ordered by impact)
+
+| Priority | Task | Why |
+|---|---|---|
+| P0 | Meaningful goal wave (example output, not identity) | Identity goal is repulsive — mechanism works but pushes wrong way |
+| P0 | Transition model audit script | Does model learn task-specific dynamics? Critical diagnostic |
+| P1 | Task-conditioned action encoding | Action waves are random-phase — planner can't learn action semantics |
+| P1 | Zone C example pair seeding | Needed for analogical goal inference |
+| P2 | Wire scorecard delta as valence | Currently only WIN=1.0 drives preference learning |
+| P2 | Constraint threshold tuning | Channel is no-op at 0% rejection — tighten or remove |
+
+---
+
+*Original HANDOFF.md follows (from Phase 3 build).*
 
 ---
 
