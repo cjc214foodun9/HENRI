@@ -448,6 +448,7 @@ def run():
                 "fallback_executed": bool(chosen.get("fallback_executed", False)),
                 "admissible_count": int(chosen.get("admissible_count", 0)),
                 "goal_distance": round(float(chosen.get("goal_distance", 0.0)), 6),
+                "residual_type": str(chosen.get("residual_type", "N/A")),
                 "lambda_goal": LAMBDA_GOAL,
                 "step_ms": round(step_ms, 1),
             })

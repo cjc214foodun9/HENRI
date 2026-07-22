@@ -1,0 +1,61 @@
+# HENRI V2 Execution Runtime (Vast.ai)
+# Start from NVIDIA CUDA 12.8 devel image (matches host torch 2.11.0+cu128 numerics)
+FROM nvidia/cuda:12.8.1-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    CUDA_HOME=/usr/local/cuda \
+    PATH=${CUDA_HOME}/bin:${PATH} \
+    LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH} \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_BREAK_SYSTEM_PACKAGES=1
+
+# OS utilities, SSH, build chain, Python 3.11 (deadsnakes for 22.04), Nsight profilers
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        software-properties-common \
+    && add-apt-repository -y ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y --no-install-recommends \
+        python3.11 python3.11-dev python3.11-venv \
+        git curl wget ca-certificates \
+        openssh-server rsync tmux htop \
+        build-essential cmake \
+        cuda-nsight-systems-12-4 cuda-nsight-compute-12-4 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
+    && curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
+
+# PyTorch 2.11 + Triton 3.7 on CUDA 12.8 wheels — pinned identical to the
+# host (2.11.0+cu128); torch 2.4.1 numerically diverges on the EDMD
+# constraint-boundary test.
+RUN pip install --upgrade pip setuptools wheel \
+    && pip install \
+        torch==2.11.0 torchvision torchaudio \
+        --index-url https://download.pytorch.org/whl/cu128 \
+    && pip install triton==3.7.1
+
+# HENRI V2 core dependencies (audited from live repo imports)
+# - torch/numpy/psycopg2: wave model + TimescaleDB telemetry
+# - arc-agi/arcengine:    ARC-AGI-3 environment SDK (installed if publicly available)
+# - wandb:                run telemetry / phase-decay analysis
+# - vastai:               instance lifecycle SDK
+RUN pip install \
+        numpy scipy pandas matplotlib rich \
+        psycopg2-binary "psycopg[binary]" sqlalchemy asyncpg \
+        wandb boto3 \
+        pytest \
+        vastai \
+        fastapi uvicorn \
+        arc-agi
+
+# SSH for Vast.ai
+RUN mkdir -p /var/run/sshd \
+    && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config \
+    && echo 'X11Forwarding yes' >> /etc/ssh/sshd_config
+
+WORKDIR /workspace/HENRI_V2
+
+EXPOSE 22
+
+CMD ["/bin/bash"]

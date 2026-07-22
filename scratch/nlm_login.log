@@ -1,0 +1,10 @@
+Opening Chrome for Google authentication...
+Please sign in to your Google account in the browser window.
+The window will close automatically once authentication is complete.
+
+[notebooklm] Launching Chrome for cookie sync (profile: C:\Users\chan\AppData\Roaming\notebooklm-ai\chrome-profile)
+[notebooklm] Please log in to NotebookLM in the opened browser window.
+[notebooklm] Waiting for cookies to become available...
+[notebooklm] NotebookLM cookies validated successfully.
+[notebooklm] Saved cookies to C:\Users\chan\AppData\Roaming\notebooklm-ai\cookies.json
+Authentication successful! Cookies saved.

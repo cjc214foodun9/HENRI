@@ -16,7 +16,7 @@ import torch
 from darwinian_phase_swarm import HenriSwarmOrchestrator, GapJunctionSwarmSyncytium
 from hopfield_cleanup import ContinuousHopfieldCleanup, HopfieldActionDecoder
 from product_clifford_product_kernel import ProductCliffordAlgebra3D
-from henri_pwm_orchestrator import SagnacInterferometer
+from _archive.orphans.henri_pwm_orchestrator import SagnacInterferometer
 from efe_planner import EFEPlanner, UnitaryWaveTransition
 
 # Scale presets: CPU runs reduced, CUDA runs production

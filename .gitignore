@@ -8,3 +8,6 @@ __pycache__/
 .venv-backups/
 llama_tokenizer_local/
 telemetry_logs/
+# CI/CD artifacts
+*.nsys-rep
+*.sqlite

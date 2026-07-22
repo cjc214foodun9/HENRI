@@ -472,6 +472,45 @@ class EFEPlanner(nn.Module):
         if self.novelty_memory.num_engrams() > self.novelty_capacity:
             self.novelty_memory.engrams = self.novelty_memory.engrams[-self.novelty_capacity:]
 
+    # -- pearl repair ------------------------------------------------------
+
+    @torch.no_grad()
+    def pearl_repair(self, predicted_wave: torch.Tensor,
+                     alpha: float = 0.3, max_attempts: int = 3) -> tuple:
+        """PEARL repair: preference-blend an off-manifold prediction toward
+        the preference store (historically favorable outcome basins).
+
+        Returns (repaired_wave, residual_type, new_penalty).
+        """
+        penalty = self.constraint_penalty(predicted_wave)
+        if penalty is None:
+            return predicted_wave, "ACCEPTED_CLEAN", 0.0
+        if penalty <= self.constraint_reject_thresh:
+            return predicted_wave, "ACCEPTED_CLEAN", penalty
+        if self.preference_store.num_engrams() == 0:
+            return predicted_wave, "REJECTED_NO_PREFS", penalty
+        prefs = self.preference_store.engrams.to(predicted_wave.device)
+        flat = predicted_wave.detach().reshape(-1)
+        flat = flat / (torch.norm(flat) + 1e-12)
+        best_wave = predicted_wave
+        best_penalty = penalty
+        for attempt in range(max_attempts):
+            sim = flat @ prefs.T
+            top_idx = sim.argmax()
+            pref_flat = prefs[top_idx]
+            pref_wave = pref_flat.view_as(predicted_wave)
+            alpha_eff = alpha * (1.0 - attempt / max_attempts)
+            repaired = (1 - alpha_eff) * best_wave + alpha_eff * pref_wave
+            repaired = repaired / (torch.norm(repaired, p=2, dim=-1, keepdim=True) + 1e-9)
+            new_penalty = self.constraint_penalty(repaired)
+            if new_penalty is None:
+                continue
+            if new_penalty <= self.constraint_reject_thresh:
+                return repaired, "ACCEPTED_PEARL_REPAIRED", new_penalty
+            if new_penalty < best_penalty:
+                best_wave, best_penalty = repaired, new_penalty
+        return best_wave, "REJECTED_REPAIR_FAILED", best_penalty
+
     # -- planning ---------------------------------------------------------
 
     def score_actions(self, state_wave: torch.Tensor, candidate_actions: list,
@@ -516,7 +555,25 @@ class EFEPlanner(nn.Module):
                 "lambda_active": lam,
                 "goal_distance": goal_dist,
                 "predicted_wave": predicted,
+                "residual_type": "ACCEPTED_CLEAN" if penalty <= self.constraint_reject_thresh else "REJECTED",
             })
+        # PEARL repair: attempt to salvage rejected candidates by blending
+        # with the preference store. Re-scored after repair.
+        for r in results:
+            if r["rejected"]:
+                repaired_wave, rtype, new_penalty = self.pearl_repair(r["predicted_wave"])
+                r["residual_type"] = rtype
+                if rtype.startswith("ACCEPTED"):
+                    r["predicted_wave"] = repaired_wave
+                    r["constraint_penalty"] = new_penalty
+                    r["rejected"] = False
+                    pragmatic = self.pragmatic_value(repaired_wave, boundary_axioms, goal_wave)
+                    epistemic = self.epistemic_value(repaired_wave)
+                    r["efe"] = float(self.pragmatic_weight * pragmatic
+                                     - self.epistemic_weight * epistemic
+                                     + lam * new_penalty)
+                    r["pragmatic"] = pragmatic.item()
+                    r["epistemic"] = epistemic.item()
         # Hard-rejection hybrid: drop off-manifold candidates from the argmin
         # unless every candidate is off-manifold (fall back to penalty-ranked).
         admissible = [r for r in results if not r["rejected"]]

@@ -1,0 +1,1082 @@
+[
+  {
+    "id": "2607.18433v1",
+    "base_id": "2607.18433",
+    "title": "Intelligence from Learnable Novelty",
+    "authors": [
+      "Yanbo Zhang",
+      "Michael Levin"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.LG",
+      "cs.AI",
+      "nlin.AO"
+    ],
+    "abstract": "Intelligence appears under different names in different fields: as data compression in statistics and machine learning, as universal computation in dynamical systems, and as adaptive behavior in agents. Each field carries its own objective, and the two most influential drives often fail in mirror im",
+    "source": "Levin — bioelectricity, morphogenesis, TAME"
+  },
+  {
+    "id": "2607.12023v1",
+    "base_id": "2607.12023",
+    "title": "Symmetry-Twisted Multi-Entropies: Order Parameters for 2D SPT Phases",
+    "authors": [
+      "Ramanjit Sohal",
+      "Michael Levin",
+      "Ruben Verresen"
+    ],
+    "year": "2026",
+    "categories": [
+      "cond-mat.str-el",
+      "hep-th",
+      "quant-ph"
+    ],
+    "abstract": "Although symmetry-protected topological phases (SPTs) can be distinguished by their entanglement properties, it has been unclear how to extract this information directly from expectation values beyond the 1D case. Here, we close this gap and propose a pair of nonlocal order parameters that can detec",
+    "source": "Levin — bioelectricity, morphogenesis, TAME"
+  },
+  {
+    "id": "2605.30708v1",
+    "base_id": "2605.30708",
+    "title": "Agnosiophobia in a virtual agent: behavioral and dynamical architecture in Lenia",
+    "authors": [
+      "Jesse Cool",
+      "Benedikt Hartl",
+      "Michael Levin",
+      "Samantha Petti"
+    ],
+    "year": "2026",
+    "categories": [
+      "nlin.CG",
+      "cs.NE",
+      "nlin.AO"
+    ],
+    "abstract": "All embodied agents are fundamentally patterns in physiological or other excitable media, blurring the distinction between objects and processes. Emergent patterns with complex behaviors, such as Gliders in the Game of Life and virtual patterns in Lenia, are powerful model systems in which to unders",
+    "source": "Levin — bioelectricity, morphogenesis, TAME"
+  },
+  {
+    "id": "2605.30109v1",
+    "base_id": "2605.30109",
+    "title": "Training Ecosystems: A Computational Approach to Uncovering Learning Behavior in Unconventional Contexts",
+    "authors": [
+      "Adrita Samanta",
+      "Hananel Hazan",
+      "Michael Levin"
+    ],
+    "year": "2026",
+    "categories": [
+      "q-bio.PE",
+      "q-bio.QM"
+    ],
+    "abstract": "Recent progress in diverse intelligence has shown simple learning capacities below the organism level - single cells and even molecular networks. However, there are still many knowledge gaps around learning capacity above the organism level, and about memory implemented purely by dynamical interacti",
+    "source": "Levin — bioelectricity, morphogenesis, TAME"
+  },
+  {
+    "id": "2605.10310v3",
+    "base_id": "2605.10310",
+    "title": "Positive Alignment: Artificial Intelligence for Human Flourishing",
+    "authors": [
+      "Ruben Laukkonen",
+      "Seb Krier",
+      "Chloé Bakalar",
+      "Shamil Chandaria",
+      "Morten Kringelbach",
+      "Adam Elwood",
+      "Daniel Ford",
+      "Fernando Rosas",
+      "Maty Bohacek",
+      "Matija Franklin",
+      "Nenad Tomašev",
+      "Stephanie Chan",
+      "Verena Rieser",
+      "Roma Patel",
+      "Michael Levin",
+      "Arun Rao"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.AI",
+      "cs.CY",
+      "cs.HC",
+      "q-bio.NC"
+    ],
+    "abstract": "Existing alignment research is dominated by concerns about safety and preventing harm: safeguards, controllability, and compliance. This paradigm of alignment parallels early psychology's focus on mental illness: necessary but incomplete. What we call Positive Alignment is the development of AI syst",
+    "source": "Levin — bioelectricity, morphogenesis, TAME"
+  },
+  {
+    "id": "2605.06746v1",
+    "base_id": "2605.06746",
+    "title": "The Causally Emergent Alignment Hypothesis: Causal Emergence Aligns with and Predicts Final Reward in Reinforcement Learning Agents",
+    "authors": [
+      "Federico Pigozzi",
+      "Michael Levin"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.NE"
+    ],
+    "abstract": "A hallmark of life on Earth is the ability of agents to exert causal power and be drivers of subsequent events. This is key to cognition at all scales. Causal emergence, measuring the degree to which an agent exerts unique predictive power on its future, is one consequence of causal power. Indeed, r",
+    "source": "Levin — bioelectricity, morphogenesis, TAME"
+  },
+  {
+    "id": "2605.16321v1",
+    "base_id": "2605.16321",
+    "title": "Language Game: Talking to Non-Human Systems",
+    "authors": [
+      "Yanbo Zhang",
+      "Michael Levin"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.LG"
+    ],
+    "abstract": "Language carries thought and coordination among humans but rarely reaches further along the spectrum of diverse intelligence. Yet non-neural systems -- from gene regulatory networks and microbial consortia to fungi -- are increasingly recognized as substrates of computation, decision-making and memo",
+    "source": "Levin — bioelectricity, morphogenesis, TAME"
+  },
+  {
+    "id": "2604.08749v2",
+    "base_id": "2604.08749",
+    "title": "A Little Rank Goes a Long Way: Random Scaffolds with LoRA Adapters Are All You Need",
+    "authors": [
+      "Hananel Hazan",
+      "Yanbo Zhang",
+      "Benedikt Hartl",
+      "Michael Levin"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.LG",
+      "cs.NE"
+    ],
+    "abstract": "How many of a neural network's parameters actually encode task-specific information? We investigate this question with LottaLoRA, a training paradigm in which every backbone weight is drawn at random and frozen; only low-rank LoRA adapters are trained. Across nine benchmarks spanning diverse archite",
+    "source": "Levin — bioelectricity, morphogenesis, TAME"
+  },
+  {
+    "id": "2604.01932v1",
+    "base_id": "2604.01932",
+    "title": "BraiNCA: brain-inspired neural cellular automata and applications to morphogenesis and motor control",
+    "authors": [
+      "Léo Pio-Lopez",
+      "Benedikt Hartl",
+      "Michael Levin"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.AI"
+    ],
+    "abstract": "Most of the Neural Cellular Automata (NCAs) defined in the literature have a common theme: they are based on regular grids with a Moore neighborhood (one-hop neighbour). They do not take into account long-range connections and more complex topologies as we can find in the brain. In this paper, we in",
+    "source": "Levin — bioelectricity, morphogenesis, TAME"
+  },
+  {
+    "id": "2602.08079v2",
+    "base_id": "2602.08079",
+    "title": "Bootstrapping Life-Inspired Machine Intelligence: The Biological Route from Chemistry to Cognition and Creativity",
+    "authors": [
+      "Giovanni Pezzulo",
+      "Michael Levin"
+    ],
+    "year": "2026",
+    "categories": [
+      "q-bio.NC"
+    ],
+    "abstract": "Achieving advanced machine intelligence remains a central challenge in AI research, often approached through scaling neural architectures and generative models. However, biological systems offer a broader repertoire of strategies for adaptive, goal-directed behavior - strategies that emerged long be",
+    "source": "Levin — bioelectricity, morphogenesis, TAME"
+  },
+  {
+    "id": "2601.14096v2",
+    "base_id": "2601.14096",
+    "title": "Remapping and navigation of an embedding space via error minimization: a fundamental organizational principle of cognition in natural and artificial systems",
+    "authors": [
+      "Benedikt Hartl",
+      "Léo Pio-Lopez",
+      "Chris Fields",
+      "Michael Levin"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.AI"
+    ],
+    "abstract": "The emerging field of diverse intelligence seeks an integrated view of problem-solving in agents of very different provenance, composition, and substrates. From subcellular chemical networks to swarms of organisms, and across evolved, engineered, and chimeric systems, it is hypothesized that scale-i",
+    "source": "Levin — bioelectricity, morphogenesis, TAME"
+  },
+  {
+    "id": "2601.12837v1",
+    "base_id": "2601.12837",
+    "title": "Cognition spaces: natural, artificial, and hybrid",
+    "authors": [
+      "Ricard Solé",
+      "Luis F Seoane",
+      "Jordi Pla-Mauri",
+      "Michael Timothy Bennett",
+      "Michael E. Hochberg",
+      "Michael Levin"
+    ],
+    "year": "2026",
+    "categories": [
+      "q-bio.NC",
+      "cs.AI",
+      "cs.HC",
+      "cs.NE"
+    ],
+    "abstract": "Cognitive processes are realized across an extraordinary range of natural, artificial, and hybrid systems, yet there is no unified framework for comparing their forms, limits, and unrealized possibilities. Here, we propose a cognition space approach that replaces narrow, substrate-dependent definiti",
+    "source": "Levin — bioelectricity, morphogenesis, TAME"
+  },
+  {
+    "id": "2606.19357v1",
+    "base_id": "2606.19357",
+    "title": "Physical Atari: A Robust and Accessible Platform for Real-time Reinforcement Learning on Robots",
+    "authors": [
+      "Khurram Javed",
+      "Joseph Modayil",
+      "Gloria Kennickell",
+      "Richard S. Sutton",
+      "John Carmack"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.RO",
+      "cs.AI"
+    ],
+    "abstract": "We built a robot called the Robotroller that actuates an Atari CX40+ controller and a device called the Atari Devbox that renders the game frame and the reward signal from the Arcade Learning Environment on a screen. The Robotroller and the Atari Devbox, together with an off-the-shelf camera and a d",
+    "source": "Sutton — RL, OaK"
+  },
+  {
+    "id": "2604.19033v1",
+    "base_id": "2604.19033",
+    "title": "Intentional Updates for Streaming Reinforcement Learning",
+    "authors": [
+      "Arsalan Sharifnassab",
+      "Mohamed Elsayed",
+      "Kris De Asis",
+      "A. Rupam Mahmood",
+      "Richard S. Sutton"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.LG",
+      "cs.AI"
+    ],
+    "abstract": "In gradient-based learning, a step size chosen in parameter units does not produce a predictable per-step change in function output. This often leads to instability in the streaming setting (i.e., batch size=1), where stochasticity is not averaged out and update magnitudes can momentarily become arb",
+    "source": "Sutton — RL, OaK"
+  },
+  {
+    "id": "2607.18236v1",
+    "base_id": "2607.18236",
+    "title": "Patch Policy: Efficient Embodied Control via Dense Visual Representations",
+    "authors": [
+      "Gaoyue Zhou",
+      "Zichen Jeff Cui",
+      "Ada Langford",
+      "Bowen Tan",
+      "Yann LeCun",
+      "Lerrel Pinto"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.RO",
+      "cs.LG"
+    ],
+    "abstract": "Pretrained dense visual features from Vision Transformers (ViTs) are powerful yet have been underutilized in robot learning. Modern robot policies either compress each observation into a single global token, or rely on visual backbones trained from scratch, sacrificing both fine-grained spatial deta",
+    "source": "LeCun — JEPA, self-supervised"
+  },
+  {
+    "id": "2607.04011v1",
+    "base_id": "2607.04011",
+    "title": "Separating Representation from Reconstruction Enables Scalable Text Encoders",
+    "authors": [
+      "Megi Dervishi",
+      "Mathurin Videau",
+      "Yann LeCun"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.CL",
+      "cs.AI"
+    ],
+    "abstract": "While decoders have rapidly scaled, encoders have remained largely unchanged since BERT. We revisit this disparity by frozen backbone evaluation via probing. Under this lens, the representations of BERT encoders become increasingly $\\textit{unexploitable}$ by frozen probes, despite improved perplexi",
+    "source": "LeCun — JEPA, self-supervised"
+  },
+  {
+    "id": "2606.32026v1",
+    "base_id": "2606.32026",
+    "title": "AdaJEPA: An Adaptive Latent World Model",
+    "authors": [
+      "Ying Wang",
+      "Oumayma Bounou",
+      "Yann LeCun",
+      "Mengye Ren"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.LG",
+      "cs.AI"
+    ],
+    "abstract": "Latent world models enable planning from high-dimensional observations by predicting future states in a compact latent space. However, these models are typically kept frozen at test time: when their predictions become inaccurate, planning can fail, especially under test-time distribution shift. To a",
+    "source": "LeCun — JEPA, self-supervised"
+  },
+  {
+    "id": "2606.23444v2",
+    "base_id": "2606.23444",
+    "title": "SkyJEPA: Learning Long-Horizon World Models for Zero-Shot Sim-to-Real Control of Quadrotors",
+    "authors": [
+      "Pratyaksh Rao",
+      "Wancong Zhang",
+      "Randall Balestriero",
+      "Yann LeCun",
+      "Giuseppe Loianno"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.RO",
+      "cs.LG"
+    ],
+    "abstract": "Accurate dynamics models are critical for informed decision-making in robotic systems, particularly for agile aerial vehicles operating under uncertainty. Neural network dynamics models are attractive for capturing complex nonlinear effects, but existing predictive approaches struggle with long-hori",
+    "source": "LeCun — JEPA, self-supervised"
+  },
+  {
+    "id": "2606.19398v1",
+    "base_id": "2606.19398",
+    "title": "S-JEPA : Soft Clustering Anchors for Self-Supervised Speech Representation Learning",
+    "authors": [
+      "Georgios Ioannides",
+      "Adrian Kieback",
+      "Judah Goldfeder",
+      "Linsey Pang",
+      "Aman Chadha",
+      "Aaron Elkins",
+      "Yann LeCun",
+      "Ravid Shwartz-Ziv"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.SD",
+      "eess.AS",
+      "eess.SP"
+    ],
+    "abstract": "Self-supervised speech encoders are predominantly trained by predicting discrete hard cluster IDs at masked positions, a recipe that collapses acoustic ambiguity at category boundaries and requires interrupting training to re-cluster the entire corpus between iterations. We introduce S-JEPA, a JEPA-",
+    "source": "LeCun — JEPA, self-supervised"
+  },
+  {
+    "id": "2606.15956v1",
+    "base_id": "2606.15956",
+    "title": "You Don't Need Strong Assumptions: Visual Representation Learning via Temporal Differences",
+    "authors": [
+      "Ninad Daithankar",
+      "Alexi Gladstone",
+      "Yann LeCun",
+      "Heng Ji"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.CV",
+      "cs.AI",
+      "cs.LG"
+    ],
+    "abstract": "Progress in AI has largely been driven by methods that assume less. As compute and data increase, approaches with weaker inductive biases generally outperform those with stronger assumptions. This is particularly characteristic of the field of Visual Representation Learning, where approaches have go",
+    "source": "LeCun — JEPA, self-supervised"
+  },
+  {
+    "id": "2606.08775v1",
+    "base_id": "2606.08775",
+    "title": "Unifying Object-Centric World Models and Diffusion Policy: A Hierarchical Framework for Multi-Stage Robotic Tasks",
+    "authors": [
+      "Raktim Gautam Goswami",
+      "Prashanth Krishnamurthy",
+      "Yann LeCun",
+      "Farshad Khorrami"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.RO",
+      "cs.AI"
+    ],
+    "abstract": "Visual world models have shown great potential in learning complex system dynamics. Recent advancements leverage these models as transition functions within Model Predictive Control (MPC) frameworks to solve various control tasks. When applied to robotics, however, they are limited to single-stage t",
+    "source": "LeCun — JEPA, self-supervised"
+  },
+  {
+    "id": "2605.26379v1",
+    "base_id": "2605.26379",
+    "title": "When Does LeJEPA Learn a World Model?",
+    "authors": [
+      "David Klindt",
+      "Yann LeCun",
+      "Randall Balestriero"
+    ],
+    "year": "2026",
+    "categories": [
+      "stat.ML",
+      "cs.LG"
+    ],
+    "abstract": "A representation that scrambles the true degrees of freedom of the world cannot support reliable planning or compositional generalization. We prove that LeJEPA (alignment plus Gaussian regularization) linearly recovers the world's latent variables from nonlinear observations, a property known as lin",
+    "source": "LeCun — JEPA, self-supervised"
+  },
+  {
+    "id": "2605.21800v1",
+    "base_id": "2605.21800",
+    "title": "stable-worldmodel: A Platform for Reproducible World Modeling Research and Evaluation",
+    "authors": [
+      "Lucas Maes",
+      "Quentin Le Lidec",
+      "Luiz Facury",
+      "Nassim Massaudi",
+      "Ayush Chaurasia",
+      "Francesco Capuano",
+      "Richard Gao",
+      "Taj Gillin",
+      "Dan Haramati",
+      "Damien Scieur",
+      "Yann LeCun",
+      "Randall Balestriero"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.LG",
+      "cs.RO"
+    ],
+    "abstract": "World models are central to building agents that can reason, plan, and generalize beyond their training data. However, research on world models is currently fragmented, with disparate codebases, data pipelines, and evaluation protocols hindering reproducibility and fair comparison. Current practice ",
+    "source": "LeCun — JEPA, self-supervised"
+  },
+  {
+    "id": "2605.14759v2",
+    "base_id": "2605.14759",
+    "title": "Crys-JEPA: Accelerating Crystal Discovery via Embedding Screening and Generative Refinement",
+    "authors": [
+      "Nian Liu",
+      "Nikita Kazeev",
+      "Stephen Gregory Dale",
+      "Artem Maevskiy",
+      "Yuwei Zeng",
+      "Ryoji Kubo",
+      "Pengru Huang",
+      "Thomas Laurent",
+      "Yann LeCun",
+      "Kostya S. Novoselov",
+      "Xavier Bresson"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.LG"
+    ],
+    "abstract": "De novo crystal generation seeks to discover materials that are not merely realistic, but also stable and novel. However, most existing generative models are trained to maximize the likelihood of observed crystals, which encourages samples to stay close to known materials yet not necessarily align w",
+    "source": "LeCun — JEPA, self-supervised"
+  },
+  {
+    "id": "2605.13986v2",
+    "base_id": "2605.13986",
+    "title": "TabPFN-3: Technical Report",
+    "authors": [
+      "Léo Grinsztajn",
+      "Klemens Flöge",
+      "Oscar Key",
+      "Felix Birkel",
+      "Philipp Jund",
+      "Brendan Roof",
+      "Mihir Manium",
+      "Shi Bin Hoo",
+      "Magnus Bühler",
+      "Anurag Garg",
+      "Dominik Safaric",
+      "Jake Robertson",
+      "Benjamin Jäger",
+      "Simone Alessi",
+      "Adrian Hayler",
+      "Vladyslav Moroshan",
+      "Lennart Purucker",
+      "Philipp Singer",
+      "Alan Arazi",
+      "Julien Siems",
+      "Jan Hendrik Metzen",
+      "Georg Grab",
+      "Nick Erickson",
+      "Siyuan Guo",
+      "Eliott Kalfon",
+      "Simon Bing",
+      "David Salinas",
+      "Clara Cornu",
+      "Lilly Charlotte Wehrhahn",
+      "Diana Kriuchkova",
+      "Kursat Kaya",
+      "Lydia Sidhoum",
+      "Marie Salmon",
+      "Jerry Chen",
+      "Madelon Hulsebos",
+      "Yann LeCun",
+      "Samuel Müller",
+      "Bernhard Schölkopf",
+      "Sauraj Gambhir",
+      "Noah Hollmann",
+      "Frank Hutter"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.LG",
+      "stat.ML"
+    ],
+    "abstract": "Tabular data underpins most high-value prediction problems in science and industry, and TabPFN has driven the foundation model revolution for this modality. Designed with feedback from our users, TabPFN-3 builds on this foundation to scale state-of-the-art performance to datasets with 1M training ro",
+    "source": "LeCun — JEPA, self-supervised"
+  },
+  {
+    "id": "2605.06732v2",
+    "base_id": "2605.06732",
+    "title": "On Training in Imagination",
+    "authors": [
+      "Nadav Timor",
+      "Ravid Shwartz-Ziv",
+      "Micah Goldblum",
+      "Yann LeCun",
+      "David Harel"
+    ],
+    "year": "2026",
+    "categories": [
+      "cs.LG"
+    ],
+    "abstract": "State-of-the-art model-based reinforcement learning methods train policies on imagined rollouts. These rollouts are trajectories generated by a learned dynamics model and are scored by a learned reward model, but without querying the true environment during policy updates. We study this training par",
+    "source": "LeCun — JEPA, self-supervised"
+  },
+  {
+    "id": "2607.05678v1",
+    "base_id": "2607.05678",
+    "title": "Holograms and Standard Models",
+    "authors": [
+      "Shoichiro Miyashita",
+      "Yasuhiro Sekino",
+      "Leonard Susskind"
+    ],
+    "year": "2026",
+    "categories": [
+      "hep-th",
+      "gr-qc"
+    ],
+    "abstract": "Despite riddles, mysteries, and enigmas the theory of elementary particles has not changed for 50 years. We argue that the current paradigm -- Wilsonian quantum field theory -- is inadequate for resolving the puzzles, and should be replaced by a new paradigm based on the Holographic Principle. We sh",
+    "source": "Susskind — holography, ER=EPR"
+  },
+  {
+    "id": "2603.12434v1",
+    "base_id": "2603.12434",
+    "title": "Is Time Reversal in de Sitter Space a Spontaneously Broken Gauge Symmetry?",
+    "authors": [
+      "Leonard Susskind"
+    ],
+    "year": "2026",
+    "categories": [
+      "hep-th"
+    ],
+    "abstract": "I'll begin with some well-deserved acknowledgements: I am grateful to Daniel Harlow for discussions of time-reversal holonomies. I have also benefited from a long ongoing correspondence with Edward Witten, but frankly in both cases I can't tell whether they agree with me or not. I have often been ac",
+    "source": "Susskind — holography, ER=EPR"
+  },
+  {
+    "id": "2601.01666v2",
+    "base_id": "2601.01666",
+    "title": "More About the Spontaneous Breaking of Time Reversal in de Sitter Space",
+    "authors": [
+      "Leonard Susskind"
+    ],
+    "year": "2026",
+    "categories": [
+      "hep-th"
+    ],
+    "abstract": "It is widely thought that the quantum theory of de Sitter space requires the existence of a physical observer in the static patch. What exactly is meant by an observer is unclear; it could be anything from a few photons with energy just above the Gibbons-Hawking temperature to a gravitationally boun",
+    "source": "Susskind — holography, ER=EPR"
+  },
+  {
+    "id": "2605.05336v2",
+    "base_id": "2605.05336",
+    "title": "Wormholes and the imaginary distance bound",
+    "authors": [
+      "Juan Maldacena",
+      "Alexander Maloney",
+      "Brian McPeak"
+    ],
+    "year": "2026",
+    "categories": [
+      "hep-th",
+      "gr-qc",
+      "hep-ph"
+    ],
+    "abstract": "Some of the simplest wormhole solutions involve massless scalar fields that take imaginary values. Massless fields can be interpreted as coupling constants in asymptotically flat or asymptotically AdS gravity theories. We argue that wormhole effects imply an imaginary distance bound, an upper limit ",
+    "source": "Maldacena — AdS/CFT, quantum gravity"
+  },
+  {
+    "id": "2601.08908v1",
+    "base_id": "2601.08908",
+    "title": "A melonic quantum mechanical model without disorder",
+    "authors": [
+      "Anna Biggs",
+      "Loki L. Lin",
+      "Juan Maldacena"
+    ],
+    "year": "2026",
+    "categories": [
+      "hep-th",
+      "cond-mat.str-el"
+    ],
+    "abstract": "We consider a quantum mechanical model involving interacting fermions without disorder that has the same low energy physics as the supersymmetric SYK model. The model is $SU(2)$ invariant, and the supercharge involves the $ SU(2) $ 3j symbol. We analyze various solvable corners, conceptually explain",
+    "source": "Maldacena — AdS/CFT, quantum gravity"
+  },
+  {
+    "id": "2512.06218v1",
+    "base_id": "2512.06218",
+    "title": "Average-reward reinforcement learning in semi-Markov decision processes via relative value iteration",
+    "authors": [
+      "Huizhen Yu",
+      "Yi Wan",
+      "Richard S. Sutton"
+    ],
+    "year": "2025",
+    "categories": [
+      "cs.LG",
+      "math.OC"
+    ],
+    "abstract": "This paper applies the authors' recent results on asynchronous stochastic approximation (SA) in the Borkar-Meyn framework to reinforcement learning in average-reward semi-Markov decision processes (SMDPs). We establish the convergence of an asynchronous SA analogue of Schweitzer's classical relative",
+    "source": "Sutton — RL, OaK"
+  },
+  {
+    "id": "2507.19539v1",
+    "base_id": "2507.19539",
+    "title": "Swift-Sarsa: Fast and Robust Linear Control",
+    "authors": [
+      "Khurram Javed",
+      "Richard S. Sutton"
+    ],
+    "year": "2025",
+    "categories": [
+      "cs.LG",
+      "cs.AI",
+      "stat.ML"
+    ],
+    "abstract": "Javed, Sharifnassab, and Sutton (2024) introduced a new algorithm for TD learning -- SwiftTD -- that augments True Online TD($λ$) with step-size optimization, a bound on the effective learning rate, and step-size decay. In their experiments SwiftTD outperformed True Online TD($λ$) and TD($λ$) on a v",
+    "source": "Sutton — RL, OaK"
+  },
+  {
+    "id": "2512.13650v1",
+    "base_id": "2512.13650",
+    "title": "Why do we Need Observers? Spontaneous Breaking of Time-Reversal in de Sitter Space",
+    "authors": [
+      "Leonard Susskind"
+    ],
+    "year": "2025",
+    "categories": [
+      "hep-th"
+    ],
+    "abstract": "In this paper I explain the relation between the need for observers in de Sitter space and the spontaneous breakdown of time-reversal symmetry.",
+    "source": "Susskind — holography, ER=EPR"
+  },
+  {
+    "id": "2511.10907v1",
+    "base_id": "2511.10907",
+    "title": "Where is the Entropy in DSSYK-de Sitter? Correction to a wrong claim",
+    "authors": [
+      "Leonard Susskind"
+    ],
+    "year": "2025",
+    "categories": [
+      "hep-th"
+    ],
+    "abstract": "A question arises in the holographic description of the static patch of de Sitter space: Where does the entropy reside? The answer of course is in the stretched horizon, but how far from the mathematical horizon is the stretched horizon? In recent papers and lectures I argued that the entropy in DSS",
+    "source": "Susskind — holography, ER=EPR"
+  },
+  {
+    "id": "2506.18054v3",
+    "base_id": "2506.18054",
+    "title": "DSSYK at Infinite Temperature: The Flat-Space Limit and the 't Hooft Model",
+    "authors": [
+      "Shoichiro Miyashita",
+      "Yasuhiro Sekino",
+      "Leonard Susskind"
+    ],
+    "year": "2025",
+    "categories": [
+      "hep-th"
+    ],
+    "abstract": "In the limit of infinite radius de Sitter space becomes locally flat and the static patch tends to Rindler space. A holographic description of the static patch must result in a holographic description of some flat space theory, expressed in Rindler coordinates. Given such a holographic theory how do",
+    "source": "Susskind — holography, ER=EPR"
+  },
+  {
+    "id": "2501.09423v2",
+    "base_id": "2501.09423",
+    "title": "Double-Scaled SYK, QCD, and the Flat Space Limit of de Sitter Space",
+    "authors": [
+      "Yasuhiro Sekino",
+      "Leonard Susskind"
+    ],
+    "year": "2025",
+    "categories": [
+      "hep-th"
+    ],
+    "abstract": "A surprising connection exists between double-scaled SYK at infinite temperature, and large N QCD. The large N expansions of the two theories have the same form; the 't Hooft limit of QCD parallels the fixed p limit of SYK (for a theory with p-fermion interactions), and the limit of fixed gauge coup",
+    "source": "Susskind — holography, ER=EPR"
+  },
+  {
+    "id": "2508.03532v1",
+    "base_id": "2508.03532",
+    "title": "Comments on QED$_3$ in a Magnetic Field",
+    "authors": [
+      "Thomas T. Dumitrescu",
+      "Juan Maldacena"
+    ],
+    "year": "2025",
+    "categories": [
+      "hep-th",
+      "cond-mat.str-el"
+    ],
+    "abstract": "We discuss the low-energy dynamics of massless Dirac fermions interacting with a propagating, relativistic photon in 2+1 spacetime dimensions, when we turn on a uniform magnetic field. This problem can be solved when the magnetic field is sufficiently strong. As observed previously, we find that the",
+    "source": "Maldacena — AdS/CFT, quantum gravity"
+  },
+  {
+    "id": "2504.00920v2",
+    "base_id": "2504.00920",
+    "title": "Physical instabilities and the phase of the Euclidean path integral",
+    "authors": [
+      "Victor Ivo",
+      "Juan Maldacena",
+      "Zimo Sun"
+    ],
+    "year": "2025",
+    "categories": [
+      "hep-th"
+    ],
+    "abstract": "We compute the phase of the Euclidean gravity partition function on manifolds of the form $S^p \\times M_q$. We find that the total phase is equal to the phase in pure gravity on $S^p$ times an extra phase that arises from negative mass squared fields that we obtain when we perform a Kaluza-Klein red",
+    "source": "Maldacena — AdS/CFT, quantum gravity"
+  },
+  {
+    "id": "2409.03915v3",
+    "base_id": "2409.03915",
+    "title": "Asynchronous Stochastic Approximation with Applications to Average-Reward Reinforcement Learning",
+    "authors": [
+      "Huizhen Yu",
+      "Yi Wan",
+      "Richard S. Sutton"
+    ],
+    "year": "2024",
+    "categories": [
+      "cs.LG",
+      "math.OC"
+    ],
+    "abstract": "This paper investigates the stability and convergence properties of asynchronous stochastic approximation (SA) algorithms, with a focus on extensions relevant to average-reward reinforcement learning. We first extend a stability proof method of Borkar and Meyn to accommodate more general noise condi",
+    "source": "Sutton — RL, OaK"
+  },
+  {
+    "id": "2408.16262v1",
+    "base_id": "2408.16262",
+    "title": "On Convergence of Average-Reward Q-Learning in Weakly Communicating Markov Decision Processes",
+    "authors": [
+      "Yi Wan",
+      "Huizhen Yu",
+      "Richard S. Sutton"
+    ],
+    "year": "2024",
+    "categories": [
+      "cs.LG",
+      "math.OC"
+    ],
+    "abstract": "This paper analyzes reinforcement learning (RL) algorithms for Markov decision processes (MDPs) under the average-reward criterion. We focus on Q-learning algorithms based on relative value iteration (RVI), which are model-free stochastic analogues of the classical RVI method for average-reward MDPs",
+    "source": "Sutton — RL, OaK"
+  },
+  {
+    "id": "2406.14951v2",
+    "base_id": "2406.14951",
+    "title": "An Idiosyncrasy of Time-discretization in Reinforcement Learning",
+    "authors": [
+      "Kris De Asis",
+      "Richard S. Sutton"
+    ],
+    "year": "2024",
+    "categories": [
+      "cs.LG",
+      "cs.AI"
+    ],
+    "abstract": "Many reinforcement learning algorithms are built on an assumption that an agent interacts with an environment over fixed-duration, discrete time steps. However, physical systems are continuous in time, requiring a choice of time-discretization granularity when digitally controlling them. Furthermore",
+    "source": "Sutton — RL, OaK"
+  },
+  {
+    "id": "2405.09999v2",
+    "base_id": "2405.09999",
+    "title": "Reward Centering",
+    "authors": [
+      "Abhishek Naik",
+      "Yi Wan",
+      "Manan Tomar",
+      "Richard S. Sutton"
+    ],
+    "year": "2024",
+    "categories": [
+      "cs.LG",
+      "cs.AI"
+    ],
+    "abstract": "We show that discounted methods for solving continuing reinforcement learning problems can perform significantly better if they center their rewards by subtracting out the rewards' empirical average. The improvement is substantial at commonly used discount factors and increases further as the discou",
+    "source": "Sutton — RL, OaK"
+  },
+  {
+    "id": "2412.14749v1",
+    "base_id": "2412.14749",
+    "title": "New Modes for Vector Bosons in the Static Patch",
+    "authors": [
+      "Adel A. Rahman",
+      "Leonard Susskind"
+    ],
+    "year": "2024",
+    "categories": [
+      "hep-th",
+      "gr-qc"
+    ],
+    "abstract": "We consider a massive vector Boson in a static patch of $D$-dimensional de Sitter space (dS$_D$). We argue that this field is controlled by an effective physical (squared) mass $μ_{\\mathrm{v}}^2 = m_{\\mathrm{v}}^2 + 2(D-1)\\ell_{\\mathrm{dS}}^{-2}$ which differs from the naive \"Lagrangian\" (squared) m",
+    "source": "Susskind — holography, ER=EPR"
+  },
+  {
+    "id": "2407.12988v2",
+    "base_id": "2407.12988",
+    "title": "$p$-Chords, Wee-Chords, and de Sitter Space",
+    "authors": [
+      "Adel A. Rahman",
+      "Leonard Susskind"
+    ],
+    "year": "2024",
+    "categories": [
+      "hep-th",
+      "gr-qc"
+    ],
+    "abstract": "One of us (L.S.) and H. Verlinde independently conjectured a holographic duality between the double-scaled SYK model at infinite temperature and dimensionally reduced $(2+1)$-dimensional de Sitter space [1]-[8]. Beyond the statement that such a duality exists there was deep disagreement between the ",
+    "source": "Susskind — holography, ER=EPR"
+  },
+  {
+    "id": "2401.08555v3",
+    "base_id": "2401.08555",
+    "title": "Infinite Temperature is Not So Infinite: The Many Temperatures of de Sitter Space",
+    "authors": [
+      "Adel A. Rahman",
+      "Leonard Susskind"
+    ],
+    "year": "2024",
+    "categories": [
+      "hep-th",
+      "gr-qc"
+    ],
+    "abstract": "Several distinct concepts of temperature appear in the holographic description of de Sitter space. Conflating these has led to confusion and inconsistent claims. The double-scaled limit of SYK is a concrete model in which we can examine and explain these different concepts of temperature. This note ",
+    "source": "Susskind — holography, ER=EPR"
+  },
+  {
+    "id": "2412.14014v3",
+    "base_id": "2412.14014",
+    "title": "Real observers solving imaginary problems",
+    "authors": [
+      "Juan Maldacena"
+    ],
+    "year": "2024",
+    "categories": [
+      "hep-th",
+      "gr-qc"
+    ],
+    "abstract": "The sphere partition function is one of the simplest euclidean gravity computations. It is usually interpreted as count of states. However, the one loop gravity correction contains a dimension dependent phase factor, $i^{D+2}$, which seems confusing for such an interpretation. We show that, after in",
+    "source": "Maldacena — AdS/CFT, quantum gravity"
+  },
+  {
+    "id": "2409.14218v2",
+    "base_id": "2409.14218",
+    "title": "The no boundary density matrix",
+    "authors": [
+      "Victor Ivo",
+      "Yue-Zhou Li",
+      "Juan Maldacena"
+    ],
+    "year": "2024",
+    "categories": [
+      "hep-th",
+      "gr-qc"
+    ],
+    "abstract": "We discuss a no-boundary proposal for a subregion of the universe. In the classical approximation, this density matrix involves finding a specific classical solution of the equations of motion with no boundary. Beyond the usual no boundary condition at early times, we also have another no boundary c",
+    "source": "Maldacena — AdS/CFT, quantum gravity"
+  },
+  {
+    "id": "2405.02227v1",
+    "base_id": "2405.02227",
+    "title": "Comparing the decoherence effects due to black holes versus ordinary matter",
+    "authors": [
+      "Anna Biggs",
+      "Juan Maldacena"
+    ],
+    "year": "2024",
+    "categories": [
+      "hep-th",
+      "gr-qc",
+      "quant-ph"
+    ],
+    "abstract": "Recently a certain thought experiment was discussed which involves the decoherence of a quantum system due to a black hole. Here we show how this phenomenon is consistent with standard ideas about quantum black holes. In other words, modeling the black hole as a quantum system at finite temperature ",
+    "source": "Maldacena — AdS/CFT, quantum gravity"
+  },
+  {
+    "id": "2403.10510v2",
+    "base_id": "2403.10510",
+    "title": "Comments on the no boundary wavefunction and slow roll inflation",
+    "authors": [
+      "Juan Maldacena"
+    ],
+    "year": "2024",
+    "categories": [
+      "hep-th"
+    ],
+    "abstract": "We review aspects of the Hartle-Hawking no boundary geometry in the context of slow roll inflation. We give an analytic approximation to the geometry and we explain the rationale for the proposal. We also explain why it gives a prediction for the curvature of the universe that is in disagreement wit",
+    "source": "Maldacena — AdS/CFT, quantum gravity"
+  },
+  {
+    "id": "2312.15091v2",
+    "base_id": "2312.15091",
+    "title": "A Note on Stability in Asynchronous Stochastic Approximation without Communication Delays",
+    "authors": [
+      "Huizhen Yu",
+      "Yi Wan",
+      "Richard S. Sutton"
+    ],
+    "year": "2023",
+    "categories": [
+      "cs.LG",
+      "math.OC"
+    ],
+    "abstract": "In this paper, we study asynchronous stochastic approximation algorithms without communication delays. Our main contribution is a stability proof for these algorithms that extends a method of Borkar and Meyn by accommodating more general noise conditions. We also derive convergence results from this",
+    "source": "Sutton — RL, OaK"
+  },
+  {
+    "id": "2310.01569v2",
+    "base_id": "2310.01569",
+    "title": "Iterative Option Discovery for Planning, by Planning",
+    "authors": [
+      "Kenny Young",
+      "Richard S. Sutton"
+    ],
+    "year": "2023",
+    "categories": [
+      "cs.AI",
+      "cs.LG"
+    ],
+    "abstract": "Discovering useful temporal abstractions, in the form of options, is widely thought to be key to applying reinforcement learning and planning to increasingly complex domains. Building on the empirical success of the Expert Iteration approach to policy learning used in AlphaZero, we propose Option It",
+    "source": "Sutton — RL, OaK"
+  },
+  {
+    "id": "2306.15625v1",
+    "base_id": "2306.15625",
+    "title": "Value-aware Importance Weighting for Off-policy Reinforcement Learning",
+    "authors": [
+      "Kristopher De Asis",
+      "Eric Graves",
+      "Richard S. Sutton"
+    ],
+    "year": "2023",
+    "categories": [
+      "cs.LG",
+      "cs.AI"
+    ],
+    "abstract": "Importance sampling is a central idea underlying off-policy prediction in reinforcement learning. It provides a strategy for re-weighting samples from a distribution to obtain unbiased estimates under another distribution. However, importance sampling weights tend to exhibit extreme variance, often ",
+    "source": "Sutton — RL, OaK"
+  },
+  {
+    "id": "2306.13812v3",
+    "base_id": "2306.13812",
+    "title": "Maintaining Plasticity in Deep Continual Learning",
+    "authors": [
+      "Shibhansh Dohare",
+      "J. Fernando Hernandez-Garcia",
+      "Parash Rahman",
+      "A. Rupam Mahmood",
+      "Richard S. Sutton"
+    ],
+    "year": "2023",
+    "categories": [
+      "cs.LG"
+    ],
+    "abstract": "Modern deep-learning systems are specialized to problem settings in which training occurs once and then never again, as opposed to continual-learning settings in which training occurs continually. If deep-learning systems are applied in a continual learning setting, then it is well known that they m",
+    "source": "Sutton — RL, OaK"
+  },
+  {
+    "id": "2312.04097v2",
+    "base_id": "2312.04097",
+    "title": "Comments on a Paper by Narovlansky and Verlinde",
+    "authors": [
+      "Adel A Rahman",
+      "Leonard Susskind"
+    ],
+    "year": "2023",
+    "categories": [
+      "hep-th"
+    ],
+    "abstract": "The double-scaled infinite temperature limit of the SYK model has been conjectured by Rahman and Susskind (RS) [1, 2, 3, 4], and independently by Verlinde [5] to be dual to a certain low dimensional de Sitter space. In a recent discussion of this conjecture Narovlansky and Verlinde (NV) [6] came to ",
+    "source": "Susskind — holography, ER=EPR"
+  },
+  {
+    "id": "2304.00589v1",
+    "base_id": "2304.00589",
+    "title": "A Paradox and its Resolution Illustrate Principles of de Sitter Holography",
+    "authors": [
+      "Leonard Susskind"
+    ],
+    "year": "2023",
+    "categories": [
+      "hep-th"
+    ],
+    "abstract": "Semiclassical gravity and the holographic description of the static patch of de Sitter space appear to disagree about properties of correlation functions. Certain holographic correlation functions are necessarily real whereas their semiclassical counterparts have both real and imaginary parts. The r",
+    "source": "Susskind — holography, ER=EPR"
+  },
+  {
+    "id": "2312.15111v1",
+    "base_id": "2312.15111",
+    "title": "Soft Theorems in Matrix Theory",
+    "authors": [
+      "Aidan Herderschee",
+      "Juan Maldacena"
+    ],
+    "year": "2023",
+    "categories": [
+      "hep-th"
+    ],
+    "abstract": "We show that the Banks-Fischler-Shenker-Susskind matrix model for M-theory obeys the leading and subleading soft theorems expected from eleven-dimensional supergravity. The subleading soft theorem implies the amplitude is Lorentz symmetric. This is argued for general four point amplitudes, but only ",
+    "source": "Maldacena — AdS/CFT, quantum gravity"
+  },
+  {
+    "id": "2312.12592v3",
+    "base_id": "2312.12592",
+    "title": "Three Point Amplitudes in Matrix Theory",
+    "authors": [
+      "Aidan Herderschee",
+      "Juan Maldacena"
+    ],
+    "year": "2023",
+    "categories": [
+      "hep-th"
+    ],
+    "abstract": "We compute the three graviton amplitude in the Banks-Fischler-Shenker-Susskind matrix model for M-theory. Even though the three point amplitude is determined by super Poincare invariance in eleven dimensional M-theory, it requires a non-trivial computation in the matrix model. We consider a configur",
+    "source": "Maldacena — AdS/CFT, quantum gravity"
+  },
+  {
+    "id": "2310.11617v2",
+    "base_id": "2310.11617",
+    "title": "Comments on the double cone wormhole",
+    "authors": [
+      "Yiming Chen",
+      "Victor Ivo",
+      "Juan Maldacena"
+    ],
+    "year": "2023",
+    "categories": [
+      "hep-th",
+      "gr-qc"
+    ],
+    "abstract": "In this paper we revisit the double cone wormhole introduced by Saad, Shenker and Stanford (SSS), which was shown to reproduce the ramp in the spectral form factor. As a first approximation we can say that this solution computes $\\textrm{Tr}[e^{-iKT}]$, a trace of the \"evolution\" operator that gener",
+    "source": "Maldacena — AdS/CFT, quantum gravity"
+  },
+  {
+    "id": "2309.08818v2",
+    "base_id": "2309.08818",
+    "title": "A supersymmetric SYK model with a curious low energy behavior",
+    "authors": [
+      "Anna Biggs",
+      "Juan Maldacena",
+      "Vladimir Narovlansky"
+    ],
+    "year": "2023",
+    "categories": [
+      "hep-th",
+      "cond-mat.dis-nn",
+      "cond-mat.stat-mech",
+      "cond-mat.str-el"
+    ],
+    "abstract": "We consider $\\mathcal{N}$ = 2, 4 supersymmetric SYK models that have a peculiar low energy behavior, with the entropy going like $S = S_{0} + \\text{(constant)}T^{a}$, where $a \\neq 1$. The large $N$ equations for these models are a generalization of equations that have been previously studied as an ",
+    "source": "Maldacena — AdS/CFT, quantum gravity"
+  }
+]

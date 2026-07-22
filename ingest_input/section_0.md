@@ -1,0 +1,1 @@
+# Project HENRI: Compendium of Research Notes for Obsidian Vault

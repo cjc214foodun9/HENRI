@@ -1,0 +1,250 @@
+[
+  {
+    "id": "1611.01578",
+    "base_id": "1611.01578",
+    "title": "Neural Architecture Search with Reinforcement Learning",
+    "authors": [
+      "Barret Zoph",
+      "Quoc V. Le"
+    ],
+    "year": "2016",
+    "venue": {
+      "id": "939c6e1d-0d17-4d6e-8a82-66d960df0e40",
+      "name": "International Conference on Learning Representations",
+      "type": "conference",
+      "alternate_names": [
+        "Int Conf Learn Represent",
+        "ICLR"
+      ],
+      "url": "https://iclr.cc/"
+    },
+    "source": "OaK"
+  },
+  {
+    "id": "2402.03500",
+    "base_id": "2402.03500",
+    "title": "Curriculum reinforcement learning for quantum architecture search under hardware errors",
+    "authors": [
+      "Yash J. Patel",
+      "Akash Kundu",
+      "M. Ostaszewski",
+      "Xavier Bonet-Monroig",
+      "V. Dunjko",
+      "Onur Danaci"
+    ],
+    "year": "2024",
+    "venue": {
+      "id": "939c6e1d-0d17-4d6e-8a82-66d960df0e40",
+      "name": "International Conference on Learning Representations",
+      "type": "conference",
+      "alternate_names": [
+        "Int Conf Learn Represent",
+        "ICLR"
+      ],
+      "url": "https://iclr.cc/"
+    },
+    "source": "OaK"
+  },
+  {
+    "id": "2407.18202",
+    "base_id": "2407.18202",
+    "title": "Differentiable Quantum Architecture Search in Asynchronous Quantum Reinforcement Learning",
+    "authors": [
+      "S. Y. Chen"
+    ],
+    "year": "2024",
+    "venue": {
+      "id": "f4feaf1a-55ae-44e8-a601-dd4b8d6993ab",
+      "name": "International Conference on Quantum Computing and Engineering",
+      "type": "conference",
+      "alternate_names": [
+        "QCE",
+        "Int Conf Quantum Comput Eng"
+      ]
+    },
+    "source": "OaK"
+  },
+  {
+    "id": "2407.20147",
+    "base_id": "2407.20147",
+    "title": "Quantum Machine Learning Architecture Search via Deep Reinforcement Learning",
+    "authors": [
+      "Xin Dai",
+      "Tzu-Chieh Wei",
+      "Shinjae Yoo",
+      "S. Y. Chen"
+    ],
+    "year": "2024",
+    "venue": {
+      "id": "f4feaf1a-55ae-44e8-a601-dd4b8d6993ab",
+      "name": "International Conference on Quantum Computing and Engineering",
+      "type": "conference",
+      "alternate_names": [
+        "QCE",
+        "Int Conf Quantum Comput Eng"
+      ]
+    },
+    "source": "OaK"
+  },
+  {
+    "id": "2406.02717",
+    "base_id": "2406.02717",
+    "title": "Reinforcement learning-based architecture search for quantum machine learning",
+    "authors": [
+      "Frederic Rapp",
+      "D. Kreplin",
+      "Marco F Huber",
+      "M. Roth"
+    ],
+    "year": "2024",
+    "venue": {
+      "id": "716b25a3-49ad-45bd-9ef4-475301c0886f",
+      "name": "Machine Learning: Science and Technology",
+      "type": "journal",
+      "alternate_names": [
+        "Mach Learn Sci Technol"
+      ],
+      "issn": "2632-2153",
+      "url": "https://iopscience.iop.org/journal/2632-2153"
+    },
+    "source": "OaK"
+  },
+  {
+    "id": "2504.03160",
+    "base_id": "2504.03160",
+    "title": "DeepResearcher: Scaling Deep Research via Reinforcement Learning in Real-world Environments",
+    "authors": [
+      "Yuxiang Zheng",
+      "Dayuan Fu",
+      "Xiangkun Hu",
+      "Xiaojie Cai",
+      "Lyumanshan Ye",
+      "Pengrui Lu",
+      "Pengfei Liu"
+    ],
+    "year": "2025",
+    "venue": {
+      "id": "41bf9ed3-85b3-4c90-b015-150e31690253",
+      "name": "Conference on Empirical Methods in Natural Language Processing",
+      "type": "conference",
+      "alternate_names": [
+        "Empir Method Nat Lang Process",
+        "Empirical Methods in Natural Language Processing",
+        "Conf Empir Method Nat Lang Process",
+        "EMNLP"
+      ],
+      "url": "https://www.aclweb.org/portal/emnlp"
+    },
+    "source": "OaK"
+  },
+  {
+    "id": "2303.04705",
+    "base_id": "2303.04705",
+    "title": "Dextrous Tactile In-Hand Manipulation Using a Modular Reinforcement Learning Architecture",
+    "authors": [
+      "Johannes Pitz",
+      "Lennart Röstel",
+      "Leon Sievers",
+      "Berthold Bauml"
+    ],
+    "year": "2023",
+    "venue": {
+      "id": "3f2626a8-9d78-42ca-9e0d-4b853b59cdcc",
+      "name": "IEEE International Conference on Robotics and Automation",
+      "type": "conference",
+      "alternate_names": [
+        "International Conference on Robotics and Automation",
+        "Int Conf Robot Autom",
+        "ICRA",
+        "IEEE Int Conf Robot Autom"
+      ],
+      "issn": "2152-4092",
+      "alternate_issns": [
+        "2379-9544"
+      ],
+      "url": "http://ieeexplore.ieee.org/xpl/conhome.jsp?punumber=1000639",
+      "alternate_urls": [
+        "http://www.ncsu.edu/IEEE-RAS/"
+      ]
+    },
+    "source": "OaK"
+  },
+  {
+    "id": "2502.15280",
+    "base_id": "2502.15280",
+    "title": "Hyperspherical Normalization for Scalable Deep Reinforcement Learning",
+    "authors": [
+      "Hojoon Lee",
+      "youngdon lee",
+      "Takuma Seno",
+      "Donghu Kim",
+      "Peter Stone",
+      "J. Choo"
+    ],
+    "year": "2025",
+    "venue": {
+      "id": "fc0a208c-acb7-47dc-a0d4-af8190e21d29",
+      "name": "International Conference on Machine Learning",
+      "type": "conference",
+      "alternate_names": [
+        "ICML",
+        "Int Conf Mach Learn"
+      ],
+      "url": "https://icml.cc/"
+    },
+    "source": "OaK"
+  },
+  {
+    "id": "2309.10392",
+    "base_id": "2309.10392",
+    "title": "Differentiable Quantum Architecture Search for Quantum Reinforcement Learning",
+    "authors": [
+      "Yize Sun",
+      "Yunpu Ma",
+      "Volker Tresp"
+    ],
+    "year": "2023",
+    "venue": {
+      "id": "f4feaf1a-55ae-44e8-a601-dd4b8d6993ab",
+      "name": "International Conference on Quantum Computing and Engineering",
+      "type": "conference",
+      "alternate_names": [
+        "QCE",
+        "Int Conf Quantum Comput Eng"
+      ]
+    },
+    "source": "OaK"
+  },
+  {
+    "id": "2501.15085",
+    "base_id": "2501.15085",
+    "title": "Data Center Cooling System Optimization Using Offline Reinforcement Learning",
+    "authors": [
+      "Xianyuan Zhan",
+      "Xiangyu Zhu",
+      "Peng Cheng",
+      "Xiao Hu",
+      "Ziteng He",
+      "Hanfei Geng",
+      "Jichao Leng",
+      "Huiwen Zheng",
+      "Chenhui Liu",
+      "Tianshun Hong",
+      "Yan Liang",
+      "Yunxin Liu",
+      "Feng Zhao"
+    ],
+    "year": "2025",
+    "venue": {
+      "id": "939c6e1d-0d17-4d6e-8a82-66d960df0e40",
+      "name": "International Conference on Learning Representations",
+      "type": "conference",
+      "alternate_names": [
+        "Int Conf Learn Represent",
+        "ICLR"
+      ],
+      "url": "https://iclr.cc/"
+    },
+    "source": "OaK"
+  }
+]

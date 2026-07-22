@@ -1,0 +1,57 @@
+# Hermes Agent Configuration: Asymmetric Driver + Mixture of Agents (MoA) Expert
+# Primary Driver: DeepSeek v4 Pro
+# MoA Proposers: Kimi k3, GPT 5.6 Sol, Sakana Fugu Ultra
+# MoA Aggregator: Sakana Fugu Ultra
+
+agent:
+  name: "Aletheia-Hermes-MoA"
+  max_react_steps: 12
+  token_budget_warning: 40000
+  history_truncation_threshold: 16000
+
+# -----------------------------------------------------------------------------
+# TIER 1: PRIMARY DRIVER (DeepSeek v4 Pro)
+# Handles standard chat, local tool calls, and initial code drafts at lowest cost.
+# -----------------------------------------------------------------------------
+model:
+  provider: "openai-compatible"
+  api_base: "https://api.deepseek.com/v1"
+  api_key_env: "DEEPSEEK_API_KEY"
+  model_name: "deepseek-coder"
+  temperature: 0.1
+  max_tokens: 4096
+
+# -----------------------------------------------------------------------------
+# TIER 2: MIXTURE OF AGENTS (MoA) HEAVY REASONING CLUSTER
+# Invoked in parallel by model_escalation_skill on test/proof failures.
+# -----------------------------------------------------------------------------
+moa_cluster:
+  proposers:
+    kimi_k3:
+      api_base: "https://api.moonshot.cn/v1"
+      api_key_env: "KIMI_API_KEY"
+      model_name: "kimi-k3-pro"
+      role: "Mathematical & High-Dimensional Proofs"
+    
+    gpt_56_sol:
+      api_base: "https://api.openai.com/v1"
+      api_key_env: "OPENAI_API_KEY"
+      model_name: "gpt-5.6-sol"
+      role: "Formal Logic & Strict Syntax Correctness"
+    
+    sakana_fugu_ultra:
+      api_base: "https://api.sakana.ai/v1" # Custom/Routed endpoint
+      api_key_env: "SAKANA_API_KEY"
+      model_name: "sakana-fugu-ultra"
+      role: "Hybrid Cross-Domain Synthesis (Claude+GPT+Gemini)"
+
+  aggregator:
+    model_key: "sakana_fugu_ultra"
+    temperature: 0.1
+    max_tokens: 8192
+
+skills_path: "~/.hermes/skills"
+autoload_skills:
+  - "model_escalation_skill"
+  - "compressed_executor"
+  - "local_rag_context"

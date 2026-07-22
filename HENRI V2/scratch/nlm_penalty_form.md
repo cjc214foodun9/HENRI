@@ -1,0 +1,3 @@
+[notebooklm] Loaded cookies from C:\Users\chan\AppData\Roaming\notebooklm-ai\cookies.json
+Initializing RPC client...
+Error: NotebookLM redirected (302) to https://notebooklm.google.com/login?continue=https://notebooklm.google.com/. Cookies may be expired — try running "login --force".

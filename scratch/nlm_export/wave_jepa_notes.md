@@ -1,0 +1,3 @@
+# Wave JEPA Notes
+
+Wave-JEPA uses holographic reduced representations for predictive coding...
