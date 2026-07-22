@@ -402,6 +402,9 @@ def run():
                 "constraint_penalty": round(float(chosen.get("constraint_penalty", 0.0)), 6),
                 "constraint_rejected": bool(chosen.get("rejected", False)),
                 "lambda_active": round(float(chosen.get("lambda_active", 0.0)), 6),
+                "raw_l2_residual": round(float(chosen.get("raw_l2_residual", 0.0)), 1),
+                "fallback_executed": bool(chosen.get("fallback_executed", False)),
+                "admissible_count": int(chosen.get("admissible_count", 0)),
                 "step_ms": round(step_ms, 1),
             })
             # Wave-level hypertable log (downsampled for DB volume)

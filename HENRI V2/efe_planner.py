@@ -461,6 +461,7 @@ class EFEPlanner(nn.Module):
         gated (weak operator imposes no barrier from a noise subspace).
         """
         lam = self._constraint_lambda()
+        sqrt_d = self.d_model ** 0.5
         results = []
         for action_id, action_wave in candidate_actions:
             predicted = self.transition(state_wave, action_wave)
@@ -468,6 +469,7 @@ class EFEPlanner(nn.Module):
             epistemic = self.epistemic_value(predicted)
             penalty = self.constraint_penalty(predicted)
             penalty = 0.0 if penalty is None else penalty
+            raw_l2 = penalty * sqrt_d  # un-normalized residual
             efe = (self.pragmatic_weight * pragmatic
                    - self.epistemic_weight * epistemic
                    + lam * penalty)
@@ -477,6 +479,7 @@ class EFEPlanner(nn.Module):
                 "pragmatic": pragmatic.item(),
                 "epistemic": epistemic.item(),
                 "constraint_penalty": penalty,
+                "raw_l2_residual": raw_l2,
                 "rejected": penalty > self.constraint_reject_thresh,
                 "lambda_active": lam,
                 "predicted_wave": predicted,
@@ -484,8 +487,13 @@ class EFEPlanner(nn.Module):
         # Hard-rejection hybrid: drop off-manifold candidates from the argmin
         # unless every candidate is off-manifold (fall back to penalty-ranked).
         admissible = [r for r in results if not r["rejected"]]
+        fallback = len(admissible) == 0
         ranked = admissible if admissible else results
         ranked.sort(key=lambda r: r["efe"])
+        # Annotate call-level metadata on every result for telemetry consumers
+        for r in ranked:
+            r["fallback_executed"] = fallback
+            r["admissible_count"] = len(admissible)
         return ranked
 
     def select_action(self, state_wave: torch.Tensor, candidate_actions: list, boundary_axioms: torch.Tensor,
