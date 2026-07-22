@@ -84,6 +84,13 @@ PV_SLOW_BETA = 0.9375      # EMA_slow horizon ~16 steps (EDMD cadence)
 # stronger pull toward historically favorable outcome basins.
 BETA_PRAGMATIC = float(os.environ.get("BETA_PRAGMATIC", "1.0"))
 
+# Phase 3 goal-conditioned planning: lambda_goal weights the goal-distance
+# term in EFE pragmatic value. 0.0 = backward-compatible (no goal);
+# >0 = planner minimizes distance to the externally-provided goal wave.
+# The goal wave is inferred from Zone C example-pair retrieval or set
+# directly as the VSA-encoded desired output grid.
+LAMBDA_GOAL = float(os.environ.get("LAMBDA_GOAL", "0.0"))
+
 
 # ---------------------------------------------------------------------------
 # Telemetry
@@ -146,6 +153,7 @@ def run():
         constraint_weight_max=LAMBDA_CONSTRAINT_MAX,
         constraint_reject_thresh=CONSTRAINT_REJECT_THRESH,
         beta_pragmatic=BETA_PRAGMATIC,
+        lambda_goal=LAMBDA_GOAL,
         **SCALE,
     ).to(DEVICE)
     if CONSTRAINT_AXIOM:
@@ -174,6 +182,39 @@ def run():
         if obs is None or not getattr(obs, "frame", None):
             print("  [skip] null initial frame")
             continue
+
+        # Phase 3 goal-conditioned planning: infer goal wave for this env.
+        # The goal wave is the VSA-encoded desired output grid. When
+        # lambda_goal > 0, the planner minimizes distance to this wave.
+        # Strategy (layered, earliest-available wins):
+        #   1. Zone C example-pair retrieval (most similar example input →
+        #      its paired output wave) — future: requires populated DB
+        #   2. Initial state as identity goal (for tasks where output ~ input)
+        #   3. None (lambda_goal=0 → backward-compatible, no goal conditioning)
+        goal_wave = None
+        if LAMBDA_GOAL > 0.0:
+            # Layer 1: try Zone C analogical retrieval
+            try:
+                init_grid = obs.frame[0].tolist()
+                init_wave = tokenizer.encode_spatial_grid(init_grid).squeeze(0).to(DEVICE)
+                res = orch.segment_cache.retrieve(init_wave.cpu())
+                if res["hits"] > 0 and res.get("top_similarity", 0) > 0.7:
+                    # Retrieved wave is a similar past state — use as goal
+                    goal_wave = res["conditioning_wave"]
+                    if goal_wave is not None:
+                        goal_wave = goal_wave.to(DEVICE)
+                        print(f"  [goal] Zone C analogical — top_sim={res['top_similarity']:.3f}")
+            except Exception as e:
+                pass  # Zone C may be offline; fall through
+            # Layer 2: identity goal (output ≈ input for simple tasks)
+            if goal_wave is None:
+                goal_wave = tokenizer.encode_spatial_grid(
+                    obs.frame[0].tolist()
+                ).squeeze(0).to(DEVICE)
+                print(f"  [goal] identity (initial state)")
+            orch.planner.lambda_goal = LAMBDA_GOAL
+        else:
+            orch.planner.lambda_goal = 0.0  # ensure backward compat
 
         prev_wave = None
         prev_raw_wave = None
@@ -341,7 +382,8 @@ def run():
             boundary_batch = torch.stack([boundary])
             n_axiom_rows = 1
             action, predicted_wave, efe_table, chosen = orch.plan_action(
-                state_wave, boundary_batch, top_k=4, return_chosen=True
+                state_wave, boundary_batch, top_k=4, return_chosen=True,
+                goal_wave=goal_wave,
             )
             explored = bool(chosen.get("explored", False))
             hop_conf = chosen["efe"]  # chosen-candidate EFE as confidence proxy
@@ -405,6 +447,8 @@ def run():
                 "raw_l2_residual": round(float(chosen.get("raw_l2_residual", 0.0)), 1),
                 "fallback_executed": bool(chosen.get("fallback_executed", False)),
                 "admissible_count": int(chosen.get("admissible_count", 0)),
+                "goal_distance": round(float(chosen.get("goal_distance", 0.0)), 6),
+                "lambda_goal": LAMBDA_GOAL,
                 "step_ms": round(step_ms, 1),
             })
             # Wave-level hypertable log (downsampled for DB volume)

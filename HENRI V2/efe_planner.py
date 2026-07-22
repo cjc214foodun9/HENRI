@@ -152,6 +152,7 @@ class EFEPlanner(nn.Module):
         constraint_weight_max: float = 1.0,
         constraint_reject_thresh: float = 0.5,
         beta_pragmatic: float = 1.0,
+        lambda_goal: float = 0.0,
     ):
         super().__init__()
         self.num_blocks = num_blocks
@@ -164,6 +165,11 @@ class EFEPlanner(nn.Module):
         # above it excludes the candidate from the argmin outright).
         self.constraint_weight_max = constraint_weight_max
         self.constraint_reject_thresh = constraint_reject_thresh
+        # Phase 3 goal-conditioned planning: lambda_goal weights the
+        # goal-distance term in the EFE. 0.0 = backward-compatible
+        # (no goal conditioning); >0 = planner minimizes distance to
+        # the externally-provided goal wave.
+        self.lambda_goal = lambda_goal
 
         self.transition = UnitaryWaveTransition(num_blocks=num_blocks)
         # Retrieval store over predicted waves (real Clifford waves of width
@@ -354,18 +360,37 @@ class EFEPlanner(nn.Module):
 
     # -- value terms ------------------------------------------------------
 
-    def pragmatic_value(self, predicted_wave: torch.Tensor, boundary_axioms: torch.Tensor) -> torch.Tensor:
-        """Pragmatic term of the EFE: surprise minus prior-preference resonance.
+    def goal_distance(self, predicted_wave: torch.Tensor, goal_wave: torch.Tensor) -> torch.Tensor:
+        """Normalized Sagnac delta between predicted outcome and goal wave.
+
+        goal_distance = 1 - Re(<pred, goal>) / (||pred||·||goal||) in [0, 2].
+        0 = predicted outcome exactly matches the goal; 2 = anti-aligned.
+        Returns scalar. When goal_wave is None, returns 0.0.
+        """
+        if goal_wave is None:
+            return torch.tensor(0.0, device=predicted_wave.device)
+        p = predicted_wave.view(-1)
+        p = p / (torch.norm(p) + 1e-12)
+        g = goal_wave.view(-1)
+        g = g / (torch.norm(g) + 1e-12)
+        return 1.0 - torch.dot(p, g)
+
+    def pragmatic_value(self, predicted_wave: torch.Tensor, boundary_axioms: torch.Tensor,
+                        goal_wave: torch.Tensor = None) -> torch.Tensor:
+        """Pragmatic term of the EFE: surprise + goal_distance - preference_resonance.
 
         FEP decomposition (bank-conformant): the pragmatic value of a policy
         is the KL divergence between predicted outcomes and prior preferences
         p(o|m) = exp(V(s)). Implemented as
 
             pragmatic = min_a sagnac_delta(predicted, axiom_a)
+                        + lambda_goal * goal_distance(predicted, goal)
                         - beta_pragmatic * max_resonance(predicted, prefs)
 
         The first term is expected surprise against boundary axioms [0, 2];
-        the second is geometric resonance with the preference store of
+        the second is distance to the externally-provided goal wave [0, 2]
+        (Phase 3 goal-conditioned planning — zero when no goal is set);
+        the third is geometric resonance with the preference store of
         historically favorable transition waves [0, 1]. Resonance with a
         verified-successful outcome LOWERS the score (argmin wins), pulling
         the drift toward favorable basins without touching the epistemic
@@ -381,11 +406,13 @@ class EFEPlanner(nn.Module):
             deltas.append(1.0 - inner)
         surprise = torch.stack(deltas).min()  # closest axiom governs
 
+        goal_dist = self.lambda_goal * self.goal_distance(predicted_wave, goal_wave)
+
         resonance = torch.zeros((), device=predicted_wave.device)
         if self.preference_store.num_engrams() > 0:
             sim = p @ self.preference_store.engrams.T
             resonance = sim.max().clamp(min=0.0)
-        return surprise - self.beta_pragmatic * resonance
+        return surprise + goal_dist - self.beta_pragmatic * resonance
 
     def register_preference(self, predicted_wave: torch.Tensor):
         """Consolidate a favorable transition's predicted wave into the
@@ -447,9 +474,13 @@ class EFEPlanner(nn.Module):
 
     # -- planning ---------------------------------------------------------
 
-    def score_actions(self, state_wave: torch.Tensor, candidate_actions: list, boundary_axioms: torch.Tensor):
+    def score_actions(self, state_wave: torch.Tensor, candidate_actions: list,
+                       boundary_axioms: torch.Tensor, goal_wave: torch.Tensor = None):
         """
         candidate_actions: list of (action_id, action_wave[num_blocks, 8]).
+        goal_wave: optional [num_blocks, 8] target wave (Phase 3 goal-conditioned
+                   planning). When provided + lambda_goal > 0, actions whose
+                   predictions are closer to the goal get lower EFE.
         Returns list of dicts sorted by EFE ascending (best first).
 
         Phase 2 penalty-form constraint channel (research-grounded): each
@@ -465,11 +496,12 @@ class EFEPlanner(nn.Module):
         results = []
         for action_id, action_wave in candidate_actions:
             predicted = self.transition(state_wave, action_wave)
-            pragmatic = self.pragmatic_value(predicted, boundary_axioms)
+            pragmatic = self.pragmatic_value(predicted, boundary_axioms, goal_wave)
             epistemic = self.epistemic_value(predicted)
             penalty = self.constraint_penalty(predicted)
             penalty = 0.0 if penalty is None else penalty
             raw_l2 = penalty * sqrt_d  # un-normalized residual
+            goal_dist = float(self.goal_distance(predicted, goal_wave).detach())
             efe = (self.pragmatic_weight * pragmatic
                    - self.epistemic_weight * epistemic
                    + lam * penalty)
@@ -482,6 +514,7 @@ class EFEPlanner(nn.Module):
                 "raw_l2_residual": raw_l2,
                 "rejected": penalty > self.constraint_reject_thresh,
                 "lambda_active": lam,
+                "goal_distance": goal_dist,
                 "predicted_wave": predicted,
             })
         # Hard-rejection hybrid: drop off-manifold candidates from the argmin
@@ -497,9 +530,9 @@ class EFEPlanner(nn.Module):
         return ranked
 
     def select_action(self, state_wave: torch.Tensor, candidate_actions: list, boundary_axioms: torch.Tensor,
-                      explore_threshold: float = None):
+                      explore_threshold: float = None, goal_wave: torch.Tensor = None):
         """
-        Returns (best_action_id, predicted_wave, scores_table).
+        Returns (best_action_id, predicted_wave, scores_table, chosen_dict).
 
         T4 — calibrated exploration: when the planner's uncertainty (the EFE
         spread across candidates) exceeds explore_threshold, the model's
@@ -507,8 +540,12 @@ class EFEPlanner(nn.Module):
         action (max information gain) instead of the lowest-EFE one. When
         confident, we exploit (min EFE). Default threshold: adaptive, the
         median of the observed spread.
+
+        Phase 3 goal-conditioned planning: goal_wave is the desired target
+        wave (VSA-encoded goal grid). When provided + lambda_goal > 0,
+        actions whose predictions are closer to the goal get lower EFE.
         """
-        results = self.score_actions(state_wave, candidate_actions, boundary_axioms)
+        results = self.score_actions(state_wave, candidate_actions, boundary_axioms, goal_wave)
         best = results[0]
         spread = results[-1]["efe"] - results[0]["efe"]
 

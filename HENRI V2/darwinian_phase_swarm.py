@@ -238,7 +238,8 @@ class HenriSwarmOrchestrator(nn.Module):
     sub-graphs, leaving the remainder isolated to prevent representational saturation.
     """
     def __init__(self, num_experts=1024, d_model=65536, r_rank=16, num_blocks=8192, action_enum_class=None,
-                 constraint_weight_max=5.0, constraint_reject_thresh=0.5, beta_pragmatic=1.0):
+                 constraint_weight_max=5.0, constraint_reject_thresh=0.5, beta_pragmatic=1.0,
+                 lambda_goal=0.0):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
@@ -252,7 +253,8 @@ class HenriSwarmOrchestrator(nn.Module):
         self.planner = EFEPlanner(num_blocks=num_blocks, d_model=d_model,
                                   constraint_weight_max=constraint_weight_max,
                                   constraint_reject_thresh=constraint_reject_thresh,
-                                  beta_pragmatic=beta_pragmatic)
+                                  beta_pragmatic=beta_pragmatic,
+                                  lambda_goal=lambda_goal)
         # Seed the planner's retrieval store with the decoder's action waves,
         # flattened to real width d_model to match the planner's store.
         action_real = torch.stack([
@@ -307,16 +309,17 @@ class HenriSwarmOrchestrator(nn.Module):
         return waves
 
     def plan_action(self, active_wave: torch.Tensor, boundary_axioms: torch.Tensor, top_k: int = 4,
-                    return_chosen: bool = False):
+                    return_chosen: bool = False, goal_wave: torch.Tensor = None):
         """
         EFE action selection: score the top-k candidate actions by Expected
         Free Energy and return (action, predicted_wave, score_table).
         With return_chosen=True, returns (action, predicted_wave, table, chosen).
         boundary_axioms: [N, num_blocks, 8] real waves.
+        goal_wave: optional [num_blocks, 8] target wave (Phase 3 goal-conditioned).
         """
         candidates = self.candidate_action_waves(top_k=top_k)
         action, predicted, table, chosen = self.planner.select_action(
-            active_wave, candidates, boundary_axioms
+            active_wave, candidates, boundary_axioms, goal_wave=goal_wave
         )
         if return_chosen:
             return action, predicted, table, chosen
