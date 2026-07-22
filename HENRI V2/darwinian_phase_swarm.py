@@ -237,7 +237,8 @@ class HenriSwarmOrchestrator(nn.Module):
     Uses Sagnac-driven voltage gating to activate only the highly resonant expert
     sub-graphs, leaving the remainder isolated to prevent representational saturation.
     """
-    def __init__(self, num_experts=1024, d_model=65536, r_rank=16, num_blocks=8192, action_enum_class=None):
+    def __init__(self, num_experts=1024, d_model=65536, r_rank=16, num_blocks=8192, action_enum_class=None,
+                 constraint_weight_max=5.0, constraint_reject_thresh=0.5, beta_pragmatic=1.0):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
@@ -248,7 +249,10 @@ class HenriSwarmOrchestrator(nn.Module):
         # EFE action planner: scores top-k candidate action waves by Expected
         # Free Energy (pragmatic surprise vs epistemic information gain) by
         # propagating each through the unitary transition operator.
-        self.planner = EFEPlanner(num_blocks=num_blocks, d_model=d_model)
+        self.planner = EFEPlanner(num_blocks=num_blocks, d_model=d_model,
+                                  constraint_weight_max=constraint_weight_max,
+                                  constraint_reject_thresh=constraint_reject_thresh,
+                                  beta_pragmatic=beta_pragmatic)
         # Seed the planner's retrieval store with the decoder's action waves,
         # flattened to real width d_model to match the planner's store.
         action_real = torch.stack([

@@ -67,7 +67,7 @@ CONSTRAINT_AXIOM = os.environ.get("CONSTRAINT_AXIOM", "0") == "1"
 # Penalty scalars (env-tunable; research-grounded defaults). LAMBDA_MAX is
 # the exactness cap on the accuracy-gated weight; REJECT_THRESH is the
 # hard-rejection cutoff on the per-candidate off-manifold residual.
-LAMBDA_CONSTRAINT_MAX = float(os.environ.get("LAMBDA_CONSTRAINT_MAX", "1.0"))
+LAMBDA_CONSTRAINT_MAX = float(os.environ.get("LAMBDA_CONSTRAINT_MAX", "5.0"))
 CONSTRAINT_REJECT_THRESH = float(os.environ.get("CONSTRAINT_REJECT_THRESH", "0.5"))
 
 # Phase 2 Task 2.3: progress valence (exteroceptive anchor). When set, the
@@ -78,6 +78,11 @@ CONSTRAINT_REJECT_THRESH = float(os.environ.get("CONSTRAINT_REJECT_THRESH", "0.5
 PROGRESS_VALENCE = os.environ.get("PROGRESS_VALENCE", "0") == "1"
 PV_FAST_BETA = 0.75        # EMA_fast horizon ~4 steps
 PV_SLOW_BETA = 0.9375      # EMA_slow horizon ~16 steps (EDMD cadence)
+
+# Preference-resonance steering: beta_pragmatic weights the preference-store
+# resonance term in EFE pragmatic value. 1.0 = equal to surprise; higher =
+# stronger pull toward historically favorable outcome basins.
+BETA_PRAGMATIC = float(os.environ.get("BETA_PRAGMATIC", "1.0"))
 
 
 # ---------------------------------------------------------------------------
@@ -136,7 +141,13 @@ def run():
     tele = LatentTelemetry(log_path, db_logger)
 
     print(f"[init] orchestrator @ {SCALE}")
-    orch = HenriSwarmOrchestrator(action_enum_class=GameAction, **SCALE).to(DEVICE)
+    orch = HenriSwarmOrchestrator(
+        action_enum_class=GameAction,
+        constraint_weight_max=LAMBDA_CONSTRAINT_MAX,
+        constraint_reject_thresh=CONSTRAINT_REJECT_THRESH,
+        beta_pragmatic=BETA_PRAGMATIC,
+        **SCALE,
+    ).to(DEVICE)
     if CONSTRAINT_AXIOM:
         # Penalty-form constraint channel: arm the planner's barrier scalars
         # (no-op in the default path; the penalty itself activates only once
@@ -388,6 +399,9 @@ def run():
                 "action": str(game_action),
                 "recall": recall_info,
                 "n_axiom_rows": n_axiom_rows,
+                "constraint_penalty": round(float(chosen.get("constraint_penalty", 0.0)), 6),
+                "constraint_rejected": bool(chosen.get("rejected", False)),
+                "lambda_active": round(float(chosen.get("lambda_active", 0.0)), 6),
                 "step_ms": round(step_ms, 1),
             })
             # Wave-level hypertable log (downsampled for DB volume)

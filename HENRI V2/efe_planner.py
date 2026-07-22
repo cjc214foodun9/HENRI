@@ -151,6 +151,7 @@ class EFEPlanner(nn.Module):
         pragmatic_weight: float = 1.0,
         constraint_weight_max: float = 1.0,
         constraint_reject_thresh: float = 0.5,
+        beta_pragmatic: float = 1.0,
     ):
         super().__init__()
         self.num_blocks = num_blocks
@@ -193,7 +194,7 @@ class EFEPlanner(nn.Module):
         # basins. Real waves, ring-capped like the novelty memory.
         self.preference_store = ContinuousHopfieldCleanup(dim=d_model, beta=8.0)
         self.preference_capacity = 256
-        self.beta_pragmatic = 1.0
+        self.beta_pragmatic = beta_pragmatic
 
         # EDMD fit diagnostics (Phase 0: cd82 L2 instability characterization).
         # Populated by train_transition_batch on every fit; read-only record
@@ -470,6 +471,7 @@ class EFEPlanner(nn.Module):
                 "epistemic": epistemic.item(),
                 "constraint_penalty": penalty,
                 "rejected": penalty > self.constraint_reject_thresh,
+                "lambda_active": lam,
                 "predicted_wave": predicted,
             })
         # Hard-rejection hybrid: drop off-manifold candidates from the argmin
