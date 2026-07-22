@@ -150,7 +150,7 @@ class EFEPlanner(nn.Module):
         epistemic_weight: float = 1.0,
         pragmatic_weight: float = 1.0,
         constraint_weight_max: float = 1.0,
-        constraint_reject_thresh: float = 0.5,
+        constraint_reject_thresh: float = 0.38,
         beta_pragmatic: float = 1.0,
         lambda_goal: float = 0.0,
     ):

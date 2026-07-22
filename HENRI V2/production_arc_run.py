@@ -68,7 +68,7 @@ CONSTRAINT_AXIOM = os.environ.get("CONSTRAINT_AXIOM", "0") == "1"
 # the exactness cap on the accuracy-gated weight; REJECT_THRESH is the
 # hard-rejection cutoff on the per-candidate off-manifold residual.
 LAMBDA_CONSTRAINT_MAX = float(os.environ.get("LAMBDA_CONSTRAINT_MAX", "5.0"))
-CONSTRAINT_REJECT_THRESH = float(os.environ.get("CONSTRAINT_REJECT_THRESH", "0.5"))
+CONSTRAINT_REJECT_THRESH = float(os.environ.get("CONSTRAINT_REJECT_THRESH", "0.38"))
 
 # Phase 2 Task 2.3: progress valence (exteroceptive anchor). When set, the
 # per-step valence is the descent of within-invariant-subspace motion:
