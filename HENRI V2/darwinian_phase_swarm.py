@@ -239,7 +239,7 @@ class HenriSwarmOrchestrator(nn.Module):
     """
     def __init__(self, num_experts=1024, d_model=65536, r_rank=16, num_blocks=8192, action_enum_class=None,
                  constraint_weight_max=5.0, constraint_reject_thresh=0.5, beta_pragmatic=1.0,
-                 lambda_goal=0.0):
+                 lambda_goal=0.0, learnable_actions=False):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
@@ -247,6 +247,8 @@ class HenriSwarmOrchestrator(nn.Module):
         self.syncytium = GapJunctionSwarmSyncytium(num_experts=num_experts, d_model=d_model, r_rank=r_rank)
         self.clifford = ProductCliffordAlgebra3D(num_blocks=num_blocks)
         self.decoder = HolographicActionDecoder(d_model=d_model, action_enum_class=action_enum_class)
+        self._learnable_actions = learnable_actions
+        num_actions = len(self.decoder.id_to_action)
         # EFE action planner: scores top-k candidate action waves by Expected
         # Free Energy (pragmatic surprise vs epistemic information gain) by
         # propagating each through the unitary transition operator.
@@ -254,7 +256,7 @@ class HenriSwarmOrchestrator(nn.Module):
                                   constraint_weight_max=constraint_weight_max,
                                   constraint_reject_thresh=constraint_reject_thresh,
                                   beta_pragmatic=beta_pragmatic,
-                                  lambda_goal=lambda_goal)
+                                  lambda_goal=lambda_goal, learnable_actions=learnable_actions, num_actions=num_actions)
         # Seed the planner's retrieval store with the decoder's action waves,
         # flattened to real width d_model to match the planner's store.
         action_real = torch.stack([
@@ -301,10 +303,13 @@ class HenriSwarmOrchestrator(nn.Module):
         n = min(top_k, len(self.decoder.id_to_action))
         for idx in range(n):
             action = self.decoder.id_to_action[idx]
-            w = self.decoder.get_action_wave(action)  # complex [d_model]
-            w_real = torch.view_as_real(w).reshape(-1)[: self.d_model]
-            w_grid = w_real.view(self.num_blocks, 8)
-            w_grid = w_grid / (torch.norm(w_grid, p=2, dim=-1, keepdim=True) + 1e-9)
+            if self._learnable_actions:
+                w_grid = self.planner.get_learnable_action_wave(idx)
+            else:
+                w = self.decoder.get_action_wave(action)
+                w_real = torch.view_as_real(w).reshape(-1)[: self.d_model]
+                w_grid = w_real.view(self.num_blocks, 8)
+                w_grid = w_grid / (torch.norm(w_grid, p=2, dim=-1, keepdim=True) + 1e-9)
             waves.append((action, w_grid))
         return waves
 

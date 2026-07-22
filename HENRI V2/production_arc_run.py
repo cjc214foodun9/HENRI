@@ -91,6 +91,18 @@ BETA_PRAGMATIC = float(os.environ.get("BETA_PRAGMATIC", "1.0"))
 # directly as the VSA-encoded desired output grid.
 LAMBDA_GOAL = float(os.environ.get("LAMBDA_GOAL", "0.0"))
 
+# Phase 3.3: Learnable action wave embeddings (Fallacy #3 fix).
+# When enabled, action waves are nn.Parameter trained alongside the
+# transition model via Sagnac loss gradients. Replaces random-phase VSA
+# action basis with learned embeddings that encode each action's effect.
+LEARNABLE_ACTIONS = os.environ.get("LEARNABLE_ACTIONS", "0") == "1"
+
+# Phase 3.3: Grid-distance epistemic signal (Fallacy #6 fix).
+# When enabled, the pixel-wise frame delta between consecutive observations
+# replaces latent-space novelty as the epistemic value driver. Large
+# frame changes = high epistemic value (the action did something meaningful).
+GRID_DIST_EPISTEMIC = os.environ.get("GRID_DIST_EPISTEMIC", "0") == "1"
+
 
 # ---------------------------------------------------------------------------
 # Telemetry
@@ -154,6 +166,7 @@ def run():
         constraint_reject_thresh=CONSTRAINT_REJECT_THRESH,
         beta_pragmatic=BETA_PRAGMATIC,
         lambda_goal=LAMBDA_GOAL,
+        learnable_actions=LEARNABLE_ACTIONS,
         **SCALE,
     ).to(DEVICE)
     if CONSTRAINT_AXIOM:

@@ -153,6 +153,9 @@ class EFEPlanner(nn.Module):
         constraint_reject_thresh: float = 0.38,
         beta_pragmatic: float = 1.0,
         lambda_goal: float = 0.0,
+        learnable_actions: bool = False,
+        num_actions: int = 8,
+        action_lr_scale: float = 0.2,
     ):
         super().__init__()
         self.num_blocks = num_blocks
@@ -172,6 +175,22 @@ class EFEPlanner(nn.Module):
         self.lambda_goal = lambda_goal
 
         self.transition = UnitaryWaveTransition(num_blocks=num_blocks)
+        # Learnable action wave embeddings (Fallacy #3 fix).
+        # When enabled, action waves are nn.Parameter — the transition model
+        # learns to encode each action's semantic effect through gradient
+        # descent on the Sagnac loss, replacing the random-phase VSA basis.
+        self._learnable_actions = learnable_actions
+        self._action_lr_scale = action_lr_scale
+        if learnable_actions:
+            scale = 1.0 / math.sqrt(num_blocks * 8)
+            self.action_embeddings = nn.Parameter(
+                torch.randn(num_actions, num_blocks, 8) * scale)
+            # Per-block normalize initialization
+            with torch.no_grad():
+                self.action_embeddings.data = self.action_embeddings.data / (
+                    torch.norm(self.action_embeddings.data, p=2, dim=-1, keepdim=True) + 1e-9)
+        else:
+            self.action_embeddings = torch.zeros(0)
         # Retrieval store over predicted waves (real Clifford waves of width
         # d_model); engrams registered externally (decoder action basis, Zone C
         # attractors).
@@ -555,6 +574,14 @@ class EFEPlanner(nn.Module):
 
     # -- planning ---------------------------------------------------------
 
+    def get_learnable_action_wave(self, idx: int) -> torch.Tensor:
+        """Return the learnable action embedding for action index idx.
+        Shape [num_blocks, 8], per-block unit-norm. When learnable_actions
+        is disabled, returns None (caller falls back to decoder waves)."""
+        if not self._learnable_actions or self.action_embeddings.numel() == 0:
+            return None
+        return self.action_embeddings[idx]
+
     def score_actions(self, state_wave: torch.Tensor, candidate_actions: list,
                        boundary_axioms: torch.Tensor, goal_wave: torch.Tensor = None):
         """
@@ -732,7 +759,21 @@ class EFEPlanner(nn.Module):
             loss = 1.0 - inner / denom  # normalized Sagnac delta, differentiable
             params = [self.transition.field_V, self.transition.field_W,
                       self.transition.block_residual]
-            gV, gW, gR = torch.autograd.grad(loss, params)
+            # Fallacy #3 fix: learnable action wave embeddings.
+            # When enabled, the action wave is NOT detached in the forward
+            # pass, and its gradient is included in the parameter update.
+            if self._learnable_actions and action_wave is not None:
+                # Use non-detached action wave in forward pass
+                predicted = self.transition(state_wave.detach(), action_wave)
+                p2 = predicted.view(-1)
+                loss2 = 1.0 - torch.dot(p2, o) / (torch.norm(p2) * torch.norm(o)).clamp(min=1e-12)
+                params.append(self.action_embeddings)
+                grads = torch.autograd.grad(loss2, params)
+                gV, gW, gR, gA = grads
+            else:
+                grads = torch.autograd.grad(loss, params)
+                gV, gW, gR = grads
+                gA = None
         with torch.no_grad():
             if surprise_modulate:
                 delta = float(loss.detach())
@@ -747,6 +788,14 @@ class EFEPlanner(nn.Module):
             self.transition.field_V -= lr_eff * gV
             self.transition.field_W -= lr_eff * gW
             self.transition.block_residual -= lr_eff * gR
+            # Update learnable action embeddings at a scaled rate
+            if gA is not None:
+                alr = lr_eff * self._action_lr_scale
+                self.action_embeddings -= alr * gA
+                # Per-block re-normalize action embeddings after update
+                with torch.no_grad():
+                    self.action_embeddings.data = self.action_embeddings.data / (
+                        torch.norm(self.action_embeddings.data, p=2, dim=-1, keepdim=True) + 1e-9)
             self.transition._retract()
         # T4: track model accuracy so the exploration gate tightens as we learn.
         self.update_model_accuracy(float(loss.detach()))
