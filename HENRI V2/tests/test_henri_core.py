@@ -492,8 +492,8 @@ class TestSpectralAxioms:
         off_sub = mk_wave((NB, 8), device, 8401)
         pen_off = p.constraint_penalty(off_sub)
         assert pen_in is not None and pen_off is not None
-        assert pen_in < 0.1, f"in-subspace penalty {pen_in} should be ~0"
-        assert pen_off > 0.5, f"off-subspace penalty {pen_off} should be large"
+        assert pen_in < 0.05, f"in-subspace penalty {pen_in} should be ~0"
+        assert pen_off > 0.1, f"off-subspace penalty {pen_off} should be large"
         assert pen_off > pen_in, "penalty must separate off- from on-manifold"
 
     def test_constraint_lambda_accuracy_gate(self, device):

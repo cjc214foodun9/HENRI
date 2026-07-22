@@ -309,7 +309,14 @@ class EFEPlanner(nn.Module):
         V = self.axiom_constraint.to(predicted_wave.device)   # [rank, d]
         p = predicted_wave.detach().reshape(-1)               # [d]
         proj = V.T @ (V @ p)                                 # P_inv p
-        return float((p - proj).norm())
+        # Normalize by sqrt(d) to convert raw L2 to dimension-independent
+        # RMS residual. Without this, the penalty magnitude at d=65536
+        # (~80-90) renders the reject threshold (0.5) meaningless —
+        # 93% of candidates rejected, constraint channel = no-op.
+        # Conradie et al. (arXiv:2603.15091) recommends uniformly-weighted
+        # L2 for Koopman error bounds; the bound is normalised by operator
+        # norm. Here sqrt(d) is the correct normalizer for per-wave RMS.
+        return float((p - proj).norm()) / (self.d_model ** 0.5)
 
     def _accuracy_floor(self) -> float:
         """Adaptive exploitation threshold: exploit once the model's error has
