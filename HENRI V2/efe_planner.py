@@ -423,6 +423,48 @@ class EFEPlanner(nn.Module):
         self.preference_store.store_engrams(flat.unsqueeze(0))
         if self.preference_store.num_engrams() > self.preference_capacity:
             self.preference_store.engrams = self.preference_store.engrams[-self.preference_capacity:]
+    @torch.no_grad()
+    def infer_goal_from_preferences(self, state_wave: torch.Tensor,
+                                     top_k: int = 8) -> torch.Tensor:
+        """Infer a goal wave by blending top-k preference engrams.
+
+        Preferences encode historically favorable transition waves.
+        Blending the top-k most similar preferences to the current
+        state creates a "desired outcome basin" — a goal wave that
+        represents where favorable transitions tend to lead.
+        Returns None when preference store is empty.
+        """
+        if self.preference_store.num_engrams() == 0:
+            return None
+        flat = state_wave.detach().reshape(-1)
+        flat = flat / (torch.norm(flat) + 1e-12)
+        prefs = self.preference_store.engrams.to(state_wave.device)
+        sim = flat @ prefs.T
+        k = min(top_k, prefs.shape[0])
+        _, top_indices = torch.topk(sim, k)
+        top_prefs = prefs[top_indices]
+        top_sims = torch.softmax(sim[top_indices], dim=0)
+        goal_flat = (top_prefs * top_sims.unsqueeze(-1)).sum(dim=0)
+        goal_wave = goal_flat.view_as(state_wave)
+        goal_wave = goal_wave / (torch.norm(goal_wave, p=2, dim=-1, keepdim=True) + 1e-12)
+        return goal_wave
+
+    def cross_cov_epistemic(self, predicted_wave: torch.Tensor,
+                             action_wave: torch.Tensor) -> torch.Tensor:
+        """Cross-covariance spectral entropy of predicted vs action wave.
+
+        Low entropy = focused transformation (structured, informative).
+        High entropy = diffuse effect (noisy, already-explored).
+        The [block_dim, block_dim] SVD is always well-defined.
+        """
+        nb = self.transition.num_blocks
+        bd = self.transition.block_dim
+        pred_b = predicted_wave.detach().view(nb, bd)
+        act_b = action_wave.detach().view(nb, bd)
+        rho = pred_b.T @ act_b
+        sv = torch.linalg.svdvals(rho)
+        p = sv / (sv.sum() + 1e-12)
+        return -(p * torch.log(p + 1e-12)).sum()
 
     def epistemic_value(self, predicted_wave: torch.Tensor) -> torch.Tensor:
         """

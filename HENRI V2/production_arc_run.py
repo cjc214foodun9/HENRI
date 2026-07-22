@@ -193,10 +193,10 @@ def run():
         #   3. None (lambda_goal=0 → backward-compatible, no goal conditioning)
         goal_wave = None
         if LAMBDA_GOAL > 0.0:
+            init_grid = obs.frame[0].tolist()
+            init_wave = tokenizer.encode_spatial_grid(init_grid).squeeze(0).to(DEVICE)
             # Layer 1: try Zone C analogical retrieval
             try:
-                init_grid = obs.frame[0].tolist()
-                init_wave = tokenizer.encode_spatial_grid(init_grid).squeeze(0).to(DEVICE)
                 res = orch.segment_cache.retrieve(init_wave.cpu())
                 if res["hits"] > 0 and res.get("top_similarity", 0) > 0.7:
                     # Retrieved wave is a similar past state — use as goal
@@ -206,12 +206,19 @@ def run():
                         print(f"  [goal] Zone C analogical — top_sim={res['top_similarity']:.3f}")
             except Exception as e:
                 pass  # Zone C may be offline; fall through
-            # Layer 2: identity goal (output ≈ input for simple tasks)
+            # Layer 2: preference-blend goal (blend top-k preference engrams into a
+            # "desired outcome basin" — more meaningful than identity goal)
+            if goal_wave is None:
+                goal_wave = orch.planner.infer_goal_from_preferences(init_wave)
+                if goal_wave is not None:
+                    print(f"  [goal] preference-blend (top-k from "
+                          f"{orch.planner.preference_store.num_engrams()} engrams)")
+            # Layer 3: identity fallback (only if preference store is empty)
             if goal_wave is None:
                 goal_wave = tokenizer.encode_spatial_grid(
                     obs.frame[0].tolist()
                 ).squeeze(0).to(DEVICE)
-                print(f"  [goal] identity (initial state)")
+                print(f"  [goal] identity (initial state — preference store empty)")
             orch.planner.lambda_goal = LAMBDA_GOAL
         else:
             orch.planner.lambda_goal = 0.0  # ensure backward compat
