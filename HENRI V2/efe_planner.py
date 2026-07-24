@@ -166,6 +166,7 @@ class EFEPlanner(nn.Module):
         lambda_goal: float = 0.0,
         learnable_actions: bool = False,
         grid_dist_epistemic: bool = False,
+        happy_tensor_cut: bool = False,
         interoceptive_viability: bool = False,
         num_actions: int = 8,
         action_lr_scale: float = 0.2,
@@ -176,6 +177,7 @@ class EFEPlanner(nn.Module):
         self.epistemic_weight = epistemic_weight
         self.pragmatic_weight = pragmatic_weight
         self._grid_dist_epistemic = grid_dist_epistemic
+        self._happy_tensor_cut = happy_tensor_cut
         self._interoceptive_viability = interoceptive_viability
         # Phase 2 penalty-form constraint channel (research-grounded, see
         # constraint_penalty). lambda_max is the exactness cap; the reject
@@ -500,7 +502,30 @@ class EFEPlanner(nn.Module):
         p = sv / (sv.sum() + 1e-12)
         return -(p * torch.log(p + 1e-12)).sum()
 
-    def epistemic_value(self, predicted_wave: torch.Tensor, grid_dist: float = None) -> torch.Tensor:
+    def compute_happy_tensor_cut_area(self, wave: torch.Tensor, boundary_fraction: float = 0.25) -> torch.Tensor:
+        """
+        Computes Ryu-Takayanagi minimal tensor-cut area Area(gamma_A) across the HaPPY
+        holographic tensor network for state wave [num_blocks, 8].
+
+        Boundary region A = first k = int(num_blocks * boundary_fraction) blocks.
+        Bulk region A^c = remaining blocks.
+        Edge capacity W_ij = ln(1.0 + |<psi_i, psi_j>| / (||psi_i|| ||psi_j|| + 1e-12)).
+        Cut Area Area(gamma_A) = sum_{i in A, j in A^c} W_ij.
+        """
+        if wave.dim() != 2:
+            wave = wave.view(-1, 8)
+        num_blocks = wave.shape[0]
+        k = max(1, int(num_blocks * boundary_fraction))
+
+        norms = torch.norm(wave, dim=-1, keepdim=True) + 1e-12
+        unit_wave = wave / norms
+        sim = torch.abs(torch.matmul(unit_wave[:k], unit_wave[k:].T))
+        capacities = torch.log1p(sim)
+        area = capacities.sum() / math.sqrt(float(num_blocks))
+        return area
+
+    def epistemic_value(self, predicted_wave: torch.Tensor, state_wave: torch.Tensor = None,
+                        grid_dist: float = None) -> torch.Tensor:
         """
         Information gain with novelty discounting and optional pixel-wise frame delta scaling.
 
@@ -511,7 +536,11 @@ class EFEPlanner(nn.Module):
               memory of already-visited outcomes. Repeated predictions
               (same action, same outcome) are discounted toward zero, so
               exploration stops rewarding loops like RESET-spam.
-          (c) Grid distance (Fallacy #6 fix): when grid_dist_epistemic is active,
+          (c) HaPPY Minimal Cut Area Delta: when happy_tensor_cut is active,
+              measures Delta Area(gamma_A) = Area(pred) - Area(curr). Expansion
+              increases exteroceptive information gain; non-positive delta
+              soft-rejects non-informative roaming.
+          (d) Grid distance (Fallacy #6 fix): when grid_dist_epistemic is active,
               pixel-wise frame delta scales epistemic value (large frame changes
               = high epistemic signal).
         Returns scalar >= 0.
@@ -538,6 +567,17 @@ class EFEPlanner(nn.Module):
             novelty = (1.0 - sim).clamp(min=0.0)
 
         base_epistemic = entropy * novelty
+
+        happy_active = self._happy_tensor_cut or os.environ.get("HAPPY_TENSOR_CUT", "0") == "1"
+        if happy_active and state_wave is not None:
+            area_pred = self.compute_happy_tensor_cut_area(predicted_wave)
+            area_curr = self.compute_happy_tensor_cut_area(state_wave)
+            delta_area = area_pred - area_curr
+            if delta_area > 0:
+                base_epistemic = base_epistemic * (1.0 + float(delta_area.detach()))
+            else:
+                base_epistemic = base_epistemic * 0.1
+
         if grid_dist is not None and (self._grid_dist_epistemic or os.environ.get("GRID_DIST_EPISTEMIC", "0") == "1"):
             return base_epistemic * (1.0 + float(grid_dist))
         return base_epistemic
@@ -657,7 +697,7 @@ class EFEPlanner(nn.Module):
         for action_id, action_wave in candidate_actions:
             predicted = self.transition(state_wave, action_wave)
             pragmatic = self.pragmatic_value(predicted, boundary_axioms, goal_wave)
-            epistemic = self.epistemic_value(predicted, grid_dist=grid_dist)
+            epistemic = self.epistemic_value(predicted, state_wave=state_wave, grid_dist=grid_dist)
             penalty = self.constraint_penalty(predicted)
             penalty = 0.0 if penalty is None else penalty
             raw_l2 = penalty * sqrt_d  # un-normalized residual

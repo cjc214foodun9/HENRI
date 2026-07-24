@@ -30,7 +30,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from darwinian_phase_swarm import GapJunctionSwarmSyncytium, HenriSwarmOrchestrator
+from darwinian_phase_swarm import GapJunctionSwarmSyncytium, HenriSwarmOrchestrator, generate_colored_langevin_noise
 from efe_planner import EFEPlanner, UnitaryWaveTransition
 from hopfield_cleanup import ContinuousHopfieldCleanup
 from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
@@ -295,6 +295,32 @@ class TestStageIV_ActiveInference:
         high_sagnac_state = InteroceptiveState(sagnac_delta=0.60, action_entropy=1.50, creep_fatigue=0.01)
         loss_high_sagnac = planner.calculate_viability_loss(high_sagnac_state).item()
         assert loss_high_sagnac > 0.05, f"expected positive viability loss for Sagnac stress, got {loss_high_sagnac}"
+
+    def test_colored_langevin_noise_spectrum(self, device):
+        """Verifies colored noise generation and spectral power decay at higher frequencies."""
+        shape = (100, 1024)
+        colored = generate_colored_langevin_noise(shape, alpha=1.5, device=device)
+        spec = torch.fft.rfft(colored, dim=-1).abs().mean(dim=0)
+        low_freq_power = float(spec[:100].mean())
+        high_freq_power = float(spec[-100:].mean())
+        assert low_freq_power > high_freq_power * 2.0, (
+            f"expected low-pass power concentration: low={low_freq_power:.3f}, high={high_freq_power:.3f}"
+        )
+
+    def test_happy_tensor_cut_area_delta(self, device):
+        """Verifies Ryu-Takayanagi minimal tensor-cut area calculation on HaPPY network."""
+        planner = EFEPlanner(
+            num_blocks=SCALE["num_blocks"],
+            d_model=SCALE["num_blocks"] * 8,
+            happy_tensor_cut=True,
+        ).to(device)
+        wave_a = unit_blocks((SCALE["num_blocks"], 8), device, 88)
+        wave_b = unit_blocks((SCALE["num_blocks"], 8), device, 89)
+        area_a = float(planner.compute_happy_tensor_cut_area(wave_a).item())
+        area_b = float(planner.compute_happy_tensor_cut_area(wave_b).item())
+        assert area_a > 0.0 and area_b > 0.0, f"non-positive cut areas: a={area_a}, b={area_b}"
+        epistemic_val = planner.epistemic_value(wave_b, state_wave=wave_a)
+        assert epistemic_val.item() >= 0.0, "epistemic value must be non-negative"
 
 
 # ---------------------------------------------------------------------------

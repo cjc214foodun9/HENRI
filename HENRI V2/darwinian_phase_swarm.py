@@ -16,6 +16,21 @@ from efe_planner import EFEPlanner
 from idbd_swifttd import AdaptiveCreepController
 from zone_c_segment_cache import SegmentCache
 
+
+def generate_colored_langevin_noise(shape, alpha: float = 1.0, device='cpu'):
+    """
+    Generates colored Langevin noise with power spectral density S(omega) ~ 1 / (1 + (k/k_c)^2)^(alpha/2)
+    along the last dimension via 1D Real FFT.
+    """
+    white = torch.randn(*shape, device=device)
+    n = shape[-1]
+    k = torch.arange(n // 2 + 1, device=device)
+    filter_mask = 1.0 / (1.0 + (k / 10.0) ** 2) ** (alpha / 2.0)
+    spec = torch.fft.rfft(white, dim=-1) * filter_mask
+    colored = torch.fft.irfft(spec, n=n, dim=-1)
+    std = colored.std(dim=-1, keepdim=True) + 1e-12
+    return colored / std
+
 # =========================================================================
 # I. HIGH-PERFORMANCE SCALE-FREE GRAPH GENERATOR
 # =========================================================================
@@ -228,7 +243,10 @@ class GapJunctionSwarmSyncytium(nn.Module):
         if sagnac_order_param < 0.65:
             # Thermal variance proportional to the mismatch delta
             temperature = 3.5 * (1.0 - sagnac_order_param)
-            noise = torch.randn_like(self.expert_phases) * math.sqrt(2.0 * temperature * dt)
+            if os.environ.get("COLORED_NOISE", "0") == "1" or os.environ.get("COLORED_LANGEVIN", "0") == "1":
+                noise = generate_colored_langevin_noise(self.expert_phases.shape, alpha=1.0, device=self.expert_phases.device) * math.sqrt(2.0 * temperature * dt)
+            else:
+                noise = torch.randn_like(self.expert_phases) * math.sqrt(2.0 * temperature * dt)
             d_theta += noise
 
         # Execute Euler-Maruyama step integration
@@ -282,7 +300,8 @@ class HenriSwarmOrchestrator(nn.Module):
                  constraint_weight_max=5.0, constraint_reject_thresh=0.5, beta_pragmatic=1.0,
                  lambda_goal=0.0, learnable_actions=False,
                  chimera_mode: bool = False, chimera_alpha: float = 1.4,
-                 chimera_explorer_fraction: float = 0.25):
+                 chimera_explorer_fraction: float = 0.25,
+                 happy_tensor_cut: bool = False):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
@@ -302,7 +321,8 @@ class HenriSwarmOrchestrator(nn.Module):
                                   constraint_weight_max=constraint_weight_max,
                                   constraint_reject_thresh=constraint_reject_thresh,
                                   beta_pragmatic=beta_pragmatic,
-                                  lambda_goal=lambda_goal, learnable_actions=learnable_actions, num_actions=num_actions)
+                                  lambda_goal=lambda_goal, learnable_actions=learnable_actions,
+                                  happy_tensor_cut=happy_tensor_cut, num_actions=num_actions)
         # Seed the planner's retrieval store with the decoder's action waves,
         # flattened to real width d_model to match the planner's store.
         action_real = torch.stack([
@@ -542,8 +562,12 @@ class HenriSwarmOrchestrator(nn.Module):
             for i in range(0, self.num_experts, chunk_size):
                 j = min(i + chunk_size, self.num_experts)
                 n = j - i
-                noise_A_chunk = torch.randn((n, r_rank, d_model), device=self.syncytium.experts_A.device) * noise_scale * error_mask.view(1, 1, -1)
-                noise_B_chunk = torch.randn((n, r_rank, d_model), device=self.syncytium.experts_B.device) * noise_scale * error_mask.view(1, 1, -1)
+                if os.environ.get("COLORED_NOISE", "0") == "1" or os.environ.get("COLORED_LANGEVIN", "0") == "1":
+                    noise_A_chunk = generate_colored_langevin_noise((n, r_rank, d_model), alpha=1.0, device=self.syncytium.experts_A.device) * noise_scale * error_mask.view(1, 1, -1)
+                    noise_B_chunk = generate_colored_langevin_noise((n, r_rank, d_model), alpha=1.0, device=self.syncytium.experts_B.device) * noise_scale * error_mask.view(1, 1, -1)
+                else:
+                    noise_A_chunk = torch.randn((n, r_rank, d_model), device=self.syncytium.experts_A.device) * noise_scale * error_mask.view(1, 1, -1)
+                    noise_B_chunk = torch.randn((n, r_rank, d_model), device=self.syncytium.experts_B.device) * noise_scale * error_mask.view(1, 1, -1)
 
                 dA = drift_A[i:j] if drift_A is not None else 0.0
                 dB = drift_B[i:j] if drift_B is not None else 0.0

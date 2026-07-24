@@ -113,6 +113,10 @@ CHIMERA_MODE = os.environ.get("CHIMERA_MODE", "0") == "1"
 CHIMERA_ALPHA = float(os.environ.get("CHIMERA_ALPHA", "1.4"))
 CHIMERA_EXPLORER_FRACTION = float(os.environ.get("CHIMERA_EXPLORER_FRACTION", "0.25"))
 
+# Phase 3.4: Holographic HaPPY Tensor-Cut Area & Colored Langevin Exploration
+HAPPY_TENSOR_CUT = os.environ.get("HAPPY_TENSOR_CUT", "0") == "1"
+COLORED_LANGEVIN = os.environ.get("COLORED_LANGEVIN", "0") == "1" or os.environ.get("COLORED_NOISE", "0") == "1"
+
 
 # ---------------------------------------------------------------------------
 # Telemetry
@@ -180,6 +184,7 @@ def run():
         chimera_mode=CHIMERA_MODE,
         chimera_alpha=CHIMERA_ALPHA,
         chimera_explorer_fraction=CHIMERA_EXPLORER_FRACTION,
+        happy_tensor_cut=HAPPY_TENSOR_CUT,
         **SCALE,
     ).to(DEVICE)
     if CONSTRAINT_AXIOM:
@@ -500,6 +505,9 @@ def run():
                 "residual_type": str(chosen.get("residual_type", "N/A")),
                 "lambda_goal": LAMBDA_GOAL,
                 "grid_dist": round(grid_dist, 6),
+                "happy_cut_area": round(float(orch.planner.compute_happy_tensor_cut_area(predicted_wave).detach()), 6)
+                    if HAPPY_TENSOR_CUT else None,
+                "colored_langevin_active": COLORED_LANGEVIN,
                 "action_embedding_divergence": round(orch.planner.action_embedding_divergence(), 6),
                 "step_ms": round(step_ms, 1),
             })
