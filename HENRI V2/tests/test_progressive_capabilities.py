@@ -270,6 +270,23 @@ class TestStageIV_ActiveInference:
         distinct = len(set(chosen))
         assert distinct >= 2, f"action collapse: single action over 8 queries"
 
+    def test_interoceptive_viability_loss(self, device):
+        from efe_planner import InteroceptiveState
+        planner = EFEPlanner(
+            num_blocks=SCALE["num_blocks"],
+            d_model=SCALE["num_blocks"] * 8,
+            interoceptive_viability=True,
+        ).to(device)
+        # Low entropy state (< 0.50) triggers homeostatic viability penalty
+        low_ent_state = InteroceptiveState(sagnac_delta=0.10, action_entropy=0.10, creep_fatigue=0.01)
+        loss_low_ent = planner.calculate_viability_loss(low_ent_state).item()
+        assert loss_low_ent > 0.10, f"expected positive viability loss for entropy violation, got {loss_low_ent}"
+
+        # High Sagnac stress state (> 0.35) triggers penalty
+        high_sagnac_state = InteroceptiveState(sagnac_delta=0.60, action_entropy=1.50, creep_fatigue=0.01)
+        loss_high_sagnac = planner.calculate_viability_loss(high_sagnac_state).item()
+        assert loss_high_sagnac > 0.05, f"expected positive viability loss for Sagnac stress, got {loss_high_sagnac}"
+
 
 # ---------------------------------------------------------------------------
 # Stage V — Non-stationary adaptation & continual learning

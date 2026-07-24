@@ -29,7 +29,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.fft as fft
 
+from dataclasses import dataclass
 from hopfield_cleanup import ContinuousHopfieldCleanup
+
+
+@dataclass
+class InteroceptiveState:
+    """Interoceptive Regulatory State (Candia-Rivera, 2026)."""
+    sagnac_delta: float = 0.0
+    action_entropy: float = 2.0
+    creep_fatigue: float = 0.0
 
 
 class UnitaryWaveTransition(nn.Module):
@@ -156,6 +165,7 @@ class EFEPlanner(nn.Module):
         lambda_goal: float = 0.0,
         learnable_actions: bool = False,
         grid_dist_epistemic: bool = False,
+        interoceptive_viability: bool = False,
         num_actions: int = 8,
         action_lr_scale: float = 0.2,
     ):
@@ -165,6 +175,7 @@ class EFEPlanner(nn.Module):
         self.epistemic_weight = epistemic_weight
         self.pragmatic_weight = pragmatic_weight
         self._grid_dist_epistemic = grid_dist_epistemic
+        self._interoceptive_viability = interoceptive_viability
         # Phase 2 penalty-form constraint channel (research-grounded, see
         # constraint_penalty). lambda_max is the exactness cap; the reject
         # threshold is the hard-rejection hybrid (per-candidate residual
@@ -529,6 +540,22 @@ class EFEPlanner(nn.Module):
         if grid_dist is not None and (self._grid_dist_epistemic or os.environ.get("GRID_DIST_EPISTEMIC", "0") == "1"):
             return base_epistemic * (1.0 + float(grid_dist))
         return base_epistemic
+
+    def calculate_viability_loss(self, intero: InteroceptiveState) -> torch.Tensor:
+        """Interoceptive Regulatory Viability Loss (Candia-Rivera, 2026).
+        Quadratic corridor penalties for homeostatic setpoint violations:
+        - Sagnac stress above bound (0.35)
+        - Action selection entropy below floor (0.50)
+        - Parameter creep fatigue above bound (0.10)
+        """
+        loss = 0.0
+        if intero.action_entropy < 0.50:
+            loss += (0.50 - intero.action_entropy) ** 2
+        if intero.sagnac_delta > 0.35:
+            loss += (intero.sagnac_delta - 0.35) ** 2
+        if intero.creep_fatigue > 0.10:
+            loss += (intero.creep_fatigue - 0.10) ** 2
+        return torch.tensor(loss, dtype=torch.float32)
 
     def remember_outcome(self, predicted_wave: torch.Tensor):
         """Record a visited outcome wave so future identical predictions are
