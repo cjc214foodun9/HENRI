@@ -32,6 +32,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 
+import numpy as np
 import torch
 
 import arc_agi
@@ -103,6 +104,15 @@ LEARNABLE_ACTIONS = os.environ.get("LEARNABLE_ACTIONS", "0") == "1"
 # frame changes = high epistemic value (the action did something meaningful).
 GRID_DIST_EPISTEMIC = os.environ.get("GRID_DIST_EPISTEMIC", "0") == "1"
 
+# Biophysical Invariants (Franović et al. 2026): chimera phase-lag swarm.
+# When enabled, a trailing fraction of experts receives a non-zero Kuramoto
+# phase-lag α, partitioning the syncytium into a coherent memory enclave
+# (α=0, preserves engrams) and a desynchronized plastic explorer block.
+# Default OFF — historical zero-lag dynamics untouched otherwise.
+CHIMERA_MODE = os.environ.get("CHIMERA_MODE", "0") == "1"
+CHIMERA_ALPHA = float(os.environ.get("CHIMERA_ALPHA", "1.4"))
+CHIMERA_EXPLORER_FRACTION = float(os.environ.get("CHIMERA_EXPLORER_FRACTION", "0.25"))
+
 
 # ---------------------------------------------------------------------------
 # Telemetry
@@ -167,6 +177,9 @@ def run():
         beta_pragmatic=BETA_PRAGMATIC,
         lambda_goal=LAMBDA_GOAL,
         learnable_actions=LEARNABLE_ACTIONS,
+        chimera_mode=CHIMERA_MODE,
+        chimera_alpha=CHIMERA_ALPHA,
+        chimera_explorer_fraction=CHIMERA_EXPLORER_FRACTION,
         **SCALE,
     ).to(DEVICE)
     if CONSTRAINT_AXIOM:
@@ -238,6 +251,7 @@ def run():
 
         prev_wave = None
         prev_raw_wave = None
+        prev_raw_grid = None
         prev_predicted_prior = None
         train_ctx = None
         action_counts = {}
@@ -246,6 +260,7 @@ def run():
         # computed when the next observation arrives and consumed by the
         # deferred T1 update + the current relaxation's thermal schedule.
         valence = 0.0
+        grid_dist = 0.0
         last_action_was_reset = False
         # Progress-valence EMA state (Task 2.3): per-episode fast/slow
         # baselines of within-invariant motion; None until the first m.
@@ -265,6 +280,17 @@ def run():
         for step in range(args.steps):
             t0 = time.perf_counter()
             grid = obs.frame[0].tolist()
+            curr_arr = np.array(grid)
+            if prev_raw_grid is not None:
+                prev_arr = np.array(prev_raw_grid)
+                if curr_arr.shape == prev_arr.shape:
+                    grid_dist = float(np.mean(curr_arr != prev_arr))
+                else:
+                    grid_dist = 1.0
+            else:
+                grid_dist = 0.0
+            prev_raw_grid = grid
+
             state_wave = tokenizer.encode_spatial_grid(grid).squeeze(0).to(DEVICE)
             raw_wave = state_wave  # pre-blend; recall blending mutates below
 
@@ -403,7 +429,7 @@ def run():
             n_axiom_rows = 1
             action, predicted_wave, efe_table, chosen = orch.plan_action(
                 state_wave, boundary_batch, top_k=4, return_chosen=True,
-                goal_wave=goal_wave,
+                goal_wave=goal_wave, grid_dist=grid_dist if GRID_DIST_EPISTEMIC else None,
             )
             explored = bool(chosen.get("explored", False))
             hop_conf = chosen["efe"]  # chosen-candidate EFE as confidence proxy
@@ -449,6 +475,9 @@ def run():
                 "sagnac_coherence": round(coherence, 6),
                 "free_energy": round(free_energy, 6),
                 "kuramoto_r": round(order_param, 6),
+                "chimera_r_memory": round(orch.syncytium.get_block_order_parameters()[0], 6),
+                "chimera_r_explorer": round(orch.syncytium.get_block_order_parameters()[1], 6)
+                    if CHIMERA_MODE else None,
                 "plasticity": plasticity,
                 "efe_best": round(chosen["efe"], 6),
                 "efe_spread": round(efe_table[-1]["efe"] - efe_table[0]["efe"], 6),
@@ -470,6 +499,8 @@ def run():
                 "goal_distance": round(float(chosen.get("goal_distance", 0.0)), 6),
                 "residual_type": str(chosen.get("residual_type", "N/A")),
                 "lambda_goal": LAMBDA_GOAL,
+                "grid_dist": round(grid_dist, 6),
+                "action_embedding_divergence": round(orch.planner.action_embedding_divergence(), 6),
                 "step_ms": round(step_ms, 1),
             })
             # Wave-level hypertable log (downsampled for DB volume)

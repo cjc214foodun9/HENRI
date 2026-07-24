@@ -26,6 +26,7 @@ FHRR binding algebra used across the rest of the stack.
 import math
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.fft as fft
 
 from hopfield_cleanup import ContinuousHopfieldCleanup
@@ -154,6 +155,7 @@ class EFEPlanner(nn.Module):
         beta_pragmatic: float = 1.0,
         lambda_goal: float = 0.0,
         learnable_actions: bool = False,
+        grid_dist_epistemic: bool = False,
         num_actions: int = 8,
         action_lr_scale: float = 0.2,
     ):
@@ -162,6 +164,7 @@ class EFEPlanner(nn.Module):
         self.d_model = d_model
         self.epistemic_weight = epistemic_weight
         self.pragmatic_weight = pragmatic_weight
+        self._grid_dist_epistemic = grid_dist_epistemic
         # Phase 2 penalty-form constraint channel (research-grounded, see
         # constraint_penalty). lambda_max is the exactness cap; the reject
         # threshold is the hard-rejection hybrid (per-candidate residual
@@ -485,17 +488,20 @@ class EFEPlanner(nn.Module):
         p = sv / (sv.sum() + 1e-12)
         return -(p * torch.log(p + 1e-12)).sum()
 
-    def epistemic_value(self, predicted_wave: torch.Tensor) -> torch.Tensor:
+    def epistemic_value(self, predicted_wave: torch.Tensor, grid_dist: float = None) -> torch.Tensor:
         """
-        Information gain with novelty discounting.
+        Information gain with novelty discounting and optional pixel-wise frame delta scaling.
 
-        Two terms:
+        Terms:
           (a) Retrieval entropy: uncertainty over which attractor the
               prediction lands in (informative when spread).
           (b) Novelty bonus: how far the prediction is from the novelty
               memory of already-visited outcomes. Repeated predictions
               (same action, same outcome) are discounted toward zero, so
               exploration stops rewarding loops like RESET-spam.
+          (c) Grid distance (Fallacy #6 fix): when grid_dist_epistemic is active,
+              pixel-wise frame delta scales epistemic value (large frame changes
+              = high epistemic signal).
         Returns scalar >= 0.
         """
         flat = predicted_wave.view(-1)
@@ -519,7 +525,10 @@ class EFEPlanner(nn.Module):
             sim = (r @ self.novelty_memory.engrams.T).max()
             novelty = (1.0 - sim).clamp(min=0.0)
 
-        return entropy * novelty
+        base_epistemic = entropy * novelty
+        if grid_dist is not None and (self._grid_dist_epistemic or os.environ.get("GRID_DIST_EPISTEMIC", "0") == "1"):
+            return base_epistemic * (1.0 + float(grid_dist))
+        return base_epistemic
 
     def remember_outcome(self, predicted_wave: torch.Tensor):
         """Record a visited outcome wave so future identical predictions are
@@ -582,13 +591,28 @@ class EFEPlanner(nn.Module):
             return None
         return self.action_embeddings[idx]
 
+    def action_embedding_divergence(self) -> float:
+        """Mean pairwise cosine distance (1 - cos_sim) among learnable action embeddings.
+        0.0 = all action waves identical; 1.0 = orthogonal action embeddings."""
+        if not self._learnable_actions or self.action_embeddings.numel() == 0 or self.action_embeddings.shape[0] < 2:
+            return 0.0
+        flat = self.action_embeddings.view(self.action_embeddings.shape[0], -1)
+        normed = F.normalize(flat, p=2, dim=-1)
+        cos_sim = normed @ normed.T
+        n = cos_sim.shape[0]
+        mask = ~torch.eye(n, dtype=torch.bool, device=cos_sim.device)
+        mean_cos_sim = cos_sim[mask].mean().item()
+        return float(1.0 - mean_cos_sim)
+
     def score_actions(self, state_wave: torch.Tensor, candidate_actions: list,
-                       boundary_axioms: torch.Tensor, goal_wave: torch.Tensor = None):
+                       boundary_axioms: torch.Tensor, goal_wave: torch.Tensor = None,
+                       grid_dist: float = None):
         """
         candidate_actions: list of (action_id, action_wave[num_blocks, 8]).
         goal_wave: optional [num_blocks, 8] target wave (Phase 3 goal-conditioned
                    planning). When provided + lambda_goal > 0, actions whose
                    predictions are closer to the goal get lower EFE.
+        grid_dist: optional float pixel-wise frame delta (Phase 3.3 epistemic signal).
         Returns list of dicts sorted by EFE ascending (best first).
 
         Phase 2 penalty-form constraint channel (research-grounded): each
@@ -605,11 +629,11 @@ class EFEPlanner(nn.Module):
         for action_id, action_wave in candidate_actions:
             predicted = self.transition(state_wave, action_wave)
             pragmatic = self.pragmatic_value(predicted, boundary_axioms, goal_wave)
-            epistemic = self.epistemic_value(predicted)
+            epistemic = self.epistemic_value(predicted, grid_dist=grid_dist)
             penalty = self.constraint_penalty(predicted)
             penalty = 0.0 if penalty is None else penalty
             raw_l2 = penalty * sqrt_d  # un-normalized residual
-            goal_dist = float(self.goal_distance(predicted, goal_wave).detach())
+            goal_dist_val = float(self.goal_distance(predicted, goal_wave).detach())
             efe = (self.pragmatic_weight * pragmatic
                    - self.epistemic_weight * epistemic
                    + lam * penalty)
@@ -622,7 +646,7 @@ class EFEPlanner(nn.Module):
                 "raw_l2_residual": raw_l2,
                 "rejected": penalty > self.constraint_reject_thresh,
                 "lambda_active": lam,
-                "goal_distance": goal_dist,
+                "goal_distance": goal_dist_val,
                 "predicted_wave": predicted,
                 "residual_type": "ACCEPTED_CLEAN" if penalty <= self.constraint_reject_thresh else "REJECTED",
             })
@@ -637,7 +661,7 @@ class EFEPlanner(nn.Module):
                     r["constraint_penalty"] = new_penalty
                     r["rejected"] = False
                     pragmatic = self.pragmatic_value(repaired_wave, boundary_axioms, goal_wave)
-                    epistemic = self.epistemic_value(repaired_wave)
+                    epistemic = self.epistemic_value(repaired_wave, grid_dist=grid_dist)
                     r["efe"] = float(self.pragmatic_weight * pragmatic
                                      - self.epistemic_weight * epistemic
                                      + lam * new_penalty)
@@ -656,7 +680,8 @@ class EFEPlanner(nn.Module):
         return ranked
 
     def select_action(self, state_wave: torch.Tensor, candidate_actions: list, boundary_axioms: torch.Tensor,
-                      explore_threshold: float = None, goal_wave: torch.Tensor = None):
+                      explore_threshold: float = None, goal_wave: torch.Tensor = None,
+                      grid_dist: float = None):
         """
         Returns (best_action_id, predicted_wave, scores_table, chosen_dict).
 
@@ -671,7 +696,7 @@ class EFEPlanner(nn.Module):
         wave (VSA-encoded goal grid). When provided + lambda_goal > 0,
         actions whose predictions are closer to the goal get lower EFE.
         """
-        results = self.score_actions(state_wave, candidate_actions, boundary_axioms, goal_wave)
+        results = self.score_actions(state_wave, candidate_actions, boundary_axioms, goal_wave, grid_dist=grid_dist)
         best = results[0]
         spread = results[-1]["efe"] - results[0]["efe"]
 

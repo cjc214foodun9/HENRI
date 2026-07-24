@@ -72,7 +72,9 @@ class GapJunctionSwarmSyncytium(nn.Module):
     Uses bioelectric gap-junction potential fields to coordinate lateral resource 
     allocation without causing representational saturation in the core.
     """
-    def __init__(self, num_experts=1024, d_model=4096, r_rank=16, coupling_temp=0.5):
+    def __init__(self, num_experts=1024, d_model=4096, r_rank=16, coupling_temp=0.5,
+                 chimera_mode: bool = False, chimera_alpha: float = 1.4,
+                 chimera_explorer_fraction: float = 0.25):
         super().__init__()
         self.num_experts = num_experts
         self.d_model = d_model
@@ -100,6 +102,23 @@ class GapJunctionSwarmSyncytium(nn.Module):
         inhibitory_indices = torch.randperm(num_experts)[:num_inhibitory]
         polarity[inhibitory_indices] = -1.0
         self.register_buffer("polarity", polarity)
+
+        # Chimera phase-lag (Franović et al. 2026): per-expert α vector.
+        # α=0 on memory enclave experts (coherent sub-block, preserves
+        # engrams); α≈1.4 (near π/2) on explorer experts — the non-zero
+        # phase-lag keeps that sub-block DESYNCHRONIZED and plastic while
+        # the memory block phase-locks. Flag-gated, default OFF: the
+        # historical zero-lag Kuramoto dynamics are untouched unless
+        # chimera_mode=True is passed.
+        self.chimera_mode = chimera_mode
+        self.chimera_alpha = chimera_alpha
+        self.chimera_explorer_fraction = chimera_explorer_fraction
+        alpha = torch.zeros(num_experts)
+        if chimera_mode:
+            n_explore = int(num_experts * chimera_explorer_fraction)
+            # explorers = the trailing fraction (indices deterministic)
+            alpha[num_experts - n_explore:] = chimera_alpha
+        self.register_buffer("phase_lag", alpha)
 
         # Per-expert adaptive step-size controllers (IDBD + SwiftTD) for the
         # SGLD creep: one scalar step-size per expert keeps state tiny while
@@ -169,8 +188,14 @@ class GapJunctionSwarmSyncytium(nn.Module):
         # Compute dynamic gap-junction potential fields
         G = self.compute_dynamic_conductance(active_wave)
 
-        # Compute phase difference matrix: \sin(\theta_j - \theta_i)
-        phase_diff = self.expert_phases.unsqueeze(1) - self.expert_phases.unsqueeze(0)
+        # Compute phase difference matrix: sin(theta_j - theta_i + alpha_i)
+        # Sakaguchi-Kuramoto form: lag alpha acts on the RECEIVER i. Explorer
+        # receivers see a lagged force (frustrated -> desynchronized, plastic);
+        # memory receivers see the clean zero-lag attractive force and lock
+        # regardless of explorer chaos (no cross-block leak). alpha=0
+        # everywhere reduces exactly to the historical dynamics.
+        phase_diff = (self.expert_phases.unsqueeze(1) - self.expert_phases.unsqueeze(0)
+                      + self.phase_lag.unsqueeze(1))
         sin_diff = torch.sin(phase_diff)
 
         # Scale coupling based on current Sagnac Order Parameter (High coherence -> strong coupling)
@@ -214,6 +239,22 @@ class GapJunctionSwarmSyncytium(nn.Module):
 
         return self.expert_phases
 
+    def get_block_order_parameters(self) -> tuple:
+        """Chimera telemetry: (R_memory, R_explorer) Kuramoto order
+        parameters for the zero-lag memory enclave vs the phase-lagged
+        explorer block. With chimera_mode=False all experts are memory
+        (R_explorer = nan sentinel)."""
+        phases = self.expert_phases.detach()
+        if self.chimera_mode:
+            n_explore = int(self.num_experts * self.chimera_explorer_fraction)
+            mem = phases[:self.num_experts - n_explore]
+            exp = phases[self.num_experts - n_explore:]
+            r_mem = float(torch.abs(torch.mean(torch.exp(1j * mem))))
+            r_exp = float(torch.abs(torch.mean(torch.exp(1j * exp))))
+            return r_mem, r_exp
+        r = float(torch.abs(torch.mean(torch.exp(1j * phases))))
+        return r, float("nan")
+
 
 # =========================================================================
 # III. HOLOGRAPHIC ACTION DECODER (EGRESS GATE)
@@ -239,12 +280,17 @@ class HenriSwarmOrchestrator(nn.Module):
     """
     def __init__(self, num_experts=1024, d_model=65536, r_rank=16, num_blocks=8192, action_enum_class=None,
                  constraint_weight_max=5.0, constraint_reject_thresh=0.5, beta_pragmatic=1.0,
-                 lambda_goal=0.0, learnable_actions=False):
+                 lambda_goal=0.0, learnable_actions=False,
+                 chimera_mode: bool = False, chimera_alpha: float = 1.4,
+                 chimera_explorer_fraction: float = 0.25):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
         self.num_experts = num_experts
-        self.syncytium = GapJunctionSwarmSyncytium(num_experts=num_experts, d_model=d_model, r_rank=r_rank)
+        self.syncytium = GapJunctionSwarmSyncytium(
+            num_experts=num_experts, d_model=d_model, r_rank=r_rank,
+            chimera_mode=chimera_mode, chimera_alpha=chimera_alpha,
+            chimera_explorer_fraction=chimera_explorer_fraction)
         self.clifford = ProductCliffordAlgebra3D(num_blocks=num_blocks)
         self.decoder = HolographicActionDecoder(d_model=d_model, action_enum_class=action_enum_class)
         self._learnable_actions = learnable_actions

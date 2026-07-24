@@ -210,6 +210,31 @@ class TestEFEPlanner:
         diff = (o1[min(5, nb - 1)] - o2[min(5, nb - 1)]).abs().max().item()
         assert diff > 1e-6, "no cross-block coupling (block-diagonal regression)"
 
+    def test_grid_dist_epistemic_scaling(self, device):
+        planner = EFEPlanner(
+            num_blocks=SCALE["num_blocks"],
+            d_model=SCALE["num_blocks"] * 8,
+            grid_dist_epistemic=True,
+        ).to(device)
+        wave = mk_wave((SCALE["num_blocks"], 8), device, 42)
+        # Register engrams to give non-zero base epistemic entropy
+        engrams = torch.stack([mk_wave((SCALE["num_blocks"], 8), device, 43 + i).view(-1) for i in range(3)])
+        planner.cleanup.store_engrams(engrams)
+        
+        v_base = planner.epistemic_value(wave, grid_dist=0.0).item()
+        v_scaled = planner.epistemic_value(wave, grid_dist=0.5).item()
+        assert v_scaled == pytest.approx(v_base * 1.5, rel=1e-4)
+
+    def test_action_embedding_divergence(self, device):
+        planner = EFEPlanner(
+            num_blocks=SCALE["num_blocks"],
+            d_model=SCALE["num_blocks"] * 8,
+            learnable_actions=True,
+            num_actions=4,
+        ).to(device)
+        div = planner.action_embedding_divergence()
+        assert 0.0 <= div <= 2.0, f"action embedding divergence {div} out of expected range"
+
 
 # ---------------------------------------------------------------------------
 # IDBD + SwiftTD adaptive step-sizes

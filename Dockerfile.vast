@@ -8,7 +8,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH=${CUDA_HOME}/bin:${PATH} \
     LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH} \
     PIP_NO_CACHE_DIR=1 \
-    PIP_BREAK_SYSTEM_PACKAGES=1
+    PIP_BREAK_SYSTEM_PACKAGES=1 \
+    PYTHONPATH="/workspace/HENRI/HENRI V2" \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 # OS utilities, SSH, build chain, Python 3.11 (deadsnakes for 22.04), Nsight profilers
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -35,27 +37,32 @@ RUN pip install --upgrade pip setuptools wheel \
         --index-url https://download.pytorch.org/whl/cu128 \
     && pip install triton==3.7.1
 
-# HENRI V2 core dependencies (audited from live repo imports)
-# - torch/numpy/psycopg2: wave model + TimescaleDB telemetry
-# - arc-agi/arcengine:    ARC-AGI-3 environment SDK (installed if publicly available)
-# - wandb:                run telemetry / phase-decay analysis
-# - vastai:               instance lifecycle SDK
+# HENRI V2 core dependencies (audited from live repo imports across core, scripts & tests)
+# - torch/numpy/scipy/pandas/matplotlib: wave model + SVD + analytics
+# - psycopg2/psycopg/asyncpg/sqlalchemy: TimescaleDB Zone C hypertable telemetry
+# - arc-agi:                             ARC-AGI-3 environment SDK
+# - pytest/pytest-asyncio/anyio:         test suite execution engine
+# - wandb/boto3:                         run telemetry & cloud storage
+# - vastai:                              instance lifecycle SDK
+# - fastapi/uvicorn/chromadb/frontmatter: local vault RAG & search server
+# - pypdf/requests/sentence-transformers: research paper ingestion & embeddings
 RUN pip install \
         numpy scipy pandas matplotlib rich \
         psycopg2-binary "psycopg[binary]" sqlalchemy asyncpg \
         wandb boto3 \
-        pytest \
+        pytest pytest-asyncio anyio \
         vastai \
-        fastapi uvicorn \
+        fastapi uvicorn chromadb python-frontmatter \
+        sentence-transformers pypdf requests \
         arc-agi
 
-# SSH for Vast.ai
+# SSH for Vast.ai & environment setup
 RUN mkdir -p /var/run/sshd \
     && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config \
     && echo 'X11Forwarding yes' >> /etc/ssh/sshd_config
 
-WORKDIR /workspace/HENRI_V2
+WORKDIR /workspace/HENRI/HENRI V2
 
-EXPOSE 22
+EXPOSE 22 8000
 
 CMD ["/bin/bash"]
