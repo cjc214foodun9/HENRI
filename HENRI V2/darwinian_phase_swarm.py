@@ -360,17 +360,20 @@ class HenriSwarmOrchestrator(nn.Module):
         return waves
 
     def plan_action(self, active_wave: torch.Tensor, boundary_axioms: torch.Tensor, top_k: int = 4,
-                    return_chosen: bool = False, goal_wave: torch.Tensor = None):
+                    return_chosen: bool = False, goal_wave: torch.Tensor = None,
+                    grid_dist: float = None):
         """
         EFE action selection: score the top-k candidate actions by Expected
         Free Energy and return (action, predicted_wave, score_table).
         With return_chosen=True, returns (action, predicted_wave, table, chosen).
         boundary_axioms: [N, num_blocks, 8] real waves.
         goal_wave: optional [num_blocks, 8] target wave (Phase 3 goal-conditioned).
+        grid_dist: optional pixel frame distance for epistemic novelty.
         """
         candidates = self.candidate_action_waves(top_k=top_k)
         action, predicted, table, chosen = self.planner.select_action(
-            active_wave, candidates, boundary_axioms, goal_wave=goal_wave
+            active_wave, candidates, boundary_axioms, goal_wave=goal_wave,
+            grid_dist=grid_dist
         )
         if return_chosen:
             return action, predicted, table, chosen
