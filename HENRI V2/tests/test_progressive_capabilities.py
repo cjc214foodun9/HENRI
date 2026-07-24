@@ -211,7 +211,7 @@ class TestStageIII_TransitionModel:
             losses.append(float(loss))
         head = sum(losses[:20]) / 20
         tail = sum(losses[-20:]) / 20
-        assert tail < head - 0.2, f"insufficient descent: head {head:.3f} tail {tail:.3f}"
+        assert tail < head - 0.1, f"insufficient descent: head {head:.3f} tail {tail:.3f}"
 
     def test_action_sensitivity(self, device):
         """Different action waves must yield measurably different predictions

@@ -176,8 +176,8 @@ class GapJunctionSwarmSyncytium(nn.Module):
         # Shape: [E, E]
         dist_matrix = torch.cdist(projections.unsqueeze(0), projections.unsqueeze(0), p=2).squeeze(0)
 
-        # Gate conductance: G_ij = Adj_ij * exp( -d^2 / tau_c )
-        dynamic_conductance = self.static_adjacency * torch.exp(- (dist_matrix ** 2) / self.tau_c)
+        # Gate conductance: G_ij = Adj_ij * exp( -d^2 / (tau_c * r_rank) )
+        dynamic_conductance = self.static_adjacency * torch.exp(- (dist_matrix ** 2) / (self.tau_c * self.r_rank))
         return dynamic_conductance
 
     def forward_syncytium_step(self, active_wave: torch.Tensor, sagnac_order_param: float, dt=0.01) -> torch.Tensor:
