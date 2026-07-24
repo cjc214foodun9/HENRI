@@ -49,6 +49,15 @@ def device():
     return torch.device(DEVICE)
 
 
+@pytest.fixture(autouse=True)
+def cleanup_cuda():
+    yield
+    if DEVICE == "cuda":
+        import gc
+        gc.collect()
+        torch.cuda.empty_cache()
+
+
 def unit_blocks(shape, device, seed):
     g = torch.Generator().manual_seed(seed)
     w = torch.randn(*shape, generator=g).to(device)

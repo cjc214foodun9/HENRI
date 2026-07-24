@@ -33,6 +33,15 @@ def device():
     return torch.device(DEVICE)
 
 
+@pytest.fixture(autouse=True)
+def cleanup_cuda():
+    yield
+    if DEVICE == "cuda":
+        import gc
+        gc.collect()
+        torch.cuda.empty_cache()
+
+
 @pytest.fixture(scope="module")
 def orch(device):
     torch.manual_seed(0)
