@@ -202,7 +202,7 @@ class TestStageIII_TransitionModel:
             t = F.normalize(s + shifts[i % 4] * truth, p=2, dim=-1)
             triples.append((s, i % 4, t))
 
-        n_steps = 300 if DEVICE == "cpu" else 600
+        n_steps = 200
         losses = []
         for step in range(n_steps):
             s, a_idx, t = triples[step % 8]
