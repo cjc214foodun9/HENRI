@@ -207,7 +207,7 @@ class TestStageIII_TransitionModel:
         for step in range(n_steps):
             s, a_idx, t = triples[step % 8]
             a = planner.get_learnable_action_wave(a_idx)
-            loss = planner.train_transition_step(s, a, t)
+            loss = planner.train_transition_step(s, a, t, lr=0.25)
             losses.append(float(loss))
         head = sum(losses[:20]) / 20
         tail = sum(losses[-20:]) / 20
