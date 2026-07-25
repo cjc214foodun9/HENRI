@@ -22,8 +22,10 @@ the pgvector <=> operator, time-bounded to recent chunks (Spatiotemporal
 Geodesic Routing). The returned engram waves condition the syncytium's next
 relaxation step.
 
-Falls back to an in-process surrogate store when no DSN is reachable so the
-test suite still runs offline; set POSTGRES_DSN to go live.
+The live backend fails closed when the database is unavailable.  An in-process
+surrogate is available only through an explicit ``offline://surrogate`` DSN or
+``MOCK_TEST_MODE=1``.  Production code must not silently change persistence
+semantics after a connection failure.
 """
 
 import math
@@ -37,12 +39,18 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-DEFAULT_DSN = os.environ.get(
-    "POSTGRES_DSN",
-    "postgres://postgres:henri@62.107.25.198:53468/henri",
-)
+try:
+    from zone_c_env import assert_zone_c_env, resolve_zone_c_dsn
+except ImportError:  # pragma: no cover - supports direct module loading
+    assert_zone_c_env = None
+    resolve_zone_c_dsn = None
+
 SEMANTIC_DIM = 2000          # pgvector HNSW index width (server limit)
 ENGRAM_DIM = 65536           # full wave width (num_blocks * 8)
+
+
+class DatabaseConnectionError(RuntimeError):
+    """Raised when the live Zone C database cannot be reached or verified."""
 
 
 # ---------------------------------------------------------------------------
@@ -145,9 +153,16 @@ class TimescaleZoneCStore(ZoneCStore):
         self.dsn = dsn
         self.num_blocks = num_blocks
         self._psycopg = psycopg
-        # Fail fast if unreachable
+        # Fail fast if unreachable.  SegmentCache.connect() translates the
+        # driver exception to DatabaseConnectionError with the target intact.
         with self._connect() as conn:
-            pass
+            if assert_zone_c_env is None:
+                raise DatabaseConnectionError(
+                    "Zone C environment resolver is unavailable; refusing an "
+                    "unverified database target"
+                )
+            expected = os.environ.get("ZONE_C_ENV", "dev").strip().lower()
+            assert_zone_c_env(conn, expected)
 
     def _connect(self):
         return self._psycopg.connect(self.dsn, connect_timeout=8)
@@ -317,13 +332,30 @@ class SegmentCache:
 
     @classmethod
     def connect(cls, dsn: str = None, num_blocks: int = 8192, **kw):
-        dsn = dsn or DEFAULT_DSN
+        explicit_surrogate = dsn == "offline://surrogate"
+        mock_mode = os.environ.get("MOCK_TEST_MODE", "0") == "1"
+        if explicit_surrogate:
+            return cls(store=InProcessZoneCStore(num_blocks), num_blocks=num_blocks, **kw)
+
+        if dsn is None:
+            if resolve_zone_c_dsn is None:
+                raise DatabaseConnectionError(
+                    "Zone C environment resolver is unavailable; refusing an "
+                    "unverified database target"
+                )
+            dsn = resolve_zone_c_dsn()
         try:
             store = TimescaleZoneCStore(dsn, num_blocks)
             print(f"[ZoneC] Connected to TimescaleDB segment store")
         except Exception as e:
-            print(f"[ZoneC] TimescaleDB unreachable ({e}); using in-process surrogate")
-            store = InProcessZoneCStore(num_blocks)
+            if mock_mode:
+                print(f"[ZoneC] MOCK_TEST_MODE=1; using explicit in-process surrogate ({e})")
+                store = InProcessZoneCStore(num_blocks)
+            else:
+                raise DatabaseConnectionError(
+                    f"Zone C database connection or environment verification failed "
+                    f"for target {dsn!r}: {e}"
+                ) from e
         return cls(store=store, num_blocks=num_blocks, **kw)
 
     def checkpoint(self, wave: torch.Tensor, domain: str, sagnac_stress: float) -> str:

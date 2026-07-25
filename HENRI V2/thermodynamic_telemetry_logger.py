@@ -3,9 +3,12 @@ import queue
 import datetime
 import uuid
 import sys
+import os
 import torch
 import psycopg
 from typing import List, Dict, Any, Tuple
+
+from zone_c_env import assert_zone_c_env
 
 class ThermodynamicTelemetryLogger:
     """
@@ -54,13 +57,12 @@ class ThermodynamicTelemetryLogger:
         -- This ensures temporal queries scale logarithmically, bounding retrieval costs.
         SELECT create_hypertable('zone_c_resonant_hypersphere', 'recorded_at', chunk_time_interval => INTERVAL '1 hour', if_not_exists => TRUE);
         """
-        try:
-            with psycopg.connect(self.db_conn_str) as conn:
-                with conn.cursor() as cur:
-                    cur.execute(schema_sql)
-                conn.commit()
-        except Exception as e:
-            print(f"[Zone C Boot Error] Database not accessible. Running in simulation mode. Error: {e}")
+        with psycopg.connect(self.db_conn_str) as conn:
+            expected = os.environ.get("ZONE_C_ENV", "dev").strip().lower()
+            assert_zone_c_env(conn, expected)
+            with conn.cursor() as cur:
+                cur.execute(schema_sql)
+            conn.commit()
 
     def log_trajectory(self, domain: str, subdomain: str, concept_key: str, predicted_wave: torch.Tensor, phase_delta: float, is_valid: bool):
         """
@@ -123,6 +125,8 @@ class ThermodynamicTelemetryLogger:
         """
         try:
             with psycopg.connect(self.db_conn_str) as conn:
+                expected = os.environ.get("ZONE_C_ENV", "dev").strip().lower()
+                assert_zone_c_env(conn, expected)
                 with conn.cursor() as cur:
                     with cur.copy(
                         "COPY zone_c_resonant_hypersphere (id, domain, subdomain, concept_key, recorded_at, real_phases, imag_phases, phase_delta, sagnac_clearance) FROM STDIN"
@@ -131,7 +135,9 @@ class ThermodynamicTelemetryLogger:
                             copy.write_row(record)
                 conn.commit()
         except Exception as e:
-            print(f"[Telemetry Sink Error] Discarding batch due to TimescaleDB disconnect: {e}")
+            # Do not claim that a failed database write entered simulation
+            # mode.  The logger is a sink, not a persistence surrogate.
+            print(f"[Telemetry Sink Error] Database write failed; batch not persisted: {e}")
 
     def shutdown(self):
         """

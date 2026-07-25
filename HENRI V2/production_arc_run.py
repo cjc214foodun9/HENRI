@@ -20,7 +20,8 @@ plus a JSONL mirror in telemetry_logs/ for offline analysis):
     fraction), chosen action, hopfield confidence, recall hits/gates.
 
 Run on the 5090:
-    POSTGRES_DSN=postgres://postgres:henri@localhost:10100/henri \
+    ZONE_C_ENV=prod \
+    ZONE_C_PROD_DSN=postgres://postgres:***@localhost:10100/henri \
         python3 production_arc_run.py [--envs N] [--steps M]
 """
 
@@ -41,8 +42,8 @@ from arcengine import GameAction
 from darwinian_phase_swarm import HenriSwarmOrchestrator
 from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
 from thermodynamic_telemetry_logger import ThermodynamicTelemetryLogger
+from zone_c_env import resolve_zone_c_dsn
 
-DSN = os.environ.get("POSTGRES_DSN", "postgres://postgres:henri@localhost:10100/henri")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Scale: production on GPU, reduced on CPU
@@ -169,8 +170,25 @@ def run():
     ap = argparse.ArgumentParser()
     ap.add_argument("--envs", type=int, default=3)
     ap.add_argument("--steps", type=int, default=30, help="max env steps per environment")
-    ap.add_argument("--dsn", type=str, default=DSN)
+    ap.add_argument(
+        "--dsn", type=str, default=None,
+        help="Explicit Zone C DSN. CUDA runs still require ZONE_C_ENV=prod."
+    )
     args = ap.parse_args()
+
+    # Resolve the target before constructing either database consumer.  This
+    # prevents the telemetry logger and the engram store from silently using
+    # different databases.  The resolver defaults to a disposable dev target;
+    # production requires explicit ZONE_C_ENV=prod and ZONE_C_PROD_DSN.
+    if DEVICE == "cuda":
+        if args.dsn is not None:
+            raise RuntimeError(
+                "CUDA Zone C runs must use ZONE_C_ENV=prod and "
+                "ZONE_C_PROD_DSN; do not pass --dsn"
+            )
+        dsn = resolve_zone_c_dsn()
+    else:
+        dsn = args.dsn or "offline://surrogate"
 
     print("=" * 70)
     print("  PROJECT HENRI: ARC-AGI-3 PRODUCTION RUN")
@@ -182,10 +200,15 @@ def run():
         "telemetry_logs", f"production_run_{int(time.time())}.jsonl"
     )
     db_logger = None
-    try:
-        db_logger = ThermodynamicTelemetryLogger(db_conn_str=args.dsn, batch_size=100)
-    except Exception as e:
-        print(f"[telemetry] hypertable logger offline ({e}); JSONL only")
+    if dsn != "offline://surrogate":
+        try:
+            db_logger = ThermodynamicTelemetryLogger(db_conn_str=dsn, batch_size=100)
+        except Exception as e:
+            if DEVICE == "cuda":
+                raise RuntimeError(
+                    f"CUDA production run requires a verified Zone C telemetry sink: {e}"
+                ) from e
+            print(f"[telemetry] database sink unavailable; JSONL only: {e}")
     tele = LatentTelemetry(log_path, db_logger)
 
     print(f"[init] orchestrator @ {SCALE}")
@@ -213,7 +236,10 @@ def run():
         # the first L2 fit populates axiom_constraint).
         orch.planner.constraint_weight_max = LAMBDA_CONSTRAINT_MAX
         orch.planner.constraint_reject_thresh = CONSTRAINT_REJECT_THRESH
-    orch.attach_zone_c(dsn=args.dsn if DEVICE == "cuda" else "offline://surrogate")
+    # The offline surrogate is retained only for an explicit reduced
+    # development invocation; it is never selected after a failed live
+    # connection.
+    orch.attach_zone_c(dsn=dsn)
     tokenizer = O_VSA_IngressTokenizer(
         num_blocks=SCALE["num_blocks"], vocab_size=256, device=DEVICE
     )
