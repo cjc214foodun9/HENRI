@@ -168,6 +168,9 @@ class EFEPlanner(nn.Module):
         grid_dist_epistemic: bool = False,
         happy_tensor_cut: bool = False,
         interoceptive_viability: bool = False,
+        external_outcome_efe: bool = False,
+        external_eig_weight: float = 0.25,
+        external_task_weight: float = 1.0,
         num_actions: int = 8,
         action_lr_scale: float = 0.2,
     ):
@@ -179,6 +182,13 @@ class EFEPlanner(nn.Module):
         self._grid_dist_epistemic = grid_dist_epistemic
         self._happy_tensor_cut = happy_tensor_cut
         self._interoceptive_viability = interoceptive_viability
+        self._external_outcome_efe = external_outcome_efe
+        if not 0.0 <= external_eig_weight <= 0.5:
+            raise ValueError("external_eig_weight must be in [0, 0.5]")
+        if not 0.0 <= external_task_weight <= 2.0:
+            raise ValueError("external_task_weight must be in [0, 2]")
+        self.external_eig_weight = external_eig_weight
+        self.external_task_weight = external_task_weight
         # Phase 2 penalty-form constraint channel (research-grounded, see
         # constraint_penalty). lambda_max is the exactness cap; the reject
         # threshold is the hard-rejection hybrid (per-candidate residual
@@ -238,6 +248,16 @@ class EFEPlanner(nn.Module):
         self.preference_capacity = 256
         self.beta_pragmatic = beta_pragmatic
 
+        # P0 task-space channel.  Beta-Bernoulli posteriors estimate the
+        # information value of observing each action's next external frame.
+        # The separate Hopfield store contains ONLY externally verified
+        # progress states (level completion / WIN), never internal valence.
+        self.register_buffer("external_alpha", torch.ones(num_actions, dtype=torch.float64))
+        self.register_buffer("external_beta", torch.ones(num_actions, dtype=torch.float64))
+        self.external_task_store = ContinuousHopfieldCleanup(dim=d_model, beta=8.0)
+        self.register_buffer("external_task_action_ids", torch.zeros(0, dtype=torch.long))
+        self.external_task_capacity = 256
+
         # EDMD fit diagnostics (Phase 0: cd82 L2 instability characterization).
         # Populated by train_transition_batch on every fit; read-only record
         # of the solved spectrum and Gram conditioning, no behavior change.
@@ -260,6 +280,98 @@ class EFEPlanner(nn.Module):
         self.loss_ema = self.loss_ema_beta * self.loss_ema + (1 - self.loss_ema_beta) * transition_loss
         # Peak tracks the highest error seen (starts at the initial error).
         self.loss_ema_peak = max(self.loss_ema_peak, self.loss_ema)
+
+    @torch.no_grad()
+    def reset_external_outcomes(self):
+        """Reset P0 evidence at an environment boundary."""
+        self.external_alpha.fill_(1.0)
+        self.external_beta.fill_(1.0)
+        self.external_task_store.clear()
+        self.external_task_action_ids = torch.zeros(
+            0, dtype=torch.long, device=self.external_alpha.device)
+
+    def external_outcome_counts(self) -> list:
+        """Number of valid observations assigned to each action."""
+        return [
+            int(a + b - 2.0)
+            for a, b in zip(self.external_alpha.tolist(), self.external_beta.tolist())
+        ]
+
+    def external_information_gain(self, action_idx: int) -> float:
+        """Normalized one-step I(theta_a; Y) for a Beta-Bernoulli model.
+
+        The Beta(1,1) prior is the maximum over alpha,beta >= 1, so division
+        by 0.1931471805599453 bounds this readout in [0,1].
+        """
+        if action_idx < 0 or action_idx >= self.external_alpha.numel():
+            return 0.0
+        a = self.external_alpha[action_idx]
+        b = self.external_beta[action_idx]
+        total = a + b
+        q = a / total
+        bern_entropy = -(q * torch.log(q) + (1.0 - q) * torch.log(1.0 - q))
+        expected_entropy = (
+            torch.special.digamma(total + 1.0)
+            - (a * torch.special.digamma(a + 1.0)
+               + b * torch.special.digamma(b + 1.0)) / total
+        )
+        eig = (bern_entropy - expected_entropy) / 0.1931471805599453
+        return float(eig.clamp(0.0, 1.0))
+
+    @torch.no_grad()
+    def observe_external_outcome(
+        self,
+        action_idx: int,
+        *,
+        frame_changed: bool,
+        task_progressed: bool = False,
+        observed_next_wave: torch.Tensor = None,
+        valid: bool = True,
+    ):
+        """Update P0 evidence after the environment returns the next frame."""
+        if not self._external_outcome_efe or not valid:
+            return
+        if action_idx < 0 or action_idx >= self.external_alpha.numel():
+            return
+        if frame_changed:
+            self.external_alpha[action_idx] += 1.0
+        else:
+            self.external_beta[action_idx] += 1.0
+        if task_progressed and observed_next_wave is not None:
+            flat = F.normalize(observed_next_wave.detach().reshape(-1), p=2, dim=0)
+            self.external_task_store.store_engrams(flat.unsqueeze(0))
+            action_tensor = torch.tensor(
+                [action_idx], dtype=torch.long,
+                device=self.external_task_action_ids.device)
+            self.external_task_action_ids = torch.cat(
+                [self.external_task_action_ids, action_tensor])
+            if self.external_task_store.num_engrams() > self.external_task_capacity:
+                self.external_task_store.engrams = (
+                    self.external_task_store.engrams[-self.external_task_capacity:]
+                )
+                self.external_task_action_ids = (
+                    self.external_task_action_ids[-self.external_task_capacity:]
+                )
+
+    def external_task_resonance(
+        self, predicted_wave: torch.Tensor, action_idx: int
+    ) -> torch.Tensor:
+        """Cosine resonance with progress outcomes caused by this action."""
+        if not self._external_outcome_efe or self.external_task_store.num_engrams() == 0:
+            return torch.zeros((), device=predicted_wave.device)
+        action_mask = self.external_task_action_ids == action_idx
+        if not bool(action_mask.any()):
+            return torch.zeros((), device=predicted_wave.device)
+        p = F.normalize(predicted_wave.reshape(-1), p=2, dim=0)
+        memories = self.external_task_store.engrams[action_mask]
+        return (p @ memories.T).max().clamp(0.0, 1.0)
+
+    def _external_action_index(self, action_id) -> int:
+        """Map integer/IntEnum action identifiers to posterior rows."""
+        if isinstance(action_id, int):
+            return action_id
+        value = getattr(action_id, "value", None)
+        return int(value) if isinstance(value, int) else -1
 
     def constraint_boundary_row(self, state_wave: torch.Tensor):
         """Phase 2 constraint channel (option a, additive): the component of
@@ -705,8 +817,16 @@ class EFEPlanner(nn.Module):
             penalty = 0.0 if penalty is None else penalty
             raw_l2 = penalty * sqrt_d  # un-normalized residual
             goal_dist_val = float(self.goal_distance(predicted, goal_wave).detach())
+            action_idx = self._external_action_index(action_id)
+            external_eig = (
+                self.external_information_gain(action_idx)
+                if self._external_outcome_efe else 0.0
+            )
+            external_resonance = self.external_task_resonance(predicted, action_idx)
             efe = (self.pragmatic_weight * pragmatic
                    - self.epistemic_weight * epistemic
+                   - self.external_eig_weight * external_eig
+                   - self.external_task_weight * external_resonance
                    + lam * penalty)
             results.append({
                 "action": action_id,
@@ -718,6 +838,8 @@ class EFEPlanner(nn.Module):
                 "rejected": penalty > self.constraint_reject_thresh,
                 "lambda_active": lam,
                 "goal_distance": goal_dist_val,
+                "external_eig": external_eig,
+                "external_task_resonance": float(external_resonance.detach()),
                 "predicted_wave": predicted,
                 "residual_type": "ACCEPTED_CLEAN" if penalty <= self.constraint_reject_thresh else "REJECTED",
             })
@@ -733,11 +855,18 @@ class EFEPlanner(nn.Module):
                     r["rejected"] = False
                     pragmatic = self.pragmatic_value(repaired_wave, boundary_axioms, goal_wave)
                     epistemic = self.epistemic_value(repaired_wave, grid_dist=grid_dist)
+                    action_idx = self._external_action_index(r["action"])
+                    external_resonance = self.external_task_resonance(
+                        repaired_wave, action_idx)
                     r["efe"] = float(self.pragmatic_weight * pragmatic
                                      - self.epistemic_weight * epistemic
+                                     - self.external_eig_weight * r["external_eig"]
+                                     - self.external_task_weight * external_resonance
                                      + lam * new_penalty)
                     r["pragmatic"] = pragmatic.item()
                     r["epistemic"] = epistemic.item()
+                    r["external_task_resonance"] = float(
+                        external_resonance.detach())
         # Hard-rejection hybrid: drop off-manifold candidates from the argmin
         # unless every candidate is off-manifold (fall back to penalty-ranked).
         admissible = [r for r in results if not r["rejected"]]

@@ -246,6 +246,114 @@ class TestEFEPlanner:
 
 
 # ---------------------------------------------------------------------------
+# P0: external-outcome EFE (task-space evidence, default OFF)
+# ---------------------------------------------------------------------------
+
+class TestExternalOutcomeEFE:
+    def _planner(self, device, enabled=True):
+        return EFEPlanner(
+            num_blocks=SCALE["num_blocks"],
+            d_model=SCALE["d_model"],
+            num_actions=4,
+            external_outcome_efe=enabled,
+            external_eig_weight=0.25,
+            external_task_weight=1.0,
+        ).to(device)
+
+    def test_beta_bernoulli_information_gain_exact_and_bounded(self, device):
+        planner = self._planner(device)
+        # One-observation mutual information for theta~Beta(alpha,beta).
+        assert planner.external_information_gain(0) == pytest.approx(1.0, rel=1e-6)
+        for _ in range(99):
+            planner.observe_external_outcome(0, frame_changed=True)
+            planner.observe_external_outcome(0, frame_changed=False)
+        assert planner.external_information_gain(0) == pytest.approx(
+            0.0024937500781206934 / 0.1931471805599453, rel=1e-5)
+        for action_idx in range(4):
+            eig = planner.external_information_gain(action_idx)
+            assert math.isfinite(eig) and 0.0 <= eig <= 1.0
+
+    def test_external_success_counterfactually_changes_ranking(self, device):
+        planner = self._planner(device)
+        state = mk_wave((SCALE["num_blocks"], 8), device, 420)
+        action_wave = mk_wave((SCALE["num_blocks"], 8), device, 421)
+        boundary = mk_wave((1, SCALE["num_blocks"], 8), device, 422)
+        # Identical action waves hold every internal EFE term fixed.
+        candidates = [(0, action_wave), (1, action_wave.clone())]
+        before = planner.score_actions(state, candidates, boundary)
+        assert before[0]["external_task_resonance"] == pytest.approx(0.0)
+
+        predicted = planner.transition(state, action_wave).detach()
+        planner.observe_external_outcome(
+            1, frame_changed=True, task_progressed=True,
+            observed_next_wave=predicted,
+        )
+        after = planner.score_actions(state, candidates, boundary)
+        assert after[0]["action"] == 1
+        assert after[0]["external_task_resonance"] > 0.99
+        assert after[0]["efe"] < next(r["efe"] for r in after if r["action"] == 0)
+
+    def test_external_outcome_updates_only_executed_action(self, device):
+        planner = self._planner(device)
+        before = planner.external_outcome_counts()
+        planner.observe_external_outcome(2, frame_changed=True)
+        after = planner.external_outcome_counts()
+        for action_idx in range(4):
+            expected = before[action_idx] + (1 if action_idx == 2 else 0)
+            assert after[action_idx] == expected
+
+    def test_external_success_stores_returned_next_wave(self, device):
+        planner = self._planner(device)
+        prior = mk_wave((SCALE["num_blocks"], 8), device, 430)
+        observed_next = mk_wave((SCALE["num_blocks"], 8), device, 431)
+        planner.observe_external_outcome(
+            0, frame_changed=True, task_progressed=True,
+            observed_next_wave=observed_next,
+        )
+        stored = planner.external_task_store.engrams[0]
+        assert torch.allclose(stored, observed_next.view(-1) / observed_next.norm(), atol=1e-5)
+        assert not torch.allclose(stored, prior.view(-1) / prior.norm(), atol=1e-5)
+
+    def test_external_outcome_reset_clears_episode_state(self, device):
+        planner = self._planner(device)
+        wave = mk_wave((SCALE["num_blocks"], 8), device, 432)
+        planner.observe_external_outcome(
+            0, frame_changed=True, task_progressed=True,
+            observed_next_wave=wave,
+        )
+        planner.reset_external_outcomes()
+        assert planner.external_outcome_counts() == [0, 0, 0, 0]
+        assert planner.external_task_store.num_engrams() == 0
+        assert planner.external_information_gain(0) == pytest.approx(1.0, rel=1e-6)
+
+    def test_external_outcome_default_off_is_score_identity(self, device):
+        torch.manual_seed(440)
+        baseline = EFEPlanner(
+            num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"],
+            num_actions=4,
+        ).to(device)
+        torch.manual_seed(440)
+        disabled = self._planner(device, enabled=False)
+        state = mk_wave((SCALE["num_blocks"], 8), device, 441)
+        boundary = mk_wave((1, SCALE["num_blocks"], 8), device, 442)
+        actions = [mk_wave((SCALE["num_blocks"], 8), device, 443 + i) for i in range(4)]
+        candidates = list(enumerate(actions))
+        base_scores = baseline.score_actions(state, candidates, boundary)
+        off_scores = disabled.score_actions(state, candidates, boundary)
+        assert [r["action"] for r in off_scores] == [r["action"] for r in base_scores]
+        assert [r["efe"] for r in off_scores] == pytest.approx(
+            [r["efe"] for r in base_scores], rel=0.0, abs=0.0)
+
+    def test_orchestrator_filters_to_allowed_simple_actions(self, device):
+        orch = HenriSwarmOrchestrator(
+            **SCALE, external_outcome_efe=True,
+        ).to(device)
+        allowed = [orch.decoder.id_to_action[1], orch.decoder.id_to_action[3]]
+        candidates = orch.candidate_action_waves(top_k=None, allowed_actions=allowed)
+        assert [a for a, _ in candidates] == allowed
+
+
+# ---------------------------------------------------------------------------
 # IDBD + SwiftTD adaptive step-sizes
 # ---------------------------------------------------------------------------
 

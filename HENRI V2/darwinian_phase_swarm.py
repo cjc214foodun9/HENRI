@@ -301,7 +301,10 @@ class HenriSwarmOrchestrator(nn.Module):
                  lambda_goal=0.0, learnable_actions=False,
                  chimera_mode: bool = False, chimera_alpha: float = 1.4,
                  chimera_explorer_fraction: float = 0.25,
-                 happy_tensor_cut: bool = False):
+                 happy_tensor_cut: bool = False,
+                 external_outcome_efe: bool = False,
+                 external_eig_weight: float = 0.25,
+                 external_task_weight: float = 1.0):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
@@ -322,7 +325,11 @@ class HenriSwarmOrchestrator(nn.Module):
                                   constraint_reject_thresh=constraint_reject_thresh,
                                   beta_pragmatic=beta_pragmatic,
                                   lambda_goal=lambda_goal, learnable_actions=learnable_actions,
-                                  happy_tensor_cut=happy_tensor_cut, num_actions=num_actions)
+                                  happy_tensor_cut=happy_tensor_cut,
+                                  external_outcome_efe=external_outcome_efe,
+                                  external_eig_weight=external_eig_weight,
+                                  external_task_weight=external_task_weight,
+                                  num_actions=num_actions)
         # Seed the planner's retrieval store with the decoder's action waves,
         # flattened to real width d_model to match the planner's store.
         action_real = torch.stack([
@@ -360,14 +367,19 @@ class HenriSwarmOrchestrator(nn.Module):
         """
         return self.segment_cache.retrieve(query_wave)["conditioning_wave"]
 
-    def candidate_action_waves(self, top_k: int = 4):
+    def candidate_action_waves(self, top_k: int = 4, allowed_actions=None):
         """
         Returns the top-k (action, action_wave) candidates from the decoder's
         engram store, reshaped to [num_blocks, 8] Clifford waves.
         """
         waves = []
-        n = min(top_k, len(self.decoder.id_to_action))
-        for idx in range(n):
+        indices = list(range(len(self.decoder.id_to_action)))
+        if allowed_actions is not None:
+            allowed = set(allowed_actions)
+            indices = [idx for idx in indices if self.decoder.id_to_action[idx] in allowed]
+        if top_k is not None:
+            indices = indices[:top_k]
+        for idx in indices:
             action = self.decoder.id_to_action[idx]
             if self._learnable_actions:
                 w_grid = self.planner.get_learnable_action_wave(idx)
@@ -381,7 +393,7 @@ class HenriSwarmOrchestrator(nn.Module):
 
     def plan_action(self, active_wave: torch.Tensor, boundary_axioms: torch.Tensor, top_k: int = 4,
                     return_chosen: bool = False, goal_wave: torch.Tensor = None,
-                    grid_dist: float = None):
+                    grid_dist: float = None, allowed_actions=None):
         """
         EFE action selection: score the top-k candidate actions by Expected
         Free Energy and return (action, predicted_wave, score_table).
@@ -389,8 +401,9 @@ class HenriSwarmOrchestrator(nn.Module):
         boundary_axioms: [N, num_blocks, 8] real waves.
         goal_wave: optional [num_blocks, 8] target wave (Phase 3 goal-conditioned).
         grid_dist: optional pixel frame distance for epistemic novelty.
+        allowed_actions: optional subset of valid GameActions to score.
         """
-        candidates = self.candidate_action_waves(top_k=top_k)
+        candidates = self.candidate_action_waves(top_k=top_k, allowed_actions=allowed_actions)
         action, predicted, table, chosen = self.planner.select_action(
             active_wave, candidates, boundary_axioms, goal_wave=goal_wave,
             grid_dist=grid_dist

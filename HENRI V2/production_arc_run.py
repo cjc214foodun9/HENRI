@@ -117,6 +117,15 @@ CHIMERA_EXPLORER_FRACTION = float(os.environ.get("CHIMERA_EXPLORER_FRACTION", "0
 HAPPY_TENSOR_CUT = os.environ.get("HAPPY_TENSOR_CUT", "0") == "1"
 COLORED_LANGEVIN = os.environ.get("COLORED_LANGEVIN", "0") == "1" or os.environ.get("COLORED_NOISE", "0") == "1"
 
+# Phase 3.5: External-outcome EFE (P0). When set, each action carries a
+# Beta-Bernoulli posterior over observed next-frame change, and externally
+# verified progress states (level completion / WIN) enter a separate task
+# store whose resonance rewards action-conditioned outcome candidates.
+# Default OFF so the default path stays byte-identical to run 11.
+EXTERNAL_OUTCOME_EFE = os.environ.get("EXTERNAL_OUTCOME_EFE", "0") == "1"
+EXTERNAL_EIG_WEIGHT = float(os.environ.get("EXTERNAL_EIG_WEIGHT", "0.25"))
+EXTERNAL_TASK_WEIGHT = float(os.environ.get("EXTERNAL_TASK_WEIGHT", "1.0"))
+
 
 # ---------------------------------------------------------------------------
 # Telemetry
@@ -185,6 +194,9 @@ def run():
         chimera_alpha=CHIMERA_ALPHA,
         chimera_explorer_fraction=CHIMERA_EXPLORER_FRACTION,
         happy_tensor_cut=HAPPY_TENSOR_CUT,
+        external_outcome_efe=EXTERNAL_OUTCOME_EFE,
+        external_eig_weight=EXTERNAL_EIG_WEIGHT,
+        external_task_weight=EXTERNAL_TASK_WEIGHT,
         **SCALE,
     ).to(DEVICE)
     if CONSTRAINT_AXIOM:
@@ -213,6 +225,12 @@ def run():
         if obs is None or not getattr(obs, "frame", None):
             print("  [skip] null initial frame")
             continue
+        if EXTERNAL_OUTCOME_EFE:
+            orch.planner.reset_external_outcomes()
+        # P0 external evidence: per-step counters for the Beta-Bernoulli
+        # posterior and task-store updates.
+        ext_alpha_start = [1.0] * len(orch.planner.external_alpha)
+        ext_beta_start = [1.0] * len(orch.planner.external_beta)
 
         # Phase 3 goal-conditioned planning: infer goal wave for this env.
         # The goal wave is the VSA-encoded desired output grid. When
@@ -432,10 +450,20 @@ def run():
             # additive axiom row (the falsified attractor). No row is appended.
             boundary_batch = torch.stack([boundary])
             n_axiom_rows = 1
-            action, predicted_wave, efe_table, chosen = orch.plan_action(
-                state_wave, boundary_batch, top_k=4, return_chosen=True,
-                goal_wave=goal_wave, grid_dist=grid_dist if GRID_DIST_EPISTEMIC else None,
-            )
+            # P0: pass the environment's valid action set so the planner
+            # cannot select an un-executable action.
+            allowed_actions = list(getattr(game, "action_space", []))
+            if allowed_actions:
+                action, predicted_wave, efe_table, chosen = orch.plan_action(
+                    state_wave, boundary_batch, top_k=4, return_chosen=True,
+                    goal_wave=goal_wave, grid_dist=grid_dist if GRID_DIST_EPISTEMIC else None,
+                    allowed_actions=allowed_actions,
+                )
+            else:
+                action, predicted_wave, efe_table, chosen = orch.plan_action(
+                    state_wave, boundary_batch, top_k=4, return_chosen=True,
+                    goal_wave=goal_wave, grid_dist=grid_dist if GRID_DIST_EPISTEMIC else None,
+                )
             explored = bool(chosen.get("explored", False))
             hop_conf = chosen["efe"]  # chosen-candidate EFE as confidence proxy
             loss_ema = orch.planner.loss_ema
@@ -449,6 +477,68 @@ def run():
             obs_next = game.step(game_action)
             step_ms = (time.perf_counter() - t0) * 1000
             last_action_was_reset = (game_action.name == "RESET")
+
+            # P0: observe the executed action's external outcome AFTER the
+            # environment returns the next frame.  The Beta-Bernoulli
+            # posterior uses only whether the returned frame changed; the
+            # task store uses only externally verified progress (level
+            # completion or WIN).
+            if EXTERNAL_OUTCOME_EFE:
+                # Frame change: compare the newly returned frame against
+                # the pre-action frame we encoded above.  obs_next.frame[0]
+                # is the post-action observation.
+                post_frame_changed = True
+                if obs_next is not None and getattr(obs_next, "frame", None):
+                    try:
+                        post_arr = np.array(obs_next.frame[0].tolist())
+                        prev_arr = np.array(grid)
+                        if post_arr.shape == prev_arr.shape:
+                            post_frame_changed = bool(np.any(post_arr != prev_arr))
+                        else:
+                            post_frame_changed = True
+                    except Exception:
+                        post_frame_changed = True
+                task_progressed = False
+                if obs_next is not None and getattr(obs_next, "state", None):
+                    st = obs_next.state.name
+                    if st == "WIN":
+                        task_progressed = True
+                    # ARC-AGI-3 may expose levels_completed on the observation
+                    # or via game metadata; use either if present.
+                    elif hasattr(obs_next, "levels_completed"):
+                        try:
+                            task_progressed = bool(obs_next.levels_completed > 0)
+                        except Exception:
+                            pass
+                # Encode the post-action observation for task-store
+                # registration when progress occurred.  Use the tokenizer's
+                # actual production encoding path (VSA spatial grid).
+                observed_next_wave = None
+                if task_progressed and obs_next is not None and getattr(obs_next, "frame", None):
+                    observed_next_wave = tokenizer.encode_spatial_grid(
+                        obs_next.frame[0].tolist()
+                    ).squeeze(0).to(DEVICE)
+                # Map the GameAction to its decoder index (posterior row).
+                action_idx = next(
+                    (idx for idx, a in orch.decoder.id_to_action.items()
+                     if a == game_action),
+                    -1,
+                )
+                orch.planner.observe_external_outcome(
+                    action_idx,
+                    frame_changed=post_frame_changed,
+                    task_progressed=task_progressed,
+                    observed_next_wave=observed_next_wave,
+                )
+                # Telemetry: expose the new P0 statistics.
+                tele.emit({
+                    "env": env_name, "step": step,
+                    "external_eig": round(orch.planner.external_information_gain(action_idx), 6)
+                        if action_idx >= 0 else 0.0,
+                    "external_alpha": orch.planner.external_alpha.tolist(),
+                    "external_beta": orch.planner.external_beta.tolist(),
+                    "external_task_store_size": orch.planner.external_task_store.num_engrams(),
+                })
 
             # T1/T2: train the transition model on the EXECUTED action pair.
             # observed_next is encoded on the NEXT loop iteration; stash the
