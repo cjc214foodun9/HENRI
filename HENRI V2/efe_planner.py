@@ -572,9 +572,9 @@ class EFEPlanner(nn.Module):
         if happy_active and state_wave is not None:
             area_pred = self.compute_happy_tensor_cut_area(predicted_wave)
             area_curr = self.compute_happy_tensor_cut_area(state_wave)
-            delta_area = area_pred - area_curr
-            if delta_area > 0:
-                base_epistemic = base_epistemic * (1.0 + float(delta_area.detach()))
+            rel_delta = (area_pred - area_curr) / (area_curr + 1e-12)
+            if rel_delta > 0:
+                base_epistemic = base_epistemic * (1.0 + float(rel_delta.detach()))
             else:
                 base_epistemic = base_epistemic * 0.1
 
@@ -660,11 +660,14 @@ class EFEPlanner(nn.Module):
         return self.action_embeddings[idx]
 
     def action_embedding_divergence(self) -> float:
-        """Mean pairwise cosine distance (1 - cos_sim) among learnable action embeddings.
+        """Mean pairwise cosine distance (1 - cos_sim) among action embeddings.
         0.0 = all action waves identical; 1.0 = orthogonal action embeddings."""
-        if not self._learnable_actions or self.action_embeddings.numel() == 0 or self.action_embeddings.shape[0] < 2:
+        if self._learnable_actions and self.action_embeddings.numel() > 0 and self.action_embeddings.shape[0] >= 2:
+            flat = self.action_embeddings.view(self.action_embeddings.shape[0], -1)
+        elif self.cleanup.num_engrams() >= 2:
+            flat = self.cleanup.engrams
+        else:
             return 0.0
-        flat = self.action_embeddings.view(self.action_embeddings.shape[0], -1)
         normed = F.normalize(flat, p=2, dim=-1)
         cos_sim = normed @ normed.T
         n = cos_sim.shape[0]

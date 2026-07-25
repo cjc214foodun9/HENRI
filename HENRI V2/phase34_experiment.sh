@@ -14,19 +14,19 @@ PY="PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python3 production_arc_run.
 
 # ── ARM1: Baseline (White Noise, No HaPPY Cut) ──
 echo "=== ARM1: COLORED_LANGEVIN=0, HAPPY_TENSOR_CUT=0 (baseline) ===" | tee "logs/${RUN_ID}_arm1.log"
-env ${COMMON} CHIMERA_MODE=1 COLORED_LANGEVIN=0 HAPPY_TENSOR_CUT=0 CONSTRAINT_REJECT_THRESH=0.25 LAMBDA_GOAL=1.0 \
+env ${COMMON} CHIMERA_MODE=1 COLORED_LANGEVIN=0 HAPPY_TENSOR_CUT=0 CONSTRAINT_REJECT_THRESH=0.50 LAMBDA_GOAL=1.0 \
   ${PY} --envs 3 --steps 40 2>&1 | tee -a "logs/${RUN_ID}_arm1.log"
 echo "ARM1 done."
 
 # ── ARM2: Colored Langevin Exploration ──
 echo "=== ARM2: COLORED_LANGEVIN=1, HAPPY_TENSOR_CUT=0 ===" | tee "logs/${RUN_ID}_arm2.log"
-env ${COMMON} CHIMERA_MODE=1 COLORED_LANGEVIN=1 HAPPY_TENSOR_CUT=0 CONSTRAINT_REJECT_THRESH=0.25 LAMBDA_GOAL=1.0 \
+env ${COMMON} CHIMERA_MODE=1 COLORED_LANGEVIN=1 HAPPY_TENSOR_CUT=0 CONSTRAINT_REJECT_THRESH=0.50 LAMBDA_GOAL=1.0 \
   ${PY} --envs 3 --steps 40 2>&1 | tee -a "logs/${RUN_ID}_arm2.log"
 echo "ARM2 done."
 
 # ── ARM3: Full Protocol (Colored Langevin + HaPPY Tensor Cut) ──
 echo "=== ARM3: COLORED_LANGEVIN=1, HAPPY_TENSOR_CUT=1 ===" | tee "logs/${RUN_ID}_arm3.log"
-env ${COMMON} CHIMERA_MODE=1 COLORED_LANGEVIN=1 HAPPY_TENSOR_CUT=1 CONSTRAINT_REJECT_THRESH=0.25 LAMBDA_GOAL=1.0 \
+env ${COMMON} CHIMERA_MODE=1 COLORED_LANGEVIN=1 HAPPY_TENSOR_CUT=1 CONSTRAINT_REJECT_THRESH=0.50 LAMBDA_GOAL=1.0 \
   ${PY} --envs 3 --steps 40 2>&1 | tee -a "logs/${RUN_ID}_arm3.log"
 echo "ARM3 done."
 
