@@ -304,7 +304,9 @@ class HenriSwarmOrchestrator(nn.Module):
                  happy_tensor_cut: bool = False,
                  external_outcome_efe: bool = False,
                  external_eig_weight: float = 0.25,
-                 external_task_weight: float = 1.0):
+                 external_task_weight: float = 1.0,
+                 task_weighted_eig: bool = False,
+                 task_eig_gamma: float = 4.0):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
@@ -329,6 +331,8 @@ class HenriSwarmOrchestrator(nn.Module):
                                   external_outcome_efe=external_outcome_efe,
                                   external_eig_weight=external_eig_weight,
                                   external_task_weight=external_task_weight,
+                                  task_weighted_eig=task_weighted_eig,
+                                  task_eig_gamma=task_eig_gamma,
                                   num_actions=num_actions)
         # Seed the planner's retrieval store with the decoder's action waves,
         # flattened to real width d_model to match the planner's store.

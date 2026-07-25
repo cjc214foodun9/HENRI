@@ -354,6 +354,78 @@ class TestExternalOutcomeEFE:
 
 
 # ---------------------------------------------------------------------------
+# P0.5: task-weighted discriminative EIG (default OFF)
+# ---------------------------------------------------------------------------
+
+class TestTaskWeightedEIG:
+    def _planner(self, device, enabled=True):
+        return EFEPlanner(
+            num_blocks=SCALE["num_blocks"],
+            d_model=SCALE["d_model"],
+            num_actions=4,
+            external_outcome_efe=True,
+            task_weighted_eig=enabled,
+            task_eig_gamma=4.0,
+        ).to(device)
+
+    def test_default_off_binary_updates_unchanged(self, device):
+        # P0 semantics preserved when task_weighted_eig=False
+        p = self._planner(device, enabled=False)
+        p.observe_external_outcome(0, frame_changed=True)
+        assert p.external_alpha[0].item() == pytest.approx(2.0)
+        assert p.external_beta[0].item() == pytest.approx(1.0)
+
+    def test_weighted_update_bounds(self, device):
+        p = self._planner(device)
+        # Seed the jitter statistics with several observations
+        for gd in (0.1, 0.12, 0.08, 0.11, 0.09):
+            p.observe_external_outcome(0, frame_changed=True, grid_dist=gd)
+        a = p.external_alpha[0].item()
+        b = p.external_beta[0].item()
+        # Total evidence added must equal number of observations
+        assert (a + b - 2.0) == pytest.approx(5.0, rel=1e-6)
+        # Each weight in [0, 1]
+        for i in range(4):
+            assert p.external_alpha[i].item() >= 1.0
+            assert p.external_beta[i].item() >= 1.0
+
+    def test_discrimination_above_vs_below_jitter(self, device):
+        p = self._planner(device)
+        # Establish jitter baseline ~0.10 on action 0
+        for _ in range(20):
+            p.observe_external_outcome(0, frame_changed=True, grid_dist=0.10)
+        # Action 1: above-jitter displacement
+        p.observe_external_outcome(1, frame_changed=True, grid_dist=0.50)
+        # Action 2: below-jitter displacement (menu toggle)
+        p.observe_external_outcome(2, frame_changed=True, grid_dist=0.10)
+        # Above-jitter action must have MORE task-relevant evidence (alpha)
+        # than the below-jitter action, relative to its observation count.
+        alpha_frac_1 = (p.external_alpha[1].item() - 1.0)
+        alpha_frac_2 = (p.external_alpha[2].item() - 1.0)
+        assert alpha_frac_1 > alpha_frac_2, (
+            f"above-jitter alpha gain {alpha_frac_1:.4f} must exceed "
+            f"below-jitter {alpha_frac_2:.4f}")
+
+    def test_weighted_reset_clears_jitter_stats(self, device):
+        p = self._planner(device)
+        for gd in (0.1, 0.2, 0.15):
+            p.observe_external_outcome(0, frame_changed=True, grid_dist=gd)
+        p.reset_external_outcomes()
+        assert p.external_alpha[0].item() == pytest.approx(1.0)
+        assert p.external_beta[0].item() == pytest.approx(1.0)
+        # Jitter stats must also reset
+        assert p._jitter_count == 0
+
+    def test_weighted_eig_still_bounded(self, device):
+        p = self._planner(device)
+        for _ in range(50):
+            p.observe_external_outcome(0, frame_changed=True, grid_dist=0.5)
+        for i in range(4):
+            eig = p.external_information_gain(i)
+            assert math.isfinite(eig) and 0.0 <= eig <= 1.0
+
+
+# ---------------------------------------------------------------------------
 # IDBD + SwiftTD adaptive step-sizes
 # ---------------------------------------------------------------------------
 

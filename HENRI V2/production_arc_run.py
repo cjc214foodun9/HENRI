@@ -126,6 +126,12 @@ EXTERNAL_OUTCOME_EFE = os.environ.get("EXTERNAL_OUTCOME_EFE", "0") == "1"
 EXTERNAL_EIG_WEIGHT = float(os.environ.get("EXTERNAL_EIG_WEIGHT", "0.25"))
 EXTERNAL_TASK_WEIGHT = float(os.environ.get("EXTERNAL_TASK_WEIGHT", "1.0"))
 
+# P0.5: task-weighted discriminative EIG (Aletheia postmortem).  Evidence
+# updates to the Beta posterior are weighted by sigmoid(gamma * z_score)
+# of the observed grid displacement vs running jitter statistics.
+TASK_WEIGHTED_EIG = os.environ.get("TASK_WEIGHTED_EIG", "0") == "1"
+TASK_EIG_GAMMA = float(os.environ.get("TASK_EIG_GAMMA", "4.0"))
+
 
 # ---------------------------------------------------------------------------
 # Telemetry
@@ -197,6 +203,8 @@ def run():
         external_outcome_efe=EXTERNAL_OUTCOME_EFE,
         external_eig_weight=EXTERNAL_EIG_WEIGHT,
         external_task_weight=EXTERNAL_TASK_WEIGHT,
+        task_weighted_eig=TASK_WEIGHTED_EIG,
+        task_eig_gamma=TASK_EIG_GAMMA,
         **SCALE,
     ).to(DEVICE)
     if CONSTRAINT_AXIOM:
@@ -529,6 +537,7 @@ def run():
                     frame_changed=post_frame_changed,
                     task_progressed=task_progressed,
                     observed_next_wave=observed_next_wave,
+                    grid_dist=grid_dist if TASK_WEIGHTED_EIG else None,
                 )
                 # Telemetry: expose the new P0 statistics.
                 tele.emit({

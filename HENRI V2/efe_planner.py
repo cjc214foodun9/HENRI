@@ -171,6 +171,8 @@ class EFEPlanner(nn.Module):
         external_outcome_efe: bool = False,
         external_eig_weight: float = 0.25,
         external_task_weight: float = 1.0,
+        task_weighted_eig: bool = False,
+        task_eig_gamma: float = 4.0,
         num_actions: int = 8,
         action_lr_scale: float = 0.2,
     ):
@@ -258,6 +260,14 @@ class EFEPlanner(nn.Module):
         self.register_buffer("external_task_action_ids", torch.zeros(0, dtype=torch.long))
         self.external_task_capacity = 256
 
+        # P0.5: task-weighted discriminative EIG.  Running jitter statistics
+        # (Welford) over grid_dist; evidence weight w = sigmoid(gamma * z).
+        self._task_weighted_eig = task_weighted_eig
+        self._task_eig_gamma = task_eig_gamma
+        self._jitter_count = 0
+        self._jitter_mean = 0.0
+        self._jitter_m2 = 0.0
+
         # EDMD fit diagnostics (Phase 0: cd82 L2 instability characterization).
         # Populated by train_transition_batch on every fit; read-only record
         # of the solved spectrum and Gram conditioning, no behavior change.
@@ -289,6 +299,30 @@ class EFEPlanner(nn.Module):
         self.external_task_store.clear()
         self.external_task_action_ids = torch.zeros(
             0, dtype=torch.long, device=self.external_alpha.device)
+        self._jitter_count = 0
+        self._jitter_mean = 0.0
+        self._jitter_m2 = 0.0
+
+    def _task_evidence_weight(self, grid_dist: float) -> float:
+        """Sigmoid weight: how task-relevant is this frame displacement?
+
+        w = sigmoid(gamma * (grid_dist - mu) / (sigma + eps))
+        where mu, sigma are running Welford statistics over grid_dist.
+        Cold start (count < 3): w = 0.5 (neutral, no discrimination).
+        """
+        if self._jitter_count < 3:
+            return 0.5
+        sigma = (self._jitter_m2 / max(self._jitter_count - 1, 1)) ** 0.5
+        z = (grid_dist - self._jitter_mean) / (sigma + 1e-8)
+        return float(torch.sigmoid(torch.tensor(self._task_eig_gamma * z)))
+
+    def _update_jitter_stats(self, grid_dist: float):
+        """Welford online update of running mean and M2."""
+        self._jitter_count += 1
+        delta = grid_dist - self._jitter_mean
+        self._jitter_mean += delta / self._jitter_count
+        delta2 = grid_dist - self._jitter_mean
+        self._jitter_m2 += delta * delta2
 
     def external_outcome_counts(self) -> list:
         """Number of valid observations assigned to each action."""
@@ -327,16 +361,28 @@ class EFEPlanner(nn.Module):
         task_progressed: bool = False,
         observed_next_wave: torch.Tensor = None,
         valid: bool = True,
+        grid_dist: float = None,
     ):
         """Update P0 evidence after the environment returns the next frame."""
         if not self._external_outcome_efe or not valid:
             return
         if action_idx < 0 or action_idx >= self.external_alpha.numel():
             return
-        if frame_changed:
-            self.external_alpha[action_idx] += 1.0
+        # P0.5: task-weighted evidence gating
+        if self._task_weighted_eig and grid_dist is not None:
+            w = self._task_evidence_weight(grid_dist)
+            if frame_changed:
+                self.external_alpha[action_idx] += w
+                self.external_beta[action_idx] += (1.0 - w)
+            else:
+                # No frame change: full no-op evidence regardless of weight
+                self.external_beta[action_idx] += 1.0
+            self._update_jitter_stats(grid_dist)
         else:
-            self.external_beta[action_idx] += 1.0
+            if frame_changed:
+                self.external_alpha[action_idx] += 1.0
+            else:
+                self.external_beta[action_idx] += 1.0
         if task_progressed and observed_next_wave is not None:
             flat = F.normalize(observed_next_wave.detach().reshape(-1), p=2, dim=0)
             self.external_task_store.store_engrams(flat.unsqueeze(0))
