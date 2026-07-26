@@ -1,11 +1,10 @@
 """Zone C environment resolver — structural separation of dev vs production.
 
 WHY THIS EXISTS (load-bearing):
-  PRODUCTION Zone C  = Vast.ai 5090 TimescaleDB, reached ONLY via SSH tunnel at
-                       localhost:10100, db name `henri`. Holds world-knowledge
-                       engrams (zone_c_resonant_hypersphere: 4096-dim phase
-                       arrays). Writes here are permanent world-model state.
-  DEV Zone C         = local Docker container, localhost:5433, db name
+  PRODUCTION Zone C  = Vast.ai 5090 PostgreSQL/TimescaleDB, reached only via
+                       the guarded production DSN, db name `henri`. Holds
+                       world-model engrams and telemetry.
+  DEV Zone C         = local Docker container, localhost:5434, db name
                        `henri_zonec_dev`. Disposable schema sandbox. Any table
                        may be dropped at any time.
 
@@ -17,9 +16,8 @@ rather than remembered:
   2. A dev DSN must point at localhost AND use a db name ending in `_dev`.
      Anything else is rejected before a connection is attempted.
   3. assert_zone_c_env() verifies the environment marker table inside the
-     connected database before any write/DDL. The dev init script seeds
-     `_zonec_environment` with 'dev'; production is asserted by host/port
-     heuristics (tunnel port 10100 or db name `henri`).
+     connected database before any write/DDL. Dev carries `_zonec_environment`
+     with 'dev'; production carries the explicit 'prod' marker.
 
 Usage:
     from zone_c_env import resolve_zone_c_dsn, assert_zone_c_env
@@ -33,7 +31,7 @@ import os
 import re
 
 DEV_DB_SUFFIX = "_dev"
-DEV_PORT = 5434  # 5433 is occupied by a host service (PID 18260); keep in sync with docker/zonec-dev/docker-compose.yml
+DEV_PORT = 5434  # Keep in sync with docker/zonec-dev/docker-compose.yml.
 DEV_DEFAULT_DSN = (
     f"postgres://zonec_dev_user:zonec_dev@localhost:{DEV_PORT}/henri_zonec_dev"
 )
@@ -124,8 +122,7 @@ def assert_zone_c_env(conn, expected: str) -> str:
             if row:
                 observed = str(row[0]).strip().lower()
     except Exception:
-        # Marker table absent: dev DBs always have it (seeded by init script),
-        # so absence means this is NOT a dev database.
+        # Marker table absence is not proof of either environment.
         observed = "unknown"
 
     if expected == "dev":
@@ -136,13 +133,13 @@ def assert_zone_c_env(conn, expected: str) -> str:
                 "_zonec_environment, and only production lacks it."
             )
     elif expected == "prod":
-        # Production assertion is topological (checked at DSN resolution) plus
-        # negative marker evidence here; absence of a dev marker is consistent
-        # with production but not proof. Documented as a guardrail, not proof.
-        if observed == "dev":
+        # Production must carry an explicit prod marker after bootstrap.
+        # Absence is not proof of production and is rejected closed.
+        if observed != "prod":
             raise ZoneCEnvError(
-                "Expected PRODUCTION but connected database carries a 'dev' "
-                "marker. Refusing: mislabeled environment."
+                f"Expected a PRODUCTION database (marker 'prod'), observed "
+                f"{observed!r}. Refusing to write: production bootstrap must "
+                "seed the explicit prod marker."
             )
     else:
         raise ZoneCEnvError(f"expected must be 'dev' or 'prod', got {expected!r}")

@@ -1,0 +1,25 @@
+# Zone C DEV database — local disposable schema sandbox.
+# The production database is native PostgreSQL on Vast, not this container.
+services:
+  zonec-dev:
+    image: timescale/timescaledb-ha:pg16
+    container_name: henri-zonec-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: henri_zonec_dev
+      POSTGRES_USER: zonec_dev_user
+      POSTGRES_PASSWORD: ${ZONE_C_DEV_PASSWORD:-zonec_dev}
+    ports:
+      - "5434:5432"
+    volumes:
+      - zonec_dev_data:/var/lib/postgresql/data
+      - ../../HENRI V2/zone_c_schema.sql:/docker-entrypoint-initdb.d/01_zone_c_schema.sql:ro
+      - ./init_scripts/02_dev_environment.sql:/docker-entrypoint-initdb.d/02_dev_environment.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zonec_dev_user -d henri_zonec_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  zonec_dev_data:

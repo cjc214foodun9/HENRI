@@ -1,5 +1,6 @@
 # HENRI V2 Execution Runtime (Vast.ai)
-# Start from NVIDIA CUDA 12.8 devel image (matches host torch 2.11.0+cu128 numerics)
+# This image contains the CUDA/Python execution environment only. PostgreSQL
+# Zone C is a separate native service with its own persistent data path.
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -39,7 +40,7 @@ RUN pip install --upgrade pip setuptools wheel \
 
 # HENRI V2 core dependencies (audited from live repo imports across core, scripts & tests)
 # - torch/numpy/scipy/pandas/matplotlib: wave model + SVD + analytics
-# - psycopg2/psycopg/asyncpg/sqlalchemy: TimescaleDB Zone C hypertable telemetry
+# - psycopg2/psycopg/asyncpg/sqlalchemy: PostgreSQL/TimescaleDB Zone C telemetry
 # - arc-agi:                             ARC-AGI-3 environment SDK
 # - pytest/pytest-asyncio/anyio:         test suite execution engine
 # - wandb/boto3:                         run telemetry & cloud storage
@@ -55,6 +56,13 @@ RUN pip install \
         fastapi uvicorn chromadb python-frontmatter \
         sentence-transformers pypdf requests \
         arc-agi
+
+# Client only. The image does not install or start PostgreSQL. Native Zone C
+# setup is handled by scripts/zone_c_install_native.sh and
+# scripts/zone_c_bootstrap.py on the host that owns the persistent database.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        postgresql-client-16 \
+    && rm -rf /var/lib/apt/lists/*
 
 # SSH for Vast.ai & environment setup
 RUN mkdir -p /var/run/sshd \

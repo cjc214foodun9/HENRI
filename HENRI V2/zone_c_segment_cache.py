@@ -5,8 +5,7 @@ Closes the continuous-learning loop: the swarm stores wave checkpoints
 (engrams) into the TimescaleDB hypertable and retrieves them during inference
 through input-dependent gates, rather than recomputing from scratch.
 
-Backed by the live Zone C substrate on the RTX 5090 instance:
-    host 62.107.25.198, port 53468 (external) / 10100 (internal), db `henri`.
+Backed by the guarded Zone C production DSN on the RTX 5090 instance.
 
 Schema target: phylogenetic_engrams_65536
     id uuid, timestamp timestamptz, environmental_context_hash varchar,
