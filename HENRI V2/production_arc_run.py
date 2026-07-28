@@ -169,7 +169,7 @@ def kuramoto_order_parameter(phases: torch.Tensor) -> float:
 def run():
     ap = argparse.ArgumentParser()
     ap.add_argument("--envs", type=int, default=3)
-    ap.add_argument("--steps", type=int, default=30, help="max env steps per environment")
+    ap.add_argument("--steps", type=int, default=1000, help="max env steps per environment (unlimited execution until completion)")
     ap.add_argument(
         "--dsn", type=str, default=None,
         help="Explicit Zone C DSN. CUDA runs still require ZONE_C_ENV=prod."
@@ -766,6 +766,15 @@ def run():
             json.dump(final_scores, fp, indent=1, default=str)
         print(f"  scorecards -> {log_path.replace('.jsonl', '_scorecards.json')}")
     print(f"\n[done] telemetry -> {log_path}")
+
+    # Dispatch automatic mobile push notification via Photon Notifier
+    try:
+        from photon_notifier import PhotonNotifier
+        notifier = PhotonNotifier()
+        msg = f"ARC-AGI-3 Run Completed.\nTelemetry: {os.path.basename(log_path)}\nFinal Scores: {len(final_scores)} envs recorded."
+        notifier.send_notification(title="HENRI V2: ARC-AGI-3 Run Complete", message=msg)
+    except Exception as notify_err:
+        print(f"[Photon Push Error] {notify_err}")
 
 
 if __name__ == "__main__":
