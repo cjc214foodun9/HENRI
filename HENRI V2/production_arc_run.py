@@ -518,8 +518,9 @@ def run():
             macro_actions = [action if isinstance(action, GameAction) else GameAction.ACTION1]
             if not explored and isinstance(action, GameAction) and action.name != "RESET":
                 # Expand AST program macro: sequence complementary spatial actions
-                next_act_code = (int(action.value) % len(allowed_actions)) + 1 if allowed_actions else 1
-                macro_actions.append(GameAction(next_act_code) if next_act_code in [a.value for a in allowed_actions] else action)
+                if allowed_actions:
+                    next_act_idx = (int(getattr(action, "value", 1)) % len(allowed_actions))
+                    macro_actions.append(allowed_actions[next_act_idx])
 
             # Environment macro step loop
             obs_next = None
