@@ -1,13 +1,58 @@
-﻿data/
+﻿# Production repository boundary
+# Research, vault state, telemetry, databases, scratch work, and local workspace
+# state remain outside Git.
+
+# Local and generated state
 __pycache__/
-*.zip
-*.h5
-*.bin
+*.py[cod]
+*.sqlite
+*.sqlite3
+*.pickle
+*.jsonl
+*.nsys-rep
 *.pt
 *.pth
+*.bin
+*.h5
+*.zip
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# Local HENRI and Obsidian state
+.vault_vector_db/
+.vault_vector_db
+.env
+.env.*
+.venv/
 .venv-backups/
 llama_tokenizer_local/
 telemetry_logs/
-# CI/CD artifacts
-*.nsys-rep
-*.sqlite
+outputs/
+logs/
+scratch/
+HENRI V2/scratch/
+HENRI V2/telemetry_logs/
+HENRI V2/.obsidian/
+Obsidian_Vault/
+
+# Research and notebook exports
+arxiv_*.json
+arxiv_*.md
+arxiv_*.py
+ScienceDirect_articles_*/
+Research_Papers_*/
+ingest_input/
+assets/
+
+# Runtime and editor state
+.hermes/
+.mypy_cache/
+.pytest_cache/
+.vscode/
+.idea/
+
+# Holonic loop runtime state (deterministic router poll cache)
+scripts/.henri_router_state.json

@@ -1,21 +1,39 @@
-import psycopg
-import json
+"""Export compact Zone C telemetry through the guarded production boundary.
+
+This is a Zone C latent-space adapter. It does not read or write the local
+Obsidian agentic graph. Output defaults outside the production repository.
+"""
+import argparse
 import datetime
+import json
+import os
+import sys
 from pathlib import Path
 
-def sync_telemetry():
-    # Localhost connection for execution natively on Vast.ai
-    db_url = "postgres://postgres:password@localhost:10100/henri"
-    log_dir = Path("./telemetry_logs")
+import psycopg
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from zone_c_env import assert_zone_c_env, resolve_zone_c_dsn  # noqa: E402
+
+def sync_telemetry(output_dir: str | None = None, limit: int = 500):
+    if os.environ.get("ZONE_C_ENV", "dev").strip().lower() != "prod":
+        raise RuntimeError("telemetry export requires explicit ZONE_C_ENV=prod")
+    db_url = resolve_zone_c_dsn()
+    log_dir = Path(output_dir or os.environ.get(
+        "HENRI_TELEMETRY_EXPORT_DIR",
+        str(Path.home() / "HENRI_telemetry_exports"),
+    )).expanduser().resolve()
     log_dir.mkdir(parents=True, exist_ok=True)
     
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     out_file = log_dir / f"vast_ai_sync_{timestamp}.jsonl"
     
-    print(f"[ALETHEIA] Connecting to Vast.ai TimescaleDB at 62.107.25.198:53468...")
+    print("[ZONE_C] Connecting through guarded production DSN")
     
     try:
-        with psycopg.connect(db_url) as conn:
+        with psycopg.connect(db_url, connect_timeout=8) as conn:
+            assert_zone_c_env(conn, "prod")
             with conn.cursor() as cur:
                 print("[ALETHEIA] Querying Zone C Resonant Hypersphere...")
                 
@@ -25,8 +43,8 @@ def sync_telemetry():
                            real_phases, imag_phases, phase_delta, sagnac_clearance 
                     FROM zone_c_resonant_hypersphere 
                     ORDER BY recorded_at DESC
-                    LIMIT 500
-                """)
+                    LIMIT %s
+                """, (int(limit),))
                 
                 rows = cur.fetchall()
                 if not rows:
@@ -50,10 +68,15 @@ def sync_telemetry():
                         }
                         f.write(json.dumps(record) + '\n')
                         
-                print(f"[ALETHEIA] Sync Complete! Telemetry dumped to {out_file.absolute()}")
+                print(f"[ZONE_C] Export complete: {out_file.absolute()}")
                 
     except Exception as e:
-        print(f"[ALETHEIA FATAL] Sync failed: {e}")
+        print(f"[ZONE_C BLOCKED] Export failed: {type(e).__name__}: {e}")
+        raise
 
 if __name__ == "__main__":
-    sync_telemetry()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output-dir")
+    parser.add_argument("--limit", type=int, default=500)
+    args = parser.parse_args()
+    sync_telemetry(args.output_dir, args.limit)

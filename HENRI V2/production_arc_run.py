@@ -195,9 +195,13 @@ def run():
     print(f"  device={DEVICE} scale={SCALE} run telemetry=zone_c + jsonl")
     print("=" * 70)
 
-    os.makedirs("telemetry_logs", exist_ok=True)
+    telemetry_dir = os.environ.get(
+        "HENRI_TELEMETRY_DIR",
+        os.path.join(os.path.expanduser("~"), "HENRI_telemetry_exports"),
+    )
+    os.makedirs(telemetry_dir, exist_ok=True)
     log_path = os.path.join(
-        "telemetry_logs", f"production_run_{int(time.time())}.jsonl"
+        telemetry_dir, f"production_run_{int(time.time())}.jsonl"
     )
     db_logger = None
     if dsn != "offline://surrogate":

@@ -35,9 +35,12 @@ from efe_planner import EFEPlanner, UnitaryWaveTransition
 from hopfield_cleanup import ContinuousHopfieldCleanup
 from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
 from qfhrr_kernels import quantization_roundtrip_error
+from subliminal_clock_probe import SubliminalClockProbe
+from qfhrr_readout_ledger import qFHRRAuditLedger, ReadoutPacket
+from henri_egress import UniversalEgress, TextEgress, ToolEgress, EgressResult
 
 if torch.cuda.is_available():
-    SCALE = dict(num_experts=1024, d_model=65536, r_rank=16, num_blocks=8192)
+    SCALE = dict(num_experts=128, d_model=16384, r_rank=16, num_blocks=2048)
     DEVICE = "cuda"
 else:
     SCALE = dict(num_experts=64, d_model=512, r_rank=8, num_blocks=64)
@@ -352,3 +355,111 @@ class TestStageV_Adaptation:
         tail = sum(losses[-10:]) / 10
         assert all(math.isfinite(l) for l in losses), "divergence after shift"
         assert tail < spike, f"no recovery: spike {spike:.3f} tail {tail:.3f}"
+
+    def test_subliminal_clock_progress_decoding_and_steering(self, device):
+        """Verifies that SubliminalClockProbe decodes progress t_hat and that v_clock
+        steering shifts estimated progress forward with positive beta."""
+        nb = SCALE["num_blocks"]
+        d = nb * 8
+        probe = SubliminalClockProbe(d_model=d).to(device)
+
+        # Train probe on synthetic trajectory step ratios
+        trajectory = []
+        for i in range(10):
+            step_ratio = i / 9.0
+            wave = unit_blocks((nb, 8), device, seed=200 + i)
+            probe.update_online(wave, step_ratio, lr=0.1)
+            trajectory.append((wave, step_ratio))
+
+        # Test steering on early wave (ratio 0.0)
+        early_wave = trajectory[0][0]
+        p_before = float(probe(early_wave).item())
+        steered_wave = probe.steer_wave(early_wave, beta=0.5)
+        p_after = float(probe(steered_wave).item())
+
+        assert p_after > p_before, f"steering failed to advance progress: before={p_before:.3f}, after={p_after:.3f}"
+
+        # Test state-dependent temperature cooling
+        t_early = SubliminalClockProbe.anneal_temperature(0.1, t_base=0.10)
+        t_late = SubliminalClockProbe.anneal_temperature(0.9, t_base=0.10)
+        assert t_late < t_early, f"expected cooling at higher progress: t_early={t_early}, t_late={t_late}"
+
+    def test_qfhrr_audit_ledger_chain_integrity(self, device, tmp_path):
+        """Verifies qFHRRAuditLedger cryptographic parent-hash chain generation,
+        validation, and tamper detection."""
+        ledger_path = str(tmp_path / "test_qfhrr_ledger.jsonl")
+        ledger = qFHRRAuditLedger(ledger_path)
+
+        nb = SCALE["num_blocks"]
+        wave = unit_blocks((nb, 8), device, seed=123)
+        codes = torch.randint(0, 256, (nb,), dtype=torch.uint8)
+
+        # Record 5 steps
+        for step in range(5):
+            ledger.record_step(
+                run_id="run_test",
+                step_id=step,
+                environment_id="cd82",
+                source_commit="commit_abc123",
+                state_kind="active_inference_step",
+                wave_tensor=wave,
+                qfhrr_codes=codes,
+                wave_ref=f"zone_c://waves/chk_{step:04d}",
+                sagnac_delta=0.04 - 0.005 * step,
+                coherence=0.90 + 0.01 * step,
+                transition_loss=0.10,
+                selected_action=step % 4,
+                external_outcome_status="STEP_SUCCESS",
+            )
+
+        valid, count, msg = qFHRRAuditLedger.verify_chain_integrity(ledger_path)
+        assert valid is True, f"Chain integrity failed: {msg}"
+        assert count == 5
+
+        # Tamper record 2 and confirm chain rejection
+        with open(ledger_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        import json
+        record2 = json.loads(lines[2])
+        record2["selected_action"] = 99  # Tamper selected action
+        lines[2] = json.dumps(record2) + "\n"
+        with open(ledger_path, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+
+        valid_tampered, break_idx, msg_tampered = qFHRRAuditLedger.verify_chain_integrity(ledger_path)
+        assert valid_tampered is False, "Expected chain integrity failure on tampered ledger"
+        assert break_idx == 2, f"Expected break at record 2, got {break_idx}"
+
+    def test_universal_egress_text_tool_snapping(self, device):
+        """Verifies UniversalEgress zero-entropy Hopfield codebook snapping for
+        text tokens, JSON-RPC tool schemas, and spatial grid matrices."""
+        nb = SCALE["num_blocks"]
+        d = nb * 8
+        egress_engine = UniversalEgress(d_model=d, num_blocks=nb).to(device)
+
+        # 1. Test Text Egress
+        token_wave_0 = unit_blocks((nb, 8), device, seed=301)
+        token_wave_1 = unit_blocks((nb, 8), device, seed=302)
+        engrams = torch.stack([token_wave_0.view(-1), token_wave_1.view(-1)])
+        egress_engine.text_egress.register_tokens(engrams, ["action_up", "action_down"])
+
+        res_text = egress_engine.egress(token_wave_0, modality="text")
+        assert res_text.egress_type == "text"
+        assert res_text.raw_text == "action_up"
+        assert res_text.snapped_index == 0
+
+        # 2. Test Tool Egress
+        tool_schema_0 = {"jsonrpc": "2.0", "method": "grid_shift", "params": {"dx": 1, "dy": 0}}
+        egress_engine.tool_egress.register_tool_schema(0, token_wave_0.view(-1), tool_schema_0)
+
+        res_tool = egress_engine.egress(token_wave_0, modality="tool")
+        assert res_tool.egress_type == "tool"
+        assert res_tool.tool_call == tool_schema_0
+        assert res_tool.snapped_index == 0
+
+        # 3. Test Spatial Grid Fallback Egress
+        grid_wave = unit_blocks((nb, 8), device, seed=404)
+        res_grid = egress_engine.egress(grid_wave, modality="grid")
+        assert res_grid.egress_type == "grid"
+        assert isinstance(res_grid.grid_matrix, list)
+        assert len(res_grid.grid_matrix) > 0

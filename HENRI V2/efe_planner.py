@@ -32,6 +32,7 @@ import torch.fft as fft
 
 from dataclasses import dataclass
 from hopfield_cleanup import ContinuousHopfieldCleanup
+from subliminal_clock_probe import SubliminalClockProbe
 
 
 @dataclass
@@ -284,6 +285,23 @@ class EFEPlanner(nn.Module):
         # well-determined (N approaching d, not reachable at production).
         self.axiom_constraint = torch.zeros(0)
         self.axiom_stability = {"constraint_overlap": None}
+
+        # Subliminal Clock Probe (Rulli et al., July 2026; Phase 3 Recoop).
+        # Linear ridge probe decoding intrinsic progress t_hat in [0, 1]
+        # and providing anisotropic v_clock temporal steering vectors.
+        self.clock_probe = SubliminalClockProbe(d_model=d_model)
+
+    def predict_progress(self, wave: torch.Tensor) -> torch.Tensor:
+        """Decodes intrinsic progress t_hat in [0, 1] from wave state."""
+        return self.clock_probe(wave)
+
+    def steer_temporal(self, wave: torch.Tensor, beta: float) -> torch.Tensor:
+        """Applies anisotropic subliminal phase steering along v_clock."""
+        return self.clock_probe.steer_wave(wave, beta)
+
+    def anneal_langevin_temperature(self, progress_hat: float, t_base: float = 0.1, alpha: float = 1.5) -> float:
+        """Computes state-dependent Langevin cooling temperature T(t_hat) = T_base * (1 - t_hat)^alpha."""
+        return SubliminalClockProbe.anneal_temperature(progress_hat, t_base=t_base, alpha=alpha)
 
     def update_model_accuracy(self, transition_loss: float):
         """EMA update of the dynamics model's observed error (T4)."""
@@ -1056,17 +1074,17 @@ class EFEPlanner(nn.Module):
             elif valence < 0.0:
                 lr_eff *= (1.0 + valence) ** 2  # failed trajectory: damp
                 lr_eff = max(lr_eff, 1e-4 * lr)  # never fully freeze
-            self.transition.field_V -= lr_eff * gV
-            self.transition.field_W -= lr_eff * gW
-            self.transition.block_residual -= lr_eff * gR
+            self.transition.field_V.add_(-lr_eff * gV)
+            self.transition.field_W.add_(-lr_eff * gW)
+            self.transition.block_residual.add_(-lr_eff * gR)
             # Update learnable action embeddings at a scaled rate
             if gA is not None:
                 alr = lr_eff * self._action_lr_scale
-                self.action_embeddings -= alr * gA
+                self.action_embeddings.add_(-alr * gA)
                 # Per-block re-normalize action embeddings after update
-                with torch.no_grad():
-                    self.action_embeddings.data = self.action_embeddings.data / (
-                        torch.norm(self.action_embeddings.data, p=2, dim=-1, keepdim=True) + 1e-9)
+                self.action_embeddings.copy_(
+                    self.action_embeddings / (torch.norm(self.action_embeddings, p=2, dim=-1, keepdim=True) + 1e-9)
+                )
             self.transition._retract()
         # T4: track model accuracy so the exploration gate tightens as we learn.
         self.update_model_accuracy(float(loss.detach()))

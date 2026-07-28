@@ -1,24 +1,20 @@
-"""Local Obsidian vault vector indexer + query server for HENRI V2.
+"""Local Obsidian graph projection and vector index server for HENRI.
 
-Indexes Markdown notes (YAML frontmatter aware) into a persistent ChromaDB
-collection using local sentence-transformer embeddings (no API tokens), and
-serves semantic search on http://127.0.0.1:8000/query.
+The external Obsidian vault is the source of local agentic graph memory. The
+append-only event store under ``<vault>/_agentic`` is authoritative. Chroma is
+only a derived semantic index over Markdown projections.
 
-Usage:
-    python scripts/local_vault_search_server.py [--vault ./Obsidian_Vault]
-                                                [--port 8000]
-
-Endpoints:
-    GET /health            -> {"status": "ok", "indexed": <chunk count>}
-    GET /query?q=...&top_k=3&module=Anisotropic Langevin&created_after=2026-06-01
-
-Reindex: restart the process (index built at startup), or POST /reindex.
+This server never connects to Zone C and never stores HENRI wave checkpoints.
 """
+from __future__ import annotations
+
 import argparse
 import glob
 import hashlib
 import os
 import re
+import sys
+from pathlib import Path
 
 import chromadb
 import frontmatter
@@ -26,17 +22,17 @@ import uvicorn
 from chromadb.utils import embedding_functions
 from fastapi import FastAPI, Query
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+from agentic_event_store import query_events, verify_local_events, write_projection  # noqa: E402
+
 EMBED_MODEL = "all-MiniLM-L6-v2"
 COLLECTION = "henri_vault_embeddings"
-
-app = FastAPI(title="HENRI Local Vault Context Engine")
-
-_state: dict = {"collection": None, "vault_dir": None}
+app = FastAPI(title="HENRI Local Agentic Graph Memory")
+_state: dict = {"collection": None, "vault_dir": None, "db_dir": None}
 
 
 def _chunk_sections(content: str) -> list[str]:
-    """Split a note into chunks on '## ' section boundaries (first chunk is
-    everything before the first '##')."""
     parts = content.split("\n## ")
     return [p.strip() for p in parts if p.strip()]
 
@@ -45,21 +41,16 @@ def index_obsidian_vault(vault_dir: str) -> int:
     collection = _state["collection"]
     md_files = glob.glob(os.path.join(vault_dir, "**", "*.md"), recursive=True)
     documents, metadatas, ids = [], [], []
-
     for filepath in md_files:
         norm = filepath.replace("\\", "/")
-        if "/.obsidian/" in norm or "/.vault_vector_db/" in norm or "/.trash/" in norm:
+        if any(part in norm for part in ("/.obsidian/", "/.vault_vector_db/", "/.trash/", "/_agentic/")):
             continue
         try:
             post = frontmatter.load(filepath)
             meta = dict(post.metadata)
-            created = str(meta.get("created_at", ""))
-            # ChromaDB $gte/$lte only accept numeric operands — store an
-            # integer YYYYMMDD alongside the ISO string for range filters.
-            try:
-                created_ymd = int(re.sub(r"[^0-9]", "", created)[:8])
-            except ValueError:
-                created_ymd = 0
+            created = str(meta.get("created_at", meta.get("event_time", "")))
+            digits = re.sub(r"[^0-9]", "", created)
+            created_ymd = int(digits[:8]) if len(digits) >= 8 else 0
             base_meta = {
                 "file_path": norm,
                 "title": str(meta.get("id") or os.path.basename(filepath)),
@@ -67,52 +58,78 @@ def index_obsidian_vault(vault_dir: str) -> int:
                 "created_at": created,
                 "created_ymd": created_ymd,
                 "status": str(meta.get("status", "draft")),
+                "causal_status": str(meta.get("causal_status", "unclassified")),
+                "audit_hash": str(meta.get("audit_hash", "")),
             }
             for sec_idx, section in enumerate(_chunk_sections(post.content)):
-                # Content-addressed IDs: stable across re-index, dedupes edits.
-                doc_id = hashlib.sha1(f"{norm}::{sec_idx}::{section}".encode()).hexdigest()
+                doc_id = hashlib.sha256(f"{norm}::{sec_idx}::{section}".encode()).hexdigest()
                 documents.append(section)
                 metadatas.append(base_meta)
                 ids.append(doc_id)
-        except Exception as e:  # noqa: BLE001 — skip malformed notes, keep indexing
-            print(f"Skipping {filepath}: {e}")
-
-    # Rebuild: drop stale chunks for files that changed or vanished.
+        except Exception as exc:  # keep one malformed note from blocking reindex
+            print(f"Skipping {filepath}: {type(exc).__name__}: {exc}")
     existing = collection.get(include=[])
     if existing["ids"]:
         collection.delete(ids=existing["ids"])
     if documents:
         collection.upsert(documents=documents, metadatas=metadatas, ids=ids)
-    print(f"Indexed {len(documents)} chunks from {len(md_files)} files in {vault_dir}")
     return len(documents)
 
 
 @app.get("/health")
 def health() -> dict:
     count = _state["collection"].count() if _state["collection"] else 0
-    return {"status": "ok", "indexed": count}
+    valid, message = verify_local_events(_state["vault_dir"])
+    return {
+        "status": "ok" if valid else "blocked",
+        "indexed_chunks": count,
+        "local_event_store": message,
+        "zone_c_connection": "not_used_by_local_server",
+    }
 
 
 @app.post("/reindex")
 def reindex() -> dict:
-    n = index_obsidian_vault(_state["vault_dir"])
-    return {"status": "ok", "indexed": n}
+    count = index_obsidian_vault(_state["vault_dir"])
+    projection = write_projection(_state["vault_dir"])
+    return {"status": "ok", "indexed": count, "projection": str(projection)}
 
 
 def _to_ymd(date_str: str) -> int:
-    """'2026-07-16' or ISO datetime -> 20260716 for numeric range filters."""
-    return int(re.sub(r"[^0-9]", "", date_str)[:8])
+    digits = re.sub(r"[^0-9]", "", date_str)
+    if len(digits) < 8:
+        raise ValueError("date must contain YYYYMMDD")
+    return int(digits[:8])
+
+
+@app.get("/events")
+def events(
+    stream: str | None = None,
+    event_type: str | None = None,
+    after: str | None = None,
+    before: str | None = None,
+    limit: int = Query(100, ge=1, le=1000),
+) -> dict:
+    return {
+        "events": query_events(
+            vault_path=_state["vault_dir"],
+            stream=stream,
+            event_type=event_type,
+            after=after,
+            before=before,
+            limit=limit,
+        )
+    }
 
 
 @app.get("/query")
 def query_vault(
     q: str = Query(..., description="Semantic search query"),
-    top_k: int = 3,
+    top_k: int = Query(3, ge=1, le=50),
     module: str | None = None,
     created_after: str | None = None,
     created_before: str | None = None,
 ) -> dict:
-    where = None
     clauses = []
     if module:
         clauses.append({"module": module})
@@ -120,40 +137,40 @@ def query_vault(
         clauses.append({"created_ymd": {"$gte": _to_ymd(created_after)}})
     if created_before:
         clauses.append({"created_ymd": {"$lte": _to_ymd(created_before)}})
+    where = None
     if len(clauses) == 1:
         where = clauses[0]
     elif clauses:
         where = {"$and": clauses}
-
-    results = _state["collection"].query(
-        query_texts=[q], n_results=top_k, where=where
-    )
+    result = _state["collection"].query(query_texts=[q], n_results=top_k, where=where)
     context = []
-    for i in range(len(results["ids"][0])):
+    for i in range(len(result["ids"][0])):
         context.append({
-            "content": results["documents"][0][i],
-            "metadata": results["metadatas"][0][i],
-            "distance": results["distances"][0][i] if "distances" in results else None,
+            "content": result["documents"][0][i],
+            "metadata": result["metadatas"][0][i],
+            "distance": result["distances"][0][i] if "distances" in result else None,
         })
-    return {"query": q, "context": context}
+    return {"query": q, "context": context, "memory_layer": "local_obsidian_projection"}
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--vault", default="./Obsidian_Vault")
-    ap.add_argument("--db", default="./.vault_vector_db")
+    ap.add_argument("--vault", default=os.environ.get("OBSIDIAN_VAULT_PATH", ""))
+    ap.add_argument("--db", default="")
     ap.add_argument("--port", type=int, default=8000)
     args = ap.parse_args()
-
-    embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name=EMBED_MODEL
-    )
-    client = chromadb.PersistentClient(path=args.db)
-    _state["collection"] = client.get_or_create_collection(
-        name=COLLECTION, embedding_function=embedding_fn
-    )
-    _state["vault_dir"] = args.vault
-    index_obsidian_vault(args.vault)
+    vault = Path(args.vault).expanduser().resolve() if args.vault else (Path.home() / "Documents" / "HENRI_Research_Vault").resolve()
+    if not vault.exists():
+        raise SystemExit(f"OBSIDIAN_VAULT_PATH does not exist: {vault}")
+    db = Path(args.db).expanduser().resolve() if args.db else vault / "_agentic" / "vector_index"
+    db.mkdir(parents=True, exist_ok=True)
+    embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=EMBED_MODEL)
+    client = chromadb.PersistentClient(path=str(db))
+    _state["collection"] = client.get_or_create_collection(name=COLLECTION, embedding_function=embedding_fn)
+    _state["vault_dir"] = str(vault)
+    _state["db_dir"] = str(db)
+    index_obsidian_vault(str(vault))
+    write_projection(str(vault))
     uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="warning")
 
 

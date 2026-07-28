@@ -1,7 +1,8 @@
 # HENRI V2 Execution Runtime (Vast.ai)
-# This image contains the CUDA/Python execution environment only. PostgreSQL
-# Zone C is a separate native service with its own persistent data path.
-FROM nvidia/cuda:12.8.1-devel-ubuntu22.04
+# Start from the official PyTorch CUDA image. This avoids installing the large
+# CUDA/PyTorch wheel stack over SSH on a fresh Vast instance.
+# Zone C is a separate native PostgreSQL service with persistent storage.
+FROM pytorch/pytorch:2.12.0-cuda13.0-cudnn9-devel
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
