@@ -8,6 +8,7 @@ when long-running benchmarks, ARC-AGI-3 runs, or production jobs complete.
 import json
 import os
 import sys
+import time
 import urllib.parse
 import urllib.request
 from typing import Any, Dict
@@ -77,7 +78,7 @@ class PhotonNotifier:
         if os.path.exists(self.gdrive_inbox):
             try:
                 report_path = os.path.join(
-                    self.gdrive_inbox, f"PHOTON_ALERT_{int(urllib.parse.time.time())}.txt"
+                    self.gdrive_inbox, f"PHOTON_ALERT_{int(time.time())}.txt"
                 )
                 with open(report_path, "w", encoding="utf-8") as f:
                     f.write(f"=== PHOTON MOBILE ALERT ===\nTitle: {title}\nPriority: {priority}\n\n{message}\n")
