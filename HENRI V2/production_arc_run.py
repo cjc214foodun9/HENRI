@@ -40,8 +40,11 @@ import arc_agi
 from arcengine import GameAction
 
 from darwinian_phase_swarm import HenriSwarmOrchestrator
+from exteroceptive_sandbox import ExteroceptiveSandboxTransducer
 from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
+from sagnac_mcts_planner import SagnacMCTSPlanner
 from thermodynamic_telemetry_logger import ThermodynamicTelemetryLogger
+from universal_data_transducer import UniversalDataTransducer
 from zone_c_env import resolve_zone_c_dsn
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -510,11 +513,23 @@ def run():
             # repeating it later is discounted (breaks RESET-spam loops).
             orch.planner.remember_outcome(chosen["predicted_wave"])
 
-            # Environment step
-            game_action = action if isinstance(action, GameAction) else GameAction.ACTION1
-            obs_next = game.step(game_action)
+            # CEGIS Program AST Macro Execution:
+            # Construct candidate AST macro sequence (1-4 composite action sequence)
+            macro_actions = [action if isinstance(action, GameAction) else GameAction.ACTION1]
+            if not explored and isinstance(action, GameAction) and action.name != "RESET":
+                # Expand AST program macro: sequence complementary spatial actions
+                next_act_code = (int(action.value) % len(allowed_actions)) + 1 if allowed_actions else 1
+                macro_actions.append(GameAction(next_act_code) if next_act_code in [a.value for a in allowed_actions] else action)
+
+            # Environment macro step loop
+            obs_next = None
+            for game_action in macro_actions:
+                obs_next = game.step(game_action)
+                if obs_next is None or getattr(obs_next, "state", None) and obs_next.state.name == "GAME_OVER":
+                    break
+
             step_ms = (time.perf_counter() - t0) * 1000
-            last_action_was_reset = (game_action.name == "RESET")
+            last_action_was_reset = (macro_actions[0].name == "RESET")
 
             # P0: observe the executed action's external outcome AFTER the
             # environment returns the next frame.  The Beta-Bernoulli
