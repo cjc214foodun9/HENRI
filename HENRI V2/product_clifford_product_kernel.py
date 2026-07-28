@@ -44,6 +44,10 @@ class ProductCliffordAlgebra3D(nn.Module):
         batch_size, num_blocks, _ = A.shape
         device = A.device
         
+        # Ensure indices tensor matches input device
+        if self.mult_indices.device != device:
+            self.mult_indices = self.mult_indices.to(device)
+
         # Initialize output multivector tensor
         C = torch.zeros((batch_size, num_blocks, 8), dtype=A.dtype, device=device)
         
