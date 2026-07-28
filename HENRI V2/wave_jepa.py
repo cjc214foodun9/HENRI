@@ -80,7 +80,7 @@ class WaveJEPA(nn.Module):
         energy = self.compute_sagnac_energy(psi_pred, psi_target)
 
         # Update predictor R-EDMD operator online
-        self.predictor.update_operator(psi_t.view(-1), a_t.view(-1), psi_target.view(-1))
+        loss_val = self.predictor.update_online_step(psi_t, a_t, psi_target)
 
         metrics = {
             "sagnac_energy": float(energy.item()),
