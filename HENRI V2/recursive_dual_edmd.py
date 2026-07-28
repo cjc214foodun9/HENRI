@@ -48,9 +48,21 @@ class RecursiveDualEDMD(nn.Module):
     def forward(self, state_wave: torch.Tensor, action_wave: torch.Tensor) -> torch.Tensor:
         """
         Predicts next state wave given current state and action wave in ambient space.
-        Input shapes: [num_blocks, 8] or flat [d_model].
+        Input shapes: [num_blocks, 8] or flat [d_model] or batched [B, num_blocks, 8].
         """
         orig_shape = state_wave.shape
+        if state_wave.dim() == 3:
+            # Batched shape: [B, num_blocks, 8] -> [B, d_model]
+            b_size = state_wave.shape[0]
+            flat_s = state_wave.view(b_size, -1).to(self.V.device)
+            flat_a = action_wave.view(b_size, -1).to(self.V.device)
+            combined = F.normalize(flat_s + flat_a, p=2, dim=-1)  # [B, d_model]
+            phi_t = combined @ self.V  # [B, r_rank]
+            phi_next = phi_t @ self.A_sub.T  # [B, r_rank]
+            pred_flat = phi_next @ self.V.T  # [B, d_model]
+            pred_norm = F.normalize(pred_flat, p=2, dim=-1)
+            return pred_norm.view(orig_shape)
+
         flat_s = state_wave.view(-1).to(self.V.device)
         flat_a = action_wave.view(-1).to(self.V.device)
 

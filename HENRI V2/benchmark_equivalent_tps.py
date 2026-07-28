@@ -17,7 +17,7 @@ import torch
 import torch.nn.functional as F
 
 from henri_egress import TextEgress, UniversalEgress
-from qfhrr_kernels import build_cos_lut, qfhrr_similarity_triton
+from qfhrr_kernels import build_cos_lut
 from recursive_dual_edmd import RecursiveDualEDMD
 
 
