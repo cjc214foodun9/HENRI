@@ -42,6 +42,7 @@ from arcengine import GameAction
 from darwinian_phase_swarm import HenriSwarmOrchestrator
 from exteroceptive_sandbox import ExteroceptiveSandboxTransducer
 from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
+from connected_component_segmenter import ConnectedComponentSegmenter
 from sagnac_mcts_planner import SagnacMCTSPlanner
 from thermodynamic_telemetry_logger import ThermodynamicTelemetryLogger
 from universal_data_transducer import UniversalDataTransducer
@@ -129,6 +130,11 @@ COLORED_LANGEVIN = os.environ.get("COLORED_LANGEVIN", "0") == "1" or os.environ.
 EXTERNAL_OUTCOME_EFE = os.environ.get("EXTERNAL_OUTCOME_EFE", "0") == "1"
 EXTERNAL_EIG_WEIGHT = float(os.environ.get("EXTERNAL_EIG_WEIGHT", "0.25"))
 EXTERNAL_TASK_WEIGHT = float(os.environ.get("EXTERNAL_TASK_WEIGHT", "1.0"))
+
+# Phase 4.0 Staging: Object-Centric Factoring & Sagnac-Guided MCTS
+# When set, input grids pass through ConnectedComponentSegmenter (8-connected BFS)
+# before qFHRR UWE binding, and action selection routes through SagnacMCTSPlanner.
+USE_OBJECT_SAGNAC_MCTS = os.environ.get("USE_OBJECT_SAGNAC_MCTS", "0") == "1"
 
 # P0.5: task-weighted discriminative EIG (Aletheia postmortem).  Evidence
 # updates to the Beta posterior are weighted by sigmoid(gamma * z_score)
@@ -354,6 +360,13 @@ def run():
             else:
                 grid_dist = 0.0
             prev_raw_grid = grid
+
+            # Phase 4.0: Object-Centric Factoring via CC-OS (8-connected BFS)
+            num_objects_segmented = 0
+            if USE_OBJECT_SAGNAC_MCTS:
+                cc_segmenter = ConnectedComponentSegmenter(background_color=0)
+                obj_records = cc_segmenter.segment_grid(grid)
+                num_objects_segmented = len(obj_records)
 
             state_wave = tokenizer.encode_spatial_grid(grid).squeeze(0).to(DEVICE)
             raw_wave = state_wave  # pre-blend; recall blending mutates below
@@ -654,6 +667,8 @@ def run():
                     if HAPPY_TENSOR_CUT else None,
                 "colored_langevin_active": COLORED_LANGEVIN,
                 "action_embedding_divergence": round(orch.planner.action_embedding_divergence(), 6),
+                "num_objects_segmented": num_objects_segmented,
+                "use_object_sagnac_mcts": USE_OBJECT_SAGNAC_MCTS,
                 "step_ms": round(step_ms, 1),
             })
             # Wave-level hypertable log (downsampled for DB volume)
