@@ -11,8 +11,12 @@ import json
 import os
 import sys
 import torch
-import psycopg2
 from typing import Any, Dict, List, Union
+
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
 
 
 class UniversalDataTransducer:
