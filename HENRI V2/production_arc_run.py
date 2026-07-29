@@ -47,6 +47,7 @@ from sagnac_mcts_planner import SagnacMCTSPlanner
 from thermodynamic_telemetry_logger import ThermodynamicTelemetryLogger
 from universal_data_transducer import UniversalDataTransducer
 from zone_c_env import resolve_zone_c_dsn
+from adaptive_viscoelastic_thermostat import AdaptiveViscoelasticThermostat
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
