@@ -5,9 +5,8 @@ Subsystem: Live Execution, Empirical Measurement, & Agentic Graph Telemetry Pipe
 Presets Available:
   1. full-production    : Core internal HENRI production suite (Physical World Model, Zone C & SCI Epistemic Recall,
                           Thermostat Stiefel Projection, ARC-AGI-3 CEGIS / Sagnac MCTS, qFHRR D=65,536).
-  2. artificial-analysis: External Artificial Analysis Composite Intelligence & Agentic Suite (GDP Val AAV2,
-                          Terminal Bench Hard/V2.1, T^2 Telecom, T^3 Banking, AA-LCR, AA Omniscience, HLE,
-                          GPQA Diamond, SWE-bench/SCI Code, IF Bench, QuickPT, Apex Agents, AA IT Bench, MMMU Pro).
+  2. artificial-analysis: Codebase Capability & Readiness Diagnostic Audit for external benchmarks (SWE-bench, GPQA,
+                          MMMU Pro, Terminal Bench, IF Bench, Apex Agents, etc.). Zero mock scores / verified fitness.
   3. robotics-deepmind  : Robotics & Continuous Control Suite (CartPole/Pendulum ODEs, Cl(3,0) 3D Kinematics,
                           V-JEPA visual patch ingress, M=10,000 Hopfield codebook capacity & SNR analysis).
 
@@ -160,53 +159,96 @@ class HENRIBenchmarkGauntletHarness:
         self.record_telemetry("Tier_III_Prod", "Stiefel_Ortho_Error", ortho_err, "OBSERVED", {"lr": telem_high['effective_lr']})
 
     # -------------------------------------------------------------------------
-    # PRESET 2: ARTIFICIAL ANALYSIS COMPOSITE INTELLIGENCE & AGENTIC SUITE
+    # PRESET 2: CODEBASE CAPABILITY & BENCHMARK READINESS AUDIT
     # -------------------------------------------------------------------------
 
     def run_artificial_analysis_preset(self):
-        banner("PRESET 2: ARTIFICIAL ANALYSIS COMPOSITE INTELLIGENCE & AGENTIC SUITE")
+        banner("PRESET 2: CODEBASE CAPABILITY & BENCHMARK READINESS AUDIT")
 
-        aa_benchmarks = {
-            "GDP_Val_AAV2": {"target": 0.850, "category": "Agents & Workflow Automation"},
-            "Terminal_Bench_Hard": {"target": 0.780, "category": "CLI Terminal Automation"},
-            "Terminal_Bench_V2.1": {"target": 0.810, "category": "CLI Terminal Automation"},
-            "T2_Bench_Telecom": {"target": 0.760, "category": "Domain Specific Telecommunications"},
-            "T3_Banking": {"target": 0.740, "category": "Financial Reasoning"},
-            "AA_LCR_Long_Context": {"target": 0.920, "category": "Long Context Recall & Unbinding"},
-            "AA_Omniscience_Accuracy": {"target": 0.880, "category": "Factuality & Epistemic Grounding"},
-            "AA_Omniscience_Non_Hallucination": {"target": 0.950, "category": "Factuality & Non-Hallucination"},
-            "Humanities_Last_Exam": {"target": 0.620, "category": "Multidisciplinary Hard Reasoning"},
-            "GPQA_Diamond": {"target": 0.670, "category": "Scientific & Physics Graduate Reasoning"},
-            "SWE_bench_SCI_Code": {"target": 0.730, "category": "Software Engineering & Code Generation"},
-            "IF_Bench_Instruction_Following": {"target": 0.890, "category": "Strict Instruction Compliance"},
-            "QuickPT": {"target": 0.840, "category": "Prompt & Tool Execution Speed"},
-            "Apex_Agents": {"target": 0.830, "category": "Multi-Agent Coordination"},
-            "AA_IT_Bench": {"target": 0.800, "category": "Infrastructure & Systems Operations"},
-            "MMMU_Pro": {"target": 0.710, "category": "Multimodal Perceptual & Scientific Analysis"}
+        benchmarks_audit = {
+            "SWE_bench_SCI_Code": {
+                "required": "Terminal execution, git diff generation, pytest runner, code-patching",
+                "present": "exteroceptive_sandbox.py (traceback to error wave), ToolEgress (JSON-RPC)",
+                "missing": "No git diff patch generator from phase waves; no SWE-bench harness runner",
+                "fitness": "UNFIT (Missing external harness & diff generator)"
+            },
+            "Terminal_Bench_Hard": {
+                "required": "Interactive bash terminal CLI execution, multi-step shell loop",
+                "present": "Hermes Agent terminal execution tool (external layer)",
+                "missing": "No internal HENRI CLI environment executor",
+                "fitness": "UNFIT (Requires external Hermes agent wrapper)"
+            },
+            "GPQA_Diamond": {
+                "required": "Graduate physics/chemistry/biology QA, autoregressive chain-of-thought",
+                "present": "TextEgress (Hopfield token cleanup), Zone C epistemic database",
+                "missing": "No autoregressive language model weights or KV-cache",
+                "fitness": "UNFIT (Architectural mismatch: world model, not LLM)"
+            },
+            "MMMU_Pro": {
+                "required": "Multimodal scientific diagram OCR and visual question answering",
+                "present": "O_VSA_IngressTokenizer (2D grid fractional phase binding), WaveJEPA",
+                "missing": "No ViT / DINOv2 image patch encoder or visual QA decoder",
+                "fitness": "UNFIT (Missing visual image encoder/decoder frontend)"
+            },
+            "IF_Bench_Instruction_Following": {
+                "required": "Strict text formatting, paragraph constraints, exact string rules",
+                "present": "Sagnac Epistemic Veto Engine (Zone C constraint checking)",
+                "missing": "No generative text generation pipeline",
+                "fitness": "UNFIT (No generative text decoder)"
+            },
+            "Apex_Agents": {
+                "required": "Multi-agent coordination, tool execution, API calls",
+                "present": "qFHRRReadoutLedger (JSON-RPC ReadoutPacket log), ToolEgress, photon_notifier.py",
+                "missing": "No internal multi-agent execution loop (handled by Hermes)",
+                "fitness": "PARTIALLY_FIT (Tool schemas supported; no internal agent loop)"
+            },
+            "Physical_Control_Robotics": {
+                "required": "Continuous ODE state integration, joint torques, Cl(3,0) rigid body rotors",
+                "present": "EFEPlanner, InvertedPendulumEnvironment, CartPolePhysicsEnvironment, WaveJEPA",
+                "missing": "None",
+                "fitness": "FULLY_FIT (Native continuous wave control substrate)"
+            },
+            "ARC_AGI_3_CEGIS": {
+                "required": "2D grid object segmentation, DSL program trees, Sagnac MCTS branch pruning",
+                "present": "connected_component_segmenter.py, sagnac_mcts_planner.py, cegis_self_play_sandbox.py",
+                "missing": "None",
+                "fitness": "FULLY_FIT (Native ARC-AGI-3 CEGIS solver)"
+            }
         }
 
-        print("  Evaluating HENRI V2 against Artificial Analysis Composite Intelligence Index Targets:")
-        total_target = 0.0
-        for b_name, meta in aa_benchmarks.items():
-            tgt = meta["target"]
-            total_target += tgt
-            # Measure actual Hopfield zero-entropy token/tool response latency for agentic execution
-            t0 = time.perf_counter()
-            _ = self.udt.transduce_string(b_name)
-            latency_ms = (time.perf_counter() - t0) * 1000.0
-            
-            print(f"    • {b_name:<35} | Target: {tgt*100:5.1f}% | Transduction: {latency_ms:5.3f} ms | Category: {meta['category']}")
-            self.record_telemetry("Artificial_Analysis_Suite", b_name, tgt, "TARGET_GOAL", {
-                "category": meta["category"],
-                "transduction_latency_ms": latency_ms,
-                "status": "STAGING_HARNESS_READY"
+        print("  Audit Results: HENRI V2 Codebase Readiness across Benchmark Domains:\n")
+        fit_count = 0
+        unfit_count = 0
+        
+        for b_name, audit in benchmarks_audit.items():
+            status = audit["fitness"]
+            if "FULLY_FIT" in status:
+                fit_count += 1
+                val = 1.0
+            elif "PARTIALLY_FIT" in status:
+                val = 0.5
+            else:
+                unfit_count += 1
+                val = 0.0
+
+            print(f"  • {b_name:<30}")
+            print(f"      Required Capability : {audit['required']}")
+            print(f"      Codebase Present    : {audit['present']}")
+            print(f"      Codebase Missing    : {audit['missing']}")
+            print(f"      Fitness Assessment  : [{status}]\n")
+
+            self.record_telemetry("Capability_Audit", b_name, val, "OBSERVED", {
+                "fitness": status,
+                "missing": audit["missing"],
+                "present": audit["present"]
             })
 
-        mean_composite_target = total_target / len(aa_benchmarks)
-        print(f"\n  [2.1] [TARGET GOAL] Composite AA Intelligence Index Target: {mean_composite_target*100:.2f}%")
-        self.record_telemetry("Artificial_Analysis_Suite", "AA_Composite_Index_Target", mean_composite_target, "TARGET_GOAL", {
-            "total_benchmarks": len(aa_benchmarks)
-        })
+        print("=" * 80)
+        print(f"  READINESS SUMMARY: {fit_count} Native Fit | {len(benchmarks_audit) - fit_count - unfit_count} Partially Fit | {unfit_count} Unfit")
+        print("  NOTE: HENRI V2 is a continuous phase world model and CEGIS physical solver.")
+        print("        It is NOT an autoregressive LLM and cannot be evaluated directly on SWE-bench,")
+        print("        GPQA, or MMMU Pro without an external language/vision transduction layer.")
+        print("=" * 80)
 
     # -------------------------------------------------------------------------
     # PRESET 3: ROBOTICS & DEEPMIND BENCHMARK SUITE
@@ -222,7 +264,6 @@ class HENRIBenchmarkGauntletHarness:
         cp_state = cartpole.reset()
         cp_losses = []
         for step in range(50):
-            # Apply sinusoidal continuous control force F(t) in [-10, 10]
             force = 5.0 * math.sin(step * 0.1)
             next_state, cost, done = cartpole.step(force)
             cp_losses.append(cost)
@@ -230,7 +271,6 @@ class HENRIBenchmarkGauntletHarness:
         pen_state = pendulum.reset()
         pen_losses = []
         for step in range(50):
-            # Apply continuous control torque u(t) in [-2, 2]
             torque = 1.5 * math.cos(step * 0.1)
             next_state, cost, done = pendulum.step(torque)
             pen_losses.append(cost)
@@ -245,18 +285,17 @@ class HENRIBenchmarkGauntletHarness:
         self.record_telemetry("Robotics_Suite", "InvertedPendulum_ODE_Cost", mean_pen_cost, "OBSERVED", {"steps": 50})
 
         # 2. Cl(3,0) 3D Kinematics & Rotor Mechanics (Zero Gimbal Lock)
-        # 8-Component Multivector e = a + v1*e1 + v2*e2 + v3*e3 + b1*e12 + b2*e23 + b3*e31 + p*e123
         angles = torch.tensor([0.1, 0.2, 0.3], device=self.device)
         multivector = torch.zeros(8, device=self.device)
-        multivector[0] = math.cos(0.5 * angles[0].item())  # Scalar
-        multivector[4:7] = math.sin(0.5 * angles[0].item()) / math.sqrt(3.0)  # Bivectors (b1, b2, b3)
+        multivector[0] = math.cos(0.5 * angles[0].item())
+        multivector[4:7] = math.sin(0.5 * angles[0].item()) / math.sqrt(3.0)
         mv_norm = float(torch.norm(multivector).item())
 
         print(f"  [3.3] [OBSERVED] Cl(3,0) Multivector Unit Norm  : {mv_norm:.6f} (Singularity-free Spin(3) Rotor)")
         self.record_telemetry("Robotics_Suite", "Cl30_Rotor_Norm", mv_norm, "OBSERVED", {"gimbal_lock": False})
 
         # 3. Non-Generative V-JEPA Vision Ingress (DINOv2 Patch Tokenization)
-        wave_jepa = WaveJEPA(d_model=self.scale["qfhrr_d"], num_blocks=self.scale["num_blocks"]).to(self.device)
+        wave_jepa = WaveJEPA(d_model=self.scale["qfhrr_d"], num_blocks=self.scale["num_blocks"], device=str(self.device)).to(self.device)
         simulated_patch_grid_t = torch.randint(0, 10, (16, 16), device=self.device)
         simulated_patch_grid_next = torch.randint(0, 10, (16, 16), device=self.device)
         action_wave = unit_blocks((self.scale["num_blocks"], 8), self.device)
@@ -272,7 +311,6 @@ class HENRIBenchmarkGauntletHarness:
         snr_linear = 1.0 / crosstalk_variance
         snr_db = 10.0 * math.log10(snr_linear)
 
-        # Run live Hopfield query test on M=10,000 engrams
         beta_temp = 8.0
         hopfield = ContinuousHopfieldCleanup(dim=d_fhrr, beta=beta_temp)
         engrams = torch.randn(M_vocab, d_fhrr, device=self.device)
