@@ -158,12 +158,12 @@ def retroactive_update(orch, trajectory_buffer: list, valence_nu: float, dampeni
         return 0.0
     
     buf_len = len(trajectory_buffer)
-    discount_weights = torch.tensor([gamma_credit ** (buf_len - 1 - t) for t in range(buf_len)], device=orch.planner.device)
-    update_direction = (1.0 if valence_nu >= 0.0 else -1.0) * dampening_alpha
-    
     states = torch.stack([t[0] for t in trajectory_buffer])
     actions = torch.stack([t[1] for t in trajectory_buffer])
     next_states = torch.stack([t[2] for t in trajectory_buffer])
+    
+    discount_weights = torch.tensor([gamma_credit ** (buf_len - 1 - t) for t in range(buf_len)], device=states.device)
+    update_direction = (1.0 if valence_nu >= 0.0 else -1.0) * dampening_alpha
     
     loss = orch.planner.train_transition_batch(
         states, actions, next_states, blend=0.5
