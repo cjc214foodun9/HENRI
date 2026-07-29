@@ -41,6 +41,7 @@ from arcengine import GameAction
 
 from darwinian_phase_swarm import HenriSwarmOrchestrator
 from exteroceptive_sandbox import ExteroceptiveSandboxTransducer
+from henri_vision_encoder import HENRIVisionEncoder
 from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
 from connected_component_segmenter import ConnectedComponentSegmenter
 from sagnac_mcts_planner import SagnacMCTSPlanner
@@ -283,8 +284,8 @@ def run():
         print(f"[ZoneC Warning] Could not attach to TimescaleDB at {dsn}: {e}")
         print("[ZoneC Warning] Falling back to in-memory SegmentCache surrogate...")
         orch.attach_zone_c(dsn="offline://surrogate")
-    tokenizer = O_VSA_IngressTokenizer(
-        num_blocks=SCALE["num_blocks"], vocab_size=256, device=DEVICE
+    tokenizer = HENRIVisionEncoder(
+        d_model=SCALE["d_model"], k_blocks=SCALE["num_blocks"], device=DEVICE
     )
 
     arcade = arc_agi.Arcade()

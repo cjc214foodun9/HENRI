@@ -96,9 +96,9 @@ class qFHRRAuditLedger:
             f.write(json.dumps(record_data) + "\n")
 
         # 2. Persist to TimescaleDB
-        if psycopg:
+        if psycopg and self.db_dsn and not self.db_dsn.startswith("offline"):
             try:
-                conn = psycopg.connect(self.db_dsn)
+                conn = psycopg.connect(self.db_dsn, connect_timeout=2)
                 cur = conn.cursor()
                 cur.execute(
                     """
@@ -126,16 +126,16 @@ class qFHRRAuditLedger:
 
         return packet.event_hash
 
-    def verify_chain_integrity(self) -> Tuple[bool, int]:
+    def verify_chain_integrity(self) -> Tuple[bool, int, str]:
         """Verifies hash-chained ledger continuity from JSONL file."""
         if not os.path.exists(self.log_file):
-            return True, 0
+            return True, 0, "Empty ledger log file."
 
         verified_count = 0
         expected_parent = "0" * 64
 
         with open(self.log_file, "r", encoding="utf-8") as f:
-            for line in f:
+            for line_idx, line in enumerate(f):
                 if not line.strip():
                     continue
                 data = json.loads(line)
@@ -159,18 +159,26 @@ class qFHRRAuditLedger:
                     parent_hash=data["parent_hash"],
                     event_hash=data["event_hash"],
                 )
-                recomputed_hash = pkt.compute_hash(expected_parent)
-                if recomputed_hash != pkt.event_hash or pkt.parent_hash != expected_parent:
-                    print(f"[Ledger Integrity Failure] Event step {pkt.step_id} broken chain!", file=sys.stderr)
-                    return False, verified_count
+
+                if pkt.parent_hash != expected_parent:
+                    msg = f"Parent hash mismatch at line {line_idx}: expected {expected_parent[:8]}, got {pkt.parent_hash[:8]}"
+                    print(f"[Ledger Integrity Failure] {msg}")
+                    return False, line_idx, msg
+
+                calc_hash = pkt.compute_hash(expected_parent)
+                if calc_hash != pkt.event_hash:
+                    msg = f"Event hash mismatch at line {line_idx}: calculated {calc_hash[:8]}, stored {pkt.event_hash[:8]}"
+                    print(f"[Ledger Integrity Failure] {msg}")
+                    return False, line_idx, msg
+
                 expected_parent = pkt.event_hash
                 verified_count += 1
 
-        return True, verified_count
+        return True, verified_count, "Chain verified intact."
 
 
 if __name__ == "__main__":
-    ledger = qFHRRAuditLedger()
+    ledger = qFHRRAuditLedger(db_dsn="offline://surrogate")
     sample_codes = os.urandom(65536)
     packet = ReadoutPacket(
         schema_version="1.0.0",
@@ -193,7 +201,7 @@ if __name__ == "__main__":
     event_hash = ledger.record_event(packet)
     print(f"Recorded ReadoutPacket event hash: {event_hash}")
 
-    valid, count = ledger.verify_chain_integrity()
-    print(f"Ledger Chain Integrity Verified: {valid} ({count} events checked)")
+    valid, count, msg = ledger.verify_chain_integrity()
+    print(f"Ledger Chain Integrity Verified: {valid} ({count} events checked, msg: {msg})")
     assert valid, "Ledger integrity check failed"
     print("qFHRRAuditLedger successfully verified.")

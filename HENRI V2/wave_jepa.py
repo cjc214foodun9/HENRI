@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, Tuple, Optional
 
-from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
+from henri_vision_encoder import HENRIVisionEncoder
 from recursive_dual_edmd import RecursiveDualEDMD
 
 
@@ -31,8 +31,8 @@ class WaveJEPA(nn.Module):
         self.r_rank = r_rank
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
-        # 1. Context & Target Ingress Tokenizer (Encoder f_theta and Target Encoder g_phi)
-        self.encoder = O_VSA_IngressTokenizer(num_blocks=num_blocks, vocab_size=256, device=self.device)
+        # 1. Context & Target Ingress Encoder (HENRIVisionEncoder)
+        self.encoder = HENRIVisionEncoder(d_model=d_model, k_blocks=num_blocks, device=self.device)
 
         # 2. Action-Conditioned Latent Predictor (R-EDMD Koopman Operator p_psi)
         self.predictor = RecursiveDualEDMD(d_model=d_model, r_rank=r_rank, lambda_forget=0.98)

@@ -388,7 +388,7 @@ class TestStageV_Adaptation:
         """Verifies qFHRRAuditLedger cryptographic parent-hash chain generation,
         validation, and tamper detection."""
         ledger_path = str(tmp_path / "test_qfhrr_ledger.jsonl")
-        ledger = qFHRRAuditLedger(ledger_path)
+        ledger = qFHRRAuditLedger(db_dsn="offline://surrogate", log_file=ledger_path)
 
         nb = SCALE["num_blocks"]
         wave = unit_blocks((nb, 8), device, seed=123)
@@ -396,24 +396,28 @@ class TestStageV_Adaptation:
 
         # Record 5 steps
         for step in range(5):
-            ledger.record_step(
+            packet = ReadoutPacket(
+                schema_version="v2.1",
                 run_id="run_test",
                 step_id=step,
                 environment_id="cd82",
                 source_commit="commit_abc123",
                 state_kind="active_inference_step",
-                wave_tensor=wave,
-                qfhrr_codes=codes,
-                wave_ref=f"zone_c://waves/chk_{step:04d}",
+                tensor_shape=list(wave.shape),
+                tensor_dtype=str(wave.dtype),
+                device=str(device),
+                qfhrr_phase_codes=codes.cpu().numpy().tobytes(),
                 sagnac_delta=0.04 - 0.005 * step,
                 coherence=0.90 + 0.01 * step,
                 transition_loss=0.10,
-                selected_action=step % 4,
+                selected_action=str(step % 4),
                 external_outcome_status="STEP_SUCCESS",
+                zone_c_checkpoint_id=f"zone_c://waves/chk_{step:04d}",
             )
+            ledger.record_event(packet)
 
-        valid, count, msg = qFHRRAuditLedger.verify_chain_integrity(ledger_path)
-        assert valid is True, f"Chain integrity failed: {msg}"
+        valid, count, msg = ledger.verify_chain_integrity()
+        assert valid is True, f"Chain integrity failed for {ledger_path}: {msg}"
         assert count == 5
 
         # Tamper record 2 and confirm chain rejection
@@ -426,7 +430,7 @@ class TestStageV_Adaptation:
         with open(ledger_path, "w", encoding="utf-8") as f:
             f.writelines(lines)
 
-        valid_tampered, break_idx, msg_tampered = qFHRRAuditLedger.verify_chain_integrity(ledger_path)
+        valid_tampered, break_idx, msg_tampered = ledger.verify_chain_integrity()
         assert valid_tampered is False, "Expected chain integrity failure on tampered ledger"
         assert break_idx == 2, f"Expected break at record 2, got {break_idx}"
 
