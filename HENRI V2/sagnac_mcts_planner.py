@@ -171,8 +171,13 @@ class SagnacMCTSPlanner(nn.Module):
                 print(f"[SagnacMCTS Success] Exact Grid Match Solved at Simulation {sim+1}!")
                 return tree, 0.0
 
-            pred_wave = self.codec.encode_text(str(pred_grid.tolist()))
-            sagnac_delta = 1.0 - self.codec.compute_similarity(pred_wave, target_wave)
+            # Enforce Stationarity Sagnac Veto: If candidate tree produces zero grid displacement (Delta_grid == 0),
+            # assign maximum Sagnac penalty (1.0) so stationary trees are vetoed (Q -> -inf) and MCTS explores active DSL transformations.
+            if torch.equal(pred_grid, input_grid):
+                sagnac_delta = 1.0
+            else:
+                pred_wave = self.codec.encode_text(str(pred_grid.tolist()))
+                sagnac_delta = 1.0 - self.codec.compute_similarity(pred_wave, target_wave)
 
             if sim == 0 or sagnac_delta <= best_sagnac:
                 best_sagnac = sagnac_delta
