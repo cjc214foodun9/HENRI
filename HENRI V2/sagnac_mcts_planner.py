@@ -11,6 +11,7 @@ import torch
 from typing import Any, Dict, List, Optional, Tuple, Union
 from henri_vision_encoder import HENRIVisionEncoder
 from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec, HolographicTaskFunctorCompiler
+from henri_universal_repl import HENRIUniversalREPL
 
 
 class SpelkeDSLNode:
@@ -107,6 +108,7 @@ class SagnacMCTSPlanner:
         self.vision_encoder = HENRIVisionEncoder(d_model=d_model, k_blocks=k_blocks, device=device)
         self.codec = qFHRREpistemicCodec(d_model=d_model, device=device)
         self.task_compiler = HolographicTaskFunctorCompiler(self.codec)
+        self.repl = HENRIUniversalREPL(d_model=d_model, device=device)
 
         self.primitive_ops = [
             "Identity", "Rotate90", "Rotate180", "Rotate270",
