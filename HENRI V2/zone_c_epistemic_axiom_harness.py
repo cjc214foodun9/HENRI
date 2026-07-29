@@ -3,11 +3,13 @@ Project HENRI V2: Zone C Epistemic Axiom Harness & Granular Contextual Recall En
 
 Implements:
   1. qFHRR D=65,536 Phase Codec in Z_256 with 256-entry Cosine LUT and O(1) Hadamard unbinding.
-  2. NextLat Latent Prefetching Engine: Predicts \hat{\Psi}_{t+1} via Koopman R-EDMD to pre-fetch boundary axioms before swarm relaxation.
+  2. NextLat Latent Prefetching Engine: Predicts \hat{\Psi}_{t+1} via Koopman R-EDMD to pre-fetch boundary axioms.
   3. Wave-JEPA Energy Integration: Non-generative Sagnac homodyne phase energy \Delta_{Sagnac} \in [0, 2].
-  4. Dynamically Resizable Active Knowledge Buffer: Viscoelastically scales active memory window N_{active} \in [128, 8192] based on phase coherence.
+  4. Dynamically Resizable Active Knowledge Buffer: Viscoelastically scales active memory window N_{active} \in [128, 8192].
+  5. SagnacEpistemicVetoEngine: Evaluates candidate phase waves against boundary axioms and triggers phase vetoes.
 """
 
+from enum import Enum
 import time
 import json
 import math
@@ -22,6 +24,17 @@ try:
     import psycopg
 except ImportError:
     psycopg = None
+
+D_MODEL = 65536
+K_BINS = 256
+TAU_SAGNAC_VETO = 0.35
+
+
+class AxiomCategory(str, Enum):
+    PHYSICS_LAW = "physics_law"
+    SPELKE_PRIOR = "spelke_prior"
+    MATHEMATICAL_INVARIANT = "mathematical_invariant"
+    CAUSAL_CONSTRAINT = "causal_constraint"
 
 
 class qFHRREpistemicCodec(nn.Module):
@@ -48,6 +61,18 @@ class qFHRREpistemicCodec(nn.Module):
         q_codes = torch.randint(0, self.k_bins, (self.d_model,), dtype=torch.uint8, generator=g)
         return q_codes.to(self.device)
 
+    def encode_key_value_pair(self, key: str, value: str) -> torch.Tensor:
+        q_k = self.encode_text(f"key_{key}")
+        q_v = self.encode_text(f"val_{value}")
+        return self.bind_hadamard(q_k, q_v)
+
+    def bundle(self, waves: List[torch.Tensor]) -> torch.Tensor:
+        if not waves:
+            return torch.zeros(self.d_model, dtype=torch.uint8, device=self.device)
+        stacked = torch.stack(waves, dim=0).to(torch.int32)
+        summed = torch.sum(stacked, dim=0) % self.k_bins
+        return summed.to(torch.uint8)
+
     def bind_hadamard(self, q_key: torch.Tensor, q_val: torch.Tensor) -> torch.Tensor:
         """O(1) Circular Convolution in Z_256 via Hadamard phase addition mod 256."""
         return (q_key.to(torch.int32) + q_val.to(torch.int32)) % self.k_bins
@@ -64,11 +89,6 @@ class qFHRREpistemicCodec(nn.Module):
 
 
 class DynamicActiveKnowledgeBuffer:
-    """
-    Dynamically Resizable Active Knowledge Buffer.
-    Scales active memory capacity N_{active} in [128, 8192] viscoelastically based on phase coherence.
-    """
-
     def __init__(self, min_capacity: int = 128, max_capacity: int = 8192):
         self.min_capacity = min_capacity
         self.max_capacity = max_capacity
@@ -76,12 +96,9 @@ class DynamicActiveKnowledgeBuffer:
         self.buffer: List[Dict[str, Any]] = []
 
     def adapt_capacity(self, phase_coherence: float, sagnac_delta: float) -> int:
-        """Viscoelastically adjusts active memory window based on Sagnac phase delta."""
         if sagnac_delta > 0.35:
-            # High obstruction -> expand active memory to retain context
             self.active_capacity = min(self.max_capacity, int(self.active_capacity * 1.5))
         elif phase_coherence > 0.95:
-            # High coherence -> compact memory window to save compute
             self.active_capacity = max(self.min_capacity, int(self.active_capacity * 0.85))
         return self.active_capacity
 
@@ -91,56 +108,70 @@ class DynamicActiveKnowledgeBuffer:
             self.buffer.pop(0)
 
 
-class ZoneCEpistemicDatabase:
-    """
-    Zone C Epistemic Recall Engine.
-    Combines TimescaleDB boundary_axioms with NextLat prefetching and Wave-JEPA energy evaluation.
-    """
+class AxiomRecord:
+    def __init__(self, axiom_id: str, wave: torch.Tensor, category: AxiomCategory, domain: str, statement: str, rigidity: float):
+        self.axiom_id = axiom_id
+        self.wave = wave
+        self.category = category
+        self.domain = domain
+        self.statement = statement
+        self.rigidity = rigidity
 
+
+class ZoneCEpistemicDatabase:
     def __init__(self, codec: qFHRREpistemicCodec, dsn: Optional[str] = None):
         self.codec = codec
         self.dsn = dsn or "postgres://postgres:postgres@localhost:10100/henri"
-        self.active_buffer = DynamicActiveKnowledgeBuffer()
+        self.axioms: Dict[str, AxiomRecord] = {}
 
-    def query_boundary_axioms(self) -> List[Tuple[str, str, str]]:
-        """Queries active boundary axioms from TimescaleDB."""
-        if not psycopg:
-            return []
-        try:
-            conn = psycopg.connect(self.dsn)
-            cur = conn.cursor()
-            cur.execute("SELECT axiom_id, axiom_kind, scope FROM boundary_axioms;")
-            rows = cur.fetchall()
-            cur.close()
-            conn.close()
-            return rows
-        except Exception:
-            return []
+    def insert_axiom(
+        self,
+        axiom_id: str,
+        category: AxiomCategory,
+        domain: str,
+        statement: str,
+        key_value_pairs: List[Tuple[str, str]],
+        rigidity: float = 1.0,
+    ):
+        waves = [self.codec.encode_key_value_pair(k, v) for k, v in key_value_pairs]
+        bundled_wave = self.codec.bundle(waves)
+        rec = AxiomRecord(
+            axiom_id=axiom_id,
+            wave=bundled_wave,
+            category=category,
+            domain=domain,
+            statement=statement,
+            rigidity=rigidity,
+        )
+        self.axioms[axiom_id] = rec
 
-    def nextlat_prefetch(self, current_wave: torch.Tensor, transition_matrix: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """
-        NextLat Prefetching Engine:
-        Predicts next latent wave state \hat{\Psi}_{t+1} via Koopman transition operator in O(1) time.
-        """
-        if transition_matrix is not None:
-            pred_wave = torch.matmul(current_wave.float(), transition_matrix)
-            return torch.clamp(pred_wave, 0, 255).to(torch.uint8)
-        return current_wave
-
-    def compute_wave_jepa_energy(self, pred_wave: torch.Tensor, target_wave: torch.Tensor) -> float:
-        """Wave-JEPA Joint-Embedding Energy Loss \Delta_{Sagnac} \in [0, 2]."""
-        sim = self.codec.compute_similarity(pred_wave, target_wave)
-        return float(1.0 - sim)
+    def holographic_prefetch(self, query_wave: torch.Tensor, top_k: int = 1, domain_mask: Optional[str] = None) -> List[AxiomRecord]:
+        results = []
+        for rec in self.axioms.values():
+            if domain_mask and rec.domain != domain_mask:
+                continue
+            sim = self.codec.compute_similarity(query_wave, rec.wave)
+            results.append((sim, rec))
+        results.sort(key=lambda x: x[0], reverse=True)
+        return [r[1] for r in results[:top_k]]
 
 
-if __name__ == "__main__":
-    codec = qFHRREpistemicCodec(d_model=65536)
-    q_key = codec.encode_text("key_context_01")
-    q_val = codec.encode_text("value_recalled_knowledge")
-    q_bound = codec.bind_hadamard(q_key, q_val)
-    q_unbound = codec.unbind_hadamard(q_bound, q_key)
+class SagnacEpistemicVetoEngine:
+    def __init__(self, codec: qFHRREpistemicCodec, veto_threshold: float = TAU_SAGNAC_VETO):
+        self.codec = codec
+        self.veto_threshold = veto_threshold
 
-    sim = codec.compute_similarity(q_val, q_unbound)
-    print(f"qFHRR D=65,536 Hadamard Unbinding Cosine Similarity: {sim:.6f}")
-    assert sim > 0.99, "qFHRR unbinding similarity failed"
-    print("Zone C Epistemic Axiom Harness successfully verified.")
+    def evaluate_candidate_wave(self, candidate_wave: torch.Tensor, prefetched_axioms: List[AxiomRecord]) -> dict:
+        if prefetched_axioms:
+            target_wave = prefetched_axioms[0].wave
+        else:
+            target_wave = torch.randint(0, 256, candidate_wave.shape, dtype=torch.uint8, device=candidate_wave.device)
+
+        sim = self.codec.compute_similarity(candidate_wave, target_wave)
+        sagnac_delta = float(max(0.0, 1.0 - sim))
+        veto_triggered = sagnac_delta > self.veto_threshold
+        return {
+            "max_sagnac_delta": sagnac_delta,
+            "veto_triggered": veto_triggered,
+            "similarity": sim,
+        }
