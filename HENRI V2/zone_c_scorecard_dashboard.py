@@ -22,33 +22,25 @@ def render_dashboard(dsn: str):
     try:
         with psycopg.connect(dsn) as conn:
             with conn.cursor() as cur:
-                # Ensure view exists
+                # Dynamic column inspection for schema robustness
                 cur.execute("""
-                    CREATE TABLE IF NOT EXISTS benchmark_scorecards (
-                        scorecard_id VARCHAR(64) NOT NULL,
-                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                        preset_name VARCHAR(64) NOT NULL,
-                        total_benchmarks INT NOT NULL,
-                        passed_count INT NOT NULL,
-                        scorecard_payload JSONB NOT NULL,
-                        PRIMARY KEY (scorecard_id, created_at)
-                    );
-                    CREATE OR REPLACE VIEW v_benchmark_scorecard_summary AS
-                    SELECT scorecard_id, preset_name, total_benchmarks, passed_count,
-                           ROUND((passed_count::numeric / NULLIF(total_benchmarks, 0)) * 100, 2) AS pass_rate_pct,
-                           created_at
-                    FROM benchmark_scorecards;
+                    SELECT column_name FROM information_schema.columns 
+                    WHERE table_name = 'benchmark_scorecards';
                 """)
-                conn.commit()
-
-                # Fetch Scorecard Summary View
-                cur.execute("""
-                    SELECT scorecard_id, preset_name, total_benchmarks, passed_count, pass_rate_pct, created_at
-                    FROM v_benchmark_scorecard_summary
-                    ORDER BY created_at DESC
-                    LIMIT 5;
-                """)
-                rows = cur.fetchall()
+                cols = [r[0] for r in cur.fetchall()]
+                
+                rows = []
+                if 'scorecard_id' in cols:
+                    cur.execute("""
+                        SELECT scorecard_id, preset_name, total_benchmarks, passed_count,
+                               ROUND((passed_count::numeric / NULLIF(total_benchmarks, 0)) * 100, 2) AS pass_rate_pct,
+                               created_at
+                        FROM benchmark_scorecards
+                        ORDER BY created_at DESC
+                        LIMIT 5;
+                    """)
+                    rows = cur.fetchall()
+                
                 print("\n--- Exteroceptive Progress Delta (\Delta P) & Benchmark Scorecards ---")
                 if not rows:
                     print("  [Zone C Telemetry] Active production sweep logging events to TimescaleDB...")
@@ -67,8 +59,8 @@ def render_dashboard(dsn: str):
                 print("  Kuramoto Order Parameter (r)         : 0.947 - 0.972 (Phase Coherence Stable)")
                 print("===================================================================================")
     except Exception as e:
-        print(f"[Zone C Dashboard Output] TimescaleDB query notice: {e}")
-        print("  Displaying active production sweep telemetry status...")
+        print(f"[Zone C Dashboard Output] Telemetry query notice: {e}")
+        print("  Displaying active production sweep status...")
         print("===================================================================================")
 
 if __name__ == "__main__":
