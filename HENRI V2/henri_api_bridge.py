@@ -115,7 +115,7 @@ async def completions(request: Request):
         last_msg = prompt
         
     # Ingress Transduction via UniversalDataTransducer
-    input_wave = TRANSDUCER.transduce_object(str(last_msg))
+    input_wave = TRANSDUCER.transduce_string(str(last_msg)) if hasattr(TRANSDUCER, "transduce_string") else TRANSDUCER.transduce_object(str(last_msg))
     
     # Viscoelastic Thermostat Relaxation Step
     W = torch.eye(128, device=DEVICE)
