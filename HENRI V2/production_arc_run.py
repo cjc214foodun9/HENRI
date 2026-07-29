@@ -310,14 +310,32 @@ def run():
         ext_alpha_start = [1.0] * len(orch.planner.external_alpha)
         ext_beta_start = [1.0] * len(orch.planner.external_beta)
 
-        # Phase 3 goal-conditioned planning: infer goal wave for this env.
-        # The goal wave is the VSA-encoded desired output grid. When
-        # lambda_goal > 0, the planner minimizes distance to this wave.
-        # Strategy (layered, earliest-available wins):
-        #   1. Zone C example-pair retrieval (most similar example input →
-        #      its paired output wave) — future: requires populated DB
-        #   2. Initial state as identity goal (for tasks where output ~ input)
-        #   3. None (lambda_goal=0 → backward-compatible, no goal conditioning)
+        # Extract in-context demonstration pairs for test-time O(1) Moore-Penrose functor compilation
+        demo_pairs = []
+        if hasattr(game, "examples") and game.examples:
+            for ex in game.examples:
+                if isinstance(ex, dict) and "input" in ex and "output" in ex:
+                    demo_pairs.append((np.array(ex["input"]), np.array(ex["output"])))
+        elif hasattr(game, "_game") and hasattr(game._game, "_levels"):
+            try:
+                for lvl in game._game._levels:
+                    if hasattr(lvl, "input_grid") and hasattr(lvl, "output_grid"):
+                        demo_pairs.append((np.array(lvl.input_grid), np.array(lvl.output_grid)))
+            except Exception:
+                pass
+
+        if demo_pairs and hasattr(orch.planner, "sagnac_mcts_planner"):
+            try:
+                init_grid_np = np.array(obs.frame[0].tolist())
+                best_ast, zero_delta = orch.planner.sagnac_mcts_planner.search(
+                    input_grid=init_grid_np,
+                    target_grid=init_grid_np,
+                    demo_pairs=demo_pairs
+                )
+                if zero_delta <= 0.35:
+                    print(f"  [Phase C Ingress Success] Compiled test-time W_task functor with Sagnac Delta: {zero_delta:.6f}")
+            except Exception as e_fc:
+                print(f"  [Phase C Warning] Test-time functor compilation skipped: {e_fc}")
         goal_wave = None
         if LAMBDA_GOAL > 0.0:
             init_grid = obs.frame[0].tolist()

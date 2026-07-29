@@ -16,6 +16,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from connected_component_segmenter import ConnectedComponentSegmenter, ParityContourMask
 
 
 class HENRIVisionEncoder(nn.Module):
@@ -74,14 +75,27 @@ class HENRIVisionEncoder(nn.Module):
 
         grid_clamped = torch.clamp(grid, 0, 15)
 
-        # Memory-efficient O(D) complex phase accumulation
+        # Memory-efficient O(D) complex phase accumulation with ParityContourMask topological weighting
         superposed_wave = torch.zeros(self.d_model // 2, dtype=torch.complex64, device=self.device)
+        grid_np = grid_clamped.cpu().numpy()
+        segmenter = ConnectedComponentSegmenter(background_color=0)
+        components = segmenter.segment_grid(grid_np)
+
+        parity_mask_grid = np.ones((H, W), dtype=np.float32)
+        for comp in components:
+            interior_px, exterior_px = ParityContourMask.compute_parity_contour((H, W), comp.pixels)
+            for r_i, c_i in interior_px:
+                parity_mask_grid[r_i, c_i] = -1.0  # Parity reflection operator for enclosed regions
+
+        parity_mask_tensor = torch.tensor(parity_mask_grid, dtype=torch.float32, device=self.device)
+
         for r in range(H):
             py = self.spatial_basis_y[r]
             for c in range(W):
                 px = self.spatial_basis_x[c]
                 pc = self.color_codebook[grid_clamped[r, c]]
-                superposed_wave.add_(px * py * pc)
+                kappa = parity_mask_tensor[r, c]
+                superposed_wave.add_(px * py * pc * kappa)
 
         # Convert back to real D=65,536 representation [cos(theta), sin(theta)]
         real_wave = torch.cat([superposed_wave.real, superposed_wave.imag], dim=-1)  # [D]
