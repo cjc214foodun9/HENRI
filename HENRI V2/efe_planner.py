@@ -1199,7 +1199,14 @@ class EFEPlanner(nn.Module):
             except torch._C._LinAlgError:
                 continue
         if C is not None:
-            Uc, Sc, Vch = torch.linalg.svd(C, full_matrices=False)
+            try:
+                Uc, Sc, Vch = torch.linalg.svd(C, full_matrices=False)
+            except (torch._C._LinAlgError, RuntimeError):
+                try:
+                    Uc, Sc, Vch = torch.linalg.svd(C, full_matrices=False, driver="gesvd")
+                except (torch._C._LinAlgError, RuntimeError):
+                    Uc, Sc, Vch = torch.linalg.svd(C.cpu(), full_matrices=False)
+                    Uc, Sc, Vch = Uc.to(device), Sc.to(device), Vch.to(device)
             # Available rank is min(N, d) — with a small buffer (N < r) the
             # truncated operator is genuinely rank-N, not rank-r. Keep the V
             # side at its solved width and zero the unused field_V columns;
