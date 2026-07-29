@@ -17,9 +17,11 @@ from fastapi.responses import JSONResponse
 import uvicorn
 import torch
 
-repo_path = os.path.dirname(os.path.abspath(__file__))
-if repo_path not in sys.path:
-    sys.path.insert(0, repo_path)
+# Ensure repository directories are in sys.path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+for path in [current_dir, "/workspace/HENRI V2/HENRI V2", "/workspace/HENRI V2", r"C:\Users\chan\Desktop\HENRI 7B SWARM\HENRI V2"]:
+    if os.path.exists(path) and path not in sys.path:
+        sys.path.insert(0, path)
 
 from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec, ZoneCEpistemicDatabase
 from adaptive_viscoelastic_thermostat import AdaptiveViscoelasticThermostat
