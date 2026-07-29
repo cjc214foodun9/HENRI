@@ -17,9 +17,10 @@ from fastapi.responses import JSONResponse
 import uvicorn
 import torch
 
-# Ensure repository directories are in sys.path
+# Ensure repository root and subdirectories are in sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
-for path in [current_dir, "/workspace/HENRI V2/HENRI V2", "/workspace/HENRI V2", r"C:\Users\chan\Desktop\HENRI 7B SWARM\HENRI V2"]:
+parent_dir = os.path.dirname(current_dir)
+for path in [current_dir, parent_dir, "/workspace/HENRI V2", "/workspace/HENRI V2/HENRI V2", "/workspace/aa_eval_workspace", r"C:\Users\chan\Desktop\HENRI 7B SWARM\HENRI V2"]:
     if os.path.exists(path) and path not in sys.path:
         sys.path.insert(0, path)
 
