@@ -5,8 +5,8 @@ Subsystem: In-Place Buffer Mutation & float16 Compressed CUDA Graph Rollout Loop
 Architectural Upgrades:
   1. In-Place Buffer Mutation: Keeps A_sub in fixed static buffer self.static_A_sub.
      Updates A_sub via self.static_A_sub.copy_(A_new) without CUDA Graph re-capture.
-  2. float16 Codebook Compression: Stores V=32,000 Hopfield codebook in float16,
-     slashing VRAM from 8.38 GB down to 4.19 GB to prevent CUDA OOM.
+  2. float16 Codebook Compression & Direct VRAM Allocation: Stores V=32,000 Hopfield codebook
+     in float16 directly on CUDA VRAM, slashing VRAM from 8.38 GB down to 4.19 GB.
   3. Phase-Gated Generation Loop:
      • Phase A: Eager R-EDMD Koopman adaptation over prompt context (lambda_forget = 0.98).
      • Phase B: Lock A_sub into static buffer and execute sub-millisecond CUDA Graph replay.
@@ -27,7 +27,7 @@ from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
 class FusedHENRITransitionKernel(nn.Module):
     """
     Fused PyTorch Module representing single-pass state rollout for HENRILanguageBridge.
-    Uses float16 codebook compression and static buffer mutation.
+    Uses float16 codebook compression and direct VRAM allocation.
     """
 
     def __init__(
@@ -37,7 +37,8 @@ class FusedHENRITransitionKernel(nn.Module):
         vocab_size: int = 32000,
         r_rank: int = 16,
         hopfield_beta: float = 8.0,
-        use_fp16: bool = True
+        use_fp16: bool = True,
+        device: str = "cuda"
     ):
         super().__init__()
         self.d_model = d_model
@@ -46,29 +47,31 @@ class FusedHENRITransitionKernel(nn.Module):
         self.r_rank = r_rank
         self.hopfield_beta = hopfield_beta
         self.use_fp16 = use_fp16
+        self.dev = torch.device(device)
 
         # 1. Product Clifford Kernel
-        self.clifford_kernel = ProductCliffordAlgebra3D(num_blocks=num_blocks)
+        self.clifford_kernel = ProductCliffordAlgebra3D(num_blocks=num_blocks).to(self.dev)
 
         # 2. Koopman Basis V [d_model, r_rank] & In-Place Mutable Subspace Matrix static_A_sub
         g = torch.Generator(device="cpu").manual_seed(42)
         v_init = torch.randn(d_model, r_rank, generator=g) / math.sqrt(d_model)
-        self.register_buffer("V", F.normalize(v_init, p=2, dim=0))
-        self.register_buffer("static_A_sub", torch.eye(r_rank, dtype=torch.float32))
+        self.register_buffer("V", F.normalize(v_init, p=2, dim=0).to(self.dev))
+        self.register_buffer("static_A_sub", torch.eye(r_rank, dtype=torch.float32, device=self.dev))
 
-        # 3. float16 Compressed Hopfield Memory Codebook [vocab_size, d_model]
+        # 3. float16 Compressed Hopfield Memory Codebook [vocab_size, d_model] directly on VRAM
         chunk_sz = 4000
         codebook_chunks = []
+        dtype_target = torch.float16 if use_fp16 else torch.float32
         for i in range(0, vocab_size, chunk_sz):
             sz = min(chunk_sz, vocab_size - i)
-            cb_chunk = torch.randn(sz, d_model, device="cpu", dtype=torch.float16) / math.sqrt(d_model)
-            cb_norm = F.normalize(cb_chunk.to(torch.float32), p=2, dim=-1).to(torch.float16 if use_fp16 else torch.float32)
+            cb_chunk = torch.randn(sz, d_model, device=self.dev, dtype=dtype_target) / math.sqrt(d_model)
+            cb_norm = F.normalize(cb_chunk.to(torch.float32), p=2, dim=-1).to(dtype_target)
             codebook_chunks.append(cb_norm)
         codebook_tensor = torch.cat(codebook_chunks, dim=0)
         self.register_buffer("codebook", codebook_tensor)
 
         # 4. Boundary Axiom Phase Vector [d_model]
-        axiom_init = torch.randn(d_model)
+        axiom_init = torch.randn(d_model, device=self.dev)
         self.register_buffer("boundary_axiom", F.normalize(axiom_init, p=2, dim=-1))
 
     def update_koopman_subspace(self, A_new: torch.Tensor):
@@ -144,8 +147,9 @@ class CUDAGraphHENRIRunner:
             d_model=self.d_model,
             num_blocks=self.num_blocks,
             vocab_size=self.vocab_size,
-            use_fp16=use_fp16
-        ).to(self.device)
+            use_fp16=use_fp16,
+            device=str(self.device)
+        )
         self.kernel.eval()
 
         # Eager adaptation engine
@@ -298,7 +302,7 @@ def run_phase_gated_benchmark():
     print(f"In-Place Buffer Mutation  : self.static_A_sub.copy_(A_new) VERIFIED")
 
     print(f"\n--- Phase B: Sub-Millisecond CUDA Graph Token Rollout ---")
-    last_token_wave = tokenizer.canonical_basis[ord(':')]
+    last_token_wave = tokenizer.get_token_vector(ord(':'))
     _, tokens, metrics = runner.phase_b_graph_rollout(psi_0, last_token_wave, max_tokens=rollout_tokens)
 
     print(f"Rollout Latency / Token  : {metrics['latency_ms_per_token']:.4f} ms/token")
