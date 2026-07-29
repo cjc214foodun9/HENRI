@@ -1,0 +1,35 @@
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Archives, Scratch, & Legacy Code
+_archive/
+scratch/
+scratch_files/
+garage/
+*.canvas
+
+# Environment Datasets & Local Telemetry
+environment_files/
+field_channel_checkpoints/
+telemetry/
+telemetry_logs/
+HENRI_telemetry_exports/
+*.jsonl
+*.log
+*.tar.gz
+
+# Obsidian & IDE Configs
+.obsidian/
+.idea/
+.vscode/
+.DS_Store
+
+# Temporary & Build Artifacts
+*.tmp
+*.bak
+*.swp
