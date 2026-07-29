@@ -10,6 +10,7 @@ import numpy as np
 import torch
 from typing import Any, Dict, List, Optional, Tuple, Union
 from henri_vision_encoder import HENRIVisionEncoder
+from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec, HolographicTaskFunctorCompiler
 
 
 class SpelkeDSLNode:
@@ -104,6 +105,8 @@ class SagnacMCTSPlanner:
         self.tau_veto = tau_veto
         self.device = device
         self.vision_encoder = HENRIVisionEncoder(d_model=d_model, k_blocks=k_blocks, device=device)
+        self.codec = qFHRREpistemicCodec(d_model=d_model, device=device)
+        self.task_compiler = HolographicTaskFunctorCompiler(self.codec)
 
         self.primitive_ops = [
             "Identity", "Rotate90", "Rotate180", "Rotate270",
@@ -139,13 +142,41 @@ class SagnacMCTSPlanner:
         self,
         input_grid: np.ndarray,
         target_grid: np.ndarray,
-        num_simulations: int = 50
+        num_simulations: int = 50,
+        demo_pairs: Optional[List[Tuple[np.ndarray, np.ndarray]]] = None
     ) -> Tuple[SpelkeDSLNode, float]:
         """
-        Executes Dual-Channel Sagnac-Guided EFE MCTS tree search with Hard Axiom Pruning (Q -> -inf).
+        Executes Dual-Channel Sagnac-Guided EFE MCTS tree search with Hard Axiom Pruning (Q -> -inf)
+        and zero-shot W_task Moore-Penrose Functor Compilation.
         Returns: (best_ast_program, best_sagnac_delta)
         """
         target_wave = self.vision_encoder.encode_grid(target_grid)
+
+        # Phase C: Zero-shot W_task Moore-Penrose Functor Compilation
+        if demo_pairs:
+            encoded_demos = []
+            for demo_in, demo_out in demo_pairs:
+                w_in = self.vision_encoder.encode_grid(demo_in)
+                w_out = self.vision_encoder.encode_grid(demo_out)
+                # Map real wave states [-1, 1] to Z_256 phase ring
+                phase_in = ((torch.clamp(w_in, -1.0, 1.0) + 1.0) / 2.0 * (self.codec.k_bins - 1)).to(torch.uint8)
+                phase_out = ((torch.clamp(w_out, -1.0, 1.0) + 1.0) / 2.0 * (self.codec.k_bins - 1)).to(torch.uint8)
+                encoded_demos.append((phase_in, phase_out))
+
+            w_task = self.task_compiler.compile_functor(encoded_demos)
+            test_in_wave = self.vision_encoder.encode_grid(input_grid)
+            phase_test_in = ((torch.clamp(test_in_wave, -1.0, 1.0) + 1.0) / 2.0 * (self.codec.k_bins - 1)).to(torch.uint8)
+            
+            # Single-pass associative retrieval
+            phase_goal_pred = self.task_compiler.single_pass_associative_retrieval(w_task, phase_test_in)
+            # Reconstruct predicted real wave state
+            goal_wave_pred = (phase_goal_pred.to(torch.float32) / (self.codec.k_bins - 1) * 2.0 - 1.0).to(self.device)
+
+            zero_shot_delta = 1.0 - self.vision_encoder.compute_sagnac_similarity(goal_wave_pred, target_wave)
+            if zero_shot_delta <= self.tau_veto:
+                print(f"[Phase C Zero-Shot Success] Goal wave retrieved in O(1) single pass! Sagnac Delta: {zero_shot_delta:.6f}")
+                return SpelkeDSLNode(op_name="Identity"), float(zero_shot_delta)
+
         root_ast = SpelkeDSLNode(op_name="Identity")
         root = SagnacMCTSNode(ast_node=root_ast)
 
