@@ -6,17 +6,19 @@ class ProductCliffordAlgebra3D(nn.Module):
     Implements a highly parallelized, non-commutative Product Clifford Algebra (Cl_3,0)
     over K independent blocks. Unifies spatial, causal, and temporal operators 
     without exponential dimension scaling.
+    
+    CUDA Graph Invariant:
+      Multiplication table indices are pre-sorted by output basis idx_c at initialization.
+      This allows geometric_product to perform a single reshaped .view(B, K, 8, 8).sum(dim=-1)
+      without dynamic boolean masking or CPU fallbacks, making it 100% CUDA Graph capture compatible.
     """
     def __init__(self, num_blocks=8192):
         super().__init__()
         self.K = num_blocks
         
-        # Binary multiplication table for Cl_3,0 expressed as structural indices
-        # Represents basis: [1, e1, e2, e3, e12, e23, e31, e123]
-        # Multiplications are implemented via sign-preserving bilinear transitions
-        self.register_buffer("mult_indices", torch.tensor([
-            # Structured coordinate mapping of the geometric product of Cl_3,0
-            # [basis_a, basis_b, output_basis, sign]
+        # Raw binary multiplication table for Cl_3,0 expressed as structural indices:
+        # [basis_a, basis_b, output_basis, sign]
+        raw_table = torch.tensor([
             [0, 0, 0,  1.0], [0, 1, 1,  1.0], [0, 2, 2,  1.0], [0, 3, 3,  1.0],
             [0, 4, 4,  1.0], [0, 5, 5,  1.0], [0, 6, 6,  1.0], [0, 7, 7,  1.0],
             [1, 0, 1,  1.0], [1, 1, 0,  1.0], [1, 2, 4,  1.0], [1, 3, 6, -1.0],
@@ -33,7 +35,13 @@ class ProductCliffordAlgebra3D(nn.Module):
             [6, 4, 5, -1.0], [6, 5, 4,  1.0], [6, 6, 0, -1.0], [6, 7, 2, -1.0],
             [7, 0, 7,  1.0], [7, 1, 5,  1.0], [7, 2, 6,  1.0], [7, 3, 4,  1.0],
             [7, 4, 3, -1.0], [7, 5, 1, -1.0], [7, 6, 2, -1.0], [7, 7, 0, -1.0]
-        ], dtype=torch.float32))
+        ], dtype=torch.float32)
+
+        # Pre-sort table rows by output_basis (column 2) so every 8 consecutive rows map to basis 0..7
+        output_bases = raw_table[:, 2]
+        sorted_order = torch.argsort(output_bases)
+        sorted_table = raw_table[sorted_order]
+        self.register_buffer("mult_indices", sorted_table)
 
     def geometric_product(self, A: torch.Tensor, B: torch.Tensor) -> torch.Tensor:
         """
@@ -47,14 +55,10 @@ class ProductCliffordAlgebra3D(nn.Module):
         # Ensure indices tensor matches input device
         mult_indices = self.mult_indices.to(device=device, dtype=torch.float32)
 
-        # Initialize output multivector tensor
-        C = torch.zeros((batch_size, num_blocks, 8), dtype=A.dtype, device=device)
-        
-        # Vectorized bilinear gathering based on Clifford algebra structural tables
+        # Vectorized bilinear gathering based on pre-sorted Clifford algebra structural tables
         indices = mult_indices.long()
         idx_a = indices[:, 0]
         idx_b = indices[:, 1]
-        idx_c = indices[:, 2]
         signs = mult_indices[:, 3]
         
         # Gather coefficients
@@ -64,10 +68,8 @@ class ProductCliffordAlgebra3D(nn.Module):
         # Compute sign-preserving element-wise multiplication
         product_terms = coeffs_a * coeffs_b * signs.view(1, 1, -1) # Shape: [B, K, 64]
         
-        # Scatter-add products back to their designated multivector bases
-        for basis_idx in range(8):
-            mask = (idx_c == basis_idx)
-            C[:, :, basis_idx] = product_terms[:, :, mask].sum(dim=-1)
+        # Single-pass CUDA-graph-compatible sum over pre-sorted basis groups (8 terms per basis)
+        C = product_terms.view(batch_size, num_blocks, 8, 8).sum(dim=-1) # Shape: [B, K, 8]
             
         return C
 
@@ -76,7 +78,6 @@ class ProductCliffordAlgebra3D(nn.Module):
         Executes a directional rotor transformation: State' = R * State * R_reverse
         rotor_wave must contain unit-modulus spinors (rotors)
         """
-        # Ensure inputs match device
         state_wave = state_wave.to(self.mult_indices.device) if hasattr(self, 'mult_indices') else state_wave
         rotor_wave = rotor_wave.to(state_wave.device)
 
@@ -84,9 +85,7 @@ class ProductCliffordAlgebra3D(nn.Module):
         half_transformed = self.geometric_product(rotor_wave, state_wave)
         
         # 2. Compute rotor reversion R_reverse: reverse the sign of bivectors
-        #    (grades 2: indices 4, 5, 6) and the trivector pseudoscalar
-        #    (grade 3: index 7). Reversion of grade-k blades carries sign
-        #    (-1)^{k(k-1)/2}: vectors keep sign, bivectors and trivector flip.
+        #    (grades 2: indices 4, 5, 6) and the trivector pseudoscalar (grade 3: index 7).
         rotor_reversion = rotor_wave.clone()
         rotor_reversion[:, :, [4, 5, 6, 7]] *= -1.0
         
