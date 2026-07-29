@@ -60,6 +60,8 @@ class HENRIVisionEncoder(nn.Module):
         Uses vectorized/chunked complex phase summation to prevent memory allocation spikes.
         """
         if not isinstance(grid, torch.Tensor):
+            if isinstance(grid, np.ndarray):
+                grid = np.ascontiguousarray(grid)
             grid = torch.tensor(grid, dtype=torch.long, device=self.device)
         else:
             grid = grid.to(dtype=torch.long, device=self.device)
