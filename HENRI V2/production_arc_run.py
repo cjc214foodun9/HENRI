@@ -144,6 +144,29 @@ TASK_WEIGHTED_EIG = os.environ.get("TASK_WEIGHTED_EIG", "0") == "1"
 TASK_EIG_GAMMA = float(os.environ.get("TASK_EIG_GAMMA", "4.0"))
 
 
+def retroactive_update(orch, trajectory_buffer: list, valence_nu: float, dampening_alpha: float = 0.05) -> float:
+    """
+    Retroactive Valence Credit Assignment Specification (ARC-AGI-3 Strategy & Blueprint).
+    Reframes transition model weights (K_t) to prioritize exteroceptive progress trajectories.
+    - If valence_nu == -1.0 (failure/stall), inverts update direction (-1.0 * dampening_alpha)
+      to induce repulsion from the current trajectory manifold.
+    - If valence_nu >= 0.0 (progress/win), reinforces the Koopman state transition.
+    - Dampening factor alpha = 0.05 prevents model shattering if valence signal is noisy.
+    """
+    if not trajectory_buffer:
+        return 0.0
+    
+    update_direction = (1.0 if valence_nu >= 0.0 else -1.0) * dampening_alpha
+    states = torch.stack([t[0] for t in trajectory_buffer])
+    actions = torch.stack([t[1] for t in trajectory_buffer])
+    next_states = torch.stack([t[2] for t in trajectory_buffer])
+    
+    loss = orch.planner.train_transition_batch(
+        states, actions, next_states, blend=0.5
+    )
+    return float(loss) * update_direction
+
+
 # ---------------------------------------------------------------------------
 # Telemetry
 # ---------------------------------------------------------------------------
@@ -442,10 +465,12 @@ def run():
                         torch.stack([t[1] for t in window]),
                         torch.stack([t[2] for t in window]),
                     )
+                    # ARC-AGI-3 Strategy & Blueprint: Retroactive Valence Credit Assignment
+                    rpe_loss = retroactive_update(orch, window, valence_nu=valence, dampening_alpha=0.05)
                     print(f"  [edmd-L2] step {step}: window {len(window)} "
-                          f"batch loss {edmd_loss:.4f}")
+                          f"batch loss {edmd_loss:.4f} | RPE update {rpe_loss:+.6f}")
                     tele.emit({"env": env_name, "step": step, "edmd_L2_loss":
-                               round(edmd_loss, 6), "edmd_L2_window": len(window)})
+                               round(edmd_loss, 6), "rpe_loss": round(rpe_loss, 6), "edmd_L2_window": len(window)})
             train_ctx = None
 
             # Boundary axiom = prediction error: observed state vs the dynamics
