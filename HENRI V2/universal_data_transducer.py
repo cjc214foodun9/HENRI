@@ -10,8 +10,11 @@ import hashlib
 import json
 import os
 import sys
+import math
 import torch
-from typing import Any, Dict, List, Union
+import torch.nn as nn
+import torch.nn.functional as F
+from typing import Any, Dict, List, Union, Optional
 
 try:
     import psycopg2
@@ -19,21 +22,31 @@ except ImportError:
     psycopg2 = None
 
 
-class UniversalDataTransducer:
+class UniversalDataTransducer(nn.Module):
     """
     Transduces arbitrary exteroceptive data objects into d=65,536 qFHRR phase multivectors.
     Packs continuous numerical features into fractional phase angles theta = v * pi mod 2pi
     and categorical key-value pairs into circular convolution bound phase codes.
     """
 
-    def __init__(self, d_model: int = 65536, codebook_size: int = 256, db_dsn: str = None):
+    def __init__(
+        self,
+        d_model: int = 65536,
+        codebook_size: int = 256,
+        num_blocks: Optional[int] = None,
+        phase_bits: int = 8,
+        db_dsn: Optional[str] = None,
+        device: Optional[torch.device] = None
+    ):
+        super().__init__()
         self.d_model = d_model
         self.codebook_size = codebook_size
         self.db_dsn = db_dsn
-        self.num_blocks = d_model // 8
+        self.num_blocks = num_blocks if num_blocks is not None else d_model // 8
+        self.device = device if device is not None else torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Build 256-entry cosine Lookup Table for fast phase similarity computations
-        phase_intervals = torch.linspace(0, 2 * torch.pi, steps=codebook_size)
+        phase_intervals = torch.linspace(0, 2 * math.pi, steps=codebook_size)
         self.lut_cos = torch.cos(phase_intervals)
 
     def transduce_object(self, obj: Union[Dict[str, Any], List[Any], str, float, int]) -> torch.Tensor:
@@ -87,7 +100,6 @@ class UniversalDataTransducer:
 
     def _transduce_scalar(self, val: float) -> torch.Tensor:
         """Fractional-Phase Spatial Binding: maps scalar v to phase angle theta = v * pi mod 2pi."""
-        # Scale float to integer phase code in [0, 255]
         norm_val = math.tanh(val)  # Bounded in (-1, 1)
         phase_code = int((norm_val + 1.0) * 127.5) % self.codebook_size
         return torch.full((self.d_model,), phase_code, dtype=torch.uint8)
@@ -137,8 +149,6 @@ class UniversalDataTransducer:
             return False
 
 
-import math
-
 if __name__ == "__main__":
     transducer = UniversalDataTransducer(d_model=65536)
     sample_data = {
@@ -148,5 +158,4 @@ if __name__ == "__main__":
         "status": "NORMAL",
     }
     wave = transducer.transduce_object(sample_data)
-    print(f"Transduced Data Wave Shape: {wave.shape}, dtype: {wave.dtype}")
-    print("Universal Data Transducer module verified successfully.")
+    print(f"Transduced wave shape: {wave.shape}, dtype: {wave.dtype}")
