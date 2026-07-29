@@ -1,0 +1,27 @@
+{
+  "humaneval": {
+    "source": "openai/human-eval",
+    "count": 164,
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\humaneval_official_test.jsonl"
+  },
+  "ifeval": {
+    "source": "google-research/ifeval",
+    "count": 541,
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\ifeval_official_test.jsonl"
+  },
+  "gsm8k": {
+    "source": "openai/gsm8k",
+    "count": 1319,
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\gsm8k_official_test.jsonl"
+  },
+  "mbpp": {
+    "source": "google-research-datasets/mbpp",
+    "count": 257,
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\mbpp_official_test.jsonl"
+  },
+  "mmlu_physics": {
+    "source": "cais/mmlu",
+    "count": 102,
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\mmlu_college_physics_official_test.jsonl"
+  }
+}
