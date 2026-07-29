@@ -45,18 +45,17 @@ class ProductCliffordAlgebra3D(nn.Module):
         device = A.device
         
         # Ensure indices tensor matches input device
-        if self.mult_indices.device != device:
-            self.mult_indices = self.mult_indices.to(device)
+        mult_indices = self.mult_indices.to(device=device, dtype=torch.float32)
 
         # Initialize output multivector tensor
         C = torch.zeros((batch_size, num_blocks, 8), dtype=A.dtype, device=device)
         
         # Vectorized bilinear gathering based on Clifford algebra structural tables
-        indices = self.mult_indices.long()
+        indices = mult_indices.long()
         idx_a = indices[:, 0]
         idx_b = indices[:, 1]
         idx_c = indices[:, 2]
-        signs = self.mult_indices[:, 3]
+        signs = mult_indices[:, 3]
         
         # Gather coefficients
         coeffs_a = A[:, :, idx_a] # Shape: [B, K, 64]
@@ -66,7 +65,6 @@ class ProductCliffordAlgebra3D(nn.Module):
         product_terms = coeffs_a * coeffs_b * signs.view(1, 1, -1) # Shape: [B, K, 64]
         
         # Scatter-add products back to their designated multivector bases
-        # We accumulate the 64 product terms into the 8 target multivector slots
         for basis_idx in range(8):
             mask = (idx_c == basis_idx)
             C[:, :, basis_idx] = product_terms[:, :, mask].sum(dim=-1)
@@ -76,8 +74,12 @@ class ProductCliffordAlgebra3D(nn.Module):
     def forward(self, state_wave: torch.Tensor, rotor_wave: torch.Tensor) -> torch.Tensor:
         """
         Executes a directional rotor transformation: State' = R * State * R_reverse
-         rotor_wave must contain unit-modulus spinors (rotors)
+        rotor_wave must contain unit-modulus spinors (rotors)
         """
+        # Ensure inputs match device
+        state_wave = state_wave.to(self.mult_indices.device) if hasattr(self, 'mult_indices') else state_wave
+        rotor_wave = rotor_wave.to(state_wave.device)
+
         # 1. Compute R * State
         half_transformed = self.geometric_product(rotor_wave, state_wave)
         
