@@ -36,10 +36,13 @@ from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
 try:
     import henri_audit
 except ImportError:
-    appdata_audit = os.path.expanduser(r"~\AppData\Local\hermes\scripts")
-    if os.path.exists(appdata_audit) and appdata_audit not in sys.path:
-        sys.path.insert(0, appdata_audit)
-    import henri_audit
+    try:
+        appdata_audit = os.path.expanduser(r"~\AppData\Local\hermes\scripts")
+        if os.path.exists(appdata_audit) and appdata_audit not in sys.path:
+            sys.path.insert(0, appdata_audit)
+        import henri_audit
+    except ImportError:
+        henri_audit = None
 
 try:
     import agentic_event_store
