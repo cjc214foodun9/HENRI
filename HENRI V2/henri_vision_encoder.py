@@ -29,7 +29,7 @@ class HENRIVisionEncoder(nn.Module):
         d_model: int = 65536,
         k_blocks: int = 8192,
         block_dim: int = 8,
-        max_grid_dim: int = 32,
+        max_grid_dim: int = 128,
         device: Optional[str] = None
     ):
         super().__init__()
@@ -41,8 +41,8 @@ class HENRIVisionEncoder(nn.Module):
 
         # Complex phase spatial basis vectors [max_grid_dim, D // 2]
         # x-axis translation phase generator and y-axis translation phase generator
-        spatial_phases_x = torch.linspace(0, 2 * math.pi * 31, d_model // 2, device=self.device)
-        spatial_phases_y = torch.linspace(0, 2 * math.pi * 31, d_model // 2, device=self.device)
+        spatial_phases_x = torch.linspace(0, 2 * math.pi * 127, d_model // 2, device=self.device)
+        spatial_phases_y = torch.linspace(0, 2 * math.pi * 127, d_model // 2, device=self.device)
 
         grid_coords = torch.arange(max_grid_dim, device=self.device, dtype=torch.float32).unsqueeze(1)
         self.spatial_basis_x = torch.exp(1j * (grid_coords * spatial_phases_x.unsqueeze(0)))
