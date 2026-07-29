@@ -152,12 +152,13 @@ class SagnacMCTSPlanner(nn.Module):
 
     def solve_arc_grid(
         self, input_grid: torch.Tensor, target_grid: torch.Tensor, max_depth: int = 3, num_simulations: int = 50
-    ) -> Tuple[Optional[SpelkeProgramTree], float]:
+    ) -> Tuple[SpelkeProgramTree, float]:
         """
         Executes Sagnac-Guided MCTS over Spelke DSL Program Trees to solve ARC-AGI-3 grids.
+        Returns guaranteed non-None SpelkeProgramTree candidate and lowest Sagnac delta.
         """
         target_wave = self.codec.encode_text(str(target_grid.tolist()))
-        best_tree = None
+        best_tree = SpelkeProgramTree([self.primitive_pool[0]])
         best_sagnac = 1.0
 
         for sim in range(num_simulations):
@@ -173,7 +174,7 @@ class SagnacMCTSPlanner(nn.Module):
             pred_wave = self.codec.encode_text(str(pred_grid.tolist()))
             sagnac_delta = 1.0 - self.codec.compute_similarity(pred_wave, target_wave)
 
-            if sagnac_delta < best_sagnac:
+            if sim == 0 or sagnac_delta <= best_sagnac:
                 best_sagnac = sagnac_delta
                 best_tree = tree
 
