@@ -167,6 +167,86 @@ def generate_seed_crystal_axioms(num_blocks: int = 8192) -> list:
         "metadata": {"grid_toroidal": True, "energy_conservation": True}
     })
 
+    # --- Spelke Core Knowledge Axiom Expansion (Phase 4.1) ---
+
+    # 6. Spelke Prior: Affine Spatial Translation
+    g6 = torch.Generator(device="cpu").manual_seed(6006)
+    w6 = torch.randn(num_blocks, 8, generator=g6)
+    w6 = F.normalize(w6, p=2, dim=-1)
+    axioms.append({
+        "axiom_id": "urn:henri:axiom:spelke_affine_translation:v1",
+        "axiom_kind": "spelke_prior",
+        "source": "Spelke Core Knowledge: Continuous 2D Grid Translation",
+        "validity_scope": "global:spelke:translation",
+        "wave": w6,
+        "metadata": {"prior": "affine_translation", "spelke_core": True}
+    })
+
+    # 7. Spelke Prior: Discrete Affine Rotation (90/180/270 degrees)
+    g7 = torch.Generator(device="cpu").manual_seed(7007)
+    w7 = torch.randn(num_blocks, 8, generator=g7)
+    w7 = F.normalize(w7, p=2, dim=-1)
+    axioms.append({
+        "axiom_id": "urn:henri:axiom:spelke_affine_rotation:v1",
+        "axiom_kind": "spelke_prior",
+        "source": "Spelke Core Knowledge: Discrete Spatial Rotation Symmetry",
+        "validity_scope": "global:spelke:rotation",
+        "wave": w7,
+        "metadata": {"prior": "affine_rotation", "spelke_core": True}
+    })
+
+    # 8. Spelke Prior: Spatial Reflection Parity
+    g8 = torch.Generator(device="cpu").manual_seed(8008)
+    w8 = torch.randn(num_blocks, 8, generator=g8)
+    w8 = F.normalize(w8, p=2, dim=-1)
+    axioms.append({
+        "axiom_id": "urn:henri:axiom:spelke_reflection_symmetry:v1",
+        "axiom_kind": "spelke_prior",
+        "source": "Spelke Core Knowledge: Vertical/Horizontal Parity Reflection",
+        "validity_scope": "global:spelke:reflection",
+        "wave": w8,
+        "metadata": {"prior": "reflection_parity", "spelke_core": True}
+    })
+
+    # 9. Spelke Prior: Color-Rebinding Permutation Invariance
+    g9 = torch.Generator(device="cpu").manual_seed(9009)
+    w9 = torch.randn(num_blocks, 8, generator=g9)
+    w9 = F.normalize(w9, p=2, dim=-1)
+    axioms.append({
+        "axiom_id": "urn:henri:axiom:spelke_color_rebinding:v1",
+        "axiom_kind": "spelke_prior",
+        "source": "Spelke Core Knowledge: Permutation-Invariant Color Index Mapping",
+        "validity_scope": "global:spelke:color",
+        "wave": w9,
+        "metadata": {"prior": "color_rebinding", "spelke_core": True}
+    })
+
+    # 10. Spelke Prior: Unidirectional Contact Gravity Drop
+    g10 = torch.Generator(device="cpu").manual_seed(10010)
+    w10 = torch.randn(num_blocks, 8, generator=g10)
+    w10 = F.normalize(w10, p=2, dim=-1)
+    axioms.append({
+        "axiom_id": "urn:henri:axiom:spelke_gravity_drop:v1",
+        "axiom_kind": "spelke_prior",
+        "source": "Spelke Core Knowledge: Directional Contact Mechanics / Gravity Drop",
+        "validity_scope": "global:spelke:gravity",
+        "wave": w10,
+        "metadata": {"prior": "gravity_drop", "spelke_core": True}
+    })
+
+    # 11. Spelke Prior: Topological Boundary Contour Fill
+    g11 = torch.Generator(device="cpu").manual_seed(11011)
+    w11 = torch.randn(num_blocks, 8, generator=g11)
+    w11 = F.normalize(w11, p=2, dim=-1)
+    axioms.append({
+        "axiom_id": "urn:henri:axiom:spelke_contour_fill:v1",
+        "axiom_kind": "spelke_prior",
+        "source": "Spelke Core Knowledge: Enclosed Boundary Flood Fill Operator",
+        "validity_scope": "global:spelke:contour",
+        "wave": w11,
+        "metadata": {"prior": "contour_fill", "spelke_core": True}
+    })
+
     return axioms
 
 
