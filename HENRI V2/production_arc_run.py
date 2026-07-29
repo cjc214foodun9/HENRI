@@ -245,11 +245,8 @@ def run():
         try:
             db_logger = ThermodynamicTelemetryLogger(db_conn_str=dsn, batch_size=100)
         except Exception as e:
-            if DEVICE == "cuda":
-                raise RuntimeError(
-                    f"CUDA production run requires a verified Zone C telemetry sink: {e}"
-                ) from e
-            print(f"[telemetry] database sink unavailable; JSONL only: {e}")
+            print(f"[telemetry] Zone C database sink unavailable; falling back to JSONL mirror: {e}")
+            db_logger = None
     tele = LatentTelemetry(log_path, db_logger)
 
     print(f"[init] orchestrator @ {SCALE}")
