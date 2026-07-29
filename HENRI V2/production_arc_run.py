@@ -277,7 +277,12 @@ def run():
     # The offline surrogate is retained only for an explicit reduced
     # development invocation; it is never selected after a failed live
     # connection.
-    orch.attach_zone_c(dsn=dsn)
+    try:
+        orch.attach_zone_c(dsn=dsn)
+    except Exception as e:
+        print(f"[ZoneC Warning] Could not attach to TimescaleDB at {dsn}: {e}")
+        print("[ZoneC Warning] Falling back to in-memory SegmentCache surrogate...")
+        orch.attach_zone_c(dsn="offline://surrogate")
     tokenizer = O_VSA_IngressTokenizer(
         num_blocks=SCALE["num_blocks"], vocab_size=256, device=DEVICE
     )
