@@ -57,12 +57,15 @@ class FusedHENRITransitionKernel(nn.Module):
         self.register_buffer("static_A_sub", torch.eye(r_rank, dtype=torch.float32))
 
         # 3. float16 Compressed Hopfield Memory Codebook [vocab_size, d_model]
-        codebook_init = torch.randn(vocab_size, d_model) / math.sqrt(d_model)
-        codebook_norm = F.normalize(codebook_init, p=2, dim=-1)
-        if use_fp16:
-            self.register_buffer("codebook", codebook_norm.to(torch.float16))
-        else:
-            self.register_buffer("codebook", codebook_norm.to(torch.float32))
+        chunk_sz = 4000
+        codebook_chunks = []
+        for i in range(0, vocab_size, chunk_sz):
+            sz = min(chunk_sz, vocab_size - i)
+            cb_chunk = torch.randn(sz, d_model, device="cpu", dtype=torch.float16) / math.sqrt(d_model)
+            cb_norm = F.normalize(cb_chunk.to(torch.float32), p=2, dim=-1).to(torch.float16 if use_fp16 else torch.float32)
+            codebook_chunks.append(cb_norm)
+        codebook_tensor = torch.cat(codebook_chunks, dim=0)
+        self.register_buffer("codebook", codebook_tensor)
 
         # 4. Boundary Axiom Phase Vector [d_model]
         axiom_init = torch.randn(d_model)
