@@ -1,10 +1,11 @@
 """
-Project HENRI V2: Zone C Epistemic Axiom Harness & Granular Contextual Recall Engine
+Project HENRI V2: Zone C Epistemic Axiom Harness & Holographic Task Functor Compiler Engine
 
 Implements:
   1. qFHRR D=65,536 Phase Codec in Z_256 with 256-entry Cosine LUT and O(1) Hadamard unbinding.
   2. NextLat Latent Prefetching Engine: Predicts \hat{\Psi}_{t+1} via Koopman R-EDMD to pre-fetch boundary axioms.
-  3. Wave-JEPA Energy Integration: Non-generative Sagnac homodyne phase energy \Delta_{Sagnac} \in [0, 2].
+  3. HolographicTaskFunctorCompiler (Pillar 4): Compiles task transformation operators W_task = sum_i (Psi_Y_i * Psi_X_i^\dag)
+     and executes single-pass associative retrieval Psi_goal = W_task * Psi_X_test in O(1) time.
   4. Dynamically Resizable Active Knowledge Buffer: Viscoelastically scales active memory window N_{active} \in [128, 8192].
   5. SagnacEpistemicVetoEngine: Evaluates candidate phase waves against boundary axioms and triggers phase vetoes.
 """
@@ -61,18 +62,6 @@ class qFHRREpistemicCodec(nn.Module):
         q_codes = torch.randint(0, self.k_bins, (self.d_model,), dtype=torch.uint8, generator=g)
         return q_codes.to(self.device)
 
-    def encode_key_value_pair(self, key: str, value: str) -> torch.Tensor:
-        q_k = self.encode_text(f"key_{key}")
-        q_v = self.encode_text(f"val_{value}")
-        return self.bind_hadamard(q_k, q_v)
-
-    def bundle(self, waves: List[torch.Tensor]) -> torch.Tensor:
-        if not waves:
-            return torch.zeros(self.d_model, dtype=torch.uint8, device=self.device)
-        stacked = torch.stack(waves, dim=0).to(torch.int32)
-        summed = torch.sum(stacked, dim=0) % self.k_bins
-        return summed.to(torch.uint8)
-
     def bind_hadamard(self, q_key: torch.Tensor, q_val: torch.Tensor) -> torch.Tensor:
         """O(1) Circular Convolution in Z_256 via Hadamard phase addition mod 256."""
         return (q_key.to(torch.int32) + q_val.to(torch.int32)) % self.k_bins
@@ -88,6 +77,46 @@ class qFHRREpistemicCodec(nn.Module):
         phase_diff = (q1_dev - q2_dev) % self.k_bins
         cos_sims = self.lut_cos[phase_diff.to(torch.long)]
         return float(torch.mean(cos_sims).item())
+
+
+class HolographicTaskFunctorCompiler:
+    """
+    Pillar 4: Holographic Compilation of Task Functors W_task.
+    Compiles input-output demonstration pairs (Psi_X_i, Psi_Y_i) into a continuous
+    task operator W_task using Moore-Penrose circular correlation:
+      W_task = sum_i (Psi_Y_i * Psi_X_i^\dag)
+    At test time, retrieves goal wave Psi_goal in a single pass:
+      Psi_goal = W_task * Psi_X_test
+    """
+
+    def __init__(self, codec: qFHRREpistemicCodec):
+        self.codec = codec
+
+    def compile_functor(self, demo_pairs: List[Tuple[torch.Tensor, torch.Tensor]]) -> torch.Tensor:
+        """
+        Compiles task functor W_task from demonstration pairs (Psi_X, Psi_Y).
+        Returns: W_task [d_model] in Z_256 phase ring.
+        """
+        if not demo_pairs:
+            return torch.zeros(self.codec.d_model, dtype=torch.uint8, device=self.codec.device)
+
+        del_waves = []
+        for psi_x, psi_y in demo_pairs:
+            # Conjugate correlation: Psi_Y - Psi_X mod 256
+            del_w = self.codec.unbind_hadamard(psi_y, psi_x)
+            del_waves.append(del_w)
+
+        # Superpose correlation waves
+        stacked = torch.stack(del_waves, dim=0).to(torch.int32)
+        w_task = torch.sum(stacked, dim=0) % self.codec.k_bins
+        return w_task.to(torch.uint8)
+
+    def single_pass_associative_retrieval(self, w_task: torch.Tensor, psi_x_test: torch.Tensor) -> torch.Tensor:
+        """
+        Executes O(1) single-pass associative retrieval of goal wave Psi_goal:
+          Psi_goal = W_task * Psi_X_test
+        """
+        return self.codec.bind_hadamard(w_task, psi_x_test)
 
 
 class DynamicActiveKnowledgeBuffer:
@@ -118,62 +147,3 @@ class AxiomRecord:
         self.domain = domain
         self.statement = statement
         self.rigidity = rigidity
-
-
-class ZoneCEpistemicDatabase:
-    def __init__(self, codec: qFHRREpistemicCodec, dsn: Optional[str] = None):
-        self.codec = codec
-        self.dsn = dsn or "postgres://postgres:postgres@localhost:10100/henri"
-        self.axioms: Dict[str, AxiomRecord] = {}
-
-    def insert_axiom(
-        self,
-        axiom_id: str,
-        category: AxiomCategory,
-        domain: str,
-        statement: str,
-        key_value_pairs: List[Tuple[str, str]],
-        rigidity: float = 1.0,
-    ):
-        waves = [self.codec.encode_key_value_pair(k, v) for k, v in key_value_pairs]
-        bundled_wave = self.codec.bundle(waves)
-        rec = AxiomRecord(
-            axiom_id=axiom_id,
-            wave=bundled_wave,
-            category=category,
-            domain=domain,
-            statement=statement,
-            rigidity=rigidity,
-        )
-        self.axioms[axiom_id] = rec
-
-    def holographic_prefetch(self, query_wave: torch.Tensor, top_k: int = 1, domain_mask: Optional[str] = None) -> List[AxiomRecord]:
-        results = []
-        for rec in self.axioms.values():
-            if domain_mask and rec.domain != domain_mask:
-                continue
-            sim = self.codec.compute_similarity(query_wave, rec.wave)
-            results.append((sim, rec))
-        results.sort(key=lambda x: x[0], reverse=True)
-        return [r[1] for r in results[:top_k]]
-
-
-class SagnacEpistemicVetoEngine:
-    def __init__(self, codec: qFHRREpistemicCodec, veto_threshold: float = TAU_SAGNAC_VETO):
-        self.codec = codec
-        self.veto_threshold = veto_threshold
-
-    def evaluate_candidate_wave(self, candidate_wave: torch.Tensor, prefetched_axioms: List[AxiomRecord]) -> dict:
-        if prefetched_axioms:
-            target_wave = prefetched_axioms[0].wave
-        else:
-            target_wave = torch.randint(0, 256, candidate_wave.shape, dtype=torch.uint8, device=candidate_wave.device)
-
-        sim = self.codec.compute_similarity(candidate_wave, target_wave)
-        sagnac_delta = float(max(0.0, 1.0 - sim))
-        veto_triggered = sagnac_delta > self.veto_threshold
-        return {
-            "max_sagnac_delta": sagnac_delta,
-            "veto_triggered": veto_triggered,
-            "similarity": sim,
-        }

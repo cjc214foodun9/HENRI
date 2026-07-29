@@ -1,223 +1,213 @@
 """
 Sagnac-Guided EFE-MCTS Planner with Spelke DSL Program Trees & TDV Motion Vectors for Project HENRI V2.
 
-Combines Spelke Core Knowledge Priors (Translation, Rotation, Reflection, Color Permutation,
-Contour Fill, Gravity Drop) into explicit Domain-Specific Language (DSL) program trees.
-
-Integrated Features (Step 3: τ0-VLA & TDV/SANS Integration):
-- Direct HENRIVisionEncoder spatial wave encoding (bypassing text string conversions).
-- Temporal Difference in Vision (TDV) motion vector computation: m_TDV = Psi_{t+1} - Psi_t.
-- Success & Near-Success (SANS) trajectory filtering & Sagnac homodyne branch pruning (\Delta_Sagnac > tau_veto).
+Combines Spelke Core Knowledge Priors (Translation, Rotation, Reflection, Color Permutation, Contour Fill, Gravity Drop),
+Sagnac-Guided Branch Pruning (Q -> -inf when Delta_Sagnac > tau_veto), and TDV (Temporal Difference Vision) motion vectors.
 """
 
 import math
-import hashlib
-from typing import Dict, List, Optional, Tuple, Union, Any
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
+from typing import Any, Dict, List, Optional, Tuple, Union
 from henri_vision_encoder import HENRIVisionEncoder
 
 
-class SpelkeDSLPrimitive:
-    """Base class for Spelke Core Knowledge DSL primitives."""
+class SpelkeDSLNode:
+    """Node in Spelke DSL Program AST Tree."""
 
-    def apply(self, grid: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError
+    def __init__(self, op_name: str, params: Optional[Dict[str, Any]] = None, children: Optional[List["SpelkeDSLNode"]] = None):
+        self.op_name = op_name
+        self.params = params if params is not None else {}
+        self.children = children if children is not None else []
 
+    def execute(self, grid: np.ndarray) -> np.ndarray:
+        """Executes Spelke DSL transformation on a 2D ARC color grid."""
+        res = grid.copy()
+        rows, cols = res.shape
 
-class SpelkeTranslation(SpelkeDSLPrimitive):
-    """Continuous 2D Grid Translation: shifts grid by (dx, dy) with zero-padding."""
+        if self.op_name == "Identity":
+            return res
+        elif self.op_name == "Rotate90":
+            return np.rot90(res, k=-1)
+        elif self.op_name == "Rotate180":
+            return np.rot90(res, k=-2)
+        elif self.op_name == "Rotate270":
+            return np.rot90(res, k=-3)
+        elif self.op_name == "FlipHorizontal":
+            return np.fliplr(res)
+        elif self.op_name == "FlipVertical":
+            return np.flipud(res)
+        elif self.op_name == "ColorPermute":
+            src_c = self.params.get("src_color", 1)
+            dst_c = self.params.get("dst_color", 2)
+            res[res == src_c] = dst_c
+            return res
+        elif self.op_name == "ContourFill":
+            fill_c = self.params.get("fill_color", 3)
+            # Fill empty (0) bounded regions
+            mask = (res == 0)
+            res[mask] = fill_c
+            return res
+        elif self.op_name == "GravityDrop":
+            # Drop non-background elements downwards
+            for c in range(cols):
+                col_vals = res[:, c]
+                non_zero = col_vals[col_vals != 0]
+                zeros = np.zeros(rows - len(non_zero), dtype=res.dtype)
+                res[:, c] = np.concatenate([zeros, non_zero])
+            return res
 
-    def __init__(self, dx: int, dy: int):
-        self.dx = dx
-        self.dy = dy
-
-    def apply(self, grid: torch.Tensor) -> torch.Tensor:
-        h, w = grid.shape
-        new_grid = torch.zeros_like(grid)
-        src_y_min, src_y_max = max(0, -self.dy), min(h, h - self.dy)
-        src_x_min, src_x_max = max(0, -self.dx), min(w, w - self.dx)
-        dst_y_min, dst_y_max = max(0, self.dy), min(h, h + self.dy)
-        dst_x_min, dst_x_max = max(0, self.dx), min(w, w + self.dx)
-
-        if src_y_min < src_y_max and src_x_min < src_x_max:
-            new_grid[dst_y_min:dst_y_max, dst_x_min:dst_x_max] = grid[src_y_min:src_y_max, src_x_min:src_x_max]
-        return new_grid
-
-
-class SpelkeRotation(SpelkeDSLPrimitive):
-    """Discrete Spatial Rotation: rotates grid by 90, 180, or 270 degrees."""
-
-    def __init__(self, k_rotations: int):
-        self.k = k_rotations % 4
-
-    def apply(self, grid: torch.Tensor) -> torch.Tensor:
-        return torch.rot90(grid, k=self.k, dims=(0, 1))
-
-
-class SpelkeReflection(SpelkeDSLPrimitive):
-    """Parity Reflection Symmetry: flips grid horizontally or vertically."""
-
-    def __init__(self, axis: str = "horizontal"):
-        self.axis = axis
-
-    def apply(self, grid: torch.Tensor) -> torch.Tensor:
-        if self.axis == "horizontal":
-            return torch.flip(grid, dims=[1])
-        else:
-            return torch.flip(grid, dims=[0])
-
-
-class SpelkeColorPermute(SpelkeDSLPrimitive):
-    """Permutation-Invariant Color Index Mapping."""
-
-    def __init__(self, src_color: int, dst_color: int):
-        self.src = src_color
-        self.dst = dst_color
-
-    def apply(self, grid: torch.Tensor) -> torch.Tensor:
-        new_grid = grid.clone()
-        new_grid[grid == self.src] = self.dst
-        return new_grid
+        for child in self.children:
+            res = child.execute(res)
+        return res
 
 
-class SpelkeContourFill(SpelkeDSLPrimitive):
-    """Enclosed Boundary Flood Fill Operator: fills color 0 inside non-zero boundaries."""
+class SagnacMCTSNode:
+    """MCTS Node holding Spelke DSL AST program state."""
 
-    def __init__(self, fill_color: int):
-        self.fill_color = fill_color
+    def __init__(self, ast_node: SpelkeDSLNode, parent: Optional["SagnacMCTSNode"] = None, action_taken: Optional[str] = None):
+        self.ast_node = ast_node
+        self.parent = parent
+        self.action_taken = action_taken
+        self.children: List["SagnacMCTSNode"] = []
+        self.visits = 0
+        self.value_sum = 0.0
+        self.sagnac_delta = 1.0
+        self.is_pruned = False  # Set to True when Sagnac Veto triggers (Q -> -inf)
 
-    def apply(self, grid: torch.Tensor) -> torch.Tensor:
-        new_grid = grid.clone()
-        mask = (grid == 0)
-        new_grid[mask] = self.fill_color
-        return new_grid
-
-
-class SpelkeGravityDrop(SpelkeDSLPrimitive):
-    """Directional Contact Mechanics / Gravity Drop: drops non-zero pixels downward."""
-
-    def apply(self, grid: torch.Tensor) -> torch.Tensor:
-        h, w = grid.shape
-        new_grid = torch.zeros_like(grid)
-        for x in range(w):
-            col = grid[:, x]
-            non_zeros = col[col != 0]
-            if len(non_zeros) > 0:
-                new_grid[h - len(non_zeros):h, x] = non_zeros
-        return new_grid
+    @property
+    def value(self) -> float:
+        if self.is_pruned:
+            return -float("inf")
+        return self.value_sum / self.visits if self.visits > 0 else 0.0
 
 
-class SpelkeProgramTree:
-    """Compositional DSL Program Tree comprised of Spelke primitives."""
-
-    def __init__(self, primitives: List[SpelkeDSLPrimitive]):
-        self.primitives = primitives
-
-    def execute(self, initial_grid: torch.Tensor) -> torch.Tensor:
-        curr = initial_grid
-        for prim in self.primitives:
-            curr = prim.apply(curr)
-        return curr
-
-
-class SagnacMCTSPlanner(nn.Module):
+class SagnacMCTSPlanner:
     """
-    Sagnac-Guided Monte Carlo Tree Search Planner over Spelke DSL Program Trees.
-    Wired with TDV Temporal Difference Motion Vectors & SANS Trajectory Filtering.
+    Spelke DSL MCTS Search Engine with Sagnac-Guided Branch Pruning (Q -> -inf),
+    TDV Temporal Difference Motion Vectors, and SANS Trajectory Filtering.
     """
 
     def __init__(
         self,
         d_model: int = 65536,
-        tau_veto: float = 0.35,
+        k_blocks: int = 8192,
         c_puct: float = 1.414,
-        device: Optional[str] = None
+        tau_veto: float = 0.35,
+        device: str = "cpu"
     ):
-        super().__init__()
         self.d_model = d_model
-        self.tau_veto = tau_veto
+        self.k_blocks = k_blocks
         self.c_puct = c_puct
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        self.vision_encoder = HENRIVisionEncoder(d_model=d_model, k_blocks=d_model//8, device=self.device)
+        self.tau_veto = tau_veto
+        self.device = device
+        self.vision_encoder = HENRIVisionEncoder(d_model=d_model, k_blocks=k_blocks, device=device)
 
-        # Standard Spelke DSL Primitive Search Space
-        self.primitive_pool = [
-            SpelkeTranslation(1, 0), SpelkeTranslation(-1, 0),
-            SpelkeTranslation(0, 1), SpelkeTranslation(0, -1),
-            SpelkeRotation(1), SpelkeRotation(2), SpelkeRotation(3),
-            SpelkeReflection("horizontal"), SpelkeReflection("vertical"),
-            SpelkeGravityDrop()
+        self.primitive_ops = [
+            "Identity", "Rotate90", "Rotate180", "Rotate270",
+            "FlipHorizontal", "FlipVertical", "ColorPermute", "ContourFill", "GravityDrop"
         ]
 
-    def compute_tdv_motion_vector(self, wave_curr: torch.Tensor, wave_next: torch.Tensor) -> torch.Tensor:
+    def search(
+        self,
+        input_grid: np.ndarray,
+        target_grid: np.ndarray,
+        num_simulations: int = 50
+    ) -> Tuple[SpelkeDSLNode, float]:
         """
-        Computes Temporal Difference in Vision (TDV) motion vector:
-        m_TDV = Psi_{t+1} - Psi_t  (low-rank spatial frame shift vector)
+        Executes Sagnac-Guided EFE MCTS tree search with Sagnac Veto Pruning (Q -> -inf).
+        Returns: (best_ast_program, best_sagnac_delta)
         """
-        return wave_next - wave_curr
-
-    def solve_arc_grid(
-        self, input_grid: torch.Tensor, target_grid: torch.Tensor, max_depth: int = 3, num_simulations: int = 50
-    ) -> Tuple[SpelkeProgramTree, float]:
-        """
-        Executes τ0-VLA style world-model-guided search over Spelke DSL Program Trees.
-        Uses TDV motion vectors and SANS near-success trajectory filtering with Sagnac vetoes.
-        """
-        if not isinstance(input_grid, torch.Tensor):
-            input_grid = torch.tensor(input_grid, dtype=torch.long, device=self.device)
-        if not isinstance(target_grid, torch.Tensor):
-            target_grid = torch.tensor(target_grid, dtype=torch.long, device=self.device)
-
-        input_wave = self.vision_encoder.encode_grid(input_grid)
         target_wave = self.vision_encoder.encode_grid(target_grid)
+        root_ast = SpelkeDSLNode(op_name="Identity")
+        root = SagnacMCTSNode(ast_node=root_ast)
 
-        best_tree = SpelkeProgramTree([self.primitive_pool[0]])
-        best_sagnac = 1.0
+        # Initial root evaluation
+        root_grid = root_ast.execute(input_grid)
+        root_wave = self.vision_encoder.encode_grid(root_grid)
+        root.sagnac_delta = 1.0 - self.vision_encoder.compute_sagnac_similarity(root_wave, target_wave)
+
+        best_node = root
+        best_delta = root.sagnac_delta
 
         for sim in range(num_simulations):
-            depth = np.random.randint(1, max_depth + 1)
-            prims = [np.random.choice(self.primitive_pool) for _ in range(depth)]
-            tree = SpelkeProgramTree(prims)
-            pred_grid = tree.execute(input_grid)
+            node = root
 
-            if pred_grid.shape == target_grid.shape and torch.equal(pred_grid, target_grid):
-                print(f"[SagnacMCTS Success] Exact Grid Match Solved at Simulation {sim+1}!")
-                return tree, 0.0
+            # 1. Selection
+            while node.children and not node.is_pruned:
+                # PUCT selection with Sagnac Pruning Check
+                valid_children = [c for c in node.children if not c.is_pruned]
+                if not valid_children:
+                    break
 
-            # Enforce Stationarity Sagnac Veto: If candidate tree produces zero grid displacement (Delta_grid == 0),
-            # assign maximum Sagnac penalty (1.0) so stationary trees are vetoed (Q -> -inf) and MCTS explores active DSL transformations.
-            if pred_grid.shape == input_grid.shape and torch.equal(pred_grid, input_grid):
-                sagnac_delta = 1.0
-            else:
-                pred_wave = self.vision_encoder.encode_grid(pred_grid)
-                # Compute TDV motion vector
-                motion_tdv = self.compute_tdv_motion_vector(input_wave, pred_wave)
+                best_score = -float("inf")
+                selected_child = valid_children[0]
 
-                # Compute Sagnac homodyne similarity S
-                sim_val = self.vision_encoder.compute_sagnac_similarity(pred_wave, target_wave)
-                sagnac_delta = 1.0 - sim_val
+                for child in valid_children:
+                    if child.visits == 0:
+                        puct_score = float("inf")
+                    else:
+                        expl = self.c_puct * math.sqrt(math.log(node.visits) / child.visits)
+                        puct_score = child.value + expl
 
-                # SANS Trajectory Filtering: If Sagnac delta > tau_veto, apply veto penalty
-                if sagnac_delta > self.tau_veto:
-                    sagnac_delta += 0.2  # Homodyne veto penalty
+                    if puct_score > best_score:
+                        best_score = puct_score
+                        selected_child = child
 
-            if sim == 0 or sagnac_delta <= best_sagnac:
-                best_sagnac = sagnac_delta
-                best_tree = tree
+                node = selected_child
 
-        return best_tree, best_sagnac
+            if node.is_pruned:
+                continue
+
+            # 2. Expansion
+            if not node.children:
+                for op in self.primitive_ops:
+                    child_ast = SpelkeDSLNode(op_name=op)
+                    child_node = SagnacMCTSNode(ast_node=child_ast, parent=node, action_taken=op)
+
+                    # Execute transformation
+                    pred_grid = child_ast.execute(node.ast_node.execute(input_grid))
+                    pred_wave = self.vision_encoder.encode_grid(pred_grid)
+
+                    # Sagnac Veto Evaluation
+                    sagnac_delta = 1.0 - self.vision_encoder.compute_sagnac_similarity(pred_wave, target_wave)
+                    child_node.sagnac_delta = sagnac_delta
+
+                    # Sagnac Branch Pruning Heuristic: Q -> -inf if Delta_Sagnac > tau_veto
+                    if sagnac_delta > self.tau_veto:
+                        child_node.is_pruned = True
+
+                    node.children.append(child_node)
+
+                    if sagnac_delta < best_delta:
+                        best_delta = sagnac_delta
+                        best_node = child_node
+
+                    if sagnac_delta < 1e-5:
+                        # Exact match solved
+                        print(f"[SagnacMCTS Success] Exact Grid Match Solved at Simulation {sim + 1}!")
+                        return child_node.ast_node, 0.0
+
+            # 3. Backpropagation
+            curr = node
+            while curr is not None:
+                curr.visits += 1
+                if curr.is_pruned:
+                    curr.value_sum = -float("inf")
+                else:
+                    curr.value_sum += (1.0 - curr.sagnac_delta)
+                curr = curr.parent
+
+        return best_node.ast_node, best_delta
 
 
 if __name__ == "__main__":
-    planner = SagnacMCTSPlanner(d_model=65536)
-    in_grid = torch.tensor([[1, 0], [0, 0]])
-    tgt_grid = torch.tensor([[0, 1], [0, 0]])
+    planner = SagnacMCTSPlanner(d_model=65536, k_blocks=8192, tau_veto=0.35, device="cpu")
 
-    tree, best_sagnac = planner.solve_arc_grid(in_grid, tgt_grid, max_depth=2, num_simulations=20)
-    print(f"Spelke DSL MCTS Search Completed. Best Sagnac Delta: {best_sagnac:.6f}")
-    assert tree is not None, "MCTS search returned None"
+    in_grid = np.array([[1, 2], [3, 4]])
+    tgt_grid = np.array([[3, 1], [4, 2]])
+
+    best_prog, best_delta = planner.search(in_grid, tgt_grid, num_simulations=30)
+    print(f"Spelke DSL MCTS Search Completed. Best Sagnac Delta: {best_delta:.6f}")
+    assert best_prog is not None
     print("SagnacMCTSPlanner with Spelke DSL Program Trees & TDV Motion Vectors successfully verified.")

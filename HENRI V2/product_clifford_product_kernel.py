@@ -39,60 +39,70 @@ class ProductCliffordAlgebra3D(nn.Module):
             [7, 4, 3, -1.0], [7, 5, 1, -1.0], [7, 6, 2, -1.0], [7, 7, 0, -1.0]
         ], dtype=torch.float32)
 
-        # Pre-sort table rows by output_basis (column 2) so every 8 consecutive rows map to basis 0..7
         output_bases = raw_table[:, 2]
         sorted_order = torch.argsort(output_bases)
         sorted_table = raw_table[sorted_order]
         self.register_buffer("mult_indices", sorted_table)
 
-        # Pre-allocated Clifford reversion sign mask: vector grades (0..3) positive, bivectors/trivector (4..7) negative
         self.register_buffer("reversion_mask", torch.tensor([1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0], dtype=torch.float32))
 
     def geometric_product(self, A: torch.Tensor, B: torch.Tensor) -> torch.Tensor:
         """
         Computes the vectorized geometric product C = AB over all K blocks.
-        A, B Shapes: [Batch_Size, K, 8]
+        A, B Shapes: [Batch_Size, K, 8] or [K, 8]
         Output Shape: [Batch_Size, K, 8]
         """
+        orig_dim = A.dim()
+        if orig_dim == 2:
+            A = A.unsqueeze(0)
+            B = B.unsqueeze(0)
+
         batch_size, num_blocks, _ = A.shape
         device = A.device
         
-        # Ensure indices tensor matches input device
         mult_indices = self.mult_indices.to(device=device, dtype=torch.float32)
 
-        # Vectorized bilinear gathering based on pre-sorted Clifford algebra structural tables
         indices = mult_indices.long()
         idx_a = indices[:, 0]
         idx_b = indices[:, 1]
         signs = mult_indices[:, 3]
         
-        # Gather coefficients
         coeffs_a = A[:, :, idx_a] # Shape: [B, K, 64]
         coeffs_b = B[:, :, idx_b] # Shape: [B, K, 64]
         
-        # Compute sign-preserving element-wise multiplication
         product_terms = coeffs_a * coeffs_b * signs.view(1, 1, -1) # Shape: [B, K, 64]
         
-        # Single-pass CUDA-graph-compatible sum over pre-sorted basis groups (8 terms per basis)
         C = product_terms.view(batch_size, num_blocks, 8, 8).sum(dim=-1) # Shape: [B, K, 8]
-            
+        
+        if orig_dim == 2:
+            C = C.squeeze(0)
+
         return C
+
+    def symmetric_tensor_product_binding(self, obj_a: torch.Tensor, spatial_role: torch.Tensor, obj_b: torch.Tensor) -> torch.Tensor:
+        """
+        Symmetric Tensor Product Binding in Clifford Algebra Cl(3,0):
+          Psi_relation = obj_a * spatial_role * obj_b
+        Associative and distributive binding suppressing crosstalk noise sigma^2 ~ M/D.
+        """
+        # 1. obj_a * spatial_role
+        half_bound = self.geometric_product(obj_a, spatial_role)
+        # 2. (obj_a * spatial_role) * obj_b
+        relation_wave = self.geometric_product(half_bound, obj_b)
+        
+        # Renormalize block norms
+        block_norms = torch.norm(relation_wave, dim=-1, keepdim=True).clamp_min(1e-6)
+        return relation_wave / block_norms
 
     def forward(self, state_wave: torch.Tensor, rotor_wave: torch.Tensor) -> torch.Tensor:
         """
         Executes a directional rotor transformation: State' = R * State * R_reverse
-        rotor_wave must contain unit-modulus spinors (rotors)
         """
         state_wave = state_wave.to(self.mult_indices.device) if hasattr(self, 'mult_indices') else state_wave
         rotor_wave = rotor_wave.to(state_wave.device)
 
-        # 1. Compute R * State
         half_transformed = self.geometric_product(rotor_wave, state_wave)
-        
-        # 2. Compute rotor reversion R_reverse via precomputed CUDA buffer multiplication (100% CUDA Graph safe)
         reversion_mask = self.reversion_mask.to(rotor_wave.device)
         rotor_reversion = rotor_wave * reversion_mask
-        
-        # 3. Compute (R * State) * R_reverse
         transformed_state = self.geometric_product(half_transformed, rotor_reversion)
         return transformed_state
