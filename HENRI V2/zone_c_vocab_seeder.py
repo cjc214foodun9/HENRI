@@ -98,7 +98,7 @@ class ZoneCVocabularySeeder:
         t0 = time.perf_counter()
 
         for idx_item in sample_indices.tolist():
-            clean_target = engrams[idx_item]
+            clean_target = engrams[idx_item].to(self.device)
             # Add Gaussian wavefront noise (sigma = 0.1)
             noisy_query = clean_target + torch.randn(self.d_model, device=self.device) * 0.1
             noisy_query = F.normalize(noisy_query, p=2, dim=-1)
