@@ -147,3 +147,11 @@ class AxiomRecord:
         self.domain = domain
         self.statement = statement
         self.rigidity = rigidity
+
+
+from zone_c_segment_cache import SegmentCache
+
+class ZoneCEpistemicDatabase:
+    def __init__(self, codec, dsn=None, num_blocks=512):
+        self.codec = codec
+        self.cache = SegmentCache.connect(dsn=dsn, num_blocks=num_blocks)
