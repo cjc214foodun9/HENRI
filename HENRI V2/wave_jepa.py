@@ -12,7 +12,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
 from recursive_dual_edmd import RecursiveDualEDMD
@@ -24,14 +24,15 @@ class WaveJEPA(nn.Module):
     Predicts future environment states strictly in d=65,536 latent phase wave space without pixel/token decoders.
     """
 
-    def __init__(self, d_model: int = 65536, num_blocks: int = 8192, r_rank: int = 16):
+    def __init__(self, d_model: int = 65536, num_blocks: int = 8192, r_rank: int = 16, device: Optional[str] = None):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
         self.r_rank = r_rank
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
         # 1. Context & Target Ingress Tokenizer (Encoder f_theta and Target Encoder g_phi)
-        self.encoder = O_VSA_IngressTokenizer(num_blocks=num_blocks, vocab_size=256)
+        self.encoder = O_VSA_IngressTokenizer(num_blocks=num_blocks, vocab_size=256, device=self.device)
 
         # 2. Action-Conditioned Latent Predictor (R-EDMD Koopman Operator p_psi)
         self.predictor = RecursiveDualEDMD(d_model=d_model, r_rank=r_rank, lambda_forget=0.98)
@@ -56,8 +57,8 @@ class WaveJEPA(nn.Module):
         Latent Energy Metric L_JEPA: Sagnac Homodyne Delta \Delta_{Sagnac}(\hat{Psi}_{t+1}, Psi_{t+1}) \in [0, 2].
         Measures phase obstruction between predicted and true target wave fields.
         """
-        flat_pred = F.normalize(pred_wave.view(-1), p=2, dim=0)
-        flat_target = F.normalize(target_wave.view(-1), p=2, dim=0)
+        flat_pred = F.normalize(pred_wave.view(-1), p=2, dim=0).to(self.device)
+        flat_target = F.normalize(target_wave.view(-1), p=2, dim=0).to(self.device)
 
         # Inner product on unit sphere = cos(angle)
         cos_sim = torch.dot(flat_pred, flat_target)
