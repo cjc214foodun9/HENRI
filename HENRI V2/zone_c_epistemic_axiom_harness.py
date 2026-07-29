@@ -83,7 +83,9 @@ class qFHRREpistemicCodec(nn.Module):
 
     def compute_similarity(self, q1: torch.Tensor, q2: torch.Tensor) -> float:
         """Computes phase cosine similarity between two Z_256 hypervectors using LUT."""
-        phase_diff = (q1.to(torch.int32) - q2.to(torch.int32)) % self.k_bins
+        q1_dev = q1.to(self.device, dtype=torch.int32)
+        q2_dev = q2.to(self.device, dtype=torch.int32)
+        phase_diff = (q1_dev - q2_dev) % self.k_bins
         cos_sims = self.lut_cos[phase_diff.to(torch.long)]
         return float(torch.mean(cos_sims).item())
 
