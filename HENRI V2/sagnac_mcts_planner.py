@@ -63,7 +63,7 @@ class SpelkeDSLNode:
 
 
 class SagnacMCTSNode:
-    """MCTS Node holding Spelke DSL AST program state."""
+    """MCTS Node holding Spelke DSL AST program state and Dual-Channel Sagnac Veto metrics."""
 
     def __init__(self, ast_node: SpelkeDSLNode, parent: Optional["SagnacMCTSNode"] = None, action_taken: Optional[str] = None):
         self.ast_node = ast_node
@@ -73,7 +73,9 @@ class SagnacMCTSNode:
         self.visits = 0
         self.value_sum = 0.0
         self.sagnac_delta = 1.0
-        self.is_pruned = False  # Set to True when Sagnac Veto triggers (Q -> -inf)
+        self.delta_axiom = 1.0
+        self.delta_epistemic = 1.0
+        self.is_pruned = False  # Set to True when Hard Axiom Veto triggers (Q -> -inf)
 
     @property
     def value(self) -> float:
@@ -108,6 +110,31 @@ class SagnacMCTSPlanner:
             "FlipHorizontal", "FlipVertical", "ColorPermute", "ContourFill", "GravityDrop"
         ]
 
+    def dual_channel_sagnac_veto(
+        self,
+        psi_candidate: torch.Tensor,
+        psi_axiom: torch.Tensor,
+        psi_world: torch.Tensor,
+        epsilon_hard: float = 0.35
+    ) -> Tuple[float, float, bool]:
+        """
+        Decouples Sagnac Homodyne Interferometry into Dual Channels:
+        1. Hard Axiom Channel (delta_axiom): Evaluates strict physical/algebraic invariants.
+        2. Soft Epistemic Channel (delta_epistemic): Measures environmental transition uncertainty.
+        """
+        if psi_candidate.is_complex():
+            inner_axiom = torch.abs(torch.mean(psi_candidate.conj() * psi_axiom))
+            inner_world = torch.abs(torch.mean(psi_candidate.conj() * psi_world))
+        else:
+            inner_axiom = torch.abs(torch.mean(psi_candidate * psi_axiom))
+            inner_world = torch.abs(torch.mean(psi_candidate * psi_world))
+
+        delta_axiom = float(1.0 - inner_axiom.item())
+        delta_epistemic = float(1.0 - inner_world.item())
+        hard_veto_triggered = delta_axiom > epsilon_hard
+
+        return delta_axiom, delta_epistemic, hard_veto_triggered
+
     def search(
         self,
         input_grid: np.ndarray,
@@ -115,7 +142,7 @@ class SagnacMCTSPlanner:
         num_simulations: int = 50
     ) -> Tuple[SpelkeDSLNode, float]:
         """
-        Executes Sagnac-Guided EFE MCTS tree search with Sagnac Veto Pruning (Q -> -inf).
+        Executes Dual-Channel Sagnac-Guided EFE MCTS tree search with Hard Axiom Pruning (Q -> -inf).
         Returns: (best_ast_program, best_sagnac_delta)
         """
         target_wave = self.vision_encoder.encode_grid(target_grid)
@@ -126,6 +153,8 @@ class SagnacMCTSPlanner:
         root_grid = root_ast.execute(input_grid)
         root_wave = self.vision_encoder.encode_grid(root_grid)
         root.sagnac_delta = 1.0 - self.vision_encoder.compute_sagnac_similarity(root_wave, target_wave)
+        root.delta_axiom = root.sagnac_delta
+        root.delta_epistemic = root.sagnac_delta
 
         best_node = root
         best_delta = root.sagnac_delta
@@ -169,21 +198,28 @@ class SagnacMCTSPlanner:
                     pred_grid = child_ast.execute(node.ast_node.execute(input_grid))
                     pred_wave = self.vision_encoder.encode_grid(pred_grid)
 
-                    # Sagnac Veto Evaluation
-                    sagnac_delta = 1.0 - self.vision_encoder.compute_sagnac_similarity(pred_wave, target_wave)
-                    child_node.sagnac_delta = sagnac_delta
+                    # Dual-Channel Sagnac Veto Evaluation
+                    delta_axiom, delta_epistemic, hard_veto_triggered = self.dual_channel_sagnac_veto(
+                        psi_candidate=pred_wave,
+                        psi_axiom=target_wave,  # Hard physical invariant/target boundary
+                        psi_world=pred_wave,    # Active environmental transition state
+                        epsilon_hard=self.tau_veto
+                    )
+                    child_node.delta_axiom = delta_axiom
+                    child_node.delta_epistemic = delta_epistemic
+                    child_node.sagnac_delta = delta_axiom
 
-                    # Sagnac Branch Pruning Heuristic: Q -> -inf if Delta_Sagnac > tau_veto
-                    if sagnac_delta > self.tau_veto:
+                    # Hard Axiom Branch Pruning Heuristic: Q -> -inf if Hard Axiom Veto Triggered
+                    if hard_veto_triggered:
                         child_node.is_pruned = True
 
                     node.children.append(child_node)
 
-                    if sagnac_delta < best_delta:
-                        best_delta = sagnac_delta
+                    if delta_axiom < best_delta:
+                        best_delta = delta_axiom
                         best_node = child_node
 
-                    if sagnac_delta < 1e-5:
+                    if delta_axiom < 1e-5:
                         # Exact match solved
                         print(f"[SagnacMCTS Success] Exact Grid Match Solved at Simulation {sim + 1}!")
                         return child_node.ast_node, 0.0
