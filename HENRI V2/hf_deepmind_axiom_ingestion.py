@@ -142,7 +142,7 @@ class HuggingFaceDeepMindContractIngestor:
             payloads.append(payload)
         return payloads
 
-    def extract_python_stdlib_contracts() -> List[Dict[str, Any]]:
+    def extract_python_stdlib_contracts(self) -> List[Dict[str, Any]]:
         """
         Extracts core Python AST and stdlib contracts (math, sys, typing).
         """
