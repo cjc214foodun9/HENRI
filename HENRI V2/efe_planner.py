@@ -892,6 +892,10 @@ class EFEPlanner(nn.Module):
                    - self.external_eig_weight * external_eig
                    - self.external_task_weight * external_resonance
                    + lam * penalty)
+            # Stationarity Penalty: If previous step produced zero grid displacement (grid_dist == 0.0)
+            # and action_id matches the last executed action, inject penalty (+5.0) to break limit cycles
+            if grid_dist is not None and grid_dist == 0.0 and action_id == getattr(self, "last_executed_action", None):
+                efe = efe + 5.0
             results.append({
                 "action": action_id,
                 "efe": efe.item(),
@@ -986,6 +990,7 @@ class EFEPlanner(nn.Module):
         # Annotate which table entry was actually chosen so callers can see
         # whether the returned action was the exploit or explore pick.
         chosen = dict(best)
+        self.last_executed_action = chosen["action"]
         results = [dict(r, chosen=(r["action"] == chosen["action"])) for r in results]
         return best["action"], best["predicted_wave"], results, chosen
 
