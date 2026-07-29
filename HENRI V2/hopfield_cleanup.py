@@ -75,6 +75,8 @@ class ContinuousHopfieldCleanup(nn.Module):
         wave: [..., D]. Returns scalar energy per leading element.
         """
         assert self.engrams.numel() > 0, "No engrams stored; call store_engrams first."
+        if self.engrams.device != wave.device:
+            self.engrams = self.engrams.to(wave.device)
         r = self._flatten(wave)
         sim = r @ self.engrams.T  # [..., M]
         tau = 1.0 / self.beta
@@ -89,6 +91,8 @@ class ContinuousHopfieldCleanup(nn.Module):
         engram attractor. weights is the softmax distribution over engrams.
         """
         assert self.engrams.numel() > 0, "No engrams stored; call store_engrams first."
+        if self.engrams.device != wave.device:
+            self.engrams = self.engrams.to(wave.device)
         was_complex = wave.is_complex()
         r = self._flatten(wave)
         r = F.normalize(r, p=2, dim=-1)
