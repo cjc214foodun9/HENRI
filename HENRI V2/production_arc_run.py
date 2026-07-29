@@ -144,7 +144,7 @@ TASK_WEIGHTED_EIG = os.environ.get("TASK_WEIGHTED_EIG", "0") == "1"
 TASK_EIG_GAMMA = float(os.environ.get("TASK_EIG_GAMMA", "4.0"))
 
 
-def retroactive_update(orch, trajectory_buffer: list, valence_nu: float, dampening_alpha: float = 0.05) -> float:
+def retroactive_update(orch, trajectory_buffer: list, valence_nu: float, dampening_alpha: float = 0.05, gamma_credit: float = 0.95) -> float:
     """
     Retroactive Valence Credit Assignment Specification (ARC-AGI-3 Strategy & Blueprint).
     Reframes transition model weights (K_t) to prioritize exteroceptive progress trajectories.
@@ -152,11 +152,15 @@ def retroactive_update(orch, trajectory_buffer: list, valence_nu: float, dampeni
       to induce repulsion from the current trajectory manifold.
     - If valence_nu >= 0.0 (progress/win), reinforces the Koopman state transition.
     - Dampening factor alpha = 0.05 prevents model shattering if valence signal is noisy.
+    - Gamma credit decay (0.95) eliminates the 'semantic shadow' in distal credit assignment.
     """
     if not trajectory_buffer:
         return 0.0
     
+    buf_len = len(trajectory_buffer)
+    discount_weights = torch.tensor([gamma_credit ** (buf_len - 1 - t) for t in range(buf_len)], device=orch.planner.device)
     update_direction = (1.0 if valence_nu >= 0.0 else -1.0) * dampening_alpha
+    
     states = torch.stack([t[0] for t in trajectory_buffer])
     actions = torch.stack([t[1] for t in trajectory_buffer])
     next_states = torch.stack([t[2] for t in trajectory_buffer])
@@ -164,7 +168,7 @@ def retroactive_update(orch, trajectory_buffer: list, valence_nu: float, dampeni
     loss = orch.planner.train_transition_batch(
         states, actions, next_states, blend=0.5
     )
-    return float(loss) * update_direction
+    return float(loss) * update_direction * float(discount_weights.mean().item())
 
 
 # ---------------------------------------------------------------------------
