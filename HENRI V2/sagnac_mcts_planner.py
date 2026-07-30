@@ -308,19 +308,17 @@ class SagnacMCTSPlanner:
         if demo_pairs:
             encoded_demos = []
             for x_str, y_str in demo_pairs:
-                w_x = self.codec.encode_text(x_str)
-                w_y = self.codec.encode_text(y_str)
-                p_x = ((torch.clamp(w_x, -1.0, 1.0) + 1.0) / 2.0 * (self.codec.k_bins - 1)).to(torch.uint8)
-                p_y = ((torch.clamp(w_y, -1.0, 1.0) + 1.0) / 2.0 * (self.codec.k_bins - 1)).to(torch.uint8)
+                p_x = self.codec.encode_text(x_str)
+                p_y = self.codec.encode_text(y_str)
                 encoded_demos.append((p_x, p_y))
             
             w_task_ring = self.task_compiler.compile_functor(encoded_demos)
-            w_task = (w_task_ring.to(torch.float32) / (self.codec.k_bins - 1) * 2.0 - 1.0).to(self.device)
-            
-            # Bind W_task with prompt wave to yield target goal wave: \Psi_{goal} = W_task \odot \Psi_{prompt}
-            goal_wave = F.normalize(self.codec.bind_hadamard(w_task, prompt_wave), p=2, dim=-1)
+            goal_wave_ring = self.codec.bind_hadamard(w_task_ring, prompt_wave)
+            goal_wave = (goal_wave_ring.to(torch.float32) / (self.codec.k_bins - 1) * 2.0 - 1.0).to(self.device)
+            goal_wave = F.normalize(goal_wave, p=2, dim=-1)
         else:
-            goal_wave = prompt_wave
+            goal_wave = (prompt_wave.to(torch.float32) / (self.codec.k_bins - 1) * 2.0 - 1.0).to(self.device)
+            goal_wave = F.normalize(goal_wave, p=2, dim=-1)
 
         # 2. Generate candidate completion via AST Grammar-Masked Autoregressive Decoder
         raw_completion, telem = self.decoder.decode_wave_to_response(goal_wave, prompt)
