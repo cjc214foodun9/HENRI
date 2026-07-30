@@ -6,6 +6,7 @@ Includes dimension-specific Sagnac phase error vector (\mathbf{\Delta\Phi}_k), a
 TAME biophysical gap-junction conductance gating (G_{ij}), and Bingham Plastic yield mechanics for test-time adaptation.
 """
 
+import os
 import math
 import torch
 import torch.nn as nn
