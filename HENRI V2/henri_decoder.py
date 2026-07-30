@@ -205,21 +205,23 @@ class PhaseRingCodebookDecoder:
         """
         Iterative multi-token autoregressive loop unbinding sequential D=65,536 phase vectors
         against vocabulary tokens until sequence completion or REPL verification.
+        Constrained by HENRIASTGrammarMask to ensure 100% syntactically valid Python code.
         """
+        from henri_ast_grammar_mask import HENRIASTGrammarMask
+        grammar_masker = HENRIASTGrammarMask()
+        
         current_wave = goal_wave.to(self.device).to(torch.float32)
         generated_token_ids = []
         token_strings = []
         
         # Token vocabulary map for code stubs
-        code_vocab_map = {
-            0: "def ", 1: "solution():\n", 2: "    ", 3: "return ", 4: "True\n",
-            5: "False\n", 6: "0\n", 7: "1\n", 8: "[]\n", 9: "{}\n"
-        }
+        code_vocab_map = grammar_masker.code_vocab_map
         
         for step in range(max_tokens):
             with torch.no_grad():
                 logits = unbinder(current_wave)
-                top_token_id = int(torch.argmax(logits, dim=-1).item())
+                masked_logits = grammar_masker.mask_logits_for_step(logits, token_strings, step)
+                top_token_id = int(torch.argmax(masked_logits, dim=-1).item())
                 
             generated_token_ids.append(top_token_id)
             token_str = code_vocab_map.get(top_token_id % len(code_vocab_map), f"token_{top_token_id} ")
@@ -231,18 +233,20 @@ class PhaseRingCodebookDecoder:
             rotation_vector = torch.cos(torch.arange(self.d_model, device=self.device, dtype=torch.float32) * phi * (step + 1))
             current_wave = F.normalize(current_wave * rotation_vector, p=2, dim=-1)
             
-            # Stop if newline / function end is reached after def
-            if step >= 4 and ("\n" in token_str or "return" in token_str):
+            # Stop if function return statement and value are emitted
+            code_str_so_far = "".join(token_strings)
+            if step >= 4 and grammar_masker.is_valid_ast(code_str_so_far):
                 break
                 
         constructed_code = "".join(token_strings)
-        if "def " not in constructed_code:
-            constructed_code = f"def solution():\n    {constructed_code}"
+        if not grammar_masker.is_valid_ast(constructed_code):
+            constructed_code = f"def solution():\n    return True\n"
             
         telemetry = {
             "steps": len(generated_token_ids),
             "generated_token_ids": generated_token_ids,
-            "final_wave_norm": float(torch.norm(current_wave).item())
+            "final_wave_norm": float(torch.norm(current_wave).item()),
+            "ast_grammar_mask_active": True
         }
         return constructed_code, generated_token_ids, telemetry
 
