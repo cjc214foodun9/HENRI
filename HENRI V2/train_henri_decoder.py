@@ -54,7 +54,7 @@ def generate_qfhrr_training_dataset(codec: qFHRREpistemicCodec, num_samples: int
         target_id = hash(text_target) % vocab_size
         
         # Ingress Transduction -> Unit wave state on S^{D-1}
-        text_wave = codec.encode_text(text_target)
+        text_wave = codec.encode_text(text_target).to(device).to(torch.float32)
         noise = torch.randn_like(text_wave) * 0.05
         noisy_wave = F.normalize(text_wave + noise, p=2, dim=-1)
         
