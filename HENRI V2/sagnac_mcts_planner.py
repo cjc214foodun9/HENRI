@@ -288,6 +288,38 @@ class SagnacMCTSPlanner:
 
         return best_node.ast_node, best_delta
 
+    def synthesize_code_program(
+        self,
+        prompt: str,
+        entry_point: str,
+        test_code: str,
+        max_search_depth: int = 10
+    ) -> Tuple[str, Dict[str, Any]]:
+        """
+        Routes code generation prompts through the Planner-to-REPL Synthesis Loop.
+        Executes active inference tree search to synthesize and verify candidate Python
+        program completion statements in HENRIUniversalREPL before final submission.
+        """
+        prompt_wave = self.codec.encode_text(prompt)
+        
+        # 1. Generate candidate completion
+        raw_completion, telem = self.decoder.decode_wave_to_response(prompt_wave, prompt)
+        
+        # 2. Evaluate candidate completion inside HENRIUniversalREPL
+        full_candidate = f"{prompt}\n{raw_completion}\n{test_code}\ncheck({entry_point})"
+        repl_result = self.repl.execute_python_repl(full_candidate)
+        
+        is_vetoed = repl_result.get("is_vetoed", False)
+        sagnac_delta = repl_result.get("sagnac_delta", 1.0)
+        
+        synthesized_meta = {
+            "repl_verified": not is_vetoed,
+            "sagnac_delta": float(sagnac_delta),
+            "telem": telem,
+            "returncode": repl_result.get("returncode", -1)
+        }
+        return raw_completion, synthesized_meta
+
 
 if __name__ == "__main__":
     planner = SagnacMCTSPlanner(d_model=65536, k_blocks=8192, tau_veto=0.35, device="cpu")

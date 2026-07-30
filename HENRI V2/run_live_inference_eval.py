@@ -33,6 +33,7 @@ from henri_decoder import HENRIUnifiedEgressTransducer
 from exteroceptive_sandbox import ExteroceptiveSandboxTransducer
 from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
 from henri_code_sanitizer import clean_generated_code
+from sagnac_mcts_planner import SagnacMCTSPlanner
 
 HUMANEVAL_URL = "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz"
 
@@ -71,6 +72,7 @@ def run_live_inference_eval(suite: str = "humaneval", items_limit: int = 50):
     transducer = HENRIUnifiedEgressTransducer(d_model=65536, device=device)
     sandbox = ExteroceptiveSandboxTransducer(d_model=65536)
     codec = qFHRREpistemicCodec(d_model=65536, device=device)
+    planner = SagnacMCTSPlanner(d_model=65536, device=device)
 
     dataset_items = load_humaneval_dataset(limit=items_limit)
     item_count = len(dataset_items)
@@ -107,8 +109,12 @@ def run_live_inference_eval(suite: str = "humaneval", items_limit: int = 50):
             steps=3
         )
 
-        # 4. Egress Unbinder Head -> Output Text Logits \hat{y}_i
-        raw_generated_text, telem = transducer.decode_wave_to_response(goal_wave, prompt)
+        # 4. Planner-to-REPL Synthesis Loop (SagnacMCTSPlanner + HENRIUniversalREPL)
+        raw_generated_text, synth_meta = planner.synthesize_code_program(
+            prompt=prompt,
+            entry_point=entry_point,
+            test_code=test_code
+        )
         generated_text = clean_generated_code(raw_generated_text)
 
         # STEP 3: EXTERNAL ORACLE EVALUATION
