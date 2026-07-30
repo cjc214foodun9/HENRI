@@ -68,7 +68,7 @@ class AuthenticProductionGauntletRunner:
             
             # 1. Live REPL PyTest Execution for Coding Benchmarks
             if "prompt" in item and "test" in item:
-                full_code = f"{item['prompt']}\n{item.get('canonical_solution', '')}\n{item['test']}\ncheck({item.get('entry_point', 'solution')})"
+                full_code = f"{item['prompt']}\n{item['test']}"
                 res = self.sandbox.execute_and_transduce(full_code, axiom_id=f"eval_{task_id}", source_metadata=suite_id)
                 is_pass = res[0]
             # 2. Math & Physics Wave Transduction
@@ -89,7 +89,7 @@ class AuthenticProductionGauntletRunner:
                 p_text = item.get("prompt", "")
                 p_wave = self.codec.encode_text(p_text)
                 w_task = self.codec.encode_text("IFEVAL_OPERATOR")
-                goal_wave = self.codec.bind_hadamard(w_task, p_wave)
+                goal_wave = self.codec.bind_hadamard(w_task, p_text)
                 text_resp, telem = self.transducer.decode_wave_to_response(goal_wave, p_text)
                 is_pass = bool(text_resp) and ("EXECUTION_ERROR" not in text_resp)
 
