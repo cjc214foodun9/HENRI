@@ -89,7 +89,7 @@ class AuthenticProductionGauntletRunner:
                 p_text = item.get("prompt", "")
                 p_wave = self.codec.encode_text(p_text)
                 w_task = self.codec.encode_text("IFEVAL_OPERATOR")
-                goal_wave = self.codec.bind_hadamard(w_task, p_text)
+                goal_wave = self.codec.bind_hadamard(w_task, p_wave)
                 text_resp, telem = self.transducer.decode_wave_to_response(goal_wave, p_text)
                 is_pass = bool(text_resp) and ("EXECUTION_ERROR" not in text_resp)
 
