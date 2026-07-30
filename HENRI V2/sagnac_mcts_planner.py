@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from henri_vision_encoder import HENRIVisionEncoder
 from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec, HolographicTaskFunctorCompiler
 from henri_universal_repl import HENRIUniversalREPL
+from henri_decoder import HENRIUnifiedEgressTransducer
 
 
 class SpelkeDSLNode:
@@ -109,6 +110,7 @@ class SagnacMCTSPlanner:
         self.codec = qFHRREpistemicCodec(d_model=d_model, device=device)
         self.task_compiler = HolographicTaskFunctorCompiler(self.codec)
         self.repl = HENRIUniversalREPL(d_model=d_model, device=device)
+        self.decoder = HENRIUnifiedEgressTransducer(d_model=d_model, device=device)
 
         self.primitive_ops = [
             "Identity", "Rotate90", "Rotate180", "Rotate270",

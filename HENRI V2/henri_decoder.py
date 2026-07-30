@@ -2,20 +2,21 @@
 HENRI V2 Neural Egress Unbinder & Phase Ring Codebook Decoder
 Subsystem: Neural Decoder / Wave Phase Unbinding Head
 Maps D=65,536 continuous wave hypervector phase states directly to vocabulary logits and tokens.
-Eliminates hardcoded string lookup dictionaries in henri_api_bridge.py.
+Supports online test-time SGLD parameter adaptation over in-context demonstration pairs (X_i, Y_i).
 """
 
 import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 
 
 class HENRINeuralEgressUnbinder(nn.Module):
     """
     2-Layer Neural Projection Head mapping D=65,536 continuous wave hypervector
     phase states onto discrete vocabulary token distributions.
+    Includes online test-time SGLD parameter adaptation for in-context learning.
     """
     def __init__(self, d_model: int = 65536, d_hidden: int = 2048, vocab_size: int = 32000, device: str = "cuda"):
         super().__init__()
@@ -32,6 +33,7 @@ class HENRINeuralEgressUnbinder(nn.Module):
         self.lm_head = nn.Linear(d_hidden, vocab_size, bias=False)
 
         self.to(self.device)
+        self.optimizer = torch.optim.AdamW(self.parameters(), lr=1e-3, weight_decay=1e-4)
 
     def forward(self, wave_state: torch.Tensor) -> torch.Tensor:
         """
@@ -51,6 +53,29 @@ class HENRINeuralEgressUnbinder(nn.Module):
         h = self.act(h)
         logits = self.lm_head(h)
         return logits
+
+    def adapt_online_step(self, wave_state: torch.Tensor, target_token_ids: torch.Tensor, steps: int = 3) -> float:
+        """
+        Executes online test-time gradient adaptation on in-context demonstration pairs (X_i, Y_i).
+        Adapts projection weights to target token distributions at test time.
+        """
+        self.train()
+        total_loss = 0.0
+        wave_state = wave_state.to(self.device).to(torch.float32)
+        target_token_ids = target_token_ids.to(self.device).to(torch.long)
+
+        for _ in range(steps):
+            self.optimizer.zero_grad()
+            logits = self.forward(wave_state)  # [1, vocab_size]
+            if target_token_ids.dim() == 1:
+                target_token_ids = target_token_ids.unsqueeze(0)
+            loss = F.cross_entropy(logits, target_token_ids[:, 0])
+            loss.backward()
+            self.optimizer.step()
+            total_loss += loss.item()
+
+        self.eval()
+        return total_loss / max(1, steps)
 
 
 class PhaseRingCodebookDecoder:
@@ -96,7 +121,7 @@ class PhaseRingCodebookDecoder:
 class HENRIUnifiedEgressTransducer:
     """
     Integrated Egress Transducer combining Phase Ring Hadamard Unbinding
-    with Neural Projection Logit Decoding for REST API Completions.
+    with Neural Projection Logit Decoding and Online In-Context Adaptation.
     """
     def __init__(self, d_model: int = 65536, vocab_size: int = 32000, device: str = "cuda"):
         self.d_model = d_model
@@ -141,3 +166,14 @@ class HENRIUnifiedEgressTransducer:
         }
 
         return response_text, telemetry
+
+    def adapt_in_context(self, demo_waves: List[torch.Tensor], demo_token_ids: List[int]) -> float:
+        """
+        Online test-time adaptation on in-context demonstration pairs.
+        """
+        losses = []
+        for w, tok in zip(demo_waves, demo_token_ids):
+            tok_tensor = torch.tensor([tok], device=self.device)
+            loss = self.unbinder.adapt_online_step(w, tok_tensor, steps=2)
+            losses.append(loss)
+        return float(sum(losses) / max(1, len(losses)))
