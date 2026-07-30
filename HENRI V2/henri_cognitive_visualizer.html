@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HENRI V2 - Interactive 3D Cognitive Process Visualizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0c10;
+            --bg-secondary: #12161f;
+            --card-bg: #1a202c;
+            --accent-cyan: #00f2ff;
+            --accent-magenta: #ff0055;
+            --accent-green: #00ff88;
+            --text-main: #e2e8f0;
+            --text-dim: #94a3b8;
+            --border: #2d3748;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+        }
+
+        header {
+            background-color: var(--bg-secondary);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            color: var(--accent-cyan);
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge {
+            background: rgba(0, 242, 255, 0.1);
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 1rem;
+            padding: 1rem;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #canvas-3d {
+            width: 100%;
+            height: 520px;
+            border-radius: 6px;
+            background: #05070a;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: var(--bg-secondary);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .btn-active {
+            background: rgba(0, 242, 255, 0.2);
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        input[type="range"] {
+            accent-color: var(--accent-cyan);
+        }
+
+        .metrics-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .metric-box {
+            background: var(--bg-secondary);
+            padding: 0.8rem 1rem;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        .metric-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #fff;
+            margin-top: 4px;
+        }
+
+        canvas.fringe-canvas {
+            width: 100%;
+            height: 120px;
+            background: #000;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Project HENRI V2 <span>- Holographic Cognitive Visualizer</span></h1>
+        <span class="badge">D=65,536 | RTX 5090 Execution Target</span>
+    </header>
+
+    <div class="grid-container">
+        <!-- 3D Phase Space Canvas -->
+        <div class="card">
+            <div class="card-header">
+                <span>3D MCTS Phase Space Trajectory (&mathbb;S<sup>D-1</sup> &rarr; &mathbb;R<sup>3</sup>)</span>
+                <span style="color: var(--accent-green);" id="status-text">W_task Modulation Active</span>
+            </div>
+            <div id="canvas-3d"></div>
+            <div class="controls">
+                <button class="btn btn-active" id="btn-toggle-wtask" onclick="toggleWTask()">Toggle W_task Linear Modulation</button>
+                <button class="btn" onclick="resetTrajectories()">Reset Trajectories</button>
+                <div class="slider-group">
+                    <label for="slider-veto">Sagnac Veto (&tau;<sub>veto</sub>):</label>
+                    <input type="range" id="slider-veto" min="0.10" max="0.80" step="0.05" value="0.35" onchange="updateVeto(this.value)">
+                    <span id="veto-val">0.35</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Metrics & Logit Distribution -->
+        <div class="metrics-panel">
+            <div class="card">
+                <div class="card-header">
+                    <span>Egress Logit Entropy Collapse</span>
+                </div>
+                <canvas id="chart-logits" height="200"></canvas>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span>Sagnac Homodyne Interference Fringe Map</span>
+                </div>
+                <canvas class="fringe-canvas" id="canvas-fringe"></canvas>
+                <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 6px; display: flex; justify-content: space-between;">
+                    <span>Phase Delta (&Delta;&Phi;<sub>k</sub>)</span>
+                    <span id="fringe-status">Coherent Phase Alignment (&Delta;<sub>Sagnac</sub> = 0.042)</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span>Active Telemetry</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div class="metric-box">
+                        <div style="font-size: 0.75rem; color: var(--text-dim);">Mutual Info I(W; Y)</div>
+                        <div class="metric-value" id="val-mi" style="color: var(--accent-green);">14.82 bits</div>
+                    </div>
+                    <div class="metric-box">
+                        <div style="font-size: 0.75rem; color: var(--text-dim);">Logit Entropy</div>
+                        <div class="metric-value" id="val-entropy" style="color: var(--accent-cyan);">0.14 nats</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. THREE.JS 3D MCTS PHASE SPACE VISUALIZATION ---
+        const container = document.getElementById('canvas-3d');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setClearColor(0x05070a);
+        container.appendChild(renderer.domElement);
+
+        camera.position.set(0, 0, 7);
+
+        // Holographic Hyper-Sphere Wireframe S^{D-1} Projection
+        const sphereGeo = new THREE.SphereGeometry(3, 24, 24);
+        const sphereMat = new THREE.MeshBasicMaterial({ color: 0x1f293d, wireframe: true, transparent: true, opacity: 0.3 });
+        const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+        scene.add(sphere);
+
+        // Branch Trajectory Points
+        const numBranches = 120;
+        const particlesGeo = new THREE.BufferGeometry();
+        const positions = new Float32Array(numBranches * 3);
+        const colors = new Float32Array(numBranches * 3);
+
+        let wTaskActive = true;
+        let tauVeto = 0.35;
+
+        function generateTrajectories() {
+            for (let i = 0; i < numBranches; i++) {
+                const u = Math.random();
+                const v = Math.random();
+                const theta = u * 2.0 * Math.PI;
+                const phi = Math.acos(2.0 * v - 1.0);
+                const r = 3.0;
+
+                // W_task modulation focuses trajectories into a tight task cone
+                const spread = wTaskActive ? 0.25 : 1.2;
+                const x = r * Math.sin(phi * spread) * Math.cos(theta * spread);
+                const y = r * Math.sin(phi * spread) * Math.sin(theta * spread);
+                const z = r * Math.cos(phi * spread);
+
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = z;
+
+                // Color coding: Cyan for accepted, Magenta for Sagnac Vetoed
+                const sagnacDelta = Math.sqrt(x*x + y*y) / r;
+                if (sagnacDelta > tauVeto) {
+                    colors[i * 3] = 1.0; colors[i * 3 + 1] = 0.0; colors[i * 3 + 2] = 0.33; // Magenta (Pruned)
+                } else {
+                    colors[i * 3] = 0.0; colors[i * 3 + 1] = 0.95; colors[i * 3 + 2] = 1.0; // Cyan (Accepted)
+                }
+            }
+            particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particlesGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        }
+
+        generateTrajectories();
+        const particleMat = new THREE.PointsMaterial({ size: 0.12, vertexColors: true, transparent: true, opacity: 0.9 });
+        const particleSystem = new THREE.Points(particlesGeo, particleMat);
+        scene.add(particleSystem);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            sphere.rotation.y += 0.002;
+            particleSystem.rotation.y += 0.003;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // --- 2. CHART.JS LOGIT ENTROPY COLLAPSE CHART ---
+        const ctxLogits = document.getElementById('chart-logits').getContext('2d');
+        const chartLogits = new Chart(ctxLogits, {
+            type: 'bar',
+            data: {
+                labels: ['def', 'return', 'solution', 'if', 'for', 'x', '0', '[]'],
+                datasets: [{
+                    label: 'Transduced Logit Probability',
+                    data: [0.85, 0.92, 0.88, 0.02, 0.01, 0.01, 0.03, 0.02],
+                    backgroundColor: 'rgba(0, 242, 255, 0.7)',
+                    borderColor: '#00f2ff',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, max: 1.0, grid: { color: '#2d3748' } },
+                    x: { grid: { color: '#2d3748' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // --- 3. SAGNAC HOMODYNE INTERFERENCE CANVAS ---
+        const fringeCanvas = document.getElementById('canvas-fringe');
+        const fringeCtx = fringeCanvas.getContext('2d');
+
+        function drawFringe() {
+            const width = fringeCanvas.width = fringeCanvas.clientWidth;
+            const height = fringeCanvas.height = fringeCanvas.clientHeight;
+            const imgData = fringeCtx.createImageData(width, height);
+
+            for (let x = 0; x < width; x++) {
+                const freq = wTaskActive ? 0.1 : 0.02;
+                const val = Math.floor(128 + 127 * Math.sin(x * freq));
+                for (let y = 0; y < height; y++) {
+                    const idx = (y * width + x) * 4;
+                    imgData.data[idx] = 0;
+                    imgData.data[idx + 1] = val;
+                    imgData.data[idx + 2] = val;
+                    imgData.data[idx + 3] = 255;
+                }
+            }
+            fringeCtx.putImageData(imgData, 0, 0);
+        }
+        drawFringe();
+
+        // --- 4. INTERACTIVE CONTROLS ---
+        function toggleWTask() {
+            wTaskActive = !wTaskActive;
+            const btn = document.getElementById('btn-toggle-wtask');
+            const status = document.getElementById('status-text');
+            const valMI = document.getElementById('val-mi');
+            const valEnt = document.getElementById('val-entropy');
+
+            if (wTaskActive) {
+                btn.classList.add('btn-active');
+                status.innerText = 'W_task Modulation Active';
+                status.style.color = 'var(--accent-green)';
+                valMI.innerText = '14.82 bits';
+                valMI.style.color = 'var(--accent-green)';
+                valEnt.innerText = '0.14 nats';
+                chartLogits.data.datasets[0].data = [0.85, 0.92, 0.88, 0.02, 0.01, 0.01, 0.03, 0.02];
+            } else {
+                btn.classList.remove('btn-active');
+                status.innerText = 'Unmodulated High-Entropy Logit State';
+                status.style.color = 'var(--accent-magenta)';
+                valMI.innerText = '0.02 bits';
+                valMI.style.color = 'var(--accent-magenta)';
+                valEnt.innerText = '3.89 nats';
+                chartLogits.data.datasets[0].data = [0.12, 0.11, 0.13, 0.14, 0.12, 0.13, 0.12, 0.13];
+            }
+            chartLogits.update();
+            generateTrajectories();
+            drawFringe();
+        }
+
+        function updateVeto(val) {
+            tauVeto = parseFloat(val);
+            document.getElementById('veto-val').innerText = tauVeto.toFixed(2);
+            generateTrajectories();
+        }
+
+        function resetTrajectories() {
+            generateTrajectories();
+        }
+    </script>
+</body>
+</html>

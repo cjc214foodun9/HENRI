@@ -313,15 +313,17 @@ class SagnacMCTSPlanner:
                 encoded_demos.append((p_x, p_y))
             
             w_task_ring = self.task_compiler.compile_functor(encoded_demos)
+            w_task_vector = (w_task_ring.to(torch.float32) / (self.codec.k_bins - 1) * 2.0 - 1.0).to(self.device)
             goal_wave_ring = self.codec.bind_hadamard(w_task_ring, prompt_wave)
             goal_wave = (goal_wave_ring.to(torch.float32) / (self.codec.k_bins - 1) * 2.0 - 1.0).to(self.device)
             goal_wave = F.normalize(goal_wave, p=2, dim=-1)
         else:
+            w_task_vector = None
             goal_wave = (prompt_wave.to(torch.float32) / (self.codec.k_bins - 1) * 2.0 - 1.0).to(self.device)
             goal_wave = F.normalize(goal_wave, p=2, dim=-1)
 
-        # 2. Generate candidate completion via AST Grammar-Masked Autoregressive Decoder
-        raw_completion, telem = self.decoder.decode_wave_to_response(goal_wave, prompt)
+        # 2. Generate candidate completion via AST Grammar-Masked Autoregressive Decoder with W_task modulation
+        raw_completion, telem = self.decoder.decode_wave_to_response(goal_wave, prompt, w_task=w_task_vector)
         
         # 3. Evaluate candidate completion inside HENRIUniversalREPL
         full_candidate = f"{prompt}\n{raw_completion}\n{test_code}\ncheck({entry_point})"

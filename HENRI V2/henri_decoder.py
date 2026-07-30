@@ -37,9 +37,10 @@ class HENRINeuralEgressUnbinder(nn.Module):
         self.to(self.device)
         self.optimizer = torch.optim.AdamW(self.parameters(), lr=1e-3, weight_decay=1e-4)
 
-    def forward(self, wave_state: torch.Tensor) -> torch.Tensor:
+    def forward(self, wave_state: torch.Tensor, w_task: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         Input: wave_state shape [batch_size, d_model] or [d_model]
+        Optional: w_task shape [batch_size, d_model] or [d_model] for linear task modulation
         Output: logits shape [batch_size, vocab_size]
         """
         if wave_state.dim() == 1:
@@ -49,6 +50,16 @@ class HENRINeuralEgressUnbinder(nn.Module):
         # Normalize input hypervector on S^{D-1}
         norm = torch.norm(wave_state, dim=-1, keepdim=True) + 1e-8
         unit_wave = wave_state / norm
+
+        # W_task Linear Modulation: Direct task operator coupling to unbinder projection
+        if w_task is not None:
+            w_task = w_task.to(self.device).to(torch.float32)
+            if w_task.dim() == 1:
+                w_task = w_task.unsqueeze(0)
+            w_norm = torch.norm(w_task, dim=-1, keepdim=True) + 1e-8
+            unit_w_task = w_task / w_norm
+            # Direct Hadamard modulation: \tilde{\Psi} = \Psi \odot (1 + W_{task})
+            unit_wave = unit_wave * (1.0 + unit_w_task)
 
         h = self.down_proj(unit_wave)
         h = self.layer_norm(h)
@@ -200,12 +211,14 @@ class PhaseRingCodebookDecoder:
         unbinder: HENRINeuralEgressUnbinder,
         goal_wave: torch.Tensor,
         prompt_text: str,
-        max_tokens: int = 32
+        max_tokens: int = 32,
+        w_task: Optional[torch.Tensor] = None
     ) -> Tuple[str, List[int], Dict[str, Any]]:
         """
         Iterative multi-token autoregressive loop unbinding sequential D=65,536 phase vectors
         against vocabulary tokens until sequence completion or REPL verification.
         Constrained by HENRIASTGrammarMask to ensure 100% syntactically valid Python code.
+        Modulated by W_task linear modulation to direct logits toward problem-specific logic.
         """
         from henri_ast_grammar_mask import HENRIASTGrammarMask
         grammar_masker = HENRIASTGrammarMask()
@@ -219,7 +232,7 @@ class PhaseRingCodebookDecoder:
         
         for step in range(max_tokens):
             with torch.no_grad():
-                logits = unbinder(current_wave)
+                logits = unbinder(current_wave, w_task=w_task)
                 masked_logits = grammar_masker.mask_logits_for_step(logits, token_strings, step)
                 top_token_id = int(torch.argmax(masked_logits, dim=-1).item())
                 
@@ -276,17 +289,18 @@ class HENRIUnifiedEgressTransducer:
                 self.unbinder.load_state_dict(ckpt)
             print(f"[HENRIUnifiedEgressTransducer] Loaded trained unbinder weights from: {checkpoint_path}")
 
-    def decode_wave_to_response(self, goal_wave: torch.Tensor, prompt_text: str) -> Tuple[str, Dict[str, Any]]:
+    def decode_wave_to_response(self, goal_wave: torch.Tensor, prompt_text: str, w_task: Optional[torch.Tensor] = None) -> Tuple[str, Dict[str, Any]]:
         """
         Decodes a bound wave phase state into structured text / completion token choices.
         Calculates true tensor L2 norm and phase coherence metrics.
+        Optionally modulated by W_task linear modulation to direct egress logits toward task return values.
         """
         goal_wave = goal_wave.to(self.device).to(torch.float32)
         wave_norm = float(torch.norm(goal_wave).item())
 
-        # Forward pass through neural unbinder
+        # Forward pass through neural unbinder with optional W_task modulation
         with torch.no_grad():
-            logits = self.unbinder(goal_wave)
+            logits = self.unbinder(goal_wave, w_task=w_task)
             top_token_id = int(torch.argmax(logits, dim=-1).item())
 
         prompt_lower = prompt_text.lower()
@@ -294,7 +308,8 @@ class HENRIUnifiedEgressTransducer:
             "qfhrr_wave_norm": wave_norm,
             "top_token_id": top_token_id,
             "neural_unbinder_active": True,
-            "phase_ring_bins": 256
+            "phase_ring_bins": 256,
+            "w_task_modulated": w_task is not None
         }
         
         # Option Parsing for Multiple-Choice tasks
@@ -311,7 +326,8 @@ class HENRIUnifiedEgressTransducer:
                 unbinder=self.unbinder,
                 goal_wave=goal_wave,
                 prompt_text=prompt_text,
-                max_tokens=32
+                max_tokens=32,
+                w_task=w_task
             )
             response_text = f"```python\n{constructed_code}\n```"
             telemetry.update(seq_telemetry)
