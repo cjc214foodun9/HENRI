@@ -1,0 +1,90 @@
+{
+  "generated_at": "2026-07-30T00:26:35.840Z",
+  "suite_version": "Artificial Analysis Intelligence Index v4.1",
+  "staged_suites": {
+    "gdpval_aa": {
+      "name": "GDPval-AA v2",
+      "category": "Agentic",
+      "item_count": 100,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\gdpval_aa_staged.jsonl"
+    },
+    "terminal_bench_hard": {
+      "name": "Terminal-Bench Hard",
+      "category": "Agentic Coding",
+      "item_count": 100,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\terminal_bench_hard_staged.jsonl"
+    },
+    "terminal_bench_v21": {
+      "name": "Terminal-Bench v2.1",
+      "category": "CLI Agent",
+      "item_count": 100,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\terminal_bench_v21_staged.jsonl"
+    },
+    "tau2_telecom": {
+      "name": "\u03c4\u00b2-Telecom",
+      "category": "Tool-Use",
+      "item_count": 100,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\tau2_telecom_staged.jsonl"
+    },
+    "tau3_banking": {
+      "name": "\u03c4\u00b3-Banking",
+      "category": "Tool-Use",
+      "item_count": 100,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\tau3_banking_staged.jsonl"
+    },
+    "scicode": {
+      "name": "SciCode",
+      "category": "Scientific Coding",
+      "item_count": 100,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\scicode_staged.jsonl"
+    },
+    "aa_lcr": {
+      "name": "AA-LCR",
+      "category": "Long-Context Reasoning",
+      "item_count": 100,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\aa_lcr_staged.jsonl"
+    },
+    "aa_omniscience": {
+      "name": "AA-Omniscience",
+      "category": "Knowledge",
+      "item_count": 100,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\aa_omniscience_staged.jsonl"
+    },
+    "ifbench": {
+      "name": "IFBench",
+      "category": "Instruction Following",
+      "item_count": 100,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\ifbench_staged.jsonl"
+    },
+    "hle": {
+      "name": "HLE",
+      "category": "Expert Logic",
+      "item_count": 100,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\hle_staged.jsonl"
+    },
+    "gpqa_diamond": {
+      "name": "GPQA Diamond",
+      "category": "Graduate Science",
+      "item_count": 198,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\gpqa_diamond_staged.jsonl"
+    },
+    "critpt": {
+      "name": "CritPt",
+      "category": "Research Physics",
+      "item_count": 100,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\critpt_staged.jsonl"
+    },
+    "mmmu_pro": {
+      "name": "MMMU-Pro",
+      "category": "Multimodal",
+      "item_count": 100,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\mmmu_pro_staged.jsonl"
+    },
+    "ifeval_official": {
+      "name": "IFEval Official",
+      "category": "Instruction Following",
+      "item_count": 541,
+      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\ifeval_official_staged.jsonl"
+    }
+  }
+}
