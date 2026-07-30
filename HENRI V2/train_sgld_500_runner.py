@@ -76,7 +76,7 @@ def execute_sgld_training_run():
     lr = 1e-3
 
     # 2. Instantiate Model Heads & Task Compiler
-    unbinder = HENRINeuralEgressUnbinder(d_model=D, hidden_dim=2048, vocab_size=vocab_size, device=str(device)).to(device)
+    unbinder = HENRINeuralEgressUnbinder(d_model=D, vocab_size=vocab_size, device=str(device)).to(device)
     task_compiler = SGLDTaskCompiler(dimension=D, device=str(device))
     optimizer = torch.optim.AdamW(unbinder.parameters(), lr=lr, weight_decay=1e-4)
 
