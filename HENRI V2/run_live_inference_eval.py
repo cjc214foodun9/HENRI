@@ -32,6 +32,7 @@ for p in [repo_path, parent_path, os.path.join(parent_path, "scripts")]:
 from henri_decoder import HENRIUnifiedEgressTransducer
 from exteroceptive_sandbox import ExteroceptiveSandboxTransducer
 from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
+from henri_code_sanitizer import clean_generated_code
 
 HUMANEVAL_URL = "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz"
 
@@ -94,8 +95,9 @@ def run_live_inference_eval(suite: str = "humaneval", items_limit: int = 50):
         # 2. World Model / Wave-JEPA Transition -> Goal Wave \\mathbf{\\Psi}_{goal}
         goal_wave = codec.bind_hadamard(task_op, prompt_wave)
 
-        # 3. Egress Unbinder Head -> Output Text Logits \\hat{y}_i
-        generated_text, telem = transducer.decode_wave_to_response(goal_wave, prompt)
+        # 3. Egress Unbinder Head -> Output Text Logits \hat{y}_i
+        raw_generated_text, telem = transducer.decode_wave_to_response(goal_wave, prompt)
+        generated_text = clean_generated_code(raw_generated_text)
 
         # STEP 3: EXTERNAL ORACLE EVALUATION
         # Coding (HumanEval): Pass generated completion to exteroceptive_sandbox.py for live exec() evaluation
