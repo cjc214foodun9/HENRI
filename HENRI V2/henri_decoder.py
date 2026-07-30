@@ -199,11 +199,25 @@ class HENRIUnifiedEgressTransducer:
     Integrated Egress Transducer combining Phase Ring Hadamard Unbinding
     with Neural Projection Logit Decoding and TAME Bingham Plastic Test-Time SGLD Adaptation.
     """
-    def __init__(self, d_model: int = 65536, vocab_size: int = 32000, device: str = "cuda"):
+    def __init__(self, d_model: int = 65536, vocab_size: int = 32000, device: str = "cuda", checkpoint_path: Optional[str] = None):
         self.d_model = d_model
         self.device = device if torch.cuda.is_available() else "cpu"
         self.unbinder = HENRINeuralEgressUnbinder(d_model=d_model, vocab_size=vocab_size, device=self.device)
         self.codebook = PhaseRingCodebookDecoder(d_model=d_model, device=self.device)
+
+        if checkpoint_path is None:
+            # Auto-detect trained checkpoint if present
+            default_ckpt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "henri_decoder_checkpoint.pt")
+            if os.path.exists(default_ckpt):
+                checkpoint_path = default_ckpt
+
+        if checkpoint_path and os.path.exists(checkpoint_path):
+            ckpt = torch.load(checkpoint_path, map_location=self.device)
+            if "model_state_dict" in ckpt:
+                self.unbinder.load_state_dict(ckpt["model_state_dict"])
+            else:
+                self.unbinder.load_state_dict(ckpt)
+            print(f"[HENRIUnifiedEgressTransducer] Loaded trained unbinder weights from: {checkpoint_path}")
 
     def decode_wave_to_response(self, goal_wave: torch.Tensor, prompt_text: str) -> Tuple[str, Dict[str, Any]]:
         """
