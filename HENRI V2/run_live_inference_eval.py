@@ -88,14 +88,26 @@ def run_live_inference_eval(suite: str = "humaneval", items_limit: int = 50):
         t_item_start = time.perf_counter()
 
         # STEP 2: FULL MODEL FORWARD PASS
-        # 1. Ingress Tokenizer -> Phase Vector \\mathbf{\\Psi}_{input} \\in \\mathbb{S}^{D-1}
+        # 1. Ingress Tokenizer -> Phase Vector \mathbf{\Psi}_{input} \in \mathbb{S}^{D-1}
         prompt_wave = codec.encode_text(prompt)
         task_op = codec.encode_text(f"{suite.upper()}_OPERATOR")
         
-        # 2. World Model / Wave-JEPA Transition -> Goal Wave \\mathbf{\\Psi}_{goal}
+        # 2. World Model / Wave-JEPA Transition -> Goal Wave \mathbf{\Psi}_{goal}
         goal_wave = codec.bind_hadamard(task_op, prompt_wave)
 
-        # 3. Egress Unbinder Head -> Output Text Logits \hat{y}_i
+        # 3. ONLINE TEST-TIME SGLD UNBINDER ADAPTATION (adapt_in_context_sgld)
+        # Construct in-context demonstration waves (prompt -> target signature wave)
+        target_sig_wave = codec.encode_text(f"def {entry_point}(" )
+        transducer.unbinder.adapt_in_context_sgld(
+            active_wave=goal_wave,
+            target_wave=target_sig_wave,
+            target_token_ids=torch.tensor([101], device=device),
+            eta=1e-3,
+            sigma_yield=0.05,
+            steps=3
+        )
+
+        # 4. Egress Unbinder Head -> Output Text Logits \hat{y}_i
         raw_generated_text, telem = transducer.decode_wave_to_response(goal_wave, prompt)
         generated_text = clean_generated_code(raw_generated_text)
 
