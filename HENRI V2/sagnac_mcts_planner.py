@@ -122,24 +122,37 @@ class SagnacMCTSPlanner:
         psi_candidate: torch.Tensor,
         psi_axiom: torch.Tensor,
         psi_world: torch.Tensor,
-        epsilon_hard: float = 0.35
+        epsilon_hard: Optional[float] = None
     ) -> Tuple[float, float, bool]:
         """
         Decouples Sagnac Homodyne Interferometry into Dual Channels:
         1. Hard Axiom Channel (delta_axiom): Evaluates strict physical/algebraic invariants.
         2. Soft Epistemic Channel (delta_epistemic): Measures environmental transition uncertainty.
+        Connects epsilon_hard dynamically to TAME Gap-Junction Conductance G_ij(t) to adapt veto tolerance.
         """
-        if psi_candidate.is_complex():
-            inner_axiom = torch.abs(torch.mean(psi_candidate.conj() * psi_axiom))
-            inner_world = torch.abs(torch.mean(psi_candidate.conj() * psi_world))
+        w_cand = psi_candidate.flatten()
+        w_ax = psi_axiom.flatten()
+        w_wrld = psi_world.flatten()
+
+        if w_cand.is_complex():
+            inner_axiom = torch.abs(torch.mean(w_cand.conj() * w_ax))
+            inner_world = torch.abs(torch.mean(w_cand.conj() * w_wrld))
         else:
-            inner_axiom = torch.abs(torch.mean(psi_candidate * psi_axiom))
-            inner_world = torch.abs(torch.mean(psi_candidate * psi_world))
+            inner_axiom = torch.abs(torch.mean(w_cand * w_ax))
+            inner_world = torch.abs(torch.mean(w_cand * w_wrld))
 
         delta_axiom = float(1.0 - inner_axiom.item())
         delta_epistemic = float(1.0 - inner_world.item())
-        hard_veto_triggered = delta_axiom > epsilon_hard
 
+        # Adaptive Biophysical Sagnac Veto: scale epsilon_hard based on TAME Conductance
+        if epsilon_hard is None:
+            phase_error = torch.abs(w_cand - w_ax) * math.pi
+            conductance = 1.0 / (1.0 + torch.exp(2.0 * (phase_error - 0.05)))
+            g_mean = float(torch.mean(conductance).item())
+            # Dynamic expansion: high stress (g_mean -> 0) expands veto threshold up to 2x tau_veto
+            epsilon_hard = float(self.tau_veto * (1.0 + 1.0 * (1.0 - g_mean)))
+
+        hard_veto_triggered = delta_axiom > epsilon_hard
         return delta_axiom, delta_epistemic, hard_veto_triggered
 
     def search(
@@ -150,19 +163,24 @@ class SagnacMCTSPlanner:
         demo_pairs: Optional[List[Tuple[np.ndarray, np.ndarray]]] = None
     ) -> Tuple[SpelkeDSLNode, float]:
         """
-        Executes Dual-Channel Sagnac-Guided EFE MCTS tree search with Hard Axiom Pruning (Q -> -inf)
-        and zero-shot W_task Moore-Penrose Functor Compilation.
+        Executes Dual-Channel Sagnac-Guided EFE MCTS tree search with Hard Axiom Pruning (Q -> -inf),
+        In-Context SGLD Unbinder Adaptation, and zero-shot W_task Moore-Penrose Functor Compilation.
         Returns: (best_ast_program, best_sagnac_delta)
         """
         target_wave = self.vision_encoder.encode_grid(target_grid)
 
-        # Phase C: Zero-shot W_task Moore-Penrose Functor Compilation
+        # In-Context SGLD Unbinder Adaptation & Zero-shot W_task Functor Compilation
         if demo_pairs:
+            demo_waves = [self.vision_encoder.encode_grid(x) for x, y in demo_pairs]
+            target_waves = [self.vision_encoder.encode_grid(y) for x, y in demo_pairs]
+            demo_token_ids = [0] * len(demo_pairs)
+            
+            # Execute online test-time SGLD parameter adaptation on decoder unbinder
+            adapt_telemetry = self.decoder.adapt_in_context(demo_waves, target_waves, demo_token_ids)
+            print(f"[In-Context SGLD Adaptation] Adapted unbinder logits across {len(demo_pairs)} demo pairs | Avg Adapt Loss: {adapt_telemetry.get('avg_adapt_loss', 0.0):.6f}")
+
             encoded_demos = []
-            for demo_in, demo_out in demo_pairs:
-                w_in = self.vision_encoder.encode_grid(demo_in)
-                w_out = self.vision_encoder.encode_grid(demo_out)
-                # Map real wave states [-1, 1] to Z_256 phase ring
+            for w_in, w_out in zip(demo_waves, target_waves):
                 phase_in = ((torch.clamp(w_in, -1.0, 1.0) + 1.0) / 2.0 * (self.codec.k_bins - 1)).to(torch.uint8)
                 phase_out = ((torch.clamp(w_out, -1.0, 1.0) + 1.0) / 2.0 * (self.codec.k_bins - 1)).to(torch.uint8)
                 encoded_demos.append((phase_in, phase_out))
@@ -173,7 +191,6 @@ class SagnacMCTSPlanner:
             
             # Single-pass associative retrieval
             phase_goal_pred = self.task_compiler.single_pass_associative_retrieval(w_task, phase_test_in)
-            # Reconstruct predicted real wave state
             goal_wave_pred = (phase_goal_pred.to(torch.float32) / (self.codec.k_bins - 1) * 2.0 - 1.0).to(self.device)
 
             zero_shot_delta = 1.0 - self.vision_encoder.compute_sagnac_similarity(goal_wave_pred, target_wave)

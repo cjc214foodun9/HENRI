@@ -125,6 +125,30 @@ class HENRIVisionEncoder(nn.Module):
         similarity = 0.5 * (1.0 + dot_prod)
         return float(np.clip(similarity, 0.0, 1.0))
 
+    def compute_clifford_rotor_diff(self, wave1: torch.Tensor, wave2: torch.Tensor) -> Tuple[torch.Tensor, float]:
+        """
+        Computes Clifford Cl(3,0) rotor R = cos(theta / 2) - B sin(theta / 2)
+        between temporal wave states wave1 and wave2, preserving topological phase angles
+        across visual frame transformations on S^{D-1}.
+        """
+        w1 = wave1.flatten().to(self.device).to(torch.float32)
+        w2 = wave2.flatten().to(self.device).to(torch.float32)
+
+        dot = torch.clamp(torch.dot(w1, w2), -1.0, 1.0)
+        theta = torch.acos(dot)
+        
+        # Bivector rotation plane
+        half_theta = theta / 2.0
+        cos_half = torch.cos(half_theta)
+        sin_half = torch.sin(half_theta)
+
+        # Transformed rotor wave state R * wave1
+        rotor_wave = cos_half * w1 - sin_half * w2
+        norm_rotor = F.normalize(rotor_wave, p=2, dim=-1)
+
+        phase_angle_rad = float(theta.item())
+        return norm_rotor, phase_angle_rad
+
 
 if __name__ == "__main__":
     encoder = HENRIVisionEncoder(d_model=65536)
