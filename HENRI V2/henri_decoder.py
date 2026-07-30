@@ -181,11 +181,11 @@ class ASTProductionPhaseCodec:
         # AST Production Phase Bank for standard code structures
         g = torch.Generator(device="cpu").manual_seed(1337)
         self.ast_production_bank = {
-            "def": F.normalize(torch.randn(self.d_model, generator=g, device=self.device), p=2, dim=-1),
-            "return": F.normalize(torch.randn(self.d_model, generator=g, device=self.device), p=2, dim=-1),
-            "assign": F.normalize(torch.randn(self.d_model, generator=g, device=self.device), p=2, dim=-1),
-            "call": F.normalize(torch.randn(self.d_model, generator=g, device=self.device), p=2, dim=-1),
-            "binop": F.normalize(torch.randn(self.d_model, generator=g, device=self.device), p=2, dim=-1)
+            "def": F.normalize(torch.randn(self.d_model, generator=g, device="cpu").to(self.device), p=2, dim=-1),
+            "return": F.normalize(torch.randn(self.d_model, generator=g, device="cpu").to(self.device), p=2, dim=-1),
+            "assign": F.normalize(torch.randn(self.d_model, generator=g, device="cpu").to(self.device), p=2, dim=-1),
+            "call": F.normalize(torch.randn(self.d_model, generator=g, device="cpu").to(self.device), p=2, dim=-1),
+            "binop": F.normalize(torch.randn(self.d_model, generator=g, device="cpu").to(self.device), p=2, dim=-1)
         }
 
     def shift_wave_by_ast_production(self, wave: torch.Tensor, production_key: str = "def") -> torch.Tensor:
