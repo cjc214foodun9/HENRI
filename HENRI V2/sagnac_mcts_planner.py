@@ -293,19 +293,38 @@ class SagnacMCTSPlanner:
         prompt: str,
         entry_point: str,
         test_code: str,
+        demo_pairs: Optional[List[Tuple[str, str]]] = None,
         max_search_depth: int = 10
     ) -> Tuple[str, Dict[str, Any]]:
         """
         Routes code generation prompts through the Planner-to-REPL Synthesis Loop.
-        Executes active inference tree search to synthesize and verify candidate Python
-        program completion statements in HENRIUniversalREPL before final submission.
+        Connects HolographicTaskFunctorCompiler to compile in-context demonstration pairs (X_i, Y_i)
+        into W_task, guiding token unbinding selection toward task-specific return values.
         """
         prompt_wave = self.codec.encode_text(prompt)
         
-        # 1. Generate candidate completion
-        raw_completion, telem = self.decoder.decode_wave_to_response(prompt_wave, prompt)
+        # 1. Compile Task Transformation Operator W_task from in-context demo pairs if available
+        if demo_pairs:
+            encoded_demos = []
+            for x_str, y_str in demo_pairs:
+                w_x = self.codec.encode_text(x_str)
+                w_y = self.codec.encode_text(y_str)
+                p_x = ((torch.clamp(w_x, -1.0, 1.0) + 1.0) / 2.0 * (self.codec.k_bins - 1)).to(torch.uint8)
+                p_y = ((torch.clamp(w_y, -1.0, 1.0) + 1.0) / 2.0 * (self.codec.k_bins - 1)).to(torch.uint8)
+                encoded_demos.append((p_x, p_y))
+            
+            w_task_ring = self.task_compiler.compile_functor(encoded_demos)
+            w_task = (w_task_ring.to(torch.float32) / (self.codec.k_bins - 1) * 2.0 - 1.0).to(self.device)
+            
+            # Bind W_task with prompt wave to yield target goal wave: \Psi_{goal} = W_task \odot \Psi_{prompt}
+            goal_wave = F.normalize(self.codec.bind_hadamard(w_task, prompt_wave), p=2, dim=-1)
+        else:
+            goal_wave = prompt_wave
+
+        # 2. Generate candidate completion via AST Grammar-Masked Autoregressive Decoder
+        raw_completion, telem = self.decoder.decode_wave_to_response(goal_wave, prompt)
         
-        # 2. Evaluate candidate completion inside HENRIUniversalREPL
+        # 3. Evaluate candidate completion inside HENRIUniversalREPL
         full_candidate = f"{prompt}\n{raw_completion}\n{test_code}\ncheck({entry_point})"
         repl_result = self.repl.execute_python_repl(full_candidate)
         
@@ -316,6 +335,7 @@ class SagnacMCTSPlanner:
             "repl_verified": not is_vetoed,
             "sagnac_delta": float(sagnac_delta),
             "telem": telem,
+            "w_task_active": demo_pairs is not None and len(demo_pairs) > 0,
             "returncode": repl_result.get("returncode", -1)
         }
         return raw_completion, synthesized_meta

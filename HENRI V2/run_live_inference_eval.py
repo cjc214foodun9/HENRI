@@ -13,10 +13,11 @@ Executes full model inference forward passes across un-cached dataset items:
   4. Real-time item logging & hardware assertions (VRAM, Latency per item).
 """
 
+import re
 import os
 import sys
-import json
 import time
+import json
 import gzip
 import urllib.request
 import argparse
@@ -36,6 +37,17 @@ from henri_code_sanitizer import clean_generated_code
 from sagnac_mcts_planner import SagnacMCTSPlanner
 
 HUMANEVAL_URL = "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz"
+
+
+def extract_docstring_demo_pairs(prompt: str) -> list:
+    """
+    Extracts example input-output pairs (X_i, Y_i) from function docstrings (e.g. >>> call -> result).
+    """
+    demo_pairs = []
+    matches = re.findall(r'>>>\s*([^\n]+)\n\s*([^\n]+)', prompt)
+    for call_str, out_str in matches:
+        demo_pairs.append((call_str.strip(), out_str.strip()))
+    return demo_pairs
 
 
 def load_humaneval_dataset(limit: int = 50) -> list:
@@ -109,11 +121,13 @@ def run_live_inference_eval(suite: str = "humaneval", items_limit: int = 50):
             steps=3
         )
 
-        # 4. Planner-to-REPL Synthesis Loop (SagnacMCTSPlanner + HENRIUniversalREPL)
+        # 4. Planner-to-REPL Synthesis Loop (SagnacMCTSPlanner + HENRIUniversalREPL + HolographicTaskFunctorCompiler)
+        demo_pairs = extract_docstring_demo_pairs(prompt)
         raw_generated_text, synth_meta = planner.synthesize_code_program(
             prompt=prompt,
             entry_point=entry_point,
-            test_code=test_code
+            test_code=test_code,
+            demo_pairs=demo_pairs
         )
         generated_text = clean_generated_code(raw_generated_text)
 
