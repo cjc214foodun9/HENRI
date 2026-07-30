@@ -109,9 +109,10 @@ class AttractorBaseplateVerifier:
             # Potential Field Gradient: -nabla V(Psi) = w_target
             grad = w_target
             
-            # Decay thermal noise over time
+            # Decay thermal noise over time (normalized on unit hypersphere S^{D-1})
             temp = 0.01 * math.exp(-0.05 * step)
-            langevin_noise = torch.randn(D, device=self.device) * math.sqrt(2.0 * temp)
+            unit_langevin_noise = F.normalize(torch.randn(D, device=self.device), p=2.0, dim=-1)
+            langevin_noise = math.sqrt(2.0 * temp) * unit_langevin_noise
             
             # Step toward attractor well on hypersphere S^{D-1}
             psi_t = F.normalize(psi_t + learning_rate * grad + langevin_noise, p=2.0, dim=-1)
