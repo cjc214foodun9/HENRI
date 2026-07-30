@@ -26,34 +26,22 @@ from henri_decoder import HENRINeuralEgressUnbinder, ASTProductionPhaseCodec, Ph
 
 class SGLDTaskCompiler:
     """
-    Newton-Schulz Stiefel Retraction Task Operator Compiler on CUDA.
-    Compiles in-context demonstration pairs (X_i, Y_i) on S^{D-1} into W_task in 5 polynomial steps.
+    Hadamard Circular Binding Task Operator Compiler on CUDA.
+    Compiles in-context demonstration pairs (X_i, Y_i) on S^{D-1} into w_task in O(D) memory (256 KB).
+    Prevents OOM by avoiding 65536x65536 matrix allocations (16 GB).
     """
     def __init__(self, dimension: int = 65536, device: str = "cuda"):
         self.dimension = dimension
         self.device = device if torch.cuda.is_available() else "cpu"
 
-    def compile_task_operator_newton_schulz(self, X_demo: torch.Tensor, Y_demo: torch.Tensor, steps: int = 5) -> torch.Tensor:
+    def compile_task_operator_hadamard(self, X_demo: torch.Tensor, Y_demo: torch.Tensor) -> torch.Tensor:
         """
-        Computes W_task via 5-step Newton-Schulz polynomial Stiefel retraction on CUDA.
-        W_0 = Y_demo^T * X_demo / N
-        W_{k+1} = 0.5 * W_k * (3I - W_k^T * W_k)
+        Computes Hadamard circular binding task vector w_task in S^{D-1}.
+        w_task = normalize(mean(Y_demo * X_demo, dim=0))
         """
-        batch_size = X_demo.shape[0]
-        # Cross-covariance initializer
-        W = torch.matmul(Y_demo.transpose(0, 1), X_demo) / batch_size
-        
-        # Scale for initial spectral radius <= 1.0
-        norm_W = torch.linalg.norm(W, ord=2)
-        if norm_W > 1e-6:
-            W = W / norm_W
-            
-        I = torch.eye(self.dimension, device=self.device, dtype=W.dtype)
-        for _ in range(steps):
-            W_t_W = torch.matmul(W.transpose(0, 1), W)
-            W = 0.5 * torch.matmul(W, (3.0 * I - W_t_W))
-            
-        return W
+        fused_binding = torch.mean(Y_demo * X_demo, dim=0)
+        w_task = F.normalize(fused_binding, p=2, dim=-1)
+        return w_task
 
 
 def execute_sgld_training_run():
@@ -99,18 +87,16 @@ def execute_sgld_training_run():
         Y_demo = F.normalize(torch.randn(batch_size, D, device=device), p=2, dim=-1)
         a_target = torch.randint(0, vocab_size, (batch_size,), device=device)
 
-        # Step 2: Compile W_task via 5-step Newton-Schulz polynomial mapping on CUDA
-        W_task = task_compiler.compile_task_operator_newton_schulz(X_demo, Y_demo, steps=5)
+        # Step 2: Compile w_task via Hadamard circular binding on CUDA (O(D) memory)
+        w_task = task_compiler.compile_task_operator_hadamard(X_demo, Y_demo)
 
         # Query Input Wave -> Goal Wave
         psi_query = F.normalize(torch.randn(batch_size, D, device=device), p=2, dim=-1)
-        psi_goal = F.normalize(torch.matmul(psi_query, W_task.transpose(0, 1)), p=2, dim=-1)
+        psi_goal = F.normalize(psi_query * (1.0 + w_task), p=2, dim=-1)
 
         # Step 3: Forward Unbinding Pass
         optimizer.zero_grad()
-        # Modulate psi_goal with W_task diagonal
-        w_task_diag = torch.diag(W_task)
-        z_egress = unbinder(psi_goal, w_task=w_task_diag)
+        z_egress = unbinder(psi_goal, w_task=w_task)
 
         # Loss Computation: Pragmatic Cross-Entropy + Sagnac Veto Delta
         loss_ce = F.cross_entropy(z_egress, a_target)
