@@ -105,13 +105,19 @@ def run_live_inference_eval(suite: str = "humaneval", items_limit: int = 50):
         t_item_elapsed = (time.perf_counter() - t_item_start) * 1000.0  # ms
 
         # STEP 4: LOG RAW INFERENCE TELEMETRY
-        prompt_preview = prompt.replace("\n", " ")[:30] + "..."
-        gen_preview = generated_text.replace("\n", " ")[:30] + "..."
+        prompt_preview = prompt.replace("\n", " ")[:25] + "..."
+        gen_preview = generated_text.replace("\n", " ")[:25] + "..."
         if is_pass:
             passed_count += 1
             status_str = "PASS"
         else:
-            status_str = f"FAIL ({trace_out.splitlines()[0] if trace_out else 'AssertionError'})"
+            if isinstance(trace_out, dict):
+                err_detail = trace_out.get("error", trace_out.get("exception_type", "AssertionError"))
+            elif isinstance(trace_out, str):
+                err_detail = trace_out.splitlines()[0] if trace_out else "AssertionError"
+            else:
+                err_detail = "AssertionError"
+            status_str = f"FAIL ({err_detail})"
 
         print(f"[Task {idx:03d}/{item_count:03d}] {task_id:<15}: Prompt: \"{prompt_preview}\" | Generated: \"{gen_preview}\" | Result: {status_str} [{t_item_elapsed:6.2f} ms]")
 
