@@ -147,14 +147,9 @@ class CUDAGraphBatchedUnbinderRunner:
                 # 1. Fetch GPU bitmask tensor
                 gpu_mask = self.gpu_masker.get_gpu_bitmask_tensor(step, [])
                 
-                # 2. Fused Hadamard projection pass
-                logits = fused_hadamard_stiefel_bitmask_forward(
-                    current_wave,
-                    w_task_b,
-                    self.unbinder.projection.weight,
-                    self.unbinder.projection.bias,
-                    gpu_mask
-                )
+                # 2. Fused Hadamard projection pass via unbinder head
+                raw_logits = self.unbinder(current_wave, w_task=w_task_b)
+                logits = torch.where(gpu_mask, raw_logits, torch.tensor(-1e9, device=device, dtype=raw_logits.dtype))
                 
                 # 3. Greedy token selection
                 top_tokens = torch.argmax(logits, dim=-1)
