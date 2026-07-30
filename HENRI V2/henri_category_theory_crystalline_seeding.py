@@ -31,7 +31,7 @@ class CategoryTheoryCrystallineSeeder:
         self.dimension = dimension
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.codec = qFHRREpistemicCodec(d_model=65536)
-        self.cuda_runner = CUDAGraphBatchedUnbinderRunner(vocab_size=32000, num_streams=16)
+        self.cuda_runner = CUDAGraphBatchedUnbinderRunner(d_model=65536, vocab_size=32000)
 
     def build_category_theory_baseplate_corpus(self) -> List[Dict[str, str]]:
         """
