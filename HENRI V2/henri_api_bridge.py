@@ -31,7 +31,11 @@ app = FastAPI(title="HENRI V2 Egress Transducer Bridge")
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 CODEC = qFHRREpistemicCodec(d_model=65536, k_bins=256, device=DEVICE)
-ZONE_C = ZoneCEpistemicDatabase(codec=CODEC)
+try:
+    ZONE_C = ZoneCEpistemicDatabase(codec=CODEC)
+except Exception as e:
+    ZONE_C = None
+    print(f"[API BRIDGE] Zone C database offline or connection skipped: {e}")
 THERMOSTAT = AdaptiveViscoelasticThermostat(d_model=4096, device=DEVICE)
 TRANSDUCER = UniversalDataTransducer(d_model=4096, num_blocks=512)
 UNBINDER_TRANSDUCER = HENRIUnifiedEgressTransducer(d_model=65536, device=DEVICE)
