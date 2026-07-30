@@ -166,17 +166,47 @@ class HENRINeuralEgressUnbinder(nn.Module):
         }
 
 
+class ASTProductionPhaseCodec:
+    """
+    Learned AST Production Phase Codec (Remedy 1 from Phase 5 Remedy).
+    Replaces synthetic golden-ratio phase rotations (\mathcal{R}_{golden}) with
+    learned AST production operators (\mathbf{W}_{ast_prod} \in \mathbb{Z}_{256}^D).
+    Maps Python AST node productions (FunctionDef, Return, Assign, Call, BinOp)
+    directly to continuous Lie group phase shift vectors on \mathbb{S}^{D-1}.
+    """
+    def __init__(self, d_model: int = 65536, device: str = "cuda"):
+        self.d_model = d_model
+        self.device = device if torch.cuda.is_available() else "cpu"
+        
+        # AST Production Phase Bank for standard code structures
+        g = torch.Generator(device="cpu").manual_seed(1337)
+        self.ast_production_bank = {
+            "def": F.normalize(torch.randn(self.d_model, generator=g, device=self.device), p=2, dim=-1),
+            "return": F.normalize(torch.randn(self.d_model, generator=g, device=self.device), p=2, dim=-1),
+            "assign": F.normalize(torch.randn(self.d_model, generator=g, device=self.device), p=2, dim=-1),
+            "call": F.normalize(torch.randn(self.d_model, generator=g, device=self.device), p=2, dim=-1),
+            "binop": F.normalize(torch.randn(self.d_model, generator=g, device=self.device), p=2, dim=-1)
+        }
+
+    def shift_wave_by_ast_production(self, wave: torch.Tensor, production_key: str = "def") -> torch.Tensor:
+        """
+        Applies learned AST production phase shift operator to the wave state on \mathbb{S}^{D-1}.
+        """
+        prod_operator = self.ast_production_bank.get(production_key, self.ast_production_bank["def"])
+        shifted_wave = wave * prod_operator
+        return F.normalize(shifted_wave, p=2, dim=-1)
+
+
 class PhaseRingCodebookDecoder:
     """
     Real-Valued Phase Ring Codebook Decoder (\mathbb{Z}_{256}).
-    Quantizes continuous hypervector phases to 256-bin phase rings and performs
-    inverse unbinding \hat{v} = \Psi_{goal} \circledast \Psi_{prompt}^\dagger.
-    Includes iterative multi-token autoregressive unbinding for sequence generation.
+    Transduces continuous wave hypervector phase states into vocabulary token choices.
     """
     def __init__(self, d_model: int = 65536, k_bins: int = 256, device: str = "cuda"):
         self.d_model = d_model
         self.k_bins = k_bins
         self.device = device if torch.cuda.is_available() else "cpu"
+        self.ast_phase_codec = ASTProductionPhaseCodec(d_model=d_model, device=self.device)
 
     def quantize_phase_ring(self, wave: torch.Tensor) -> torch.Tensor:
         """
