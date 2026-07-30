@@ -3,7 +3,7 @@ HENRI V2: Authentic Hardware-Bound Coding Benchmark Runner
 Subsystem: Falsifiable Hardware Evaluation Engine
 
 Executes true hardware-bound evaluation on OpenAI HumanEval benchmark items:
-  1. Loads raw HumanEval JSONL dataset items.
+  1. Loads raw HumanEval JSONL dataset items from GitHub master branch.
   2. Executes PyTorch/CUDA forward passes over D=65,536 wave hypervectors.
   3. Executes generated code via live isolated exec() and unit test assertions in ExteroceptiveSandboxTransducer.
   4. Measures true PyTorch GPU memory allocation, wall-clock time, and item latency.
@@ -29,7 +29,7 @@ from henri_decoder import HENRIUnifiedEgressTransducer
 from exteroceptive_sandbox import ExteroceptiveSandboxTransducer
 from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
 
-HUMANEVAL_URL = "https://raw.githubusercontent.com/openai/human-eval/main/data/HumanEval.jsonl.gz"
+HUMANEVAL_URL = "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz"
 
 
 def load_humaneval_dataset(limit: int = 50) -> list:
