@@ -17,12 +17,10 @@ from fastapi.responses import JSONResponse
 import uvicorn
 import torch
 
-# Ensure repository root and subdirectories are in sys.path
+# Ensure current execution directory is prioritized at the top of sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
-for path in [current_dir, parent_dir, "/workspace/HENRI V2", "/workspace/HENRI V2/HENRI V2", "/workspace/aa_eval_workspace", r"C:\Users\chan\Desktop\HENRI 7B SWARM\HENRI V2"]:
-    if os.path.exists(path) and path not in sys.path:
-        sys.path.insert(0, path)
+sys.path = [current_dir, parent_dir] + [p for p in sys.path if p not in (current_dir, parent_dir)]
 
 from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec, ZoneCEpistemicDatabase
 from adaptive_viscoelastic_thermostat import AdaptiveViscoelasticThermostat
