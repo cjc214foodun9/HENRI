@@ -94,17 +94,36 @@ class OfficialProductionBenchmarkRunner:
             "temperature": 0.0
         }
         data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(self.api_url, data=data, headers={"Content-Type": "application/json"})
-        try:
-            with urllib.request.urlopen(req, timeout=10) as response:
-                res = json.loads(response.read().decode("utf-8"))
-                latency = time.perf_counter() - t0
-                content = res["choices"][0]["message"]["content"]
-                telem = res.get("henri_telemetry", {})
-                return content, telem, latency
-        except Exception as e:
-            latency = time.perf_counter() - t0
-            return f"EXECUTION_ERROR: {e}", {}, latency
+        req = urllib.request.Request(
+            self.api_url,
+            data=data,
+            headers={
+                "Content-Type": "application/json",
+                "Connection": "keep-alive"
+            }
+        )
+        
+        # Robust Exponential Backoff Retry Handler (5 attempts: 1s, 2s, 4s, 8s, 16s)
+        max_retries = 5
+        backoff_delays = [1.0, 2.0, 4.0, 8.0, 16.0]
+        last_exception = None
+
+        for attempt in range(max_retries):
+            try:
+                with urllib.request.urlopen(req, timeout=15) as response:
+                    res = json.loads(response.read().decode("utf-8"))
+                    latency = time.perf_counter() - t0
+                    content = res["choices"][0]["message"]["content"]
+                    telem = res.get("henri_telemetry", {})
+                    return content, telem, latency
+            except Exception as e:
+                last_exception = e
+                if attempt < max_retries - 1:
+                    sleep_time = backoff_delays[attempt]
+                    time.sleep(sleep_time)
+
+        latency = time.perf_counter() - t0
+        return f"EXECUTION_ERROR: {last_exception}", {}, latency
 
     def check_api_health(self):
         try:
