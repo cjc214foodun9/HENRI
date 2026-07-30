@@ -28,7 +28,7 @@ class CrystallineCorpusStager:
         os.makedirs(self.output_dir, exist_ok=True)
         self.manifest_path = os.path.join(self.output_dir, "corpus_manifest.json")
 
-    def build_core_knowledge_baseplate_corpus() -> List[Dict[str, str]]:
+    def build_core_knowledge_baseplate_corpus(self) -> List[Dict[str, str]]:
         """
         Constructs authentic multi-domain ground truth corpus entries spanning
         Mathematics, Physics, Computer Science ASTs, Logic, and Active Inference Heuristics.
