@@ -282,20 +282,21 @@ class OfficialProductionBenchmarkRunner:
         acc = (passed / len(items)) * 100.0 if items else 0.0
         return {"passed": passed, "total": len(items), "accuracy": acc, "details": details}
 
-    def run_all(self):
+    def run_all(self, max_items_per_suite=None):
         start_time = time.time()
         iso_timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
         print("========================================================================")
-        print("        HENRI V2: OFFICIAL PRODUCTION BENCHMARK GAUNTLET RUNNER")
+        print(f"        HENRI V2: OFFICIAL PRODUCTION BENCHMARK GAUNTLET RUNNER")
+        print(f"        (Mode: {'FULL SPLIT (ALL STAGED ITEMS)' if max_items_per_suite is None else f'SUBSET ({max_items_per_suite} items/suite)'})")
         print("========================================================================")
 
         results = {}
         evals = [
-            ("humaneval_official", self.eval_humaneval_official),
-            ("ifeval_official", self.eval_ifeval_official),
-            ("gsm8k_official", self.eval_gsm8k_official),
-            ("mbpp_official", self.eval_mbpp_official),
-            ("mmlu_physics_official", self.eval_mmlu_physics_official),
+            ("humaneval_official", lambda: self.eval_humaneval_official(max_items=max_items_per_suite)),
+            ("ifeval_official", lambda: self.eval_ifeval_official(max_items=max_items_per_suite)),
+            ("gsm8k_official", lambda: self.eval_gsm8k_official(max_items=max_items_per_suite)),
+            ("mbpp_official", lambda: self.eval_mbpp_official(max_items=max_items_per_suite)),
+            ("mmlu_physics_official", lambda: self.eval_mmlu_physics_official(max_items=max_items_per_suite)),
         ]
 
         total_accuracy = 0.0
@@ -394,6 +395,9 @@ class OfficialProductionBenchmarkRunner:
 
 
 if __name__ == "__main__":
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8090
+    port = 8090
+    max_items = 25  # Default sample subset
+    if "--full" in sys.argv or "--full-split" in sys.argv:
+        max_items = None
     runner = OfficialProductionBenchmarkRunner(port=port)
-    runner.run_all()
+    runner.run_all(max_items_per_suite=max_items)
