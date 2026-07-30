@@ -104,7 +104,15 @@ class OfficialProductionBenchmarkRunner:
                 return content, telem, latency
         except Exception as e:
             latency = time.perf_counter() - t0
-            return f"API_ERROR: {e}", {}, latency
+            return f"EXECUTION_ERROR: {e}", {}, latency
+
+    def check_api_health(self):
+        try:
+            req = urllib.request.Request(f"http://127.0.0.1:{self.port}/v1/models")
+            with urllib.request.urlopen(req, timeout=2) as response:
+                return response.status == 200
+        except Exception:
+            return False
 
     # 1. OpenAI HumanEval Official Dataset
     def eval_humaneval_official(self, max_items=20):
@@ -261,7 +269,12 @@ class OfficialProductionBenchmarkRunner:
             prompt += "State the correct option letter (A, B, C, or D)."
 
             resp, telem, lat = self.query_api(prompt)
-            is_pass = expected_letter in resp.upper()
+            if "EXECUTION_ERROR" in resp or lat < 0.010:
+                is_pass = False
+            else:
+                match = re.search(r"\b([A-D])\b", resp.upper())
+                parsed_letter = match.group(1) if match else None
+                is_pass = (parsed_letter == expected_letter)
             if is_pass:
                 passed += 1
             details.append({"question": question, "expected": expected_letter, "response": resp, "passed": is_pass, "latency": lat, "telemetry": telem})
