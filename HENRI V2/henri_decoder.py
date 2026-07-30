@@ -286,6 +286,12 @@ class HENRIUnifiedEgressTransducer:
             top_token_id = int(torch.argmax(logits, dim=-1).item())
 
         prompt_lower = prompt_text.lower()
+        telemetry = {
+            "qfhrr_wave_norm": wave_norm,
+            "top_token_id": top_token_id,
+            "neural_unbinder_active": True,
+            "phase_ring_bins": 256
+        }
         
         # Option Parsing for Multiple-Choice tasks
         if "option letter" in prompt_lower or "options:" in prompt_lower or "(a, b, c, or d)" in prompt_lower:
@@ -309,13 +315,6 @@ class HENRIUnifiedEgressTransducer:
             response_text = f"Calculated wave state solution: \\boxed{{{top_token_id}}}"
         else:
             response_text = f"Continuous wave state transduced successfully (Token ID: {top_token_id})."
-
-        telemetry = {
-            "qfhrr_wave_norm": wave_norm,
-            "top_token_id": top_token_id,
-            "neural_unbinder_active": True,
-            "phase_ring_bins": 256
-        }
 
         return response_text, telemetry
 
