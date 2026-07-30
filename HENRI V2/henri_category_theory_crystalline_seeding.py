@@ -19,7 +19,7 @@ from typing import Dict, Any, List
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from henri_vision_encoder import qFHRREpistemicCodec
+from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
 from henri_fused_triton_cuda_graph_runner import CUDAGraphBatchedUnbinderRunner
 
 
