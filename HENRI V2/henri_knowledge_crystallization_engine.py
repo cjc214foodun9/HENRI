@@ -64,7 +64,8 @@ class ContinuousKnowledgeCrystallizer:
                 domain_tag = entry.get("domain", "general_human_knowledge")
 
                 # 1. High-dimensional encoding
-                concept_wave = self.codec.encode_text(concept_text)
+                raw_wave = self.codec.encode_text(concept_text)
+                concept_wave = raw_wave.to(torch.float32).to(self.device) / 255.0 * 2.0 - 1.0
                 
                 # 2. Extract topological relational operator (Self-Hadamard Phase Locking)
                 relational_op = F.normalize(concept_wave * concept_wave, p=2, dim=-1)
