@@ -27,6 +27,7 @@ for path in [current_dir, parent_dir, "/workspace/HENRI V2", "/workspace/HENRI V
 from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec, ZoneCEpistemicDatabase
 from adaptive_viscoelastic_thermostat import AdaptiveViscoelasticThermostat
 from universal_data_transducer import UniversalDataTransducer
+from henri_decoder import HENRIUnifiedEgressTransducer
 
 app = FastAPI(title="HENRI V2 Egress Transducer Bridge")
 
@@ -35,6 +36,7 @@ CODEC = qFHRREpistemicCodec(d_model=65536, k_bins=256, device=DEVICE)
 ZONE_C = ZoneCEpistemicDatabase(codec=CODEC)
 THERMOSTAT = AdaptiveViscoelasticThermostat(d_model=4096, device=DEVICE)
 TRANSDUCER = UniversalDataTransducer(d_model=4096, num_blocks=512)
+UNBINDER_TRANSDUCER = HENRIUnifiedEgressTransducer(d_model=65536, device=DEVICE)
 
 
 def decode_prompt_to_transduced_response(prompt: str, telem: dict) -> str:
@@ -163,8 +165,9 @@ async def completions(request: Request):
     telem["qfhrr_wave_norm"] = float(torch.norm(goal_wave.to(torch.float32)).item())
     telem["qfhrr_phase_coherence"] = 0.985
     
-    # 4. Egress Transduction from Bound Wave Phase State
-    response_text = decode_prompt_to_transduced_response(str(last_msg), telem)
+    # 4. Neural Egress Transduction & Phase Ring Unbinding
+    response_text, unbinder_telem = UNBINDER_TRANSDUCER.decode_wave_to_response(goal_wave, str(last_msg))
+    telem.update(unbinder_telem)
     
     resp_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
     return JSONResponse({
