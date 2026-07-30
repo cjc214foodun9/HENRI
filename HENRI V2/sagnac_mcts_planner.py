@@ -8,6 +8,7 @@ Sagnac-Guided Branch Pruning (Q -> -inf when Delta_Sagnac > tau_veto), and TDV (
 import math
 import numpy as np
 import torch
+import torch.nn.functional as F
 from typing import Any, Dict, List, Optional, Tuple, Union
 from henri_vision_encoder import HENRIVisionEncoder
 from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec, HolographicTaskFunctorCompiler
