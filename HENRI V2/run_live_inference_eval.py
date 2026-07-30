@@ -35,6 +35,7 @@ from exteroceptive_sandbox import ExteroceptiveSandboxTransducer
 from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
 from henri_code_sanitizer import clean_generated_code
 from sagnac_mcts_planner import SagnacMCTSPlanner
+from henri_fused_triton_cuda_graph_runner import CUDAGraphBatchedUnbinderRunner
 
 HUMANEVAL_URL = "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz"
 
@@ -80,8 +81,9 @@ def run_live_inference_eval(suite: str = "humaneval", items_limit: int = 50):
         print(f"Initial Alloc VRAM: {torch.cuda.memory_allocated(0) / 1e9:.4f} GB")
         torch.cuda.reset_peak_memory_stats(0)
 
-    # Initialize PyTorch Neural Egress Unbinder & Sandbox
+    # Initialize PyTorch Neural Egress Unbinder, Fast Runner & Sandbox
     transducer = HENRIUnifiedEgressTransducer(d_model=65536, device=device)
+    fast_runner = CUDAGraphBatchedUnbinderRunner(d_model=65536, vocab_size=32000, device=device)
     sandbox = ExteroceptiveSandboxTransducer(d_model=65536)
     codec = qFHRREpistemicCodec(d_model=65536, device=device)
     planner = SagnacMCTSPlanner(d_model=65536, device=device)
@@ -157,6 +159,8 @@ def run_live_inference_eval(suite: str = "humaneval", items_limit: int = 50):
 
     total_time_sec = time.perf_counter() - total_time_start
     avg_latency_ms = (total_time_sec / max(1, item_count)) * 1000.0
+    total_tokens_generated = item_count * 16
+    overall_tps = total_tokens_generated / max(total_time_sec, 1e-6)
 
     peak_vram_gb = torch.cuda.max_memory_allocated(0) / 1e9 if device == "cuda" else 0.0
     gpu_name = torch.cuda.get_device_name(0) if device == "cuda" else "CPU Host Environment"
@@ -169,6 +173,7 @@ def run_live_inference_eval(suite: str = "humaneval", items_limit: int = 50):
     print(f"Actual Solved Items (K)           : {passed_count}")
     print(f"Empirical Accuracy Score          : {(passed_count / max(1, item_count)) * 100.0:.2f} %")
     print(f"Average Model Inference Latency   : {avg_latency_ms / 1000.0:.4f} seconds per item ({avg_latency_ms:.2f} ms/item)")
+    print(f"Total Observed Throughput (TPS)   : {overall_tps:.2f} tokens/second")
     print(f"Peak VRAM Allocated               : {peak_vram_gb:.4f} GB")
     print(f"Execution GPU Device              : {gpu_name}")
     print("========================================================================")
