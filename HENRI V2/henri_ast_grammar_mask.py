@@ -33,9 +33,15 @@ class HENRIASTGrammarMask:
     ) -> torch.Tensor:
         """
         Applies grammar masks to logits tensor based on AST syntactic state.
-        Masks invalid transitions with -1e9.
+        Masks invalid transitions with -1e9. Handles 1D and 2D logit tensors.
         """
-        masked_logits = logits.clone()
+        is_2d = (logits.dim() == 2)
+        if is_2d:
+            logits_1d = logits.squeeze(0)
+        else:
+            logits_1d = logits
+
+        masked_logits = logits_1d.clone()
         code_so_far = "".join(current_sequence)
         
         # Rule 1: Step 0 MUST start with "def "
@@ -43,21 +49,24 @@ class HENRIASTGrammarMask:
             mask = torch.full_like(masked_logits, -1e9)
             if 0 in self.code_vocab_map:
                 mask[0] = 0.0
-            return masked_logits + mask
+            res = masked_logits + mask
+            return res.unsqueeze(0) if is_2d else res
 
         # Rule 2: Step 1 MUST be "solution():\n" or valid signature
         if step == 1:
             mask = torch.full_like(masked_logits, -1e9)
             if 1 in self.code_vocab_map:
                 mask[1] = 0.0
-            return masked_logits + mask
+            res = masked_logits + mask
+            return res.unsqueeze(0) if is_2d else res
 
         # Rule 3: After "def solution():\n", MUST indent "    " at step 2
         if step == 2 and code_so_far.endswith("solution():\n"):
             mask = torch.full_like(masked_logits, -1e9)
             if 2 in self.code_vocab_map:
                 mask[2] = 0.0
-            return masked_logits + mask
+            res = masked_logits + mask
+            return res.unsqueeze(0) if is_2d else res
 
         # Rule 4: Inside body, if ending with indent "    ", next must be return, variable, or statement (not raw solution():\n)
         if code_so_far.endswith("    "):
@@ -72,7 +81,7 @@ class HENRIASTGrammarMask:
                 if token_str in ["def ", "solution():\n", "    ", "return "]:
                     masked_logits[token_id] = -1e9
 
-        return masked_logits
+        return masked_logits.unsqueeze(0) if is_2d else masked_logits
 
     def is_valid_ast(self, code_str: str) -> bool:
         """
