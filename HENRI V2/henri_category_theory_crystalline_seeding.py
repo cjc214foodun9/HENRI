@@ -96,7 +96,7 @@ class CategoryTheoryCrystallineSeeder:
             relational_op = F.normalize(unit_wave * unit_wave, p=2.0, dim=-1)
 
             # Simulate Zone C HNSW Vector Indexing
-            hnsw_sim = torch.dot(unit_wave[0, :2000], relational_op[0, :2000]).item()
+            hnsw_sim = torch.dot(unit_wave[:2000], relational_op[:2000]).item()
 
             ingestion_records.append({
                 "item_id": item["id"],
