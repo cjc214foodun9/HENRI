@@ -246,9 +246,10 @@ def run():
     if dsn != "offline://surrogate":
         try:
             db_logger = ThermodynamicTelemetryLogger(db_conn_str=dsn, batch_size=100)
-        except Exception as e:
-            print(f"[telemetry] Zone C database sink unavailable; falling back to JSONL mirror: {e}")
-            db_logger = None
+        except Exception as exc:
+            raise RuntimeError(
+                "BLOCKED: live Zone C telemetry sink unavailable; refusing JSONL-only production evidence"
+            ) from exc
     tele = LatentTelemetry(log_path, db_logger)
 
     print(f"[init] orchestrator @ {SCALE}")
@@ -281,10 +282,10 @@ def run():
     # connection.
     try:
         orch.attach_zone_c(dsn=dsn)
-    except Exception as e:
-        print(f"[ZoneC Warning] Could not attach to TimescaleDB at {dsn}: {e}")
-        print("[ZoneC Warning] Falling back to in-memory SegmentCache surrogate...")
-        orch.attach_zone_c(dsn="offline://surrogate")
+    except Exception as exc:
+        raise RuntimeError(
+            f"BLOCKED: Zone C attach failed for the selected target {dsn!r}"
+        ) from exc
     tokenizer = HENRIVisionEncoder(
         d_model=SCALE["d_model"], k_blocks=SCALE["num_blocks"], device=DEVICE
     )
@@ -311,43 +312,30 @@ def run():
         ext_alpha_start = [1.0] * len(orch.planner.external_alpha)
         ext_beta_start = [1.0] * len(orch.planner.external_beta)
 
-        # Extract in-context demonstration pairs for test-time O(1) Moore-Penrose functor compilation
+        # Only use demonstrations exposed by the public environment API.  A
+        # private level list can contain hidden targets and is not admissible
+        # evidence for an unseen-task episode.
         demo_pairs = []
         if hasattr(game, "examples") and game.examples:
             for ex in game.examples:
                 if isinstance(ex, dict) and "input" in ex and "output" in ex:
                     demo_pairs.append((np.array(ex["input"]), np.array(ex["output"])))
-        elif hasattr(game, "_game") and hasattr(game._game, "_levels"):
-            try:
-                for lvl in game._game._levels:
-                    if hasattr(lvl, "input_grid") and hasattr(lvl, "output_grid"):
-                        demo_pairs.append((np.array(lvl.input_grid), np.array(lvl.output_grid)))
-            except Exception:
-                pass
 
         if demo_pairs and hasattr(orch.planner, "sagnac_mcts_planner"):
-            try:
-                init_grid_np = np.array(obs.frame[0].tolist())
-                # Allocate 20-second active inference search time budget per level
-                start_search_time = time.perf_counter()
-                time_budget_sec = 20.0
-                
-                best_ast, zero_delta = orch.planner.sagnac_mcts_planner.search(
-                    input_grid=init_grid_np,
-                    target_grid=init_grid_np,
-                    num_simulations=100,
-                    demo_pairs=demo_pairs
-                )
-                search_duration = time.perf_counter() - start_search_time
-                print(f"  [Active Inference Search Budget] Allocated {time_budget_sec:.1f}s | Executed in {search_duration:.2f}s")
-                
-                if zero_delta <= 0.35:
-                    print(f"  [Phase C Ingress Success] Compiled test-time W_task functor with Sagnac Delta: {zero_delta:.6f}")
-                    # Automated Submission Bridge: Execute verified program AST directly on test input
-                    predicted_output_grid = best_ast.execute(init_grid_np)
-                    print(f"  [Automated Submission Bridge] Generated verified output grid shape: {predicted_output_grid.shape}")
-            except Exception as e_fc:
-                print(f"  [Phase C Warning] Test-time functor compilation skipped: {e_fc}")
+            # The current Arcade adapter exposes demonstrations but not the
+            # held-out target grid required by SagnacMCTSPlanner.search().
+            # Passing init_grid as target_grid was an identity-target leak.
+            tele.emit({
+                "event_type": "EVALUATION_BLOCKED",
+                "reason": "OBSERVED_TEST_TARGET_UNAVAILABLE",
+                "demo_pair_count": len(demo_pairs),
+                "task_leakage_detected": False,
+                "external_outcome_status": "BLOCKED",
+            })
+            print(
+                "  [BLOCKED] Public demonstrations found, but no observed test target "
+                "is available for target-scored MCTS; identity target is disabled."
+            )
         goal_wave = None
         if LAMBDA_GOAL > 0.0:
             init_grid = obs.frame[0].tolist()

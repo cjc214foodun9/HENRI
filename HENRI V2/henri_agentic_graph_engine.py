@@ -201,9 +201,10 @@ class HENRIAgenticGraphEngine:
             audit_hash = henri_audit.record_event(actor, action, audit_payload)
             experiment_record["audit_hash"] = audit_hash
             print(f"[AUDIT LEDGER] Experiment '{experiment_name}' sealed in SHA-256 chain: #{audit_hash[:16]}...")
-        except Exception as e:
-            print(f"[AUDIT LEDGER] Warning: Audit sealing failed: {e}")
-            experiment_record["audit_hash"] = "UNSEALED"
+        except Exception as exc:
+            raise RuntimeError(
+                "BLOCKED: audit sealing failed; no experiment scorecard may be persisted"
+            ) from exc
 
         # 2. Append Event to Agentic Event Store
         try:
@@ -217,8 +218,10 @@ class HENRIAgenticGraphEngine:
             experiment_record["event_id"] = event["event_id"]
             proj = agentic_event_store.graph_projection()
             print(f"[AGENTIC GRAPH] Event appended (event_id: {event['event_id']}). Active graph node_count: {proj.get('node_count', 0)}")
-        except Exception as e:
-            print(f"[AGENTIC GRAPH] Warning: Event store append failed: {e}")
+        except Exception as exc:
+            raise RuntimeError(
+                "BLOCKED: governed event append failed; no experiment scorecard may be persisted"
+            ) from exc
 
         # 3. Export Telemetry and Upload Scorecards
         ts_slug = iso_timestamp.replace(":", "-")
@@ -252,12 +255,7 @@ class HENRIAgenticGraphEngine:
 
 
 if __name__ == "__main__":
-    from run_official_production_benchmarks import OfficialProductionBenchmarkRunner
-    engine = HENRIAgenticGraphEngine()
-    runner = OfficialProductionBenchmarkRunner()
-    record = engine.execute_and_log_experiment("official_production_benchmark_suite", runner.run_all)
-    print("========================================================================")
-    print(f" EXPERIMENT COMPLETED & SEALED IN AGENTIC GRAPH ENGINE")
-    print(f" COMPOSITE SCORE: {record['eval_results'].get('composite_score'):.2f} / 100")
-    print(f" FLOP REDUCTION vs TRANSFORMER BASELINE: {record['system_efficiency']['flop_reduction_factor']:.2f}x")
-    print("========================================================================")
+    raise RuntimeError(
+        "BLOCKED: the legacy graph entrypoint depended on an invalid benchmark runner; "
+        "invoke a verified evaluator with an explicit evidence bundle instead"
+    )
