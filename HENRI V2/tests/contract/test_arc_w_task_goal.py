@@ -47,6 +47,17 @@ def _random_demo_pairs(n: int, d_model: int):
     return list(zip(xs, ys))
 
 
+def test_planner_no_all_zero_label_wart():
+    """Regression guard: search() must not resurrect the C1-class inert
+    all-zero bootstrap labels or the CE-only adapt_in_context call."""
+    import inspect
+    import sagnac_mcts_planner as sp
+    src = inspect.getsource(sp)
+    assert "demo_token_ids = [0]" not in src, "all-zero bootstrap labels must not return"
+    assert "adapt_in_context_sgld_wave" in src, "corrected soft-target SGLD must be wired"
+    assert "self.decoder.adapt_in_context(demo_waves" not in src, "CE-only inert call must not return"
+
+
 def test_w_task_retrieval_captures_consistent_rule():
     codec = qFHRREpistemicCodec(d_model=1024, k_bins=256, device="cpu")
     comp = HolographicTaskFunctorCompiler(codec)

@@ -180,11 +180,25 @@ class SagnacMCTSPlanner:
         if demo_pairs:
             demo_waves = [self.vision_encoder.encode_grid(x) for x, y in demo_pairs]
             target_waves = [self.vision_encoder.encode_grid(y) for x, y in demo_pairs]
-            demo_token_ids = [0] * len(demo_pairs)
-            
-            # Execute online test-time SGLD parameter adaptation on decoder unbinder
-            adapt_telemetry = self.decoder.adapt_in_context(demo_waves, target_waves, demo_token_ids)
-            print(f"[In-Context SGLD Adaptation] Adapted unbinder logits across {len(demo_pairs)} demo pairs | Avg Adapt Loss: {adapt_telemetry.get('avg_adapt_loss', 0.0):.6f}")
+
+            # Execute online test-time SGLD parameter adaptation (C2 corrected
+            # protocol: full softmax target distributions + Sagnac phase
+            # alignment + scheduled temperature + unit-normalized Langevin
+            # noise). The all-zero argmax-label CE-only variant was measured
+            # INERT (MBPP run4); this variant demonstrated real internal
+            # learning (MBPP run6: isolation 0.888, loss descent, sagnac
+            # distance halved).
+            adapt_telemetry = self.decoder.unbinder.adapt_in_context_sgld_wave(
+                active_waves=torch.stack(demo_waves),
+                target_waves=torch.stack(target_waves),
+                steps=500,
+                seed=0,
+            )
+            print(
+                f"[In-Context SGLD Adaptation] soft-target protocol across {len(demo_pairs)} demo pairs | "
+                f"loss {adapt_telemetry.get('loss_first', 0.0):.6f} -> {adapt_telemetry.get('loss_last', 0.0):.6f} | "
+                f"sagnac_dist_final {adapt_telemetry.get('sagnac_dist_final', 0.0):.6f}"
+            )
 
             encoded_demos = []
             for w_in, w_out in zip(demo_waves, target_waves):
