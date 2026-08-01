@@ -320,40 +320,64 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
         started = time.perf_counter()
         passed = 0
         failed = 0
+        execution_errors = 0
         for item in items:
             task_id = int(item["task_id"])
-            prompt = render_prompt(item)
-            prompt_wave = codec.encode_text(prompt)
-            task_operator = codec.encode_text("MBPP_CODING_OPERATOR")
-            goal_wave = codec.bind_hadamard(task_operator, prompt_wave)
-            response, telemetry = transducer.decode_wave_to_response(goal_wave, prompt)
-            code = extract_code_blocks(response)
-            validate_candidate(code)
-            result = sandbox.execute(code + "\n" + "\n".join(item["test_list"]))
-            is_pass = result.status == "PASS"
-            passed += int(is_pass)
-            failed += int(not is_pass)
-            stdout_records.append({"task_id": task_id, "stdout": result.stdout})
-            stderr_records.append({"task_id": task_id, "stderr": result.stderr})
-            item_records.append({
-                "task_id": task_id,
-                "split": "test",
-                "source_sha256": manifest["source_sha256"],
-                "rendered_prompt_sha256": sha256_bytes(prompt.encode()),
-                "model_output_sha256": sha256_bytes(response.encode()),
-                "postprocessed_output_sha256": sha256_bytes(code.encode()),
-                "pass": is_pass,
-                "failure_reason": None if is_pass else result.status,
-                "runtime_ms": result.runtime_ms,
-                "telemetry": telemetry,
-            })
+            try:
+                prompt = render_prompt(item)
+                prompt_wave = codec.encode_text(prompt)
+                task_operator = codec.encode_text("MBPP_CODING_OPERATOR")
+                goal_wave = codec.bind_hadamard(task_operator, prompt_wave)
+                response, telemetry = transducer.decode_wave_to_response(goal_wave, prompt)
+                code = extract_code_blocks(response)
+                validate_candidate(code)
+                result = sandbox.execute(code + "\n" + "\n".join(item["test_list"]))
+                is_pass = result.status == "PASS"
+                passed += int(is_pass)
+                failed += int(not is_pass)
+                stdout_records.append({"task_id": task_id, "stdout": result.stdout})
+                stderr_records.append({"task_id": task_id, "stderr": result.stderr})
+                item_records.append({
+                    "task_id": task_id,
+                    "split": "test",
+                    "source_sha256": manifest["source_sha256"],
+                    "rendered_prompt_sha256": sha256_bytes(prompt.encode()),
+                    "model_output_sha256": sha256_bytes(response.encode()),
+                    "postprocessed_output_sha256": sha256_bytes(code.encode()),
+                    "pass": is_pass,
+                    "failure_reason": None if is_pass else result.status,
+                    "runtime_ms": result.runtime_ms,
+                    "telemetry": telemetry,
+                })
+            except torch.cuda.OutOfMemoryError:
+                raise
+            except Exception as exc:
+                # Item-level fail-closed: an invalid-AST decode, empty output,
+                # or sandbox refusal records as an execution error for this
+                # item and the run continues. Any execution error blocks score
+                # promotion; it is never an observed task outcome.
+                execution_errors += 1
+                stdout_records.append({"task_id": task_id, "stdout": ""})
+                stderr_records.append({"task_id": task_id, "stderr": f"{type(exc).__name__}: {exc}"})
+                item_records.append({
+                    "task_id": task_id,
+                    "split": "test",
+                    "source_sha256": manifest["source_sha256"],
+                    "rendered_prompt_sha256": None,
+                    "model_output_sha256": None,
+                    "postprocessed_output_sha256": None,
+                    "pass": False,
+                    "failure_reason": f"EXECUTION_ERROR:{type(exc).__name__}:{exc}",
+                    "runtime_ms": None,
+                    "telemetry": {},
+                })
         elapsed = time.perf_counter() - started
         write_jsonl(output_dir / "raw_stdout.jsonl", stdout_records)
         write_jsonl(output_dir / "raw_stderr.jsonl", stderr_records)
         write_jsonl(output_dir / "item_results.jsonl", item_records)
         evidence = build_evidence(
             manifest, output_dir, "OBSERVED", "LOADED", checkpoint_sha,
-            attempted=500, passed=passed, failed=failed, execution_errors=0,
+            attempted=passed + failed, passed=passed, failed=failed, execution_errors=execution_errors,
             raw_stdout_sha=sha256_path(output_dir / "raw_stdout.jsonl"),
             raw_stderr_sha=sha256_path(output_dir / "raw_stderr.jsonl"),
             item_results_sha=sha256_path(output_dir / "item_results.jsonl"),
@@ -361,9 +385,9 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
         )
         registry = make_registry(manifest, evaluated=True)
         eligible, reasons = validate_score_eligibility(evidence, registry, minimum_items=500)
-        if not eligible:
-            raise PilotBlocked("SCORE_PROMOTION_BLOCKED:" + ",".join(reasons))
         write_json(output_dir / "run_evidence.json", evidence.model_dump(mode="json"))
+        if not eligible:
+            return {"status": "OBSERVED", "score_eligible": False, "reason": "SCORE_PROMOTION_BLOCKED:" + ",".join(reasons), "evidence": evidence}
         return {"status": "OBSERVED", "score_eligible": True, "evidence": evidence}
     except PilotBlocked as exc:
         manifest = load_json(MANIFEST_PATH)
