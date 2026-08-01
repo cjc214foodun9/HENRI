@@ -1,0 +1,18 @@
+{
+  "schema_id": "henri.mbpp-prompt-contract.v1",
+  "benchmark_id": "mbpp_google_test_v1",
+  "variant": "henri-fewshot10",
+  "reference_code_exposed": false,
+  "reference_field": "code",
+  "exemplar_ids": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "num_fewshot": 10,
+  "online_adaptation": false,
+  "zone_c_task_persistence": false,
+  "one_completion_per_item": true,
+  "do_sample": false,
+  "temperature": 0.0,
+  "retries": 0,
+  "task_compilation": "W_task compiled online from exemplar pairs (X_i, Y_i); X_i = rendered prompt, Y_i = reference_solution. W_task is an input-side task operator; no model parameter adaptation.",
+  "heldout_rule": "test items are task_id 11..510; exemplars 1..10 are the paper-sanctioned few-shot set and are NOT part of the heldout",
+  "digest_normalization": "lf_line_endings"
+}

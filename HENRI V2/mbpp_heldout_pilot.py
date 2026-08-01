@@ -30,6 +30,8 @@ MANIFEST_PATH = ROOT / "data/official_benchmarks/mbpp_google_test_v1_manifest.js
 SOURCE_PATH = ROOT / "data/official_benchmarks/canonical/mbpp/mbpp.jsonl"
 CHECKPOINT_PROVENANCE_PATH = ROOT / "data/official_benchmarks/mbpp_henri_checkpoint_provenance_v1.json"
 PROMPT_CONTRACT_PATH = ROOT / "data/official_benchmarks/evaluators/mbpp_henri_prompt_contract_v1.json"
+FEWSHOT_CONTRACT_PATH = ROOT / "data/official_benchmarks/evaluators/mbpp_henri_fewshot10_contract_v1.json"
+EXEMPLAR_IDS = list(range(1, 11))
 DECODER_PATH = ROOT / "henri_decoder.py"
 
 CODE_BLOCK_RE = re.compile(r"```(?:\w+)?\n?(.*?)\n?```", re.DOTALL)
@@ -78,14 +80,40 @@ def load_items() -> list[dict[str, Any]]:
     return items
 
 
-def validate_static_bundle() -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def load_exemplars() -> list[dict[str, Any]]:
+    """Load the paper-sanctioned few-shot exemplars (task_id 1..10).
+
+    Exemplars are the MBPP paper's own few-shot set; they are distinct from
+    the heldout 11..510 and are used only to compile W_task at test time.
+    """
+    items = []
+    for line in SOURCE_PATH.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            item = json.loads(line)
+            if int(item["task_id"]) in EXEMPLAR_IDS:
+                items.append(item)
+    items.sort(key=lambda item: int(item["task_id"]))
+    if len(items) != 10 or [int(item["task_id"]) for item in items] != EXEMPLAR_IDS:
+        raise PilotBlocked("MBPP_EXEMPLAR_SPLIT_INVALID")
+    for ex in items:
+        if not isinstance(ex.get("text"), str) or not isinstance(ex.get("code"), str):
+            raise PilotBlocked(f"MBPP_EXEMPLAR_SCHEMA_INVALID:{ex.get('task_id')}")
+    return items
+
+
+def validate_static_bundle(egress_path: str = "zero_shot") -> tuple[dict[str, Any], list[dict[str, Any]]]:
     manifest = load_json(MANIFEST_PATH)
-    prompt_contract = load_json(PROMPT_CONTRACT_PATH)
+    contract_key = "zero_shot" if egress_path == "legacy" else "henri_fewshot10"
+    contract_info = (manifest.get("prompt_contracts") or {}).get(contract_key)
+    if contract_info is None:
+        raise PilotBlocked(f"PROMPT_CONTRACT_NOT_IN_MANIFEST:{contract_key}")
+    contract_path = ROOT / contract_info["artifact"]
+    prompt_contract = load_json(contract_path)
+    if contract_info["sha256"] != sha256_lf_path(contract_path):
+        raise PilotBlocked("PROMPT_CONTRACT_DIGEST_MISMATCH")
     checkpoint_provenance = load_json(CHECKPOINT_PROVENANCE_PATH)
     if manifest["source_sha256"] != sha256_path(SOURCE_PATH):
         raise PilotBlocked("DATASET_DIGEST_MISMATCH")
-    if manifest["prompt_contract"]["sha256"] != sha256_lf_path(PROMPT_CONTRACT_PATH):
-        raise PilotBlocked("PROMPT_CONTRACT_DIGEST_MISMATCH")
     evaluator = manifest["evaluator"]
     evaluator_dir = ROOT / "data/official_benchmarks/evaluators/lm-evaluation-harness/mbpp"
     parts = []
@@ -103,10 +131,14 @@ def validate_static_bundle() -> tuple[dict[str, Any], list[dict[str, Any]]]:
     items = load_items()
     if manifest["item_count"] != len(items):
         raise PilotBlocked("MANIFEST_ITEM_COUNT_MISMATCH")
-    if prompt_contract["reference_code_exposed"] or prompt_contract["num_fewshot"] != 0:
-        raise PilotBlocked("REFERENCE_CODE_EXPOSURE_ENABLED")
-    if prompt_contract["online_adaptation"] or prompt_contract["zone_c_task_persistence"]:
-        raise PilotBlocked("ONLINE_ADAPTATION_OR_ZONE_C_PERSISTENCE_ENABLED")
+    if prompt_contract["reference_code_exposed"] or prompt_contract["online_adaptation"] or prompt_contract["zone_c_task_persistence"]:
+        raise PilotBlocked("REFERENCE_CODE_EXPOSURE_OR_ONLINE_ADAPTATION_ENABLED")
+    if contract_key == "zero_shot":
+        if prompt_contract["num_fewshot"] != 0:
+            raise PilotBlocked("REFERENCE_CODE_EXPOSURE_ENABLED")
+    else:
+        if prompt_contract["num_fewshot"] != 10 or list(prompt_contract["exemplar_ids"]) != EXEMPLAR_IDS:
+            raise PilotBlocked("FEWSHOT_CONTRACT_INVALID")
     return manifest, items
 
 
@@ -280,10 +312,10 @@ def blocked_bundle(manifest: dict[str, Any], output_dir: Path, reason: str, chec
     return evidence
 
 
-def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False, sandbox_mode: str = "namespace") -> dict[str, Any]:
+def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False, sandbox_mode: str = "namespace", egress_path: str = "henri") -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=False)
     try:
-        manifest, items = validate_static_bundle()
+        manifest, items = validate_static_bundle(egress_path)
         provenance = load_json(CHECKPOINT_PROVENANCE_PATH)
         source_exclusions = [
             SOURCE_PATH,
@@ -306,6 +338,8 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
         probe_result = sandbox.execute("print(41 + 1)")
         if probe_result.status != "PASS":
             return {"status": "BLOCKED", "reason": f"SANDBOX_PROBE_FAILED:{probe_result.status}:{probe_result.stderr.strip()[:200]}", "evidence": blocked_bundle(manifest, output_dir, f"SANDBOX_PROBE_FAILED:{probe_result.status}", "BLOCKED_PREFLIGHT")}
+        if egress_path == "henri":
+            load_exemplars()  # validate exemplar split/schema before any run
         if preflight_only:
             return {"status": "PREFLIGHT_PASS", "reason": "STATIC_AND_SANDBOX_PREFLIGHT_ONLY", "checkpoint_sha256": checkpoint_sha}
 
@@ -313,10 +347,25 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
         if not torch.cuda.is_available():
             return {"status": "BLOCKED", "reason": "CUDA_REQUIRED", "evidence": blocked_bundle(manifest, output_dir, "CUDA_REQUIRED", "LOADED")}
         from henri_decoder import HENRIUnifiedEgressTransducer
-        from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
+        from zone_c_epistemic_axiom_harness import HolographicTaskFunctorCompiler, qFHRREpistemicCodec
 
         transducer = HENRIUnifiedEgressTransducer(d_model=65536, device="cuda", checkpoint_path=str(checkpoint_path))
         codec = qFHRREpistemicCodec(d_model=65536, device="cuda")
+
+        # HENRI path: compile W_task online from the paper-sanctioned exemplars
+        # (X_i = rendered prompt, Y_i = reference_solution). Zero pretraining;
+        # W_task is an input-side task operator, not model parameter adaptation.
+        w_task_ring = None
+        w_task_vector = None
+        if egress_path == "henri":
+            exemplars = load_exemplars()
+            task_compiler = HolographicTaskFunctorCompiler(codec)
+            demo_pairs = [
+                (codec.encode_text(render_prompt(ex)), codec.encode_text(ex["code"]))
+                for ex in exemplars
+            ]
+            w_task_ring = task_compiler.compile_functor(demo_pairs)
+            w_task_vector = (w_task_ring.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0).to("cuda")
         stdout_records = []
         stderr_records = []
         item_records = []
@@ -329,9 +378,12 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             try:
                 prompt = render_prompt(item)
                 prompt_wave = codec.encode_text(prompt)
-                task_operator = codec.encode_text("MBPP_CODING_OPERATOR")
-                goal_wave = codec.bind_hadamard(task_operator, prompt_wave)
-                response, telemetry = transducer.decode_wave_to_response(goal_wave, prompt)
+                if egress_path == "henri":
+                    goal_wave = codec.bind_hadamard(w_task_ring, prompt_wave)
+                else:
+                    task_operator = codec.encode_text("MBPP_CODING_OPERATOR")
+                    goal_wave = codec.bind_hadamard(task_operator, prompt_wave)
+                response, telemetry = transducer.decode_wave_to_response(goal_wave, prompt, w_task=w_task_vector)
                 code = extract_code_blocks(response)
                 validate_candidate(code)
                 result = sandbox.execute(code + "\n" + "\n".join(item["test_list"]))
@@ -384,7 +436,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             raw_stdout_sha=sha256_path(output_dir / "raw_stdout.jsonl"),
             raw_stderr_sha=sha256_path(output_dir / "raw_stderr.jsonl"),
             item_results_sha=sha256_path(output_dir / "item_results.jsonl"),
-            limitations=f"Public MBPP operational holdout; sandbox_mode={sandbox_mode}; elapsed_sec={elapsed:.6f}",
+            limitations=f"Public MBPP operational holdout; egress_path={egress_path}; sandbox_mode={sandbox_mode}; elapsed_sec={elapsed:.6f}",
         )
         registry = make_registry(manifest, evaluated=True)
         eligible, reasons = validate_score_eligibility(evidence, registry, minimum_items=500)
@@ -405,8 +457,9 @@ def main() -> int:
     parser.add_argument("--scan-root", type=Path, default=ROOT)
     parser.add_argument("--preflight-only", action="store_true")
     parser.add_argument("--sandbox-mode", choices=["namespace", "container-rlimit"], default="namespace")
+    parser.add_argument("--egress-path", choices=["legacy", "henri"], default="henri")
     args = parser.parse_args()
-    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only, args.sandbox_mode)
+    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only, args.sandbox_mode, args.egress_path)
     print(json.dumps({"status": result["status"], "reason": result.get("reason"), "score_eligible": result.get("score_eligible", False)}, sort_keys=True))
     return 0 if result["status"] in {"OBSERVED", "PREFLIGHT_PASS", "BLOCKED"} else 1
 

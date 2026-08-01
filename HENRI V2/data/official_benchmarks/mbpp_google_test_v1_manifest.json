@@ -53,5 +53,15 @@
   "score_status": "BLOCKED",
   "block_reason": "REMOTE_CUDA_EXECUTION_AND_COMPLETE_EVIDENCE_BUNDLE_PENDING",
   "public_holdout_limit": "Operational holdout only; public pretraining contamination cannot be excluded.",
-  "digest_normalization": "lf_line_endings: text-artifact digests hash CRLF stripped to LF (platform-independent)"
+  "digest_normalization": "lf_line_endings: text-artifact digests hash CRLF stripped to LF (platform-independent)",
+  "prompt_contracts": {
+    "zero_shot": {
+      "artifact": "data/official_benchmarks/evaluators/mbpp_henri_prompt_contract_v1.json",
+      "sha256": "da9fc125b24658984cf0eb45f16567cb814f58c40f49c92d4e18684bdb8aa527"
+    },
+    "henri_fewshot10": {
+      "artifact": "data/official_benchmarks/evaluators/mbpp_henri_fewshot10_contract_v1.json",
+      "sha256": "39e994c666854b813fc21c4725b708d3a3af0eb1e44b624c75e42670b94f11ce"
+    }
+  }
 }
