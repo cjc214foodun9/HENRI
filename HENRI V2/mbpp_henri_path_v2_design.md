@@ -92,3 +92,28 @@ Pre-registered criteria:
 - BLOCKED: any gate failure.
 
 Recorded deviation: shipped `adapt_in_context_sgld` injects UNNORMALIZED Langevin noise (randn_like, D^1/2 norm inflation) instead of the skill invariant `F.normalize(randn(D))`; noted, not fixed in this change (one bounded change).
+
+## C2: Corrected Wave-Aligned SGLD (2026-08-01)
+
+Addresses run4's two structural causes:
+
+1. Degenerate CE labels -> SOFT TARGETS: p_target = softmax(unbinder(Psi_Yi)) for each
+   exemplar, snapshotted pre-adaptation. The label is the full 32000-dim solution-wave
+   distribution (entropy ~9.98 nats), not the collapsed argmax (4/10 distinct in run4).
+2. Missing Sagnac/phase term -> L = L_CE + 0.25 * Delta_Sagnac, with
+   Delta_Sagnac = 1 - cos(p(·|Psi_Xi), p_target) in the probability simplex (the only
+   wave-informed egress geometry without a wave decoder).
+
+Plus the scheduled protocol: T(t) = T0*(1+0.05t)^-0.55, unit-normalized Langevin noise
+(sqrt(2T dt) * F.normalize(randn(D))), Bingham yield gate, TAME gap-junction isolation,
+Cholesky Stiefel retraction. Batch 10 exemplars, 500 steps, seed 0. Only down_proj updates.
+
+Mechanism: adapt_in_context_sgld_wave (henri_decoder.py), wired as --sgld-adapt (replaces
+the C1 call; bootstrap labels kept only as comparison telemetry).
+
+Pre-registered criteria:
+- PASS: loss_last < loss_first (descent), entropy_demo_after < entropy_demo_before
+  (peaking toward the target), AND pass delta > 0 vs run3/run4.
+- INERT: descent happens but no peaking AND 0 passes -> mechanism insufficient;
+  next = higher steps/lr or re-trained head with wave supervision.
+- BLOCKED: any gate failure.

@@ -385,8 +385,8 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                     demo_waves = [codec.encode_text(render_prompt(ex)) for ex in exemplars]
                     target_waves = [codec.encode_text(ex["code"]) for ex in exemplars]
                     # Fixed bootstrap labels: pre-adaptation argmax token of each solution wave.
-                    # No tokenizer exists in the transducer; the CE term aligns active-wave
-                    # projection with the model's own solution-wave representation (snapshot).
+                    # Kept ONLY as comparison telemetry (run4 showed 4/10 degeneracy);
+                    # the C2 loss uses full soft-target distributions instead.
                     with torch.no_grad():
                         demo_token_ids = [
                             int(transducer.unbinder(w.unsqueeze(0)).argmax(dim=-1).item())
@@ -396,11 +396,16 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                     probe_waves = [codec.encode_text(render_prompt(it)) for it in items[:10]]
                     ent_demo_before = _mean_logit_entropy(torch, transducer.unbinder, demo_waves)
                     ent_probe_before = _mean_logit_entropy(torch, transducer.unbinder, probe_waves)
-                    adapt_result = transducer.adapt_in_context(demo_waves, target_waves, demo_token_ids)
+                    adapt_result = transducer.unbinder.adapt_in_context_sgld_wave(
+                        active_waves=torch.stack(demo_waves),
+                        target_waves=torch.stack(target_waves),
+                        steps=500,
+                        seed=0,
+                    )
                     ent_demo_after = _mean_logit_entropy(torch, transducer.unbinder, demo_waves)
                     ent_probe_after = _mean_logit_entropy(torch, transducer.unbinder, probe_waves)
                     adapt_telemetry = {
-                        "sgld_steps_per_pair": 2,
+                        "sgld_protocol": "wave_soft_targets_scheduled_sgld",
                         "demo_token_ids": demo_token_ids,
                         "distinct_bootstrap_labels": distinct_labels,
                         "logit_entropy_nats_demo_before": round(ent_demo_before, 6),
