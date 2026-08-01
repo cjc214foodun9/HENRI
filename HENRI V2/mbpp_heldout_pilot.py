@@ -415,6 +415,8 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             adapt_telemetry = None
             if sgld_adapt:
                 raise PilotBlocked("SGLD_ADAPT_REQUIRES_HENRI_EGRESS")
+        stdout_records = []
+        stderr_records = []
         item_records = []
         started = time.perf_counter()
         passed = 0
@@ -430,6 +432,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                 else:
                     task_operator = codec.encode_text("MBPP_CODING_OPERATOR")
                     goal_wave = codec.bind_hadamard(task_operator, prompt_wave)
+                    w_task_vector = None
                 response, telemetry = transducer.decode_wave_to_response(goal_wave, prompt, w_task=w_task_vector)
                 code = extract_code_blocks(response)
                 validate_candidate(code)
@@ -497,6 +500,10 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
         manifest = load_json(MANIFEST_PATH)
         evidence = blocked_bundle(manifest, output_dir, str(exc), "FAILED_REQUIRED_CHECKPOINT")
         return {"status": "BLOCKED", "reason": str(exc), "evidence": evidence}
+    except Exception as exc:
+        manifest = load_json(MANIFEST_PATH)
+        evidence = blocked_bundle(manifest, output_dir, f"UNHANDLED_RUN_ERROR:{type(exc).__name__}:{exc}", "BLOCKED_PILOT")
+        return {"status": "BLOCKED", "reason": f"UNHANDLED_RUN_ERROR:{type(exc).__name__}:{exc}", "evidence": evidence}
 
 
 def main() -> int:
