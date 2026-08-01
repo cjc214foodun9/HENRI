@@ -21,6 +21,15 @@ class DecoderCheckpointCompatibilityError(RuntimeError):
     """Raised when a required decoder checkpoint cannot load safely."""
 
 
+class DecoderEgressFailClosedError(RuntimeError):
+    """Raised when the decoder would otherwise emit a hardcoded fallback.
+
+    A grammar-masked decode that fails to produce valid AST must not return a
+    toy solution. The caller treats this as an execution error; it never
+    becomes an observed task outcome.
+    """
+
+
 def _state_dict_sha256(state_dict: Dict[str, torch.Tensor]) -> str:
     """Hash tensor names, dtypes, shapes, and bytes in deterministic order."""
     digest = hashlib.sha256()
@@ -307,7 +316,9 @@ class PhaseRingCodebookDecoder:
                 
         constructed_code = "".join(token_strings)
         if not grammar_masker.is_valid_ast(constructed_code):
-            constructed_code = f"def solution():\n    return True\n"
+            raise DecoderEgressFailClosedError(
+                "decoder produced invalid AST; refusing hardcoded fallback output"
+            )
             
         telemetry = {
             "steps": len(generated_token_ids),

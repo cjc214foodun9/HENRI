@@ -194,6 +194,14 @@ def make_registry(manifest: dict[str, Any], evaluated: bool) -> BenchmarkRegistr
     )
 
 
+def _artifact_rel(path: Path) -> str:
+    """Repo-relative artifact path when inside ROOT, absolute path otherwise."""
+    try:
+        return str(path.relative_to(ROOT)).replace("\\", "/")
+    except ValueError:
+        return str(path)
+
+
 def build_evidence(
     manifest: dict[str, Any],
     output_dir: Path,
@@ -246,7 +254,7 @@ def build_evidence(
         raw_stdout_sha256=raw_stdout_sha,
         raw_stderr_sha256=raw_stderr_sha,
         item_results_sha256=item_results_sha,
-        artifact_paths=[str(path.relative_to(ROOT)).replace("\\", "/") for path in output_dir.glob("*")],
+        artifact_paths=[_artifact_rel(path) for path in output_dir.glob("*")],
         limitations=limitations,
         grader_mode="isolated_assertion_execution_pinned_mbpp_pass_at_1",
         synthetic_source=False,
