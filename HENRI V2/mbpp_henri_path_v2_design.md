@@ -117,3 +117,25 @@ Pre-registered criteria:
 - INERT: descent happens but no peaking AND 0 passes -> mechanism insufficient;
   next = higher steps/lr or re-trained head with wave supervision.
 - BLOCKED: any gate failure.
+
+## C2b: Root-Cause Fix — Sagnac Representation Bug (2026-08-01)
+
+run5 telemetry exposed: mean_phase_mismatch = 0.0124 rad (pathological) and
+yield_events = 500 with NO loss descent (10.111 -> 10.124). Diagnostic proved:
+
+- encode_text returns Z_256 uint8 rings [0, 255] (norm 37731, unique 256 values).
+- compute_dimension_sagnac_mismatch did acos(clamp(w, -1, 1)) on the raw ring:
+  every value >= 1 clamps to 1 -> acos(1) = 0 -> Delta_Phi ~ 0.012 rad.
+- TAME conductance g = 1/(1+e^(10(0.012-0.35))) ~ 0.967 -> isolation (1-g) ~ 0.037
+  -> 96.7% of the SGLD gradient suppressed every step -> adaptation frozen.
+- Control: identical rings -> 0.0 mismatch (correct); different rings -> true
+  circular distance mean ~ 1.05 rad (~pi/2, healthy). The codec is NOT degenerate.
+
+Fix: compute_dimension_sagnac_mismatch is now representation-aware:
+- uint8 / [0,255] rings -> circular Z_256 distance mapped to [0, pi].
+- real [-1,1] waves (vision) -> acos-clamp path unchanged.
+Test: test_sagnac_mismatch_ring_path_healthy (independent rings > 0.8 rad mean,
+identical rings == 0.0). Suite 157 passed / 1 skipped.
+
+This bug suppressed adaptation in BOTH C1 (run4) and C2 (run5); the SGLD designs
+were correct but starved of gradient. run6 re-runs C2 with the fix.

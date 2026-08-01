@@ -110,12 +110,29 @@ class HENRINeuralEgressUnbinder(nn.Module):
 
     def compute_dimension_sagnac_mismatch(self, active_wave: torch.Tensor, target_wave: torch.Tensor) -> torch.Tensor:
         """
-        Computes dimension-specific Sagnac phase error vector \mathbf{\Delta\Phi}_k \in [0, \pi]^D.
+        Computes dimension-specific Sagnac phase error vector \\mathbf{\\Delta\\Phi}_k \\in [0, \\pi]^D.
+
+        Representation-aware: Z_256 phase rings (uint8, or float values in [0, 255],
+        as produced by qFHRREpistemicCodec.encode_text) use the circular ring
+        distance mapped to [0, pi]. Real hypervectors in [-1, 1] (vision waves)
+        use acos(clamp(.)) as before. The previous acos-clamp on raw ring values
+        collapsed every dimension to 0 (values >= 1 clamp to 1 -> acos(1) = 0),
+        suppressing the TAME isolation gate and freezing adaptation.
         """
+        is_ring = active_wave.dtype == torch.uint8 or target_wave.dtype == torch.uint8
         active_wave = active_wave.to(self.device).to(torch.float32)
         target_wave = target_wave.to(self.device).to(torch.float32)
+        if not is_ring:
+            is_ring = bool((active_wave.max() > 1.0 or target_wave.max() > 1.0) and active_wave.numel() > 0)
 
-        # Scale real hypervectors [-1, 1] to phase angles [0, \pi]
+        if is_ring:
+            # Circular distance on the Z_256 ring: d in [0, 128] -> phase in [0, pi]
+            d = torch.abs(active_wave - target_wave)
+            d = torch.minimum(d, 256.0 - d)
+            delta_phi = d * (math.pi / 128.0)
+            return delta_phi
+
+        # Scale real hypervectors [-1, 1] to phase angles [0, \\pi]
         phase_active = torch.acos(torch.clamp(active_wave, -1.0, 1.0))
         phase_target = torch.acos(torch.clamp(target_wave, -1.0, 1.0))
 

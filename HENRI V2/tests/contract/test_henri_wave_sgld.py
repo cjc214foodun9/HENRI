@@ -1,4 +1,5 @@
-"""Contract tests for the corrected wave-aligned SGLD adaptation (C2).
+"""Contract tests for the corrected wave-aligned SGLD adaptation (C2) and
+the representation-aware Sagnac phase mismatch fix.
 
 Reduced-dimension mechanics only (no checkpoint, CPU); remote CUDA verification
 is the production evidence path.
@@ -16,6 +17,18 @@ def test_thermal_schedule_monotone_decreasing():
     assert vals[0] == 1e-6
     assert all(v > 0 for v in vals)
     assert all(vals[i] > vals[i + 1] for i in range(len(vals) - 1))
+
+
+def test_sagnac_mismatch_ring_path_healthy():
+    """Z_256 rings must yield healthy phase mismatch, not the acos-clamp collapse."""
+    ub = HENRINeuralEgressUnbinder(d_model=64, d_hidden=32, vocab_size=128, device="cpu")
+    torch.manual_seed(0)
+    a = torch.randint(0, 256, (64,), dtype=torch.uint8)
+    b = torch.randint(0, 256, (64,), dtype=torch.uint8)
+    mm = ub.compute_dimension_sagnac_mismatch(a, b)
+    assert float(mm.mean().item()) > 0.8  # independent rings: mean circular distance ~ pi/2
+    same = ub.compute_dimension_sagnac_mismatch(a, a)
+    assert float(same.max().item()) == 0.0  # identical rings: zero mismatch
 
 
 def test_wave_sgld_mechanism_reduced_dim():
