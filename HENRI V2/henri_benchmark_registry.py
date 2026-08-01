@@ -89,7 +89,7 @@ class RunEvidence(BaseModel):
     checkpoint_load_status: Literal[
         "LOADED", "SKIPPED_POLICY_DISABLED", "SKIPPED_NO_CHECKPOINT",
         "SKIPPED_INCOMPATIBLE_ARCHITECTURE", "FAILED_REQUIRED_CHECKPOINT",
-        "FAILED_CORRUPT_CHECKPOINT"
+        "FAILED_CORRUPT_CHECKPOINT", "BLOCKED_PREFLIGHT", "FAILED_MODEL_PATH_PREFLIGHT"
     ] | None = None
     trained_decoder_active: bool | None = None
     device: str
@@ -283,6 +283,15 @@ def validate_score_eligibility(evidence: RunEvidence, registry: BenchmarkRegistr
         reasons.append("TASK_LEAKAGE_DETECTED")
     if evidence.execution_error_count or evidence.vetoed_count:
         reasons.append("EXECUTION_ERROR_PRESENT")
-    if record and evidence.dataset_sha256 and record.dataset_sha256 and evidence.dataset_sha256 != record.dataset_sha256:
-        reasons.append("DATASET_DIGEST_MISMATCH")
+    if record:
+        if evidence.dataset_source != record.canonical_source:
+            reasons.append("DATASET_SOURCE_MISMATCH")
+        if evidence.evaluator_id != record.evaluator_id:
+            reasons.append("EVALUATOR_ID_MISMATCH")
+        if evidence.evaluator_version != record.evaluator_version:
+            reasons.append("EVALUATOR_VERSION_MISMATCH")
+        if evidence.evaluator_sha256 != record.evaluator_sha256:
+            reasons.append("EVALUATOR_DIGEST_MISMATCH")
+        if evidence.dataset_sha256 != record.dataset_sha256:
+            reasons.append("DATASET_DIGEST_MISMATCH")
     return not reasons, reasons

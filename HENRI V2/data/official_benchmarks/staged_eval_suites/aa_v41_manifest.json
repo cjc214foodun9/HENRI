@@ -1,90 +1,47 @@
 {
-  "generated_at": "2026-07-30T00:26:35.840Z",
-  "suite_version": "Artificial Analysis Intelligence Index v4.1",
-  "staged_suites": {
-    "gdpval_aa": {
-      "name": "GDPval-AA v2",
-      "category": "Agentic",
-      "item_count": 100,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\gdpval_aa_staged.jsonl"
-    },
-    "terminal_bench_hard": {
-      "name": "Terminal-Bench Hard",
-      "category": "Agentic Coding",
-      "item_count": 100,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\terminal_bench_hard_staged.jsonl"
-    },
-    "terminal_bench_v21": {
-      "name": "Terminal-Bench v2.1",
-      "category": "CLI Agent",
-      "item_count": 100,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\terminal_bench_v21_staged.jsonl"
-    },
-    "tau2_telecom": {
-      "name": "\u03c4\u00b2-Telecom",
-      "category": "Tool-Use",
-      "item_count": 100,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\tau2_telecom_staged.jsonl"
-    },
-    "tau3_banking": {
-      "name": "\u03c4\u00b3-Banking",
-      "category": "Tool-Use",
-      "item_count": 100,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\tau3_banking_staged.jsonl"
-    },
-    "scicode": {
-      "name": "SciCode",
-      "category": "Scientific Coding",
-      "item_count": 100,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\scicode_staged.jsonl"
-    },
-    "aa_lcr": {
-      "name": "AA-LCR",
-      "category": "Long-Context Reasoning",
-      "item_count": 100,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\aa_lcr_staged.jsonl"
-    },
-    "aa_omniscience": {
-      "name": "AA-Omniscience",
-      "category": "Knowledge",
-      "item_count": 100,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\aa_omniscience_staged.jsonl"
-    },
-    "ifbench": {
-      "name": "IFBench",
-      "category": "Instruction Following",
-      "item_count": 100,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\ifbench_staged.jsonl"
-    },
-    "hle": {
-      "name": "HLE",
-      "category": "Expert Logic",
-      "item_count": 100,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\hle_staged.jsonl"
-    },
-    "gpqa_diamond": {
-      "name": "GPQA Diamond",
-      "category": "Graduate Science",
-      "item_count": 198,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\gpqa_diamond_staged.jsonl"
-    },
-    "critpt": {
-      "name": "CritPt",
-      "category": "Research Physics",
-      "item_count": 100,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\critpt_staged.jsonl"
-    },
-    "mmmu_pro": {
-      "name": "MMMU-Pro",
-      "category": "Multimodal",
-      "item_count": 100,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\mmmu_pro_staged.jsonl"
-    },
-    "ifeval_official": {
-      "name": "IFEval Official",
-      "category": "Instruction Following",
-      "item_count": 541,
-      "file_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\data\\official_benchmarks\\staged_eval_suites\\ifeval_official_staged.jsonl"
-    }
-  }
+  "schema_id": "henri.aa-v41-index.v1",
+  "index_id": "artificial_analysis_intelligence_index_v4_1",
+  "index_version": "v4.1",
+  "retrieved_at_utc": "2026-07-31T21:56:09Z",
+  "official_index_uri": "https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index",
+  "official_methodology_uri": "https://artificialanalysis.ai/methodology/intelligence-benchmarking",
+  "official_release_article_uri": "https://artificialanalysis.ai/articles/artificial-analysis-intelligence-index-v4-1",
+  "official_index_page_sha256": "39bae29c1fde8130e7cedc3712b1124f8cad232fd1f405a284a0369344c533f5",
+  "official_methodology_page_sha256": "288ea8e4eb3a8218758ceedcddd24f32792f13b9ca3c90ed56a59d3ccf8f6d3a",
+  "official_release_article_sha256": "50170a8bf0e26a4152cb48c2a9212075b407ed0481ae2e6cfa8f8d6ce22e5e05",
+  "evaluation_family_count": 9,
+  "composite_components": [
+    {"component_id": "gdpval_aa_v2", "evaluation_family": "gdpval_aa_v2", "weight_percent": 20},
+    {"component_id": "terminalbench_v2_1", "evaluation_family": "terminalbench_v2_1", "weight_percent": 16},
+    {"component_id": "tau3_banking", "evaluation_family": "tau3_banking", "weight_percent": 14},
+    {"component_id": "hle", "evaluation_family": "hle", "weight_percent": 12},
+    {"component_id": "aa_omniscience_accuracy", "evaluation_family": "aa_omniscience", "weight_percent": 8},
+    {"component_id": "scicode", "evaluation_family": "scicode", "weight_percent": 8},
+    {"component_id": "gpqa_diamond", "evaluation_family": "gpqa_diamond", "weight_percent": 6},
+    {"component_id": "aa_lcr", "evaluation_family": "aa_lcr", "weight_percent": 6},
+    {"component_id": "critpt", "evaluation_family": "critpt", "weight_percent": 6},
+    {"component_id": "aa_omniscience_non_hallucination", "evaluation_family": "aa_omniscience", "weight_percent": 4}
+  ],
+  "evaluations": [
+    {"benchmark_id": "gdpval_aa_v2", "display_name": "GDPval-AA v2", "official_page_uri": "https://artificialanalysis.ai/evaluations/gdpval-aa", "official_metric": "pairwise_judge_elo", "access_class": "public_source_with_official_preprocessing", "adapter_status": "BLOCKED", "block_reason": "CANONICAL_DATASET_AND_EXACT_EVALUATOR_NOT_VERIFIED"},
+    {"benchmark_id": "tau3_banking", "display_name": "τ³-Banking", "official_page_uri": "https://artificialanalysis.ai/evaluations/tau3-banking", "official_metric": "pass_at_1", "access_class": "official_or_proprietary_environment", "adapter_status": "BLOCKED", "block_reason": "CANONICAL_ENVIRONMENT_AND_EVALUATOR_NOT_VERIFIED"},
+    {"benchmark_id": "terminalbench_v2_1", "display_name": "Terminal-Bench v2.1", "official_page_uri": "https://artificialanalysis.ai/evaluations/terminalbench-v2-1", "official_metric": "pass_at_1", "access_class": "public_or_restricted_harness", "adapter_status": "BLOCKED", "block_reason": "CANONICAL_TASK_SOURCE_AND_EVALUATOR_NOT_VERIFIED"},
+    {"benchmark_id": "scicode", "display_name": "SciCode", "official_page_uri": "https://artificialanalysis.ai/evaluations/scicode", "official_metric": "pass_at_1", "access_class": "public_or_restricted_harness", "adapter_status": "BLOCKED", "block_reason": "CANONICAL_TASK_SOURCE_AND_EVALUATOR_NOT_VERIFIED"},
+    {"benchmark_id": "aa_lcr", "display_name": "AA-LCR", "official_page_uri": "https://artificialanalysis.ai/evaluations/artificial-analysis-long-context-reasoning", "official_metric": "llm_equality_checker_pass_at_1", "access_class": "official_evaluator", "adapter_status": "BLOCKED", "block_reason": "CANONICAL_TASK_SOURCE_AND_EVALUATOR_NOT_VERIFIED"},
+    {"benchmark_id": "aa_omniscience", "display_name": "AA-Omniscience", "official_page_uri": "https://artificialanalysis.ai/evaluations/omniscience", "official_metric": "accuracy_and_non_hallucination", "access_class": "official_evaluator", "adapter_status": "BLOCKED", "block_reason": "CANONICAL_TASK_SOURCE_AND_EVALUATOR_NOT_VERIFIED"},
+    {"benchmark_id": "hle", "display_name": "Humanity's Last Exam", "official_page_uri": "https://artificialanalysis.ai/evaluations/humanitys-last-exam", "official_metric": "pass_at_1", "access_class": "public_source_with_official_prompt_contract", "adapter_status": "BLOCKED", "block_reason": "CANONICAL_PROMPT_AND_EVALUATOR_NOT_VERIFIED"},
+    {"benchmark_id": "gpqa_diamond", "display_name": "GPQA Diamond", "official_page_uri": "https://artificialanalysis.ai/evaluations/gpqa-diamond", "official_metric": "pass_at_1", "access_class": "public_source_with_official_prompt_contract", "adapter_status": "BLOCKED", "block_reason": "CANONICAL_PROMPT_AND_EVALUATOR_NOT_VERIFIED"},
+    {"benchmark_id": "critpt", "display_name": "CritPt", "official_page_uri": "https://artificialanalysis.ai/evaluations/critpt", "official_metric": "pass_at_1", "access_class": "official_evaluator", "adapter_status": "BLOCKED", "block_reason": "CANONICAL_TASK_SOURCE_AND_EVALUATOR_NOT_VERIFIED"}
+  ],
+  "legacy_or_additional_evaluations": [
+    {"benchmark_id": "terminal_bench_hard", "display_name": "Terminal-Bench Hard", "official_metric": null, "adapter_status": "EXCLUDED_FROM_V41_COMPOSITE", "block_reason": "LEGACY_OR_ADDITIONAL_EVALUATION"},
+    {"benchmark_id": "tau2_telecom", "display_name": "τ²-Bench Telecom", "official_metric": null, "adapter_status": "EXCLUDED_FROM_V41_COMPOSITE", "block_reason": "LEGACY_OR_ADDITIONAL_EVALUATION"},
+    {"benchmark_id": "ifbench", "display_name": "IFBench", "official_metric": null, "adapter_status": "EXCLUDED_FROM_V41_COMPOSITE", "block_reason": "LEGACY_OR_ADDITIONAL_EVALUATION"},
+    {"benchmark_id": "mmmu_pro", "display_name": "MMMU Pro", "official_metric": null, "adapter_status": "EXCLUDED_FROM_V41_COMPOSITE", "block_reason": "LEGACY_OR_ADDITIONAL_EVALUATION"},
+    {"benchmark_id": "ifeval_official", "display_name": "IFEval Official", "official_metric": null, "adapter_status": "EXCLUDED_FROM_V41_COMPOSITE", "block_reason": "NOT_AN_AA_V41_INDEX_COMPONENT"}
+  ],
+  "composite_status": "BLOCKED",
+  "block_reason": "NO_COMPLETE_CANONICAL_SOURCE_EVALUATOR_AND_ITEM_RESULT_CHAIN",
+  "task_data_present": false,
+  "notes": "This file is an index and provenance boundary. It is not benchmark task data and must not be used to generate tasks."
 }

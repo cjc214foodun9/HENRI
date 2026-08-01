@@ -1,0 +1,18 @@
+{
+  "schema_id": "henri.checkpoint-provenance.v1",
+  "benchmark_id": "mbpp_google_test_v1",
+  "checkpoint_artifact": "models/henri_decoder_checkpoint.pt",
+  "checkpoint_sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+  "expected_bytes": 799034119,
+  "architecture": {
+    "d_model": 65536,
+    "hidden_dim": 2048,
+    "vocab_size": 32000,
+    "state_schema": "architecture-bound decoder state_dict"
+  },
+  "checkpoint_policy": "required",
+  "online_adaptation": false,
+  "training_lineage_status": "INCOMPLETE_PROVENANCE_REQUIRES_REMOTE_PREFLIGHT",
+  "load_status": "REQUIRED_BEFORE_RUN",
+  "limitations": "The digest was observed for the local HENRI decoder artifact before this clean implementation boundary. The artifact must be present and rehashed in the remote worktree before a run."
+}

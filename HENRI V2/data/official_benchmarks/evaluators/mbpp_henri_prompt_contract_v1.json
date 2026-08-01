@@ -1,0 +1,22 @@
+{
+  "schema_id": "henri.mbpp-prompt-contract.v1",
+  "benchmark_id": "mbpp_google_test_v1",
+  "source_task_split": "Google MBPP task_id 11 through 510 inclusive",
+  "num_fewshot": 0,
+  "reference_code_exposed": false,
+  "test_code_exposed": true,
+  "one_completion_per_item": true,
+  "do_sample": false,
+  "temperature": 0.0,
+  "retries": 0,
+  "online_adaptation": false,
+  "zone_c_task_persistence": false,
+  "template": "You are an expert Python programmer, and here is your task: {{text}} Your code should pass these tests:\n\n{{test_list[0]}}\n{{test_list[1]}}\n{{test_list[2]}}\n[BEGIN]\n",
+  "completion_extraction": {
+    "source_file": "data/official_benchmarks/evaluators/lm-evaluation-harness/mbpp/utils.py",
+    "function": "extract_code_blocks",
+    "require_fenced_python_block": true,
+    "first_block_only": true
+  },
+  "limitations": "This contract uses the pinned MBPP execution semantics but disables the canonical harness few-shot reference-code examples to prevent reference-code exposure during the first HENRI grounding pilot."
+}

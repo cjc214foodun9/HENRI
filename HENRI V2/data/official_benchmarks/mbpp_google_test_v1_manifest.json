@@ -1,0 +1,56 @@
+{
+  "schema_id": "henri.mbpp-heldout-manifest.v1",
+  "benchmark_id": "mbpp_google_test_v1",
+  "display_name": "Google MBPP official test split",
+  "source_repository": "https://github.com/google-research/google-research",
+  "source_commit": "8dadc6c56e2c2e51a9dd7e0d4bf2840922b4b6c0",
+  "source_uri": "https://raw.githubusercontent.com/google-research/google-research/8dadc6c56e2c2e51a9dd7e0d4bf2840922b4b6c0/mbpp/mbpp.jsonl",
+  "source_artifact": "data/official_benchmarks/canonical/mbpp/mbpp.jsonl",
+  "source_sha256": "ccf64ceae9c5403bf50a044cb6d505bfd2a2963ee58338ba268fd65beab92a9f",
+  "source_record_count": 974,
+  "official_split_rule": "integer task_id inclusive range 11..510",
+  "item_count": 500,
+  "task_id_sha256": "ac601a75ba8db68c19256095f57de4b6b1d99867fa936a02bf8f4297f6d6de6f",
+  "license_status": "VERIFY_BEFORE_DISTRIBUTION",
+  "evaluator": {
+    "repository": "https://github.com/EleutherAI/lm-evaluation-harness",
+    "commit": "f4d4b3de3ee6741a7151a9fe74945ee515262f4c",
+    "config_artifact": "data/official_benchmarks/evaluators/lm-evaluation-harness/mbpp/mbpp.yaml",
+    "config_sha256": "e527105e271ab1c57d692dabbf35306e61d2ffdefa5c08785baa6c493ee2a078",
+    "utility_artifact": "data/official_benchmarks/evaluators/lm-evaluation-harness/mbpp/utils.py",
+    "utility_sha256": "eecfcc264a63801d4ac478fac80b0f18c3faf16a107baf641a4fd498e81de7df",
+    "bundle_sha256": "f89837ca42d8d672451afb46bd03a7f7586ab3da8d51f3a913ba5b8c880a4250",
+    "evaluator_id": "lm-evaluation-harness:mbpp.yaml+utils.py",
+    "evaluator_version": "f4d4b3de3ee6741a7151a9fe74945ee515262f4c",
+    "metric": "pass@1",
+    "execution_semantics": "all supplied test assertions must execute successfully"
+  },
+  "prompt_contract": {
+    "artifact": "data/official_benchmarks/evaluators/mbpp_henri_prompt_contract_v1.json",
+    "sha256": "da9fc125b24658984cf0eb45f16567cb814f58c40f49c92d4e18684bdb8aa527",
+    "reference_code_exposed": false,
+    "online_adaptation": false,
+    "zone_c_task_persistence": false,
+    "one_completion_per_item": true,
+    "do_sample": false,
+    "temperature": 0.0,
+    "retries": 0
+  },
+  "checkpoint_provenance_artifact": "data/official_benchmarks/mbpp_henri_checkpoint_provenance_v1.json",
+  "contamination_scan": {
+    "required": true,
+    "artifact": "data/official_benchmarks/mbpp_contamination_scan_v1.json",
+    "status_before_run": "REQUIRED_BEFORE_RUN"
+  },
+  "secure_execution": {
+    "required": true,
+    "network": "disabled",
+    "filesystem": "temporary_work_directory_only",
+    "resource_limits": "cpu_memory_file_size_process_count_timeout",
+    "infrastructure_error_policy": "run_level_failure"
+  },
+  "adapter_status": "ADAPTER_READY",
+  "score_status": "BLOCKED",
+  "block_reason": "REMOTE_CUDA_EXECUTION_AND_COMPLETE_EVIDENCE_BUNDLE_PENDING",
+  "public_holdout_limit": "Operational holdout only; public pretraining contamination cannot be excluded."
+}
