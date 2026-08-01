@@ -382,7 +382,11 @@ def run():
             # Layer 1: try Zone C analogical retrieval
             try:
                 res = orch.segment_cache.retrieve(init_wave.cpu())
-                if res["hits"] > 0 and res.get("top_similarity", 0) > 0.7:
+                # top_sim >= 0.99 is an identity self-match: a prior run persisted
+                # this exact task's grid (ARC episode-trace rule: reject
+                # pre-existing task-specific persistence). Identity goals are not
+                # task supervision.
+                if (res["hits"] > 0 and 0.7 < res.get("top_similarity", 0) < 0.99):
                     # Retrieved wave is a similar past state — use as goal
                     goal_wave = res["conditioning_wave"]
                     if goal_wave is not None:
