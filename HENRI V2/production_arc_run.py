@@ -138,6 +138,12 @@ EXTERNAL_TASK_WEIGHT = float(os.environ.get("EXTERNAL_TASK_WEIGHT", "1.0"))
 # When set, input grids pass through ConnectedComponentSegmenter (8-connected BFS)
 # before qFHRR UWE binding, and action selection routes through SagnacMCTSPlanner.
 USE_OBJECT_SAGNAC_MCTS = os.environ.get("USE_OBJECT_SAGNAC_MCTS", "0") == "1"
+# Phase C goal channel (A/B flag, default OFF): compile W_task online from the
+# public demonstration pairs and feed the retrieved goal wave into plan_action.
+W_TASK_GOAL_CHANNEL = os.environ.get("W_TASK_GOAL_CHANNEL", "0") == "1"
+# Pre-registered kill threshold: if the W_task retrieval cannot match its own
+# in-context demo outputs above this similarity, the goal is not adopted.
+W_TASK_GOAL_MIN_SIM = float(os.environ.get("W_TASK_GOAL_MIN_SIM", "0.5"))
 
 # P0.5: task-weighted discriminative EIG (Aletheia postmortem).  Evidence
 # updates to the Beta posterior are weighted by sigmoid(gamma * z_score)
@@ -336,10 +342,43 @@ def run():
                 "  [BLOCKED] Public demonstrations found, but no observed test target "
                 "is available for target-scored MCTS; identity target is disabled."
             )
+        w_task_goal_active = False
+        w_task_goal_sim = 0.0
         goal_wave = None
         if LAMBDA_GOAL > 0.0:
             init_grid = obs.frame[0].tolist()
             init_wave = tokenizer.encode_spatial_grid(init_grid).squeeze(0).to(DEVICE)
+            # Layer 0 (Phase C): W_task goal channel. Compile the task functor
+            # online from the public demonstration pairs (zero pretraining) and
+            # retrieve the goal wave for the current grid. TARGET-FREE: no
+            # held-out test target is consulted (search() stays disabled).
+            if W_TASK_GOAL_CHANNEL and demo_pairs:
+                try:
+                    smc = orch.planner.sagnac_mcts_planner
+                    demo_waves = [smc.vision_encoder.encode_grid(x) for x, _ in demo_pairs]
+                    target_waves = [smc.vision_encoder.encode_grid(y) for _, y in demo_pairs]
+                    k = smc.codec.k_bins - 1
+                    encoded_demos = []
+                    for w_in, w_out in zip(demo_waves, target_waves):
+                        phase_in = ((torch.clamp(w_in, -1.0, 1.0) + 1.0) / 2.0 * k).to(torch.uint8)
+                        phase_out = ((torch.clamp(w_out, -1.0, 1.0) + 1.0) / 2.0 * k).to(torch.uint8)
+                        encoded_demos.append((phase_in, phase_out))
+                    w_task = smc.task_compiler.compile_functor(encoded_demos)
+                    test_phase = ((torch.clamp(smc.vision_encoder.encode_grid(init_grid), -1.0, 1.0) + 1.0) / 2.0 * k).to(torch.uint8)
+                    phase_goal = smc.task_compiler.single_pass_associative_retrieval(w_task, test_phase)
+                    goal_flat = (phase_goal.to(torch.float32) / k * 2.0 - 1.0).to(DEVICE)
+                    # In-context validity probe: similarity of the retrieved goal
+                    # to the demo OUTPUT waves (demos are public task data).
+                    sims = [float(smc.vision_encoder.compute_sagnac_similarity(goal_flat, tw)) for tw in target_waves]
+                    w_task_goal_sim = max(sims) if sims else 0.0
+                    if w_task_goal_sim >= W_TASK_GOAL_MIN_SIM:
+                        goal_wave = goal_flat
+                        w_task_goal_active = True
+                        print(f"  [goal] W_task functor — retrieval sim={w_task_goal_sim:.3f}")
+                    else:
+                        print(f"  [goal] W_task retrieval below kill threshold ({w_task_goal_sim:.3f} < {W_TASK_GOAL_MIN_SIM}) — goal not adopted")
+                except Exception as e:
+                    print(f"  [goal] W_task channel failed: {type(e).__name__}: {e}")
             # Layer 1: try Zone C analogical retrieval
             try:
                 res = orch.segment_cache.retrieve(init_wave.cpu())
@@ -713,6 +752,8 @@ def run():
                 "goal_distance": round(float(chosen.get("goal_distance", 0.0)), 6),
                 "residual_type": str(chosen.get("residual_type", "N/A")),
                 "lambda_goal": LAMBDA_GOAL,
+                "w_task_goal_active": w_task_goal_active,
+                "w_task_goal_sim": round(w_task_goal_sim, 6),
                 "grid_dist": round(grid_dist, 6),
                 "happy_cut_area": round(float(orch.planner.compute_happy_tensor_cut_area(predicted_wave).detach()), 6)
                     if HAPPY_TENSOR_CUT else None,
