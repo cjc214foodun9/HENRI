@@ -19,7 +19,12 @@ import torch
 import torch.nn.functional as F
 from typing import Dict, Any, List, Tuple
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+STAGING_DIR = os.path.join(REPO_ROOT, "scripts", "staging")
+# This verifier is a standalone script. Keep imports stable after organization.
+for import_path in (REPO_ROOT, STAGING_DIR):
+    if import_path not in sys.path:
+        sys.path.insert(0, import_path)
 
 from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
 from henri_fused_triton_cuda_graph_runner import CUDAGraphBatchedUnbinderRunner
