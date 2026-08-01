@@ -323,7 +323,7 @@ def blocked_bundle(manifest: dict[str, Any], output_dir: Path, reason: str, chec
     return evidence
 
 
-def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False, sandbox_mode: str = "namespace", egress_path: str = "henri", sgld_adapt: bool = False) -> dict[str, Any]:
+def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False, sandbox_mode: str = "namespace", egress_path: str = "henri", sgld_adapt: bool = False, hopfield_snap: bool = False) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=False)
     try:
         manifest, items = validate_static_bundle(egress_path)
@@ -368,6 +368,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
         # W_task is an input-side task operator, not model parameter adaptation.
         w_task_ring = None
         w_task_vector = None
+        egress = None
         if egress_path == "henri":
             exemplars = load_exemplars()
             task_compiler = HolographicTaskFunctorCompiler(codec)
@@ -379,6 +380,18 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             w_task_vector = (
                 w_task_ring.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
             ).to("cuda")
+            # C3 remembering probe: UniversalEgress Hopfield codebook over the
+            # exemplar solution waves. When enabled, the W_task goal wave snaps
+            # to the nearest exemplar solution (zero-entropy retrieval, beta=8.0)
+            # instead of passing through the linear decode head.
+            if hopfield_snap:
+                from henri_egress import TextEgress
+                egress = TextEgress(d_model=65536, beta=8.0)
+                sol_waves = torch.stack([
+                    (codec.encode_text(ex["code"]).to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0)
+                    for ex in exemplars
+                ])
+                egress.register_tokens(sol_waves, [ex["code"] for ex in exemplars])
             adapt_telemetry = None
             if sgld_adapt:
                 try:
@@ -438,7 +451,13 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                     task_operator = codec.encode_text("MBPP_CODING_OPERATOR")
                     goal_wave = codec.bind_hadamard(task_operator, prompt_wave)
                     w_task_vector = None
-                response, telemetry = transducer.decode_wave_to_response(goal_wave, prompt, w_task=w_task_vector)
+                if egress is not None:
+                    goal_real = (goal_wave.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0).to("cuda")
+                    snapped_text, snapped_idx, snap_sim = egress.decode_wave(goal_real)
+                    response = snapped_text
+                    telemetry = {"snap_idx": int(snapped_idx), "snap_sim": round(float(snap_sim), 4), "snap_source": "exemplar_codebook"}
+                else:
+                    response, telemetry = transducer.decode_wave_to_response(goal_wave, prompt, w_task=w_task_vector)
                 code = extract_code_blocks(response)
                 validate_candidate(code)
                 result = sandbox.execute(code + "\n" + "\n".join(item["test_list"]))
@@ -493,7 +512,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             raw_stdout_sha=sha256_path(output_dir / "raw_stdout.jsonl"),
             raw_stderr_sha=sha256_path(output_dir / "raw_stderr.jsonl"),
             item_results_sha=sha256_path(output_dir / "item_results.jsonl"),
-            limitations=f"Public MBPP operational holdout; egress_path={egress_path}; sgld_adapt={sgld_adapt}; sandbox_mode={sandbox_mode}; elapsed_sec={elapsed:.6f}",
+            limitations=f"Public MBPP operational holdout; egress_path={egress_path}; sgld_adapt={sgld_adapt}; hopfield_snap={hopfield_snap}; sandbox_mode={sandbox_mode}; elapsed_sec={elapsed:.6f}",
         )
         registry = make_registry(manifest, evaluated=True)
         eligible, reasons = validate_score_eligibility(evidence, registry, minimum_items=500)
@@ -520,8 +539,9 @@ def main() -> int:
     parser.add_argument("--sandbox-mode", choices=["namespace", "container-rlimit"], default="namespace")
     parser.add_argument("--egress-path", choices=["legacy", "henri"], default="henri")
     parser.add_argument("--sgld-adapt", action="store_true", help="test-time SGLD unbinder adaptation on the 10 exemplars (henri path only)")
+    parser.add_argument("--hopfield-snap", action="store_true", help="UniversalEgress remembering probe: snap the W_task goal wave to the nearest exemplar solution in a Hopfield codebook (henri path only)")
     args = parser.parse_args()
-    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only, args.sandbox_mode, args.egress_path, args.sgld_adapt)
+    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only, args.sandbox_mode, args.egress_path, args.sgld_adapt, args.hopfield_snap)
     print(json.dumps({"status": result["status"], "reason": result.get("reason"), "score_eligible": result.get("score_eligible", False)}, sort_keys=True))
     return 0 if result["status"] in {"OBSERVED", "PREFLIGHT_PASS", "BLOCKED"} else 1
 

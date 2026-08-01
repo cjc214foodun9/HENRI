@@ -58,6 +58,24 @@ def test_planner_no_all_zero_label_wart():
     assert "self.decoder.adapt_in_context(demo_waves" not in src, "CE-only inert call must not return"
 
 
+def test_text_egress_hopfield_snap_retrieval():
+    """UniversalEgress remembering probe: a query near an exemplar snaps to it."""
+    import torch.nn.functional as F
+    from henri_egress import TextEgress
+    torch.manual_seed(3)
+    eg = TextEgress(d_model=256, beta=8.0)
+    sols = ["def f():\n    return 1", "def g():\n    return 2", "def h():\n    return 3"]
+    base = torch.randn(3, 256)
+    base = F.normalize(base, dim=-1)
+    eg.register_tokens(base, sols)
+    q = base[1] + 0.01 * torch.randn(256)
+    q = F.normalize(q, dim=-1)
+    text, idx, sim = eg.decode_wave(q)
+    assert int(idx) == 1
+    assert text == sols[1]
+    assert float(sim) > 0.9
+
+
 def test_w_task_retrieval_captures_consistent_rule():
     codec = qFHRREpistemicCodec(d_model=1024, k_bins=256, device="cpu")
     comp = HolographicTaskFunctorCompiler(codec)
