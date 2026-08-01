@@ -187,6 +187,11 @@ class ArtificialAnalysisV41GauntletRunner:
         return scorecard
 
     def run_full_gauntlet(self):
+        raise RuntimeError(
+            "BLOCKED: this AA v4.1 runner contains inline or synthetic benchmark fixtures; "
+            "no external score is permitted until canonical task data, official evaluators, "
+            "and a complete evidence bundle are supplied"
+        )
         print("\n========================================================================")
         print("   ARTIFICIAL ANALYSIS v4.1 INTELLIGENCE INDEX GAUNTLET (14 TRACKS)")
         print("========================================================================")

@@ -1,5 +1,7 @@
 """
-HENRI LangGraph Agentic Engine with Speculative MoA & Immutable Audit Ledger.
+EXPERIMENTAL ONLY: simulated HENRI LangGraph design demonstration.
+
+This module contains simulated workflow values. It is not a HENRI production execution path.
 
 Orchestrates custom machine learning software development for Project HENRI,
 including research ingestion, speculative diff drafting, multi-model critique,
@@ -244,8 +246,16 @@ def decision_router(state: HenriDevState) -> str:
 # GRAPH COMPOSITION & COMPILATION
 # ============================================================================
 
-def build_henri_dev_graph():
-    """Constructs the LangGraph Workflow for HENRI Development."""
+def build_henri_dev_graph(*args, **kwargs):
+    """Fail-closed compatibility entry point for the simulated prototype."""
+    raise RuntimeError(
+        "BLOCKED: legacy simulated LangGraph workflow is not a production route. "
+        "Use HENRI V2/agentic_graph with deterministic evidence receipts."
+    )
+
+
+def build_experimental_simulated_henri_dev_graph():
+    """Historical prototype builder; never call from production routing."""
     builder = StateGraph(HenriDevState)
     
     # Add Nodes

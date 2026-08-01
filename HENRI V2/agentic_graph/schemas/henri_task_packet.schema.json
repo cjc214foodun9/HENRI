@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "henri.task-packet.v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "task_id",
+    "task_type",
+    "question",
+    "requested_outcome",
+    "risk_class",
+    "input_refs",
+    "selected_skills",
+    "budget",
+    "source_hashes",
+    "scope",
+    "acceptance",
+    "rejection"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parent_task_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "task_type": {
+      "enum": [
+        "research",
+        "audit",
+        "implementation",
+        "verification",
+        "telemetry",
+        "governance"
+      ]
+    },
+    "question": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requested_outcome": {
+      "type": "string"
+    },
+    "risk_class": {
+      "enum": [
+        "routine",
+        "elevated",
+        "load_bearing"
+      ]
+    },
+    "input_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "allowed_paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "allowed_tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "selected_skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "acceptance_checks": {
+      "type": "array"
+    },
+    "rejection_checks": {
+      "type": "array"
+    },
+    "budget": {
+      "type": "object",
+      "required": [
+        "max_model_calls",
+        "max_leaf_retries",
+        "max_dynamic_context_tokens",
+        "max_output_tokens"
+      ],
+      "properties": {
+        "max_model_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_leaf_retries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_dynamic_context_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_output_tokens": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "source_hashes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      }
+    },
+    "scope": {
+      "type": "object",
+      "required": [
+        "allowed_paths",
+        "allowed_tools"
+      ],
+      "properties": {
+        "allowed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "allowed_tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "acceptance": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "rejection": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}

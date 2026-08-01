@@ -112,7 +112,11 @@ class SagnacMCTSPlanner:
         self.codec = qFHRREpistemicCodec(d_model=d_model, device=device)
         self.task_compiler = HolographicTaskFunctorCompiler(self.codec)
         self.repl = HENRIUniversalREPL(d_model=d_model, device=device)
-        self.decoder = HENRIUnifiedEgressTransducer(d_model=d_model, device=device)
+        self.decoder = HENRIUnifiedEgressTransducer(
+            d_model=d_model,
+            device=device,
+            checkpoint_policy="disabled" if d_model != 65536 else "required",
+        )
         self.intact_head = INTACTIsomorphicConjugacyHead(d_model=d_model, device=device)
 
         self.primitive_ops = [

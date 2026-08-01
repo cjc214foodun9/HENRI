@@ -63,7 +63,11 @@ def run_authentic_hardware_benchmark(limit: int = 50):
         torch.cuda.reset_peak_memory_stats(0)
 
     # Initialize PyTorch Neural Egress Unbinder & Sandbox
-    transducer = HENRIUnifiedEgressTransducer(d_model=65536, device=device)
+    transducer = HENRIUnifiedEgressTransducer(
+        d_model=65536,
+        device=device,
+        checkpoint_policy="required",
+    )
     sandbox = ExteroceptiveSandboxTransducer(d_model=65536)
     codec = qFHRREpistemicCodec(d_model=65536, device=device)
 

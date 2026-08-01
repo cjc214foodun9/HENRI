@@ -53,7 +53,10 @@ class ArtificialAnalysisV41GauntletRunner:
         self.port = port
         self.d_model = d_model
         self.repl = HENRIUniversalREPL(d_model=d_model)
-        self.transducer = HENRIUnifiedEgressTransducer(d_model=d_model)
+        self.transducer = HENRIUnifiedEgressTransducer(
+            d_model=d_model,
+            checkpoint_policy="required" if d_model == 65536 else "disabled",
+        )
         self.staged_dir = os.path.join(repo_path, "data", "official_benchmarks", "staged_eval_suites")
 
     def run_suite(self, suite_id: str) -> dict:

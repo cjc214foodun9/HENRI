@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "henri.evidence-receipt.v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "receipt_id",
+    "kind",
+    "status",
+    "subject_ref",
+    "tool",
+    "command_or_query_hash",
+    "summary",
+    "artifact_ref",
+    "created_at_utc",
+    "command_or_method"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "receipt_id": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "test",
+        "hash",
+        "schema",
+        "citation",
+        "query",
+        "lint",
+        "diff"
+      ]
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail",
+        "unavailable"
+      ]
+    },
+    "subject_ref": {
+      "type": "string"
+    },
+    "subject_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "tool": {
+      "type": "string"
+    },
+    "command_or_query_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "artifact_ref": {
+      "type": "string"
+    },
+    "created_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "artifact_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "details_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "exit_code": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "command_or_method": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

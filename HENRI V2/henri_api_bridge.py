@@ -38,7 +38,11 @@ except Exception as e:
     print(f"[API BRIDGE] Zone C database offline or connection skipped: {e}")
 THERMOSTAT = AdaptiveViscoelasticThermostat(d_model=4096, device=DEVICE)
 TRANSDUCER = UniversalDataTransducer(d_model=4096, num_blocks=512)
-UNBINDER_TRANSDUCER = HENRIUnifiedEgressTransducer(d_model=65536, device=DEVICE)
+UNBINDER_TRANSDUCER = HENRIUnifiedEgressTransducer(
+    d_model=65536,
+    device=DEVICE,
+    checkpoint_policy="required",
+)
 
 
 def decode_prompt_to_transduced_response(goal_wave: torch.Tensor, prompt_text: str) -> str:

@@ -142,6 +142,11 @@ class FalsifiableVLAGauntletRunner:
         }
 
     def run_full_falsifiable_gauntlet(self) -> dict:
+        raise RuntimeError(
+            "BLOCKED: this VLA gauntlet depends on unverified staged suites; "
+            "no external score is permitted until canonical task data, evaluators, "
+            "and a complete evidence bundle are supplied"
+        )
         suites = [
             "gdpval_aa", "terminal_bench_hard", "terminal_bench_v21",
             "tau2_telecom", "tau3_banking", "scicode", "aa_lcr",

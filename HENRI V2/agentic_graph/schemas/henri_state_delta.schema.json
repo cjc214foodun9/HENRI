@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "henri.state-delta.v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "task_id",
+    "from_state",
+    "to_state",
+    "reason",
+    "changed_refs",
+    "budget_remaining",
+    "status",
+    "completed_checks",
+    "unmet_checks",
+    "failed_node",
+    "retry_count",
+    "next_safe_action"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "task_id": {
+      "type": "string"
+    },
+    "from_state": {
+      "type": "string"
+    },
+    "to_state": {
+      "enum": [
+        "intake",
+        "classified",
+        "collected",
+        "dispatched",
+        "verified",
+        "repair",
+        "complete",
+        "partial",
+        "blocked",
+        "failed",
+        "budget_exhausted"
+      ]
+    },
+    "reason": {
+      "type": "string"
+    },
+    "changed_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "budget_remaining": {
+      "type": "object"
+    },
+    "status": {
+      "enum": [
+        "complete",
+        "partial",
+        "blocked",
+        "failed",
+        "budget_exhausted"
+      ]
+    },
+    "completed_checks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "unmet_checks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "failed_node": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "retry_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "next_safe_action": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

@@ -6,12 +6,36 @@ Includes dimension-specific Sagnac phase error vector (\mathbf{\Delta\Phi}_k), a
 TAME biophysical gap-junction conductance gating (G_{ij}), and Bingham Plastic yield mechanics for test-time adaptation.
 """
 
+import hashlib
 import os
 import math
+import pickle
+from pathlib import Path
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple, Optional, Literal
+
+
+class DecoderCheckpointCompatibilityError(RuntimeError):
+    """Raised when a required decoder checkpoint cannot load safely."""
+
+
+def _state_dict_sha256(state_dict: Dict[str, torch.Tensor]) -> str:
+    """Hash tensor names, dtypes, shapes, and bytes in deterministic order."""
+    digest = hashlib.sha256()
+    for name in sorted(state_dict):
+        tensor = state_dict[name]
+        if not isinstance(tensor, torch.Tensor):
+            raise DecoderCheckpointCompatibilityError(
+                f"checkpoint state entry is not a tensor: key={name}"
+            )
+        value = tensor.detach().cpu().contiguous()
+        digest.update(name.encode("utf-8"))
+        digest.update(str(value.dtype).encode("ascii"))
+        digest.update(repr(tuple(value.shape)).encode("ascii"))
+        digest.update(value.numpy().tobytes())
+    return digest.hexdigest()
 
 
 class HENRINeuralEgressUnbinder(nn.Module):
@@ -299,25 +323,169 @@ class HENRIUnifiedEgressTransducer:
     Integrated Egress Transducer combining Phase Ring Hadamard Unbinding
     with Neural Projection Logit Decoding and TAME Bingham Plastic Test-Time SGLD Adaptation.
     """
-    def __init__(self, d_model: int = 65536, vocab_size: int = 32000, device: str = "cuda", checkpoint_path: Optional[str] = None):
+    def __init__(
+        self,
+        d_model: int = 65536,
+        hidden_dim: int = 2048,
+        vocab_size: int = 32000,
+        device: str = "cuda",
+        checkpoint_path: Optional[str] = None,
+        checkpoint_policy: Literal["auto", "required", "disabled"] = "auto",
+    ):
+        if checkpoint_policy not in {"auto", "required", "disabled"}:
+            raise ValueError(f"unknown checkpoint_policy={checkpoint_policy!r}")
         self.d_model = d_model
+        self.hidden_dim = hidden_dim
+        self.vocab_size = vocab_size
         self.device = device if torch.cuda.is_available() else "cpu"
-        self.unbinder = HENRINeuralEgressUnbinder(d_model=d_model, vocab_size=vocab_size, device=self.device)
+        self.checkpoint_policy = checkpoint_policy
+        self.unbinder = HENRINeuralEgressUnbinder(
+            d_model=d_model,
+            d_hidden=hidden_dim,
+            vocab_size=vocab_size,
+            device=self.device,
+        )
         self.codebook = PhaseRingCodebookDecoder(d_model=d_model, device=self.device)
+        self.checkpoint_load_status = "SKIPPED_POLICY_DISABLED"
+        self.checkpoint_path: Optional[str] = None
+        self.checkpoint_sha256: Optional[str] = None
+        self.checkpoint_state_dict_sha256: Optional[str] = None
+        self.checkpoint_metadata: Dict[str, Any] = {}
 
-        if checkpoint_path is None:
-            # Auto-detect trained checkpoint if present
-            default_ckpt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "henri_decoder_checkpoint.pt")
-            if os.path.exists(default_ckpt):
-                checkpoint_path = default_ckpt
-
-        if checkpoint_path and os.path.exists(checkpoint_path):
-            ckpt = torch.load(checkpoint_path, map_location=self.device)
-            if "model_state_dict" in ckpt:
-                self.unbinder.load_state_dict(ckpt["model_state_dict"])
+        if checkpoint_policy != "disabled":
+            auto_discovered = checkpoint_path is None
+            if auto_discovered:
+                checkpoint_path = os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    "models",
+                    "henri_decoder_checkpoint.pt",
+                )
+            # The default repository artifact is production-shaped. Do not
+            # deserialize it for reduced CPU objects. An explicitly supplied
+            # path is always inspected and must match its runtime architecture.
+            if auto_discovered and d_model != 65536:
+                self.checkpoint_path = str(Path(checkpoint_path))
+                self.checkpoint_load_status = "SKIPPED_INCOMPATIBLE_ARCHITECTURE"
+                self.checkpoint_metadata = {
+                    "schema_id": "henri.decoder-checkpoint.v1-legacy",
+                    "checkpoint_architecture": {
+                        "d_model": 65536,
+                        "hidden_dim": 2048,
+                        "vocab_size": 32000,
+                    },
+                }
+                if checkpoint_policy == "required":
+                    raise DecoderCheckpointCompatibilityError(
+                        f"checkpoint d_model=65536 incompatible with runtime d_model={d_model}; "
+                        f"checkpoint={checkpoint_path}; policy=required"
+                    )
             else:
-                self.unbinder.load_state_dict(ckpt)
-            print(f"[HENRIUnifiedEgressTransducer] Loaded trained unbinder weights from: {checkpoint_path}")
+                self._load_checkpoint(checkpoint_path)
+
+    def _load_checkpoint(self, checkpoint_path: str) -> None:
+        """Validate the state dict on CPU before moving validated weights to target device."""
+        path = Path(checkpoint_path)
+        self.checkpoint_path = str(path)
+        if not path.exists():
+            self.checkpoint_load_status = "SKIPPED_NO_CHECKPOINT"
+            if self.checkpoint_policy == "required":
+                raise DecoderCheckpointCompatibilityError(
+                    f"checkpoint missing: checkpoint={path}; policy=required"
+                )
+            return
+
+        try:
+            self.checkpoint_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+            try:
+                payload = torch.load(path, map_location="cpu", weights_only=True)
+            except TypeError:
+                payload = torch.load(path, map_location="cpu")
+            if not isinstance(payload, dict):
+                raise DecoderCheckpointCompatibilityError(
+                    f"checkpoint payload is not a mapping: checkpoint={path}"
+                )
+            state_dict = payload.get("model_state_dict", payload.get("state_dict", payload))
+            if not isinstance(state_dict, dict):
+                raise DecoderCheckpointCompatibilityError(
+                    f"checkpoint state_dict is not a mapping: checkpoint={path}"
+                )
+            expected_shapes = {
+                "down_proj.weight": (self.hidden_dim, self.d_model),
+                "layer_norm.weight": (self.hidden_dim,),
+                "layer_norm.bias": (self.hidden_dim,),
+                "lm_head.weight": (self.vocab_size, self.hidden_dim),
+            }
+            for key, expected in expected_shapes.items():
+                actual = tuple(state_dict[key].shape) if key in state_dict else None
+                if actual != expected:
+                    raise DecoderCheckpointCompatibilityError(
+                        f"checkpoint {key}_shape={actual} incompatible with runtime expected={expected}; "
+                        f"checkpoint={path}; policy={self.checkpoint_policy}"
+                    )
+            metadata = payload.get("metadata", {})
+            if not isinstance(metadata, dict):
+                raise DecoderCheckpointCompatibilityError(
+                    f"checkpoint metadata is not a mapping: checkpoint={path}"
+                )
+            for key, expected in {
+                "d_model": self.d_model,
+                "hidden_dim": self.hidden_dim,
+                "vocab_size": self.vocab_size,
+            }.items():
+                if key in metadata and metadata[key] != expected:
+                    raise DecoderCheckpointCompatibilityError(
+                        f"checkpoint {key}={metadata[key]} incompatible with runtime {key}={expected}; "
+                        f"checkpoint={path}; policy={self.checkpoint_policy}"
+                    )
+            self.unbinder.load_state_dict(state_dict, strict=True)
+            self.checkpoint_state_dict_sha256 = _state_dict_sha256(state_dict)
+            self.checkpoint_metadata = {
+                "schema_id": metadata.get("schema_id", "henri.decoder-checkpoint.v1-legacy"),
+                "d_model": self.d_model,
+                "hidden_dim": self.hidden_dim,
+                "vocab_size": self.vocab_size,
+                **metadata,
+            }
+            self.checkpoint_load_status = "LOADED"
+            print(
+                f"[HENRIUnifiedEgressTransducer] Loaded validated decoder checkpoint: "
+                f"path={path} sha256={self.checkpoint_sha256}"
+            )
+        except DecoderCheckpointCompatibilityError:
+            self.checkpoint_load_status = "SKIPPED_INCOMPATIBLE_ARCHITECTURE"
+            if self.checkpoint_policy == "required":
+                raise
+        except (KeyError, RuntimeError, OSError, pickle.UnpicklingError) as exc:
+            self.checkpoint_load_status = (
+                "FAILED_REQUIRED_CHECKPOINT"
+                if self.checkpoint_policy == "required"
+                else "FAILED_CORRUPT_CHECKPOINT"
+            )
+            error = DecoderCheckpointCompatibilityError(
+                f"checkpoint validation failed: checkpoint={path}; reason={type(exc).__name__}"
+            )
+            self.checkpoint_metadata = {"error": str(error)}
+            if self.checkpoint_policy == "required":
+                raise error from exc
+
+    def checkpoint_telemetry(self) -> Dict[str, Any]:
+        return {
+            "checkpoint_policy": self.checkpoint_policy,
+            "checkpoint_load_status": self.checkpoint_load_status,
+            "checkpoint_path": self.checkpoint_path,
+            "checkpoint_sha256": self.checkpoint_sha256,
+            "checkpoint_state_dict_sha256": self.checkpoint_state_dict_sha256,
+            "runtime_d_model": self.d_model,
+            "runtime_hidden_dim": self.hidden_dim,
+            "runtime_vocab_size": self.vocab_size,
+            "checkpoint_metadata": self.checkpoint_metadata,
+            "trained_decoder_active": self.checkpoint_load_status == "LOADED",
+            "decoder_state": (
+                "TRAINED_DECODER"
+                if self.checkpoint_load_status == "LOADED"
+                else "UNTRAINED_DECODER"
+            ),
+        }
 
     def decode_wave_to_response(self, goal_wave: torch.Tensor, prompt_text: str, w_task: Optional[torch.Tensor] = None) -> Tuple[str, Dict[str, Any]]:
         """
@@ -339,9 +507,10 @@ class HENRIUnifiedEgressTransducer:
             "top_token_id": top_token_id,
             "neural_unbinder_active": True,
             "phase_ring_bins": 256,
-            "w_task_modulated": w_task is not None
+            "w_task_modulated": w_task is not None,
         }
-        
+        telemetry.update(self.checkpoint_telemetry())
+
         # Option Parsing for Multiple-Choice tasks
         if "option letter" in prompt_lower or "options:" in prompt_lower or "(a, b, c, or d)" in prompt_lower:
             # Deterministic phase projection onto option choices

@@ -1,0 +1,21 @@
+decision_id: eval-grounding-p0-2026-07-31
+status: APPROVED
+scope:
+  - BenchLM registry import and validation
+  - versioned run-evidence and ARC episode-trace schemas
+  - synthetic benchmark quarantine
+  - production-score fail-closed gating
+non_scope:
+  - planner changes
+  - decoder changes
+  - SGLD or category-theory changes
+  - ARC solver behavior changes
+acceptance:
+  - no external score without canonical source, dataset digest, evaluator identity, commit, and item-level outcomes
+  - synthetic or template content cannot be promoted as benchmark data
+  - invalid evidence produces BLOCKED or INVALID, never a score
+rejection:
+  - generic substring grading
+  - N=1 intelligence claims
+  - absent dataset or evaluator digest
+  - transport errors treated as outputs

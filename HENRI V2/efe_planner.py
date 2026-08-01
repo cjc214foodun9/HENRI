@@ -292,7 +292,10 @@ class EFEPlanner(nn.Module):
         # Linear ridge probe decoding intrinsic progress t_hat in [0, 1]
         # and providing anisotropic v_clock temporal steering vectors.
         self.clock_probe = SubliminalClockProbe(d_model=d_model)
-        self.decoder = HENRIUnifiedEgressTransducer(d_model=d_model)
+        self.decoder = HENRIUnifiedEgressTransducer(
+            d_model=d_model,
+            checkpoint_policy="disabled" if d_model != 65536 else "required",
+        )
 
     def predict_progress(self, wave: torch.Tensor) -> torch.Tensor:
         """Decodes intrinsic progress t_hat in [0, 1] from wave state."""

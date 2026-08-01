@@ -82,7 +82,11 @@ def run_live_inference_eval(suite: str = "humaneval", items_limit: int = 50):
         torch.cuda.reset_peak_memory_stats(0)
 
     # Initialize PyTorch Neural Egress Unbinder, Fast Runner & Sandbox
-    transducer = HENRIUnifiedEgressTransducer(d_model=65536, device=device)
+    transducer = HENRIUnifiedEgressTransducer(
+        d_model=65536,
+        device=device,
+        checkpoint_policy="required",
+    )
     fast_runner = CUDAGraphBatchedUnbinderRunner(d_model=65536, vocab_size=32000, device=device)
     sandbox = ExteroceptiveSandboxTransducer(d_model=65536)
     codec = qFHRREpistemicCodec(d_model=65536, device=device)

@@ -108,6 +108,11 @@ class AuthenticProductionGauntletRunner:
         }
 
     def run_authentic_gauntlet(self) -> dict:
+        raise RuntimeError(
+            "BLOCKED: this runner uses unverified or synthetic staged benchmark content; "
+            "no external score is permitted until a canonical dataset, evaluator, and "
+            "evidence bundle are supplied"
+        )
         suites = [
             "humaneval_official", "mbpp_official", "ifeval_official",
             "gsm8k_official", "gpqa_official", "math_official", "mmlu_physics_official"
