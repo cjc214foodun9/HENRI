@@ -80,14 +80,14 @@ def load_items() -> list[dict[str, Any]]:
     return items
 
 
-def _mean_logit_entropy(transducer: Any, waves: "list[Any]") -> float:
+def _mean_logit_entropy(torch_mod: Any, unbinder: Any, waves: list) -> float:
     """Mean softmax logit entropy (nats) over wave states. INTERNAL telemetry only."""
-    with torch.no_grad():
+    with torch_mod.no_grad():
         total = 0.0
         for w in waves:
-            logits = transducer.unbinder(w.unsqueeze(0))
-            p = torch.softmax(logits.float(), dim=-1)
-            total += float(-(p * torch.log(p + 1e-12)).sum(dim=-1).mean().item())
+            logits = unbinder(w.unsqueeze(0))
+            p = torch_mod.softmax(logits.float(), dim=-1)
+            total += float(-(p * torch_mod.log(p + 1e-12)).sum(dim=-1).mean().item())
         return total / max(1, len(waves))
 
 
@@ -381,33 +381,36 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             ).to("cuda")
             adapt_telemetry = None
             if sgld_adapt:
-                demo_waves = [codec.encode_text(render_prompt(ex)) for ex in exemplars]
-                target_waves = [codec.encode_text(ex["code"]) for ex in exemplars]
-                # Fixed bootstrap labels: pre-adaptation argmax token of each solution wave.
-                # No tokenizer exists in the transducer; the CE term aligns active-wave
-                # projection with the model's own solution-wave representation (snapshot).
-                with torch.no_grad():
-                    demo_token_ids = [
-                        int(transducer.unbinder(w.unsqueeze(0)).argmax(dim=-1).item())
-                        for w in target_waves
-                    ]
-                distinct_labels = len(set(demo_token_ids))
-                probe_waves = [codec.encode_text(render_prompt(it)) for it in items[:10]]
-                ent_demo_before = _mean_logit_entropy(transducer, demo_waves)
-                ent_probe_before = _mean_logit_entropy(transducer, probe_waves)
-                adapt_result = transducer.adapt_in_context(demo_waves, target_waves, demo_token_ids)
-                ent_demo_after = _mean_logit_entropy(transducer, demo_waves)
-                ent_probe_after = _mean_logit_entropy(transducer, probe_waves)
-                adapt_telemetry = {
-                    "sgld_steps_per_pair": 2,
-                    "demo_token_ids": demo_token_ids,
-                    "distinct_bootstrap_labels": distinct_labels,
-                    "logit_entropy_nats_demo_before": round(ent_demo_before, 6),
-                    "logit_entropy_nats_demo_after": round(ent_demo_after, 6),
-                    "logit_entropy_nats_probe_before": round(ent_probe_before, 6),
-                    "logit_entropy_nats_probe_after": round(ent_probe_after, 6),
-                }
-                adapt_telemetry.update(adapt_result)
+                try:
+                    demo_waves = [codec.encode_text(render_prompt(ex)) for ex in exemplars]
+                    target_waves = [codec.encode_text(ex["code"]) for ex in exemplars]
+                    # Fixed bootstrap labels: pre-adaptation argmax token of each solution wave.
+                    # No tokenizer exists in the transducer; the CE term aligns active-wave
+                    # projection with the model's own solution-wave representation (snapshot).
+                    with torch.no_grad():
+                        demo_token_ids = [
+                            int(transducer.unbinder(w.unsqueeze(0)).argmax(dim=-1).item())
+                            for w in target_waves
+                        ]
+                    distinct_labels = len(set(demo_token_ids))
+                    probe_waves = [codec.encode_text(render_prompt(it)) for it in items[:10]]
+                    ent_demo_before = _mean_logit_entropy(torch, transducer.unbinder, demo_waves)
+                    ent_probe_before = _mean_logit_entropy(torch, transducer.unbinder, probe_waves)
+                    adapt_result = transducer.adapt_in_context(demo_waves, target_waves, demo_token_ids)
+                    ent_demo_after = _mean_logit_entropy(torch, transducer.unbinder, demo_waves)
+                    ent_probe_after = _mean_logit_entropy(torch, transducer.unbinder, probe_waves)
+                    adapt_telemetry = {
+                        "sgld_steps_per_pair": 2,
+                        "demo_token_ids": demo_token_ids,
+                        "distinct_bootstrap_labels": distinct_labels,
+                        "logit_entropy_nats_demo_before": round(ent_demo_before, 6),
+                        "logit_entropy_nats_demo_after": round(ent_demo_after, 6),
+                        "logit_entropy_nats_probe_before": round(ent_probe_before, 6),
+                        "logit_entropy_nats_probe_after": round(ent_probe_after, 6),
+                    }
+                    adapt_telemetry.update(adapt_result)
+                except Exception as exc:
+                    raise PilotBlocked(f"SGLD_ADAPT_FAILED:{type(exc).__name__}:{exc}") from exc
         else:
             adapt_telemetry = None
             if sgld_adapt:
