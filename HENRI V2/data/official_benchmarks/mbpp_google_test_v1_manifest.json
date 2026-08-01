@@ -52,5 +52,6 @@
   "adapter_status": "ADAPTER_READY",
   "score_status": "BLOCKED",
   "block_reason": "REMOTE_CUDA_EXECUTION_AND_COMPLETE_EVIDENCE_BUNDLE_PENDING",
-  "public_holdout_limit": "Operational holdout only; public pretraining contamination cannot be excluded."
+  "public_holdout_limit": "Operational holdout only; public pretraining contamination cannot be excluded.",
+  "digest_normalization": "lf_line_endings: text-artifact digests hash CRLF stripped to LF (platform-independent)"
 }

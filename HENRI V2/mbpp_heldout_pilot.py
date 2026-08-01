@@ -49,6 +49,17 @@ def sha256_path(path: Path) -> str:
     return sha256_bytes(path.read_bytes())
 
 
+def sha256_lf_path(path: Path) -> str:
+    """Hash canonical LF bytes for text artifacts.
+
+    Manifest digests are computed over the canonical LF forms of text files.
+    Windows git checkouts (core.autocrlf) materialize CRLF working copies;
+    hashing raw working-tree bytes would make the check platform-dependent.
+    """
+    raw = path.read_bytes().replace(bytes((13, 10)), b"\n")
+    return sha256_bytes(raw)
+
+
 def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -73,14 +84,14 @@ def validate_static_bundle() -> tuple[dict[str, Any], list[dict[str, Any]]]:
     checkpoint_provenance = load_json(CHECKPOINT_PROVENANCE_PATH)
     if manifest["source_sha256"] != sha256_path(SOURCE_PATH):
         raise PilotBlocked("DATASET_DIGEST_MISMATCH")
-    if manifest["prompt_contract"]["sha256"] != sha256_path(PROMPT_CONTRACT_PATH):
+    if manifest["prompt_contract"]["sha256"] != sha256_lf_path(PROMPT_CONTRACT_PATH):
         raise PilotBlocked("PROMPT_CONTRACT_DIGEST_MISMATCH")
     evaluator = manifest["evaluator"]
     evaluator_dir = ROOT / "data/official_benchmarks/evaluators/lm-evaluation-harness/mbpp"
     parts = []
     for name in ("mbpp.yaml", "utils.py"):
         path = evaluator_dir / name
-        parts.append(name.encode() + b"\0" + path.read_bytes())
+        parts.append(name.encode() + b"\0" + path.read_bytes().replace(bytes((13, 10)), b"\n"))
     if evaluator["bundle_sha256"] != sha256_bytes(b"\0".join(parts)):
         raise PilotBlocked("EVALUATOR_BUNDLE_DIGEST_MISMATCH")
     if manifest["checkpoint_provenance_artifact"] != str(CHECKPOINT_PROVENANCE_PATH.relative_to(ROOT)).replace("\\", "/"):
