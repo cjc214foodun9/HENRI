@@ -454,7 +454,9 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                 if egress is not None:
                     goal_real = (goal_wave.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0).to("cuda")
                     snapped_text, snapped_idx, snap_sim = egress.decode_wave(goal_real)
-                    response = snapped_text
+                    # Codebook entries are raw code; present fenced so the shared
+                    # extract_code_blocks contract applies unchanged.
+                    response = "```python\n" + snapped_text + "\n```"
                     telemetry = {"snap_idx": int(snapped_idx), "snap_sim": round(float(snap_sim), 4), "snap_source": "exemplar_codebook"}
                 else:
                     response, telemetry = transducer.decode_wave_to_response(goal_wave, prompt, w_task=w_task_vector)
