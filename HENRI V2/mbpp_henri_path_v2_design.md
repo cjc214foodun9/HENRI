@@ -139,3 +139,22 @@ identical rings == 0.0). Suite 157 passed / 1 skipped.
 
 This bug suppressed adaptation in BOTH C1 (run4) and C2 (run5); the SGLD designs
 were correct but starved of gradient. run6 re-runs C2 with the fix.
+
+## run6 Result (2026-08-01, commit 7e980fa)
+
+Mechanism-level: FIX VERIFIED.
+- mean_phase_mismatch 0.0124 -> 1.571 rad (theoretical pi/2 for independent rings)
+- mean_gap_junction_isolation 0.037 -> 0.888 (gradient flows)
+- loss 10.111 -> 10.063 (descent restored; run5 ascended)
+- sagnac_dist_final 0.118 -> 0.058 (phase-alignment distance halved)
+- exec_errors 62/57 -> 48 (marginal improvement in candidate AST validity)
+
+External: 452 attempted, 0 passed, 48 exec_errors -> score_eligible false.
+ENTROPY proxy caveat: logit entropy still rises (9.984 -> 10.088) while CE descends;
+the linear head broadens to cover p_target rather than peaking (capacity effect).
+CE descent is the valid alignment evidence; entropy is not a valid MI proxy here.
+
+Verdict: C2 mechanism is CORRECTED and learning. 0-pass is now a CAPACITY finding:
+the linear egress head (down_proj 65536->2048 -> lm_head 32000) cannot compose
+novel Python functions from exemplar alignment; adaptation only aligns known
+exemplar pairs. Next direction (C3) is a capacity decision, not an SGLD tuning.
