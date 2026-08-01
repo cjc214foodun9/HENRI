@@ -280,7 +280,7 @@ def blocked_bundle(manifest: dict[str, Any], output_dir: Path, reason: str, chec
     return evidence
 
 
-def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False) -> dict[str, Any]:
+def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False, sandbox_mode: str = "namespace") -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=False)
     try:
         manifest, items = validate_static_bundle()
@@ -300,9 +300,12 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
         if FALLBACK_SOURCE_MARKER in DECODER_PATH.read_text(encoding="utf-8"):
             return {"status": "BLOCKED", "reason": "DECODER_FALLBACK_PATH_PRESENT", "evidence": blocked_bundle(manifest, output_dir, "DECODER_FALLBACK_PATH_PRESENT", "FAILED_MODEL_PATH_PREFLIGHT")}
         try:
-            sandbox = SecurePythonSandbox()
+            sandbox = SecurePythonSandbox(mode=sandbox_mode)
         except SandboxUnavailable as exc:
             return {"status": "BLOCKED", "reason": str(exc), "evidence": blocked_bundle(manifest, output_dir, str(exc), "BLOCKED_PREFLIGHT")}
+        probe_result = sandbox.execute("print(41 + 1)")
+        if probe_result.status != "PASS":
+            return {"status": "BLOCKED", "reason": f"SANDBOX_PROBE_FAILED:{probe_result.status}:{probe_result.stderr.strip()[:200]}", "evidence": blocked_bundle(manifest, output_dir, f"SANDBOX_PROBE_FAILED:{probe_result.status}", "BLOCKED_PREFLIGHT")}
         if preflight_only:
             return {"status": "PREFLIGHT_PASS", "reason": "STATIC_AND_SANDBOX_PREFLIGHT_ONLY", "checkpoint_sha256": checkpoint_sha}
 
@@ -381,7 +384,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             raw_stdout_sha=sha256_path(output_dir / "raw_stdout.jsonl"),
             raw_stderr_sha=sha256_path(output_dir / "raw_stderr.jsonl"),
             item_results_sha=sha256_path(output_dir / "item_results.jsonl"),
-            limitations=f"Public MBPP operational holdout; elapsed_sec={elapsed:.6f}",
+            limitations=f"Public MBPP operational holdout; sandbox_mode={sandbox_mode}; elapsed_sec={elapsed:.6f}",
         )
         registry = make_registry(manifest, evaluated=True)
         eligible, reasons = validate_score_eligibility(evidence, registry, minimum_items=500)
@@ -401,8 +404,9 @@ def main() -> int:
     parser.add_argument("--checkpoint", type=Path, default=ROOT / "models/henri_decoder_checkpoint.pt")
     parser.add_argument("--scan-root", type=Path, default=ROOT)
     parser.add_argument("--preflight-only", action="store_true")
+    parser.add_argument("--sandbox-mode", choices=["namespace", "container-rlimit"], default="namespace")
     args = parser.parse_args()
-    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only)
+    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only, args.sandbox_mode)
     print(json.dumps({"status": result["status"], "reason": result.get("reason"), "score_eligible": result.get("score_eligible", False)}, sort_keys=True))
     return 0 if result["status"] in {"OBSERVED", "PREFLIGHT_PASS", "BLOCKED"} else 1
 
