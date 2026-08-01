@@ -80,6 +80,17 @@ def load_items() -> list[dict[str, Any]]:
     return items
 
 
+def _mean_logit_entropy(transducer: Any, waves: "list[Any]") -> float:
+    """Mean softmax logit entropy (nats) over wave states. INTERNAL telemetry only."""
+    with torch.no_grad():
+        total = 0.0
+        for w in waves:
+            logits = transducer.unbinder(w.unsqueeze(0))
+            p = torch.softmax(logits.float(), dim=-1)
+            total += float(-(p * torch.log(p + 1e-12)).sum(dim=-1).mean().item())
+        return total / max(1, len(waves))
+
+
 def load_exemplars() -> list[dict[str, Any]]:
     """Load the paper-sanctioned few-shot exemplars (task_id 1..10).
 
@@ -312,7 +323,7 @@ def blocked_bundle(manifest: dict[str, Any], output_dir: Path, reason: str, chec
     return evidence
 
 
-def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False, sandbox_mode: str = "namespace", egress_path: str = "henri") -> dict[str, Any]:
+def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False, sandbox_mode: str = "namespace", egress_path: str = "henri", sgld_adapt: bool = False) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=False)
     try:
         manifest, items = validate_static_bundle(egress_path)
@@ -365,9 +376,42 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                 for ex in exemplars
             ]
             w_task_ring = task_compiler.compile_functor(demo_pairs)
-            w_task_vector = (w_task_ring.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0).to("cuda")
-        stdout_records = []
-        stderr_records = []
+            w_task_vector = (
+                w_task_ring.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
+            ).to("cuda")
+            adapt_telemetry = None
+            if sgld_adapt:
+                demo_waves = [codec.encode_text(render_prompt(ex)) for ex in exemplars]
+                target_waves = [codec.encode_text(ex["code"]) for ex in exemplars]
+                # Fixed bootstrap labels: pre-adaptation argmax token of each solution wave.
+                # No tokenizer exists in the transducer; the CE term aligns active-wave
+                # projection with the model's own solution-wave representation (snapshot).
+                with torch.no_grad():
+                    demo_token_ids = [
+                        int(transducer.unbinder(w.unsqueeze(0)).argmax(dim=-1).item())
+                        for w in target_waves
+                    ]
+                distinct_labels = len(set(demo_token_ids))
+                probe_waves = [codec.encode_text(render_prompt(it)) for it in items[:10]]
+                ent_demo_before = _mean_logit_entropy(transducer, demo_waves)
+                ent_probe_before = _mean_logit_entropy(transducer, probe_waves)
+                adapt_result = transducer.adapt_in_context(demo_waves, target_waves, demo_token_ids)
+                ent_demo_after = _mean_logit_entropy(transducer, demo_waves)
+                ent_probe_after = _mean_logit_entropy(transducer, probe_waves)
+                adapt_telemetry = {
+                    "sgld_steps_per_pair": 2,
+                    "demo_token_ids": demo_token_ids,
+                    "distinct_bootstrap_labels": distinct_labels,
+                    "logit_entropy_nats_demo_before": round(ent_demo_before, 6),
+                    "logit_entropy_nats_demo_after": round(ent_demo_after, 6),
+                    "logit_entropy_nats_probe_before": round(ent_probe_before, 6),
+                    "logit_entropy_nats_probe_after": round(ent_probe_after, 6),
+                }
+                adapt_telemetry.update(adapt_result)
+        else:
+            adapt_telemetry = None
+            if sgld_adapt:
+                raise PilotBlocked("SGLD_ADAPT_REQUIRES_HENRI_EGRESS")
         item_records = []
         started = time.perf_counter()
         passed = 0
@@ -430,13 +474,15 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
         write_jsonl(output_dir / "raw_stdout.jsonl", stdout_records)
         write_jsonl(output_dir / "raw_stderr.jsonl", stderr_records)
         write_jsonl(output_dir / "item_results.jsonl", item_records)
+        if adapt_telemetry is not None:
+            (output_dir / "adapt_telemetry.json").write_text(json.dumps(adapt_telemetry, indent=2), encoding="utf-8")
         evidence = build_evidence(
             manifest, output_dir, "OBSERVED", "LOADED", checkpoint_sha,
             attempted=passed + failed, passed=passed, failed=failed, execution_errors=execution_errors,
             raw_stdout_sha=sha256_path(output_dir / "raw_stdout.jsonl"),
             raw_stderr_sha=sha256_path(output_dir / "raw_stderr.jsonl"),
             item_results_sha=sha256_path(output_dir / "item_results.jsonl"),
-            limitations=f"Public MBPP operational holdout; egress_path={egress_path}; sandbox_mode={sandbox_mode}; elapsed_sec={elapsed:.6f}",
+            limitations=f"Public MBPP operational holdout; egress_path={egress_path}; sgld_adapt={sgld_adapt}; sandbox_mode={sandbox_mode}; elapsed_sec={elapsed:.6f}",
         )
         registry = make_registry(manifest, evaluated=True)
         eligible, reasons = validate_score_eligibility(evidence, registry, minimum_items=500)
@@ -458,8 +504,9 @@ def main() -> int:
     parser.add_argument("--preflight-only", action="store_true")
     parser.add_argument("--sandbox-mode", choices=["namespace", "container-rlimit"], default="namespace")
     parser.add_argument("--egress-path", choices=["legacy", "henri"], default="henri")
+    parser.add_argument("--sgld-adapt", action="store_true", help="test-time SGLD unbinder adaptation on the 10 exemplars (henri path only)")
     args = parser.parse_args()
-    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only, args.sandbox_mode, args.egress_path)
+    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only, args.sandbox_mode, args.egress_path, args.sgld_adapt)
     print(json.dumps({"status": result["status"], "reason": result.get("reason"), "score_eligible": result.get("score_eligible", False)}, sort_keys=True))
     return 0 if result["status"] in {"OBSERVED", "PREFLIGHT_PASS", "BLOCKED"} else 1
 

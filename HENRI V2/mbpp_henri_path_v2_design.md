@@ -76,3 +76,19 @@ schema, score-eligibility rule (execution errors block promotion).
 Local suite -> commit -> push -> remote preflight (henri path) -> full 500-item
 run (container-rlimit sandbox) -> telemetry pull -> sync to
 G:\My Drive\HENRI_Telemetry\mbpp_run3.
+
+## C1: SGLD In-Context Adaptation Experiment (2026-08-01)
+
+Mechanism: test-time `adapt_in_context` on the 10 sanctioned exemplars (steps=2/pair, AdamW lr=1e-3, Bingham yield sigma=0.05, TAME gap-junction isolation, Cholesky retraction), then decode the 500 test items with W_task as run3.
+
+Label rule: `demo_token_ids = argmax(unbinder(Psi_Yi))` computed pre-adaptation (fixed snapshot; no tokenizer in the transducer). The CE term aligns active-wave projection with the model's own solution-wave representation.
+
+INTERNAL telemetry (never a task score): logit entropy (nats) on demo + 10 probe waves before/after; adapt_loss; yield_events; distinct_bootstrap_labels.
+EXTERNAL telemetry: pass count vs run3.
+
+Pre-registered criteria:
+- PASS: yield_events > 0, distinct_bootstrap_labels >= 3, AND pass delta > 0 vs run3.
+- INERT (valid negative): adaptation executes but entropy unchanged AND 0 passes -> shipped adapt_in_context is insufficient; next step = 500-step scheduled SGLD (T(t) = T0*(1+0.05t)^-0.55, L = CE + 0.25*Delta_Sagnac) per the training protocol.
+- BLOCKED: any gate failure.
+
+Recorded deviation: shipped `adapt_in_context_sgld` injects UNNORMALIZED Langevin noise (randn_like, D^1/2 norm inflation) instead of the skill invariant `F.normalize(randn(D))`; noted, not fixed in this change (one bounded change).
