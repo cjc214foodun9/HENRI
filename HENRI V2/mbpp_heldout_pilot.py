@@ -471,7 +471,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                         edmd_predictor(pw.view(8192, 8), w_task_real.view(8192, 8)).view(-1)
                         for pw in pred_waves_real
                     ]
-                cegis_probe = synth.probe_self_selection(self_preds)
+                cegis_probe = synth.probe_self_selection(self_preds, prompt_waves=pred_waves_real)
                 if cegis_probe["hit_rate"] < CEGIS_PROBE_MIN_HIT:
                     raise PilotBlocked(
                         f"CEGIS_SELECTION_INERT:hit_rate={cegis_probe['hit_rate']} "
@@ -556,7 +556,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                         # signature, rank by predicted-wave similarity, and
                         # verify in the sandbox against the item's tests.
                         cands = synth.build_candidates(prompt)
-                        ranked = synth.rank_candidates(cands, pred_wave)
+                        ranked = synth.rank_candidates(cands, pred_wave, prompt_wave=prompt_wave_real)
                         code, meta = synth.cegis_verify(ranked, item, sandbox)
                         if code is None:
                             raise RuntimeError(f"CEGIS_NO_CANDIDATE_PASSED:attempts={meta['candidates_tried']}")

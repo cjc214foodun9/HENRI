@@ -132,14 +132,26 @@ class MbppCegisSynthesizer:
 
     def rank_candidates(
         self, candidates: list[tuple[str, dict[str, Any]]], pred_wave: torch.Tensor,
+        prompt_wave: Optional[torch.Tensor] = None,
     ) -> list[tuple[str, dict[str, Any], float]]:
-        """Rank candidates by cosine similarity of their encoded wave to the
-        R-EDMD predicted solution wave."""
+        """Rank candidates by cosine similarity to the R-EDMD predicted solution
+        wave. When prompt_wave is provided, rank by TRANSFORMATION similarity:
+        cos(cand - prompt, pred - prompt) — subtracts the shared prompt
+        component so the holographic manifold blend cannot mask the correct
+        solution family (run11: CEGIS_SELECTION_INERT)."""
         scored = []
         pn = torch.nn.functional.normalize(pred_wave.view(-1).to(torch.float32), p=2, dim=0)
+        qn = None
+        if prompt_wave is not None:
+            pn = torch.nn.functional.normalize(
+                (pred_wave.view(-1).to(torch.float32) - prompt_wave.view(-1).to(torch.float32)), p=2, dim=0)
+            qn = torch.nn.functional.normalize(prompt_wave.view(-1).to(torch.float32), p=2, dim=0)
         for src, meta in candidates:
             ring = self.codec.encode_text(src).to(torch.float32) / (self.codec.k_bins - 1) * 2.0 - 1.0
-            v = torch.nn.functional.normalize(ring.view(-1).to(self.device), p=2, dim=0)
+            v = ring.view(-1).to(self.device)
+            if qn is not None:
+                v = v - torch.nn.functional.normalize(qn, p=2, dim=0) * torch.dot(v, qn).clamp(min=0.0)
+            v = torch.nn.functional.normalize(v, p=2, dim=0)
             sim = float(torch.dot(v, pn).item())
             scored.append((src, meta, sim))
         scored.sort(key=lambda t: t[2], reverse=True)
@@ -167,7 +179,7 @@ class MbppCegisSynthesizer:
         return None, {"candidates_tried": attempted, "cegis": False}
 
     def probe_self_selection(
-        self, pred_waves: list[torch.Tensor],
+        self, pred_waves: list[torch.Tensor], prompt_waves: Optional[list[torch.Tensor]] = None,
     ) -> dict[str, Any]:
         """Kill gate on the exemplars only: for each exemplar, does the
         predicted wave rank the true solution in the top-K among distractors?
@@ -178,9 +190,9 @@ class MbppCegisSynthesizer:
             true_src = ex["code"]
             # candidate set = all exemplar solutions renamed to this item's
             # signature (the true solution appears with identity rename)
-            fake_item = {"text": true_src, "test_list": []}
             cands = self.build_candidates(true_src)
-            scored = self.rank_candidates(cands, pred)
+            pw = prompt_waves[k] if prompt_waves is not None else None
+            scored = self.rank_candidates(cands, pred, prompt_wave=pw)
             true_rank = None
             for i, (src, meta, sim) in enumerate(scored):
                 if meta["anchor"] == int(ex["task_id"]) and meta["morphism"] == "identity":

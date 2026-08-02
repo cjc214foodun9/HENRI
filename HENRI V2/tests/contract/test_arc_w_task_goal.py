@@ -241,6 +241,34 @@ def test_cegis_verify_returns_none_when_nothing_passes():
     assert meta["cegis"] is False
 
 
+def test_cegis_transformation_ranking_resists_manifold_blend():
+    """run11 diagnosis: the R-EDMD prediction is a holographic blend in the
+    exemplar manifold. With prompt-relative (transformation) ranking, the true
+    solution must win even when the predicted wave blends it with a distractor."""
+    from mbpp_cegis_synthesizer import MbppCegisSynthesizer
+    from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
+    import torch
+    codec = qFHRREpistemicCodec(d_model=2048, k_bins=256, device="cpu")
+    exs = [
+        {"task_id": 1, "code": "def f1(x):\n    return [i * 2 for i in x]"},
+        {"task_id": 2, "code": "def f2(x):\n    return sum(x)"},
+        {"task_id": 3, "code": "def f3(x):\n    return sorted(x, reverse=True)"},
+    ]
+    synth = MbppCegisSynthesizer(exs, codec, device="cpu")
+    prompt = "def solve(x):\n    pass\n"
+    cands = synth.build_candidates(prompt)
+    prompt_wave = codec.encode_text(prompt).to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
+    true_src = "def solve(x):\n    return sorted(x, reverse=True)"
+    distractor_src = "def solve(x):\n    return sum(x)"
+    def _real(src):
+        return codec.encode_text(src).to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
+    # blend: 0.8 true + 0.2 distractor (holographic superposition)
+    pred_blend = 0.8 * torch.nn.functional.normalize(_real(true_src).view(-1), p=2, dim=0) + \
+                 0.2 * torch.nn.functional.normalize(_real(distractor_src).view(-1), p=2, dim=0)
+    ranked = synth.rank_candidates(cands, pred_blend, prompt_wave=prompt_wave.view(-1))
+    assert ranked[0][0] == true_src, f"blend top candidate {ranked[0][0]!r} != true"
+
+
 def test_w_task_retrieval_captures_consistent_rule():
     codec = qFHRREpistemicCodec(d_model=1024, k_bins=256, device="cpu")
     comp = HolographicTaskFunctorCompiler(codec)
