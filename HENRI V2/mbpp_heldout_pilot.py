@@ -507,7 +507,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                         f"CEGIS_SELECTION_INERT:hit_rate={cegis_probe['hit_rate']} "
                         f"< {CEGIS_PROBE_MIN_HIT}")
                 print(f"  [cegis] probe hit_rate={cegis_probe['hit_rate']} "
-                      f"top_ranks={cegis_probe['top_ranks']}")
+                      f"top_ranks={cegis_probe.get('top_ranks')}")
             adapt_telemetry = None
             if sgld_adapt:
                 try:
@@ -715,7 +715,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
         return {"status": "BLOCKED", "reason": str(exc), "evidence": evidence}
     except Exception as exc:
         manifest = load_json(MANIFEST_PATH)
-        evidence = blocked_bundle(manifest, output_dir, f"UNHANDLED_RUN_ERROR:{type(exc).__name__}:{exc}", "BLOCKED_PILOT")
+        evidence = blocked_bundle(manifest, output_dir, f"UNHANDLED_RUN_ERROR:{type(exc).__name__}:{exc}", "BLOCKED_PREFLIGHT")
         return {"status": "BLOCKED", "reason": f"UNHANDLED_RUN_ERROR:{type(exc).__name__}:{exc}", "evidence": evidence}
 
 
