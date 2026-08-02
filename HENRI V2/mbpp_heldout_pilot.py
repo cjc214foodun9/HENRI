@@ -606,8 +606,10 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                         ranked = synth.rank_candidates(cands, pred_wave, prompt_wave=prompt_wave_real)
                         code, meta = synth.cegis_verify(ranked, item, sandbox, escalate=ast_decode)
                         if code is None:
-                            raise CandidateMissError(
+                            exc = CandidateMissError(
                                 f"CEGIS_NO_CANDIDATE_PASSED:attempts={meta['candidates_tried']}")
+                            exc.meta = meta  # full inner-loop observability (run16)
+                            raise exc
                         response = "```python\n" + code + "\n```"
                         telemetry = {**meta, "egress": "cegis_ast_synth",
                                      "edmd_sim_max": round(edmd_sim_max, 4)}
@@ -670,7 +672,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                     "pass": False,
                     "failure_reason": f"CEGIS_MISS:{exc}",
                     "runtime_ms": None,
-                    "telemetry": {},
+                    "telemetry": getattr(exc, "meta", {}),  # run16: preserve inner-loop meta
                 })
             except torch.cuda.OutOfMemoryError:
                 raise

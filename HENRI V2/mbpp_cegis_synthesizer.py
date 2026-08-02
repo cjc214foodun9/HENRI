@@ -219,8 +219,9 @@ class MbppCegisSynthesizer:
                 except Exception:
                     continue
                 if result.status == "PASS":
+                    body = src.splitlines()[1].strip() if len(src.splitlines()) > 1 else src
                     return src, {"candidates_tried": attempted, "winner_sim": round(sim, 4),
-                                 "cegis": True, "cegis_escalated": escalated}
+                                 "cegis": True, "cegis_escalated": escalated, "body": body}
             if not escalate:
                 break
             escalated = True
