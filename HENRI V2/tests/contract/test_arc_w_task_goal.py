@@ -76,6 +76,47 @@ def test_text_egress_hopfield_snap_retrieval():
     assert float(sim) > 0.9
 
 
+def test_recursive_edmd_kill_gate_mechanics():
+    """c3-next kill-test mechanics at reduced dim: the online R-EDMD operator
+    must (a) beat the identity operator on exemplar self-prediction when a
+    transformation is learnable (the pilot's gate), and (b) generalize
+    leave-one-out better on a structured map than on random targets."""
+    from recursive_dual_edmd import RecursiveDualEDMD
+    d, r, n = 128, 16, 8
+    torch.manual_seed(11)
+    edmd = RecursiveDualEDMD(d_model=d, r_rank=r)
+    edmd_id = RecursiveDualEDMD(d_model=d, r_rank=r)
+    w0 = torch.nn.functional.normalize(torch.randn(d), dim=0)
+    xs = torch.nn.functional.normalize(torch.randn(n, d), dim=-1)
+    a = torch.zeros(d)
+    ys = torch.nn.functional.normalize(0.7 * xs + 0.3 * w0, dim=-1)  # structured attractor map
+    ys_rand = torch.nn.functional.normalize(torch.randn(n, d), dim=-1)
+    for i in range(n):
+        edmd.update_online_step(xs[i], a, ys[i])
+    def self_sim(pred, x_list, y_list):
+        sims = []
+        for x, y in zip(x_list, y_list):
+            p = pred(x, a)
+            sims.append(float(torch.dot(p, y).item()))
+        return sum(sims) / len(sims)
+    learned = self_sim(edmd, xs, ys)
+    identity = self_sim(edmd_id, xs, ys)
+    assert learned > identity + 0.02, f"gate: learned={learned:.4f} identity={identity:.4f}"
+    def loo_cv(targets):
+        holdout = []
+        for k in range(n):
+            m = RecursiveDualEDMD(d_model=d, r_rank=r)
+            for i in range(n):
+                if i != k:
+                    m.update_online_step(xs[i], a, targets[i])
+            p = m(xs[k], a)
+            holdout.append(float(torch.dot(p, targets[k]).item()))
+        return sum(holdout) / len(holdout)
+    loo_learned = loo_cv(ys)
+    loo_rand = loo_cv(ys_rand)
+    assert loo_learned > loo_rand + 0.05, f"loo: learned={loo_learned:.4f} random={loo_rand:.4f}"
+
+
 def test_w_task_retrieval_captures_consistent_rule():
     codec = qFHRREpistemicCodec(d_model=1024, k_bins=256, device="cpu")
     comp = HolographicTaskFunctorCompiler(codec)

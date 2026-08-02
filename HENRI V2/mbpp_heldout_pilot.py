@@ -36,6 +36,12 @@ DECODER_PATH = ROOT / "henri_decoder.py"
 
 CODE_BLOCK_RE = re.compile(r"```(?:\w+)?\n?(.*?)\n?```", re.DOTALL)
 FALLBACK_MARKER = "def solution():\n    return True"
+
+# c3-next R-EDMD latent composition gate: the online operator must beat the
+# identity operator (A=I, no updates) on exemplar self-prediction by this
+# margin (dimension-normalized; at r=16/d=65536 the identity baseline sits at
+# ~sqrt(r/d) ~ 0.0156 cosine, so a 0.02 margin = a strong learned signal).
+EDMD_PREDICT_MIN_IMPROVEMENT = float(os.environ.get("EDMD_PREDICT_MIN_IMPROVEMENT", "0.02"))
 FALLBACK_SOURCE_MARKER = r"def solution():\n    return True"
 
 
@@ -323,7 +329,7 @@ def blocked_bundle(manifest: dict[str, Any], output_dir: Path, reason: str, chec
     return evidence
 
 
-def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False, sandbox_mode: str = "namespace", egress_path: str = "henri", sgld_adapt: bool = False, hopfield_snap: bool = False) -> dict[str, Any]:
+def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False, sandbox_mode: str = "namespace", egress_path: str = "henri", sgld_adapt: bool = False, hopfield_snap: bool = False, edmd_predict: bool = False) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=False)
     try:
         manifest, items = validate_static_bundle(egress_path)
@@ -383,15 +389,63 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             # C3 remembering probe: UniversalEgress Hopfield codebook over the
             # exemplar solution waves. When enabled, the W_task goal wave snaps
             # to the nearest exemplar solution (zero-entropy retrieval, beta=8.0)
-            # instead of passing through the linear decode head.
-            if hopfield_snap:
+            # instead of passing through the linear decode head. The c3-next
+            # R-EDMD composition path also snaps (from the PREDICTED wave).
+            sol_waves_real = None
+            pred_waves_real = None
+            if hopfield_snap or edmd_predict:
                 from henri_egress import TextEgress
                 egress = TextEgress(d_model=65536, beta=8.0)
-                sol_waves = torch.stack([
-                    (codec.encode_text(ex["code"]).to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0)
+                sol_waves_real = [
+                    (codec.encode_text(ex["code"]).to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0).view(-1).to("cuda")
                     for ex in exemplars
-                ])
-                egress.register_tokens(sol_waves, [ex["code"] for ex in exemplars])
+                ]
+                egress.register_tokens(torch.stack(sol_waves_real), [ex["code"] for ex in exemplars])
+            # c3-next: R-EDMD latent composition (WaveJEPA p_psi operator).
+            # Fit ONLINE from the exemplar pairs: (prompt wave + W_task action)
+            # -> solution wave. Zero pretraining. Kill probe: the learned operator
+            # must BEAT the identity operator (A=I) on exemplar self-prediction
+            # by a dimension-normalized margin; otherwise fail closed.
+            edmd_predictor = None
+            edmd_telemetry = None
+            if edmd_predict:
+                from recursive_dual_edmd import RecursiveDualEDMD
+                pred_waves_real = [
+                    (codec.encode_text(render_prompt(ex)).to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0).view(-1).to("cuda")
+                    for ex in exemplars
+                ]
+                w_task_real = (
+                    w_task_ring.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
+                ).view(-1).to("cuda")
+                edmd_predictor = RecursiveDualEDMD(d_model=65536, r_rank=16, lambda_forget=0.98).to("cuda")
+                with torch.no_grad():
+                    for pw, sw in zip(pred_waves_real, sol_waves_real):
+                        edmd_predictor.update_online_step(
+                            pw.view(8192, 8), w_task_real.view(8192, 8), sw.view(8192, 8))
+                    # identity baseline (A=I, no updates)
+                    edmd_identity = RecursiveDualEDMD(d_model=65536, r_rank=16, lambda_forget=0.98).to("cuda")
+                    def _self_sim(pred):
+                        sims = []
+                        for pw, sw in zip(pred_waves_real, sol_waves_real):
+                            p = pred(pw.view(8192, 8), w_task_real.view(8192, 8)).view(-1)
+                            sims.append(float(torch.dot(
+                                torch.nn.functional.normalize(p, p=2, dim=0),
+                                torch.nn.functional.normalize(sw, p=2, dim=0)).item()))
+                        return float(sum(sims) / len(sims))
+                    self_sim_learned = _self_sim(edmd_predictor)
+                    self_sim_identity = _self_sim(edmd_identity)
+                improvement = self_sim_learned - self_sim_identity
+                edmd_telemetry = {
+                    "self_sim_learned": round(self_sim_learned, 6),
+                    "self_sim_identity": round(self_sim_identity, 6),
+                    "improvement": round(improvement, 6),
+                }
+                if improvement < EDMD_PREDICT_MIN_IMPROVEMENT:
+                    raise PilotBlocked(
+                        f"EDMD_PREDICTOR_UNDERFIT:improvement={improvement:.6f} "
+                        f"< min={EDMD_PREDICT_MIN_IMPROVEMENT}")
+                print(f"  [edmd] r=16 online fit | self_sim_learned={self_sim_learned:.4f} "
+                      f"identity={self_sim_identity:.4f} improvement={improvement:.4f}")
             adapt_telemetry = None
             if sgld_adapt:
                 try:
@@ -451,7 +505,24 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                     task_operator = codec.encode_text("MBPP_CODING_OPERATOR")
                     goal_wave = codec.bind_hadamard(task_operator, prompt_wave)
                     w_task_vector = None
-                if egress is not None:
+                if edmd_predictor is not None:
+                    # c3-next: COMPOSE the answer via latent prediction instead of
+                    # retrieval. The R-EDMD operator (fitted online from the 10
+                    # exemplars) predicts the solution wave from (prompt + W_task).
+                    prompt_wave_real = (prompt_wave.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0).view(-1).to("cuda")
+                    pred_wave = edmd_predictor(
+                        prompt_wave_real.view(8192, 8), w_task_real.view(8192, 8)).view(-1)
+                    edmd_sims = [
+                        float(torch.dot(torch.nn.functional.normalize(pred_wave, p=2, dim=0),
+                                        torch.nn.functional.normalize(sw, p=2, dim=0)).item())
+                        for sw in sol_waves_real
+                    ]
+                    edmd_sim_max = max(edmd_sims) if edmd_sims else 0.0
+                    snapped_text, snapped_idx, snap_sim = egress.decode_wave(pred_wave)
+                    response = "```python\n" + snapped_text + "\n```"
+                    telemetry = {"snap_idx": int(snapped_idx), "snap_sim": round(float(snap_sim), 4),
+                                 "snap_source": "edmd_predicted", "edmd_sim_max": round(edmd_sim_max, 4)}
+                elif egress is not None:
                     goal_real = (goal_wave.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0).to("cuda")
                     snapped_text, snapped_idx, snap_sim = egress.decode_wave(goal_real)
                     # Codebook entries are raw code; present fenced so the shared
@@ -514,7 +585,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             raw_stdout_sha=sha256_path(output_dir / "raw_stdout.jsonl"),
             raw_stderr_sha=sha256_path(output_dir / "raw_stderr.jsonl"),
             item_results_sha=sha256_path(output_dir / "item_results.jsonl"),
-            limitations=f"Public MBPP operational holdout; egress_path={egress_path}; sgld_adapt={sgld_adapt}; hopfield_snap={hopfield_snap}; sandbox_mode={sandbox_mode}; elapsed_sec={elapsed:.6f}",
+            limitations=f"Public MBPP operational holdout; egress_path={egress_path}; sgld_adapt={sgld_adapt}; hopfield_snap={hopfield_snap}; edmd_predict={edmd_predict}; sandbox_mode={sandbox_mode}; elapsed_sec={elapsed:.6f}",
         )
         registry = make_registry(manifest, evaluated=True)
         eligible, reasons = validate_score_eligibility(evidence, registry, minimum_items=500)
@@ -542,8 +613,9 @@ def main() -> int:
     parser.add_argument("--egress-path", choices=["legacy", "henri"], default="henri")
     parser.add_argument("--sgld-adapt", action="store_true", help="test-time SGLD unbinder adaptation on the 10 exemplars (henri path only)")
     parser.add_argument("--hopfield-snap", action="store_true", help="UniversalEgress remembering probe: snap the W_task goal wave to the nearest exemplar solution in a Hopfield codebook (henri path only)")
+    parser.add_argument("--edmd-predict", action="store_true", help="compose the answer via online R-EDMD latent prediction from the exemplars (c3-next; implies hopfield-snap egress)")
     args = parser.parse_args()
-    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only, args.sandbox_mode, args.egress_path, args.sgld_adapt, args.hopfield_snap)
+    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only, args.sandbox_mode, args.egress_path, args.sgld_adapt, args.hopfield_snap, args.edmd_predict)
     print(json.dumps({"status": result["status"], "reason": result.get("reason"), "score_eligible": result.get("score_eligible", False)}, sort_keys=True))
     return 0 if result["status"] in {"OBSERVED", "PREFLIGHT_PASS", "BLOCKED"} else 1
 
