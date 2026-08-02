@@ -392,8 +392,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             # instead of passing through the linear decode head. The c3-next
             # R-EDMD composition path also snaps (from the PREDICTED wave).
             sol_waves_real = None
-            pred_waves_real = None
-            if hopfield_snap or edmd_predict:
+            if hopfield_snap:
                 from henri_egress import TextEgress
                 egress = TextEgress(d_model=65536, beta=8.0)
                 sol_waves_real = [
@@ -412,6 +411,10 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                 from recursive_dual_edmd import RecursiveDualEDMD
                 pred_waves_real = [
                     (codec.encode_text(render_prompt(ex)).to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0).view(-1).to("cuda")
+                    for ex in exemplars
+                ]
+                sol_waves_real = [
+                    (codec.encode_text(ex["code"]).to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0).view(-1).to("cuda")
                     for ex in exemplars
                 ]
                 w_task_real = (
@@ -528,10 +531,19 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                         for sw in sol_waves_real
                     ]
                     edmd_sim_max = max(edmd_sims) if edmd_sims else 0.0
-                    snapped_text, snapped_idx, snap_sim = egress.decode_wave(pred_wave)
-                    response = "```python\n" + snapped_text + "\n```"
-                    telemetry = {"snap_idx": int(snapped_idx), "snap_sim": round(float(snap_sim), 4),
-                                 "snap_source": "edmd_predicted", "edmd_sim_max": round(edmd_sim_max, 4)}
+                    if egress is not None:
+                        # remember: snap the PREDICTED wave to the exemplar codebook
+                        snapped_text, snapped_idx, snap_sim = egress.decode_wave(pred_wave)
+                        response = "```python\n" + snapped_text + "\n```"
+                        telemetry = {"snap_idx": int(snapped_idx), "snap_sim": round(float(snap_sim), 4),
+                                     "snap_source": "edmd_predicted", "edmd_sim_max": round(edmd_sim_max, 4)}
+                    else:
+                        # compose + decode: map the predicted REAL wave back to a
+                        # ring and pass it through the linear decode head.
+                        pred_ring = ((pred_wave.clamp(-1, 1) + 1.0) / 2.0 * (codec.k_bins - 1)).round().clamp(0, codec.k_bins - 1).to(torch.uint8)
+                        response, telemetry = transducer.decode_wave_to_response(pred_ring, prompt, w_task=w_task_vector)
+                        telemetry = dict(telemetry or {})
+                        telemetry.update({"egress": "linear_decode_from_edmd", "edmd_sim_max": round(edmd_sim_max, 4)})
                 elif egress is not None:
                     goal_real = (goal_wave.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0).to("cuda")
                     snapped_text, snapped_idx, snap_sim = egress.decode_wave(goal_real)
