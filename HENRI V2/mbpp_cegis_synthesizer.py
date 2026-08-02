@@ -28,6 +28,12 @@ import torch
 CEGIS_MAX_ATTEMPTS = int(__import__("os").environ.get("CEGIS_MAX_ATTEMPTS", "12"))
 CEGIS_PROBE_TOP_K = int(__import__("os").environ.get("CEGIS_PROBE_TOP_K", "5"))
 CEGIS_PROBE_MIN_HIT = float(__import__("os").environ.get("CEGIS_PROBE_MIN_HIT", "0.5"))
+
+
+class CandidateMissError(RuntimeError):
+    """A genuine synthesis miss: the CEGIS search ran the item's real sandbox
+    tests and no candidate passed. Task-level FAIL, NOT an execution error —
+    it must not block score eligibility."""
 _WRAPPERS = [
     ("identity", lambda s: s),
     ("list", lambda s: f"list({s})"),

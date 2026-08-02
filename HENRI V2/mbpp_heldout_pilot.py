@@ -365,6 +365,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             return {"status": "BLOCKED", "reason": "CUDA_REQUIRED", "evidence": blocked_bundle(manifest, output_dir, "CUDA_REQUIRED", "LOADED")}
         from henri_decoder import HENRIUnifiedEgressTransducer
         from zone_c_epistemic_axiom_harness import HolographicTaskFunctorCompiler, qFHRREpistemicCodec
+        from mbpp_cegis_synthesizer import CandidateMissError
 
         transducer = HENRIUnifiedEgressTransducer(d_model=65536, device="cuda", checkpoint_path=str(checkpoint_path))
         codec = qFHRREpistemicCodec(d_model=65536, device="cuda")
@@ -559,7 +560,8 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                         ranked = synth.rank_candidates(cands, pred_wave, prompt_wave=prompt_wave_real)
                         code, meta = synth.cegis_verify(ranked, item, sandbox)
                         if code is None:
-                            raise RuntimeError(f"CEGIS_NO_CANDIDATE_PASSED:attempts={meta['candidates_tried']}")
+                            raise CandidateMissError(
+                                f"CEGIS_NO_CANDIDATE_PASSED:attempts={meta['candidates_tried']}")
                         response = "```python\n" + code + "\n```"
                         telemetry = {**meta, "egress": "cegis_ast_synth",
                                      "edmd_sim_max": round(edmd_sim_max, 4)}
@@ -604,6 +606,25 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                     "failure_reason": None if is_pass else result.status,
                     "runtime_ms": result.runtime_ms,
                     "telemetry": telemetry,
+                })
+            except CandidateMissError as exc:
+                # A genuine synthesis miss: the CEGIS search ran the item's
+                # real sandbox tests and no candidate passed. Task-level FAIL
+                # (the mechanism executed); it must not block score eligibility.
+                failed += 1
+                stdout_records.append({"task_id": task_id, "stdout": ""})
+                stderr_records.append({"task_id": task_id, "stderr": str(exc)})
+                item_records.append({
+                    "task_id": task_id,
+                    "split": "test",
+                    "source_sha256": manifest["source_sha256"],
+                    "rendered_prompt_sha256": sha256_bytes(prompt.encode()),
+                    "model_output_sha256": None,
+                    "postprocessed_output_sha256": None,
+                    "pass": False,
+                    "failure_reason": f"CEGIS_MISS:{exc}",
+                    "runtime_ms": None,
+                    "telemetry": {},
                 })
             except torch.cuda.OutOfMemoryError:
                 raise
