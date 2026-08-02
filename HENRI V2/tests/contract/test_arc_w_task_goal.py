@@ -147,10 +147,13 @@ def test_recursive_edmd_manifold_basis_captures_transition():
 
 
 def test_cegis_parse_entry_signature():
-    from mbpp_cegis_synthesizer import parse_entry_signature
+    from mbpp_cegis_synthesizer import parse_entry_from_tests, parse_entry_signature
     assert parse_entry_signature("def add_binary(a, b):\n    pass\n") == ("add_binary", ["a", "b"])
     assert parse_entry_signature("no def here") is None
     assert parse_entry_signature("def f(x, y, z):\n    return x") == ("f", ["x", "y", "z"])
+    # MBPP prompts have no def line: signature comes from the test calls
+    assert parse_entry_from_tests(["assert small_nnum([5, 6], 1) == [5]"]) == ("small_nnum", ["a0", "a1"])
+    assert parse_entry_from_tests(["assert is_not_prime(2) == False"]) == ("is_not_prime", ["a0"])
 
 
 def test_cegis_build_candidates_renames_args_and_wraps():
@@ -160,13 +163,14 @@ def test_cegis_build_candidates_renames_args_and_wraps():
     ex = [{"task_id": 1, "code": "def small_nnum(list1, n):\n    return list1[:n]"}]
     codec = qFHRREpistemicCodec(d_model=1024, k_bins=256, device="cpu")
     synth = MbppCegisSynthesizer(ex, codec, device="cpu")
-    cands = synth.build_candidates("def k_smallest(lst, k):\n    pass\n")
+    # no def line in the prompt: signature must come from the test list
+    cands = synth.build_candidates("Write a function to get the k smallest.\n", ["assert k_smallest([5, 6, 1], 2) == [1, 5]"])
     assert len(cands) == 5  # identity + 4 wrappers
     sources = [c[0] for c in cands]
-    assert "def k_smallest(lst, k):" in sources[0]
-    assert "lst[:k]" in sources[0]
-    assert "return list(lst[:k])" in sources[1]
-    assert "return sorted(lst[:k])" in sources[3]
+    assert "def k_smallest(a0, a1):" in sources[0]
+    assert "a0[:a1]" in sources[0]
+    assert "return list(a0[:a1])" in sources[1]
+    assert "return sorted(a0[:a1])" in sources[3]
     for s in sources:
         import ast
         ast.parse(s)  # every candidate is syntax-valid

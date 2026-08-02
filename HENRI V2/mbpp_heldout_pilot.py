@@ -556,7 +556,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                         # exemplar-anchored candidates under the item's
                         # signature, rank by predicted-wave similarity, and
                         # verify in the sandbox against the item's tests.
-                        cands = synth.build_candidates(prompt)
+                        cands = synth.build_candidates(prompt, item.get("test_list"))
                         ranked = synth.rank_candidates(cands, pred_wave, prompt_wave=prompt_wave_real)
                         code, meta = synth.cegis_verify(ranked, item, sandbox)
                         if code is None:

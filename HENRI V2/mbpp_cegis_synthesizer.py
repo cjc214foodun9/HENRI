@@ -59,6 +59,21 @@ def parse_entry_signature(prompt: str) -> Optional[tuple[str, list[str]]]:
     return None
 
 
+def parse_entry_from_tests(test_list: list[str]) -> Optional[tuple[str, list[str]]]:
+    """Extract (entry_name, generic_arg_names) from the first assert call in the
+    item's test list. MBPP prompts contain no def line; the model must generate
+    the signature, and positional calls make arg names free (generic a0..an)."""
+    for t in test_list:
+        try:
+            tree = ast.parse(t)
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                return node.func.id, [f"a{i}" for i in range(len(node.args))]
+    return None
+
+
 class _RenameArgs(ast.NodeTransformer):
     """Rename the function name and positional args of an exemplar solution to
     the target item's signature. Positional mapping: exemplar args -> target
@@ -102,10 +117,16 @@ class MbppCegisSynthesizer:
                 raise ValueError(f"exemplar {ex.get('task_id')} has no parseable signature")
             self._parsed.append(sig)
 
-    def build_candidates(self, prompt: str) -> list[tuple[str, dict[str, Any]]]:
-        """Instantiate exemplar solutions under the item's rendered prompt
-        signature + bounded return-wrapper morphisms."""
+    def build_candidates(
+        self, prompt: str, test_list: Optional[list[str]] = None,
+    ) -> list[tuple[str, dict[str, Any]]]:
+        """Instantiate exemplar solutions under the item's signature + bounded
+        return-wrapper morphisms. The signature comes from the rendered prompt
+        def line when present, else from the item's test calls (MBPP prompts
+        contain no def line; arg names are free because calls are positional)."""
         sig = parse_entry_signature(prompt)
+        if sig is None and test_list:
+            sig = parse_entry_from_tests(test_list)
         if sig is None:
             return []
         entry, tgt_args = sig
