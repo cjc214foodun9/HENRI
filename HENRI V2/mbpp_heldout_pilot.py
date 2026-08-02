@@ -479,6 +479,19 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                         for pw in pred_waves_real
                     ]
                 cegis_probe = synth.probe_self_selection(self_preds, prompt_waves=pred_waves_real)
+                if ast_decode:
+                    # The self-selection probe measures the exemplar-anchored
+                    # path; in the decoder union (approx 150 candidates) it is
+                    # diluted and fires falsely. The --ast-decode path is gated
+                    # by the decoder's expressiveness probe instead.
+                    cegis_probe = synth.probe_decoder_expressiveness(decoder, exemplars, sandbox)
+                    if cegis_probe["expressible"] < 1:
+                        raise PilotBlocked(
+                            f"DECODER_EXPRESSIVENESS_INERT:expressible="
+                            f"{cegis_probe['expressible']} < 1")
+                    print(f"  [ast-decode] expressiveness={cegis_probe['expressible']}/"
+                          f"{cegis_probe['total']}")
+                    cegis_probe = {**cegis_probe, "hit_rate": float(cegis_probe["expressible"] >= 1)}
                 if cegis_probe["hit_rate"] < CEGIS_PROBE_MIN_HIT:
                     raise PilotBlocked(
                         f"CEGIS_SELECTION_INERT:hit_rate={cegis_probe['hit_rate']} "

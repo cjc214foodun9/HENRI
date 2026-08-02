@@ -60,7 +60,6 @@ class WaveASTDecoder:
         self.codec = codec
         self.device = device
         self._op_waves = {op: self._wave(op) for op in OPS}
-        self._shape_waves = {"return", "listcomp"}
 
     def _wave(self, text: str) -> torch.Tensor:
         ring = self.codec.encode_text(text).to(torch.float32)
@@ -113,26 +112,53 @@ class WaveASTDecoder:
         wrap_scores = [(w, self._score(self._wave(w), pn)) for w, _ in WRAPPERS]
         wrap_scores.sort(key=lambda t: t[1], reverse=True)
         top_wraps = [w for w, _ in wrap_scores[:DECODE_TOP_WRAPPERS]]
-        # enumerate the pruned grammar + shape
+        # enumerate the pruned grammar + shape. Minimal set: every selector
+        # under the top ops (identity wrapper) so selector-scoring noise cannot
+        # kill expressiveness; wrapper variants under the top-2 selectors.
         candidates: list[tuple[str, dict[str, Any]]] = []
-        for shape in self._shape_waves:
-            for op in top_ops:
-                for sel in top_sels:
-                    inner = f"{op}({sel})"
-                    for wname, wrap in WRAPPERS:
-                        if wname not in top_wraps and wname != "identity":
-                            continue
-                        expr = wrap(inner)
-                        if shape == "listcomp" and op in ("identity", "list"):
-                            expr = f"[x for x in {sel}]"
-                        body = f"return {expr}"
-                        src = f"def {entry}({', '.join(args)}):\n    {body}"
-                        try:
-                            ast.parse(src)
-                        except SyntaxError:
-                            continue
-                        candidates.append((src, {"decoder": True, "op": op, "selector": sel,
-                                                 "wrapper": wname, "shape": shape}))
+        for op in top_ops:
+            for sel in sels:
+                inner = f"{op}({sel})"
+                for wname, wrap in WRAPPERS:
+                    if wname != "identity":
+                        continue
+                    expr = wrap(inner)
+                    body = f"return {expr}"
+                    src = f"def {entry}({', '.join(args)}):\n    {body}"
+                    try:
+                        ast.parse(src)
+                    except SyntaxError:
+                        continue
+                    candidates.append((src, {"decoder": True, "op": op, "selector": sel,
+                                             "wrapper": wname, "shape": "return"}))
+        for op in top_ops:
+            for sel in top_sels:
+                inner = f"{op}({sel})"
+                for wname, wrap in WRAPPERS:
+                    if wname not in top_wraps or wname == "identity":
+                        continue
+                    expr = wrap(inner)
+                    body = f"return {expr}"
+                    src = f"def {entry}({', '.join(args)}):\n    {body}"
+                    try:
+                        ast.parse(src)
+                    except SyntaxError:
+                        continue
+                    candidates.append((src, {"decoder": True, "op": op, "selector": sel,
+                                             "wrapper": wname, "shape": "return"}))
+        # list-comprehension shape: the list op over the top selectors
+        for op in top_ops:
+            if op != "list":
+                continue
+            for sel in top_sels:
+                expr = f"[x for x in {sel}]"
+                src = f"def {entry}({', '.join(args)}):\n    return {expr}"
+                try:
+                    ast.parse(src)
+                except SyntaxError:
+                    continue
+                candidates.append((src, {"decoder": True, "op": op, "selector": sel,
+                                         "wrapper": "identity", "shape": "listcomp"}))
         # rank by full transformation-relative wave similarity
         scored = []
         for src, meta in candidates:

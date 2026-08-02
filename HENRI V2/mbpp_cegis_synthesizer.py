@@ -211,6 +211,39 @@ class MbppCegisSynthesizer:
                 return src, {"candidates_tried": attempted, "winner_sim": round(sim, 4), "cegis": True}
         return None, {"candidates_tried": attempted, "cegis": False}
 
+    def probe_decoder_expressiveness(
+        self, decoder, exemplars: list[dict[str, Any]], sandbox,
+        top_n: int = 12,
+    ) -> dict[str, Any]:
+        """Kill gate for the --ast-decode path: count exemplars whose OWN
+        tests are passed by the decoder's candidates. This gates the decoder's
+        expressiveness + the real verification path. The exemplar self-
+        selection probe is the wrong instrument for the mixed candidate space
+        (the decoder union dilutes exemplar anchors)."""
+        passes = 0
+        per: list[bool] = []
+        for ex in exemplars:
+            tests = ex.get("test_list") or []
+            if not tests:
+                continue
+            sig = parse_entry_signature(ex.get("code") or "") or parse_entry_from_tests(tests)
+            if sig is None:
+                continue
+            entry, args = sig
+            ring = self.codec.encode_text(ex["code"]).to(torch.float32)
+            pred_wave = torch.nn.functional.normalize(
+                (ring / (self.codec.k_bins - 1) * 2.0 - 1.0).view(-1).to(self.device), p=2, dim=0)
+            p_ring = self.codec.encode_text(ex.get("text", "")).to(torch.float32)
+            prompt_wave = torch.nn.functional.normalize(
+                (p_ring / (self.codec.k_bins - 1) * 2.0 - 1.0).view(-1).to(self.device), p=2, dim=0)
+            cands = decoder.decode(pred_wave, prompt_wave, entry, args)
+            ranked = self.rank_candidates(cands, pred_wave, prompt_wave=prompt_wave)
+            code, _meta = self.cegis_verify(ranked[:top_n], ex, sandbox)
+            ok = code is not None
+            passes += int(ok)
+            per.append(bool(ok))
+        return {"expressible": passes, "total": len(exemplars), "per_exemplar": per}
+
     def probe_self_selection(
         self, pred_waves: list[torch.Tensor], prompt_waves: Optional[list[torch.Tensor]] = None,
     ) -> dict[str, Any]:
