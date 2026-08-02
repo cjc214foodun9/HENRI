@@ -132,8 +132,15 @@ def load_boundary_axioms(
             raise BoundaryAxiomLoadError(
                 f"{aid}: stored num_blocks {stored_blocks} != {num_blocks}")
         wave = decode_wave_payload(bytes(payload), num_blocks)
+        # pgvector columns may be returned as a bracketed string ("[a,b,...]")
+        if isinstance(sem_index, str):
+            import json
+            sem_index = json.loads(sem_index)
         sem_t = torch.as_tensor(
             np.asarray(sem_index, dtype=np.float32)) if not torch.is_tensor(sem_index) else sem_index
+        if sem_t.numel() != 2000:
+            raise BoundaryAxiomLoadError(
+                f"{aid}: semantic projection dim {sem_t.numel()} != 2000")
         summ = verify_wave_integrity(wave, sem_t)
         summaries.append({"axiom_id": aid, "axiom_kind": kind, **summ})
         waves.append(wave)
