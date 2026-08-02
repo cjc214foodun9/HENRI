@@ -52,6 +52,77 @@ EXPRS_CONST = [
     "{a} * 2", "len({a}) + 1",
 ]
 
+# ---- multi-statement body templates (bounded; each complete + parseable) ----
+# {entry} is the item's function name (needed by the recursion shape).
+IFELSE_CONDS = [
+    "{a} > {b}", "{a} < {b}", "{a} == {b}", "{a} >= {b}",
+    "len({a}) < len({b})", "len({a}) > len({b})",
+]
+IFELSE_BRANCHES = [
+    ("{a}", "{b}"),
+    ("sorted({a})", "sorted({b})"),
+    ("sum({a})", "sum({b})"),
+    ("len({a})", "len({b})"),
+]
+LOOP_APPENDS = [
+    "x", "x ** 2", "len(x)", "x[0] if x else None",
+]
+LOOP_SUMS = ["x", "x ** 2"]
+COUNT_CONDS = ["x > 0", "x < 0", "x % 2 == 0"]
+
+
+def _ifelse_bodies(a: str, b: str) -> list[str]:
+    out = []
+    for cond in IFELSE_CONDS:
+        for br1, br2 in IFELSE_BRANCHES:
+            out.append(
+                f"    if {cond.format(a=a, b=b)}:\n"
+                f"        return {br1.format(a=a, b=b)}\n"
+                f"    return {br2.format(a=a, b=b)}")
+    return out
+
+
+def _loop_bodies(a: str) -> list[str]:
+    out = []
+    for expr in LOOP_APPENDS:
+        out.append(
+            f"    result = []\n"
+            f"    for x in {a}:\n"
+            f"        result.append({expr})\n"
+            f"    return result")
+    for expr in LOOP_SUMS:
+        out.append(
+            f"    t = 0\n"
+            f"    for x in {a}:\n"
+            f"        t += {expr}\n"
+            f"    return t")
+    for cond in COUNT_CONDS:
+        out.append(
+            f"    c = 0\n"
+            f"    for x in {a}:\n"
+            f"        if {cond}:\n"
+            f"            c += 1\n"
+            f"    return c")
+    return out
+
+
+def _recursive_bodies(a: str, entry: str) -> list[str]:
+    return [
+        f"    if {a} <= 1:\n        return {a}\n"
+        f"    return {a} * {entry}({a} - 1)",
+        f"    if {a} == 0:\n        return 1\n"
+        f"    return {a} * {entry}({a} - 1)",
+    ]
+
+
+def _index_bodies(a: str, b: str) -> list[str]:
+    return [
+        f"    for i in range(len({a})):\n"
+        f"        if {a}[i] == {b}:\n"
+        f"            return i\n"
+        f"    return -1",
+    ]
+
 
 class WaveASTDecoder:
     """Grammar-enumerating wave-guided AST decoder (single-return programs)."""
@@ -66,36 +137,43 @@ class WaveASTDecoder:
             (ring / (self.codec.k_bins - 1) * 2.0 - 1.0).view(-1).to(self.device), p=2, dim=0)
 
     def _instantiate(self, entry: str, args: list[str]) -> list[str]:
-        """Return expression strings for the item's signature (arity-aware)."""
-        exprs: list[str] = []
+        """Return BODY strings (already indented) for the item's signature."""
+        bodies: list[str] = []
         if len(args) >= 2:
             a0, a1 = args[0], args[1]
             for t in EXPRS_UNARY:
-                exprs.append(t.format(a=a0))
-                exprs.append(t.format(a=a1))
+                bodies.append(f"    return {t.format(a=a0)}")
+                bodies.append(f"    return {t.format(a=a1)}")
             for t in EXPRS_BINARY:
-                exprs.append(t.format(a=a0, b=a1))
+                bodies.append(f"    return {t.format(a=a0, b=a1)}")
             for t in EXPRS_UNARY_COMP:
-                exprs.append(t.format(a=a0))
+                bodies.append(f"    return {t.format(a=a0)}")
             for t in EXPRS_CONST:
-                exprs.append(t.format(a=a0))
+                bodies.append(f"    return {t.format(a=a0)}")
+            bodies.extend(_ifelse_bodies(a0, a1))
+            bodies.extend(_loop_bodies(a0))
+            bodies.extend(_loop_bodies(a1))
+            bodies.extend(_recursive_bodies(a0, entry))
+            bodies.extend(_index_bodies(a0, a1))
         elif len(args) == 1:
             a0 = args[0]
             for t in EXPRS_UNARY:
-                exprs.append(t.format(a=a0))
+                bodies.append(f"    return {t.format(a=a0)}")
             for t in EXPRS_UNARY_COMP:
-                exprs.append(t.format(a=a0))
+                bodies.append(f"    return {t.format(a=a0)}")
             for t in EXPRS_CONST:
-                exprs.append(t.format(a=a0))
+                bodies.append(f"    return {t.format(a=a0)}")
+            bodies.extend(_loop_bodies(a0))
+            bodies.extend(_recursive_bodies(a0, entry))
         else:
             return []
         # dedupe, preserve order
         seen: set[str] = set()
         out: list[str] = []
-        for e in exprs:
-            if e not in seen:
-                seen.add(e)
-                out.append(e)
+        for b in bodies:
+            if b not in seen:
+                seen.add(b)
+                out.append(b)
         return out
 
     def decode(
@@ -110,13 +188,13 @@ class WaveASTDecoder:
             pred_wave.view(-1).to(torch.float32) - prompt_wave, p=2, dim=0)
 
         candidates: list[tuple[str, dict[str, Any]]] = []
-        for expr in self._instantiate(entry, args):
-            src = f"def {entry}({', '.join(args)}):\n    return {expr}"
+        for body in self._instantiate(entry, args):
+            src = f"def {entry}({', '.join(args)}):\n{body}"
             try:
                 ast.parse(src)
             except SyntaxError:
                 continue
-            candidates.append((src, {"decoder": True, "expr": expr}))
+            candidates.append((src, {"decoder": True, "body": body.splitlines()[0].strip()}))
 
         scored = []
         for src, meta in candidates:
