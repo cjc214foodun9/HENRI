@@ -70,12 +70,20 @@ def canonical_signature(code: str) -> tuple[str, list[str]]:
     return fn.name, [a.arg for a in fn.args.args]
 
 
-def canonical_key(code: str, entry: str, args: list[str]) -> Optional[str]:
+def canonical_key(code: str, entry: str) -> Optional[str]:
     """Deterministic structural key of the canonical solution after
-    stripping the docstring and renaming args to the item signature.
+    stripping the docstring and renaming the canonical's OWN positional
+    args to a0..aN.
 
-    Returns None when the canonical does not parse (should not happen
-    for official MBPP items)."""
+    FIX (2026-08-02, post-run17): the old version took `args` from
+    parse_entry_signature, which ALREADY renames args to a0/a1/a2; the
+    rename map then became identity and descriptive canonical names
+    (l, b, h, M, s) were never renamed -> false COVERAGE_MISS on every
+    such item. The key now derives the map from the canonical's own
+    signature, making the comparison invariant to both the item
+    signature parser and the grammar's aN convention.
+
+    Returns None when the canonical does not parse."""
     try:
         tree = ast.parse(code)
     except SyntaxError:
@@ -85,7 +93,8 @@ def canonical_key(code: str, entry: str, args: list[str]) -> Optional[str]:
         isinstance(n, ast.Expr) and isinstance(n.value, ast.Constant)
         and isinstance(n.value.value, str))]
     fn.body = body
-    arg_map = {orig: new for orig, new in zip(args, [f"a{i}" for i in range(len(args))])}
+    orig = [a.arg for a in fn.args.args]
+    arg_map = {orig[i]: f"a{i}" for i in range(len(orig))}
     tree = _RenameArgs(fn.name, entry, arg_map).visit(tree)
     return ast.dump(tree)
 
@@ -180,7 +189,7 @@ def probe_item(
         return {"task_id": task_id, "classification": "SIG_UNAVAILABLE",
                 "rank": None, "n_candidates": len(ranked), "true_score": None,
                 "rank1_score": None, "rank1_body": None}
-    true_key = canonical_key(canon_code, entry, args)
+    true_key = canonical_key(canon_code, entry)
     if true_key is None:
         return {"task_id": task_id, "classification": "SIG_UNAVAILABLE",
                 "rank": None, "n_candidates": len(ranked), "true_score": None,

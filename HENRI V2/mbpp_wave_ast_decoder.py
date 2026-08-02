@@ -35,11 +35,18 @@ EXPRS_UNARY = [
     "list({a})", "tuple({a})", "set({a})", "reversed({a})", "abs({a})",
     "str({a})", "int({a})", "list(reversed({a}))", "sorted({a}, reverse=True)",
     "{a}[::-1]", "{a}[0]", "{a}[-1]",
+    # run18 Phase A (coverage audit: sorted-key 14, range 170, mean 8):
+    "sorted({a}, key=sum)", "sorted({a}, key=len)",
+    "sum(range({a}))", "list(range({a}))",
+    "max({a}) - min({a})", "sum({a}) / len({a})", "sum({a}) // len({a})",
 ]
 EXPRS_UNARY_COMP = [
     "[x for x in {a}]", "[x ** 2 for x in {a}]",
     "sum([x ** 2 for x in {a}])", "[len(x) for x in {a}]",
     "[x for x in {a} if x > 0]",
+    # run18 Phase A (comprehension count 100, string/len transforms):
+    "[x for x in {a} if x % 2 == 0]", "[x[0] for x in {a}]",
+    "len([x for x in {a} if x > 0])",
 ]
 EXPRS_BINARY = [
     "{a} + {b}", "{a} - {b}", "{a} * {b}", "{a} // {b}", "{a} % {b}",
@@ -47,10 +54,36 @@ EXPRS_BINARY = [
     "sorted({a} + {b})", "len({a}) + len({b})", "{a}.count({b})",
     "{a}.index({b})", "{a}[:{b}]", "{a}[{b}:]", "sorted({a})[:{b}]",
     "{a}[:len({b})]",
+    # run18 Phase A (max/min pair 30, int/ord conversion, zip 15):
+    "max({a}, {b})", "min({a}, {b})",
+    "int({a}) + int({b})", "ord({a}) + ord({b})",
+    "list(zip({a}, {b}))", "len(list(zip({a}, {b})))",
 ]
 EXPRS_CONST = [
     "int({a}, 2)", "int({a}, 16)", "{a} ** 2", "{a} + 1", "{a} - 1",
     "{a} * 2", "len({a}) + 1",
+]
+
+# ---- run18 Phase A: n-ary bodies (arity gap: 49x3, 8x4, 1x5, 1x6) ----
+# {c}=third arg, {d}=fourth arg. Bounded: arithmetic chains, min/max,
+# slices, and the measured find_Volume `/2` division shape.
+NARY_3 = [
+    "return {a} + {b} + {c}",
+    "return {a} * {b} * {c}",
+    "return ({a} * {b} * {c}) / 2",
+    "return ({a} * {b}) // {c}",
+    "return max({a}, {b}, {c})",
+    "return min({a}, {b}, {c})",
+    "return {a}[{b}:{c}]",
+    "return sorted({a})[{b}:{c}]",
+    "return {a}[:{b}] + {c}",
+    "return len({a}) + {b} + {c}",
+]
+NARY_4 = [
+    "return {a} + {b} + {c} + {d}",
+    "return {a} * {b} * {c} * {d}",
+    "return max({a}, {b}, {c}, {d})",
+    "return min({a}, {b}, {c}, {d})",
 ]
 
 # ---- multi-statement body templates (bounded; each complete + parseable) ----
@@ -140,7 +173,17 @@ class WaveASTDecoder:
     def _instantiate(self, entry: str, args: list[str]) -> list[str]:
         """Return BODY strings (already indented) for the item's signature."""
         bodies: list[str] = []
-        if len(args) >= 2:
+        if len(args) == 1:
+            a0 = args[0]
+            for t in EXPRS_UNARY:
+                bodies.append(f"    return {t.format(a=a0)}")
+            for t in EXPRS_UNARY_COMP:
+                bodies.append(f"    return {t.format(a=a0)}")
+            for t in EXPRS_CONST:
+                bodies.append(f"    return {t.format(a=a0)}")
+            bodies.extend(_loop_bodies(a0))
+            bodies.extend(_recursive_bodies(a0, entry))
+        elif len(args) == 2:
             a0, a1 = args[0], args[1]
             for t in EXPRS_UNARY:
                 bodies.append(f"    return {t.format(a=a0)}")
@@ -156,16 +199,23 @@ class WaveASTDecoder:
             bodies.extend(_loop_bodies(a1))
             bodies.extend(_recursive_bodies(a0, entry))
             bodies.extend(_index_bodies(a0, a1))
-        elif len(args) == 1:
-            a0 = args[0]
-            for t in EXPRS_UNARY:
-                bodies.append(f"    return {t.format(a=a0)}")
-            for t in EXPRS_UNARY_COMP:
-                bodies.append(f"    return {t.format(a=a0)}")
-            for t in EXPRS_CONST:
-                bodies.append(f"    return {t.format(a=a0)}")
-            bodies.extend(_loop_bodies(a0))
-            bodies.extend(_recursive_bodies(a0, entry))
+        elif len(args) == 3:
+            a0, a1, a2 = args
+            for t in NARY_3:
+                bodies.append(f"    {t.format(a=a0, b=a1, c=a2)}")
+        elif len(args) == 4:
+            a0, a1, a2, a3 = args
+            for t in NARY_4:
+                bodies.append(f"    {t.format(a=a0, b=a1, c=a2, d=a3)}")
+        elif len(args) >= 5:
+            # rare (1x5, 1x6): generic sum/product/min/max chains.
+            body_args = ", ".join(args)
+            chained_plus = " + ".join(args)
+            chained_mul = " * ".join(args)
+            bodies.append(f"    return {chained_plus}")
+            bodies.append(f"    return {chained_mul}")
+            bodies.append(f"    return max({body_args})")
+            bodies.append(f"    return min({body_args})")
         else:
             return []
         # dedupe, preserve order
