@@ -329,7 +329,7 @@ def blocked_bundle(manifest: dict[str, Any], output_dir: Path, reason: str, chec
     return evidence
 
 
-def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False, sandbox_mode: str = "namespace", egress_path: str = "henri", sgld_adapt: bool = False, hopfield_snap: bool = False, edmd_predict: bool = False, cegis_synth: bool = False) -> dict[str, Any]:
+def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False, sandbox_mode: str = "namespace", egress_path: str = "henri", sgld_adapt: bool = False, hopfield_snap: bool = False, edmd_predict: bool = False, cegis_synth: bool = False, ast_decode: bool = False) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=False)
     try:
         manifest, items = validate_static_bundle(egress_path)
@@ -410,8 +410,11 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             edmd_telemetry = None
             synth = None
             cegis_probe = None
-            if cegis_synth:
+            decoder = None
+            if cegis_synth or ast_decode:
                 edmd_predict = True  # CEGIS egress ranks candidates by the predicted wave
+            if ast_decode:
+                cegis_synth = True  # wave->AST decoder is a CEGIS candidate generator
             if edmd_predict:
                 from recursive_dual_edmd import RecursiveDualEDMD
                 pred_waves_real = [
@@ -467,6 +470,9 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             if cegis_synth:
                 from mbpp_cegis_synthesizer import CEGIS_PROBE_MIN_HIT, MbppCegisSynthesizer
                 synth = MbppCegisSynthesizer(exemplars, codec, device="cuda")
+                if ast_decode:
+                    from mbpp_wave_ast_decoder import WaveASTDecoder
+                    decoder = WaveASTDecoder(codec, device="cuda")
                 with torch.no_grad():
                     self_preds = [
                         edmd_predictor(pw.view(8192, 8), w_task_real.view(8192, 8)).view(-1)
@@ -557,6 +563,18 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                         # signature, rank by predicted-wave similarity, and
                         # verify in the sandbox against the item's tests.
                         cands = synth.build_candidates(prompt, item.get("test_list"))
+                        if ast_decode:
+                            # Wave->AST structural decode: score grammar slots
+                            # from the predicted wave, enumerate the pruned
+                            # grammar, then retain exemplar identity anchors so
+                            # the exemplar path is preserved in the union.
+                            from mbpp_cegis_synthesizer import parse_entry_from_tests, parse_entry_signature
+                            sig = parse_entry_signature(prompt) or parse_entry_from_tests(item.get("test_list") or [])
+                            if sig is not None:
+                                entry, args = sig
+                                dec_cands = decoder.decode(pred_wave, prompt_wave_real, entry, args)
+                                anchors = [c for c in cands if c[1].get("morphism") == "identity"]
+                                cands = dec_cands + anchors
                         ranked = synth.rank_candidates(cands, pred_wave, prompt_wave=prompt_wave_real)
                         code, meta = synth.cegis_verify(ranked, item, sandbox)
                         if code is None:
@@ -690,8 +708,9 @@ def main() -> int:
     parser.add_argument("--hopfield-snap", action="store_true", help="UniversalEgress remembering probe: snap the W_task goal wave to the nearest exemplar solution in a Hopfield codebook (henri path only)")
     parser.add_argument("--edmd-predict", action="store_true", help="compose the answer via online R-EDMD latent prediction from the exemplars (c3-next; implies hopfield-snap egress)")
     parser.add_argument("--cegis-synth", action="store_true", help="CEGIS/AST program synthesis egress: rank exemplar-anchored AST candidates by the R-EDMD predicted wave, verify in the sandbox (implies --edmd-predict)")
+    parser.add_argument("--ast-decode", action="store_true", help="Wave->AST structural decode egress: score a bounded AST grammar's slots from the predicted wave, enumerate the pruned grammar + exemplar identity anchors, CEGIS-verify (implies --cegis-synth)")
     args = parser.parse_args()
-    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only, args.sandbox_mode, args.egress_path, args.sgld_adapt, args.hopfield_snap, args.edmd_predict, args.cegis_synth)
+    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only, args.sandbox_mode, args.egress_path, args.sgld_adapt, args.hopfield_snap, args.edmd_predict, args.cegis_synth, args.ast_decode)
     print(json.dumps({"status": result["status"], "reason": result.get("reason"), "score_eligible": result.get("score_eligible", False)}, sort_keys=True))
     return 0 if result["status"] in {"OBSERVED", "PREFLIGHT_PASS", "BLOCKED"} else 1
 
