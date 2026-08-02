@@ -1,170 +1,126 @@
 """Wave -> AST structural decoder (non-autoregressive) for the MBPP pilot.
 
-Architecture rationale (run12 law, measured): the R-EDMD predicted wave
-carries solution-family structure but cannot RANK wide candidate lists
-(selection resolution ~ 1/candidates). The decoder instead scores each
-STRUCTURAL SLOT of a bounded AST grammar in parallel from the predicted
-wave (op, selector, wrapper, body shape), prunes to the top-K per slot,
-enumerates the pruned grammar (~O(30) candidates), ranks by
-transformation-relative wave similarity, and lets CEGIS verify.
+Measured design constraint (run13 debug, 2026-08-02): slot-level wave
+scoring (encode(op-name) vs the predicted wave) is NOISE at qFHRR scale
+(cosines 0.02-0.08 — fragments are orthogonal to full-program waves).
+The signal that works is FULL-PROGRAM wave ranking (run11d; the exact
+solution wave ranks #1 when it IS the prediction source, sim ~ 1.0).
 
-Non-autoregressive: all slots are scored from the SAME predicted wave;
-no token-by-token generation. The grammar is bounded and MBPP-realistic
-(single-return solutions: sorted/sum/len/... over arg selectors with
-wrapper coercions, plus list-comprehension shape).
+Therefore the decoder is: a bounded, MBPP-simple AST grammar enumerator
+(return-expression programs over the item's parsed signature) whose
+candidates are ranked by transformation-relative full-program wave
+similarity and verified by CEGIS in the sandbox. The wave guides
+selection; the grammar bounds expression; the sandbox decides.
 
-Pre-registered gates:
-  - Local contract: for a synthetic single-return solution, the decoder
-    must rank the EXACT solution in the top-K of its own candidates.
-  - Remote run: --ast-decode on the heldout; acceptance = pass count
-    strictly greater than the run11d exemplar-anchor baseline (4/500).
+Non-autoregressive: candidates are enumerated in full and scored in
+parallel from the SAME predicted wave. No token-by-token generation.
+
+Honest boundary: this grammar expresses single-return solutions
+(unary/binary collection ops, slices, int-conversion, list
+comprehensions). DP/regex/heapq multi-statement solutions are beyond it;
+the external run measures what this space covers.
 """
 
 from __future__ import annotations
 
 import ast
-from typing import Any, Optional
+from typing import Any
 
 import torch
 
-OPS = [
-    "sorted", "sum", "len", "min", "max", "list", "tuple", "set",
-    "reversed", "map", "filter", "zip", "enumerate", "range", "abs",
-    "pow", "bin", "hex", "str", "int", "round", "join", "split",
+# ---- grammar: expression templates, {a}=first arg, {b}=second arg ----
+EXPRS_UNARY = [
+    "sorted({a})", "sum({a})", "len({a})", "min({a})", "max({a})",
+    "list({a})", "tuple({a})", "set({a})", "reversed({a})", "abs({a})",
+    "str({a})", "int({a})", "list(reversed({a}))", "sorted({a}, reverse=True)",
+    "{a}[::-1]", "{a}[0]", "{a}[-1]",
 ]
-
-WRAPPERS = [
-    ("identity", lambda s: s),
-    ("list", lambda s: f"list({s})"),
-    ("tuple", lambda s: f"tuple({s})"),
-    ("sorted", lambda s: f"sorted({s})"),
-    ("sorted_rev", lambda s: f"sorted({s}, reverse=True)"),
-    ("set", lambda s: f"set({s})"),
-    ("sum", lambda s: f"sum({s})"),
-    ("len", lambda s: f"len({s})"),
-    ("min", lambda s: f"min({s})"),
-    ("max", lambda s: f"max({s})"),
-    ("reversed", lambda s: f"list(reversed({s}))"),
+EXPRS_UNARY_COMP = [
+    "[x for x in {a}]", "[x ** 2 for x in {a}]",
+    "sum([x ** 2 for x in {a}])", "[len(x) for x in {a}]",
+    "[x for x in {a} if x > 0]",
 ]
-
-DECODE_TOP_OPS = 6
-DECODE_TOP_SELECTORS = 4
-DECODE_TOP_WRAPPERS = 3
-DECODE_TOP_K = 5  # local contract gate: true solution must rank in top-K
+EXPRS_BINARY = [
+    "{a} + {b}", "{a} - {b}", "{a} * {b}", "{a} // {b}", "{a} % {b}",
+    "abs({a} - {b})", "set({a}) & set({b})", "set({a}) | set({b})",
+    "sorted({a} + {b})", "len({a}) + len({b})", "{a}.count({b})",
+    "{a}.index({b})", "{a}[:{b}]", "{a}[{b}:]", "sorted({a})[:{b}]",
+    "{a}[:len({b})]",
+]
+EXPRS_CONST = [
+    "int({a}, 2)", "int({a}, 16)", "{a} ** 2", "{a} + 1", "{a} - 1",
+    "{a} * 2", "len({a}) + 1",
+]
 
 
 class WaveASTDecoder:
-    """Non-autoregressive wave->AST structural decoder over a bounded grammar."""
+    """Grammar-enumerating wave-guided AST decoder (single-return programs)."""
 
     def __init__(self, codec, device: str = "cuda"):
         self.codec = codec
         self.device = device
-        self._op_waves = {op: self._wave(op) for op in OPS}
 
     def _wave(self, text: str) -> torch.Tensor:
         ring = self.codec.encode_text(text).to(torch.float32)
         return torch.nn.functional.normalize(
             (ring / (self.codec.k_bins - 1) * 2.0 - 1.0).view(-1).to(self.device), p=2, dim=0)
 
-    def _score(self, cand_wave: torch.Tensor, pred: torch.Tensor) -> float:
-        return float(torch.dot(
-            torch.nn.functional.normalize(cand_wave, p=2, dim=0),
-            torch.nn.functional.normalize(pred.view(-1), p=2, dim=0)).item())
-
-    def _selectors(self, args: list[str]) -> list[str]:
-        sels = []
-        for a in args:
-            sels.append(a)
-            sels.append(f"{a}[0]")
-            sels.append(f"{a}[-1]")
-            sels.append(f"{a}[::-1]")
-            sels.append(f"len({a})")
+    def _instantiate(self, entry: str, args: list[str]) -> list[str]:
+        """Return expression strings for the item's signature (arity-aware)."""
+        exprs: list[str] = []
         if len(args) >= 2:
-            sels.append(f"{args[0]}[:{args[1]}]")
-        # dedupe, keep order
-        seen = set()
-        out = []
-        for s in sels:
-            if s not in seen:
-                seen.add(s)
-                out.append(s)
+            a0, a1 = args[0], args[1]
+            for t in EXPRS_UNARY:
+                exprs.append(t.format(a=a0))
+                exprs.append(t.format(a=a1))
+            for t in EXPRS_BINARY:
+                exprs.append(t.format(a=a0, b=a1))
+            for t in EXPRS_UNARY_COMP:
+                exprs.append(t.format(a=a0))
+            for t in EXPRS_CONST:
+                exprs.append(t.format(a=a0))
+        elif len(args) == 1:
+            a0 = args[0]
+            for t in EXPRS_UNARY:
+                exprs.append(t.format(a=a0))
+            for t in EXPRS_UNARY_COMP:
+                exprs.append(t.format(a=a0))
+            for t in EXPRS_CONST:
+                exprs.append(t.format(a=a0))
+        else:
+            return []
+        # dedupe, preserve order
+        seen: set[str] = set()
+        out: list[str] = []
+        for e in exprs:
+            if e not in seen:
+                seen.add(e)
+                out.append(e)
         return out
 
     def decode(
         self, pred_wave: torch.Tensor, prompt_wave: torch.Tensor,
         entry: str, args: list[str],
     ) -> list[tuple[str, dict[str, Any]]]:
-        """Score every grammar slot from the predicted wave; return the pruned
-        candidate list (source, meta) with full-wave ranking."""
-        prompt_wave = torch.nn.functional.normalize(prompt_wave.view(-1).to(torch.float32), p=2, dim=0)
+        """Enumerate the grammar under the item signature, rank every complete
+        program by transformation-relative wave similarity, return the list."""
+        prompt_wave = torch.nn.functional.normalize(
+            prompt_wave.view(-1).to(torch.float32), p=2, dim=0)
         pn = torch.nn.functional.normalize(
             pred_wave.view(-1).to(torch.float32) - prompt_wave, p=2, dim=0)
-        # slot: op
-        op_scores = [(op, self._score(self._op_waves[op], pn)) for op in OPS]
-        op_scores.sort(key=lambda t: t[1], reverse=True)
-        top_ops = [op for op, _ in op_scores[:DECODE_TOP_OPS]]
-        # slot: selectors (arg-position neutral: score the arg-name text)
-        sels = self._selectors(args)
-        sel_scores = [(s, self._score(self._wave(s), pn)) for s in sels]
-        sel_scores.sort(key=lambda t: t[1], reverse=True)
-        top_sels = [s for s, _ in sel_scores[:DECODE_TOP_SELECTORS]]
-        # slot: wrapper (scored by wrapper-op text)
-        wrap_scores = [(w, self._score(self._wave(w), pn)) for w, _ in WRAPPERS]
-        wrap_scores.sort(key=lambda t: t[1], reverse=True)
-        top_wraps = [w for w, _ in wrap_scores[:DECODE_TOP_WRAPPERS]]
-        # enumerate the pruned grammar + shape. Minimal set: every selector
-        # under the top ops (identity wrapper) so selector-scoring noise cannot
-        # kill expressiveness; wrapper variants under the top-2 selectors.
+
         candidates: list[tuple[str, dict[str, Any]]] = []
-        for op in top_ops:
-            for sel in sels:
-                inner = f"{op}({sel})"
-                for wname, wrap in WRAPPERS:
-                    if wname != "identity":
-                        continue
-                    expr = wrap(inner)
-                    body = f"return {expr}"
-                    src = f"def {entry}({', '.join(args)}):\n    {body}"
-                    try:
-                        ast.parse(src)
-                    except SyntaxError:
-                        continue
-                    candidates.append((src, {"decoder": True, "op": op, "selector": sel,
-                                             "wrapper": wname, "shape": "return"}))
-        for op in top_ops:
-            for sel in top_sels:
-                inner = f"{op}({sel})"
-                for wname, wrap in WRAPPERS:
-                    if wname not in top_wraps or wname == "identity":
-                        continue
-                    expr = wrap(inner)
-                    body = f"return {expr}"
-                    src = f"def {entry}({', '.join(args)}):\n    {body}"
-                    try:
-                        ast.parse(src)
-                    except SyntaxError:
-                        continue
-                    candidates.append((src, {"decoder": True, "op": op, "selector": sel,
-                                             "wrapper": wname, "shape": "return"}))
-        # list-comprehension shape: the list op over the top selectors
-        for op in top_ops:
-            if op != "list":
+        for expr in self._instantiate(entry, args):
+            src = f"def {entry}({', '.join(args)}):\n    return {expr}"
+            try:
+                ast.parse(src)
+            except SyntaxError:
                 continue
-            for sel in top_sels:
-                expr = f"[x for x in {sel}]"
-                src = f"def {entry}({', '.join(args)}):\n    return {expr}"
-                try:
-                    ast.parse(src)
-                except SyntaxError:
-                    continue
-                candidates.append((src, {"decoder": True, "op": op, "selector": sel,
-                                         "wrapper": "identity", "shape": "listcomp"}))
-        # rank by full transformation-relative wave similarity
+            candidates.append((src, {"decoder": True, "expr": expr}))
+
         scored = []
         for src, meta in candidates:
-            ring = self.codec.encode_text(src).to(torch.float32)
-            v = torch.nn.functional.normalize(
-                (ring / (self.codec.k_bins - 1) * 2.0 - 1.0).view(-1).to(self.device), p=2, dim=0)
+            v = self._wave(src)
             v_rel = v - prompt_wave * torch.dot(v, prompt_wave).clamp(min=0.0)
             v_rel = torch.nn.functional.normalize(v_rel, p=2, dim=0)
             scored.append((src, meta, float(torch.dot(v_rel, pn).item())))

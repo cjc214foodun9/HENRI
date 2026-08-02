@@ -19,7 +19,7 @@ def _make_codec():
 
 
 def test_decoder_candidates_all_parse():
-    from mbpp_wave_ast_decoder import WaveASTDecoder, DECODE_TOP_K
+    from mbpp_wave_ast_decoder import WaveASTDecoder
     codec = _make_codec()
     dec = WaveASTDecoder(codec, device="cpu")
     pred = torch.nn.functional.normalize(
@@ -35,7 +35,8 @@ def test_decoder_candidates_all_parse():
 
 
 def test_decoder_ranks_exact_solution_top_k():
-    from mbpp_wave_ast_decoder import WaveASTDecoder, DECODE_TOP_K
+    from mbpp_wave_ast_decoder import WaveASTDecoder
+    TOP_K = 5
     codec = _make_codec()
     dec = WaveASTDecoder(codec, device="cpu")
     target = "def solve(x):\n    return sorted(x)"
@@ -52,7 +53,7 @@ def test_decoder_ranks_exact_solution_top_k():
     # must be able to EXPRESS the solution) and rank in the top-K.
     assert target in sources, "decoder cannot express the target solution"
     rank = sources.index(target)
-    assert rank < DECODE_TOP_K, f"exact solution ranked {rank} (top-K={DECODE_TOP_K})"
+    assert rank < TOP_K, f"exact solution ranked {rank} (top-K={TOP_K})"
 
 
 def test_decoder_signature_rename():
