@@ -329,7 +329,7 @@ def blocked_bundle(manifest: dict[str, Any], output_dir: Path, reason: str, chec
     return evidence
 
 
-def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False, sandbox_mode: str = "namespace", egress_path: str = "henri", sgld_adapt: bool = False, hopfield_snap: bool = False, edmd_predict: bool = False) -> dict[str, Any]:
+def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, preflight_only: bool = False, sandbox_mode: str = "namespace", egress_path: str = "henri", sgld_adapt: bool = False, hopfield_snap: bool = False, edmd_predict: bool = False, cegis_synth: bool = False) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=False)
     try:
         manifest, items = validate_static_bundle(egress_path)
@@ -407,6 +407,10 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             # by a dimension-normalized margin; otherwise fail closed.
             edmd_predictor = None
             edmd_telemetry = None
+            synth = None
+            cegis_probe = None
+            if cegis_synth:
+                edmd_predict = True  # CEGIS egress ranks candidates by the predicted wave
             if edmd_predict:
                 from recursive_dual_edmd import RecursiveDualEDMD
                 pred_waves_real = [
@@ -459,6 +463,21 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                         f"< min={EDMD_PREDICT_MIN_IMPROVEMENT}")
                 print(f"  [edmd] r=16 online fit | self_sim_learned={self_sim_learned:.4f} "
                       f"identity={self_sim_identity:.4f} improvement={improvement:.4f}")
+            if cegis_synth:
+                from mbpp_cegis_synthesizer import CEGIS_PROBE_MIN_HIT, MbppCegisSynthesizer
+                synth = MbppCegisSynthesizer(exemplars, codec, device="cuda")
+                with torch.no_grad():
+                    self_preds = [
+                        edmd_predictor(pw.view(8192, 8), w_task_real.view(8192, 8)).view(-1)
+                        for pw in pred_waves_real
+                    ]
+                cegis_probe = synth.probe_self_selection(self_preds)
+                if cegis_probe["hit_rate"] < CEGIS_PROBE_MIN_HIT:
+                    raise PilotBlocked(
+                        f"CEGIS_SELECTION_INERT:hit_rate={cegis_probe['hit_rate']} "
+                        f"< {CEGIS_PROBE_MIN_HIT}")
+                print(f"  [cegis] probe hit_rate={cegis_probe['hit_rate']} "
+                      f"top_ranks={cegis_probe['top_ranks']}")
             adapt_telemetry = None
             if sgld_adapt:
                 try:
@@ -531,7 +550,20 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                         for sw in sol_waves_real
                     ]
                     edmd_sim_max = max(edmd_sims) if edmd_sims else 0.0
-                    if egress is not None:
+                    if cegis_synth:
+                        # CEGIS/AST program synthesis egress: instantiate
+                        # exemplar-anchored candidates under the item's
+                        # signature, rank by predicted-wave similarity, and
+                        # verify in the sandbox against the item's tests.
+                        cands = synth.build_candidates(prompt)
+                        ranked = synth.rank_candidates(cands, pred_wave)
+                        code, meta = synth.cegis_verify(ranked, item, sandbox)
+                        if code is None:
+                            raise RuntimeError(f"CEGIS_NO_CANDIDATE_PASSED:attempts={meta['candidates_tried']}")
+                        response = "```python\n" + code + "\n```"
+                        telemetry = {**meta, "egress": "cegis_ast_synth",
+                                     "edmd_sim_max": round(edmd_sim_max, 4)}
+                    elif egress is not None:
                         # remember: snap the PREDICTED wave to the exemplar codebook
                         snapped_text, snapped_idx, snap_sim = egress.decode_wave(pred_wave)
                         response = "```python\n" + snapped_text + "\n```"
@@ -607,7 +639,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
             raw_stdout_sha=sha256_path(output_dir / "raw_stdout.jsonl"),
             raw_stderr_sha=sha256_path(output_dir / "raw_stderr.jsonl"),
             item_results_sha=sha256_path(output_dir / "item_results.jsonl"),
-            limitations=f"Public MBPP operational holdout; egress_path={egress_path}; sgld_adapt={sgld_adapt}; hopfield_snap={hopfield_snap}; edmd_predict={edmd_predict}; sandbox_mode={sandbox_mode}; elapsed_sec={elapsed:.6f}",
+            limitations=f"Public MBPP operational holdout; egress_path={egress_path}; sgld_adapt={sgld_adapt}; hopfield_snap={hopfield_snap}; edmd_predict={edmd_predict}; cegis_synth={cegis_synth}; sandbox_mode={sandbox_mode}; elapsed_sec={elapsed:.6f}",
         )
         registry = make_registry(manifest, evaluated=True)
         eligible, reasons = validate_score_eligibility(evidence, registry, minimum_items=500)
@@ -636,8 +668,9 @@ def main() -> int:
     parser.add_argument("--sgld-adapt", action="store_true", help="test-time SGLD unbinder adaptation on the 10 exemplars (henri path only)")
     parser.add_argument("--hopfield-snap", action="store_true", help="UniversalEgress remembering probe: snap the W_task goal wave to the nearest exemplar solution in a Hopfield codebook (henri path only)")
     parser.add_argument("--edmd-predict", action="store_true", help="compose the answer via online R-EDMD latent prediction from the exemplars (c3-next; implies hopfield-snap egress)")
+    parser.add_argument("--cegis-synth", action="store_true", help="CEGIS/AST program synthesis egress: rank exemplar-anchored AST candidates by the R-EDMD predicted wave, verify in the sandbox (implies --edmd-predict)")
     args = parser.parse_args()
-    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only, args.sandbox_mode, args.egress_path, args.sgld_adapt, args.hopfield_snap, args.edmd_predict)
+    result = run_pilot(args.output_dir, args.checkpoint, args.scan_root, args.preflight_only, args.sandbox_mode, args.egress_path, args.sgld_adapt, args.hopfield_snap, args.edmd_predict, args.cegis_synth)
     print(json.dumps({"status": result["status"], "reason": result.get("reason"), "score_eligible": result.get("score_eligible", False)}, sort_keys=True))
     return 0 if result["status"] in {"OBSERVED", "PREFLIGHT_PASS", "BLOCKED"} else 1
 

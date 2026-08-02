@@ -146,6 +146,101 @@ def test_recursive_edmd_manifold_basis_captures_transition():
     assert learned > 0.5, f"manifold: learned={learned:.4f} — targets in-span but not recovered"
 
 
+def test_cegis_parse_entry_signature():
+    from mbpp_cegis_synthesizer import parse_entry_signature
+    assert parse_entry_signature("def add_binary(a, b):\n    pass\n") == ("add_binary", ["a", "b"])
+    assert parse_entry_signature("no def here") is None
+    assert parse_entry_signature("def f(x, y, z):\n    return x") == ("f", ["x", "y", "z"])
+
+
+def test_cegis_build_candidates_renames_args_and_wraps():
+    """AST-level arg/entry renaming + wrapper morphisms, all syntax-valid."""
+    from mbpp_cegis_synthesizer import MbppCegisSynthesizer
+    from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
+    ex = [{"task_id": 1, "code": "def small_nnum(list1, n):\n    return list1[:n]"}]
+    codec = qFHRREpistemicCodec(d_model=1024, k_bins=256, device="cpu")
+    synth = MbppCegisSynthesizer(ex, codec, device="cpu")
+    cands = synth.build_candidates("def k_smallest(lst, k):\n    pass\n")
+    assert len(cands) == 5  # identity + 4 wrappers
+    sources = [c[0] for c in cands]
+    assert "def k_smallest(lst, k):" in sources[0]
+    assert "lst[:k]" in sources[0]
+    assert "return list(lst[:k])" in sources[1]
+    assert "return sorted(lst[:k])" in sources[3]
+    for s in sources:
+        import ast
+        ast.parse(s)  # every candidate is syntax-valid
+
+
+def test_cegis_ranking_prefers_true_solution():
+    """The predicted wave ranks the true solution first among distractors."""
+    from mbpp_cegis_synthesizer import MbppCegisSynthesizer
+    from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
+    import torch
+    codec = qFHRREpistemicCodec(d_model=2048, k_bins=256, device="cpu")
+    exs = [
+        {"task_id": 1, "code": "def f1(x):\n    return [i * 2 for i in x]"},
+        {"task_id": 2, "code": "def f2(x):\n    return sum(x)"},
+        {"task_id": 3, "code": "def f3(x):\n    return sorted(x, reverse=True)"},
+    ]
+    synth = MbppCegisSynthesizer(exs, codec, device="cpu")
+    prompt = "def solve(x):\n    pass\n"
+    cands = synth.build_candidates(prompt)
+    true_src = "def solve(x):\n    return sorted(x, reverse=True)"
+    ring = codec.encode_text(true_src).to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
+    pred = torch.nn.functional.normalize(ring.view(-1), p=2, dim=0)
+    ranked = synth.rank_candidates(cands, pred)
+    assert ranked[0][0] == true_src, f"top candidate {ranked[0][0]!r} != true {true_src!r}"
+
+
+def test_cegis_verify_loop_orders_by_tests():
+    """The CEGIS loop returns the first candidate that passes ALL tests."""
+    from mbpp_cegis_synthesizer import MbppCegisSynthesizer
+    from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
+
+    class _StubSandbox:
+        def __init__(self, passing_src: str):
+            self.passing_src = passing_src
+
+        def execute(self, code: str):
+            class _R:
+                status = "PASS" if self.passing_src in code else "FAIL"
+            return _R()
+
+    codec = qFHRREpistemicCodec(d_model=1024, k_bins=256, device="cpu")
+    exs = [{"task_id": 1, "code": "def f(x):\n    return x"}]
+    synth = MbppCegisSynthesizer(exs, codec, device="cpu")
+    winner = "def solve(x):\n    return [v for v in x if v > 0]"
+    ranked = [
+        ("def solve(x):\n    return x", {}, 0.9),
+        (winner, {}, 0.8),
+        ("def solve(x):\n    return []", {}, 0.7),
+    ]
+    sb = _StubSandbox(winner)
+    code, meta = synth.cegis_verify(ranked, {"test_list": ["check(True)"]}, sb, max_attempts=3)
+    assert code == winner
+    assert meta["candidates_tried"] == 2
+    assert meta["cegis"] is True
+
+
+def test_cegis_verify_returns_none_when_nothing_passes():
+    from mbpp_cegis_synthesizer import MbppCegisSynthesizer
+    from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
+
+    class _StubSandbox:
+        def execute(self, code):
+            class _R:
+                status = "FAIL"
+            return _R()
+
+    codec = qFHRREpistemicCodec(d_model=1024, k_bins=256, device="cpu")
+    synth = MbppCegisSynthesizer([{"task_id": 1, "code": "def f(x):\n    return x"}], codec, device="cpu")
+    ranked = [("def solve(x):\n    return x", {}, 0.5)]
+    code, meta = synth.cegis_verify(ranked, {"test_list": []}, _StubSandbox(), max_attempts=1)
+    assert code is None
+    assert meta["cegis"] is False
+
+
 def test_w_task_retrieval_captures_consistent_rule():
     codec = qFHRREpistemicCodec(d_model=1024, k_bins=256, device="cpu")
     comp = HolographicTaskFunctorCompiler(codec)
