@@ -111,6 +111,12 @@ LEARNABLE_ACTIONS = os.environ.get("LEARNABLE_ACTIONS", "0") == "1"
 # replaces latent-space novelty as the epistemic value driver. Large
 # frame changes = high epistemic value (the action did something meaningful).
 GRID_DIST_EPISTEMIC = os.environ.get("GRID_DIST_EPISTEMIC", "0") == "1"
+# Epistemic north star: load the 11 canonical boundary axioms from Zone C
+# `boundary_axioms` and feed them into the plan_action boundary_axioms
+# channel (EFE pragmatic constraint). Default OFF; fail-closed on any
+# load or integrity violation (no silent surrogate).
+USE_ZONE_C_AXIOMS = os.environ.get("USE_ZONE_C_AXIOMS", "0") == "1"
+ZONE_C_AXIOM_ENV_FILE = os.environ.get("ZONE_C_AXIOM_ENV_FILE", "")
 
 # Biophysical Invariants (Franović et al. 2026): chimera phase-lag swarm.
 # When enabled, a trailing fraction of experts receives a non-zero Kuramoto
@@ -274,9 +280,22 @@ def run():
     if CONSTRAINT_AXIOM:
         # Penalty-form constraint channel: arm the planner's barrier scalars
         # (no-op in the default path; the penalty itself activates only once
-        # the first L2 fit populates axiom_constraint).
+        # the learned subspace exists — see plan loop).
         orch.planner.constraint_weight_max = LAMBDA_CONSTRAINT_MAX
         orch.planner.constraint_reject_thresh = CONSTRAINT_REJECT_THRESH
+    # Epistemic north star: load the 11 canonical boundary axioms from Zone C
+    # and feed them into the plan_action boundary_axioms channel. Fail closed:
+    # a load/integrity violation blocks the run (no silent surrogate).
+    axiom_waves = None
+    if USE_ZONE_C_AXIOMS:
+        from zone_c_boundary_axiom_loader import BoundaryAxiomLoadError, load_boundary_axioms
+        try:
+            axiom_waves, axiom_summary = load_boundary_axioms(
+                env_file=ZONE_C_AXIOM_ENV_FILE or None)
+        except BoundaryAxiomLoadError as exc:
+            raise SystemExit(f"BLOCKED: BOUNDARY_AXIOM_LOAD_FAILED: {exc}")
+        print(f"[init] loaded {int(axiom_waves.shape[0])} Zone C boundary axioms "
+              f"(norms ok, proj_cos>={min(s['proj_cos'] for s in axiom_summary):.4f})")
     # The offline surrogate is retained only for an explicit reduced
     # development invocation; it is never selected after a failed live
     # connection.
@@ -553,8 +572,15 @@ def run():
             # off-manifold residual enters the EFE inside score_actions as a
             # per-candidate penalty + hard rejection (a barrier), NOT as an
             # additive axiom row (the falsified attractor). No row is appended.
-            boundary_batch = torch.stack([boundary])
-            n_axiom_rows = 1
+            if USE_ZONE_C_AXIOMS and axiom_waves is not None:
+                # Epistemic north star: the 11 Zone C boundary axioms (unit
+                # hypersphere waves, verified against the stored projections)
+                # constrain EFE pragmatic scoring instead of the residual.
+                boundary_batch = axiom_waves.to(device=DEVICE, dtype=torch.float32)
+                n_axiom_rows = int(boundary_batch.shape[0])
+            else:
+                boundary_batch = torch.stack([boundary])
+                n_axiom_rows = 1
             # P0: pass the environment's valid action set so the planner
             # cannot select an un-executable action.
             allowed_actions = list(getattr(game, "action_space", []))
