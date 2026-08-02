@@ -165,7 +165,7 @@ def test_cegis_build_candidates_renames_args_and_wraps():
     synth = MbppCegisSynthesizer(ex, codec, device="cpu")
     # no def line in the prompt: signature must come from the test list
     cands = synth.build_candidates("Write a function to get the k smallest.\n", ["assert k_smallest([5, 6, 1], 2) == [1, 5]"])
-    assert len(cands) == 5  # identity + 4 wrappers
+    assert len(cands) == 11  # identity + 10 op morphisms
     sources = [c[0] for c in cands]
     assert "def k_smallest(a0, a1):" in sources[0]
     assert "a0[:a1]" in sources[0]

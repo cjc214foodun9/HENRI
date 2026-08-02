@@ -39,7 +39,13 @@ _WRAPPERS = [
     ("list", lambda s: f"list({s})"),
     ("tuple", lambda s: f"tuple({s})"),
     ("sorted", lambda s: f"sorted({s})"),
+    ("sorted_rev", lambda s: f"sorted({s}, reverse=True)"),
     ("set", lambda s: f"set({s})"),
+    ("sum", lambda s: f"sum({s})"),
+    ("len", lambda s: f"len({s})"),
+    ("reversed", lambda s: f"list(reversed({s}))"),
+    ("min", lambda s: f"min({s})"),
+    ("max", lambda s: f"max({s})"),
 ]
 
 
