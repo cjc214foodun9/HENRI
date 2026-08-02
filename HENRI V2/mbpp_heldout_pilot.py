@@ -42,8 +42,11 @@ FALLBACK_MARKER = "def solution():\n    return True"
 # margin (dimension-normalized; at r=16/d=65536 the identity baseline sits at
 # ~sqrt(r/d) ~ 0.0156 cosine, so a 0.02 margin = a strong learned signal).
 EDMD_PREDICT_MIN_IMPROVEMENT = float(os.environ.get("EDMD_PREDICT_MIN_IMPROVEMENT", "0.02"))
-# Run15 selection-fidelity control (structural-complexity penalty lambda).
-COMPLEXITY_LAMBDA = float(os.environ.get("HENRI_COMPLEXITY_LAMBDA", "0.15"))
+# Run16 A/B verdict (2026-08-02): the structural-complexity penalty is
+# GEOMETRICALLY INERT at this grammatical scale (16a lambda=0.0 == 16b
+# lambda=0.15 == 15/500, byte-identical winners). Default OFF; the flag
+# stays for other grammar scales (scale-dependence hypothesis open).
+COMPLEXITY_LAMBDA = float(os.environ.get("HENRI_COMPLEXITY_LAMBDA", "0.0"))
 FALLBACK_SOURCE_MARKER = r"def solution():\n    return True"
 
 
