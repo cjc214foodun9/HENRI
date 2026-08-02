@@ -9,6 +9,8 @@ matrices incrementally in O(r^2 * D) FLOPS without Backpropagation Through Time 
 """
 
 import math
+from typing import Optional
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -26,6 +28,7 @@ class RecursiveDualEDMD(nn.Module):
         r_rank: int = 16,
         lambda_forget: float = 0.98,
         regularization: float = 1e-4,
+        v_basis: Optional[torch.Tensor] = None,
     ):
         super().__init__()
         self.d_model = d_model
@@ -33,9 +36,18 @@ class RecursiveDualEDMD(nn.Module):
         self.lambda_forget = lambda_forget
         self.regularization = regularization
 
-        # Low-rank projection basis V: [d_model, r_rank]
-        g = torch.Generator(device="cpu").manual_seed(42)
-        v_init = torch.randn(d_model, r_rank, generator=g) / math.sqrt(d_model)
+        # Low-rank projection basis V: [d_model, r_rank].
+        # Default: random (seed 42). When v_basis is provided (task-manifold
+        # dictionary, e.g. orthonormalized exemplar waves), the operator acts
+        # within the span of the observables of interest — the EDMD dictionary
+        # condition (Williams et al., arXiv:1408.4408) that random projections
+        # fail at production dimension (run8: EDMD_PREDICTOR_UNDERFIT).
+        if v_basis is not None:
+            v_init = v_basis.to(torch.float32)
+            assert v_init.shape == (d_model, r_rank), f"v_basis shape {tuple(v_init.shape)} != {(d_model, r_rank)}"
+        else:
+            g = torch.Generator(device="cpu").manual_seed(42)
+            v_init = torch.randn(d_model, r_rank, generator=g) / math.sqrt(d_model)
         self.register_buffer("V", F.normalize(v_init, p=2, dim=0))
 
         # Covariance matrices in rank-r subspace: [r_rank, r_rank]

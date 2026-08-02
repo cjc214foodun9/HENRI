@@ -417,13 +417,22 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                 w_task_real = (
                     w_task_ring.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
                 ).view(-1).to("cuda")
-                edmd_predictor = RecursiveDualEDMD(d_model=65536, r_rank=16, lambda_forget=0.98).to("cuda")
+                # Task-manifold dictionary (Koopman EDMD dictionary condition,
+                # arXiv:1408.4408): V = orthonormal span of the exemplar
+                # prompt+action and solution waves, so the operator composes
+                # within the observables of interest instead of a random
+                # projection (run8 failure).
+                with torch.no_grad():
+                    _, _, Vt = torch.linalg.svd(
+                        torch.stack(pred_waves_real + sol_waves_real), full_matrices=False)
+                    v_basis = Vt.T[:, :16].contiguous().to("cuda")
+                edmd_predictor = RecursiveDualEDMD(d_model=65536, r_rank=16, lambda_forget=0.98, v_basis=v_basis).to("cuda")
                 with torch.no_grad():
                     for pw, sw in zip(pred_waves_real, sol_waves_real):
                         edmd_predictor.update_online_step(
                             pw.view(8192, 8), w_task_real.view(8192, 8), sw.view(8192, 8))
-                    # identity baseline (A=I, no updates)
-                    edmd_identity = RecursiveDualEDMD(d_model=65536, r_rank=16, lambda_forget=0.98).to("cuda")
+                    # identity baseline (A=I, no updates) in the SAME manifold
+                    edmd_identity = RecursiveDualEDMD(d_model=65536, r_rank=16, lambda_forget=0.98, v_basis=v_basis).to("cuda")
                     def _self_sim(pred):
                         sims = []
                         for pw, sw in zip(pred_waves_real, sol_waves_real):
@@ -436,6 +445,7 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                     self_sim_identity = _self_sim(edmd_identity)
                 improvement = self_sim_learned - self_sim_identity
                 edmd_telemetry = {
+                    "v_basis": "task_manifold_svd",
                     "self_sim_learned": round(self_sim_learned, 6),
                     "self_sim_identity": round(self_sim_identity, 6),
                     "improvement": round(improvement, 6),

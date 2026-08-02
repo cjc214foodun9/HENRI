@@ -117,6 +117,35 @@ def test_recursive_edmd_kill_gate_mechanics():
     assert loo_learned > loo_rand + 0.05, f"loo: learned={loo_learned:.4f} random={loo_rand:.4f}"
 
 
+def test_recursive_edmd_manifold_basis_captures_transition():
+    """c3-next run9: seeding V from the exemplar manifold (the EDMD dictionary)
+    must let the operator strongly beat the identity operator — the run8
+    random-basis underfit is fixed by acting within the observable span."""
+    from recursive_dual_edmd import RecursiveDualEDMD
+    d, r, n = 128, 16, 8
+    torch.manual_seed(13)
+    w0 = torch.nn.functional.normalize(torch.randn(d), dim=0)
+    xs = torch.nn.functional.normalize(torch.randn(n, d), dim=-1)
+    ys = torch.nn.functional.normalize(0.7 * xs + 0.3 * w0, dim=-1)
+    a = torch.zeros(d)
+    _, _, Vt = torch.linalg.svd(torch.stack(list(xs) + list(ys)), full_matrices=False)
+    v_basis = Vt.T[:, :r].contiguous()
+    edmd = RecursiveDualEDMD(d_model=d, r_rank=r, v_basis=v_basis)
+    edmd_id = RecursiveDualEDMD(d_model=d, r_rank=r, v_basis=v_basis)
+    for i in range(n):
+        edmd.update_online_step(xs[i], a, ys[i])
+    def self_sim(pred, x_list, y_list):
+        sims = []
+        for x, y in zip(x_list, y_list):
+            p = pred(x, a)
+            sims.append(float(torch.dot(p, y).item()))
+        return sum(sims) / len(sims)
+    learned = self_sim(edmd, xs, ys)
+    identity = self_sim(edmd_id, xs, ys)
+    assert learned > identity + 0.05, f"manifold: learned={learned:.4f} identity={identity:.4f}"
+    assert learned > 0.5, f"manifold: learned={learned:.4f} — targets in-span but not recovered"
+
+
 def test_w_task_retrieval_captures_consistent_rule():
     codec = qFHRREpistemicCodec(d_model=1024, k_bins=256, device="cpu")
     comp = HolographicTaskFunctorCompiler(codec)
