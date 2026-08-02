@@ -42,6 +42,8 @@ FALLBACK_MARKER = "def solution():\n    return True"
 # margin (dimension-normalized; at r=16/d=65536 the identity baseline sits at
 # ~sqrt(r/d) ~ 0.0156 cosine, so a 0.02 margin = a strong learned signal).
 EDMD_PREDICT_MIN_IMPROVEMENT = float(os.environ.get("EDMD_PREDICT_MIN_IMPROVEMENT", "0.02"))
+# Run15 selection-fidelity control (structural-complexity penalty lambda).
+COMPLEXITY_LAMBDA = float(os.environ.get("HENRI_COMPLEXITY_LAMBDA", "0.15"))
 FALLBACK_SOURCE_MARKER = r"def solution():\n    return True"
 
 
@@ -595,11 +597,14 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                             sig = parse_entry_signature(prompt) or parse_entry_from_tests(item.get("test_list") or [])
                             if sig is not None:
                                 entry, args = sig
-                                dec_cands = decoder.decode(pred_wave, prompt_wave_real, entry, args)
+                                dec_cands = decoder.decode(
+                                    pred_wave, prompt_wave_real, entry, args,
+                                    manifold_proj=getattr(edmd_predictor, "V", None),
+                                    complexity_lambda=COMPLEXITY_LAMBDA)
                                 anchors = [c for c in cands if c[1].get("morphism") == "identity"]
                                 cands = dec_cands + anchors
                         ranked = synth.rank_candidates(cands, pred_wave, prompt_wave=prompt_wave_real)
-                        code, meta = synth.cegis_verify(ranked, item, sandbox)
+                        code, meta = synth.cegis_verify(ranked, item, sandbox, escalate=ast_decode)
                         if code is None:
                             raise CandidateMissError(
                                 f"CEGIS_NO_CANDIDATE_PASSED:attempts={meta['candidates_tried']}")

@@ -193,23 +193,39 @@ class MbppCegisSynthesizer:
     def cegis_verify(
         self, ranked: list[tuple[str, dict[str, Any], float]], item: dict[str, Any],
         sandbox, max_attempts: int = CEGIS_MAX_ATTEMPTS,
+        escalate: bool = False,
     ) -> tuple[Optional[str], dict[str, Any]]:
-        """Run candidates in order; first to pass ALL tests wins (CEGIS)."""
+        """Run candidates in order; first to pass ALL tests wins (CEGIS).
+
+        escalate (run15): if the primary attempt window fails (exemplar-biased
+        local minimum), try the next window up to 2*max_attempts — the true
+        low-complexity solutions displaced below the noise floor are still
+        routed into the sandbox for physical verification."""
         tests = "\n".join(item.get("test_list", []))
+        windows = [max_attempts, max_attempts]
+        if escalate:
+            windows = [max_attempts, 2 * max_attempts]
         attempted = 0
-        for src, meta, sim in ranked[:max_attempts]:
-            attempted += 1
-            try:
-                ast.parse(src)
-            except SyntaxError:
-                continue
-            try:
-                result = sandbox.execute(src + "\n" + tests)
-            except Exception:
-                continue
-            if result.status == "PASS":
-                return src, {"candidates_tried": attempted, "winner_sim": round(sim, 4), "cegis": True}
-        return None, {"candidates_tried": attempted, "cegis": False}
+        escalated = False
+        for window in windows:
+            for src, meta, sim in ranked[attempted:window]:
+                attempted += 1
+                try:
+                    ast.parse(src)
+                except SyntaxError:
+                    continue
+                try:
+                    result = sandbox.execute(src + "\n" + tests)
+                except Exception:
+                    continue
+                if result.status == "PASS":
+                    return src, {"candidates_tried": attempted, "winner_sim": round(sim, 4),
+                                 "cegis": True, "cegis_escalated": escalated}
+            if not escalate:
+                break
+            escalated = True
+        return None, {"candidates_tried": attempted, "cegis": False,
+                      "cegis_escalated": escalated}
 
     def probe_decoder_expressiveness(
         self, decoder, exemplars: list[dict[str, Any]], sandbox,
