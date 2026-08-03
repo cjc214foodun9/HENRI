@@ -281,13 +281,13 @@ def main() -> int:
                 it.get("test_list") or [])
             if sig is None:
                 continue
-            entry, args = sig
-            key = canonical_key(it["code"], entry)
+            entry_name, arg_names = sig
+            key = canonical_key(it["code"], entry_name)
             if key is None:
                 continue
-            for b in dec0._instantiate(entry, args):
-                src = f"def {entry}({', '.join(args)}):\n{b}"
-                if canonical_key(src, entry) == key:
+            for b in dec0._instantiate(entry_name, arg_names):
+                src = f"def {entry_name}({', '.join(arg_names)}):\n{b}"
+                if canonical_key(src, entry_name) == key:
                     exp.append(r)
                     break
         misses = exp
