@@ -31,9 +31,20 @@ CEGIS_PROBE_MIN_HIT = float(__import__("os").environ.get("CEGIS_PROBE_MIN_HIT", 
 
 
 class CandidateMissError(RuntimeError):
-    """A genuine synthesis miss: the CEGIS search ran the item's real sandbox
-    tests and no candidate passed. Task-level FAIL, NOT an execution error —
-    it must not block score eligibility."""
+    """Raised when the CEGIS search exhausted its windows without a pass.
+
+    The mechanism executed the item's real tests; the failure is a genuine
+    task-level miss and does not block score eligibility.
+    """
+
+
+class SandboxExecutionError(RuntimeError):
+    """Raised when the sandbox could not genuinely execute any candidate.
+
+    Distinct from CandidateMissError: infra (launcher/OOM/timeout) failures
+    are never observed task outcomes and must surface as execution errors,
+    never as task FAILs (run-evidence post-mortem contract).
+    """
 _WRAPPERS = [
     ("identity", lambda s: s),
     ("list", lambda s: f"list({s})"),
@@ -74,6 +85,14 @@ def parse_entry_from_tests(test_list: list[str]) -> Optional[tuple[str, list[str
             tree = ast.parse(t)
         except SyntaxError:
             continue
+        stmt = tree.body[0] if tree.body else None
+        # Prefer the call directly compared with the expected value
+        # (assert f(args) == expected): the entry call, not a wrapper.
+        if (isinstance(stmt, ast.Assert) and isinstance(stmt.test, ast.Compare)
+                and isinstance(stmt.test.left, ast.Call)
+                and isinstance(stmt.test.left.func, ast.Name)):
+            left = stmt.test.left
+            return left.func.id, [f"a{i}" for i in range(len(left.args))]
         for node in ast.walk(tree):
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
                 return node.func.id, [f"a{i}" for i in range(len(node.args))]
@@ -207,6 +226,7 @@ class MbppCegisSynthesizer:
             windows = [max_attempts, 2 * max_attempts]
         attempted = 0
         escalated = False
+        infra_failures = 0  # candidates whose sandbox run infra-failed (never a genuine miss)
         for window in windows:
             for src, meta, sim in ranked[attempted:window]:
                 attempted += 1
@@ -217,6 +237,13 @@ class MbppCegisSynthesizer:
                 try:
                     result = sandbox.execute(src + "\n" + tests)
                 except Exception:
+                    # Sandbox raised (launcher refusal etc.). Not a genuine
+                    # candidate failure; track separately.
+                    infra_failures += 1
+                    continue
+                if result.status == "EXECUTION_ERROR":
+                    # Launcher/OOM/timeout on this candidate: infra, not a miss.
+                    infra_failures += 1
                     continue
                 if result.status == "PASS":
                     body = src.splitlines()[1].strip() if len(src.splitlines()) > 1 else src
@@ -225,6 +252,12 @@ class MbppCegisSynthesizer:
             if not escalate:
                 break
             escalated = True
+        if attempted > 0 and infra_failures >= attempted:
+            # No candidate genuinely executed its tests: the mechanism did not
+            # run. Surface as an execution error, never as a task FAIL.
+            raise SandboxExecutionError(
+                f"all {attempted} attempted candidates infra-failed "
+                f"({infra_failures} execution errors); no genuine miss")
         return None, {"candidates_tried": attempted, "cegis": False,
                       "cegis_escalated": escalated}
 

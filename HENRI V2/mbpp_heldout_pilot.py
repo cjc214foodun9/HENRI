@@ -351,7 +351,11 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
         if scan_result["matches"]:
             return {"status": "BLOCKED", "reason": "TASK_EXPOSURE_MATCH", "evidence": blocked_bundle(manifest, output_dir, "TASK_EXPOSURE_MATCH", "BLOCKED_PREFLIGHT")}
         checkpoint_sha = checkpoint_preflight(checkpoint_path, provenance)
-        if FALLBACK_SOURCE_MARKER in DECODER_PATH.read_text(encoding="utf-8"):
+        decoder_source = DECODER_PATH.read_text(encoding="utf-8")
+        # Gate must catch BOTH spellings of the historical hardcoded fallback:
+        # a real newline in source text (FALLBACK_MARKER) and the escape
+        # sequence inside a string literal (FALLBACK_SOURCE_MARKER).
+        if FALLBACK_SOURCE_MARKER in decoder_source or FALLBACK_MARKER in decoder_source:
             return {"status": "BLOCKED", "reason": "DECODER_FALLBACK_PATH_PRESENT", "evidence": blocked_bundle(manifest, output_dir, "DECODER_FALLBACK_PATH_PRESENT", "FAILED_MODEL_PATH_PREFLIGHT")}
         try:
             sandbox = SecurePythonSandbox(mode=sandbox_mode)
@@ -641,6 +645,27 @@ def run_pilot(output_dir: Path, checkpoint_path: Path, scan_root: Path, prefligh
                 code = extract_code_blocks(response)
                 validate_candidate(code)
                 result = sandbox.execute(code + "\n" + "\n".join(item["test_list"]))
+                if result.status == "EXECUTION_ERROR":
+                    # Fail-closed contract (run-evidence post-mortem): a sandbox
+                    # launcher/OOM/timeout failure is never an observed task
+                    # outcome. It must not count as a task FAIL. Record it as an
+                    # execution error (blocks score promotion) and move on.
+                    execution_errors += 1
+                    stdout_records.append({"task_id": task_id, "stdout": result.stdout})
+                    stderr_records.append({"task_id": task_id, "stderr": result.stderr})
+                    item_records.append({
+                        "task_id": task_id,
+                        "split": "test",
+                        "source_sha256": manifest["source_sha256"],
+                        "rendered_prompt_sha256": sha256_bytes(prompt.encode()),
+                        "model_output_sha256": sha256_bytes(response.encode()),
+                        "postprocessed_output_sha256": sha256_bytes(code.encode()),
+                        "pass": False,
+                        "failure_reason": "EXECUTION_ERROR",
+                        "runtime_ms": result.runtime_ms,
+                        "telemetry": telemetry,
+                    })
+                    continue
                 is_pass = result.status == "PASS"
                 passed += int(is_pass)
                 failed += int(not is_pass)
