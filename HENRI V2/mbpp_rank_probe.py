@@ -112,8 +112,15 @@ def candidate_key(src: str, entry: str, args: list[str]) -> Optional[str]:
     return ast.dump(tree)
 
 
-def build_pipeline(device: str):
-    """Replicate the pilot's HENRI path exactly (lines ~378-490)."""
+def build_pipeline(device: str, r_rank: int = 16, lambda_forget: float = 0.98,
+                   regularization: float = 1e-4):
+    """Replicate the pilot's HENRI path exactly (lines ~378-490).
+
+    Run19 recalibration knobs (user mandate, 2026-08-02): r_rank is the
+    Koopman observable-basis width (capped at min(r_rank, N=20 exemplar
+    vectors) per the effective-rank invariant), lambda_forget is the
+    online EDMD forgetting factor, regularization is the ridge on the
+    low-rank covariance C_t (the 'lambda of the regression')."""
     exemplars = load_exemplars()
     codec = qFHRREpistemicCodec()
     task_compiler = HolographicTaskFunctorCompiler(codec)
@@ -137,9 +144,10 @@ def build_pipeline(device: str):
     with torch.no_grad():
         _, _, Vt = torch.linalg.svd(
             torch.stack(pred_waves_real + sol_waves_real), full_matrices=False)
-        v_basis = Vt.T[:, :16].contiguous().to(device)
+        v_basis = Vt.T[:, :r_rank].contiguous().to(device)
     edmd_predictor = RecursiveDualEDMD(
-        d_model=65536, r_rank=16, lambda_forget=0.98, v_basis=v_basis).to(device)
+        d_model=65536, r_rank=r_rank, lambda_forget=lambda_forget,
+        regularization=regularization, v_basis=v_basis).to(device)
     with torch.no_grad():
         for pw, sw in zip(pred_waves_real, sol_waves_real):
             edmd_predictor.update_online_step(
@@ -237,6 +245,14 @@ def main() -> int:
     ap.add_argument("--output", required=True, help="output dir")
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--r-rank", type=int, default=16,
+                    help="Koopman observable-basis width (effective rank cap = N exemplars)")
+    ap.add_argument("--lambda-forget", type=float, default=0.98,
+                    help="online EDMD forgetting factor")
+    ap.add_argument("--regularization", type=float, default=1e-4,
+                    help="ridge on the low-rank covariance (W_task spectral fit)")
+    ap.add_argument("--expressible-only", action="store_true",
+                    help="probe only items whose canonical is in the Phase A grammar")
     args = ap.parse_args()
 
     rows = []
@@ -251,10 +267,38 @@ def main() -> int:
                 continue
     misses = [r for r in rows if str(r.get("failure_reason", "")).startswith("CEGIS")]
     misses = sorted(misses, key=lambda r: int(r.get("task_id", 0)))
+    if args.expressible_only:
+        # Run19 protocol step 1: isolate the expressible subset (canonical
+        # verified in the Phase A grammar via AST-exact key). CPU-only.
+        items_map = {int(i["task_id"]): i for i in load_items()}
+        dec0 = WaveASTDecoder(None)
+        exp: list[dict[str, Any]] = []
+        for r in misses:
+            it = items_map.get(int(r["task_id"]))
+            if it is None or not it.get("code"):
+                continue
+            sig = parse_entry_signature(render_prompt(it)) or parse_entry_from_tests(
+                it.get("test_list") or [])
+            if sig is None:
+                continue
+            entry, args = sig
+            key = canonical_key(it["code"], entry)
+            if key is None:
+                continue
+            for b in dec0._instantiate(entry, args):
+                src = f"def {entry}({', '.join(args)}):\n{b}"
+                if canonical_key(src, entry) == key:
+                    exp.append(r)
+                    break
+        misses = exp
+        print(f"[probe] expressible-only: {len(misses)} items")
     misses = misses[: args.sample]
     print(f"[probe] failures={len(rows)} misses={len([r for r in rows if str(r.get('failure_reason','')).startswith('CEGIS')])} sampled={len(misses)}")
 
-    codec, w_task_real, edmd_predictor, decoder, synth = build_pipeline(args.device)
+    codec, w_task_real, edmd_predictor, decoder, synth = build_pipeline(
+        args.device, r_rank=args.r_rank, lambda_forget=args.lambda_forget,
+        regularization=args.regularization)
+    print(f"[probe] recalib r_rank={args.r_rank} lambda_forget={args.lambda_forget} regularization={args.regularization}")
 
     out_dir = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
