@@ -77,9 +77,9 @@ class SubliminalClockProbe(nn.Module):
         flat_wave = wave.reshape(-1, self.d_model)
         steered = flat_wave + beta * v_clock.unsqueeze(0)
 
-        resreshaped = steered.reshape(orig_shape)
+        reshaped = steered.reshape(orig_shape)
         # Renormalize last dimension to unit norm per block
-        return F.normalize(resreshaped, p=2, dim=-1)
+        return F.normalize(reshaped, p=2, dim=-1)
 
     @staticmethod
     def anneal_temperature(progress_hat: float, t_base: float = 0.1, alpha: float = 1.5) -> float:

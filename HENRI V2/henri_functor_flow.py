@@ -7,6 +7,11 @@ Sridhar Mahadevan et al. (https://github.com/sridharmahadevan/FunctorFlow).
 Models multi-modal domains (Vision, Code, Logic, Actions) as Riemannian Categories
 C and D, using Covariant Functors F: C -> D, Laplacian Heat Kernels, and Natural
 Transformations eta: F => G to enforce commutative cross-modal mapping.
+
+STATUS (forensic audit 2026-08-03): demo-only module. FunctorFlowAligner has no
+live production caller in the inference path; the naturality check is a
+two-object proxy, not a morphism-level verification. Treat claims from this
+module as unverified until wired into a live consumer.
 """
 
 import torch
@@ -58,17 +63,14 @@ class FunctorFlowAligner(nn.Module):
         eta_Y: torch.Tensor
     ) -> float:
         """
-        Verifies natural transformation commutativity error:
-        || eta_Y o F(f) - G(f) o eta_X ||_F
-        F_X, F_Y: Functor F outputs
-        G_X, G_Y: Functor G outputs
-        eta_X, eta_Y: Natural transformation matrices
+        Naturality proxy for eta: F => G over the two-object slice {X, Y}:
+          || [F(X); F(Y)] @ eta_Y^T  -  [G(X); G(Y)] @ eta_X^T ||_F
+        Uses BOTH objects (F_X/F_Y/G_X/G_Y) so the error is non-trivial
+        when eta is not identity. This is a proxy for eta_Y o F(f) =
+        G(f) o eta_X over the objects X, Y; it does not verify morphisms.
         """
-        # Left path: eta_Y @ F_X
-        left_path = F_X @ eta_Y.mT
-        # Right path: G_X @ eta_X
-        right_path = G_X @ eta_X.mT
-        
+        left_path = torch.cat([F_X, F_Y], dim=0) @ eta_Y.mT
+        right_path = torch.cat([G_X, G_Y], dim=0) @ eta_X.mT
         commutativity_error = torch.norm(left_path - right_path).item()
         return commutativity_error
 
@@ -95,15 +97,24 @@ def main():
     F_X = aligner.apply_covariant_functor(X_vision, W_functor)
     print(f"Applied Covariant Functor F(X) Unit-Norm     : {torch.norm(F_X, dim=-1).mean().item():.6f} [PASSED]")
     
-    # 3. Verify Natural Transformation Commutativity (eta: F => G)
+    # 3. Verify Natural Transformation Commutativity (eta: F => G) over a
+    #    two-object slice {X, Y} with non-identity eta. The printed error is
+    #    a REAL proxy value (NOT a fabricated 0: eta != identity and both
+    #    objects are used). NOTE (forensic audit 2026-08-03): this module is
+    #    demo-only; it has no live production caller in the inference path.
     W_g = F.normalize(torch.randn(1, D, device=device), p=2.0, dim=-1)
     G_X = aligner.apply_covariant_functor(X_vision, W_g)
-    
-    eta_X = torch.eye(D, device=device)
-    eta_Y = torch.eye(D, device=device)
-    
-    comm_err = aligner.verify_natural_transformation_commutativity(F_X, F_X, G_X, G_X, eta_X, eta_Y)
-    print(f"Natural Transformation Commutativity Error  : {comm_err:.8e} [VERIFIED]")
+
+    X_vision2 = F.normalize(torch.randn(N, D, device=device), p=2.0, dim=-1)
+    F_Y = aligner.apply_covariant_functor(X_vision2, W_functor)
+    G_Y = aligner.apply_covariant_functor(X_vision2, W_g)
+
+    eta_X = torch.randn(D, D, device=device) * 0.1
+    eta_Y = torch.randn(D, D, device=device) * 0.1
+
+    comm_err = aligner.verify_natural_transformation_commutativity(
+        F_X, F_Y, G_X, G_Y, eta_X, eta_Y)
+    print(f"Natural Transformation Commutativity Error (proxy) : {comm_err:.8e}")
     print("=========================================================================")
 
 
