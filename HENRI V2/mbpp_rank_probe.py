@@ -157,23 +157,84 @@ def build_pipeline(device: str, r_rank: int = 16, lambda_forget: float = 0.98,
     return codec, w_task_real, edmd_predictor, decoder, synth
 
 
+def per_item_demo_pairs(codec: qFHRREpistemicCodec, item: dict[str, Any],
+                        entry: str) -> list[tuple[torch.Tensor, torch.Tensor]]:
+    """Run20: compile demo pairs from the item's OWN test_list asserts.
+
+    Each assert 'f(a, b, ...) == expected' yields (X_i, Y_i) where
+    X_i = the concrete call 'f(a, b, ...)' text and Y_i = repr(expected).
+    Transduced via the qFHRR codec exactly as the pilot transduces the
+    10-exemplar pairs. This is test-time compilation from the task's own
+    demonstration pairs (zero-pretraining invariant), never from the
+    canonical solution code.
+    """
+    import ast
+    pairs: list[tuple[torch.Tensor, torch.Tensor]] = []
+    for t in item.get("test_list") or []:
+        try:
+            tree = ast.parse(t.strip())
+            if len(tree.body) != 1:
+                continue
+            stmt = tree.body[0]
+            if not isinstance(stmt, ast.Assert):
+                continue
+            cmp = stmt.test
+            if not isinstance(cmp, ast.Compare) or len(cmp.ops) != 1:
+                continue
+            if not isinstance(cmp.ops[0], ast.Eq):
+                continue
+            left = cmp.left
+            if not isinstance(left, ast.Call):
+                continue
+            args = [ast.literal_eval(a) for a in left.args]
+            expected = ast.literal_eval(cmp.comparators[0])
+            fname = left.func.id if isinstance(left.func, ast.Name) else entry
+            x_str = f"{fname}({', '.join(map(repr, args))})"
+            y_str = repr(expected)
+            pairs.append((codec.encode_text(x_str), codec.encode_text(y_str)))
+        except Exception:
+            continue
+    return pairs
+
+
+def codec_geometry_control(codec: qFHRREpistemicCodec) -> dict[str, float]:
+    """Deterministic probe of the qFHRR text codec's compositional structure.
+
+    Under a structured codec, semantically close strings produce correlated
+    waves. Under the current SHA-256-seeded random-ring encoder, every
+    distinct string is an independent random vector: similarity ~ 1/sqrt(D)
+    ~ 0.0039. These six numbers decide whether per-item W_task failure is an
+    operator problem or a codec-geometry problem.
+    """
+    import math
+    s = lambda t: codec.encode_text(t).to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
+    c = lambda a, b: float(torch.nn.functional.cosine_similarity(s(a).view(1, -1), s(b).view(1, -1)).item())
+    baseline = 1.0 / math.sqrt(codec.d_model)
+    control = {
+        "identical_input_sim": c("f(3, 3, 3)", "f(3, 3, 3)"),
+        "nearby_input_sim": c("f(3, 3, 3)", "f(4, 4, 4)"),
+        "commutative_sim": c("return a + b", "return b + a"),
+        "identical_output_sim": c("27", "27"),
+        "nearby_output_sim": c("27", "28"),
+        "random_baseline": baseline,
+    }
+    return control
+
+
 def probe_item(
     item: dict[str, Any],
     codec: qFHRREpistemicCodec,
-    w_task_real: torch.Tensor,
-    edmd_predictor: RecursiveDualEDMD,
+    pred_wave: torch.Tensor,
     decoder: WaveASTDecoder,
     synth: MbppCegisSynthesizer,
+    manifold_proj: Optional[torch.Tensor] = None,
 ) -> dict[str, Any]:
     task_id = int(item["task_id"])
     prompt = render_prompt(item)
     prompt_wave = codec.encode_text(prompt)
     prompt_wave_real = (
         prompt_wave.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
-    ).view(-1).to(w_task_real.device)
-    pred_wave = edmd_predictor(
-        prompt_wave_real.view(8192, 8), w_task_real.view(8192, 8)).view(-1)
-
+    ).view(-1).to(pred_wave.device)
     sig = parse_entry_signature(prompt) or parse_entry_from_tests(
         item.get("test_list") or [])
     if sig is None:
@@ -184,7 +245,7 @@ def probe_item(
 
     dec_cands = decoder.decode(
         pred_wave, prompt_wave_real, entry, args,
-        manifold_proj=getattr(edmd_predictor, "V", None),
+        manifold_proj=manifold_proj,
         complexity_lambda=COMPLEXITY_LAMBDA)
 
     cands = synth.build_candidates(prompt, item.get("test_list"))
@@ -253,6 +314,11 @@ def main() -> int:
                     help="ridge on the low-rank covariance (W_task spectral fit)")
     ap.add_argument("--expressible-only", action="store_true",
                     help="probe only items whose canonical is in the Phase A grammar")
+    ap.add_argument("--per-item-wtask", action="store_true",
+                    help="Run20: compile W_task from the item's OWN test_list demo "
+                         "pairs (variants A=per-item EDMD, B=single-pass projection) "
+                         "instead of the global 10-exemplar blend; emit codec "
+                         "geometry control")
     args = ap.parse_args()
 
     rows = []
@@ -295,27 +361,111 @@ def main() -> int:
     misses = misses[: args.sample]
     print(f"[probe] failures={len(rows)} misses={len([r for r in rows if str(r.get('failure_reason','')).startswith('CEGIS')])} sampled={len(misses)}")
 
-    codec, w_task_real, edmd_predictor, decoder, synth = build_pipeline(
-        args.device, r_rank=args.r_rank, lambda_forget=args.lambda_forget,
-        regularization=args.regularization)
-    print(f"[probe] recalib r_rank={args.r_rank} lambda_forget={args.lambda_forget} regularization={args.regularization}")
-
     out_dir = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
-    results: list[dict[str, Any]] = []
-    for i, r in enumerate(misses):
-        item = next(
-            (it for it in load_items() if int(it["task_id"]) == int(r["task_id"])), None)
-        if item is None:
-            continue
-        try:
-            row = probe_item(item, codec, w_task_real, edmd_predictor, decoder, synth)
-        except Exception as exc:  # fail-closed probe row, never a fake rank
-            row = {"task_id": int(r["task_id"]), "classification": "PROBE_ERROR",
-                   "error": f"{type(exc).__name__}:{exc}", "rank": None}
-        row["source_failure"] = str(r.get("failure_reason", ""))
-        results.append(row)
-        print(f"[probe] {i+1}/{len(misses)} task {row['task_id']} {row['classification']} rank={row.get('rank')}")
+
+    if args.per_item_wtask:
+        # Run20: per-item operator compilation. The global 10-exemplar
+        # W_task/EDMD blend is NOT built; only the shared codec, grammar
+        # decoder, and synthesizer are reused.
+        codec = qFHRREpistemicCodec(device=args.device)
+        decoder = WaveASTDecoder(codec, device=args.device)
+        synth = MbppCegisSynthesizer(load_exemplars(), codec, device=args.device)
+        control = codec_geometry_control(codec)
+        with open(out_dir / "codec_geometry_control.json", "w", encoding="utf-8") as f:
+            json.dump(control, f, indent=2)
+        print(f"[probe] codec_geometry_control {json.dumps(control)}")
+
+        results = []
+        items_map = {int(i["task_id"]): i for i in load_items()}
+        for i, r in enumerate(misses):
+            item = items_map.get(int(r["task_id"]))
+            if item is None:
+                continue
+            sig = parse_entry_signature(render_prompt(item)) or parse_entry_from_tests(
+                item.get("test_list") or [])
+            if sig is None:
+                continue
+            entry, _args = sig
+            pairs = per_item_demo_pairs(codec, item, entry)
+            task_compiler = HolographicTaskFunctorCompiler(codec)
+            w_task_ring = task_compiler.compile_functor(pairs)
+            w_task_real = (
+                w_task_ring.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
+            ).view(-1).to(args.device)
+            prompt_wave = codec.encode_text(render_prompt(item))
+            prompt_wave_real = (
+                prompt_wave.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
+            ).view(-1).to(args.device)
+            try:
+                # Variant A: per-item EDMD fit on the item's own pairs.
+                x_waves = [pw.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
+                           for pw, _ in pairs]
+                y_waves = [sw.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
+                           for _, sw in pairs]
+                with torch.no_grad():
+                    _, _, vt = torch.linalg.svd(
+                        torch.stack(x_waves + y_waves).view(len(x_waves) + len(y_waves), -1),
+                        full_matrices=False)
+                    v_basis = vt.T[:, : min(args.r_rank, len(x_waves) + len(y_waves))].contiguous().to(args.device)
+                edmd = RecursiveDualEDMD(
+                    d_model=65536, r_rank=min(args.r_rank, len(x_waves) + len(y_waves)),
+                    lambda_forget=args.lambda_forget, regularization=args.regularization,
+                    v_basis=v_basis).to(args.device)
+                with torch.no_grad():
+                    for pw, sw in zip(x_waves, y_waves):
+                        edmd.update_online_step(
+                            pw.view(8192, 8).to(args.device), w_task_real.view(8192, 8),
+                            sw.view(8192, 8).to(args.device))
+                pred_a = edmd(prompt_wave_real.view(8192, 8),
+                              w_task_real.view(8192, 8)).view(-1)
+                row_a = probe_item(item, codec, pred_a, decoder, synth,
+                                   manifold_proj=v_basis)
+                row_a["variant"] = "A_EDMD"
+                row_a["n_demo_pairs"] = len(pairs)
+            except Exception as exc:
+                row_a = {"task_id": int(r["task_id"]), "classification": "PROBE_ERROR",
+                         "variant": "A_EDMD", "error": f"{type(exc).__name__}:{exc}",
+                         "rank": None}
+            try:
+                # Variant B: single-pass associative retrieval (no EDMD).
+                pred_b_ring = codec.bind_hadamard(w_task_ring, prompt_wave)
+                pred_b = (
+                    pred_b_ring.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
+                ).view(-1).to(args.device)
+                row_b = probe_item(item, codec, pred_b, decoder, synth)
+                row_b["variant"] = "B_SINGLE_PASS"
+                row_b["n_demo_pairs"] = len(pairs)
+            except Exception as exc:
+                row_b = {"task_id": int(r["task_id"]), "classification": "PROBE_ERROR",
+                         "variant": "B_SINGLE_PASS",
+                         "error": f"{type(exc).__name__}:{exc}", "rank": None}
+            row_a["source_failure"] = str(r.get("failure_reason", ""))
+            row_b["source_failure"] = str(r.get("failure_reason", ""))
+            results.extend([row_a, row_b])
+            print(f"[probe] {i+1}/{len(misses)} task {row_a['task_id']} "
+                  f"A={row_a['classification']}/{row_a.get('rank')} "
+                  f"B={row_b['classification']}/{row_b.get('rank')}")
+    else:
+        codec, w_task_real, edmd_predictor, decoder, synth = build_pipeline(
+            args.device, r_rank=args.r_rank, lambda_forget=args.lambda_forget,
+            regularization=args.regularization)
+        print(f"[probe] recalib r_rank={args.r_rank} lambda_forget={args.lambda_forget} regularization={args.regularization}")
+
+        results = []
+        for i, r in enumerate(misses):
+            item = next(
+                (it for it in load_items() if int(it["task_id"]) == int(r["task_id"])), None)
+            if item is None:
+                continue
+            try:
+                row = probe_item(item, codec, w_task_real, edmd_predictor, decoder, synth)
+            except Exception as exc:  # fail-closed probe row, never a fake rank
+                row = {"task_id": int(r["task_id"]), "classification": "PROBE_ERROR",
+                       "error": f"{type(exc).__name__}:{exc}", "rank": None}
+            row["source_failure"] = str(r.get("failure_reason", ""))
+            results.append(row)
+            print(f"[probe] {i+1}/{len(misses)} task {row['task_id']} {row['classification']} rank={row.get('rank')}")
 
     out_path = out_dir / "rank_probe_results.jsonl"
     with open(out_path, "w", encoding="utf-8") as f:
@@ -342,6 +492,20 @@ def main() -> int:
             "grammar expansion justified" if (med is not None and med <= ESCALATED_WINDOW)
             else "recalibrate W_task before any grammar growth"),
     }
+    variants = {}
+    for row in results:
+        v = row.get("variant", "GLOBAL")
+        d = variants.setdefault(v, {"classes": {}, "ranks": [], "task_ranks": {}})
+        d["classes"][row["classification"]] = d["classes"].get(row["classification"], 0) + 1
+        if row.get("rank") is not None:
+            d["ranks"].append(row["rank"])
+            d["task_ranks"][str(row["task_id"])] = row["rank"]
+    for v, d in variants.items():
+        d["median_rank"] = sorted(d["ranks"])[len(d["ranks"]) // 2] if d["ranks"] else None
+        d["accepted"] = d["median_rank"] is not None and d["median_rank"] <= ESCALATED_WINDOW
+    summary["by_variant"] = variants
+    summary["accepted_variant"] = next(
+        (v for v, d in variants.items() if d.get("accepted")), None)
     with open(out_dir / "rank_probe_summary.json", "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
     print("[probe] SUMMARY " + json.dumps(summary))
