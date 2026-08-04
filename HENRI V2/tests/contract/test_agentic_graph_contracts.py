@@ -101,7 +101,7 @@ def test_file_hash_receipt_is_observable(tmp_path):
 
 def test_legacy_simulated_builder_is_blocked():
     import importlib.util
-    legacy = ROOT.parent / "henri_langgraph_executable_agent_engine.py"
+    legacy = ROOT / "_archive" / "legacy_graph" / "henri_langgraph_executable_agent_engine.py"
     spec = importlib.util.spec_from_file_location("legacy_henri_graph", legacy)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -199,7 +199,7 @@ def test_runtime_does_not_promote_unavailable_verification():
 
 
 def test_legacy_module_contains_no_production_success_marker():
-    legacy=(ROOT.parent/"henri_langgraph_executable_agent_engine.py").read_text(encoding="utf-8")
+    legacy=(ROOT/"_archive"/"legacy_graph"/"henri_langgraph_executable_agent_engine.py").read_text(encoding="utf-8")
     assert "EXPERIMENTAL ONLY" in legacy
     assert "build_experimental_simulated_henri_dev_graph" in legacy
 

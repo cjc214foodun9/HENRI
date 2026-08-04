@@ -11,7 +11,6 @@
     "henri_agentic_graph_engine.py",
     "henri_api_bridge.py",
     "henri_ast_grammar_mask.py",
-    "henri_benchmark_gauntlet.py",
     "henri_benchmark_registry.py",
     "henri_category_theory_crystalline_seeding.py",
     "henri_code_sanitizer.py",
@@ -37,7 +36,6 @@
     "qfhrr_kernels.py",
     "qfhrr_readout_ledger.py",
     "recursive_dual_edmd.py",
-    "run_live_inference_eval.py",
     "sagnac_mcts_planner.py",
     "subliminal_clock_probe.py",
     "thermodynamic_telemetry_logger.py",
@@ -64,7 +62,8 @@
     "tests/integration": "Progressive integration tests",
     "tests/contract": "Evidence, checkpoint, and fail-closed contract tests",
     "migrations": "Zone C SQL schema and extensions",
-    "_archive/invalid_evaluators": "Retained synthetic or otherwise invalid benchmark paths"
+    "_archive/invalid_evaluators": "Retained synthetic or otherwise invalid benchmark paths",
+    "_archive/legacy_graph": "Legacy simulated graph design; not a production route"
   },
   "import_policy": {
     "current": "flat imports from the HENRI V2 root remain supported",

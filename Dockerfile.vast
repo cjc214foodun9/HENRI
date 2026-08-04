@@ -14,49 +14,27 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONPATH="/workspace/HENRI/HENRI V2" \
     PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-# OS utilities, SSH, build chain, Python 3.11 (deadsnakes for 22.04), Nsight profilers
+# OS utilities and build tools. The base image already provides Python,
+# CUDA, and PyTorch; do not replace those runtime components here.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        software-properties-common \
-    && add-apt-repository -y ppa:deadsnakes/ppa \
-    && apt-get update && apt-get install -y --no-install-recommends \
-        python3.11 python3.11-dev python3.11-venv \
         git curl wget ca-certificates \
         openssh-server rsync tmux htop \
         build-essential cmake \
-        cuda-nsight-systems-12-4 cuda-nsight-compute-12-4 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
-    && update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
-    && curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
+# Copy the dependency manifest before installation, then copy the committed
+# release tree. Credentials, checkpoints, telemetry, local databases, and
+# benchmark task data are excluded by repository policy.
+COPY requirements.txt /workspace/HENRI/requirements.txt
 
-# PyTorch 2.11 + Triton 3.7 on CUDA 12.8 wheels — pinned identical to the
-# host (2.11.0+cu128); torch 2.4.1 numerically diverges on the EDMD
-# constraint-boundary test.
-RUN pip install --upgrade pip setuptools wheel \
-    && pip install \
-        torch==2.11.0 torchvision torchaudio \
-        --index-url https://download.pytorch.org/whl/cu128 \
-    && pip install triton==3.7.1
+# The base image supplies the CUDA-enabled PyTorch runtime. Install the
+# repository dependency contract without replacing that wheel with a CPU build.
+RUN python -m pip install --upgrade pip setuptools wheel \
+    && grep -v '^torch[<=>]' /workspace/HENRI/requirements.txt > /tmp/henri-requirements-no-torch.txt \
+    && python -m pip install -r /tmp/henri-requirements-no-torch.txt \
+    && python -m pip install triton==3.7.1
 
-# HENRI V2 core dependencies (audited from live repo imports across core, scripts & tests)
-# - torch/numpy/scipy/pandas/matplotlib: wave model + SVD + analytics
-# - psycopg2/psycopg/asyncpg/sqlalchemy: PostgreSQL/TimescaleDB Zone C telemetry
-# - arc-agi:                             ARC-AGI-3 environment SDK
-# - pytest/pytest-asyncio/anyio:         test suite execution engine
-# - wandb/boto3:                         run telemetry & cloud storage
-# - vastai:                              instance lifecycle SDK
-# - fastapi/uvicorn/chromadb/frontmatter: local vault RAG & search server
-# - pypdf/requests/sentence-transformers: research paper ingestion & embeddings
-RUN pip install \
-        numpy scipy pandas matplotlib rich \
-        psycopg2-binary "psycopg[binary]" sqlalchemy asyncpg \
-        wandb boto3 \
-        pytest pytest-asyncio anyio \
-        vastai \
-        fastapi uvicorn chromadb python-frontmatter \
-        sentence-transformers pypdf requests \
-        arc-agi
+COPY . /workspace/HENRI
 
 # Client only. The image does not install or start PostgreSQL. Native Zone C
 # setup is handled by scripts/zone_c_install_native.sh and

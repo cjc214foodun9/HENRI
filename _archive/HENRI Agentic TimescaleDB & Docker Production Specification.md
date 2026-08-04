@@ -375,10 +375,10 @@ def build\_quicksilver\_production\_graph():
 Execute on your control node or persistent server:
 
 \# 1\. Export credentials  
-export TELEGRAM\_BOT\_TOKEN="your\_bot\_token"  
-export TELEGRAM\_CHAT\_ID="your\_chat\_id"  
-export GEMINI\_API\_KEY="your\_gemini\_key"  
-export TIMESCALEDB\_PASSWORD="henri\_secret\_pass"
+export TELEGRAM\_BOT\_TOKEN="${TELEGRAM_BOT_TOKEN}"
+export TELEGRAM\_CHAT\_ID="${TELEGRAM_CHAT_ID}"
+export GEMINI\_API\_KEY="${GEMINI_API_KEY}"
+export TIMESCALEDB\_PASSWORD="${TIMESCALEDB_PASSWORD}"
 
 \# 2\. Boot TimescaleDB, Chroma, and Quicksilver Engine containers  
 docker-compose up \-d \--build
