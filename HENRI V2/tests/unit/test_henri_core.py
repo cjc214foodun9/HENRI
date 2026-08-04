@@ -1070,3 +1070,62 @@ class TestQFHRRKernels:
         s_t = qfhrr_similarity_torch(q, store, lut)
         s_g = qfhrr_similarity_triton(q, store, lut)
         assert (s_t - s_g).abs().max().item() < 1e-4
+
+
+# ---------------------------------------------------------------------------
+# Bennett-inspired finite extension selector integration
+# ---------------------------------------------------------------------------
+
+class TestWeaknessSelectorIntegration:
+    def test_default_off_preserves_efe_choice(self, device):
+        planner = EFEPlanner(num_blocks=SCALE["num_blocks"], d_model=SCALE["d_model"])
+        assert planner.weakness_selector_enabled is False
+        state = mk_wave((SCALE["num_blocks"], 8), device, 9100)
+        boundary = mk_wave((2, SCALE["num_blocks"], 8), device, 9101)
+        cands = [("A", mk_wave((SCALE["num_blocks"], 8), device, 9102)),
+                 ("B", mk_wave((SCALE["num_blocks"], 8), device, 9103))]
+        baseline = planner.select_action(state, cands, boundary)[0]
+        with_data = planner.select_action(
+            state, cands, boundary, weakness_extensions=[[True], [True] * 2]
+        )[0]
+        assert baseline == with_data
+
+    def test_enabled_selector_uses_only_true_efe_tie(self, device):
+        planner = EFEPlanner(
+            num_blocks=SCALE["num_blocks"],
+            d_model=SCALE["d_model"],
+            weakness_selector_enabled=True,
+        )
+        state = mk_wave((SCALE["num_blocks"], 8), device, 9110)
+        boundary = mk_wave((2, SCALE["num_blocks"], 8), device, 9111)
+        cands = [("A", mk_wave((SCALE["num_blocks"], 8), device, 9112)),
+                 ("B", mk_wave((SCALE["num_blocks"], 8), device, 9113))]
+        action, _, table, chosen = planner.select_action(
+            state,
+            cands,
+            boundary,
+            weakness_extensions=[[True], [True] * 2],
+            explore_threshold=1e9,
+        )
+        assert action == table[0]["action"]
+        assert chosen["weakness_status"] == "no_tie"
+
+    def test_malformed_extension_data_fails_closed(self, device):
+        from weakness_selector import WeaknessSelectorError
+        planner = EFEPlanner(
+            num_blocks=SCALE["num_blocks"],
+            d_model=SCALE["d_model"],
+            weakness_selector_enabled=True,
+        )
+        state = mk_wave((SCALE["num_blocks"], 8), device, 9120)
+        boundary = mk_wave((2, SCALE["num_blocks"], 8), device, 9121)
+        cands = [("A", mk_wave((SCALE["num_blocks"], 8), device, 9122)),
+                 ("B", mk_wave((SCALE["num_blocks"], 8), device, 9123))]
+        with pytest.raises(WeaknessSelectorError):
+            planner.select_action(
+                state,
+                cands,
+                boundary,
+                weakness_extensions=[[True, 1], [False]],
+                explore_threshold=1e9,
+            )

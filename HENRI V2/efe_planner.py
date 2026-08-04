@@ -35,6 +35,10 @@ from dataclasses import dataclass
 from hopfield_cleanup import ContinuousHopfieldCleanup
 from subliminal_clock_probe import SubliminalClockProbe
 from henri_decoder import HENRIUnifiedEgressTransducer
+from weakness_selector import (
+    normalize_extension_masses,
+    select_weakest_tie,
+)
 
 
 @dataclass
@@ -178,6 +182,9 @@ class EFEPlanner(nn.Module):
         task_eig_gamma: float = 4.0,
         num_actions: int = 8,
         action_lr_scale: float = 0.2,
+        weakness_selector_enabled: bool = False,
+        weakness_tie_tolerance: float = 0.0,
+        weakness_max_extensions: int = 1_000_000,
     ):
         super().__init__()
         self.num_blocks = num_blocks
@@ -205,6 +212,16 @@ class EFEPlanner(nn.Module):
         # (no goal conditioning); >0 = planner minimizes distance to
         # the externally-provided goal wave.
         self.lambda_goal = lambda_goal
+
+        # Bennett-inspired finite extension tie-break. This is disabled by
+        # default and is not a replacement for EFE or hard vetoes.
+        if not isinstance(weakness_tie_tolerance, (int, float)) or weakness_tie_tolerance < 0:
+            raise ValueError("weakness_tie_tolerance must be non-negative")
+        if not isinstance(weakness_max_extensions, int) or weakness_max_extensions < 0:
+            raise ValueError("weakness_max_extensions must be non-negative")
+        self.weakness_selector_enabled = bool(weakness_selector_enabled)
+        self.weakness_tie_tolerance = float(weakness_tie_tolerance)
+        self.weakness_max_extensions = weakness_max_extensions
 
         self.transition = UnitaryWaveTransition(num_blocks=num_blocks)
         # Learnable action wave embeddings (Fallacy #3 fix).
@@ -879,7 +896,7 @@ class EFEPlanner(nn.Module):
         lam = self._constraint_lambda()
         sqrt_d = self.d_model ** 0.5
         results = []
-        for action_id, action_wave in candidate_actions:
+        for candidate_position, (action_id, action_wave) in enumerate(candidate_actions):
             predicted = self.transition(state_wave, action_wave)
             pragmatic = self.pragmatic_value(predicted, boundary_axioms, goal_wave)
             epistemic = self.epistemic_value(predicted, state_wave=state_wave, grid_dist=grid_dist)
@@ -902,7 +919,7 @@ class EFEPlanner(nn.Module):
             # and action_id matches the last executed action, inject penalty (+5.0) to break limit cycles
             if grid_dist is not None and grid_dist == 0.0 and action_id == getattr(self, "last_executed_action", None):
                 efe = efe + 5.0
-            results.append({
+            row = {
                 "action": action_id,
                 "efe": efe.item(),
                 "pragmatic": pragmatic.item(),
@@ -916,7 +933,10 @@ class EFEPlanner(nn.Module):
                 "external_task_resonance": float(external_resonance.detach()),
                 "predicted_wave": predicted,
                 "residual_type": "ACCEPTED_CLEAN" if penalty <= self.constraint_reject_thresh else "REJECTED",
-            })
+            }
+            if self.weakness_selector_enabled:
+                row["candidate_position"] = candidate_position
+            results.append(row)
         # PEARL repair: attempt to salvage rejected candidates by blending
         # with the preference store. Re-scored after repair.
         for r in results:
@@ -955,7 +975,7 @@ class EFEPlanner(nn.Module):
 
     def select_action(self, state_wave: torch.Tensor, candidate_actions: list, boundary_axioms: torch.Tensor,
                       explore_threshold: float = None, goal_wave: torch.Tensor = None,
-                      grid_dist: float = None):
+                      grid_dist: float = None, weakness_extensions=None):
         """
         Returns (best_action_id, predicted_wave, scores_table, chosen_dict).
 
@@ -984,20 +1004,61 @@ class EFEPlanner(nn.Module):
             accuracy_floor = explore_threshold
         else:
             accuracy_floor = self._accuracy_floor()
-        if self.loss_ema > accuracy_floor and len(results) > 1:
+        exploring = self.loss_ema > accuracy_floor and len(results) > 1
+        weakness_status = None
+        weakness_selection = None
+        if self.weakness_selector_enabled:
+            if weakness_extensions is None:
+                weakness_status = "unavailable"
+            else:
+                # Validate the pre-decision provider before the exploration
+                # branch. Exploration must not hide malformed evidence.
+                masses = normalize_extension_masses(
+                    weakness_extensions,
+                    len(candidate_actions),
+                    max_extensions=self.weakness_max_extensions,
+                )
+                for row in results:
+                    row["extension_mass"] = masses[row["candidate_position"]]
+                admissible = [row for row in results if not row["rejected"]]
+                if exploring:
+                    weakness_status = "deferred_exploration"
+                elif not admissible:
+                    weakness_status = "blocked_rejected"
+                else:
+                    weakness_selection = select_weakest_tie(
+                        admissible,
+                        tie_tolerance=self.weakness_tie_tolerance,
+                    )
+                    best = dict(admissible[weakness_selection.selected_position], explored=False)
+                    weakness_status = weakness_selection.status
+                    for row in admissible:
+                        row["weakness_selected"] = False
+                    admissible[weakness_selection.selected_position]["weakness_selected"] = True
+
+        if exploring:
             epistemic_best = max(results, key=lambda r: r["epistemic"])
             best = dict(epistemic_best, explored=True)
-        else:
+        elif weakness_selection is None:
             best = dict(best, explored=False)
         explore_threshold = accuracy_floor
 
         best["spread"] = spread
         best["explore_threshold"] = explore_threshold
+        if weakness_status is not None:
+            best["weakness_status"] = weakness_status
+            best["weakness_tie_tolerance"] = self.weakness_tie_tolerance
+            best["weakness_selected"] = bool(best.get("weakness_selected", False))
         # Annotate which table entry was actually chosen so callers can see
         # whether the returned action was the exploit or explore pick.
         chosen = dict(best)
         self.last_executed_action = chosen["action"]
         results = [dict(r, chosen=(r["action"] == chosen["action"])) for r in results]
+        if weakness_status is not None:
+            for row in results:
+                row.setdefault("weakness_status", weakness_status)
+                row.setdefault("weakness_tie_tolerance", self.weakness_tie_tolerance)
+                row.setdefault("weakness_selected", False)
         return best["action"], best["predicted_wave"], results, chosen
 
     # -- transition training (single-step + batched EDMD) -----------------
