@@ -128,3 +128,32 @@ Pre-registered before Run 21 source implementation. No acceptance claim is made 
 - Identity arm uses `use_prompt_contrast=False` (plain wave similarity; no
   pred-minus-prompt subtraction that would be NaN when pred == prompt).
 - Runner writes `RUN21_DONE` when the verdict is not infrastructure-blocked.
+
+## Result (2026-08-04, remote CUDA, RTX 5090, commit 440f11d, worktree run21-wt2)
+
+Verdict: `FALSIFIED_AT_SCALE`. All 5 arms exit 0, RUN21_DONE present,
+control_healthy=true for the structured arm.
+
+Per-arm ranks (task 14 / 62 / 89):
+- legacy: A_EDMD 6/42/42, B 9/43/39 (exact run20 reproduction)
+- structured: A_EDMD 10/30/7, B 6/52/13
+- structured-nopos: A 10/31/5, B 1/20/40
+- structured-shuffled: A 3/29/9, B 3/26/33
+- identity: 9/46/54
+
+Geometry controls (structured): nearby_input_sim 0.62 vs legacy -0.0045
+(10x baseline gate passed); position_swap_sim 0.0066 (full) vs 1.0 (nopos) —
+order sensitivity active; shuffled degrades order discrimination.
+
+Acceptance required (62,89) rank <= 24 in one variant AND beats identity and
+legacy. Structured best = A_EDMD 89=7 but 62=30 > 24; B 62=52. No variant
+met the gate. FALSIFIED_AT_SCALE per prereg.
+
+Attribution (HYPOTHESIS): structured geometry restores 89 (42->7) but 62
+remains occluded (30-52) — consistent with run19's per-task phase occlusion
+finding; a single global codec does not resolve task-specific occlusion.
+Phase B grammar expansion remains blocked per prereg.
+
+Evidence: G:/My Drive/HENRI_Telemetry/mbpp_run21/ (29 files, summary
+sha256 f98e718bc491838c51eb844cbe3ada49ae6e0a0e93b8375811801eddabce63a2).
+Commit: 440f11dcf1ed3b88b398a5e337fb182d672f3b6d.
