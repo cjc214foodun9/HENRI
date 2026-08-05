@@ -25,6 +25,8 @@ from typing import Any, Optional
 
 import torch
 
+from qfhrr_structured_codec import ring_to_real  # noqa: E402
+
 CEGIS_MAX_ATTEMPTS = int(__import__("os").environ.get("CEGIS_MAX_ATTEMPTS", "12"))
 CEGIS_PROBE_TOP_K = int(__import__("os").environ.get("CEGIS_PROBE_TOP_K", "5"))
 CEGIS_PROBE_MIN_HIT = float(__import__("os").environ.get("CEGIS_PROBE_MIN_HIT", "0.5"))
@@ -199,7 +201,7 @@ class MbppCegisSynthesizer:
                 (pred_wave.view(-1).to(torch.float32) - prompt_wave.view(-1).to(torch.float32)), p=2, dim=0)
             qn = torch.nn.functional.normalize(prompt_wave.view(-1).to(torch.float32), p=2, dim=0)
         for src, meta in candidates:
-            ring = self.codec.encode_text(src).to(torch.float32) / (self.codec.k_bins - 1) * 2.0 - 1.0
+            ring = ring_to_real(self.codec, self.codec.encode_text(src))
             v = ring.view(-1).to(self.device)
             if qn is not None:
                 v = v - torch.nn.functional.normalize(qn, p=2, dim=0) * torch.dot(v, qn).clamp(min=0.0)
@@ -280,12 +282,12 @@ class MbppCegisSynthesizer:
             if sig is None:
                 continue
             entry, args = sig
-            ring = self.codec.encode_text(ex["code"]).to(torch.float32)
+            ring = ring_to_real(self.codec, self.codec.encode_text(ex["code"]))
             pred_wave = torch.nn.functional.normalize(
-                (ring / (self.codec.k_bins - 1) * 2.0 - 1.0).view(-1).to(self.device), p=2, dim=0)
-            p_ring = self.codec.encode_text(ex.get("text", "")).to(torch.float32)
+                ring.view(-1).to(self.device), p=2, dim=0)
+            p_ring = ring_to_real(self.codec, self.codec.encode_text(ex.get("text", "")))
             prompt_wave = torch.nn.functional.normalize(
-                (p_ring / (self.codec.k_bins - 1) * 2.0 - 1.0).view(-1).to(self.device), p=2, dim=0)
+                p_ring.view(-1).to(self.device), p=2, dim=0)
             cands = decoder.decode(pred_wave, prompt_wave, entry, args)
             ranked = self.rank_candidates(cands, pred_wave, prompt_wave=prompt_wave)
             code, _meta = self.cegis_verify(ranked[:top_n], ex, sandbox)

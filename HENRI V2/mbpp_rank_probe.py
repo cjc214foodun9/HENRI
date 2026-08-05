@@ -58,6 +58,7 @@ from zone_c_epistemic_axiom_harness import (  # noqa: E402
     HolographicTaskFunctorCompiler,
     qFHRREpistemicCodec,
 )
+from qfhrr_structured_codec import ring_to_real  # noqa: E402
 
 PRIMARY_WINDOW = 12
 ESCALATED_WINDOW = 24
@@ -207,17 +208,35 @@ def codec_geometry_control(codec: qFHRREpistemicCodec) -> dict[str, float]:
     operator problem or a codec-geometry problem.
     """
     import math
-    s = lambda t: codec.encode_text(t).to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
-    c = lambda a, b: float(torch.nn.functional.cosine_similarity(s(a).view(1, -1), s(b).view(1, -1)).item())
+    def s(t: str) -> torch.Tensor:
+        return ring_to_real(codec, codec.encode_text(t)).view(-1)
+    def c(a: str, b: str) -> float:
+        return float(torch.nn.functional.cosine_similarity(
+            s(a).view(1, -1), s(b).view(1, -1)).item())
     baseline = 1.0 / math.sqrt(codec.d_model)
     control = {
         "identical_input_sim": c("f(3, 3, 3)", "f(3, 3, 3)"),
         "nearby_input_sim": c("f(3, 3, 3)", "f(4, 4, 4)"),
         "commutative_sim": c("return a + b", "return b + a"),
+        "position_swap_sim": c("ab", "ba"),
         "identical_output_sim": c("27", "27"),
         "nearby_output_sim": c("27", "28"),
+        "unrelated_sim": c("abcd", "1234"),
         "random_baseline": baseline,
     }
+    md = getattr(codec, "geometry_metadata", None)
+    if callable(md):
+        control.update(md())
+    else:
+        control.update({
+            "codec_name": "legacy_sha256_ring",
+            "codec_version": "legacy",
+            "tokenizer": "sha256_full_string",
+            "position_binding": "none",
+            "position_index": "none",
+            "position_mode": "none",
+            "bundling": "none",
+        })
     return control
 
 
@@ -319,6 +338,10 @@ def main() -> int:
                          "pairs (variants A=per-item EDMD, B=single-pass projection) "
                          "instead of the global 10-exemplar blend; emit codec "
                          "geometry control")
+    ap.add_argument("--codec", default="legacy",
+                    choices=["legacy", "structured", "structured-nopos",
+                             "structured-shuffled", "identity"],
+                    help="Run21 codec arm. identity = no W_task (prompt-wave ranking).")
     args = ap.parse_args()
 
     rows = []
@@ -368,13 +391,20 @@ def main() -> int:
         # Run20: per-item operator compilation. The global 10-exemplar
         # W_task/EDMD blend is NOT built; only the shared codec, grammar
         # decoder, and synthesizer are reused.
-        codec = qFHRREpistemicCodec(device=args.device)
+        if args.codec == "legacy":
+            codec = qFHRREpistemicCodec(device=args.device)
+        else:
+            from qfhrr_structured_codec import StructuredCharPositionCodec
+            mode = {"structured": "full", "structured-nopos": "none",
+                    "structured-shuffled": "shuffled"}.get(args.codec, "full")
+            codec = StructuredCharPositionCodec(device=args.device, position_mode=mode)
         decoder = WaveASTDecoder(codec, device=args.device)
         synth = MbppCegisSynthesizer(load_exemplars(), codec, device=args.device)
         control = codec_geometry_control(codec)
+        control["arm"] = args.codec
         with open(out_dir / "codec_geometry_control.json", "w", encoding="utf-8") as f:
             json.dump(control, f, indent=2)
-        print(f"[probe] codec_geometry_control {json.dumps(control)}")
+        print(f"[probe] arm={args.codec} codec_geometry_control {json.dumps(control)}")
 
         results = []
         items_map = {int(i["task_id"]): i for i in load_items()}
@@ -387,21 +417,32 @@ def main() -> int:
             if sig is None:
                 continue
             entry, _args = sig
+            prompt_wave = codec.encode_text(render_prompt(item))
+            prompt_wave_real = ring_to_real(codec, prompt_wave).view(-1).to(args.device)
+            if args.codec == "identity":
+                # Identity arm: no W_task, no EDMD. Prediction = prompt wave.
+                try:
+                    row = probe_item(item, codec, prompt_wave_real, decoder, synth)
+                    row["variant"] = "IDENTITY"
+                    row["n_demo_pairs"] = 0
+                except Exception as exc:
+                    row = {"task_id": int(r["task_id"]), "classification": "PROBE_ERROR",
+                           "variant": "IDENTITY", "error": f"{type(exc).__name__}:{exc}",
+                           "rank": None}
+                row["source_failure"] = str(r.get("failure_reason", ""))
+                results.append(row)
+                print(f"[probe] {i+1}/{len(misses)} task {row['task_id']} "
+                      f"IDENTITY={row['classification']}/{row.get('rank')}")
+                continue
             pairs = per_item_demo_pairs(codec, item, entry)
             task_compiler = HolographicTaskFunctorCompiler(codec)
             w_task_ring = task_compiler.compile_functor(pairs)
-            w_task_real = (
-                w_task_ring.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
-            ).view(-1).to(args.device)
-            prompt_wave = codec.encode_text(render_prompt(item))
-            prompt_wave_real = (
-                prompt_wave.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
-            ).view(-1).to(args.device)
+            w_task_real = ring_to_real(codec, w_task_ring).view(-1).to(args.device)
             try:
                 # Variant A: per-item EDMD fit on the item's own pairs.
-                x_waves = [pw.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
+                x_waves = [ring_to_real(codec, pw).view(-1).to(args.device)
                            for pw, _ in pairs]
-                y_waves = [sw.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
+                y_waves = [ring_to_real(codec, sw).view(-1).to(args.device)
                            for _, sw in pairs]
                 with torch.no_grad():
                     _, _, vt = torch.linalg.svd(
@@ -430,9 +471,7 @@ def main() -> int:
             try:
                 # Variant B: single-pass associative retrieval (no EDMD).
                 pred_b_ring = codec.bind_hadamard(w_task_ring, prompt_wave)
-                pred_b = (
-                    pred_b_ring.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
-                ).view(-1).to(args.device)
+                pred_b = ring_to_real(codec, pred_b_ring).view(-1).to(args.device)
                 row_b = probe_item(item, codec, pred_b, decoder, synth)
                 row_b["variant"] = "B_SINGLE_PASS"
                 row_b["n_demo_pairs"] = len(pairs)

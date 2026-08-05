@@ -45,14 +45,20 @@ class StructuredCharPositionCodec(nn.Module):
         k_bins: int = 256,
         device: Optional[str] = None,
         max_cache_entries: int = 512,
+        position_mode: str = "full",
     ):
         super().__init__()
         if k_bins != 256:
             raise ValueError("Run21 structured codec requires k_bins=256")
+        if position_mode not in ("full", "none", "shuffled"):
+            raise ValueError(
+                f"position_mode must be full|none|shuffled, got {position_mode!r}")
         self.d_model = int(d_model)
         self.k_bins = int(k_bins)
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.max_cache_entries = int(max_cache_entries)
+        self.position_mode = position_mode
+        self._shuffle_cache: dict[int, list[int]] = {}
         self._token_cpu: dict[str, torch.Tensor] = {}
         self._ring_cache: OrderedDict[str, torch.Tensor] = OrderedDict()
         # q_P is a fixed phase-frequency ring. Position powers are generated
@@ -95,10 +101,21 @@ class StructuredCharPositionCodec(nn.Module):
         position = int(position)
         if position < 0:
             raise ValueError("position must be non-negative")
+        if self.position_mode == "none":
+            return torch.zeros(self.d_model, dtype=torch.uint8, device=self.device)
         if length is None:
             denominator = max(1, position)
         else:
-            denominator = max(1, int(length) - 1)
+            length = int(length)
+            denominator = max(1, length - 1)
+            if self.position_mode == "shuffled":
+                perm = self._shuffle_cache.get(length)
+                if perm is None:
+                    generator = torch.Generator(device="cpu").manual_seed(
+                        self._seed("position_shuffle", length))
+                    perm = torch.randperm(length, generator=generator).tolist()
+                    self._shuffle_cache[length] = perm
+                position = perm[position]
         fraction = float(position) / float(denominator)
         phase_codes = torch.round(
             self._position_base_cpu.to(torch.float32) * fraction
@@ -172,6 +189,7 @@ class StructuredCharPositionCodec(nn.Module):
             "tokenizer": "character_codepoint",
             "position_binding": "round((i/max(1,n-1))*q_P) plus q_token mod 256",
             "position_index": "normalized_fractional_character_index",
+            "position_mode": self.position_mode,
             "bundling": "complex_phase_sum_then_quantize",
             "d_model": self.d_model,
             "k_bins": self.k_bins,

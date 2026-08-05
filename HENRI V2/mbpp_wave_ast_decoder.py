@@ -29,6 +29,8 @@ from typing import Any, Optional
 
 import torch
 
+from qfhrr_structured_codec import ring_to_real  # noqa: E402
+
 # ---- grammar: expression templates, {a}=first arg, {b}=second arg ----
 EXPRS_UNARY = [
     "sorted({a})", "sum({a})", "len({a})", "min({a})", "max({a})",
@@ -168,7 +170,7 @@ class WaveASTDecoder:
     def _wave(self, text: str) -> torch.Tensor:
         ring = self.codec.encode_text(text).to(torch.float32)
         return torch.nn.functional.normalize(
-            (ring / (self.codec.k_bins - 1) * 2.0 - 1.0).view(-1).to(self.device), p=2, dim=0)
+            ring_to_real(self.codec, ring).view(-1).to(self.device), p=2, dim=0)
 
     def _instantiate(self, entry: str, args: list[str]) -> list[str]:
         """Return BODY strings (already indented) for the item's signature."""

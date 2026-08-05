@@ -111,3 +111,17 @@ The HENRI NotebookLM consultation is `INFERRED` design context only. It states t
 ## Status
 
 Pre-registered before Run 21 source implementation. No acceptance claim is made by this document.
+
+## Addendum (2026-08-04, STRUCTURED_CODEC_KILL_V1_APPROVED)
+
+- Arms added: `--codec legacy|structured|structured-nopos|structured-shuffled|identity`.
+  `identity` = prompt-wave ranking with no W_task and no EDMD; its probe rows use
+  variant `IDENTITY`.
+- Geometry control extended: `position_swap_sim`, `unrelated_sim`, and codec metadata
+  (name/version/tokenizer/position_mode).
+- Matrix runner: `experiments/verification/run21_codec_matrix.py` (remote CUDA only).
+- Contract tests: `tests/contract/test_qfhrr_structured_codec.py`.
+- Verdict: `ACCEPTANCE_MET` = structured arm control_healthy AND (62,89) rank <= 24 in
+  at least one variant AND improvement over both identity and legacy arms for the same
+  variant; `FALSIFIED_AT_SCALE` = control_healthy but no acceptance; `INVALID_PLUMBING`
+  = control gate fails; `BLOCKED_INFRASTRUCTURE` = CUDA/dataset/artifact failure.
