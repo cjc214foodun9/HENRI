@@ -234,6 +234,7 @@ class WaveASTDecoder:
         entry: str, args: list[str],
         manifold_proj: Optional[torch.Tensor] = None,
         complexity_lambda: float = 0.15,
+        use_prompt_contrast: bool = True,
     ) -> list[tuple[str, dict[str, Any]]]:
         """Enumerate the grammar under the item signature, rank every complete
         program by transformation-relative wave similarity MINUS a structural-
@@ -246,8 +247,12 @@ class WaveASTDecoder:
         exemplar-biased multi-statement distractors."""
         prompt_wave = torch.nn.functional.normalize(
             prompt_wave.view(-1).to(torch.float32), p=2, dim=0)
-        pn = torch.nn.functional.normalize(
-            pred_wave.view(-1).to(torch.float32) - prompt_wave, p=2, dim=0)
+        if use_prompt_contrast:
+            pn = torch.nn.functional.normalize(
+                pred_wave.view(-1).to(torch.float32) - prompt_wave, p=2, dim=0)
+        else:
+            pn = torch.nn.functional.normalize(
+                pred_wave.view(-1).to(torch.float32), p=2, dim=0)
         proj = None
         if manifold_proj is not None:
             proj = manifold_proj.view(-1, manifold_proj.shape[-1]).to(torch.float32).to(self.device)
@@ -264,8 +269,11 @@ class WaveASTDecoder:
         scored = []
         for src, meta in candidates:
             v = self._wave(src)
-            v_rel = v - prompt_wave * torch.dot(v, prompt_wave).clamp(min=0.0)
-            v_rel = torch.nn.functional.normalize(v_rel, p=2, dim=0)
+            if use_prompt_contrast:
+                v_rel = v - prompt_wave * torch.dot(v, prompt_wave).clamp(min=0.0)
+                v_rel = torch.nn.functional.normalize(v_rel, p=2, dim=0)
+            else:
+                v_rel = torch.nn.functional.normalize(v, p=2, dim=0)
             sim = float(torch.dot(v_rel, pn).item())
             penalty = 0.0
             if proj is not None:

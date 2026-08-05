@@ -125,3 +125,6 @@ Pre-registered before Run 21 source implementation. No acceptance claim is made 
   at least one variant AND improvement over both identity and legacy arms for the same
   variant; `FALSIFIED_AT_SCALE` = control_healthy but no acceptance; `INVALID_PLUMBING`
   = control gate fails; `BLOCKED_INFRASTRUCTURE` = CUDA/dataset/artifact failure.
+- Identity arm uses `use_prompt_contrast=False` (plain wave similarity; no
+  pred-minus-prompt subtraction that would be NaN when pred == prompt).
+- Runner writes `RUN21_DONE` when the verdict is not infrastructure-blocked.

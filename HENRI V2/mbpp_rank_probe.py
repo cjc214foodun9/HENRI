@@ -247,6 +247,7 @@ def probe_item(
     decoder: WaveASTDecoder,
     synth: MbppCegisSynthesizer,
     manifold_proj: Optional[torch.Tensor] = None,
+    use_prompt_contrast: bool = True,
 ) -> dict[str, Any]:
     task_id = int(item["task_id"])
     prompt = render_prompt(item)
@@ -263,12 +264,15 @@ def probe_item(
     dec_cands = decoder.decode(
         pred_wave, prompt_wave_real, entry, args,
         manifold_proj=manifold_proj,
-        complexity_lambda=COMPLEXITY_LAMBDA)
+        complexity_lambda=COMPLEXITY_LAMBDA,
+        use_prompt_contrast=use_prompt_contrast)
 
     cands = synth.build_candidates(prompt, item.get("test_list"))
     anchors = [c for c in cands if c[1].get("morphism") == "identity"]
     union = dec_cands + anchors
-    ranked = synth.rank_candidates(union, pred_wave, prompt_wave=prompt_wave_real)
+    ranked = synth.rank_candidates(
+        union, pred_wave,
+        prompt_wave=prompt_wave_real if use_prompt_contrast else None)
 
     canon_code = item.get("code", "")
     if not canon_code:
@@ -420,7 +424,8 @@ def main() -> int:
             if args.codec == "identity":
                 # Identity arm: no W_task, no EDMD. Prediction = prompt wave.
                 try:
-                    row = probe_item(item, codec, prompt_wave_real, decoder, synth)
+                    row = probe_item(item, codec, prompt_wave_real, decoder, synth,
+                                     use_prompt_contrast=False)
                     row["variant"] = "IDENTITY"
                     row["n_demo_pairs"] = 0
                 except Exception as exc:

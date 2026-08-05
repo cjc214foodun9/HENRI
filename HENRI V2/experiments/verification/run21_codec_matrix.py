@@ -170,6 +170,8 @@ def main() -> int:
 
     out = out_dir / "run21_summary.json"
     out.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    if summary.get("verdict") != "BLOCKED_INFRASTRUCTURE":
+        (out_dir / "RUN21_DONE").write_text("", encoding="utf-8")
     print("[run21] SUMMARY " + json.dumps(summary, indent=2), flush=True)
     return 0 if summary.get("verdict") not in ("BLOCKED_INFRASTRUCTURE",) else 1
 
