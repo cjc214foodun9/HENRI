@@ -251,9 +251,7 @@ def probe_item(
     task_id = int(item["task_id"])
     prompt = render_prompt(item)
     prompt_wave = codec.encode_text(prompt)
-    prompt_wave_real = (
-        prompt_wave.to(torch.float32) / (codec.k_bins - 1) * 2.0 - 1.0
-    ).view(-1).to(pred_wave.device)
+    prompt_wave_real = ring_to_real(codec, prompt_wave).view(-1).to(pred_wave.device)
     sig = parse_entry_signature(prompt) or parse_entry_from_tests(
         item.get("test_list") or [])
     if sig is None:
