@@ -96,20 +96,27 @@ def verdict(summaries: dict[str, dict], controls: dict[str, dict]) -> dict:
                     out[int(tid)] = r
         return out
 
+    # Identity arm has no W_task and no EDMD; its rows carry variant
+    # IDENTITY (prompt-wave ranking). It is the no-supervision baseline
+    # for both A_EDMD and B_SINGLE_PASS comparisons.
+    r_identity = ranks_for("identity", "IDENTITY")
+
     # Acceptance: structured (full) arm control_healthy AND 62,89 <= 24 in
-    # at least one variant AND better than identity and legacy for that variant.
+    # at least one variant AND strictly better than identity AND legacy
+    # for that variant.
     accepted_variant = None
     structured_ok = control_healthy("structured")
     for variant in ("A_EDMD", "B_SINGLE_PASS"):
         r_struct = ranks_for("structured", variant)
         if all(v is not None and v <= 24 for k, v in r_struct.items() if k in (62, 89)) and len(r_struct) >= 2:
-            r_id = ranks_for("identity", variant)
             r_legacy = ranks_for("legacy", variant)
             beats_id = all(
-                r_struct.get(k) is not None and (r_id.get(k) is None or r_struct[k] < r_id[k])
+                r_struct.get(k) is not None
+                and (r_identity.get(k) is None or r_struct[k] < r_identity[k])
                 for k in (62, 89))
             beats_legacy = all(
-                r_struct.get(k) is not None and (r_legacy.get(k) is None or r_struct[k] < r_legacy[k])
+                r_struct.get(k) is not None
+                and (r_legacy.get(k) is None or r_struct[k] < r_legacy[k])
                 for k in (62, 89))
             if beats_id and beats_legacy:
                 accepted_variant = variant
