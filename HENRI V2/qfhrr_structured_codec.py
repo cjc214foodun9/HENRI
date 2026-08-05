@@ -102,7 +102,9 @@ class StructuredCharPositionCodec(nn.Module):
         if position < 0:
             raise ValueError("position must be non-negative")
         if self.position_mode == "none":
-            return torch.zeros(self.d_model, dtype=torch.uint8, device=self.device)
+            # Match token-ring device (CPU): _bundle sums token and position
+            # rings before the explicit device transfer.
+            return torch.zeros(self.d_model, dtype=torch.uint8, device="cpu")
         if length is None:
             denominator = max(1, position)
         else:
