@@ -1,0 +1,146 @@
+schema_id: henri.release-disposition.v1
+status: CANDIDATE_ONLY
+candidate_base: 331c7f46c239db8e4bd822ad46cc36dbd1b3442b
+scope: clean production HENRI V2 tree plus release metadata
+preservation:
+  primary_local_checkout: protected; not modified
+  persistent_vast_checkout: protected; not modified
+  prior_git_history: preserved; excluded paths remain recoverable from Git history
+  external_pdf_staging: C:/Users/chan/henri-telemetry/release-docs-20260804
+classifications:
+  - path: HENRI V2
+    class: production_and_verification
+    action: retain
+  - path: HENRI V2/tests
+    class: test
+    action: retain
+  - path: HENRI V2/experiments
+    class: experiment_and_component_verification
+    action: retain
+  - path: HENRI V2/_archive
+    class: archive
+    action: retain
+  - path: HENRI V2/_archive/legacy_graph
+    class: legacy_simulated_runtime
+    action: retain_quarantined
+  - path: HENRI V2/environment_files
+    class: benchmark_runtime_fixture_and_task_data
+    action: remove_from_candidate_pending_separate_heldout_review
+  - path: HENRI V2/data
+    class: benchmark_index_and_staged_evaluation_metadata
+    action: remove_from_candidate_pending_evidence_review
+  - path: HENRI V2/telemetry_logs
+    class: generated_local_state
+    action: remove_from_candidate
+  - path: HENRI V2/.obsidian
+    class: editor_local_state
+    action: remove_from_candidate
+  - path: HENRI V2/scratch
+    class: scratch_and_diagnostic_state
+    action: remove_from_candidate
+  - path: HENRI V2/henri_audit_chain.json
+    class: generated_governance_artifact
+    action: preserve_external_then_remove_from_candidate
+  - path: .vault_vector_db
+    class: generated_local_database
+    action: remove_from_candidate
+  - path: Obsidian_Vault
+    class: local_research_projection
+    action: remove_from_candidate
+  - path: assets
+    class: research_and_generated_assets
+    action: remove_from_candidate
+  - path: arxiv_*
+    class: research_cache
+    action: remove_from_candidate
+  - path: ingest_input
+    class: local_staging_state
+    action: remove_from_candidate
+  - path: trustgraph
+    class: invalid_or_unmapped_gitlink
+    action: remove_from_candidate
+  - path: docker-compose.yaml
+    class: unrelated_trustgraph_deployment
+    action: remove_from_candidate
+  - path: deploy
+    class: unrelated_trustgraph_deployment
+    action: remove_from_candidate
+  - path: launch
+    class: unrelated_trustgraph_deployment
+    action: remove_from_candidate
+  - path: garage
+    class: unrelated_trustgraph_deployment
+    action: remove_from_candidate
+  - path: grafana
+    class: unrelated_trustgraph_deployment
+    action: remove_from_candidate
+  - path: loki
+    class: unrelated_trustgraph_deployment
+    action: remove_from_candidate
+  - path: prometheus
+    class: unrelated_trustgraph_deployment
+    action: remove_from_candidate
+  - path: .agents
+    class: local_agent_policy
+    action: remove_from_candidate
+  - path: .hermes
+    class: local_agent_state
+    action: remove_from_candidate
+  - path: scratch
+    class: local_research_scratch
+    action: remove_from_candidate
+  - path: docs/HENRI_TRUSTGRAPH_PHOTON_GOOGLE_DRIVE_MANUAL.md
+    class: unrelated_integration_manual
+    action: remove_from_candidate
+  - path: Holographic Quantum Error Correction & HENRI Synthesis.pdf
+    class: research_source
+    action: remove_from_candidate
+  - path: Hermes Automated Workflow Blueprint.md
+    class: external_workflow_document
+    action: remove_from_candidate
+  - path: Hermes Autonomous Workflow Architecture.md
+    class: external_workflow_document
+    action: remove_from_candidate
+  - path: benchmarks.json
+    class: benchmark_index_metadata
+    action: remove_from_candidate
+  - path: henri_langgraph_executable_agent_engine.py
+    class: legacy_or_quarantined_runtime
+    action: move_to_HENRI_V2_archive
+  - path: henri_agentic_timescaledb_docker_spec.md
+    class: superseded_external_deployment_specification
+    action: remove_from_candidate
+  - path: HANDOFF.md
+    class: stale_session_handoff
+    action: remove_from_candidate
+  - path: arxiv_retry.py
+    class: research_utility
+    action: remove_from_candidate
+  - path: merge_arxiv.py
+    class: research_utility
+    action: remove_from_candidate
+  - path: production_docker_compose_stack.yaml
+    class: HENRI V2 development Zone C deployment configuration
+    action: retain
+  - path: docker/zonec-dev
+    class: HENRI development Zone C configuration
+    action: retain
+retained_root_metadata:
+  - README.md
+  - LICENSE.md
+  - CONTRIBUTING.md
+  - SECURITY.md
+  - requirements.txt
+  - pyproject.toml
+  - Dockerfile.vast
+  - INSTALLATION.md
+  - production_docker_compose_stack.yaml
+  - docker/zonec-dev
+  - .github
+  - .gitignore
+review_required:
+  - legal license owner and grant
+  - private security reporting channel
+  - production_docker_compose_stack.yaml deployment ownership
+  - full remote suite discrepancy
+  - exact checkpoint compatibility for score-bearing paths

@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "henri-v2"
+version = "2.0.0.dev0"
+description = "Research software for HENRI V2 wave, VSA, active-inference, and CUDA experiments"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {file = "LICENSE.md"}
+dynamic = []
+dependencies = []
+
+[project.optional-dependencies]
+runtime = [
+  # Install a CUDA-compatible PyTorch wheel through the target environment.
+  "torch>=2.4,<2.13",
+  "numpy>=2.1",
+  "scipy>=1.14",
+  "pydantic>=2.0",
+  "jsonschema>=4.0",
+  "psycopg[binary]>=3.2",
+  "psycopg2-binary>=2.9",
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "requests>=2.31",
+  "pypdf>=4.0",
+]
+test = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "anyio>=4.0",
+]
+dev = [
+  "ruff>=0.6",
+  "black>=24.0",
+]
+
+[tool.setuptools]
+py-modules = []
+
+[tool.pytest.ini_options]
+testpaths = [
+  "HENRI V2/tests/unit",
+  "HENRI V2/tests/integration",
+  "HENRI V2/tests/contract",
+]
+python_files = ["test_*.py"]
+pythonpath = ["HENRI V2"]
+addopts = "-v --tb=short"
+
+[tool.henri]
+evidence_policy = "fail-closed"
+checkpoint_policy = "explicit"
+remote_cuda_required_for_production = true
+flat_import_boundary = "HENRI V2"

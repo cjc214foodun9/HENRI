@@ -1,103 +1,56 @@
-# TrustGraph Deployment Guide
+# HENRI V2 installation and verification
 
+## Scope
 
-## Platform Setup
+This document covers the HENRI V2 source tree. TrustGraph deployment files are not part of the HENRI V2 production release.
 
+## Requirements
 
-### Install and configure Docker Compose
+- Python 3.12 or newer.
+- A local CPU environment for syntax and software tests.
+- An approved CUDA host for GPU and CUDA component verification.
+- PostgreSQL/TimescaleDB only for Zone C tests or services that explicitly require it.
 
-You need to have Docker Compose installed. See [Installing Docker Compose](https://docs.docker.com/compose/install/).
+Do not place credentials, database DSNs, checkpoints, or private host details in Git.
 
+## Local environment
 
-## Identity & Access Management
-
-
-### Configure IAM bootstrap token
-
-TrustGraph 2.4 introduces IAM (Identity and Access Management) for API and UX authentication. You must configure a bootstrap token to enable initial access. Set the `IAM_BOOTSTRAP_TOKEN` environment variable before starting the deployment. The token must have a `tg_` prefix to be recognised as an API token.
-
-```
-IAM_BOOTSTRAP_TOKEN=tg_your-secret-token-here
-```
-
-
-## Model Configuration
-
-
-### Set up Ollama model server
-
-The power of Ollama is the flexibility it provides in Language Model deployments. Being able to run LMs with Ollama enables fully secure AI TrustGraph pipelines that aren't relying on any external APIs. No data is leaving the host environment or network.
-
-The Ollama service must be running, and have required models available using `ollama pull`. The Ollama service URL must be provided in an environment variable.
-
-```
-OLLAMA_HOST=http://ollama-host:11434
-```
-
-Replace the URL with the URL of your Ollama service.
-
-
-## API Gateway
-
-
-### Configure API gateway
-
-The API Gateway is a required component which supports the CLI and Workbench. As of TrustGraph 2.4, gateway authentication is managed through IAM. No separate gateway secret is required. Ensure your `IAM_BOOTSTRAP_TOKEN` environment variable is set (see IAM setup).
-
-
-### MCP server information
-
-The MCP server allows MCP clients to interact with TrustGraph. As of TrustGraph 2.4, MCP server authentication is managed through IAM. No separate MCP server credentials are required.
-
-
-## Deployment
-
-
-### Deploy with Docker Compose
-
-When you download the deploy configuration, you will have a ZIP file containing all the configuration needed to launch TrustGraph in Docker Compose. Unzip the ZIP file:
+Create an environment outside the repository, then install the declared dependencies:
 
 ```bash
-unzip deploy.zip
+python -m venv .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-On MacOS, it may be necessary to specify a destination directory for the TrustGraph package:
+On Windows, use the equivalent activation command for the selected shell. The repository tests use flat imports from `HENRI V2`; the root `pyproject.toml` supplies the test paths.
+
+## Local checks
 
 ```bash
-unzip deploy.zip -d deploy
+python -m compileall -q "HENRI V2"
+python -m pytest
 ```
 
-Navigate to the `docker-compose` directory. From this directory, launch TrustGraph with:
+Local CPU execution verifies software behavior only. It does not verify CUDA kernels, remote deployment, benchmark capability, or a live service.
 
-```bash
-docker compose -f docker-compose.yaml up -d
-```
+## CUDA checks
 
-If you are on Linux, running SELinux, you may need to change permissions on files in the deploy bundle so that they are accessible from within containers. This affects the `grafana` and `prometheus` directories.
+Run approved CUDA checks only in a clean detached worktree on the approved remote target. Before execution, record:
 
-```bash
-chcon -Rt svirt_sandbox_file_t grafana prometheus
-chmod 755 prometheus/ grafana/ grafana/*/
-chmod 644 prometheus/* grafana/*/*
-```
+- exact commit SHA;
+- Python, PyTorch, CUDA, and GPU identity;
+- complete worktree status digest;
+- checkpoint policy and compatibility result;
+- suite commands and return codes.
 
+Production and score-bearing decoder paths require `checkpoint_policy="required"`. If the exact compatible checkpoint is absent, classify the path as `BLOCKED`; do not copy an unverified checkpoint, use `strict=False`, resize weights, or weaken the policy.
 
-## Verification & Testing
+## Zone C
 
+Zone C uses environment-only DSNs. Keep production DSNs outside Git and outside chat. Development schema and bootstrap files are under `HENRI V2/migrations/` and the repository's explicit development compose configuration.
 
-### Access the TrustGraph Workbench
+## Release verification
 
-Once the system is running, you can access the Workbench on port 8888, or access using the following URL:
-
-[http://localhost:8888/](http://localhost:8888/)
-
-Once you have data loaded, you can present a Graph RAG query on the Chat tab. As well as answering the question, a list of semantic relationships which were used to answer the question are shown and these can be used to navigate the knowledge graph.
-
-
-### Test Document RAG
-
-Document RAG APIs are separate from GraphRAG. You can use `tg-invoke-document-rag` to test Document RAG processing once documents are loaded:
-
-```bash
-tg-invoke-document-rag -q "Describe a cat"
-```
+A release candidate is not a release until the local gates, remote CUDA gates, repository-professionalism gates, promotion approval, and clean deployment reconciliation all pass.

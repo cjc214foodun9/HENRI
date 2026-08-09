@@ -1,0 +1,26 @@
+# HENRI V2 runtime and verification dependencies.
+# CUDA-enabled PyTorch wheels are selected by the deployment environment.
+# Do not place private indexes, credentials, or host-specific DSNs here.
+
+# PyTorch is supplied by the CUDA base image on Vast. Install a compatible
+# wheel explicitly for other environments; do not silently replace CUDA builds.
+torch>=2.4,<2.13
+numpy>=2.1
+scipy>=1.14
+pydantic>=2.0
+jsonschema>=4.0
+psycopg[binary]>=3.2
+psycopg2-binary>=2.9
+fastapi>=0.110
+uvicorn>=0.29
+requests>=2.31
+pypdf>=4.0
+pytest>=8.0
+pytest-asyncio>=0.23
+anyio>=4.0
+
+# Optional CUDA/compiler dependency. Install only on a compatible CUDA host.
+# triton>=3.0
+
+# Optional task-environment dependencies are intentionally not installed by
+# the base release. Their dataset and service contracts require separate review.
