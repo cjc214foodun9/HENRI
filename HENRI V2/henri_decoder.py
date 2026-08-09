@@ -21,6 +21,23 @@ class DecoderCheckpointCompatibilityError(RuntimeError):
     """Raised when a required decoder checkpoint cannot load safely."""
 
 
+class DecoderEgressFailClosedError(RuntimeError):
+    """Raised when egress would otherwise emit a hardcoded/marker answer.
+
+    Production default: no prompt may resolve to a canned response. A
+    synthetic-test flag can re-enable the legacy marker branches; those
+    outputs are never score-eligible.
+    """
+
+
+def _sgld_thermal_schedule(t: int, t0: float = 1e-6) -> float:
+    """SGLD thermal schedule T(t) = T0 * (1 + 0.05t)^-0.55.
+
+    Monotone decreasing from T0; drives exploration early, exploitation late.
+    """
+    return t0 * (1.0 + 0.05 * float(t)) ** -0.55
+
+
 def _state_dict_sha256(state_dict: Dict[str, torch.Tensor]) -> str:
     """Hash tensor names, dtypes, shapes, and bytes in deterministic order."""
     digest = hashlib.sha256()
@@ -187,6 +204,109 @@ class HENRINeuralEgressUnbinder(nn.Module):
             "yield_events": yield_count,
             "mean_phase_mismatch": float(torch.mean(delta_phi).item()),
             "mean_gap_junction_isolation": float(torch.mean(1.0 - g_conductance).item())
+        }
+
+    def adapt_in_context_sgld_wave(
+        self,
+        active_waves: torch.Tensor,
+        target_waves: torch.Tensor,
+        steps: int = 500,
+        eta: float = 1e-3,
+        sigma_yield: float = 0.05,
+        t0: float = 1e-6,
+        kappa: float = 1e-2,
+        dt: float = 1.0,
+        sagnac_lambda: float = 0.25,
+        seed: int = 0,
+    ) -> Dict[str, float]:
+        """Corrected test-time SGLD with wave-aligned soft targets and a Sagnac term.
+
+        Structural fixes over adapt_in_context_sgld:
+        1. Non-degenerate labels: the CE target is the FULL softmax distribution of
+           the solution wave (p_target = softmax(unbinder(Psi_Yi))), snapshotted
+           pre-adaptation. Argmax bootstrap labels collapse to a few token classes
+           and carry no discriminative structure.
+        2. Sagnac phase-alignment term: L = L_CE + 0.25 * Delta_Sagnac with
+           Delta_Sagnac = 1 - cos(p, p_target) in the probability simplex, the only
+           wave-informed egress geometry available without a wave decoder.
+        3. Scheduled thermal noise T(t) = T0 * (1 + 0.05t)^-0.55 with unit-normalized
+           Langevin increments (no D^1/2 norm inflation).
+        Batch form: active_waves, target_waves shape [B, D].
+
+        Bingham Plastic yield gate, TAME gap-junction isolation, and Cholesky
+        Stiefel retraction follow the shipped mechanics; only down_proj is updated.
+        """
+        self.train()
+        active_waves = active_waves.to(self.device).to(torch.float32)
+        target_waves = target_waves.to(self.device).to(torch.float32)
+        if active_waves.dim() == 1:
+            active_waves = active_waves.unsqueeze(0)
+        if target_waves.dim() == 1:
+            target_waves = target_waves.unsqueeze(0)
+
+        # Frozen soft-target snapshot of the solution waves (label rule: pre-adaptation).
+        with torch.no_grad():
+            logits_target = self.forward(target_waves)
+            p_target = torch.softmax(logits_target, dim=-1)
+
+        delta_phi = self.compute_dimension_sagnac_mismatch(active_waves, target_waves)
+        g_conductance = self.compute_gap_junction_conductance(delta_phi)
+
+        total_loss = 0.0
+        yield_count = 0
+        loss_first = None
+        loss_last = None
+        sagnac_final = None
+
+        for t in range(steps):
+            temp_t = _sgld_thermal_schedule(t, t0=t0)
+            self.optimizer.zero_grad()
+            logits = self.forward(active_waves)
+            p = torch.softmax(logits, dim=-1)
+            ce_loss = -(p_target * torch.log(p + 1e-12)).sum(dim=-1).mean()
+            sagnac_dist = (1.0 - F.cosine_similarity(p, p_target, dim=-1)).mean()
+            loss = ce_loss + sagnac_lambda * sagnac_dist
+            loss.backward()
+
+            with torch.no_grad():
+                grad_down = self.down_proj.weight.grad
+                if grad_down is not None:
+                    grad_norm = torch.norm(grad_down)
+                    if grad_norm > sigma_yield:
+                        yield_count += 1
+                        effective_grad = (grad_norm - sigma_yield) * (grad_down / (grad_norm + 1e-8))
+                        isolation_mask = (1.0 - g_conductance).mean(dim=0).unsqueeze(0)
+                        effective_grad = effective_grad * isolation_mask
+                        # Unit-normalized Langevin thermal noise (skill invariant).
+                        rng = torch.Generator(device=self.device).manual_seed(seed + t)
+                        xi = torch.randn_like(self.down_proj.weight, generator=rng)
+                        xi = F.normalize(xi, p=2.0, dim=-1)
+                        langevin_noise = math.sqrt(2.0 * temp_t * dt) * xi
+                        self.down_proj.weight -= (eta / 2.0) * effective_grad - langevin_noise
+                        # Cholesky Stiefel retraction.
+                        v_weight = self.down_proj.weight
+                        v_vt = torch.matmul(v_weight, v_weight.T) + 1e-6 * torch.eye(self.d_hidden, device=self.device)
+                        l_inv = torch.linalg.inv(torch.linalg.cholesky(v_vt))
+                        self.down_proj.weight.copy_(torch.matmul(l_inv, v_weight))
+
+            total_loss += loss.item()
+            if loss_first is None:
+                loss_first = loss.item()
+            loss_last = loss.item()
+            sagnac_final = float(sagnac_dist.item())
+
+        self.eval()
+        return {
+            "adapt_protocol": "wave_soft_targets_scheduled_sgld",
+            "steps": steps,
+            "avg_loss": total_loss / max(1, steps),
+            "loss_first": float(loss_first),
+            "loss_last": float(loss_last),
+            "sagnac_dist_final": sagnac_final,
+            "yield_events": yield_count,
+            "mean_phase_mismatch": float(torch.mean(delta_phi).item()),
+            "mean_gap_junction_isolation": float(torch.mean(1.0 - g_conductance).item()),
+            "soft_target_entropy_nats": float(-(p_target * torch.log(p_target + 1e-12)).sum(dim=-1).mean().item()),
         }
 
 
@@ -511,8 +631,20 @@ class HENRIUnifiedEgressTransducer:
         }
         telemetry.update(self.checkpoint_telemetry())
 
+        # Synthetic-marker quarantine (P1): the legacy option/math/generic
+        # branches emit hardcoded canned answers ("the correct option is A",
+        # "\\boxed{token}") and are never score-eligible. Production default
+        # FAILS CLOSED with a typed error; HENRI_SYNTHETIC_EGRESS=1 restores
+        # them only for synthetic fixtures and marks the output ineligible.
+        synthetic_egress = os.environ.get("HENRI_SYNTHETIC_EGRESS", "0") == "1"
+
         # Option Parsing for Multiple-Choice tasks
         if "option letter" in prompt_lower or "options:" in prompt_lower or "(a, b, c, or d)" in prompt_lower:
+            if not synthetic_egress:
+                raise DecoderEgressFailClosedError(
+                    "multiple-choice marker egress disabled by default; "
+                    "set HENRI_SYNTHETIC_EGRESS=1 for synthetic fixtures only"
+                )
             # Deterministic phase projection onto option choices
             phase_ring = self.codebook.quantize_phase_ring(goal_wave)
             ring_sum = int(torch.sum(phase_ring).item())
@@ -520,6 +652,8 @@ class HENRIUnifiedEgressTransducer:
             choice_map = {0: "A", 1: "B", 2: "C", 3: "D"}
             selected_option = choice_map[choice_idx]
             response_text = f"Based on continuous wave phase unbinding, the correct option is {selected_option}."
+            telemetry["synthetic_marker"] = True
+            telemetry["score_eligible"] = False
         elif "python" in prompt_lower or "function" in prompt_lower or "def " in prompt_lower:
             constructed_code, gen_ids, seq_telemetry = self.codebook.decode_autoregressive_sequence(
                 unbinder=self.unbinder,
@@ -531,9 +665,23 @@ class HENRIUnifiedEgressTransducer:
             response_text = f"```python\n{constructed_code}\n```"
             telemetry.update(seq_telemetry)
         elif "math" in prompt_lower or "solve" in prompt_lower or "value" in prompt_lower or "boxed" in prompt_lower:
+            if not synthetic_egress:
+                raise DecoderEgressFailClosedError(
+                    "math marker egress disabled by default; "
+                    "set HENRI_SYNTHETIC_EGRESS=1 for synthetic fixtures only"
+                )
             response_text = f"Calculated wave state solution: \\boxed{{{top_token_id}}}"
+            telemetry["synthetic_marker"] = True
+            telemetry["score_eligible"] = False
         else:
+            if not synthetic_egress:
+                raise DecoderEgressFailClosedError(
+                    "generic marker egress disabled by default; "
+                    "set HENRI_SYNTHETIC_EGRESS=1 for synthetic fixtures only"
+                )
             response_text = f"Continuous wave state transduced successfully (Token ID: {top_token_id})."
+            telemetry["synthetic_marker"] = True
+            telemetry["score_eligible"] = False
 
         return response_text, telemetry
 

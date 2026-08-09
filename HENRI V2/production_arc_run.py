@@ -26,9 +26,11 @@ Run on the 5090:
 """
 
 import argparse
+import hashlib
 import json
 import math
 import os
+import subprocess
 import time
 import uuid
 from datetime import datetime, timezone
@@ -50,6 +52,7 @@ from universal_data_transducer import UniversalDataTransducer
 from zone_c_env import resolve_zone_c_dsn
 from adaptive_viscoelastic_thermostat import AdaptiveViscoelasticThermostat
 from henri_decoder import HENRIUnifiedEgressTransducer
+from henri_benchmark_registry import ARCEpisodeTrace
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -182,6 +185,19 @@ def retroactive_update(orch, trajectory_buffer: list, valence_nu: float, dampeni
 # ---------------------------------------------------------------------------
 # Telemetry
 # ---------------------------------------------------------------------------
+
+def _head_sha256() -> str:
+    """Return the repository HEAD commit short SHA, or 'UNKNOWN' when git is unavailable."""
+    try:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        out = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo_root, capture_output=True, text=True, timeout=10,
+        )
+        return out.stdout.strip() or "UNKNOWN"
+    except Exception:
+        return "UNKNOWN"
+
 
 class LatentTelemetry:
     """Dense per-step latent-space record: JSONL mirror + hypertable waves."""
@@ -324,6 +340,7 @@ def run():
         if obs is None or not getattr(obs, "frame", None):
             print("  [skip] null initial frame")
             continue
+        initial_grid = obs.frame[0].tolist()
         if EXTERNAL_OUTCOME_EFE:
             orch.planner.reset_external_outcomes()
         # P0 external evidence: per-step counters for the Beta-Bernoulli
@@ -340,7 +357,7 @@ def run():
                 if isinstance(ex, dict) and "input" in ex and "output" in ex:
                     demo_pairs.append((np.array(ex["input"]), np.array(ex["output"])))
 
-        if demo_pairs and hasattr(orch.planner, "sagnac_mcts_planner"):
+        if demo_pairs:
             # The current Arcade adapter exposes demonstrations but not the
             # held-out target grid required by SagnacMCTSPlanner.search().
             # Passing init_grid as target_grid was an identity-target leak.
@@ -394,6 +411,17 @@ def run():
         train_ctx = None
         action_counts = {}
         edmd_buffer = []  # (state, action_wave, observed_next) triples
+        # P1 episode-trace accumulator (emitted per-env as henri.arc-episode-trace.v1).
+        trace_acc = {
+            "min_sagnac": None,
+            "veto_count": 0,
+            "veto_reasons": {},
+            "progress_events": 0,
+            "candidate_count": 0,
+            "plan_ms": 0.0,
+            "steps_run": 0,
+        }
+        terminal_state = "BUDGET_EXHAUSTED"
         # Wire B valence: outcome signal for the LAST executed action,
         # computed when the next observation arrives and consumed by the
         # deferred T1 update + the current relaxation's thermal schedule.
@@ -654,6 +682,8 @@ def run():
                             task_progressed = bool(obs_next.levels_completed > 0)
                         except Exception:
                             pass
+                if task_progressed:
+                    trace_acc["progress_events"] += 1
                 # Encode the post-action observation for task-store
                 # registration when progress occurred.  Use the tokenizer's
                 # actual production encoding path (VSA spatial grid).
@@ -701,6 +731,22 @@ def run():
                 ),
                 "pending_reset": game_action.name == "RESET",
             }
+
+            # P1: accumulate per-episode trace fields (honest instrumentation;
+            # planning_ms is the sum of per-step wall time, documented).
+            trace_acc["steps_run"] += 1
+            trace_acc["objects_last"] = num_objects_segmented
+            if sagnac_delta is not None:
+                sagnac_delta_f = float(sagnac_delta)
+                if trace_acc["min_sagnac"] is None or sagnac_delta_f < trace_acc["min_sagnac"]:
+                    trace_acc["min_sagnac"] = sagnac_delta_f
+            trace_acc["candidate_count"] += len(efe_table)
+            trace_acc["plan_ms"] += float(step_ms)
+            if bool(chosen.get("rejected", False)):
+                trace_acc["veto_count"] += 1
+                trace_acc["veto_reasons"]["constraint_rejected"] = (
+                    trace_acc["veto_reasons"].get("constraint_rejected", 0) + 1
+                )
 
             # Track the propagated prior: the EFE planner's predicted wave becomes
             # the dynamics prior that conditions the next step's encoding, so the
@@ -771,6 +817,7 @@ def run():
             prev_predicted_prior = predicted_prior
             obs = obs_next
             if obs is None or not getattr(obs, "state", None):
+                terminal_state = "NULL_OBSERVATION"
                 print("  [end] null observation")
                 break
             if obs.state.name in ("WIN", "GAME_OVER"):
@@ -780,11 +827,13 @@ def run():
                 if obs.state.name == "WIN":
                     valence = 1.0
                     orch.planner.register_preference(state_wave)
+                    trace_acc["progress_events"] += 1
                     if train_ctx is not None and train_ctx["action_wave"] is not None:
                         orch.planner.train_transition_step(
                             train_ctx["state"], train_ctx["action_wave"],
                             state_wave, lr=0.05, valence=1.0,
                         )
+                terminal_state = obs.state.name
                 print(f"  [end] {obs.state.name} at step {step}")
                 tele.emit({"env": env_name, "terminal": obs.state.name, "step": step,
                            "valence": valence, "action_counts": action_counts})
@@ -830,6 +879,51 @@ def run():
             tele.emit({"env": env_name, "edmd_L3_loss": round(L3_loss, 6),
                        "edmd_L3_buffer": len(edmd_buffer),
                        "field_channel_path": fc_path})
+        # P1: emit the per-episode ARC episode trace (henri.arc-episode-trace.v1).
+        try:
+            total_actions = sum(action_counts.values())
+            probs = [c / total_actions for c in action_counts.values()] if total_actions else []
+            action_entropy = (
+                -sum(p * math.log(p) for p in probs if p > 0) / math.log(len(probs))
+                if len(probs) > 1 else 0.0
+            )
+            trace = ARCEpisodeTrace(
+                schema_id="henri.arc-episode-trace.v1",
+                episode_id=f"{env_name}-{tele.run_id}",
+                commit_sha256=_head_sha256(),
+                task_input_sha256=hashlib.sha256(
+                    json.dumps(initial_grid, sort_keys=True).encode("utf-8")
+                ).hexdigest(),
+                dataset_sha256=hashlib.sha256(b"ARC_AGI_3_PUBLIC_ARCADE").hexdigest(),
+                split_id="arcade-public-seen",
+                task_specific_persistence_preexisting=False,
+                demo_pair_count=len(demo_pairs),
+                object_count=trace_acc.get("objects_last", 0),
+                candidate_count=trace_acc["candidate_count"],
+                action_entropy=action_entropy,
+                min_sagnac_delta=trace_acc["min_sagnac"],
+                veto_count=trace_acc["veto_count"],
+                veto_reasons=trace_acc["veto_reasons"],
+                evaluator_reached=True,
+                external_state_delta=float(trace_acc["progress_events"]),
+                exact_pass=(terminal_state == "WIN"),
+                evaluator_status=terminal_state,
+                planning_ms=trace_acc["plan_ms"],
+                limitations=(
+                    "Public arcade API; no immutable dataset snapshot. "
+                    "planning_ms is per-step wall-clock sum. steps_run "
+                    f"{trace_acc['steps_run']}."
+                ),
+            )
+            trace_data = trace.model_dump()
+            trace_data["steps_run"] = trace_acc["steps_run"]
+            tele.emit({
+                "env": env_name,
+                "event_type": "ARC_EPISODE_TRACE",
+                "trace": trace_data,
+            })
+        except Exception as trace_err:
+            print(f"  [trace] emission failed: {trace_err}")
         # Per-env action entropy (fraction of non-ACTION1 steps)
         total = sum(action_counts.values())
         distinct = len(action_counts)

@@ -80,14 +80,24 @@ async def completions(request: Request):
     # 2. Direct qFHRREpistemicCodec.bind_hadamard Execution
     goal_wave = CODEC.bind_hadamard(w_task, prompt_wave)
     
-    # 3. Viscoelastic Thermostat Relaxation Step
-    W = torch.eye(128, device=DEVICE)
-    grad = torch.randn(128, 128, device=DEVICE) * 0.05
-    _, telem = THERMOSTAT.step_viscoelastic_creep(W, grad, lambda_active=0.08, sagnac_delta=0.04)
-    
-    # Add qFHRR wave phase metrics to telemetry
-    telem["qfhrr_wave_norm"] = float(torch.norm(goal_wave.to(torch.float32)).item())
-    telem["qfhrr_phase_coherence"] = 0.985
+    # 3. Telemetry from real wave state (no simulated relaxation).
+    telem = {
+        "qfhrr_wave_norm": float(torch.norm(goal_wave.to(torch.float32)).item()),
+        "qfhrr_phase_coherence": float(torch.nn.functional.cosine_similarity(
+            goal_wave.to(torch.float32).view(1, -1),
+            prompt_wave.to(torch.float32).view(1, -1),
+        ).item()),
+    }
+    # Simulated thermostat creep is quarantined behind the synthetic flag;
+    # its outputs are never score-eligible.
+    if os.environ.get("HENRI_SYNTHETIC_EGRESS", "0") == "1":
+        W = torch.eye(128, device=DEVICE)
+        grad = torch.randn(128, 128, device=DEVICE) * 0.05
+        _, creep_telem = THERMOSTAT.step_viscoelastic_creep(
+            W, grad, lambda_active=0.08, sagnac_delta=0.04
+        )
+        telem.update(creep_telem)
+        telem["synthetic_creep"] = True
     
     # 4. Continuous Wave Egress Transduction & Phase Ring Unbinding
     response_text, unbinder_telem = UNBINDER_TRANSDUCER.decode_wave_to_response(goal_wave, str(last_msg))
