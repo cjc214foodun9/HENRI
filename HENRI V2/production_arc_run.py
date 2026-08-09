@@ -52,6 +52,10 @@ from universal_data_transducer import UniversalDataTransducer
 from zone_c_env import resolve_zone_c_dsn
 from adaptive_viscoelastic_thermostat import AdaptiveViscoelasticThermostat
 from henri_decoder import HENRIUnifiedEgressTransducer
+from arc_score_gate import (
+    ARC_LEARNED_COMPONENT_ON_ACTION_PATH,
+    arc_score_eligibility,
+)
 from henri_benchmark_registry import ARCEpisodeTrace
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -1037,11 +1041,36 @@ def run():
             trace_data["steps_run"] = trace_acc["steps_run"]
             trace_data["policy"] = policy_mode()
             trace_data["learning_frozen"] = learning_frozen()
+            # Gate 2: score-eligibility labels (never suppress raw outcomes).
+            # The ARC action path currently uses HolographicActionDecoder; the
+            # egress transducer is NOT on the path, so eligibility is False by
+            # causal audit regardless of checkpoint state on disk.
+            eligibility = arc_score_eligibility(
+                learned_component_on_action_path=(
+                    ARC_LEARNED_COMPONENT_ON_ACTION_PATH
+                ),
+                checkpoint_policy="required",
+                checkpoint_load_status=None,
+                trained_decoder_active=False,
+                checkpoint_sha256=None,
+                state_dict_sha256=None,
+            )
             trace_data["diagnostic_only"] = True
+            trace_data["score_eligible"] = eligibility["score_eligible"]
+            trace_data["score_block_reason"] = eligibility["score_block_reason"]
             tele.emit({
                 "env": env_name,
                 "event_type": "ARC_EPISODE_TRACE",
                 "trace": trace_data,
+            })
+            tele.emit({
+                "env": env_name,
+                "event_type": "SCORE_ELIGIBILITY",
+                "score_eligible": eligibility["score_eligible"],
+                "score_block_reason": eligibility["score_block_reason"],
+                "learned_component_on_action_path": (
+                    ARC_LEARNED_COMPONENT_ON_ACTION_PATH
+                ),
             })
         except Exception as trace_err:
             print(f"  [trace] emission failed: {trace_err}")
