@@ -524,6 +524,13 @@ class HenriSwarmOrchestrator(nn.Module):
         stress_gate = (sagnac_delta_tensor > 0.05).float().view(-1, 1, 1)
         effective_mask = mask * stress_gate
 
+        # P2 diagnostic freeze (HENRI_FREEZE_LEARNING=1): skip ALL weight
+        # adaptation (drift, Langevin noise, retraction) — pure relaxation
+        # forward pass only. Default OFF: production path unchanged.
+        if os.environ.get("HENRI_FREEZE_LEARNING", "0") == "1":
+            return sagnac_delta.item(), sorted_indices, {
+                "sagnac_delta": sagnac_delta.item(), "frozen": True}
+
         # --- SGLD drift: grad of free energy w.r.t. expert matrices -----------
         # The experts enter F through the gap-junction conductance they induce.
         # Computed with torch.func.grad (functional, no persistent autograd

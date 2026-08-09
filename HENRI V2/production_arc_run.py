@@ -154,6 +154,13 @@ USE_OBJECT_SAGNAC_MCTS = os.environ.get("USE_OBJECT_SAGNAC_MCTS", "0") == "1"
 TASK_WEIGHTED_EIG = os.environ.get("TASK_WEIGHTED_EIG", "0") == "1"
 TASK_EIG_GAMMA = float(os.environ.get("TASK_EIG_GAMMA", "4.0"))
 
+# P2 ARC diagnostic baseline harness. All flags default OFF so the production
+# path stays byte-identical. Runs under these flags are DIAGNOSTIC only and
+# are NOT score-eligible (no runner-level LOADED-checkpoint gate yet).
+HENRI_OFFLINE_DIAG = os.environ.get("HENRI_OFFLINE_DIAG", "0") == "1"
+HENRI_SINGLE_ENV = os.environ.get("HENRI_SINGLE_ENV", "").strip()
+HENRI_SEED = os.environ.get("HENRI_SEED", "").strip()
+
 
 def retroactive_update(orch, trajectory_buffer: list, valence_nu: float, dampening_alpha: float = 0.05, gamma_credit: float = 0.95) -> float:
     """
@@ -199,6 +206,26 @@ def _head_sha256() -> str:
         return "UNKNOWN"
 
 
+def learning_frozen() -> bool:
+    """True when the P2 diagnostic freeze flag is set (no learning/adaptation)."""
+    return os.environ.get("HENRI_FREEZE_LEARNING", "0") == "1"
+
+
+def policy_mode() -> str:
+    """Return the active policy: 'efe' (default) or 'action1' (deterministic)."""
+    return os.environ.get("HENRI_POLICY", "efe").strip().lower()
+
+
+def select_deterministic_action(allowed_actions, action_enum):
+    """Deterministic legal-action policy: ACTION1 when legal, else first legal."""
+    if not allowed_actions:
+        return action_enum.ACTION1
+    for candidate in allowed_actions:
+        if getattr(candidate, "name", str(candidate)) == "ACTION1":
+            return candidate
+    return allowed_actions[0]
+
+
 class LatentTelemetry:
     """Dense per-step latent-space record: JSONL mirror + hypertable waves."""
 
@@ -237,11 +264,26 @@ def run():
     )
     args = ap.parse_args()
 
+    if HENRI_SEED:
+        import random
+        seed = int(HENRI_SEED)
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        if DEVICE == "cuda":
+            torch.cuda.manual_seed_all(seed)
+        print(f"[init] HENRI_SEED={seed} applied")
+
     # Resolve the target before constructing either database consumer.  This
     # prevents the telemetry logger and the engram store from silently using
     # different databases.  The resolver defaults to a disposable dev target;
     # production requires explicit ZONE_C_ENV=prod and ZONE_C_PROD_DSN.
-    if DEVICE == "cuda":
+    if HENRI_OFFLINE_DIAG:
+        # P2 diagnostic baseline: in-process Zone C surrogate, no Postgres.
+        # Diagnostic only — never score-eligible; JSONL traces still record
+        # everything and the surrogate store keeps the same interface.
+        dsn = "offline://surrogate"
+    elif DEVICE == "cuda":
         if args.dsn is not None:
             raise RuntimeError(
                 "CUDA Zone C runs must use ZONE_C_ENV=prod and "
@@ -326,7 +368,14 @@ def run():
     )
 
     arcade = arc_agi.Arcade()
-    env_ids = [e.game_id if hasattr(e, "game_id") else e for e in arcade.available_environments][: args.envs]
+    env_ids = [e.game_id if hasattr(e, "game_id") else e for e in arcade.available_environments]
+    if HENRI_SINGLE_ENV:
+        matched = [env_id for env_id in env_ids if env_id.startswith(HENRI_SINGLE_ENV)]
+        if not matched:
+            print(f"[init] HENRI_SINGLE_ENV={HENRI_SINGLE_ENV!r} matched no environment; aborting")
+            return
+        env_ids = matched[:1]
+    env_ids = env_ids[: args.envs]
     print(f"[init] {len(env_ids)} environments: {env_ids}")
 
     for env_name in env_ids:
@@ -512,7 +561,8 @@ def run():
             # never enter the training set, so the transition model stays
             # under-confident on RESET outcomes and the planner routes away.
             transition_loss = None
-            if (train_ctx is not None and train_ctx["action_wave"] is not None
+            if (not learning_frozen() and train_ctx is not None
+                    and train_ctx["action_wave"] is not None
                     and not train_ctx.get("pending_reset")):
                 # NL Level 1 (fast): surprise-modulated per-step SGLD, now
                 # valence-gated (Wire B planner-side: success crystallizes,
@@ -612,7 +662,15 @@ def run():
             # P0: pass the environment's valid action set so the planner
             # cannot select an un-executable action.
             allowed_actions = list(getattr(game, "action_space", []))
-            if allowed_actions:
+            if policy_mode() == "action1":
+                # P2 deterministic baseline: no EFE planning, no exploration,
+                # no planner state mutation. Diagnostic only.
+                action = select_deterministic_action(allowed_actions, GameAction)
+                predicted_wave = state_wave.clone()
+                efe_table = [{"efe": 0.0}]
+                chosen = {"efe": 0.0, "predicted_wave": predicted_wave,
+                          "explored": False}
+            elif allowed_actions:
                 action, predicted_wave, efe_table, chosen = orch.plan_action(
                     state_wave, boundary_batch, top_k=4, return_chosen=True,
                     goal_wave=goal_wave, grid_dist=grid_dist if GRID_DIST_EPISTEMIC else None,
@@ -629,23 +687,40 @@ def run():
 
             # Epistemic novelty: record the chosen action's predicted outcome so
             # repeating it later is discounted (breaks RESET-spam loops).
-            orch.planner.remember_outcome(chosen["predicted_wave"])
+            if policy_mode() != "action1":
+                orch.planner.remember_outcome(chosen["predicted_wave"])
 
             # CEGIS Program AST Macro Execution:
             # Construct candidate AST macro sequence (1-4 composite action sequence)
             macro_actions = [action if isinstance(action, GameAction) else GameAction.ACTION1]
-            if not explored and isinstance(action, GameAction) and action.name != "RESET":
+            if (policy_mode() != "action1" and not explored
+                    and isinstance(action, GameAction) and action.name != "RESET"):
                 # Expand AST program macro: sequence complementary spatial actions
                 if allowed_actions:
                     next_act_idx = (int(getattr(action, "value", 1)) % len(allowed_actions))
                     macro_actions.append(allowed_actions[next_act_idx])
 
-            # Environment macro step loop
+            # Environment macro step loop. Guarded so an environment-side
+            # error (e.g. the known tn36 ACTION6 bug) ends the episode with
+            # evidence instead of crashing the run.
             obs_next = None
+            env_step_error = None
             for game_action in macro_actions:
-                obs_next = game.step(game_action)
+                try:
+                    obs_next = game.step(game_action)
+                except Exception as exc:
+                    env_step_error = f"{type(exc).__name__}: {exc}"
+                    print(f"  [env-step] {game_action.name} raised {env_step_error}")
+                    break
                 if obs_next is None or getattr(obs_next, "state", None) and obs_next.state.name == "GAME_OVER":
                     break
+            if env_step_error is not None:
+                terminal_state = "ENV_STEP_ERROR"
+                tele.emit({"env": env_name, "step": step, "event_type": "ENV_STEP_ERROR",
+                           "error": env_step_error,
+                           "action": str(macro_actions[0] if macro_actions else None)})
+                print("  [end] environment step error")
+                break
 
             step_ms = (time.perf_counter() - t0) * 1000
             last_action_was_reset = (macro_actions[0].name == "RESET")
@@ -826,9 +901,11 @@ def run():
                 # and mark valence for the deferred T1 update.
                 if obs.state.name == "WIN":
                     valence = 1.0
-                    orch.planner.register_preference(state_wave)
+                    if not learning_frozen():
+                        orch.planner.register_preference(state_wave)
                     trace_acc["progress_events"] += 1
-                    if train_ctx is not None and train_ctx["action_wave"] is not None:
+                    if (not learning_frozen() and train_ctx is not None
+                            and train_ctx["action_wave"] is not None):
                         orch.planner.train_transition_step(
                             train_ctx["state"], train_ctx["action_wave"],
                             state_wave, lr=0.05, valence=1.0,
@@ -847,7 +924,7 @@ def run():
         # then persist the solved transition operator itself to Zone C as a
         # recoverable engram — future sessions inherit the dynamics, not
         # just the states (HOPE systems consolidation analog).
-        if len(edmd_buffer) >= 8:
+        if not learning_frozen() and len(edmd_buffer) >= 8:
             L3_loss = orch.planner.train_transition_batch(
                 torch.stack([t[0] for t in edmd_buffer]),
                 torch.stack([t[1] for t in edmd_buffer]),
@@ -917,6 +994,9 @@ def run():
             )
             trace_data = trace.model_dump()
             trace_data["steps_run"] = trace_acc["steps_run"]
+            trace_data["policy"] = policy_mode()
+            trace_data["learning_frozen"] = learning_frozen()
+            trace_data["diagnostic_only"] = True
             tele.emit({
                 "env": env_name,
                 "event_type": "ARC_EPISODE_TRACE",
