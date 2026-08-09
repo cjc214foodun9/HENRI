@@ -108,7 +108,7 @@ class AdaptiveViscoelasticThermostat(nn.Module):
         if rows < cols:
             W = W.T
             
-        identity = torch.eye(W.shape[1], device=self.device, dtype=W.dtype)
+        identity = torch.eye(W.shape[1], device=W.device, dtype=W.dtype)
         for _ in range(self.stiefel_iters):
             W = 0.5 * W @ (3.0 * identity - W.T @ W)
             
@@ -211,7 +211,7 @@ class AdaptiveViscoelasticThermostat(nn.Module):
             if base_noise is not None:
                 noise = base_noise * math.sqrt(2.0 * temperature * effective_lr)
             else:
-                noise = torch.randn_like(weight_matrix, device=self.device) * math.sqrt(2.0 * temperature * effective_lr)
+                noise = torch.randn_like(weight_matrix) * math.sqrt(2.0 * temperature * effective_lr)
         
         # SDE update: dW = - (eta / gamma) * grad + noise
         updated_weight = weight_matrix - effective_lr * grad_loss + noise
