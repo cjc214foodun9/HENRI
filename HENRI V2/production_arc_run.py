@@ -306,6 +306,12 @@ def run():
     log_path = os.path.join(
         telemetry_dir, f"production_run_{int(time.time())}.jsonl"
     )
+    # Gate 1: complete arcade action contract. When enabled, coordinate-bearing
+    # actions (arcengine ACTION6) receive observation-derived payload data
+    # (object centroids / deterministic fallback) instead of a bare enum.
+    HENRI_ARC_ACTION_PAYLOADS = os.environ.get(
+        "HENRI_ARC_ACTION_PAYLOADS", "0"
+    ) == "1"
     db_logger = None
     if dsn != "offline://surrogate":
         try:
@@ -705,15 +711,50 @@ def run():
             # evidence instead of crashing the run.
             obs_next = None
             env_step_error = None
+            payload_infos = []
             for game_action in macro_actions:
                 try:
-                    obs_next = game.step(game_action)
+                    if HENRI_ARC_ACTION_PAYLOADS:
+                        try:
+                            from arc_action_payloads import step_with_payload
+                        except Exception as _imp_exc:
+                            env_step_error = f"PAYLOAD_IMPORT_FAILED: {_imp_exc}"
+                            print(f"  [env-step] payload import failed: {_imp_exc}")
+                            break
+                        obs_next, payload_info = step_with_payload(
+                            game, game_action, grid, enabled=True,
+                            seed=int(os.environ.get("HENRI_SEED", "0") or 0))
+                        payload_infos.append(payload_info)
+                    else:
+                        obs_next = game.step(game_action)
                 except Exception as exc:
                     env_step_error = f"{type(exc).__name__}: {exc}"
                     print(f"  [env-step] {game_action.name} raised {env_step_error}")
                     break
                 if obs_next is None or getattr(obs_next, "state", None) and obs_next.state.name == "GAME_OVER":
                     break
+            # Gate 1 telemetry: payload completeness + external frame change.
+            if payload_infos:
+                changed_cells = None
+                grid_size = None
+                if obs_next is not None and getattr(obs_next, "frame", None):
+                    try:
+                        post_arr = np.array(obs_next.frame[0].tolist())
+                        prev_arr = np.array(grid)
+                        grid_size = int(prev_arr.size)
+                        if post_arr.shape == prev_arr.shape:
+                            changed_cells = int(np.sum(post_arr != prev_arr))
+                    except Exception:
+                        changed_cells = None
+                tele.emit({
+                    "env": env_name, "step": step,
+                    "event_type": "ARC_ACTION_PAYLOAD",
+                    "payload_actions": payload_infos,
+                    "changed_cells": changed_cells,
+                    "grid_size": grid_size,
+                    "changed_fraction": round(changed_cells / grid_size, 6)
+                        if changed_cells is not None and grid_size else None,
+                })
             if env_step_error is not None:
                 terminal_state = "ENV_STEP_ERROR"
                 tele.emit({"env": env_name, "step": step, "event_type": "ENV_STEP_ERROR",
