@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import pytest
 import torch
@@ -112,7 +113,8 @@ def test_invalid_complex_modulus_is_rejected(provenance: PhaseProvenance) -> Non
 
 
 def test_dense_production_square_is_not_constructed() -> None:
-    source = open("phase_codec_adapter.py", encoding="utf-8").read()
+    adapter_path = Path(__file__).resolve().parents[2] / "phase_codec_adapter.py"
+    source = adapter_path.read_text(encoding="utf-8")
     assert "65536 * 65536" not in source
     assert "torch.outer" not in source
     assert "torch.mm" not in source
