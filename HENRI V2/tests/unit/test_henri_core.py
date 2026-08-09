@@ -17,7 +17,7 @@ from darwinian_phase_swarm import HenriSwarmOrchestrator, GapJunctionSwarmSyncyt
 from hopfield_cleanup import ContinuousHopfieldCleanup, HopfieldActionDecoder
 from product_clifford_product_kernel import ProductCliffordAlgebra3D
 from _archive.orphans.henri_pwm_orchestrator import SagnacInterferometer
-from efe_planner import EFEPlanner, UnitaryWaveTransition
+from efe_planner import EFEPlanner, UnitaryWaveTransition, LowRankCoupledTransition
 
 # Scale presets: CPU runs reduced, CUDA runs production
 if torch.cuda.is_available():
@@ -218,6 +218,69 @@ class TestEFEPlanner:
         o1, o2 = t(s1, a), t(s2, a)
         diff = (o1[min(5, nb - 1)] - o2[min(5, nb - 1)]).abs().max().item()
         assert diff > 1e-6, "no cross-block coupling (block-diagonal regression)"
+
+    def test_low_rank_coupled_rank_configuration(self, device):
+        """Phase 5 Task 1.1/1.2: rank must flow into the operator shape and
+        the leading reduced Gram must stay orthonormal (Stiefel QR retraction)."""
+        nb = SCALE["num_blocks"]
+        r = 8
+        t = LowRankCoupledTransition(num_blocks=nb, rank=r).to(device)
+        assert t.field_V.shape == (nb * 8, r), t.field_V.shape
+        assert t.field_W.shape == (2 * nb * 8, r), t.field_W.shape
+        k = min(r, 4)
+        gram = t.field_V.T @ t.field_V
+        Iv = torch.eye(k, device=device)
+        assert (gram[:k, :k] - Iv).abs().max().item() < 1e-3
+
+    def test_cross_block_jacobian_nonzero(self, device):
+        """Phase 5 discriminating proof: the low-rank field channel must
+        couple DISTINCT blocks — d(out_j)/d(in_i) != 0 for i != j. A pure
+        block-diagonal operator has zero off-block Jacobian entries."""
+        nb = SCALE["num_blocks"]
+        t = LowRankCoupledTransition(num_blocks=nb, rank=8).to(device)
+        s = mk_wave((nb, 8), device, 40).requires_grad_(True)
+        a = mk_wave((nb, 8), device, 41)
+        out = t(s, a)
+        target_block = 5 if nb > 5 else 1
+        g = torch.autograd.grad(out[target_block, 0].sum(), s)[0]
+        coupling = g[0].abs().max().item()
+        assert coupling > 1e-6, (
+            f"zero off-block Jacobian: d(out[{target_block}])/d(in[0]) = {coupling}")
+
+    def test_rank_validation_typed_errors(self):
+        """Phase 5 Task 1.1: rank must be a non-negative int; bool is an int
+        subclass and must be rejected; rank > d clamps effective rank while
+        retaining the requested value for telemetry."""
+        from efe_planner import validate_rank
+        with pytest.raises(ValueError):
+            validate_rank(-1, 64)
+        with pytest.raises(TypeError):
+            validate_rank(1.5, 64)
+        with pytest.raises(TypeError):
+            validate_rank(True, 64)
+        assert validate_rank(0, 64) == (0, 0)
+        assert validate_rank(64, 64) == (64, 64)
+        assert validate_rank(128, 64) == (128, 64)
+
+    def test_low_rank_coupled_rank_zero_control(self, device):
+        """rank == 0 is the valid pure block-diagonal control arm: field
+        channel contributes nothing and the forward pass still works."""
+        nb = SCALE["num_blocks"]
+        t = LowRankCoupledTransition(num_blocks=nb, rank=0).to(device)
+        assert t.field_V.shape == (nb * 8, 0)
+        s = mk_wave((nb, 8), device, 50)
+        a = mk_wave((nb, 8), device, 51)
+        out = t(s, a)
+        assert out.shape == (nb, 8)
+
+    def test_efe_planner_rejects_bad_transition_rank(self, device):
+        """The planner boundary rejects invalid transition ranks with typed
+        errors before constructing the operator."""
+        nb = SCALE["num_blocks"]
+        with pytest.raises(ValueError):
+            EFEPlanner(num_blocks=nb, d_model=nb * 8, transition_rank=-1)
+        with pytest.raises(TypeError):
+            EFEPlanner(num_blocks=nb, d_model=nb * 8, transition_rank=True)
 
     def test_grid_dist_epistemic_scaling(self, device):
         planner = EFEPlanner(

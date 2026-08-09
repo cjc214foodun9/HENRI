@@ -45,9 +45,32 @@ class InteroceptiveState:
     creep_fatigue: float = 0.0
 
 
-class UnitaryWaveTransition(nn.Module):
+def validate_rank(rank: int, d: int, *, name: str = "rank") -> tuple[int, int]:
+    """Validate a Stiefel rank request. Returns (requested_rank, effective_rank).
+
+    Rules (Phase 5 Task 1.1 closure):
+    - ``bool`` is rejected explicitly (bool is an int subclass).
+    - non-integral values raise TypeError.
+    - negative values raise ValueError.
+    - rank == 0 is permitted: a pure block-diagonal control arm.
+    - effective_rank = min(requested_rank, d): a [d, r] field factor cannot
+      carry r > d. The requested value is retained for telemetry so a
+      rank-128 request at toy scale is not silently reported as rank 128
+      when the effective rank clamps to d.
     """
-    Action-conditioned forward dynamics in latent wave space.
+    if isinstance(rank, bool):
+        raise TypeError(f"{name} must be an int, got bool")
+    if not isinstance(rank, int):
+        raise TypeError(f"{name} must be an int, got {type(rank).__name__}")
+    if rank < 0:
+        raise ValueError(f"{name} must be >= 0, got {rank}")
+    return rank, min(rank, d)
+
+
+class LowRankCoupledTransition(nn.Module):
+    """
+    Action-conditioned forward dynamics in latent wave space (Phase 5
+    canonical form; PDF Task 1.1 / Doublecheck Module 1).
 
     Low-rank coupled operator (ephaptic field + gap-junction residual):
 
@@ -66,20 +89,27 @@ class UnitaryWaveTransition(nn.Module):
     d — learnable online within a single env episode.
     """
 
-    def __init__(self, num_blocks: int = 8192, block_dim: int = 8, rank: int = 128):
+    def __init__(self, num_blocks: int = 8192, block_dim: int = 8, rank: int = 64):
         super().__init__()
         self.num_blocks = num_blocks
         self.block_dim = block_dim
-        self.rank = rank
         self.d = num_blocks * block_dim
+        # Shared Stiefel rank validation (Phase 5 Task 1.1 closure). A [d, r]
+        # field factor cannot carry rank > d; effective_rank = min(rank, d).
+        # The requested value is retained for telemetry; rank == 0 is a valid
+        # pure block-diagonal control arm.
+        self.requested_rank, self.rank = validate_rank(rank, self.d, name="rank")
 
         # Global field channel: W [2d, r] reads the full complex fused wave
         # (Re ‖ Im), V [d, r] broadcasts the r-dim global mode back onto the
         # real block grid. This lets the FHRR phase content drive the field
         # while the prediction stays a real, on-manifold wave.
         scale = 1.0 / math.sqrt(2 * self.d)
-        self.field_V = nn.Parameter(torch.randn(self.d, rank) * scale)
-        self.field_W = nn.Parameter(torch.randn(2 * self.d, rank) * scale)
+        # Allocate with the EFFECTIVE rank: a [d, r] factor cannot carry
+        # r > d, and QR-reduced returns [d, min(d, r)] — a raw-rank
+        # allocation (e.g. r=128 at d=64) would break the retraction copy.
+        self.field_V = nn.Parameter(torch.randn(self.d, self.rank) * scale)
+        self.field_W = nn.Parameter(torch.randn(2 * self.d, self.rank) * scale)
 
         # Local residual: per-block near-unitary 8x8 matrices (the gap wiring).
         real = torch.eye(block_dim) + 0.01 * torch.randn(num_blocks, block_dim, block_dim)
@@ -148,6 +178,12 @@ class UnitaryWaveTransition(nn.Module):
         return out
 
 
+# Backward-compat alias: Phase 5 canonical name is LowRankCoupledTransition.
+# Kept so exploratory/scratch consumers importing the legacy name keep working
+# during the rename window; new code must use the canonical name.
+UnitaryWaveTransition = LowRankCoupledTransition
+
+
 class EFEPlanner(nn.Module):
     """
     Scores candidate actions by Expected Free Energy and selects a*.
@@ -178,6 +214,7 @@ class EFEPlanner(nn.Module):
         task_eig_gamma: float = 4.0,
         num_actions: int = 8,
         action_lr_scale: float = 0.2,
+        transition_rank: int = 64,
     ):
         super().__init__()
         self.num_blocks = num_blocks
@@ -206,7 +243,13 @@ class EFEPlanner(nn.Module):
         # the externally-provided goal wave.
         self.lambda_goal = lambda_goal
 
-        self.transition = UnitaryWaveTransition(num_blocks=num_blocks)
+        # Phase 5 Task 1.1: validate the transition rank at the planner
+        # boundary with the shared Stiefel validator. requested_rank is
+        # retained for telemetry; effective_rank = min(rank, num_blocks*8).
+        self.transition_requested_rank, _ = validate_rank(
+            transition_rank, num_blocks * 8, name="transition_rank")
+        self.transition = LowRankCoupledTransition(
+            num_blocks=num_blocks, rank=transition_rank)
         # Learnable action wave embeddings (Fallacy #3 fix).
         # When enabled, action waves are nn.Parameter — the transition model
         # learns to encode each action's semantic effect through gradient
