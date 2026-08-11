@@ -504,6 +504,11 @@ def run():
                               "HENRI_ARC_PUBLIC_INGRESS_MANIFEST",
                     "demo_pair_count": 0,
                 })
+                print(
+                    "  [ingress] BLOCKED_MANIFEST_MISSING: "
+                    "HENRI_ARC_PUBLIC_INGRESS=1 requires "
+                    "HENRI_ARC_PUBLIC_INGRESS_MANIFEST"
+                )
             else:
                 ingress = resolve_demos(
                     HENRI_ARC_PUBLIC_INGRESS_MANIFEST, env_name
