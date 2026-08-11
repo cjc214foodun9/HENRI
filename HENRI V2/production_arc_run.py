@@ -52,6 +52,14 @@ from universal_data_transducer import UniversalDataTransducer
 from zone_c_env import resolve_zone_c_dsn
 from adaptive_viscoelastic_thermostat import AdaptiveViscoelasticThermostat
 from henri_decoder import HENRIUnifiedEgressTransducer
+from arc_egress_contract import (
+    ActionEgressVocabulary,
+    EgressFailClosedError,
+    NoDemonstrationsError,
+    adapt_sgld_from_demos,
+    decode_action_egress,
+    reset_decoder_optimizer,
+)
 from arc_score_gate import (
     ARC_LEARNED_COMPONENT_ON_ACTION_PATH,
     arc_score_eligibility,
@@ -316,6 +324,15 @@ def run():
     HENRI_ARC_ACTION_PAYLOADS = os.environ.get(
         "HENRI_ARC_ACTION_PAYLOADS", "0"
     ) == "1"
+    # Phase 6: fail-closed egress transducer on the action path (default OFF).
+    # When enabled, the chosen candidate wave is decoded through the trained
+    # HENRIUnifiedEgressTransducer into a legal (GameAction, data) tuple.
+    HENRI_ARC_EGRESS = os.environ.get("HENRI_ARC_EGRESS", "0") == "1"
+    # Online test-time SGLD adaptation on in-context demo pairs (bounded).
+    HENRI_ARC_SGLD_STEPS = int(os.environ.get("HENRI_ARC_SGLD_STEPS", "0") or 0)
+    if HENRI_ARC_SGLD_STEPS < 0:
+        raise ValueError("HENRI_ARC_SGLD_STEPS must be >= 0")
+    HENRI_SEED = int(os.environ.get("HENRI_SEED", "0") or 0)
     db_logger = None
     if dsn != "offline://surrogate":
         try:
@@ -373,6 +390,21 @@ def run():
         raise RuntimeError(
             f"BLOCKED: Zone C attach failed for the selected target {dsn!r}"
         ) from exc
+    # Phase 6 egress transducer (fail-closed at init: policy=required raises on
+    # missing/incompatible checkpoint; no silent fallback to bare enums).
+    egress_transducer = None
+    if HENRI_ARC_EGRESS:
+        egress_transducer = HENRIUnifiedEgressTransducer(
+            d_model=SCALE["d_model"],
+            hidden_dim=2048,
+            vocab_size=32000,
+            device=DEVICE,
+            checkpoint_policy="required",
+        )
+        print(
+            "[init] egress transducer LOADED "
+            f"(sha256={egress_transducer.checkpoint_sha256})"
+        )
     tokenizer = HENRIVisionEncoder(
         d_model=SCALE["d_model"], k_blocks=SCALE["num_blocks"], device=DEVICE
     )
@@ -427,6 +459,44 @@ def run():
                 "task_leakage_detected": False,
                 "external_outcome_status": "BLOCKED",
             })
+        # Phase 6: online test-time SGLD adaptation on in-context demo pairs.
+        # Requires HENRI_ARC_EGRESS=1 AND HENRI_ARC_SGLD_STEPS>0 AND demos.
+        # Absent demos: typed BLOCKED_NO_DEMONSTRATIONS (never bootstrap).
+        if (HENRI_ARC_EGRESS and egress_transducer is not None
+                and HENRI_ARC_SGLD_STEPS > 0):
+            if demo_pairs:
+                try:
+                    sgld_metrics = adapt_sgld_from_demos(
+                        egress_transducer, demo_pairs, tokenizer,
+                        device=DEVICE, steps=HENRI_ARC_SGLD_STEPS,
+                        seed=HENRI_SEED,
+                    )
+                    tele.emit({
+                        "env": env_name,
+                        "event_type": "SGLD_ADAPTATION",
+                        "metrics": sgld_metrics,
+                    })
+                    print(f"  [sgld] adapted {len(demo_pairs)} demo pairs "
+                          f"({HENRI_ARC_SGLD_STEPS} steps)")
+                except EgressFailClosedError as _ef_exc:
+                    tele.emit({
+                        "env": env_name,
+                        "event_type": "EGRESS_FAIL_CLOSED",
+                        "reason": str(_ef_exc),
+                    })
+            else:
+                tele.emit({
+                    "env": env_name,
+                    "event_type": "BLOCKED_NO_DEMONSTRATIONS",
+                    "reason": "no in-context demonstration pairs exposed by the public environment API",
+                    "demo_pair_count": 0,
+                    "sgld_steps_requested": HENRI_ARC_SGLD_STEPS,
+                })
+                print("  [sgld] BLOCKED_NO_DEMONSTRATIONS: "
+                      "no public demos; SGLD adaptation skipped")
+        # Phase 6: per-episode decoder reset (no SGLD leakage across episodes).
+        if HENRI_ARC_EGRESS and egress_transducer is not None:
+            reset_decoder_optimizer(egress_transducer)
             print(
                 "  [BLOCKED] Public demonstrations found, but no observed test target "
                 "is available for target-scored MCTS; identity target is disabled."
@@ -700,9 +770,50 @@ def run():
             if policy_mode() != "action1":
                 orch.planner.remember_outcome(chosen["predicted_wave"])
 
+            # Phase 6: fail-closed egress decode of the chosen candidate wave.
+            # HENRI_ARC_EGRESS=1 routes the selected wave through the trained
+            # HENRIUnifiedEgressTransducer to produce a legal (GameAction, data)
+            # action. Decode failure ends the episode with typed evidence; there
+            # is NO silent fallback to a bare enum.
+            if (HENRI_ARC_EGRESS and egress_transducer is not None
+                    and policy_mode() != "action1"):
+                try:
+                    _vocab = ActionEgressVocabulary(GameAction, allowed_actions)
+                    egress_result = decode_action_egress(
+                        egress_transducer,
+                        chosen["predicted_wave"],
+                        _vocab,
+                        device=DEVICE,
+                        require_loaded=True,
+                    )
+                    action = egress_result.action
+                    tele.emit({
+                        "env": env_name, "step": step,
+                        "event_type": "EGRESS_DECODE",
+                        "action": egress_result.action_name,
+                        "action_index": egress_result.action_index,
+                        "entropy_bits": round(egress_result.entropy_bits, 6),
+                        "token_entropy_bits": round(egress_result.token_entropy_bits, 6),
+                        "top3": egress_result.top3,
+                        "checkpoint_sha256": egress_transducer.checkpoint_sha256,
+                    })
+                    print(f"  [egress] decoded {egress_result.action_name} "
+                          f"(entropy {egress_result.entropy_bits:.3f} bits)")
+                except EgressFailClosedError as _ef_exc:
+                    env_step_error = f"EGRESS_FAIL_CLOSED: {_ef_exc}"
+                    tele.emit({
+                        "env": env_name, "step": step,
+                        "event_type": "EGRESS_FAIL_CLOSED",
+                        "reason": str(_ef_exc),
+                    })
+                    print(f"  [egress] fail-closed: {_ef_exc}")
             # CEGIS Program AST Macro Execution:
             # Construct candidate AST macro sequence (1-4 composite action sequence)
             macro_actions = [action if isinstance(action, GameAction) else GameAction.ACTION1]
+            # Fail-closed guard: an egress decode failure must NOT fall back to
+            # stepping the original EFE enum action. Skip the step loop entirely.
+            if env_step_error is not None:
+                macro_actions = []
             if (policy_mode() != "action1" and not explored
                     and isinstance(action, GameAction) and action.name != "RESET"):
                 # Expand AST program macro: sequence complementary spatial actions
@@ -1056,18 +1167,34 @@ def run():
             trace_data["policy"] = policy_mode()
             trace_data["learning_frozen"] = learning_frozen()
             # Gate 2: score-eligibility labels (never suppress raw outcomes).
-            # The ARC action path currently uses HolographicActionDecoder; the
-            # egress transducer is NOT on the path, so eligibility is False by
-            # causal audit regardless of checkpoint state on disk.
+            # Phase 6: when HENRI_ARC_EGRESS=1 and the transducer LOADED, the
+            # learned component IS on the action-producing path and the real
+            # checkpoint identity is reported. Otherwise the causal audit
+            # keeps eligibility False (LOADED_COMPONENT_NOT_ON_ACTION_PATH).
+            _egress_active = bool(
+                HENRI_ARC_EGRESS and egress_transducer is not None
+                and getattr(egress_transducer, "checkpoint_load_status", None) == "LOADED"
+                and policy_mode() != "action1"
+            )
+            _ckpt_status = (
+                egress_transducer.checkpoint_load_status
+                if egress_transducer is not None else None
+            )
+            _ckpt_sha = (
+                egress_transducer.checkpoint_sha256
+                if egress_transducer is not None else None
+            )
+            _sd_sha = (
+                egress_transducer.checkpoint_state_dict_sha256
+                if egress_transducer is not None else None
+            )
             eligibility = arc_score_eligibility(
-                learned_component_on_action_path=(
-                    ARC_LEARNED_COMPONENT_ON_ACTION_PATH
-                ),
-                checkpoint_policy="required",
-                checkpoint_load_status=None,
-                trained_decoder_active=False,
-                checkpoint_sha256=None,
-                state_dict_sha256=None,
+                learned_component_on_action_path=_egress_active,
+                checkpoint_policy="required" if HENRI_ARC_EGRESS else None,
+                checkpoint_load_status=_ckpt_status,
+                trained_decoder_active=_egress_active,
+                checkpoint_sha256=_ckpt_sha,
+                state_dict_sha256=_sd_sha,
             )
             trace_data["diagnostic_only"] = True
             trace_data["score_eligible"] = eligibility["score_eligible"]
