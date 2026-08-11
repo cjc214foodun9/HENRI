@@ -162,3 +162,77 @@ def test_select_payload_prefers_object_centroid():
 def test_select_payload_none_when_no_match():
     cands = build_payload_candidates(GRID_OBJ, [_FakeAction("ACTION6")])
     assert select_payload(cands, _FakeAction("ACTION9")) is None
+
+
+# --- Gate 1 semantic repair: screen-space transform + oracle preference ------
+from arc_action_payloads import CameraParams, grid_to_display  # noqa: E402
+
+
+def test_grid_to_display_identity():
+    assert grid_to_display(3, 4, CameraParams(scale=1, x_offset=0, y_offset=0)) == (3, 4)
+
+
+def test_grid_to_display_scaled_and_offset():
+    assert grid_to_display(2, 3, CameraParams(scale=8, x_offset=4, y_offset=6)) == (20, 30)
+
+
+def test_grid_to_display_no_y_inversion():
+    # arcengine producers: screen = grid*scale + offset (top-left, NO Y flip).
+    assert grid_to_display(1, 7, CameraParams(scale=8)) == (8, 56)
+
+
+def test_grid_to_display_clamps_to_viewport():
+    assert grid_to_display(100, -5, CameraParams(scale=8, viewport=64)) == (63, 0)
+
+
+def test_invalid_camera_scale_fails_closed():
+    with pytest.raises(ValueError):
+        grid_to_display(1, 1, CameraParams(scale=0))
+
+
+def test_payload_candidates_screen_space_with_camera():
+    acts = [_FakeAction("ACTION6")]
+    cands = build_payload_candidates(
+        GRID_OBJ, acts, camera=CameraParams(scale=2, x_offset=3, y_offset=5))
+    assert cands
+    for c in cands:
+        assert c.coordinate_space == "screen"
+        assert c.data is not None and c.data["x"] == c.x and c.data["y"] == c.y
+        assert c.grid_x is not None and c.grid_y is not None
+        assert c.data["x"] == c.grid_x * 2 + 3
+        assert c.data["y"] == c.grid_y * 2 + 5
+
+
+def test_env_actioninput_preferred_over_transform():
+    class _OracleActionInput:
+        data = {"x": 12, "y": 34}
+
+    class _OracleGame:
+        def __init__(self):
+            self.calls = []
+            self.obs = object()
+
+        def step(self, action, data=None, reasoning=None):
+            self.calls.append((action, data))
+            return self.obs
+
+        class _G:
+            @staticmethod
+            def _get_valid_clickable_actions():
+                return [_OracleActionInput()]
+
+            @staticmethod
+            def _get_valid_placeble_actions():
+                return []
+
+        _game = _G()
+
+    game = _OracleGame()
+    act = _FakeAction("ACTION6")
+    obs, info = step_with_payload(game, act, GRID_OBJ, enabled=True, seed=0,
+                                  camera=CameraParams(scale=1))
+    _, data = game.calls[0]
+    assert data == {"x": 12, "y": 34}
+    assert info["payload_source"] == "env_actioninput"
+    assert info["coordinate_space"] == "screen"
+    assert obs is game.obs

@@ -716,6 +716,19 @@ def run():
             obs_next = None
             env_step_error = None
             payload_infos = []
+            cam_params = None
+            if HENRI_ARC_ACTION_PAYLOADS:
+                try:
+                    from arc_action_payloads import CameraParams
+                    _base = getattr(game, "_game", game)
+                    _cam = _base.camera
+                    _s, _xo, _yo = _cam._calculate_scale_and_offset()
+                    cam_params = CameraParams(scale=_s, x_offset=_xo,
+                                              y_offset=_yo)
+                except Exception as _cam_exc:
+                    cam_params = None
+                    print(f"  [env-step] camera params unavailable: "
+                          f"{_cam_exc}")
             for game_action in macro_actions:
                 try:
                     if HENRI_ARC_ACTION_PAYLOADS:
@@ -727,7 +740,8 @@ def run():
                             break
                         obs_next, payload_info = step_with_payload(
                             game, game_action, grid, enabled=True,
-                            seed=int(os.environ.get("HENRI_SEED", "0") or 0))
+                            seed=int(os.environ.get("HENRI_SEED", "0") or 0),
+                            camera=cam_params)
                         payload_infos.append(payload_info)
                     else:
                         obs_next = game.step(game_action)
