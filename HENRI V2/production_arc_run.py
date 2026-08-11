@@ -71,6 +71,9 @@ from arc_action_head import (
     decode_action_head,
     load_action_head,
 )
+from arc_public_ingress import (
+    resolve_demos,
+)
 from henri_benchmark_registry import ARCEpisodeTrace
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -346,6 +349,15 @@ def run():
     HENRI_ARC_ACTION_HEAD_PATH = os.environ.get(
         "HENRI_ARC_ACTION_HEAD_PATH", ""
     ).strip()
+    # Phase 7.1: public corpus ingress channel (default OFF). Requires an
+    # explicit provenance manifest mapping environment ID -> public ARC task
+    # ID with corpus path + sha256. Exact match only; no fuzzy fallback.
+    HENRI_ARC_PUBLIC_INGRESS = os.environ.get(
+        "HENRI_ARC_PUBLIC_INGRESS", "0"
+    ) == "1"
+    HENRI_ARC_PUBLIC_INGRESS_MANIFEST = os.environ.get(
+        "HENRI_ARC_PUBLIC_INGRESS_MANIFEST", ""
+    ).strip()
     db_logger = None
     if dsn != "offline://surrogate":
         try:
@@ -477,6 +489,44 @@ def run():
                 if isinstance(ex, dict) and "input" in ex and "output" in ex:
                     demo_pairs.append((np.array(ex["input"]), np.array(ex["output"])))
 
+        # Phase 7.1: public corpus ingress channel (default OFF). The corpus
+        # is (input, output) grid pairs; it is NOT an action-trajectory
+        # source. Exact manifest mapping required; typed fail-closed
+        # statuses otherwise. Never fall back to cached environment files.
+        corpus_demos_loaded = False
+        if HENRI_ARC_PUBLIC_INGRESS:
+            if not HENRI_ARC_PUBLIC_INGRESS_MANIFEST:
+                tele.emit({
+                    "env": env_name,
+                    "event_type": "PUBLIC_INGRESS",
+                    "status": "BLOCKED_MANIFEST_MISSING",
+                    "reason": "HENRI_ARC_PUBLIC_INGRESS=1 requires "
+                              "HENRI_ARC_PUBLIC_INGRESS_MANIFEST",
+                    "demo_pair_count": 0,
+                })
+            else:
+                ingress = resolve_demos(
+                    HENRI_ARC_PUBLIC_INGRESS_MANIFEST, env_name
+                )
+                tele.emit({
+                    "env": env_name,
+                    "event_type": "PUBLIC_INGRESS",
+                    "status": ingress.status,
+                    "reason": ingress.reason,
+                    "task_id": ingress.task_id,
+                    "demo_pair_count": len(ingress.demo_pairs),
+                    "provenance": ingress.provenance,
+                })
+                if ingress.ok:
+                    demo_pairs = ingress.demo_pairs
+                    corpus_demos_loaded = True
+                    print(
+                        f"  [ingress] LOADED_PUBLIC_DEMOS: {len(demo_pairs)} "
+                        f"grid pairs for task {ingress.task_id}"
+                    )
+                else:
+                    print(f"  [ingress] {ingress.status}: {ingress.reason}")
+
         if demo_pairs:
             # The current Arcade adapter exposes demonstrations but not the
             # held-out target grid required by SagnacMCTSPlanner.search().
@@ -497,7 +547,23 @@ def run():
         # Absent demos: typed BLOCKED_NO_DEMONSTRATIONS (never bootstrap).
         if (HENRI_ARC_EGRESS and egress_transducer is not None
                 and HENRI_ARC_SGLD_STEPS > 0):
-            if demo_pairs:
+            if demo_pairs and corpus_demos_loaded:
+                # Grid pairs do not supervise (hidden, GameAction, data).
+                # SGLD action-head calibration from grid pairs is blocked.
+                tele.emit({
+                    "env": env_name,
+                    "event_type": "BLOCKED_NO_ACTION_TRAJECTORIES",
+                    "reason": "corpus demos are (input, output) grid pairs, "
+                              "not (observation, GameAction, data) action "
+                              "trajectories; action-head SGLD blocked",
+                    "demo_pair_count": len(demo_pairs),
+                    "sgld_steps_requested": HENRI_ARC_SGLD_STEPS,
+                })
+                print(
+                    "  [sgld] BLOCKED_NO_ACTION_TRAJECTORIES: grid pairs "
+                    "do not supervise action labels"
+                )
+            elif demo_pairs:
                 try:
                     sgld_metrics = adapt_sgld_from_demos(
                         egress_transducer, demo_pairs, tokenizer,
