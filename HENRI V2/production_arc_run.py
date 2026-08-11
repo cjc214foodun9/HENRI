@@ -458,6 +458,10 @@ def run():
                 "task_leakage_detected": False,
                 "external_outcome_status": "BLOCKED",
             })
+            print(
+                "  [BLOCKED] Public demonstrations found, but no observed test target "
+                "is available for target-scored MCTS; identity target is disabled."
+            )
         # Phase 6: online test-time SGLD adaptation on in-context demo pairs.
         # Requires HENRI_ARC_EGRESS=1 AND HENRI_ARC_SGLD_STEPS>0 AND demos.
         # Absent demos: typed BLOCKED_NO_DEMONSTRATIONS (never bootstrap).
@@ -768,6 +772,10 @@ def run():
             # repeating it later is discounted (breaks RESET-spam loops).
             if policy_mode() != "action1":
                 orch.planner.remember_outcome(chosen["predicted_wave"])
+
+            # Fail-closed step-loop guard state (initialized BEFORE the egress
+            # decode so a decode failure can suppress the macro step loop).
+            env_step_error = None
 
             # Phase 6: fail-closed egress decode of the chosen candidate wave.
             # HENRI_ARC_EGRESS=1 routes the selected wave through the trained
