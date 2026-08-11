@@ -64,6 +64,13 @@ from arc_score_gate import (
     ARC_LEARNED_COMPONENT_ON_ACTION_PATH,
     arc_score_eligibility,
 )
+from arc_action_head import (
+    ActionHead,
+    ActionHeadError,
+    ActionHeadState,
+    decode_action_head,
+    load_action_head,
+)
 from henri_benchmark_registry import ARCEpisodeTrace
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -332,6 +339,13 @@ def run():
     HENRI_ARC_SGLD_STEPS = int(os.environ.get("HENRI_ARC_SGLD_STEPS", "0") or 0)
     if HENRI_ARC_SGLD_STEPS < 0:
         raise ValueError("HENRI_ARC_SGLD_STEPS must be >= 0")
+    # Phase 7 semantic action head (default-OFF). When ON, a provenance-
+    # carrying calibrated checkpoint (henri_action_head.pt) is required at
+    # init; absence raises ActionHeadError (fail-closed, never random-init).
+    HENRI_ARC_ACTION_HEAD = os.environ.get("HENRI_ARC_ACTION_HEAD", "0") == "1"
+    HENRI_ARC_ACTION_HEAD_PATH = os.environ.get(
+        "HENRI_ARC_ACTION_HEAD_PATH", ""
+    ).strip()
     db_logger = None
     if dsn != "offline://surrogate":
         try:
@@ -404,6 +418,22 @@ def run():
             "[init] egress transducer LOADED "
             f"(sha256={egress_transducer.checkpoint_sha256})"
         )
+    # Phase 7 action head (default-OFF; fail-closed when ON without a
+    # calibrated, provenance-carrying checkpoint).
+    action_head = None
+    action_head_state = ActionHeadState(action_head_policy="disabled")
+    if HENRI_ARC_ACTION_HEAD and egress_transducer is not None:
+        _head_path = HENRI_ARC_ACTION_HEAD_PATH or os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "models", "henri_action_head.pt",
+        )
+        action_head = ActionHead(d_hidden=2048, n_actions=6)
+        action_head_state = load_action_head(
+            action_head, _head_path, policy="required",
+            expected_hidden=2048, expected_actions=6,
+        )
+        print("[init] action head LOADED "
+              f"(sha256={action_head_state.action_head_sha256})")
     tokenizer = HENRIVisionEncoder(
         d_model=SCALE["d_model"], k_blocks=SCALE["num_blocks"], device=DEVICE
     )
@@ -786,17 +816,35 @@ def run():
                     and policy_mode() != "action1"):
                 try:
                     _vocab = ActionEgressVocabulary(GameAction, allowed_actions)
-                    egress_result = decode_action_egress(
-                        egress_transducer,
-                        chosen["predicted_wave"],
-                        _vocab,
-                        device=DEVICE,
-                        require_loaded=True,
+                    _head_active = bool(
+                        HENRI_ARC_ACTION_HEAD and action_head is not None
+                        and action_head_state.trained_action_head_active
                     )
+                    if _head_active:
+                        # Phase 7: calibrated action head (2048 -> |A|) decodes
+                        # the wave through the unbinder's hidden state.
+                        egress_result = decode_action_head(
+                            egress_transducer,
+                            chosen["predicted_wave"],
+                            action_head,
+                            _vocab,
+                            device=DEVICE,
+                            require_loaded=True,
+                            head_state=action_head_state,
+                        )
+                    else:
+                        egress_result = decode_action_egress(
+                            egress_transducer,
+                            chosen["predicted_wave"],
+                            _vocab,
+                            device=DEVICE,
+                            require_loaded=True,
+                        )
                     action = egress_result.action
                     tele.emit({
                         "env": env_name, "step": step,
                         "event_type": "EGRESS_DECODE",
+                        "action_source": "ACTION_HEAD" if _head_active else "TOKEN_HEAD",
                         "action": egress_result.action_name,
                         "action_index": egress_result.action_index,
                         "entropy_bits": round(egress_result.entropy_bits, 6),
@@ -806,7 +854,7 @@ def run():
                     })
                     print(f"  [egress] decoded {egress_result.action_name} "
                           f"(entropy {egress_result.entropy_bits:.3f} bits)")
-                except EgressFailClosedError as _ef_exc:
+                except (EgressFailClosedError, ActionHeadError) as _ef_exc:
                     env_step_error = f"EGRESS_FAIL_CLOSED: {_ef_exc}"
                     tele.emit({
                         "env": env_name, "step": step,
@@ -1203,9 +1251,20 @@ def run():
                 checkpoint_sha256=_ckpt_sha,
                 state_dict_sha256=_sd_sha,
             )
+            # Phase 7: eligibility also requires the calibrated action head
+            # when the action-head path is enabled. First-N token-logit
+            # relabeling (TOKEN_HEAD) never flips eligibility on its own.
+            if (HENRI_ARC_ACTION_HEAD
+                    and not action_head_state.trained_action_head_active):
+                eligibility = {
+                    "score_eligible": False,
+                    "score_block_reason": "ACTION_HEAD_NOT_CALIBRATED",
+                }
             trace_data["diagnostic_only"] = True
             trace_data["score_eligible"] = eligibility["score_eligible"]
             trace_data["score_block_reason"] = eligibility["score_block_reason"]
+            for _k in ActionHeadState.fingerprint_keys():
+                trace_data[_k] = getattr(action_head_state, _k)
             tele.emit({
                 "env": env_name,
                 "event_type": "ARC_EPISODE_TRACE",
@@ -1219,6 +1278,8 @@ def run():
                 "learned_component_on_action_path": (
                     ARC_LEARNED_COMPONENT_ON_ACTION_PATH
                 ),
+                "action_head_load_status": action_head_state.action_head_load_status,
+                "trained_action_head_active": action_head_state.trained_action_head_active,
             })
         except Exception as trace_err:
             print(f"  [trace] emission failed: {trace_err}")
