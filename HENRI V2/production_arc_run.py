@@ -332,7 +332,6 @@ def run():
     HENRI_ARC_SGLD_STEPS = int(os.environ.get("HENRI_ARC_SGLD_STEPS", "0") or 0)
     if HENRI_ARC_SGLD_STEPS < 0:
         raise ValueError("HENRI_ARC_SGLD_STEPS must be >= 0")
-    HENRI_SEED = int(os.environ.get("HENRI_SEED", "0") or 0)
     db_logger = None
     if dsn != "offline://surrogate":
         try:
@@ -469,7 +468,7 @@ def run():
                     sgld_metrics = adapt_sgld_from_demos(
                         egress_transducer, demo_pairs, tokenizer,
                         device=DEVICE, steps=HENRI_ARC_SGLD_STEPS,
-                        seed=HENRI_SEED,
+                        seed=int(os.environ.get("HENRI_SEED", "0") or 0),
                     )
                     tele.emit({
                         "env": env_name,
