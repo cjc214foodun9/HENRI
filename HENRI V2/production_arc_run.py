@@ -1275,7 +1275,8 @@ def run():
                 "event_type": "SCORE_ELIGIBILITY",
                 "score_eligible": eligibility["score_eligible"],
                 "score_block_reason": eligibility["score_block_reason"],
-                "learned_component_on_action_path": (
+                "learned_component_on_action_path": _egress_active,
+                "arc_learned_component_constant": (
                     ARC_LEARNED_COMPONENT_ON_ACTION_PATH
                 ),
                 "action_head_load_status": action_head_state.action_head_load_status,
