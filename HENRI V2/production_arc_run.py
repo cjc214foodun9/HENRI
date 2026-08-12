@@ -375,14 +375,15 @@ def run():
     # Phase 7.2: SANS epistemic play + action-head calibration (default OFF).
     HENRI_ARC_SANS_PLAY = int(os.environ.get("HENRI_ARC_SANS_PLAY", "0") or 0)
     HENRI_ARC_SANS_STEPS = int(os.environ.get("HENRI_ARC_SANS_STEPS", "0") or 0)
-    # Phase 7.6: Sagnac hard-axiom steering of epistemic play (default OFF).
-    # Values: random (legacy) | sagnac. Fail-closed inside run_sans_play when
-    # sagnac is requested without valid axiom waves (BLOCKED_SAGNAC_AXIOMS).
+    # Phase 7.6/7.7: Sagnac hard-axiom steering of epistemic play (default OFF).
+    # Values: random (legacy) | sagnac (static epsilon) | sagnac-adaptive
+    # (Phase 7.7 dynamic epsilon + axiom-proximal projection). Fail-closed
+    # inside run_sans_play when a steering mode is requested without valid
+    # axiom waves (BLOCKED_SAGNAC_AXIOMS).
     HENRI_ARC_SANS_MODE = os.environ.get("HENRI_ARC_SANS_MODE", "random").strip()
-    if HENRI_ARC_SANS_MODE not in ("random", "sagnac"):
-        raise ValueError(
-            "HENRI_ARC_SANS_MODE must be 'random'|'sagnac'"
-        )
+    if HENRI_ARC_SANS_MODE not in ("random", "sagnac", "sagnac-adaptive"):
+        raise SystemExit(
+            "HENRI_ARC_SANS_MODE must be 'random'|'sagnac'|'sagnac-adaptive'")
     HENRI_ARC_SANS_HEAD_PATH = os.environ.get(
         "HENRI_ARC_SANS_HEAD_PATH", ""
     ).strip() or os.path.join(
@@ -770,7 +771,7 @@ def run():
                     selection_mode=HENRI_ARC_SANS_MODE,
                     axiom_waves=(
                         axiom_waves.to(DEVICE)
-                        if (HENRI_ARC_SANS_MODE == "sagnac"
+                        if (HENRI_ARC_SANS_MODE in ("sagnac", "sagnac-adaptive")
                             and USE_ZONE_C_AXIOMS
                             and axiom_waves is not None)
                         else None
@@ -789,6 +790,8 @@ def run():
                     "veto_steps": sans_result.veto_steps,
                     "steered_steps": sans_result.steered_steps,
                     "veto_rate": sans_result.veto_rate,
+                    "epsilon_t": sans_result.epsilon_t,
+                    "delta_subspace": sans_result.delta_subspace,
                 })
                 print(f"  [sans] {sans_result.status}: {sans_result.reason}")
                 if (sans_result.status == "SANS_HEAD_CALIBRATED"

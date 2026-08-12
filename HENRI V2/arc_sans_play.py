@@ -87,6 +87,9 @@ class SANSResult:
     veto_steps: int = 0
     steered_steps: int = 0
     veto_rate: Optional[float] = None
+    # Phase 7.7 adaptive-steering telemetry (last-step values).
+    epsilon_t: Optional[float] = None
+    delta_subspace: Optional[float] = None
 
 
 def _state_dict_sha256(sd) -> str:
@@ -145,6 +148,83 @@ def select_action_sagnac(
     )
 
 
+# Phase 7.7 adaptive/discriminative steering (approved, default OFF).
+# PDF: "Dynamic Epsilon Scheduling" epsilon_t = mu_delta - sigma_delta, and
+# "Axiom-Proximal Projection" of proposal waves onto the 11-axiom subspace
+# BEFORE Sagnac interference evaluation. Faithful implementation; the
+# pre-registered kill gate judges it (no post-hoc threshold loosening).
+SAGNAC_RIDGE_LAMBDA = 1e-6
+ADAPTIVE_SUBSPACE_MIN_NORM = 1e-8
+# Strict-inequality float guard: the PDF rule vetoes iff min_delta > epsilon_t.
+# At boundary equality (min_delta == epsilon_t, e.g. n=2 where epsilon_t is
+# identically min_delta, or sigma=0 uniform mixtures) the rule ADMITS. 1e-7
+# only absorbs float32 rounding so the exact-arithmetic rule is implemented;
+# it is NOT threshold loosening (epsilon_t itself is untouched).
+ADAPTIVE_EPSILON_TOL = 1e-7
+
+
+def select_action_sagnac_adaptive(
+    wave_blocks: torch.Tensor,
+    axiom_waves: torch.Tensor,
+    rng: torch.Generator,
+    n_actions: int,
+) -> Tuple[Optional[int], Optional[float], Optional[float]]:
+    """Phase 7.7 adaptive steering: project, then schedule the threshold.
+
+    Returns (action_idx, epsilon_t, delta_subspace):
+      - action_idx None  -> veto (state off the axiom subspace)
+      - epsilon_t        -> mu_delta - sigma_delta over projected deltas,
+                            sigma = POPULATION std (ddof=0, pinned in the
+                            sealed manifest)
+      - delta_subspace   -> 1 - 0.5*(1 + <w_hat, w_prox_hat>); 0 when the
+                            state already lies in span(Axioms).
+
+    Projection (ridge-stabilized): w_prox = A^T (A A^T + lambda I)^-1 A w_hat
+    with A = [M, D] unit axiom rows (M=11 -> 11x11 solve). A state with no
+    component on span(A) (projected norm below ADAPTIVE_SUBSPACE_MIN_NORM)
+    is a true logical contradiction -> veto (fail closed). Veto iff
+    min_delta > epsilon_t + ADAPTIVE_EPSILON_TOL (strict inequality as
+    written in the PDF, float-guarded).
+    """
+    if axiom_waves is None or axiom_waves.ndim != 3:
+        return None, None, None
+    dev = wave_blocks.device
+    w = wave_blocks.reshape(-1).to(torch.float32).to(dev)
+    w = w / (w.norm() + 1e-12)
+    A = axiom_waves.reshape(axiom_waves.shape[0], -1).to(torch.float32).to(dev)
+    A = A / (A.norm(dim=-1, keepdim=True) + 1e-12)
+
+    # Axiom-proximal projection onto span(A).
+    G = A @ A.t()  # [M, M]
+    coef = torch.linalg.solve(
+        G + SAGNAC_RIDGE_LAMBDA * torch.eye(G.shape[0], device=dev, dtype=torch.float32),
+        A @ w,
+    )
+    w_prox = A.t() @ coef
+    prox_norm = w_prox.norm()
+    if prox_norm < ADAPTIVE_SUBSPACE_MIN_NORM:
+        # State is orthogonal to the axiom subspace: true contradiction.
+        return None, None, None
+    w_prox = w_prox / (prox_norm + 1e-12)
+    w_flat = w / (w.norm() + 1e-12)
+
+    cos_k = A @ w_prox
+    deltas = 1.0 - 0.5 * (1.0 + cos_k)
+    mu_delta = float(deltas.mean().item())
+    sigma_delta = float(deltas.std(dim=0, unbiased=False).item())  # population
+    epsilon_t = mu_delta - sigma_delta
+    delta_subspace = 1.0 - 0.5 * (1.0 + float((w_flat @ w_prox).item()))
+    min_delta = float(deltas.min().item())
+    if min_delta > epsilon_t + ADAPTIVE_EPSILON_TOL:
+        # No dominant axiom: the state is off the axiom subspace.
+        return None, epsilon_t, delta_subspace
+    return (
+        int(torch.randint(0, n_actions, (1,), generator=rng).item()),
+        epsilon_t,
+        delta_subspace,
+    )
+
+
 def run_sans_play(
     game: Any,
     tokenizer: Any,
@@ -167,7 +247,7 @@ def run_sans_play(
     camera: optional CameraParams for screen-space ACTION6 payloads.
     """
     res = SANSResult()
-    if selection_mode not in ("random", "sagnac"):
+    if selection_mode not in ("random", "sagnac", "sagnac-adaptive"):
         selection_mode = "random"
     res.selection_mode = selection_mode
     if n_steps <= 0:
@@ -189,8 +269,8 @@ def run_sans_play(
         res.status = STATUS_IMPORT_FAILED
         res.reason = "transducer lacks d_model"
         return res
-    if selection_mode == "sagnac":
-        # Fail closed: sagnac steering requires [M, num_blocks, 8] axioms.
+    if selection_mode in ("sagnac", "sagnac-adaptive"):
+        # Fail closed: steering requires [M, num_blocks, 8] axioms.
         # Never silently fall back to random selection.
         if (
             axiom_waves is None
@@ -200,8 +280,8 @@ def run_sans_play(
         ):
             res.status = STATUS_BLOCKED_AXIOMS
             res.reason = (
-                "sagnac steering requires [M, num_blocks, 8] axiom_waves "
-                f"with num_blocks*8 == d_model {d_model}"
+                f"{selection_mode} steering requires [M, num_blocks, 8] "
+                f"axiom_waves with num_blocks*8 == d_model {d_model}"
             )
             return res
 
@@ -226,8 +306,9 @@ def run_sans_play(
             egress_transducer, flat, device=device
         ).detach().cpu().flatten()
 
-        # Action selection: seeded random (default) OR Phase 7.6 Sagnac
-        # hard-axiom steering (selection_mode="sagnac", default OFF).
+        # Action selection: seeded random (default), Phase 7.6 Sagnac
+        # hard-axiom steering ("sagnac"), OR Phase 7.7 adaptive steering
+        # ("sagnac-adaptive", default OFF).
         if not allowed:
             break
         vetoed_step = False
@@ -247,6 +328,25 @@ def run_sans_play(
             else:
                 res.steered_steps += 1
                 act = allowed[idx]
+        elif (
+            selection_mode == "sagnac-adaptive"
+            and axiom_waves is not None
+            and axiom_waves.ndim == 3
+            and axiom_waves.shape[1:] == tuple(wave_blocks.shape)
+        ):
+            idx, epsilon_t, delta_subspace = select_action_sagnac_adaptive(
+                wave_blocks, axiom_waves, rng, len(allowed),
+            )
+            if idx is None:
+                vetoed_step = True
+                res.veto_steps += 1
+            else:
+                res.steered_steps += 1
+                act = allowed[idx]
+            if epsilon_t is not None:
+                res.epsilon_t = epsilon_t
+            if delta_subspace is not None:
+                res.delta_subspace = delta_subspace
         else:
             idx = int(
                 torch.randint(0, len(allowed), (1,), generator=rng).item()
@@ -298,7 +398,9 @@ def run_sans_play(
                    "selection_mode": res.selection_mode,
                    "veto_steps": res.veto_steps,
                    "steered_steps": res.steered_steps,
-                   "veto_rate": res.veto_rate})
+                   "veto_rate": res.veto_rate,
+                   "epsilon_t": res.epsilon_t,
+                   "delta_subspace": res.delta_subspace})
 
     if res.buffer_size < MIN_SAMPLES:
         res.status = STATUS_BUFFER_INSUFFICIENT
@@ -379,6 +481,8 @@ def run_sans_play(
         "veto_steps": res.veto_steps,
         "steered_steps": res.steered_steps,
         "veto_rate": res.veto_rate,
+        "epsilon_t": res.epsilon_t,
+        "delta_subspace": res.delta_subspace,
     }
 
     if not passed:

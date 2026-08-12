@@ -194,3 +194,95 @@ def test_run_sans_play_random_preserves_default_semantics():
     assert res.selection_mode == "random"
     assert res.veto_steps == 0
     assert res.veto_rate == 0.0
+
+
+# ---- Phase 7.7: adaptive/discriminative Sagnac steering (default OFF) ----
+
+def test_select_action_sagnac_adaptive_steers_on_subspace():
+    """w exactly on the axiom subspace (w == a1, M=4 orthonormal axioms)
+    -> admitted + telemetry. deltas = [0, .5, .5, .5], mu=0.375, sigma=0.2165
+    (population), eps_t=0.1585, min=0 < eps_t -> ADMIT."""
+    from arc_sans_play import select_action_sagnac_adaptive
+    g = torch.Generator().manual_seed(4)
+    a1 = torch.randn(64, 8, generator=g)
+    a1 = a1 / (a1.norm() + 1e-12)
+    others = [torch.randn(64, 8, generator=g) for _ in range(3)]
+    ax = [a1]
+    for v in others:
+        for b in ax:
+            v = v - (v.flatten() @ b.flatten()) * b
+        v = v / (v.norm() + 1e-12)
+        ax.append(v)
+    axioms = torch.stack(ax)
+    idx, epsilon_t, delta_subspace = select_action_sagnac_adaptive(a1, axioms, g, 4)
+    assert idx is not None and 0 <= idx < 4
+    assert epsilon_t is not None and 0.1 < epsilon_t < 0.25
+    assert delta_subspace is not None and delta_subspace < 1e-4
+
+
+def test_select_action_sagnac_adaptive_relative_criterion_veto():
+    """No dominant axiom -> min_delta > mu - sigma -> veto (PDF rule).
+
+    Right-skewed deltas [0.475, 0.5, 0.5, 0.703]: mu=0.544, sigma=0.092,
+    eps_t=0.452, min=0.475 > eps_t -> VETO. Constructed: w has cos 0.05 to
+    a1, ~0 to a2/a3, -0.4 to a4, rest orthogonal to span(A)."""
+    from arc_sans_play import select_action_sagnac_adaptive
+    g = torch.Generator().manual_seed(5)
+    ax = [torch.randn(64, 8, generator=g) for _ in range(4)]
+    for i in range(4):
+        for b in ax[:i]:
+            ax[i] = ax[i] - (ax[i].flatten() @ b.flatten()) * b
+        ax[i] = ax[i] / (ax[i].norm() + 1e-12)
+    e = torch.randn(64, 8, generator=g)
+    for b in ax:
+        e = e - (e.flatten() @ b.flatten()) * b
+    e = e / (e.norm() + 1e-12)
+    w = 0.05 * ax[0] - 0.4 * ax[3] + 0.9 * e
+    w = w / (w.norm() + 1e-12)
+    axioms = torch.stack(ax)
+    idx, epsilon_t, delta_subspace = select_action_sagnac_adaptive(w, axioms, g, 4)
+    assert idx is None
+    assert epsilon_t is not None
+    # 0.2-0.4 band: partially off-subspace (predicted ~0.296).
+    assert delta_subspace is not None and 0.2 < delta_subspace < 0.4
+
+
+def test_select_action_sagnac_adaptive_vetoes_null_projection():
+    """Zero wave -> zero projection norm -> fail-closed veto (no division by 0)."""
+    from arc_sans_play import select_action_sagnac_adaptive
+    g = torch.Generator().manual_seed(6)
+    axioms = _axioms(2, seed=6)
+    w = torch.zeros_like(axioms[0])
+    idx, epsilon_t, delta_subspace = select_action_sagnac_adaptive(w, axioms, g, 4)
+    assert idx is None
+    assert epsilon_t is None
+    assert delta_subspace is None
+
+
+def test_run_sans_play_sagnac_adaptive_fail_closed_without_axioms():
+    from arc_sans_play import STATUS_BLOCKED_AXIOMS, run_sans_play
+    game = _Game(n_actions=3)
+    tok = _Token(512)
+    tr = _Transducer(512)
+    head = torch.nn.Linear(64, 3)
+    res = run_sans_play(
+        game, tok, tr, head, _Vocab(3), n_steps=10, device="cpu", seed=1,
+        env_name="toy", tele=None, selection_mode="sagnac-adaptive",
+        axiom_waves=None,
+    )
+    assert res.status == STATUS_BLOCKED_AXIOMS
+    assert res.buffer_size == 0
+
+
+def test_run_sans_play_sagnac_adaptive_rejects_bad_axioms():
+    from arc_sans_play import STATUS_BLOCKED_AXIOMS, run_sans_play
+    game = _Game(n_actions=3)
+    tok = _Token(512)
+    tr = _Transducer(512)
+    head = torch.nn.Linear(64, 3)
+    res = run_sans_play(
+        game, tok, tr, head, _Vocab(3), n_steps=10, device="cpu", seed=1,
+        env_name="toy", tele=None, selection_mode="sagnac-adaptive",
+        axiom_waves=torch.randn(64, 8),
+    )
+    assert res.status == STATUS_BLOCKED_AXIOMS
