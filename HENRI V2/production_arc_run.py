@@ -1033,18 +1033,22 @@ def run():
                     _axiom_ref = boundary_batch[0].detach()
                     _world_ref = state_wave.detach()
                     _flags = []
+                    _deltas = []
                     for _cand in efe_table:
                         _wave = _cand.get("predicted_wave")
                         if _wave is None:
                             _flags.append(False)
+                            _deltas.append(None)
                             continue
                         _da, _de, _trig, _st = evaluate_veto(
                             _wave.detach(), _axiom_ref, _world_ref)
                         _flags.append(_trig)
+                        _deltas.append(round(float(_da), 4))
                     _re_ranked, _re_ranked_flag, _vetoed_count = apply_advisory_rerank(
                         efe_table, _flags, chosen)
                     veto_info = {
                         "veto_flags": _flags,
+                        "deltas_axiom": _deltas,
                         "vetoed_count": int(_vetoed_count),
                         "re_ranked": bool(_re_ranked_flag),
                     }
