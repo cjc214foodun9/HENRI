@@ -191,6 +191,13 @@ HENRI_ARC_SCORECARD_DELTA = os.environ.get("HENRI_ARC_SCORECARD_DELTA", "0") == 
 # re-rank, no deadlock.
 HENRI_ARC_SAGNAC_VETO = os.environ.get("HENRI_ARC_SAGNAC_VETO", "0") == "1"
 
+# Phase 7.5 CONN Module B: read-only AdaptiveViscoelasticThermostat shadow.
+# When set, the production thermostat's scalar math (anisotropic friction /
+# effective LR) is evaluated on the live per-step signals and emitted as
+# telemetry ONLY. It NEVER mutates weights and NEVER influences policy.
+# Default OFF: the default path stays byte-identical.
+HENRI_ARC_THERMOSTAT = os.environ.get("HENRI_ARC_THERMOSTAT", "0") == "1"
+
 # P2 ARC diagnostic baseline harness. All flags default OFF so the production
 # path stays byte-identical. Runs under these flags are DIAGNOSTIC only and
 # are NOT score-eligible (no runner-level LOADED-checkpoint gate yet).
@@ -432,6 +439,18 @@ def run():
     # The sidecar (arc_sagnac_veto.py) is self-contained; it computes the
     # dual-channel deltas with the canonical norm-consistent metric. Fail-open:
     # unavailable sidecar => UNAVAILABLE, no re-rank.
+    # Phase 7.5 CONN Module B: read-only thermostat shadow (default-OFF).
+    # The real thermostat constructor is scalar-only (no VRAM allocation);
+    # the shadow only evaluates its production scalar math. Fail-closed:
+    # None/exception => THERMO_SHADOW_UNAVAILABLE, no policy influence.
+    _thermo_shadow = None
+    if HENRI_ARC_THERMOSTAT:
+        try:
+            from adaptive_viscoelastic_thermostat import AdaptiveViscoelasticThermostat
+            _thermo_shadow = AdaptiveViscoelasticThermostat(
+                d_model=65536, use_wavelet_gating=False)
+        except Exception as _th_exc:
+            print(f"  [thermo] shadow init failed (fail-closed): {_th_exc}")
     if CONSTRAINT_AXIOM:
         # Penalty-form constraint channel: arm the planner's barrier scalars
         # (no-op in the default path; the penalty itself activates only once
@@ -1371,6 +1390,24 @@ def run():
             # model's action choices meaningfully differentiate trajectories.
             predicted_prior = predicted_wave.detach()
 
+            # Phase 7.5 CONN Module B: read-only thermostat shadow (default-OFF).
+            # Emits the production scalar friction/LR math on the live signals;
+            # NEVER mutates weights or policy. Fail-closed: None/exception ->
+            # THERMO_SHADOW_UNAVAILABLE.
+            thermo_shadow_info = None
+            if HENRI_ARC_THERMOSTAT:
+                # ON always emits a typed status (OK or UNAVAILABLE). If init
+                # failed, _thermo_shadow is None and the sidecar fails closed.
+                try:
+                    from arc_thermostat_shadow import evaluate_thermostat_shadow
+                    thermo_shadow_info, _th_status = evaluate_thermostat_shadow(
+                        _thermo_shadow,
+                        chosen.get("lambda_active"),
+                        sagnac_delta,
+                    )
+                except Exception as _th_exc:
+                    thermo_shadow_info = {"status": "THERMO_SHADOW_UNAVAILABLE"}
+
             # Telemetry emit (dense latent record)
             action_counts[game_action.name] = action_counts.get(game_action.name, 0) + 1
             tele.emit({
@@ -1401,6 +1438,7 @@ def run():
                 "fallback_executed": bool(chosen.get("fallback_executed", False)),
                 "admissible_count": int(chosen.get("admissible_count", 0)),
                 "veto_info": veto_info,
+                "thermo_shadow": thermo_shadow_info,
                 "goal_distance": round(float(chosen.get("goal_distance", 0.0)), 6),
                 "residual_type": str(chosen.get("residual_type", "N/A")),
                 "lambda_goal": LAMBDA_GOAL,
