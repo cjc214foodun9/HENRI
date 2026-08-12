@@ -357,6 +357,19 @@ def run():
     # (default OFF). Probe: FUNCTOR_FALSIFIED on live geometry — stays
     # diagnostic until the held-out gate flips.
     HENRI_ARC_FUNCTOR = int(os.environ.get("HENRI_ARC_FUNCTOR", "0") or 0)
+    # Phase 7.3: encoder-basis realignment (default OFF, authorized).
+    # HENRI_ARC_SPATIAL_BASIS=incommensurate|random replaces the collinear
+    # y-ramp (G1 ACCEPTED at D=65,536). HENRI_ARC_BG_MASK=1 excludes
+    # color-0 background from the superposition (G2: DC offset broken,
+    # identity cos 0.971 -> 0.467). "default" reproduces legacy byte-for-byte.
+    HENRI_ARC_SPATIAL_BASIS = os.environ.get(
+        "HENRI_ARC_SPATIAL_BASIS", "default"
+    ).strip()
+    if HENRI_ARC_SPATIAL_BASIS not in ("default", "incommensurate", "random"):
+        raise ValueError(
+            "HENRI_ARC_SPATIAL_BASIS must be default|incommensurate|random"
+        )
+    HENRI_ARC_BG_MASK = os.environ.get("HENRI_ARC_BG_MASK", "0") == "1"
     # Phase 7 semantic action head (default-OFF). When ON, a provenance-
     # carrying calibrated checkpoint (henri_action_head.pt) is required at
     # init; absence raises ActionHeadError (fail-closed, never random-init).
@@ -462,7 +475,9 @@ def run():
         print("[init] action head LOADED "
               f"(sha256={action_head_state.action_head_sha256})")
     tokenizer = HENRIVisionEncoder(
-        d_model=SCALE["d_model"], k_blocks=SCALE["num_blocks"], device=DEVICE
+        d_model=SCALE["d_model"], k_blocks=SCALE["num_blocks"], device=DEVICE,
+        spatial_basis_kind=HENRI_ARC_SPATIAL_BASIS,
+        bg_mask=HENRI_ARC_BG_MASK,
     )
 
     # Phase 7.2 Step 3: spatial phase-map invertibility verdict (diagnostic).
