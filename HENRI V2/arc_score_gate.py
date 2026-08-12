@@ -38,6 +38,14 @@ ELIGIBLE = ""
 # with the head active.
 SANS_HEAD_NOT_TASK_VALIDATED = "SANS_HEAD_NOT_TASK_VALIDATED"
 
+# Phase 7.4 (2026-08-12): semantic action-head dominance. A generic loaded
+# decoder must NEVER independently grant ARC score eligibility. score_eligible
+# requires a provenance-validated, calibrated semantic action head active on
+# the execution path. With the action head OFF (or uncalibrated), eligibility
+# stays false with this reason — regardless of HENRI_ARC_EGRESS or
+# HENRI_ARC_ACTION_HEAD values.
+ACTION_HEAD_NOT_CALIBRATED = "ACTION_HEAD_NOT_CALIBRATED"
+
 
 # Causal-path audit (2026-08-09, e6a346c/001fec8): the ARC action path in
 # production_arc_run.py uses HolographicActionDecoder (random phase engrams,
@@ -56,6 +64,7 @@ def arc_score_eligibility(
     trained_decoder_active: bool = False,
     checkpoint_sha256: Optional[str] = None,
     state_dict_sha256: Optional[str] = None,
+    trained_action_head_active: bool = False,
 ) -> Dict[str, object]:
     """Return {score_eligible, score_block_reason} for an ARC run.
 
@@ -65,6 +74,9 @@ def arc_score_eligibility(
     - checkpoint_load_status == "LOADED"
     - trained_decoder_active is True
     - checkpoint_sha256 and state_dict_sha256 are present
+    - trained_action_head_active is True (Phase 7.4 dominance: a generic
+      decoder without a calibrated semantic action head can never flip
+      eligibility)
 
     The first violated condition determines the block reason.
     """
@@ -95,5 +107,10 @@ def arc_score_eligibility(
         return {
             "score_eligible": False,
             "score_block_reason": CHECKPOINT_HASH_MISSING,
+        }
+    if not trained_action_head_active:
+        return {
+            "score_eligible": False,
+            "score_block_reason": ACTION_HEAD_NOT_CALIBRATED,
         }
     return {"score_eligible": True, "score_block_reason": ELIGIBLE}

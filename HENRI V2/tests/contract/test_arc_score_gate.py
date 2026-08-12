@@ -18,6 +18,7 @@ sys.path.insert(0, str(REPO / "HENRI V2"))
 import pytest  # noqa: E402
 
 from arc_score_gate import (  # noqa: E402
+    ACTION_HEAD_NOT_CALIBRATED,
     ARC_LEARNED_COMPONENT_ON_ACTION_PATH,
     CHECKPOINT_HASH_MISSING,
     CHECKPOINT_INCOMPATIBLE,
@@ -41,6 +42,7 @@ def elig(**kw):
         trained_decoder_active=True,
         checkpoint_sha256=A,
         state_dict_sha256=A,
+        trained_action_head_active=True,
     )
     defaults.update(kw)
     return arc_score_eligibility(**defaults)
@@ -109,3 +111,36 @@ def test_causal_path_priority_over_missing_checkpoint():
     r = elig(learned_component_on_action_path=False,
              checkpoint_load_status=None)
     assert r["score_block_reason"] == LOADED_COMPONENT_NOT_ON_ACTION_PATH
+
+
+# --- Phase 7.4: semantic action-head dominance ------------------------------
+def test_generic_egress_without_action_head_blocks():
+    # Phase 7.4 contract: a LOADED generic decoder + egress ON must NEVER
+    # independently grant eligibility. All decoder fields look healthy but
+    # the calibrated semantic action head is inactive -> blocked.
+    r = elig(trained_action_head_active=False)
+    assert r == {"score_eligible": False,
+                 "score_block_reason": ACTION_HEAD_NOT_CALIBRATED}
+
+
+def test_generic_egress_off_head_off_blocks():
+    # Everything off: blocked with the action-head reason (after decoder
+    # checks pass only when the decoder is on the path; with egress OFF the
+    # policy check blocks first with POLICY_NOT_REQUIRED).
+    r = elig(checkpoint_policy=None, trained_action_head_active=False)
+    assert r["score_eligible"] is False
+    assert r["score_block_reason"] == POLICY_NOT_REQUIRED
+
+
+def test_action_head_active_with_full_chain_eligible():
+    # Positive control: only a provenance-validated calibrated semantic
+    # action head plus a fully healthy decoder chain flips eligibility.
+    r = elig()
+    assert r == {"score_eligible": True, "score_block_reason": ELIGIBLE}
+
+
+def test_decoder_hash_priority_over_head():
+    # Decoder-provenance checks precede the head check; a missing decoder
+    # hash blocks with CHECKPOINT_HASH_MISSING even when the head is OFF.
+    r = elig(checkpoint_sha256=None, trained_action_head_active=False)
+    assert r["score_block_reason"] == CHECKPOINT_HASH_MISSING

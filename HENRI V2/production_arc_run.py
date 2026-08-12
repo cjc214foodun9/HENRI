@@ -1446,6 +1446,14 @@ def run():
                 egress_transducer.checkpoint_state_dict_sha256
                 if egress_transducer is not None else None
             )
+            # Phase 7.4: single-source eligibility. The gate itself requires
+            # a provenance-validated calibrated semantic action head
+            # (trained_action_head_active). A generic loaded decoder can
+            # never independently grant eligibility; the old conditional
+            # ACTION_HEAD_NOT_CALIBRATED override is superseded by the gate.
+            _action_head_active = bool(
+                action_head_state.trained_action_head_active
+            )
             eligibility = arc_score_eligibility(
                 learned_component_on_action_path=_egress_active,
                 checkpoint_policy="required" if HENRI_ARC_EGRESS else None,
@@ -1453,16 +1461,8 @@ def run():
                 trained_decoder_active=_egress_active,
                 checkpoint_sha256=_ckpt_sha,
                 state_dict_sha256=_sd_sha,
+                trained_action_head_active=_action_head_active,
             )
-            # Phase 7: eligibility also requires the calibrated action head
-            # when the action-head path is enabled. First-N token-logit
-            # relabeling (TOKEN_HEAD) never flips eligibility on its own.
-            if (HENRI_ARC_ACTION_HEAD
-                    and not action_head_state.trained_action_head_active):
-                eligibility = {
-                    "score_eligible": False,
-                    "score_block_reason": "ACTION_HEAD_NOT_CALIBRATED",
-                }
             # Phase 7.2: a SANS-calibrated head is provenance-complete but
             # was trained on self-generated random play. It predicts which
             # random action was taken (action-state correlation), not task
