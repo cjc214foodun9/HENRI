@@ -24,6 +24,7 @@ from arc_sagnac_veto import (
     DEFAULT_EPSILON_HARD,
     VETO_OK,
     VETO_UNAVAILABLE,
+    apply_advisory_rerank,
     evaluate_veto,
     rerank_with_veto,
 )
@@ -117,3 +118,41 @@ def test_length_mismatch_preserves_order():
 def test_empty_inputs_preserved():
     assert rerank_with_veto([], []) == []
     assert rerank_with_veto(None, None) is None
+
+
+def test_apply_rerank_zero_vetoes_preserves_chosen():
+    """C9: zero vetoes -> planner's chosen preserved, even when it is not
+    efe_table[0] (exploration pick). Advisory sidecar must never override
+    the planner without a fired veto."""
+    ranked = [_mk(1.0, "a"), _mk(2.0, "b")]
+    chosen = ranked[1]
+    out, re_ranked, count = apply_advisory_rerank(ranked, [False, False], chosen)
+    assert out is chosen
+    assert re_ranked is False
+    assert count == 0
+
+
+def test_apply_rerank_veto_reranks():
+    ranked = [_mk(1.0, "v"), _mk(2.0, "ok")]
+    chosen = ranked[0]
+    out, re_ranked, count = apply_advisory_rerank(ranked, [True, False], chosen)
+    assert re_ranked is True
+    assert out is ranked[1]
+    assert count == 1
+
+
+def test_apply_rerank_all_vetoed_keeps_best():
+    ranked = [_mk(1.0, "a"), _mk(2.0, "b")]
+    chosen = ranked[0]
+    out, re_ranked, count = apply_advisory_rerank(ranked, [True, True], chosen)
+    assert out is chosen
+    assert re_ranked is False
+    assert count == 2
+
+
+def test_apply_rerank_anomaly_preserves_chosen():
+    chosen = _mk(1.0, "a")
+    out, re_ranked, count = apply_advisory_rerank([], [], chosen)
+    assert out is chosen
+    assert re_ranked is False
+    assert count == 0

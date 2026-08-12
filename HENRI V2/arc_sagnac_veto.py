@@ -110,3 +110,27 @@ def rerank_with_veto(
     clean = [r for r, v in zip(ranked, vetoed_flags) if not v]
     vetoed = [r for r, v in zip(ranked, vetoed_flags) if v]
     return clean + vetoed
+
+
+def apply_advisory_rerank(
+    ranked: list,
+    vetoed_flags: list,
+    chosen: dict,
+) -> tuple:
+    """Advisory re-rank gate: (new_chosen, re_ranked, vetoed_count).
+
+    A veto MUST fire before the sidecar may change the selection. With zero
+    vetoes, the planner's chosen candidate (including exploration picks that
+    differ from efe_table[0]) is preserved byte-identical. With any veto, the
+    first non-vetoed candidate wins; all-vetoed keeps the EFE-ordered best
+    (no deadlock). Anomalous inputs preserve `chosen` with re_ranked=False.
+    """
+    vetoed_count = 0
+    if vetoed_flags:
+        vetoed_count = int(sum(1 for f in vetoed_flags if f))
+    if (not ranked or not vetoed_flags or len(ranked) != len(vetoed_flags)
+            or vetoed_count == 0):
+        return chosen, False, vetoed_count
+    re_ranked = rerank_with_veto(ranked, vetoed_flags)
+    new_chosen = re_ranked[0]
+    return new_chosen, new_chosen is not chosen, vetoed_count

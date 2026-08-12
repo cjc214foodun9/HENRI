@@ -1029,7 +1029,7 @@ def run():
             veto_info = None
             if HENRI_ARC_SAGNAC_VETO and policy_mode() != "action1":
                 try:
-                    from arc_sagnac_veto import evaluate_veto, rerank_with_veto
+                    from arc_sagnac_veto import apply_advisory_rerank, evaluate_veto
                     _axiom_ref = boundary_batch[0].detach()
                     _world_ref = state_wave.detach()
                     _flags = []
@@ -1041,24 +1041,24 @@ def run():
                         _da, _de, _trig, _st = evaluate_veto(
                             _wave.detach(), _axiom_ref, _world_ref)
                         _flags.append(_trig)
-                    _re_ranked = rerank_with_veto(efe_table, _flags)
-                    _re_chosen = _re_ranked[0]
+                    _re_ranked, _re_ranked_flag, _vetoed_count = apply_advisory_rerank(
+                        efe_table, _flags, chosen)
                     veto_info = {
                         "veto_flags": _flags,
-                        "vetoed_count": int(sum(_flags)),
-                        "re_ranked": bool(_re_ranked[0] is not chosen),
+                        "vetoed_count": int(_vetoed_count),
+                        "re_ranked": bool(_re_ranked_flag),
                     }
-                    if veto_info["re_ranked"]:
+                    if _re_ranked_flag:
                         # Atomic fail-open: compute ALL re-ranked values first;
                         # only then mutate. A missing field raises before any
                         # assignment, leaving the EFE baseline byte-identical.
-                        _new_action = _re_chosen["action"]
-                        _new_wave = _re_chosen["predicted_wave"]
-                        _new_explored = bool(_re_chosen.get("explored", False))
-                        _new_hop_conf = _re_chosen["efe"]
+                        _new_action = _re_ranked["action"]
+                        _new_wave = _re_ranked["predicted_wave"]
+                        _new_explored = bool(_re_ranked.get("explored", False))
+                        _new_hop_conf = _re_ranked["efe"]
                         action = _new_action
                         predicted_wave = _new_wave
-                        chosen = _re_chosen
+                        chosen = _re_ranked
                         # Causal consistency: every downstream value derived
                         # from the re-ranked winner is recomputed.
                         explored = _new_explored
