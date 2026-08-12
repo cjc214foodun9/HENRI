@@ -198,6 +198,14 @@ HENRI_ARC_SAGNAC_VETO = os.environ.get("HENRI_ARC_SAGNAC_VETO", "0") == "1"
 # Default OFF: the default path stays byte-identical.
 HENRI_ARC_THERMOSTAT = os.environ.get("HENRI_ARC_THERMOSTAT", "0") == "1"
 
+# Phase 7.5 CPX: read-only complex third-family diagnostic sidecar
+# (arc_complex_sidecar.py). When set, the live [K, 8] Cl(3,0) UWE wave is
+# projected one-way into a unit-modulus complex phasor family (corpus
+# norm-preserving boundary) and read-out as telemetry ONLY. It NEVER
+# mutates weights, NEVER influences policy, and has NO reverse conversion.
+# Default OFF: the default path stays byte-identical.
+HENRI_ARC_COMPLEX_SIDECAR = os.environ.get("HENRI_ARC_COMPLEX_SIDECAR", "0") == "1"
+
 # P2 ARC diagnostic baseline harness. All flags default OFF so the production
 # path stays byte-identical. Runs under these flags are DIAGNOSTIC only and
 # are NOT score-eligible (no runner-level LOADED-checkpoint gate yet).
@@ -1408,6 +1416,19 @@ def run():
                 except Exception as _th_exc:
                     thermo_shadow_info = {"status": "THERMO_SHADOW_UNAVAILABLE"}
 
+            # Phase 7.5 CPX: read-only complex sidecar (default-OFF).
+            # Projects the live state wave one-way into the complex phasor
+            # family and emits diagnostics; NEVER mutates weights or policy.
+            # Fail-closed: unavailable -> CPX_SIDECAR_UNAVAILABLE, no crash.
+            complex_sidecar_info = None
+            if HENRI_ARC_COMPLEX_SIDECAR:
+                try:
+                    from arc_complex_sidecar import evaluate_complex_sidecar
+                    complex_sidecar_info, _cpx_status = evaluate_complex_sidecar(
+                        state_wave)
+                except Exception as _cpx_exc:
+                    complex_sidecar_info = {"status": "CPX_SIDECAR_UNAVAILABLE"}
+
             # Telemetry emit (dense latent record)
             action_counts[game_action.name] = action_counts.get(game_action.name, 0) + 1
             tele.emit({
@@ -1439,6 +1460,7 @@ def run():
                 "admissible_count": int(chosen.get("admissible_count", 0)),
                 "veto_info": veto_info,
                 "thermo_shadow": thermo_shadow_info,
+                "complex_sidecar": complex_sidecar_info,
                 "goal_distance": round(float(chosen.get("goal_distance", 0.0)), 6),
                 "residual_type": str(chosen.get("residual_type", "N/A")),
                 "lambda_goal": LAMBDA_GOAL,
