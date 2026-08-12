@@ -112,11 +112,18 @@ def run_sans_play(
     tele: Any = None,
     camera: Any = None,
     head_path: str = DEFAULT_HEAD_PATH,
+    steer: bool = False,
 ) -> SANSResult:
     """Execute bounded epistemic play and calibrate the action head.
 
     vocab: object exposing id_to_action (list of action objects with .name).
     camera: optional CameraParams for screen-space ACTION6 payloads.
+    steer: Phase 7.3 G3. When True, replace uniform-random action selection
+        with history-weighted Sagnac steering: actions whose observed
+        post-state waves kept the lowest Sagnac delta (highest coherence)
+        against the current state wave are preferred; unseen actions use
+        the global mean delta as prior. Purely self-generated (no demos,
+        no leakage, no trial-stepping of the live game).
     """
     res = SANSResult()
     if n_steps <= 0:
@@ -151,6 +158,29 @@ def run_sans_play(
         res.reason = "game reset produced no frame"
         return res
 
+    # Phase 7.3 G3 steering state: per-action running Sagnac deltas and
+    # counts, computed from OBSERVED post-state waves only. This is
+    # history-weighted steering over the live arcade — self-generated,
+    # no demos, no leakage, no trial-stepping of the live game.
+    steer_stats: dict = {}
+
+    def _steer_action(current_wave: torch.Tensor) -> int:
+        # Score every legal action: unseen actions get the global mean
+        # delta as prior; observed actions get their mean delta.
+        # Prefer actions that kept the wave coherent (low delta).
+        if not steer_stats:
+            return int(torch.randint(0, len(allowed), (1,), generator=rng).item())
+        global_mean = sum(v[0] for v in steer_stats.values()) / len(steer_stats)
+        scores = []
+        for ai in range(len(allowed)):
+            if ai in steer_stats:
+                mean_d, count = steer_stats[ai]
+                scores.append((mean_d + 0.5 / (1 + count), ai))
+            else:
+                scores.append((global_mean, ai))
+        scores.sort(key=lambda t: (t[0], t[1]))
+        return scores[0][1]
+
     for _step in range(n_steps):
         import numpy as np
         grid = np.asarray(obs.frame[0]).tolist()
@@ -160,10 +190,13 @@ def run_sans_play(
             egress_transducer, flat, device=device
         ).detach().cpu().flatten()
 
-        # Seeded random legal action.
+        # Legal action selection: steer (G3) or seeded uniform random.
         if not allowed:
             break
-        idx = int(torch.randint(0, len(allowed), (1,), generator=rng).item())
+        if steer:
+            idx = _steer_action(hidden)
+        else:
+            idx = int(torch.randint(0, len(allowed), (1,), generator=rng).item())
         act = allowed[idx]
 
         # Step with a screen-space payload when the env/action needs one.

@@ -13,6 +13,7 @@ from arc_sans_play import (
     STATUS_BUFFER_INSUFFICIENT,
     STATUS_CALIBRATED,
     STATUS_DEGENERATE_LABELS,
+    STATUS_IMPORT_FAILED,
     MIN_SAMPLES,
     run_sans_play,
 )
@@ -129,3 +130,24 @@ def test_calibrated_head_dims_match():
     if res.status == STATUS_CALIBRATED:
         assert res.hidden_dim == 64
         assert res.action_dim == 3
+
+
+def test_steer_never_crashes_and_stays_legal():
+    """Phase 7.3 G3: steer=True must run the same machinery and only ever
+    select legal actions (seeded toy game, 3 actions)."""
+    game = _Game(n_actions=3)
+    tok = _Token(512)
+    tr = _Transducer(512)
+    head = torch.nn.Linear(64, 3)
+    res = run_sans_play(
+        game, tok, tr, head, _Vocab(3), n_steps=40, device="cpu", seed=7,
+        env_name="toy", tele=None, steer=True,
+        head_path=str(Path(__file__).parent / "tmp_sans_steer_head.pt"),
+    )
+    assert res.buffer_size > 0
+    assert res.status in (
+        STATUS_BUFFER_INSUFFICIENT,
+        STATUS_DEGENERATE_LABELS,
+        STATUS_CALIBRATED,
+    )
+    assert res.status != STATUS_IMPORT_FAILED

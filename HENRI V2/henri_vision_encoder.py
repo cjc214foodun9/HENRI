@@ -31,19 +31,50 @@ class HENRIVisionEncoder(nn.Module):
         k_blocks: int = 8192,
         block_dim: int = 8,
         max_grid_dim: int = 128,
-        device: Optional[str] = None
+        device: Optional[str] = None,
+        spatial_basis_kind: str = "default",
+        bg_mask: bool = False,
     ):
+        """UWE spatial encoder.
+
+        spatial_basis_kind: "default" | "incommensurate" | "random".
+            "default" reproduces the legacy collinear ramps byte-for-byte.
+            "incommensurate"/"random" replace the y ramp with a
+            sqrt(2)-scaled / seeded-random ramp (Phase 7.3 G1: ACCEPTED at
+            D=65,536 — max cross-cosine < 0.05, LUT recovery 100%).
+        bg_mask: when True, color-0 (background) cells are structurally
+            excluded from the superposition sum (Phase 7.3 G2: kills the DC
+            offset; identity cos 0.971 -> 0.467 on real corpus pairs).
+            Default False preserves the production path byte-for-byte.
+        """
         super().__init__()
         self.d_model = d_model
         self.k_blocks = k_blocks
         self.block_dim = block_dim
         self.max_grid_dim = max_grid_dim
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.spatial_basis_kind = spatial_basis_kind
+        self.bg_mask = bg_mask
 
         # Complex phase spatial basis vectors [max_grid_dim, D // 2]
         # x-axis translation phase generator and y-axis translation phase generator
         spatial_phases_x = torch.linspace(0, 2 * math.pi * 127, d_model // 2, device=self.device)
-        spatial_phases_y = torch.linspace(0, 2 * math.pi * 127, d_model // 2, device=self.device)
+        if spatial_basis_kind == "incommensurate":
+            # Phase 7.3: y ramp scaled by sqrt(2) — incommensurate with x,
+            # breaking the collinear (x+y) degeneracy. G1 ACCEPTED.
+            spatial_phases_y = torch.linspace(
+                0, 2 * math.pi * 127 * math.sqrt(2.0), d_model // 2,
+                device=self.device,
+            )
+        elif spatial_basis_kind == "random":
+            # Phase 7.3: independent seeded random y ramp. G1 ACCEPTED.
+            _g = torch.Generator(device="cpu").manual_seed(7)
+            spatial_phases_y = (
+                torch.rand(d_model // 2, generator=_g, device="cpu")
+                * 2 * math.pi * 127
+            ).to(self.device)
+        else:
+            spatial_phases_y = spatial_phases_x
 
         grid_coords = torch.arange(max_grid_dim, device=self.device, dtype=torch.float32).unsqueeze(1)
         self.spatial_basis_x = torch.exp(1j * (grid_coords * spatial_phases_x.unsqueeze(0)))
@@ -92,6 +123,11 @@ class HENRIVisionEncoder(nn.Module):
         for r in range(H):
             py = self.spatial_basis_y[r]
             for c in range(W):
+                # Phase 7.3 G2: structural background masking. When enabled,
+                # color-0 cells are EXCLUDED from the superposition sum
+                # (kills the DC offset). Default False = legacy byte-identical.
+                if self.bg_mask and grid_clamped[r, c] == 0:
+                    continue
                 px = self.spatial_basis_x[c]
                 pc = self.color_codebook[grid_clamped[r, c]]
                 kappa = parity_mask_tensor[r, c]
