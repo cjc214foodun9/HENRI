@@ -184,6 +184,13 @@ TASK_EIG_GAMMA = float(os.environ.get("TASK_EIG_GAMMA", "4.0"))
 # the default path stays byte-identical.
 HENRI_ARC_SCORECARD_DELTA = os.environ.get("HENRI_ARC_SCORECARD_DELTA", "0") == "1"
 
+# Phase 7.5 CONN Module A: advisory Sagnac dual-channel veto sidecar. When
+# set, the production SagnacMCTSPlanner.dual_channel_sagnac_veto re-ranks the
+# EFE candidate table (first non-vetoed candidate wins). Default OFF: the
+# default path stays byte-identical. FAIL-OPEN: sidecar unavailable = no
+# re-rank, no deadlock.
+HENRI_ARC_SAGNAC_VETO = os.environ.get("HENRI_ARC_SAGNAC_VETO", "0") == "1"
+
 # P2 ARC diagnostic baseline harness. All flags default OFF so the production
 # path stays byte-identical. Runs under these flags are DIAGNOSTIC only and
 # are NOT score-eligible (no runner-level LOADED-checkpoint gate yet).
@@ -421,6 +428,10 @@ def run():
         task_eig_gamma=TASK_EIG_GAMMA,
         **SCALE,
     ).to(DEVICE)
+    # Phase 7.5 CONN Module A: advisory Sagnac veto sidecar (default-OFF).
+    # The sidecar (arc_sagnac_veto.py) is self-contained; it computes the
+    # dual-channel deltas with the canonical norm-consistent metric. Fail-open:
+    # unavailable sidecar => UNAVAILABLE, no re-rank.
     if CONSTRAINT_AXIOM:
         # Penalty-form constraint channel: arm the planner's barrier scalars
         # (no-op in the default path; the penalty itself activates only once
@@ -1009,6 +1020,55 @@ def run():
             hop_conf = chosen["efe"]  # chosen-candidate EFE as confidence proxy
             loss_ema = orch.planner.loss_ema
 
+            # Phase 7.5 CONN Module A: advisory dual-channel Sagnac veto
+            # re-rank (default-OFF). Evaluates each EFE candidate's
+            # predicted_wave against the boundary/axiom wave (hard channel)
+            # and the observed world wave (soft channel). Re-ranks so the
+            # first non-vetoed candidate wins. FAIL-OPEN: any anomaly leaves
+            # the EFE order byte-identical.
+            veto_info = None
+            if HENRI_ARC_SAGNAC_VETO and policy_mode() != "action1":
+                try:
+                    from arc_sagnac_veto import evaluate_veto, rerank_with_veto
+                    _axiom_ref = boundary_batch[0].detach()
+                    _world_ref = state_wave.detach()
+                    _flags = []
+                    for _cand in efe_table:
+                        _wave = _cand.get("predicted_wave")
+                        if _wave is None:
+                            _flags.append(False)
+                            continue
+                        _da, _de, _trig, _st = evaluate_veto(
+                            _wave.detach(), _axiom_ref, _world_ref)
+                        _flags.append(_trig)
+                    _re_ranked = rerank_with_veto(efe_table, _flags)
+                    _re_chosen = _re_ranked[0]
+                    veto_info = {
+                        "veto_flags": _flags,
+                        "vetoed_count": int(sum(_flags)),
+                        "re_ranked": bool(_re_ranked[0] is not chosen),
+                    }
+                    if veto_info["re_ranked"]:
+                        # Atomic fail-open: compute ALL re-ranked values first;
+                        # only then mutate. A missing field raises before any
+                        # assignment, leaving the EFE baseline byte-identical.
+                        _new_action = _re_chosen["action"]
+                        _new_wave = _re_chosen["predicted_wave"]
+                        _new_explored = bool(_re_chosen.get("explored", False))
+                        _new_hop_conf = _re_chosen["efe"]
+                        action = _new_action
+                        predicted_wave = _new_wave
+                        chosen = _re_chosen
+                        # Causal consistency: every downstream value derived
+                        # from the re-ranked winner is recomputed.
+                        explored = _new_explored
+                        hop_conf = _new_hop_conf
+                except Exception as _veto_exc:
+                    veto_info = {
+                        "veto_error": f"{type(_veto_exc).__name__}: {_veto_exc}",
+                    }
+                    print(f"  [veto] advisory sidecar unavailable: {_veto_exc}")
+
             # Epistemic novelty: record the chosen action's predicted outcome so
             # repeating it later is discounted (breaks RESET-spam loops).
             if policy_mode() != "action1":
@@ -1336,6 +1396,7 @@ def run():
                 "raw_l2_residual": round(float(chosen.get("raw_l2_residual", 0.0)), 1),
                 "fallback_executed": bool(chosen.get("fallback_executed", False)),
                 "admissible_count": int(chosen.get("admissible_count", 0)),
+                "veto_info": veto_info,
                 "goal_distance": round(float(chosen.get("goal_distance", 0.0)), 6),
                 "residual_type": str(chosen.get("residual_type", "N/A")),
                 "lambda_goal": LAMBDA_GOAL,
