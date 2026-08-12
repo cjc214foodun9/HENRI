@@ -30,6 +30,14 @@ TRAINED_DECODER_INACTIVE = "TRAINED_DECODER_INACTIVE"
 CHECKPOINT_HASH_MISSING = "CHECKPOINT_HASH_MISSING"
 ELIGIBLE = ""
 
+# Phase 7.2: a SANS-calibrated action head (self-generated epistemic play)
+# proves action-state correlation only, never task semantics. Held-out
+# accuracy on the SANS buffer predicts which random action was taken, not
+# whether actions achieve task progress. Score eligibility stays blocked
+# until external task outcomes (exact_pass / level completions) are observed
+# with the head active.
+SANS_HEAD_NOT_TASK_VALIDATED = "SANS_HEAD_NOT_TASK_VALIDATED"
+
 
 # Causal-path audit (2026-08-09, e6a346c/001fec8): the ARC action path in
 # production_arc_run.py uses HolographicActionDecoder (random phase engrams,

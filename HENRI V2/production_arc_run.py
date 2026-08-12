@@ -74,6 +74,8 @@ from arc_action_head import (
 from arc_public_ingress import (
     resolve_demos,
 )
+from arc_task_functor import compile_task_functor
+from arc_phase_map import verify_phase_map_invertibility
 from henri_benchmark_registry import ARCEpisodeTrace
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -342,6 +344,19 @@ def run():
     HENRI_ARC_SGLD_STEPS = int(os.environ.get("HENRI_ARC_SGLD_STEPS", "0") or 0)
     if HENRI_ARC_SGLD_STEPS < 0:
         raise ValueError("HENRI_ARC_SGLD_STEPS must be >= 0")
+    # Phase 7.2: SANS epistemic play + action-head calibration (default OFF).
+    HENRI_ARC_SANS_PLAY = int(os.environ.get("HENRI_ARC_SANS_PLAY", "0") or 0)
+    HENRI_ARC_SANS_STEPS = int(os.environ.get("HENRI_ARC_SANS_STEPS", "0") or 0)
+    HENRI_ARC_SANS_HEAD_PATH = os.environ.get(
+        "HENRI_ARC_SANS_HEAD_PATH", ""
+    ).strip() or os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "models", "henri_sans_action_head.pt",
+    )
+    # Phase 7.2 Step 1: Task Functor compilation from public grid pairs
+    # (default OFF). Probe: FUNCTOR_FALSIFIED on live geometry — stays
+    # diagnostic until the held-out gate flips.
+    HENRI_ARC_FUNCTOR = int(os.environ.get("HENRI_ARC_FUNCTOR", "0") or 0)
     # Phase 7 semantic action head (default-OFF). When ON, a provenance-
     # carrying calibrated checkpoint (henri_action_head.pt) is required at
     # init; absence raises ActionHeadError (fail-closed, never random-init).
@@ -450,6 +465,20 @@ def run():
         d_model=SCALE["d_model"], k_blocks=SCALE["num_blocks"], device=DEVICE
     )
 
+    # Phase 7.2 Step 3: spatial phase-map invertibility verdict (diagnostic).
+    # The production basis is collinear (x == y ramps); fractional unbinding
+    # for ACTION6 stays BLOCKED_PHASE_MAP_NONINVERTIBLE until a load-bearing
+    # basis change is explicitly approved. Never reshape a flat wave.
+    phase_map_verdict = None
+    try:
+        phase_map_verdict = verify_phase_map_invertibility(
+            tokenizer, grid_dim=4, color=5, device=DEVICE
+        )
+        print(f"  [phase-map] {phase_map_verdict.status}: "
+              f"{phase_map_verdict.reason[:140]}")
+    except Exception as _pm_exc:
+        print(f"  [phase-map] verdict unavailable: {_pm_exc}")
+
     arcade = arc_agi.Arcade()
     env_ids = [e.game_id if hasattr(e, "game_id") else e for e in arcade.available_environments]
     if HENRI_SINGLE_ENV:
@@ -532,6 +561,38 @@ def run():
                 else:
                     print(f"  [ingress] {ingress.status}: {ingress.reason}")
 
+        # Phase 7.2 Step 1: Task Functor compilation (default OFF). W_task is
+        # compiled from public (X, Y) grid pairs in the continuous complex
+        # domain; the goal anchor is the prototype of training outputs. The
+        # falsifiable held-out gate is FUNCTOR_OK (recovery > identity +
+        # margin). OBSERVED on live geometry: FUNCTOR_FALSIFIED — identity
+        # beat recovery; the functor stays diagnostic.
+        functor_result = None
+        if HENRI_ARC_FUNCTOR and corpus_demos_loaded:
+            try:
+                _ing = locals().get("ingress", None)
+                _task_id = getattr(_ing, "task_id", "") or env_name
+                functor_result = compile_task_functor(
+                    demo_pairs, tokenizer, device=DEVICE, task_id=_task_id,
+                )
+                tele.emit({
+                    "env": env_name,
+                    "event_type": "TASK_FUNCTOR",
+                    "status": functor_result.status,
+                    "reason": functor_result.reason,
+                    "held_out_cos": functor_result.held_out_cos,
+                    "identity_cos": functor_result.identity_cos,
+                    "w_task_sha256": functor_result.w_task_sha256,
+                    "pairs_digest": functor_result.pairs_digest,
+                })
+                print(f"  [functor] {functor_result.status}: "
+                      f"{functor_result.reason}")
+            except Exception as _fn_exc:
+                tele.emit({"env": env_name, "event_type": "TASK_FUNCTOR",
+                           "status": "BLOCKED_IMPORT_FAILED",
+                           "reason": str(_fn_exc)})
+                print(f"  [functor] failed: {_fn_exc}")
+
         if demo_pairs:
             # The current Arcade adapter exposes demonstrations but not the
             # held-out target grid required by SagnacMCTSPlanner.search().
@@ -605,6 +666,62 @@ def run():
                 "  [BLOCKED] Public demonstrations found, but no observed test target "
                 "is available for target-scored MCTS; identity target is disabled."
             )
+        # Phase 7.2 Step 2: SANS epistemic play + action-head calibration
+        # (default OFF). Self-generated (state, action, delta_nu) rows from
+        # live environment feedback ONLY — no label reconstruction, no
+        # benchmark leakage. Calibration is exclusive to the SANS buffer.
+        sans_result = None
+        if (HENRI_ARC_SANS_PLAY and egress_transducer is not None
+                and HENRI_ARC_SANS_STEPS > 0):
+            try:
+                from arc_sans_play import apply_calibrated_head, run_sans_play
+                _sans_head = action_head
+                if _sans_head is None:
+                    _sans_head = ActionHead(d_hidden=2048, n_actions=6)
+                _sans_allowed = list(getattr(game, "action_space", []))
+                _sans_vocab = ActionEgressVocabulary(GameAction, _sans_allowed)
+                _sans_cam = None
+                if HENRI_ARC_ACTION_PAYLOADS:
+                    try:
+                        from arc_action_payloads import CameraParams
+                        _base = getattr(game, "_game", game)
+                        _cam = _base.camera
+                        _s, _xo, _yo = _cam._calculate_scale_and_offset()
+                        _sans_cam = CameraParams(scale=_s, x_offset=_xo,
+                                                 y_offset=_yo)
+                    except Exception:
+                        _sans_cam = None
+                sans_result = run_sans_play(
+                    game, tokenizer, egress_transducer, _sans_head,
+                    _sans_vocab, n_steps=HENRI_ARC_SANS_STEPS,
+                    device=DEVICE,
+                    seed=int(os.environ.get("HENRI_SEED", "0") or 0),
+                    env_name=env_name, tele=tele, camera=_sans_cam,
+                    head_path=HENRI_ARC_SANS_HEAD_PATH,
+                )
+                tele.emit({
+                    "env": env_name,
+                    "event_type": "SANS_PLAY_RESULT",
+                    "status": sans_result.status,
+                    "reason": sans_result.reason,
+                    "buffer_size": sans_result.buffer_size,
+                    "distinct_labels": sans_result.distinct_labels,
+                    "held_out_accuracy": sans_result.held_out_accuracy,
+                    "majority_baseline": sans_result.majority_baseline,
+                })
+                print(f"  [sans] {sans_result.status}: {sans_result.reason}")
+                if (sans_result.status == "SANS_HEAD_CALIBRATED"
+                        and action_head is not None):
+                    action_head_state = apply_calibrated_head(
+                        action_head, action_head_state, sans_result
+                    )
+                    print("  [sans] calibrated action head ACTIVE "
+                          f"(sha256={sans_result.action_head_sha256[:16]}...)")
+            except Exception as _sans_exc:
+                tele.emit({"env": env_name, "event_type": "SANS_PLAY_RESULT",
+                           "status": "BLOCKED_IMPORT_FAILED",
+                           "reason": str(_sans_exc)})
+                print(f"  [sans] failed: {_sans_exc}")
         goal_wave = None
         if LAMBDA_GOAL > 0.0:
             init_grid = obs.frame[0].tolist()
@@ -1331,9 +1448,31 @@ def run():
                     "score_eligible": False,
                     "score_block_reason": "ACTION_HEAD_NOT_CALIBRATED",
                 }
+            # Phase 7.2: a SANS-calibrated head is provenance-complete but
+            # was trained on self-generated random play. It predicts which
+            # random action was taken (action-state correlation), not task
+            # semantics. Eligibility stays blocked until external task
+            # outcomes are observed with the head active.
+            if (HENRI_ARC_ACTION_HEAD
+                    and action_head_state.trained_action_head_active
+                    and sans_result is not None
+                    and sans_result.status == "SANS_HEAD_CALIBRATED"):
+                eligibility = {
+                    "score_eligible": False,
+                    "score_block_reason": "SANS_HEAD_NOT_TASK_VALIDATED",
+                }
             trace_data["diagnostic_only"] = True
             trace_data["score_eligible"] = eligibility["score_eligible"]
             trace_data["score_block_reason"] = eligibility["score_block_reason"]
+            trace_data["phase_map_status"] = (
+                phase_map_verdict.status if phase_map_verdict is not None else None
+            )
+            trace_data["sans_status"] = (
+                sans_result.status if sans_result is not None else None
+            )
+            trace_data["functor_status"] = (
+                functor_result.status if functor_result is not None else None
+            )
             for _k in ActionHeadState.fingerprint_keys():
                 trace_data[_k] = getattr(action_head_state, _k)
             tele.emit({
