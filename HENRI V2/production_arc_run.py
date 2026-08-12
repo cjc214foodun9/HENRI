@@ -375,6 +375,14 @@ def run():
     # Phase 7.2: SANS epistemic play + action-head calibration (default OFF).
     HENRI_ARC_SANS_PLAY = int(os.environ.get("HENRI_ARC_SANS_PLAY", "0") or 0)
     HENRI_ARC_SANS_STEPS = int(os.environ.get("HENRI_ARC_SANS_STEPS", "0") or 0)
+    # Phase 7.6: Sagnac hard-axiom steering of epistemic play (default OFF).
+    # Values: random (legacy) | sagnac. Fail-closed inside run_sans_play when
+    # sagnac is requested without valid axiom waves (BLOCKED_SAGNAC_AXIOMS).
+    HENRI_ARC_SANS_MODE = os.environ.get("HENRI_ARC_SANS_MODE", "random").strip()
+    if HENRI_ARC_SANS_MODE not in ("random", "sagnac"):
+        raise ValueError(
+            "HENRI_ARC_SANS_MODE must be 'random'|'sagnac'"
+        )
     HENRI_ARC_SANS_HEAD_PATH = os.environ.get(
         "HENRI_ARC_SANS_HEAD_PATH", ""
     ).strip() or os.path.join(
@@ -759,6 +767,14 @@ def run():
                     seed=int(os.environ.get("HENRI_SEED", "0") or 0),
                     env_name=env_name, tele=tele, camera=_sans_cam,
                     head_path=HENRI_ARC_SANS_HEAD_PATH,
+                    selection_mode=HENRI_ARC_SANS_MODE,
+                    axiom_waves=(
+                        axiom_waves.to(DEVICE)
+                        if (HENRI_ARC_SANS_MODE == "sagnac"
+                            and USE_ZONE_C_AXIOMS
+                            and axiom_waves is not None)
+                        else None
+                    ),
                 )
                 tele.emit({
                     "env": env_name,
@@ -769,6 +785,10 @@ def run():
                     "distinct_labels": sans_result.distinct_labels,
                     "held_out_accuracy": sans_result.held_out_accuracy,
                     "majority_baseline": sans_result.majority_baseline,
+                    "selection_mode": sans_result.selection_mode,
+                    "veto_steps": sans_result.veto_steps,
+                    "steered_steps": sans_result.steered_steps,
+                    "veto_rate": sans_result.veto_rate,
                 })
                 print(f"  [sans] {sans_result.status}: {sans_result.reason}")
                 if (sans_result.status == "SANS_HEAD_CALIBRATED"

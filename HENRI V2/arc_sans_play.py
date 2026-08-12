@@ -53,7 +53,16 @@ ACCURACY_FLOOR = 0.6
 ACCURACY_MARGIN = 0.15
 DELTA_NU_FLOOR = 2  # changed cells required to commit to the buffer
 
+# Phase 7.6 typed fail-closed status: sagnac steering requested without
+# valid axiom waves (no silent random fallback).
+STATUS_BLOCKED_AXIOMS = "BLOCKED_SAGNAC_AXIOMS_UNAVAILABLE"
+
 DEFAULT_HEAD_PATH = "models/henri_sans_action_head.pt"
+
+# Phase 7.6 hard-axiom steering (default OFF). Canonical real-wave metric:
+# delta = 1 - 0.5*(1 + cos) on unit-norm flattened waves; identical -> 0,
+# orthogonal -> 0.5. Matches the production advisory-veto epsilon semantics.
+SAGNAC_VETO_EPSILON = 0.35
 
 
 @dataclass
@@ -74,6 +83,10 @@ class SANSResult:
     hidden_dim: int = 0
     action_dim: int = 0
     provenance: dict = field(default_factory=dict)
+    selection_mode: str = "random"
+    veto_steps: int = 0
+    steered_steps: int = 0
+    veto_rate: Optional[float] = None
 
 
 def _state_dict_sha256(sd) -> str:
@@ -99,6 +112,39 @@ def _dataset_digest(rows: Sequence[Tuple[torch.Tensor, int, int]]) -> str:
     return h.hexdigest()
 
 
+def select_action_sagnac(
+    wave_blocks: torch.Tensor,
+    axiom_waves: torch.Tensor,
+    rng: torch.Generator,
+    n_actions: int,
+    epsilon: float = SAGNAC_VETO_EPSILON,
+) -> Optional[int]:
+    """Phase 7.6 hard-axiom steering (default OFF).
+
+    Canonical real-wave metric: delta = 1 - 0.5 * (1 + cos) on unit-norm
+    flattened waves (identical -> 0, orthogonal -> 0.5). If the BEST-matching
+    axiom still leaves delta > epsilon, the state violates the invariant
+    subspace and ALL actions are vetoed (return None -> caller skips the
+    step). Otherwise sample uniformly among legal actions, confining the
+    explorer to valid topological states.
+    """
+    if axiom_waves is None or axiom_waves.ndim != 3:
+        return None
+    wa = wave_blocks.reshape(-1).to(torch.float32)
+    wa = wa / (wa.norm() + 1e-12)
+    ax = axiom_waves.reshape(axiom_waves.shape[0], -1).to(
+        wave_blocks.device
+    ).to(torch.float32)
+    ax = ax / (ax.norm(dim=-1, keepdim=True) + 1e-12)
+    cos = float((ax @ wa).max().item())
+    delta = 1.0 - 0.5 * (1.0 + cos)
+    if delta > epsilon:
+        return None
+    return int(
+        torch.randint(0, n_actions, (1,), generator=rng).item()
+    )
+
+
 def run_sans_play(
     game: Any,
     tokenizer: Any,
@@ -112,6 +158,8 @@ def run_sans_play(
     tele: Any = None,
     camera: Any = None,
     head_path: str = DEFAULT_HEAD_PATH,
+    selection_mode: str = "random",
+    axiom_waves: Optional[torch.Tensor] = None,
 ) -> SANSResult:
     """Execute bounded epistemic play and calibrate the action head.
 
@@ -119,6 +167,9 @@ def run_sans_play(
     camera: optional CameraParams for screen-space ACTION6 payloads.
     """
     res = SANSResult()
+    if selection_mode not in ("random", "sagnac"):
+        selection_mode = "random"
+    res.selection_mode = selection_mode
     if n_steps <= 0:
         res.status = STATUS_BUFFER_INSUFFICIENT
         res.reason = "n_steps <= 0"
@@ -138,6 +189,21 @@ def run_sans_play(
         res.status = STATUS_IMPORT_FAILED
         res.reason = "transducer lacks d_model"
         return res
+    if selection_mode == "sagnac":
+        # Fail closed: sagnac steering requires [M, num_blocks, 8] axioms.
+        # Never silently fall back to random selection.
+        if (
+            axiom_waves is None
+            or axiom_waves.ndim != 3
+            or axiom_waves.shape[-1] != 8
+            or axiom_waves.shape[1] * axiom_waves.shape[2] != d_model
+        ):
+            res.status = STATUS_BLOCKED_AXIOMS
+            res.reason = (
+                "sagnac steering requires [M, num_blocks, 8] axiom_waves "
+                f"with num_blocks*8 == d_model {d_model}"
+            )
+            return res
 
     rng = torch.Generator(device="cpu").manual_seed(seed)
     allowed = list(vocab.id_to_action)
@@ -160,11 +226,35 @@ def run_sans_play(
             egress_transducer, flat, device=device
         ).detach().cpu().flatten()
 
-        # Seeded random legal action.
+        # Action selection: seeded random (default) OR Phase 7.6 Sagnac
+        # hard-axiom steering (selection_mode="sagnac", default OFF).
         if not allowed:
             break
-        idx = int(torch.randint(0, len(allowed), (1,), generator=rng).item())
-        act = allowed[idx]
+        vetoed_step = False
+        if (
+            selection_mode == "sagnac"
+            and axiom_waves is not None
+            and axiom_waves.ndim == 3
+            and axiom_waves.shape[1:] == tuple(wave_blocks.shape)
+        ):
+            idx = select_action_sagnac(
+                wave_blocks, axiom_waves, rng, len(allowed),
+                epsilon=SAGNAC_VETO_EPSILON,
+            )
+            if idx is None:
+                vetoed_step = True
+                res.veto_steps += 1
+            else:
+                res.steered_steps += 1
+                act = allowed[idx]
+        else:
+            idx = int(
+                torch.randint(0, len(allowed), (1,), generator=rng).item()
+            )
+            act = allowed[idx]
+
+        if vetoed_step:
+            continue  # hard-axiom veto: no environment step this iteration
 
         # Step with a screen-space payload when the env/action needs one.
         obs_next = None
@@ -200,10 +290,15 @@ def run_sans_play(
 
     res.buffer_size = len(rows)
     res.positive_size = res.buffer_size
+    res.veto_rate = (res.veto_steps / n_steps) if n_steps > 0 else None
     if tele is not None:
         tele.emit({"env": env_name, "event_type": "SANS_PLAY",
                    "interactions": n_steps, "buffer_size": res.buffer_size,
-                   "delta_nu_floor": DELTA_NU_FLOOR})
+                   "delta_nu_floor": DELTA_NU_FLOOR,
+                   "selection_mode": res.selection_mode,
+                   "veto_steps": res.veto_steps,
+                   "steered_steps": res.steered_steps,
+                   "veto_rate": res.veto_rate})
 
     if res.buffer_size < MIN_SAMPLES:
         res.status = STATUS_BUFFER_INSUFFICIENT
@@ -280,6 +375,10 @@ def run_sans_play(
         "delta_nu_floor": DELTA_NU_FLOOR,
         "hidden_dim": hidden_dim,
         "action_dim": n_actions,
+        "selection_mode": res.selection_mode,
+        "veto_steps": res.veto_steps,
+        "steered_steps": res.steered_steps,
+        "veto_rate": res.veto_rate,
     }
 
     if not passed:

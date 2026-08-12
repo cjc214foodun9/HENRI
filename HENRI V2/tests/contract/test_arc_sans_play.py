@@ -129,3 +129,68 @@ def test_calibrated_head_dims_match():
     if res.status == STATUS_CALIBRATED:
         assert res.hidden_dim == 64
         assert res.action_dim == 3
+
+
+# ---- Phase 7.6: Sagnac hard-axiom steering (default OFF) ----
+
+def _axioms(n, blocks=64, dim=8, seed=0):
+    g = torch.Generator().manual_seed(seed)
+    ax = torch.randn(n, blocks, dim, generator=g)
+    return ax / (ax.norm(dim=(1, 2), keepdim=True) + 1e-12)
+
+
+def test_select_action_sagnac_vetoes_off_manifold():
+    from arc_sans_play import select_action_sagnac
+    g = torch.Generator().manual_seed(1)
+    w = torch.randn(64, 8, generator=g)
+    w = w / (w.norm() + 1e-12)
+    # Antipodal axioms -> cos = -1 -> delta = 1.0 > 0.35 -> veto.
+    axioms = -w.unsqueeze(0)
+    assert select_action_sagnac(w, axioms, g, 4) is None
+
+
+def test_select_action_sagnac_steers_valid_state():
+    from arc_sans_play import select_action_sagnac
+    g = torch.Generator().manual_seed(2)
+    w = torch.randn(64, 8, generator=g)
+    w = w / (w.norm() + 1e-12)
+    axioms = w.unsqueeze(0)  # identical -> delta = 0 -> steer
+    idx = select_action_sagnac(w, axioms, g, 4)
+    assert idx is not None and 0 <= idx < 4
+
+
+def test_select_action_sagnac_rejects_non_3d_axioms():
+    from arc_sans_play import select_action_sagnac
+    g = torch.Generator().manual_seed(3)
+    w = torch.randn(64, 8)
+    assert select_action_sagnac(w, torch.randn(64, 8), g, 4) is None
+
+
+def test_run_sans_play_sagnac_fail_closed_without_axioms():
+    from arc_sans_play import STATUS_BLOCKED_AXIOMS, run_sans_play
+    game = _Game(n_actions=3)
+    tok = _Token(512)
+    tr = _Transducer(512)
+    head = torch.nn.Linear(64, 3)
+    res = run_sans_play(
+        game, tok, tr, head, _Vocab(3), n_steps=10, device="cpu", seed=1,
+        env_name="toy", tele=None, selection_mode="sagnac",
+        axiom_waves=None,
+    )
+    assert res.status == STATUS_BLOCKED_AXIOMS
+    assert res.buffer_size == 0
+
+
+def test_run_sans_play_random_preserves_default_semantics():
+    game = _Game(n_actions=3)
+    tok = _Token(512)
+    tr = _Transducer(512)
+    head = torch.nn.Linear(64, 3)
+    res = run_sans_play(
+        game, tok, tr, head, _Vocab(3), n_steps=40, device="cpu", seed=7,
+        env_name="toy", tele=None,
+        head_path=str(Path(__file__).parent / "tmp_sans_head3.pt"),
+    )
+    assert res.selection_mode == "random"
+    assert res.veto_steps == 0
+    assert res.veto_rate == 0.0
