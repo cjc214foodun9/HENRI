@@ -178,6 +178,12 @@ USE_OBJECT_SAGNAC_MCTS = os.environ.get("USE_OBJECT_SAGNAC_MCTS", "0") == "1"
 TASK_WEIGHTED_EIG = os.environ.get("TASK_WEIGHTED_EIG", "0") == "1"
 TASK_EIG_GAMMA = float(os.environ.get("TASK_EIG_GAMMA", "4.0"))
 
+# Phase 7.5 D3: authoritative irreversible-progress channel. When set (with
+# EXTERNAL_OUTCOME_EFE), arc_agi scorecard levels_completed deltas supplement
+# WIN / observation-levels in the task_progressed determination. Default OFF:
+# the default path stays byte-identical.
+HENRI_ARC_SCORECARD_DELTA = os.environ.get("HENRI_ARC_SCORECARD_DELTA", "0") == "1"
+
 # P2 ARC diagnostic baseline harness. All flags default OFF so the production
 # path stays byte-identical. Runs under these flags are DIAGNOSTIC only and
 # are NOT score-eligible (no runner-level LOADED-checkpoint gate yet).
@@ -523,6 +529,8 @@ def run():
         # posterior and task-store updates.
         ext_alpha_start = [1.0] * len(orch.planner.external_alpha)
         ext_beta_start = [1.0] * len(orch.planner.external_beta)
+        # Phase 7.5 D3: last observed scorecard levels-completed count per env.
+        scorecard_levels_prev = 0
 
         # Only use demonstrations exposed by the public environment API.  A
         # private level list can contain hidden targets and is not admissible
@@ -1203,6 +1211,26 @@ def run():
                             task_progressed = bool(obs_next.levels_completed > 0)
                         except Exception:
                             pass
+                # Phase 7.5 D3: scorecard-delta channel (default-OFF). The
+                # arc_agi scorecard's levels_completed is irreversible; a
+                # strict increase is authoritative task progress. Fail-closed:
+                # any read anomaly leaves task_progressed unchanged.
+                scorecard_delta_status = None
+                if HENRI_ARC_SCORECARD_DELTA:
+                    try:
+                        from arc_scorecard_delta import detect_level_progress
+                        _scid = getattr(game, "scorecard_id", None)
+                        if _scid:
+                            _sc = arcade.get_scorecard(_scid)
+                            _env_scores = getattr(_sc, "environments", None) or []
+                            _sc_prog, _sc_cur, scorecard_delta_status = detect_level_progress(
+                                _env_scores, scorecard_levels_prev)
+                            if _sc_prog:
+                                task_progressed = True
+                            scorecard_levels_prev = _sc_cur
+                    except Exception as _sc_exc:
+                        scorecard_delta_status = (
+                            f"SCORECARD_DELTA_ERROR: {type(_sc_exc).__name__}")
                 if task_progressed:
                     trace_acc["progress_events"] += 1
                 # Encode the post-action observation for task-store
@@ -1227,6 +1255,10 @@ def run():
                     grid_dist=grid_dist if TASK_WEIGHTED_EIG else None,
                 )
                 # Telemetry: expose the new P0 statistics.
+                _p0_extra = {}
+                if HENRI_ARC_SCORECARD_DELTA:
+                    _p0_extra["scorecard_delta_status"] = scorecard_delta_status
+                    _p0_extra["scorecard_levels_completed"] = scorecard_levels_prev
                 tele.emit({
                     "env": env_name, "step": step,
                     "external_eig": round(orch.planner.external_information_gain(action_idx), 6)
@@ -1234,6 +1266,7 @@ def run():
                     "external_alpha": orch.planner.external_alpha.tolist(),
                     "external_beta": orch.planner.external_beta.tolist(),
                     "external_task_store_size": orch.planner.external_task_store.num_engrams(),
+                    **_p0_extra,
                 })
 
             # T1/T2: train the transition model on the EXECUTED action pair.
