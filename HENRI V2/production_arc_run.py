@@ -1098,6 +1098,24 @@ def run():
                     cam_params = None
                     print(f"  [env-step] camera params unavailable: "
                           f"{_cam_exc}")
+            # Phase 7.4: wave-unbind coordinate-payload channel (same
+            # default-OFF flag). The flat [D] wave is the exact buffer behind
+            # state_wave ([num_blocks, 8] = flat.view(1, k, 8)); reshape(-1)
+            # recovers it without a second encode. The unbind runs only when
+            # the payload path is enabled and the phase map is invertible.
+            wave_unbind_args = {}
+            if HENRI_ARC_ACTION_PAYLOADS and phase_map_verdict is not None:
+                try:
+                    _flat_wave = state_wave.detach().reshape(-1)
+                    _gdim = max(len(grid), len(grid[0]) if grid else 0)
+                    wave_unbind_args = {
+                        "encoder": tokenizer,
+                        "wave": _flat_wave,
+                        "phase_map_verdict": phase_map_verdict,
+                        "wave_grid_dim": _gdim,
+                    }
+                except Exception as _wu_exc:
+                    print(f"  [env-step] wave-unbind args unavailable: {_wu_exc}")
             for game_action in macro_actions:
                 try:
                     if HENRI_ARC_ACTION_PAYLOADS:
@@ -1110,7 +1128,7 @@ def run():
                         obs_next, payload_info = step_with_payload(
                             game, game_action, grid, enabled=True,
                             seed=int(os.environ.get("HENRI_SEED", "0") or 0),
-                            camera=cam_params)
+                            camera=cam_params, **wave_unbind_args)
                         payload_infos.append(payload_info)
                     else:
                         obs_next = game.step(game_action)

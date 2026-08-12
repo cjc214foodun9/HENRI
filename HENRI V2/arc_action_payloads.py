@@ -29,9 +29,18 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, Callable, List, Optional, Sequence, Tuple
+
+import torch
 
 from connected_component_segmenter import ConnectedComponentSegmenter
+from arc_phase_map import STATUS_INVERTIBLE, fractional_unbind_coordinate
+
+# Phase 7.4 wave-unbind coordinate policy statuses.
+WAVE_UNBIND_OK = "WAVE_UNBIND_OK"
+WAVE_UNBIND_UNAVAILABLE = "WAVE_UNBIND_UNAVAILABLE"
+WAVE_UNBIND_DEGENERATE = "WAVE_UNBIND_DEGENERATE"
+WAVE_UNBIND_ERROR = "WAVE_UNBIND_ERROR"
 
 # arcengine enum name for the coordinate-bearing action (ComplexAction).
 DEFAULT_COMPLEX_ACTION_NAMES: Tuple[str, ...] = ("ACTION6",)
@@ -98,6 +107,7 @@ class ArcActionCandidate:
     coordinate_space: str = "grid"  # "grid" | "screen"
     camera_scale: Optional[int] = None
     camera_offset: Optional[Tuple[int, int]] = None
+    wave_unbind_status: Optional[str] = None
 
     @property
     def payload_complete(self) -> bool:
@@ -252,6 +262,66 @@ def select_payload(
     return matching[0]
 
 
+def coordinate_payload_from_wave(
+    grid: Sequence[Sequence[int]],
+    encoder: Any,
+    wave: Any,
+    phase_map_verdict: Any,
+    camera: Optional[CameraParams] = None,
+    grid_dim: int = 30,
+) -> Tuple[Optional[dict], str]:
+    """Phase 7.4: derive ACTION6 screen coordinates via the PRODUCTION unbind
+    protocol (fractional_unbind_coordinate on the live encoder basis).
+
+    The PDF directive 3 requires spatial actions to carry mathematically
+    derived phase-gradient parameters: unbind the target object's signature
+    from the global wave state, then take the argmax of the phase-gradient
+    response surface. This reuses the production protocol that achieved
+    G1 72/72 coordinate recovery at D=65,536.
+
+    Fail-closed:
+    - non-invertible phase map (collinear legacy basis) -> WAVE_UNBIND_DEGENERATE,
+      no payload from the unbind path;
+    - missing encoder/wave/verdict -> WAVE_UNBIND_UNAVAILABLE;
+    - unbind exception -> WAVE_UNBIND_ERROR (typed, never silently falls
+      back to invented coordinates).
+
+    Returns (payload_or_None, status).
+    """
+    if encoder is None or wave is None or phase_map_verdict is None:
+        return None, WAVE_UNBIND_UNAVAILABLE
+    status = getattr(phase_map_verdict, "status", "")
+    if status != STATUS_INVERTIBLE:
+        return None, WAVE_UNBIND_DEGENERATE
+
+    # Target color: largest foreground object (deterministic tie-break).
+    arr = [[int(v) for v in row] for row in grid]
+    segmenter = ConnectedComponentSegmenter(background_color=0)
+    objects = segmenter.segment_grid(arr)
+    if not objects:
+        return None, WAVE_UNBIND_DEGENERATE
+    obj = sorted(objects, key=lambda o: (-o.area, o.object_id))[0]
+
+    try:
+        r_y, c_x, _cos = fractional_unbind_coordinate(
+            wave, encoder, int(obj.color), grid_dim,
+            device=getattr(wave, "device", "cpu"),
+        )
+    except Exception as exc:
+        return None, f"{WAVE_UNBIND_ERROR}: {type(exc).__name__}"
+
+    # Production protocol returns (row, col); screen payload is (x=col, y=row).
+    if not (0 <= c_x < grid_dim and 0 <= r_y < grid_dim):
+        return None, WAVE_UNBIND_ERROR
+
+    if camera is not None:
+        sx, sy = grid_to_display(c_x, r_y, camera)
+        payload: Optional[dict] = {"x": sx, "y": sy}
+    else:
+        payload = {"x": int(c_x), "y": int(r_y)}
+    return payload, WAVE_UNBIND_OK
+
+
 def step_with_payload(
     game: Any,
     game_action: Any,
@@ -260,21 +330,35 @@ def step_with_payload(
     complex_action_names: Tuple[str, ...] = DEFAULT_COMPLEX_ACTION_NAMES,
     seed: int = 0,
     camera: Optional[CameraParams] = None,
+    encoder: Any = None,
+    wave: Any = None,
+    phase_map_verdict: Any = None,
+    wave_grid_dim: int = 30,
 ) -> Tuple[Any, dict]:
     """Execute ``game.step`` with the correct payload contract.
 
     ``enabled=False`` reproduces the legacy bare-enum call exactly.
 
     For coordinate actions with ``enabled=True``:
-    1. environment-provided valid ActionInput (screen-space, nearest to the
+    1. (Phase 7.4) wave-unbind provenance channel when ``encoder``, ``wave``
+       and ``phase_map_verdict`` are supplied AND the phase map is
+       invertible: coordinates come from the production
+       ``fractional_unbind_coordinate`` protocol (G1 72/72 at D=65,536);
+    2. environment-provided valid ActionInput (screen-space, nearest to the
        segmented object) when exposed;
-    2. otherwise the camera-transformed object centroid (screen space);
-    3. otherwise the deterministic fallback grid.
+    3. otherwise the camera-transformed object centroid (screen space);
+    4. otherwise the deterministic fallback grid.
+
+    The wave-unbind channel is diagnostic provenance: when it fails
+    (degenerate/error/unavailable) the run still proceeds with the
+    candidate-based payload, and ``wave_unbind_status`` records the gap.
+    Score eligibility is governed separately by the arc_score_gate
+    (never flips from payload plumbing).
 
     Returns ``(obs_next, payload_info)`` where ``payload_info`` carries the
     telemetry fields: action_enum, payload_present, payload_x, payload_y,
     payload_source, payload_complete, coordinate_space, grid_x, grid_y,
-    camera_scale, camera_offset.
+    camera_scale, camera_offset, wave_unbind_status.
     """
     info = {
         "action_enum": getattr(game_action, "name", str(game_action)),
@@ -288,6 +372,7 @@ def step_with_payload(
         "grid_y": None,
         "camera_scale": None,
         "camera_offset": None,
+        "wave_unbind_status": None,
     }
     if not enabled or grid is None:
         obs = game.step(game_action)
@@ -306,10 +391,31 @@ def step_with_payload(
             grid_x, grid_y = selected.grid_x, selected.grid_y
             cam_scale = selected.camera_scale
             cam_offset = selected.camera_offset
+            # Phase 7.4 wave-unbind provenance channel: mathematically
+            # derived coordinates via the production unbind protocol
+            # (G1 72/72 at D=65,536). When it succeeds it overrides the
+            # candidate payload; when it fails it records the typed status
+            # and the run proceeds with the candidate-based payload.
+            if (encoder is not None and wave is not None
+                    and phase_map_verdict is not None):
+                unbind_payload, unbind_status = coordinate_payload_from_wave(
+                    grid, encoder, wave, phase_map_verdict,
+                    camera=camera, grid_dim=wave_grid_dim,
+                )
+            else:
+                unbind_payload, unbind_status = None, WAVE_UNBIND_UNAVAILABLE
+            wave_unbind_status = unbind_status
+            if unbind_payload is not None:
+                payload = unbind_payload
+                source = "wave_unbind"
+                coordinate_space = "screen" if camera is not None else "grid"
+                grid_x = grid_y = None
+                cam_scale = camera.scale if camera is not None else None
+                cam_offset = (camera.x_offset, camera.y_offset) if camera is not None else None
             # Environment-provided valid ActionInputs are the semantic
             # oracle: prefer the one nearest the segmented object target.
             oracle = _env_action_inputs(game)
-            if oracle:
+            if oracle and unbind_payload is None:
                 tx, ty = selected.x, selected.y
                 px, py = min(
                     oracle,
@@ -329,6 +435,7 @@ def step_with_payload(
                 "grid_y": grid_y,
                 "camera_scale": cam_scale,
                 "camera_offset": cam_offset,
+                "wave_unbind_status": wave_unbind_status,
             })
             obs = game.step(game_action, data=payload)
             return obs, info

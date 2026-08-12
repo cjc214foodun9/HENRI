@@ -236,3 +236,108 @@ def test_env_actioninput_preferred_over_transform():
     assert info["payload_source"] == "env_actioninput"
     assert info["coordinate_space"] == "screen"
     assert obs is game.obs
+
+
+# --- Phase 7.4: wave-unbind coordinate-payload provenance channel -----------
+from arc_action_payloads import (  # noqa: E402
+    WAVE_UNBIND_DEGENERATE,
+    WAVE_UNBIND_OK,
+    WAVE_UNBIND_UNAVAILABLE,
+    coordinate_payload_from_wave,
+)
+
+
+class _Verdict:
+    def __init__(self, status):
+        self.status = status
+
+
+class _Wave:
+    device = "cpu"
+
+
+def test_wave_unbind_requires_invertible_phase_map():
+    # Legacy collinear basis: the unbind protocol is undefined there; the
+    # channel must refuse with WAVE_UNBIND_DEGENERATE, never invent payloads.
+    payload, status = coordinate_payload_from_wave(
+        GRID_OBJ, object(), _Wave(), _Verdict("BLOCKED_PHASE_MAP_NONINVERTIBLE"))
+    assert payload is None
+    assert status == WAVE_UNBIND_DEGENERATE
+
+
+def test_wave_unbind_unavailable_without_provided_artifacts():
+    payload, status = coordinate_payload_from_wave(
+        GRID_OBJ, None, None, None)
+    assert payload is None
+    assert status == WAVE_UNBIND_UNAVAILABLE
+
+
+def test_wave_unbind_ok_uses_production_protocol(monkeypatch):
+    # Stub the production protocol: returns (row, col); the payload must
+    # carry (x=col, y=row) and the source must be wave_unbind.
+    from arc_action_payloads import fractional_unbind_coordinate as _real
+
+    def _stub(wave, encoder, color, grid_dim, device="cpu"):
+        return 2, 1, 0.95  # row=2, col=1
+
+    monkeypatch.setattr(
+        "arc_action_payloads.fractional_unbind_coordinate", _stub)
+    payload, status = coordinate_payload_from_wave(
+        GRID_OBJ, object(), _Wave(), _Verdict("PHASE_MAP_INVERTIBLE"))
+    assert status == WAVE_UNBIND_OK
+    assert payload == {"x": 1, "y": 2}
+
+
+def test_wave_unbind_error_typed_on_exception(monkeypatch):
+    def _boom(wave, encoder, color, grid_dim, device="cpu"):
+        raise ValueError("degenerate basis")
+
+    monkeypatch.setattr(
+        "arc_action_payloads.fractional_unbind_coordinate", _boom)
+    payload, status = coordinate_payload_from_wave(
+        GRID_OBJ, object(), _Wave(), _Verdict("PHASE_MAP_INVERTIBLE"))
+    assert payload is None
+    assert status.startswith("WAVE_UNBIND_ERROR")
+
+
+def test_step_with_payload_wave_unbind_channel(monkeypatch):
+    # With an invertible verdict + encoder + wave supplied, the coordinate
+    # branch must use the wave-unbind provenance payload and record its
+    # status in telemetry.
+    game = _FakeGame()
+    act = _FakeAction("ACTION6")
+
+    def _stub(wave, encoder, color, grid_dim, device="cpu"):
+        return 1, 3, 0.90  # row=1, col=3
+
+    monkeypatch.setattr(
+        "arc_action_payloads.fractional_unbind_coordinate", _stub)
+    obs, info = step_with_payload(
+        game, act, GRID_OBJ, enabled=True, seed=0,
+        camera=CameraParams(scale=1),
+        encoder=object(), wave=_Wave(),
+        phase_map_verdict=_Verdict("PHASE_MAP_INVERTIBLE"),
+    )
+    assert obs is game.obs
+    _, data = game.calls[0]
+    assert data == {"x": 3, "y": 1}
+    assert info["payload_source"] == "wave_unbind"
+    assert info["wave_unbind_status"] == WAVE_UNBIND_OK
+    assert info["coordinate_space"] == "screen"
+
+
+def test_step_with_payload_wave_unbind_failure_records_gap(monkeypatch):
+    # When the unbind channel fails (degenerate), the run still proceeds
+    # with the candidate-based payload and records the typed status — the
+    # gap is provenance, never silent success.
+    game = _FakeGame()
+    act = _FakeAction("ACTION6")
+    obs, info = step_with_payload(
+        game, act, GRID_OBJ, enabled=True, seed=0,
+        encoder=object(), wave=_Wave(),
+        phase_map_verdict=_Verdict("BLOCKED_PHASE_MAP_NONINVERTIBLE"),
+    )
+    assert obs is game.obs
+    assert info["payload_present"] is True
+    assert info["wave_unbind_status"] == WAVE_UNBIND_DEGENERATE
+    assert info["payload_source"] in ("object_centroid", "fallback_grid")
