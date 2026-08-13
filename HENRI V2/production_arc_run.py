@@ -385,19 +385,13 @@ def run():
     # (default OFF). Probe: FUNCTOR_FALSIFIED on live geometry — stays
     # diagnostic until the held-out gate flips.
     HENRI_ARC_FUNCTOR = int(os.environ.get("HENRI_ARC_FUNCTOR", "0") or 0)
-    # Phase 7.3: encoder-basis realignment (default OFF, authorized).
-    # HENRI_ARC_SPATIAL_BASIS=incommensurate|random replaces the collinear
-    # y-ramp (G1 ACCEPTED at D=65,536). HENRI_ARC_BG_MASK=1 excludes
-    # color-0 background from the superposition (G2: DC offset broken,
-    # identity cos 0.971 -> 0.467). "default" reproduces legacy byte-for-byte.
-    HENRI_ARC_SPATIAL_BASIS = os.environ.get(
-        "HENRI_ARC_SPATIAL_BASIS", "default"
-    ).strip()
-    if HENRI_ARC_SPATIAL_BASIS not in ("default", "incommensurate", "random"):
-        raise ValueError(
-            "HENRI_ARC_SPATIAL_BASIS must be default|incommensurate|random"
-        )
-    HENRI_ARC_BG_MASK = os.environ.get("HENRI_ARC_BG_MASK", "0") == "1"
+    # Phase 7.8 P0-A1: production encoder-basis default is the G1-ACCEPTED
+    # incommensurate ramp + CC-OS background masking (invertible phase map,
+    # LUT coordinate recovery 100% at D=65,536). Legacy collinear basis
+    # remains byte-identical via BOTH explicit env vars:
+    # HENRI_ARC_SPATIAL_BASIS=default HENRI_ARC_BG_MASK=0.
+    from arc_spatial_basis import resolve_spatial_basis
+    HENRI_ARC_SPATIAL_BASIS, HENRI_ARC_BG_MASK = resolve_spatial_basis()
     # Phase 7 semantic action head (default-OFF). When ON, a provenance-
     # carrying calibrated checkpoint (henri_action_head.pt) is required at
     # init; absence raises ActionHeadError (fail-closed, never random-init).
