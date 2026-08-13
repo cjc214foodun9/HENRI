@@ -353,9 +353,13 @@ def run_probe(game: Any, env_name: str, rounds: int = DEFAULT_ROUNDS,
     res.eta_c, res.action_variance, res.env_variance = causal_variance_ratio(
         rounds_arr, actions, raw_deltas, n_actions)
 
-    # per-action stats
+    # per-action stats (guard: an action may never produce a row if all its
+    # steps errored — emit nothing for it rather than crashing)
+    name_to_id_all = {n: i for i, n in enumerate(sorted({r["action_name"] for r in rows}))}
     for a_name in res.actions:
-        a_id = {n: i for i, n in enumerate(sorted({r["action_name"] for r in rows}))}[a_name]
+        if a_name not in name_to_id_all:
+            continue
+        a_id = name_to_id_all[a_name]
         vals = np.asarray([r["delta"] for r in dom if r["action"] == a_id], dtype=np.float64)
         res.per_action[a_name] = {
             "count": int(vals.shape[0]),
