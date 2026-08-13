@@ -365,6 +365,7 @@ def run_env_replay(
     seed: int,
     policy: EFEPlayPolicy,
     out_dir: Path,
+    env_id: str = "",
     budget_sec: float = BUDGET_SEC_PER_ENV,
 ) -> Tuple[EnvCounters, Dict[str, Any]]:
     c = _new_env_counters()
@@ -534,6 +535,7 @@ def run_env_replay(
     payload = {
         "schema_id": SCHEMA_ID,
         "env": env_name,
+        "env_id": env_id,
         "seed": seed,
         "rounds": rounds,
         "horizons": list(HORIZONS),
@@ -730,9 +732,21 @@ def main() -> int:
     )
 
     arcade = arc_agi.Arcade()
+    available = [e.game_id if hasattr(e, "game_id") else e
+                 for e in arcade.available_environments]
+
+    def _resolve(name: str) -> str:
+        matches = [a for a in available if a.startswith(name)]
+        if not matches:
+            raise SystemExit(
+                f"[p79f] env {name!r} not found in arcade "
+                f"(available={len(available)})")
+        return matches[0]
+
     results = []
     all_ok = True
     for env_name in envs:
+        full_id = _resolve(env_name)
         payload_path = out_dir / f"{env_name}.json"
         if payload_path.exists():
             print(f"[p79f] {env_name}: per-env JSON exists (immutable); "
@@ -742,7 +756,7 @@ def main() -> int:
             continue
         game = None
         try:
-            game = arcade.make(env_name)
+            game = arcade.make(full_id)
         except Exception as exc:
             print(f"[p79f] {env_name}: make failed: {exc}")
             all_ok = False
@@ -760,7 +774,7 @@ def main() -> int:
             allowed_actions=allowed)
         counters, payload = run_env_replay(
             game, arcade, env_name, args.rounds, args.seed, policy,
-            out_dir=out_dir)
+            out_dir=out_dir, env_id=full_id)
         # Immutable write: refuse to overwrite an existing artifact.
         with open(payload_path, "x", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, sort_keys=True)
