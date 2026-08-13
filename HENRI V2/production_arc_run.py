@@ -381,6 +381,12 @@ def run():
         os.path.dirname(os.path.abspath(__file__)),
         "models", "henri_sans_action_head.pt",
     )
+    # Phase 7.9c: SANS calibration optimizer (default "adamw" = control).
+    HENRI_ARC_SANS_OPTIMIZER = os.environ.get(
+        "HENRI_ARC_SANS_OPTIMIZER", "adamw").strip().lower()
+    if HENRI_ARC_SANS_OPTIMIZER not in ("adamw", "sgld"):
+        raise ValueError(
+            "HENRI_ARC_SANS_OPTIMIZER must be 'adamw' or 'sgld'")
     # Phase 7.2 Step 1: Task Functor compilation from public grid pairs
     # (default OFF). Probe: FUNCTOR_FALSIFIED on live geometry — stays
     # diagnostic until the held-out gate flips.
@@ -753,6 +759,7 @@ def run():
                     seed=int(os.environ.get("HENRI_SEED", "0") or 0),
                     env_name=env_name, tele=tele, camera=_sans_cam,
                     head_path=HENRI_ARC_SANS_HEAD_PATH,
+                    optimizer=HENRI_ARC_SANS_OPTIMIZER,
                 )
                 tele.emit({
                     "env": env_name,
@@ -763,6 +770,14 @@ def run():
                     "distinct_labels": sans_result.distinct_labels,
                     "held_out_accuracy": sans_result.held_out_accuracy,
                     "majority_baseline": sans_result.majority_baseline,
+                    "calibration_optimizer": sans_result.calibration_optimizer,
+                    "init_param_digest": sans_result.init_param_digest,
+                    "final_param_digest": sans_result.final_param_digest,
+                    "train_loss": sans_result.train_loss,
+                    "held_out_loss": sans_result.held_out_loss,
+                    "calibration_dataset_digest":
+                        sans_result.calibration_dataset_digest,
+                    "split_identity": sans_result.split_identity,
                 })
                 print(f"  [sans] {sans_result.status}: {sans_result.reason}")
                 if (sans_result.status == "SANS_HEAD_CALIBRATED"

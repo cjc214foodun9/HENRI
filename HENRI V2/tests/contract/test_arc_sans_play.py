@@ -14,6 +14,10 @@ from arc_sans_play import (
     STATUS_CALIBRATED,
     STATUS_DEGENERATE_LABELS,
     MIN_SAMPLES,
+    OPTIMIZER_ADAMW,
+    OPTIMIZER_SGLD,
+    _time_tail_split,
+    calibrate_action_head,
     run_sans_play,
 )
 
@@ -129,3 +133,39 @@ def test_calibrated_head_dims_match():
     if res.status == STATUS_CALIBRATED:
         assert res.hidden_dim == 64
         assert res.action_dim == 3
+
+
+def test_calibrate_action_head_optimizer_parity():
+    torch.manual_seed(1234)
+    X = torch.randn(20, 64)
+    y = torch.tensor([0, 1, 2] * 6 + [1, 1], dtype=torch.long)  # 20 rows
+    a = calibrate_action_head(
+        X, y, 3, seed=7, optimizer=OPTIMIZER_ADAMW, device="cpu")
+    s = calibrate_action_head(
+        X, y, 3, seed=7, optimizer=OPTIMIZER_SGLD, device="cpu")
+    assert a["non_finite"] is False and s["non_finite"] is False
+    # Deterministic init parity: identical init digests across optimizers.
+    assert a["init_param_digest"] == s["init_param_digest"]
+    # Both optimizers produce a nonzero parameter update.
+    assert a["final_param_digest"] != a["init_param_digest"]
+    assert s["final_param_digest"] != s["init_param_digest"]
+    # The mechanisms measurably differ.
+    assert a["final_param_digest"] != s["final_param_digest"]
+    # Identical time-tail split for both arms.
+    assert a["train_size"] == s["train_size"] == 16
+    assert a["held_out_size"] == s["held_out_size"] == 4
+
+
+def test_time_tail_split_is_contiguous():
+    tr, ho = _time_tail_split(20, 0.2)
+    assert tr.tolist() == list(range(16))
+    assert ho.tolist() == list(range(16, 20))
+    assert len(tr) + len(ho) == 20
+
+
+def test_calibrate_action_head_rejects_unknown_optimizer():
+    X = torch.randn(10, 64)
+    y = torch.zeros(10, dtype=torch.long)
+    with pytest.raises(ValueError):
+        calibrate_action_head(
+            X, y, 3, seed=1, optimizer="bogus", device="cpu")

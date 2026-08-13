@@ -30,12 +30,14 @@ score deltas are reconstructed.
 """
 
 import hashlib
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 STATUS_PLAY_COLLECTED = "SANS_PLAY_COLLECTED"
 STATUS_BUFFER_INSUFFICIENT = "BLOCKED_SANS_BUFFER_INSUFFICIENT"
@@ -52,6 +54,13 @@ CALIBRATION_LR = 1e-3
 ACCURACY_FLOOR = 0.6
 ACCURACY_MARGIN = 0.15
 DELTA_NU_FLOOR = 2  # changed cells required to commit to the buffer
+
+# Phase 7.9c: SANS calibration optimizer (default "adamw" = control).
+OPTIMIZER_ADAMW = "adamw"
+OPTIMIZER_SGLD = "sgld"
+SGLD_T0 = 0.5        # Langevin temperature at t=0
+SGLD_DECAY = 0.05    # T(t) = T0 * (1 + DECAY*t)^-EXP
+SGLD_EXP = 0.55
 
 DEFAULT_HEAD_PATH = "models/henri_sans_action_head.pt"
 
@@ -73,6 +82,11 @@ class SANSResult:
     action_labels: List[str] = field(default_factory=list)
     hidden_dim: int = 0
     action_dim: int = 0
+    calibration_optimizer: str = ""
+    init_param_digest: str = ""
+    final_param_digest: str = ""
+    train_loss: Optional[float] = None
+    held_out_loss: Optional[float] = None
     provenance: dict = field(default_factory=dict)
 
 
@@ -99,6 +113,117 @@ def _dataset_digest(rows: Sequence[Tuple[torch.Tensor, int, int]]) -> str:
     return h.hexdigest()
 
 
+def _time_tail_split(n: int, holdout_fraction: float) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Contiguous time-tail holdout over one trajectory.
+
+    Rows are appended in play order; the most recent holdout_fraction of
+    the buffer forms the held-out split. Adjacent frames never cross the
+    boundary (no interleaved train/holdout leakage).
+    """
+    n_hold = max(1, int(n * holdout_fraction))
+    n_train = n - n_hold
+    return torch.arange(n_train), torch.arange(n_train, n)
+
+
+def _param_digest(model: nn.Module) -> str:
+    """Deterministic digest of a module's state dict (sorted keys)."""
+    return _state_dict_sha256(model.state_dict())
+
+
+def _sgld_noise_scale(temp: float, dt: float) -> float:
+    """Langevin noise scale: sqrt(2 * T * dt) (HENRI SGLD invariant)."""
+    return math.sqrt(2.0 * temp * dt)
+
+
+def calibrate_action_head(
+    X: torch.Tensor,
+    y: torch.Tensor,
+    n_actions: int,
+    *,
+    seed: int,
+    optimizer: str,
+    device: str,
+) -> Dict[str, Any]:
+    """Calibrate a fresh Linear(hidden -> n_actions) head.
+
+    Deterministic init derived from `seed` (identical across optimizers).
+    optimizer="adamw" -> AdamW CE (control); "sgld" -> SGD base + Langevin
+    noise, T(t)=T0*(1+DECAY*t)^-EXP, noise scale sqrt(2*T*dt), unit-norm
+    per-parameter noise on a derived RNG. Returns metrics + digests;
+    never persists.
+    """
+    if optimizer not in (OPTIMIZER_ADAMW, OPTIMIZER_SGLD):
+        raise ValueError(f"unknown calibration optimizer: {optimizer!r}")
+
+    n = X.shape[0]
+    hidden_dim = int(X.shape[1])
+    train_idx, hold_idx = _time_tail_split(n, HOLDOUT_FRACTION)
+    X_tr, y_tr = X[train_idx], y[train_idx]
+    X_ho, y_ho = X[hold_idx], y[hold_idx]
+
+    # Deterministic init: derive from seed, identical for both arms.
+    rng_state = torch.get_rng_state()
+    torch.manual_seed(seed ^ 0x9E3779B9)
+    try:
+        model = nn.Linear(hidden_dim, n_actions)
+    finally:
+        torch.set_rng_state(rng_state)
+    model.to(device).to(torch.float32)
+
+    crit = nn.CrossEntropyLoss()
+    init_digest = _param_digest(model)
+    model.train()
+
+    if optimizer == OPTIMIZER_ADAMW:
+        opt = torch.optim.AdamW(model.parameters(), lr=CALIBRATION_LR)
+        for _ in range(CALIBRATION_STEPS):
+            opt.zero_grad()
+            loss = crit(model(X_tr), y_tr)
+            loss.backward()
+            opt.step()
+    else:
+        opt = torch.optim.SGD(model.parameters(), lr=CALIBRATION_LR)
+        noise_rng = torch.Generator(device="cpu").manual_seed(seed ^ 0x5F3759DF)
+        for step in range(CALIBRATION_STEPS):
+            opt.zero_grad()
+            loss = crit(model(X_tr), y_tr)
+            loss.backward()
+            opt.step()
+            temp = SGLD_T0 * (1.0 + SGLD_DECAY * step) ** (-SGLD_EXP)
+            scale = _sgld_noise_scale(temp, CALIBRATION_LR)
+            with torch.no_grad():
+                for p in model.parameters():
+                    noise = torch.randn(
+                        p.shape, generator=noise_rng, dtype=p.dtype)
+                    noise = F.normalize(noise, p=2.0, dim=-1) * scale
+                    p.add_(noise.to(p.device))
+
+    if not all(torch.isfinite(p).all().item() for p in model.parameters()):
+        return {"non_finite": True}
+
+    model.eval()
+    with torch.no_grad():
+        pred_ho = torch.argmax(model(X_ho), dim=-1)
+        held_out_accuracy = float((pred_ho == y_ho).float().mean().item())
+        train_loss = float(crit(model(X_tr), y_tr).item())
+        held_out_loss = float(crit(model(X_ho), y_ho).item())
+    counts = torch.bincount(y_tr, minlength=n_actions).float()
+    majority_baseline = float(counts.max().item() / max(1, counts.sum().item()))
+
+    return {
+        "non_finite": False,
+        "model": model,
+        "init_param_digest": init_digest,
+        "final_param_digest": _param_digest(model),
+        "held_out_accuracy": held_out_accuracy,
+        "majority_baseline": majority_baseline,
+        "train_loss": train_loss,
+        "held_out_loss": held_out_loss,
+        "train_size": int(X_tr.shape[0]),
+        "held_out_size": int(X_ho.shape[0]),
+    }
+
+
 def run_sans_play(
     game: Any,
     tokenizer: Any,
@@ -112,6 +237,7 @@ def run_sans_play(
     tele: Any = None,
     camera: Any = None,
     head_path: str = DEFAULT_HEAD_PATH,
+    optimizer: str = OPTIMIZER_ADAMW,
 ) -> SANSResult:
     """Execute bounded epistemic play and calibrate the action head.
 
@@ -220,8 +346,9 @@ def run_sans_play(
     res.calibration_dataset_digest = _dataset_digest(rows)
     res.status = STATUS_PLAY_COLLECTED
 
-    # ---- Calibration with seeded hold-out split ----
+    # ---- Calibration (deterministic init; time-tail hold-out; optimizer) ----
     res.split_identity = f"sans-play:{env_name or 'env'}:seed-{seed}"
+    res.calibration_optimizer = optimizer
     X = torch.stack([r[0] for r in rows]).to(device).to(torch.float32)
     y = torch.tensor([r[1] for r in rows], dtype=torch.long, device=device)
     if not torch.isfinite(X).all():
@@ -234,29 +361,20 @@ def run_sans_play(
     res.hidden_dim = hidden_dim
     res.action_dim = n_actions
 
-    perm = torch.randperm(n, generator=rng)
-    n_hold = max(1, int(n * HOLDOUT_FRACTION))
-    hold_idx = perm[:n_hold]
-    train_idx = perm[n_hold:]
-    X_tr, y_tr = X[train_idx], y[train_idx]
-    X_ho, y_ho = X[hold_idx], y[hold_idx]
+    cal = calibrate_action_head(
+        X, y, n_actions, seed=seed, optimizer=optimizer, device=device)
+    if cal.get("non_finite"):
+        res.status = STATUS_CALIBRATION_FAILED
+        res.reason = "non-finite parameters after calibration"
+        return res
 
-    model = nn.Linear(hidden_dim, n_actions).to(device).to(torch.float32)
-    opt = torch.optim.AdamW(model.parameters(), lr=CALIBRATION_LR)
-    crit = nn.CrossEntropyLoss()
-    model.train()
-    for _ in range(CALIBRATION_STEPS):
-        opt.zero_grad()
-        loss = crit(model(X_tr), y_tr)
-        loss.backward()
-        opt.step()
-
-    model.eval()
-    with torch.no_grad():
-        pred_ho = torch.argmax(model(X_ho), dim=-1)
-        held_out_accuracy = float((pred_ho == y_ho).float().mean().item())
-    counts = torch.bincount(y_tr, minlength=n_actions).float()
-    majority_baseline = float(counts.max().item() / max(1, counts.sum().item()))
+    res.init_param_digest = cal["init_param_digest"]
+    res.final_param_digest = cal["final_param_digest"]
+    res.train_loss = cal["train_loss"]
+    res.held_out_loss = cal["held_out_loss"]
+    held_out_accuracy = cal["held_out_accuracy"]
+    majority_baseline = cal["majority_baseline"]
+    model = cal["model"]
 
     res.held_out_accuracy = held_out_accuracy
     res.majority_baseline = majority_baseline

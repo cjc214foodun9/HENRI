@@ -75,6 +75,10 @@ class ArmReceipt:
     payload_events: int = 0
     eligibility_events: List[Dict[str, Any]] = field(default_factory=list)
     head_sha256: Optional[str] = None
+    sans_optimizer: Optional[str] = None
+    final_param_digest: Optional[str] = None
+    calibration_dataset_digest: Optional[str] = None
+    split_identity: Optional[str] = None
     error: str = ""
 
 
@@ -142,6 +146,7 @@ def run_arm(
     env_file: str,
     out_dir: str,
     timeout: int = 3600,
+    optimizer: str = "adamw",
 ) -> ArmReceipt:
     """Launch the REAL production_arc_run.py for one environment.
 
@@ -166,6 +171,7 @@ def run_arm(
         "HENRI_ARC_SANS_MODE": "random",
         "HENRI_ARC_ACTION_PAYLOADS": "1",
         "HENRI_ARC_SANS_HEAD_PATH": str(head_path),
+        "HENRI_ARC_SANS_OPTIMIZER": optimizer,
         "HENRI_SINGLE_ENV": env,
         "HENRI_SEED": str(seed),
         "HENRI_TELEMETRY_DIR": str(arm_dir),
@@ -206,6 +212,10 @@ def run_arm(
         distinct_labels=spr.get("distinct_labels"),
         held_out_accuracy=spr.get("held_out_accuracy"),
         majority_baseline=spr.get("majority_baseline"),
+        sans_optimizer=spr.get("calibration_optimizer"),
+        final_param_digest=spr.get("final_param_digest"),
+        calibration_dataset_digest=spr.get("calibration_dataset_digest"),
+        split_identity=spr.get("split_identity"),
         payload_events=tele["payload_events"],
         eligibility_events=tele["eligibility"],
     )
@@ -264,7 +274,8 @@ class TrainingGraphWorkflow:
 
     def __init__(self, *, target_envs: List[str], steps: int, seed: int,
                  python_path: str, workdir: str, env_file: str,
-                 out_dir: str, timeout: int = 3600):
+                 out_dir: str, timeout: int = 3600,
+                 optimizer: str = "adamw"):
         self.target_envs = target_envs
         self.steps = steps
         self.seed = seed
@@ -273,6 +284,7 @@ class TrainingGraphWorkflow:
         self.env_file = env_file
         self.out_dir = out_dir
         self.timeout = timeout
+        self.optimizer = optimizer
 
     def run(self) -> Dict[str, Any]:
         run_id = f"p79b_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
@@ -282,7 +294,7 @@ class TrainingGraphWorkflow:
                 env, steps=self.steps, seed=self.seed,
                 python_path=self.python_path, workdir=self.workdir,
                 env_file=self.env_file, out_dir=self.out_dir,
-                timeout=self.timeout,
+                timeout=self.timeout, optimizer=self.optimizer,
             ))
         status, reason = gate_workflow(arms)
 
@@ -307,6 +319,7 @@ class TrainingGraphWorkflow:
             "run_id": run_id,
             "target_envs": self.target_envs,
             "seed": self.seed,
+            "optimizer": self.optimizer,
             "sans_steps_per_env": self.steps,
             "status": status,
             "reason": reason,
@@ -334,12 +347,15 @@ def main() -> int:
     parser.add_argument("--env-file", default="/workspace/zonec_prod.env")
     parser.add_argument("--out-dir", default="/tmp/p79b_workflow")
     parser.add_argument("--timeout", type=int, default=3600)
+    parser.add_argument("--optimizer", choices=["adamw", "sgld"],
+                        default="adamw")
     args = parser.parse_args()
 
     wf = TrainingGraphWorkflow(
         target_envs=args.envs, steps=args.steps, seed=args.seed,
         python_path=args.python, workdir=args.workdir,
         env_file=args.env_file, out_dir=args.out_dir, timeout=args.timeout,
+        optimizer=args.optimizer,
     )
     receipt = wf.run()
     print(f"run_id: {receipt['run_id']}")
