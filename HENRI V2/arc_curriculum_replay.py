@@ -270,6 +270,7 @@ class EFEPlayPolicy:
         self.axiom_waves = axiom_waves
         self.allowed_actions = list(allowed_actions) if allowed_actions else None
         self.prev_wave: Optional[torch.Tensor] = None
+        self.d_model = getattr(egress, "d_model", None)
 
     def boundary_batch(self, state_wave: torch.Tensor) -> torch.Tensor:
         if self.use_zone_c_axioms and self.axiom_waves is not None:
@@ -291,9 +292,8 @@ class EFEPlayPolicy:
             "payload_source": None, "delta_nu": 0,
         }
         try:
-            grid_arr = np.ascontiguousarray(grid, dtype=np.int64)
             state_wave = self.tokenizer.encode_spatial_grid(
-                grid_arr).squeeze(0).to(self.device)
+                grid).squeeze(0).to(self.device)
             boundary_batch = self.boundary_batch(state_wave)
             allowed = self.allowed_actions
             action, predicted_wave, efe_table, chosen = self.orch.plan_action(
@@ -468,6 +468,22 @@ def run_env_replay(
             if cont_obs is None or not getattr(cont_obs, "frame", None):
                 c.env_step_errors += 1
                 break
+            # Harness hygiene (mirrors production run_sans_play): a terminal
+            # episode cannot yield further progress; stop the branch.
+            if (getattr(cont_obs, "state", None)
+                    and getattr(cont_obs.state, "name", None) == "GAME_OVER"):
+                cont_grid = cont_obs.frame[0].tolist()
+                if step_idx in HORIZONS:
+                    lvl, st = read_levels_completed(game, arcade)
+                    if lvl is not None and _scorecard_increased(lvl, levels_branch):
+                        c.scorecard_events += 1
+                        c.scorecard_delta_sum += int(lvl) - int(levels_branch)
+                        c.horizon_events[str(step_idx)] = (
+                            c.horizon_events.get(str(step_idx), 0) + 1)
+                        if not progress_seen:
+                            progress_seen = True
+                            c.progress_branches += 1
+                break
             cont_grid = cont_obs.frame[0].tolist()
             if info.get("explored"):
                 c.explored_steps += 1
@@ -499,6 +515,10 @@ def run_env_replay(
                             # at the FIRST horizon where progress is observed.
                             branch_rows.append({
                                 "action": an,
+                                "action_index": (actions.index(info.get("action"))
+                                                 if info.get("action") in actions
+                                                 else -1),
+                                "state_hash": frame_signature(cont_grid),
                                 "delta_nu": dnu,
                                 "horizon": step_idx,
                                 "scorecard_delta": int(lvl) - int(levels_branch),
@@ -702,10 +722,11 @@ def main() -> int:
     ).to(device)
     orch.eval()
 
+    from arc_spatial_basis import resolve_spatial_basis
+    basis_kind, bg_mask = resolve_spatial_basis()
     tokenizer = HENRIVisionEncoder(
         d_model=scale["d_model"], k_blocks=scale["num_blocks"], device=device,
-        spatial_basis_kind=os.environ.get("HENRI_ARC_SPATIAL_BASIS", "default"),
-        bg_mask=os.environ.get("HENRI_ARC_BG_MASK", "0") == "1",
+        spatial_basis_kind=basis_kind, bg_mask=bg_mask,
     )
 
     arcade = arc_agi.Arcade()
