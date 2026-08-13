@@ -26,7 +26,11 @@ cursor movement, and RESET behavior NEVER count as progress. Frame-change
 count delta_nu is recorded as telemetry (PDF P(Delta_nu>=2) descriptor)
 but never as a success label.
 
-Continuation policy: production action path —
+Continuation policy (matched first-action counterfactuals, Option 2):
+  per round: anchor reset verifies the baseline frame hash; EVERY legal
+  first action gets a fresh reset -> identical P=4 prefix replay ->
+  verified branch-state hash -> candidate (GameAction, data) step (payloads
+  when enabled) -> the SAME frozen EFE continuation:
   state_wave = tokenizer.encode_spatial_grid(grid)
   -> orch.plan_action(state_wave, boundary_batch, top_k=4, return_chosen=True,
                       goal_wave=None, grid_dist=None)
@@ -34,6 +38,8 @@ Continuation policy: production action path —
      (fail-closed: decode error suppresses the step, no enum fallback)
   -> step_with_payload(game, action, grid, camera=...) when
      HENRI_ARC_ACTION_PAYLOADS=1 else game.step(action)
+  Unmatched branches (state-hash mismatch) fail closed as replay
+  mismatches; no causal attribution is claimed across unmatched states.
 
 Frozen: NO transition training, NO preference registration, NO SGLD, NO
 action-head calibration, NO outcome-store writes during measurement.
@@ -48,13 +54,24 @@ Verdicts (per env, fail-closed):
   BLOCKED_INFRASTRUCTURE        reset/replay/environment failures dominate
 
 SANS buffer gate (discovery split only, sealed after discovery):
-  rows = (hidden, action_idx, delta_nu) committed ONLY from interactions on
-  branches where irreversible scorecard progress occurred. Buffer active
-  only when rows >= SANS_MIN_ROWS (50) AND distinct action labels >= 2 AND
-  >= 1 env contributed; otherwise INCONCLUSIVE_SPARSE_OUTCOME /
-  BLOCKED_SANS_BUFFER_INSUFFICIENT and NO SGLD / NO policy objective.
-  Held-out envs NEVER write to the buffer and NEVER influence any learned
-  parameter (freeze + seal before opening held-out).
+  Trainable rows are (hidden, action_idx, delta_nu) committed ONLY on
+  branches with irreversible scorecard progress. hidden is the EXACT
+  production feature vector consumed by run_sans_play calibration:
+  unbinder_hidden(transducer, flatten_uwe(encode_spatial_grid(grid),
+  d_model)) -> normalize -> down_proj -> layer_norm -> GELU, detached CPU
+  float32 [d_hidden]. Rows are persisted losslessly as immutable per-env
+  artifacts ({env}_sans/manifest.json + hidden_*.pt) with full provenance
+  (env, split, round, candidate action, payload_source, baseline and branch
+  state hashes, horizon, delta_nu, scorecard delta/baseline/final,
+  checkpoint SHA-256, candidate SHA, hidden SHA-256). A progress row
+  without a valid hidden feature is blocked (NO_HIDDEN_FEATURE) and is NOT
+  trainable. Buffer active only when rows >= SANS_MIN_ROWS (50) AND
+  distinct action labels >= 2 AND >= 1 discovery env contributed; otherwise
+  INCONCLUSIVE_SPARSE_OUTCOME / BLOCKED_SANS_BUFFER_INSUFFICIENT and
+  NO SGLD / NO policy objective. Held-out rows are split-tagged and NEVER
+  enter the discovery gate (filtered by split), NEVER write to the buffer,
+  and NEVER influence any learned parameter (freeze + seal before opening
+  held-out).
 
 Aggregate-trap fix: one immutable per-env JSON per env; the aggregate is a
 separate reducer artifact derived from the per-env files with an explicit
@@ -97,6 +114,7 @@ PREFIX_LEN = 4
 DELTA_NU_FLOOR = 2          # frame-change descriptor floor (PDF), NOT progress
 SANS_MIN_ROWS = 50          # PDF Step 3: >= 50 valid progress rows
 SANS_MIN_DISTINCT_LABELS = 2
+SANS_ROW_SCHEMA_ID = "henri.sans-row.v1"
 MIN_VALID_BRANCHES = 40      # 60 rounds x 0.66 floor, fail-closed
 BUDGET_SEC_PER_ENV = 3600.0
 
@@ -205,6 +223,49 @@ def read_levels_completed(game: Any, arcade: Any) -> Tuple[Optional[int], str]:
         return None, f"SCORECARD_ERROR:{type(exc).__name__}"
 
 
+def _candidate_sha() -> str:
+    """Candidate SHA for provenance: env override, else git HEAD, else UNKNOWN."""
+    env_sha = os.environ.get("HENRI_CANDIDATE_SHA", "")
+    if env_sha:
+        return env_sha
+    try:
+        import subprocess
+        out = subprocess.run(["git", "rev-parse", "HEAD"],
+                             capture_output=True, text=True, timeout=10)
+        return out.stdout.strip() or "UNKNOWN"
+    except Exception:
+        return "UNKNOWN"
+
+
+def validate_hidden(hidden: Any, expected_dim: Optional[int] = None) -> str:
+    """Return "" when hidden is a valid trainable feature, else a typed reason."""
+    if not isinstance(hidden, torch.Tensor):
+        return "NOT_A_TENSOR"
+    if hidden.dtype != torch.float32:
+        return f"DTYPE:{hidden.dtype}"
+    if hidden.dim() != 1:
+        return f"RANK:{hidden.dim()}"
+    if expected_dim is not None and hidden.shape[0] != expected_dim:
+        return f"SHAPE:{tuple(hidden.shape)}"
+    if not torch.isfinite(hidden).all().item():
+        return "NON_FINITE"
+    return ""
+
+
+def hidden_sha256(hidden: torch.Tensor) -> str:
+    """SHA-256 over raw float32 bytes (run_sans_play digest convention)."""
+    return hashlib.sha256(
+        hidden.detach().cpu().contiguous().numpy().tobytes()).hexdigest()
+
+
+def dataset_digest(hidden: Sequence[torch.Tensor]) -> str:
+    """SHA-256 over concatenated hidden raw bytes (mirrors sans_play)."""
+    h = hashlib.sha256()
+    for t in hidden:
+        h.update(t.detach().cpu().contiguous().numpy().tobytes())
+    return h.hexdigest()
+
+
 # ---------------------------------------------------------------------------
 # Replay state
 # ---------------------------------------------------------------------------
@@ -220,6 +281,9 @@ class EnvCounters:
     scorecard_failures: int = 0
     total_steps: int = 0
     valid_branches: int = 0
+    matched_branches: int = 0
+    unmatched_branches: int = 0
+    hidden_failures: int = 0
     scorecard_events: int = 0
     scorecard_delta_sum: int = 0
     frame_rows: int = 0            # delta_nu >= floor (descriptor only)
@@ -271,6 +335,25 @@ class EFEPlayPolicy:
         self.allowed_actions = list(allowed_actions) if allowed_actions else None
         self.prev_wave: Optional[torch.Tensor] = None
         self.d_model = getattr(egress, "d_model", None)
+        self.hidden_dim = getattr(egress, "hidden_dim", None)
+
+    def hidden_feature(self, grid: Sequence[Sequence[int]]) -> Tuple[Optional[torch.Tensor], str]:
+        """Production hidden feature at a state (exact run_sans_play path).
+
+        unbinder_hidden(transducer, flatten_uwe(encode_spatial_grid(grid),
+        d_model)) -> [d_hidden] float32 CPU. Fail-closed: (None, reason).
+        """
+        if self.egress is None or self.d_model is None:
+            return None, "NO_HIDDEN_FEATURE"
+        try:
+            from arc_action_head import unbinder_hidden
+            from arc_egress_contract import flatten_uwe
+            blocks = self.tokenizer.encode_spatial_grid(grid).squeeze(0)
+            flat = flatten_uwe(blocks, self.d_model)
+            h = unbinder_hidden(self.egress, flat, device=self.device)
+            return h.detach().cpu().flatten().to(torch.float32), ""
+        except Exception as exc:
+            return None, f"HIDDEN_ERROR:{type(exc).__name__}"
 
     def boundary_batch(self, state_wave: torch.Tensor) -> torch.Tensor:
         if self.use_zone_c_axioms and self.axiom_waves is not None:
@@ -357,6 +440,34 @@ class EFEPlayPolicy:
 # ---------------------------------------------------------------------------
 
 
+def _replay_prefix(
+    game: Any, start_obs: Any, prefix: Sequence[Any], payloads: bool,
+    seed: int, camera: Any, c: EnvCounters,
+) -> Tuple[Optional[Sequence[Sequence[int]]], Optional[Any], bool]:
+    """Replay the deterministic prefix from a fresh reset.
+
+    Returns (grid, obs, ok). Failure counters are mutated through c.
+    """
+    grid = start_obs.frame[0].tolist()
+    cur = start_obs
+    for p in prefix:
+        try:
+            if payloads:
+                from arc_action_payloads import step_with_payload
+                cur, _pi = step_with_payload(
+                    game, p, grid, enabled=True, seed=seed, camera=camera)
+            else:
+                cur = game.step(p)
+        except Exception:
+            cur = None
+        c.total_steps += 1
+        if cur is None or not getattr(cur, "frame", None):
+            c.env_step_errors += 1
+            return None, None, False
+        grid = cur.frame[0].tolist()
+    return grid, cur, True
+
+
 def run_env_replay(
     game: Any,
     arcade: Any,
@@ -366,8 +477,23 @@ def run_env_replay(
     policy: EFEPlayPolicy,
     out_dir: Path,
     env_id: str = "",
+    split: str = "discovery",
     budget_sec: float = BUDGET_SEC_PER_ENV,
 ) -> Tuple[EnvCounters, Dict[str, Any]]:
+    """Matched first-action counterfactual replay (Option 2, Reference 3).
+
+    Per round: anchor reset verifies the baseline frame hash; the
+    deterministic P=4 prefix is replayed to a branch state whose hash is the
+    reference for that round. EVERY legal first action then gets a fresh
+    reset, the SAME prefix, a VERIFIED branch-state hash, the candidate
+    (GameAction, data) step, and the SAME frozen EFE continuation. Only
+    strict irreversible scorecard increase counts as progress. Trainable
+    SANS rows carry the exact production hidden feature
+    (unbinder_hidden(transducer, flatten_uwe(encode_spatial_grid(grid),
+    d_model))) persisted losslessly under out_dir/{env}_sans/ with full
+    provenance. Unmatched branch states fail closed as replay mismatches;
+    no causal attribution is claimed across unmatched states.
+    """
     c = _new_env_counters()
     start = time.perf_counter()
     camera = policy.camera
@@ -400,13 +526,24 @@ def run_env_replay(
     n_actions = len(actions)
     prefix_offsets = [(r * 7) % n_actions for r in range(rounds)]
 
-    rows: List[Dict[str, Any]] = []  # SANS candidate rows
+    rows: List[Dict[str, Any]] = []      # trainable SANS candidate rows
+    blocked_rows: List[Dict[str, Any]] = []  # progress but no valid hidden
+    hidden_tensors: List[torch.Tensor] = []
     completed_branches = 0
+    row_index = 0
+    hidden_dim = getattr(policy, "hidden_dim", None)
+    egress_ref = getattr(policy, "egress", None)
+    checkpoint_sha = ""
+    if egress_ref is not None:
+        checkpoint_sha = getattr(egress_ref, "checkpoint_sha256", "") or ""
+    candidate_sha = _candidate_sha()
+    sans_dir = out_dir / f"{env_name}_sans"
+    sans_dir.mkdir(parents=True, exist_ok=True)
 
     for r in range(rounds):
         if time.perf_counter() - start > budget_sec:
             break
-        # Round reset + frame check.
+        # Anchor reset: verify the baseline frame hash.
         try:
             obs = game.reset()
         except Exception:
@@ -420,114 +557,234 @@ def run_env_replay(
             c.replay_mismatches += 1
             continue
 
-        # Prefix replay (P=4 deterministic cycle) to branch state s_b.
         prefix = [actions[(prefix_offsets[r] + i) % n_actions]
                   for i in range(PREFIX_LEN)]
-        grid = obs.frame[0].tolist()
-        prefix_ok = True
-        for p in prefix:
+        # Branch-state reference for THIS round (identical prefix).
+        anchor_grid, anchor_obs, ok = _replay_prefix(
+            game, obs, prefix, payloads, seed, camera, c)
+        if not ok:
+            continue
+        branch_hash_ref = frame_signature(anchor_grid)
+
+        for ai, first_action in enumerate(actions):
+            if time.perf_counter() - start > budget_sec:
+                break
+            # Fresh reset -> identical prefix -> verified branch state.
+            try:
+                b_obs = game.reset()
+            except Exception:
+                c.reset_failures += 1
+                continue
+            c.resets += 1
+            if b_obs is None or not getattr(b_obs, "frame", None):
+                c.reset_failures += 1
+                continue
+            if frame_signature(b_obs.frame[0].tolist()) != c.initial_frame_hash:
+                c.replay_mismatches += 1
+                continue
+            b_grid, b_obs, ok = _replay_prefix(
+                game, b_obs, prefix, payloads, seed, camera, c)
+            if not ok:
+                continue
+            if frame_signature(b_grid) != branch_hash_ref:
+                c.unmatched_branches += 1
+                continue
+            c.matched_branches += 1
+            levels_branch, sc_status = read_levels_completed(game, arcade)
+            if levels_branch is None:
+                c.scorecard_failures += 1
+                continue  # fail closed: cannot measure progress for this branch
+            completed_branches += 1
+
+            # Candidate first action (payload-aware).
+            payload_source = None
+            payload_digest = "none"
             try:
                 if payloads:
                     from arc_action_payloads import step_with_payload
-                    obs, _pi = step_with_payload(
-                        game, p, grid, enabled=True, seed=seed, camera=camera)
+                    f_obs, pi = step_with_payload(
+                        game, first_action, b_grid, enabled=True,
+                        seed=seed, camera=camera)
+                    if pi is not None:
+                        payload_source = pi.get("payload_source")
+                        try:
+                            payload_digest = hashlib.sha256(
+                                json.dumps(pi, sort_keys=True,
+                                           default=str).encode()).hexdigest()
+                        except Exception:
+                            payload_digest = "digest_error"
                 else:
-                    obs = game.step(p)
+                    f_obs = game.step(first_action)
             except Exception:
-                obs = None
+                f_obs = None
             c.total_steps += 1
-            if obs is None or not getattr(obs, "frame", None):
+            if f_obs is None or not getattr(f_obs, "frame", None):
                 c.env_step_errors += 1
-                prefix_ok = False
-                break
-            grid = obs.frame[0].tolist()
-        if not prefix_ok:
-            continue
-        levels_branch, sc_status = read_levels_completed(game, arcade)
-        if levels_branch is None:
-            c.scorecard_failures += 1
-            continue  # fail closed: cannot measure progress for this round
-        completed_branches += 1
+                continue
+            f_grid = f_obs.frame[0].tolist()
 
-        # EFE-guided continuation from s_b, reading scorecard at each H.
-        # Progress is measured against the BRANCH baseline (levels_branch),
-        # never the rolling read (7.9e semantics: delta_levels(t) =
-        # levels_completed(t) - levels_completed(at branch)).
-        branch_rows = []
-        cont_grid = grid
-        cont_obs = obs
-        progress_seen = False
-        for step_idx in range(1, H_MAX + 1):
-            cont_obs, info = policy.step(game, cont_grid)
-            c.total_steps += 1
-            if info.get("error"):
-                if str(info["error"]).startswith("EGRESS_FAIL_CLOSED"):
-                    c.egress_failures += 1
-                else:
+            # Frozen EFE continuation from the post-candidate state.
+            # Progress is measured against the BRANCH baseline (levels_branch),
+            # never the rolling read (7.9e semantics).
+            cont_grid = f_grid
+            cont_obs = f_obs
+            progress_seen = False
+
+            def _commit_progress(lvl: Optional[int], step_idx: int, dnu: int,
+                                 pre_hidden: Optional[torch.Tensor],
+                                 hidden_err: str,
+                                 horizon_act: Any = None) -> None:
+                nonlocal progress_seen, row_index
+                if not _scorecard_increased(lvl, levels_branch):
+                    return
+                c.scorecard_events += 1
+                c.scorecard_delta_sum += int(lvl) - int(levels_branch)
+                c.horizon_events[str(step_idx)] = (
+                    c.horizon_events.get(str(step_idx), 0) + 1)
+                if progress_seen:
+                    return
+                progress_seen = True
+                c.progress_branches += 1
+                if dnu < DELTA_NU_FLOOR:
+                    return
+                c.progress_rows += 1
+                act_name = (getattr(horizon_act, "name", str(horizon_act))
+                            if horizon_act is not None else "?")
+                act_idx = (actions.index(horizon_act)
+                           if horizon_act in actions else -1)
+                if act_idx < 0:
+                    c.hidden_failures += 1
+                    blocked_rows.append({
+                        "env": env_name, "round": r, "branch": ai,
+                        "horizon": step_idx,
+                        "candidate_action": getattr(
+                            first_action, "name", str(first_action)),
+                        "candidate_action_index": ai,
+                        "action": act_name,
+                        "reason": "UNKNOWN_ACTION_INDEX",
+                    })
+                    return
+                err = validate_hidden(pre_hidden, hidden_dim)
+                if pre_hidden is None:
+                    err = hidden_err or "NO_HIDDEN_FEATURE"
+                if err:
+                    c.hidden_failures += 1
+                    blocked_rows.append({
+                        "env": env_name, "round": r, "branch": ai,
+                        "horizon": step_idx,
+                        "candidate_action": getattr(
+                            first_action, "name", str(first_action)),
+                        "candidate_action_index": ai,
+                        "action": act_name,
+                        "reason": err,
+                    })
+                    return
+                fname = f"hidden_{row_index:05d}.pt"
+                torch.save(pre_hidden, sans_dir / fname)
+                hsha = hidden_sha256(pre_hidden)
+                hidden_tensors.append(pre_hidden)
+                row_index += 1
+                rows.append({
+                    "schema_id": SANS_ROW_SCHEMA_ID,
+                    "env": env_name, "env_id": env_id, "split": split,
+                    "round": r, "branch": ai,
+                    "baseline_frame_hash": c.initial_frame_hash,
+                    "branch_state_hash": branch_hash_ref,
+                    "candidate_action": getattr(
+                        first_action, "name", str(first_action)),
+                    "candidate_action_index": ai,
+                    "action": act_name,
+                    "action_index": act_idx,
+                    "payload_source": payload_source,
+                    "payload_digest": payload_digest,
+                    "horizon": step_idx,
+                    "scorecard_baseline": int(levels_branch),
+                    "scorecard_final": int(lvl),
+                    "scorecard_delta": int(lvl) - int(levels_branch),
+                    "delta_nu": dnu,
+                    "hidden_sha256": hsha,
+                    "hidden_shape": list(pre_hidden.shape),
+                    "hidden_dtype": str(pre_hidden.dtype),
+                    "hidden_producer": "unbinder_hidden(transducer, flatten_uwe(encode_spatial_grid, d_model))",
+                    "checkpoint_sha256": checkpoint_sha,
+                    "candidate_sha": candidate_sha,
+                    "feature_file": fname,
+                })
+
+            for step_idx in range(1, H_MAX + 1):
+                pre_hidden = None
+                hidden_err = ""
+                if step_idx in HORIZONS:
+                    pre_hidden, hidden_err = policy.hidden_feature(cont_grid)
+                cont_obs, info = policy.step(game, cont_grid)
+                c.total_steps += 1
+                if info.get("error"):
+                    if str(info["error"]).startswith("EGRESS_FAIL_CLOSED"):
+                        c.egress_failures += 1
+                    else:
+                        c.env_step_errors += 1
+                    break
+                if cont_obs is None or not getattr(cont_obs, "frame", None):
                     c.env_step_errors += 1
-                break
-            if cont_obs is None or not getattr(cont_obs, "frame", None):
-                c.env_step_errors += 1
-                break
-            # Harness hygiene (mirrors production run_sans_play): a terminal
-            # episode cannot yield further progress; stop the branch.
-            if (getattr(cont_obs, "state", None)
-                    and getattr(cont_obs.state, "name", None) == "GAME_OVER"):
+                    break
+                dnu = int(info.get("delta_nu") or 0)
+                # Harness hygiene (mirrors production run_sans_play): a
+                # terminal episode cannot yield further progress.
+                if (getattr(cont_obs, "state", None)
+                        and getattr(cont_obs.state, "name", None) == "GAME_OVER"):
+                    cont_grid = cont_obs.frame[0].tolist()
+                    if step_idx in HORIZONS:
+                        lvl, st = read_levels_completed(game, arcade)
+                        if lvl is None:
+                            c.scorecard_failures += 1
+                        else:
+                            _commit_progress(lvl, step_idx, dnu,
+                                             pre_hidden, hidden_err,
+                                             info.get("action"))
+                    break
                 cont_grid = cont_obs.frame[0].tolist()
+                if info.get("explored"):
+                    c.explored_steps += 1
+                an = info.get("action_name") or "?"
+                c.action_counts[an] = c.action_counts.get(an, 0) + 1
+                if info.get("efe") is not None:
+                    c.efe_min = min(c.efe_min, float(info["efe"]))
+                if info.get("spread") is not None:
+                    c.efe_spread_max = max(c.efe_spread_max, float(info["spread"]))
+                if dnu >= DELTA_NU_FLOOR:
+                    c.frame_rows += 1
                 if step_idx in HORIZONS:
                     lvl, st = read_levels_completed(game, arcade)
-                    if lvl is not None and _scorecard_increased(lvl, levels_branch):
-                        c.scorecard_events += 1
-                        c.scorecard_delta_sum += int(lvl) - int(levels_branch)
-                        c.horizon_events[str(step_idx)] = (
-                            c.horizon_events.get(str(step_idx), 0) + 1)
-                        if not progress_seen:
-                            progress_seen = True
-                            c.progress_branches += 1
-                break
-            cont_grid = cont_obs.frame[0].tolist()
-            if info.get("explored"):
-                c.explored_steps += 1
-            an = info.get("action_name") or "?"
-            c.action_counts[an] = c.action_counts.get(an, 0) + 1
-            if info.get("efe") is not None:
-                c.efe_min = min(c.efe_min, float(info["efe"]))
-            if info.get("spread") is not None:
-                c.efe_spread_max = max(c.efe_spread_max, float(info["spread"]))
-            dnu = int(info.get("delta_nu") or 0)
-            if dnu >= DELTA_NU_FLOOR:
-                c.frame_rows += 1
-            if step_idx in HORIZONS:
-                lvl, st = read_levels_completed(game, arcade)
-                if lvl is None:
-                    c.scorecard_failures += 1
-                    break
-                if _scorecard_increased(lvl, levels_branch):
-                    c.scorecard_events += 1
-                    c.scorecard_delta_sum += int(lvl) - int(levels_branch)
-                    c.horizon_events[str(step_idx)] = (
-                        c.horizon_events.get(str(step_idx), 0) + 1)
-                    if not progress_seen:
-                        progress_seen = True
-                        c.progress_branches += 1
-                        if dnu >= DELTA_NU_FLOOR:
-                            c.progress_rows += 1
-                            # One SANS candidate row per branch: commit only
-                            # at the FIRST horizon where progress is observed.
-                            branch_rows.append({
-                                "action": an,
-                                "action_index": (actions.index(info.get("action"))
-                                                 if info.get("action") in actions
-                                                 else -1),
-                                "state_hash": frame_signature(cont_grid),
-                                "delta_nu": dnu,
-                                "horizon": step_idx,
-                                "scorecard_delta": int(lvl) - int(levels_branch),
-                            })
-        if progress_seen:
-            rows.extend(branch_rows)
+                    if lvl is None:
+                        c.scorecard_failures += 1
+                        break
+                    _commit_progress(lvl, step_idx, dnu, pre_hidden,
+                                     hidden_err, info.get("action"))
 
     c.valid_branches = completed_branches
+
+    # ---- Persist trainable artifacts (immutable manifest) ----
+    sans_dir_name = None
+    if rows:
+        sans_dir.mkdir(parents=True, exist_ok=True)
+        manifest = {
+            "schema_id": SANS_ROW_SCHEMA_ID,
+            "env": env_name, "env_id": env_id, "split": split,
+            "candidate_sha": candidate_sha,
+            "checkpoint_sha256": checkpoint_sha,
+            "hidden_dim": hidden_dim,
+            "hidden_producer": "unbinder_hidden(transducer, flatten_uwe(encode_spatial_grid, d_model))",
+            "dataset_digest": dataset_digest(hidden_tensors),
+            "row_count": len(rows),
+            "rows": rows,
+        }
+        manifest_path = sans_dir / "manifest.json"
+        try:
+            with open(manifest_path, "x", encoding="utf-8") as f:
+                json.dump(manifest, f, indent=2, sort_keys=True)
+        except FileExistsError:
+            c.env_step_errors += 1  # immutable: refuse to overwrite
+        sans_dir_name = sans_dir.name
 
     # ---- Verdict (fail-closed, pre-registered) ----
     verdict, reason = decide_verdict(c, rounds)
@@ -537,16 +794,24 @@ def run_env_replay(
         "env": env_name,
         "env_id": env_id,
         "seed": seed,
+        "split": split,
         "rounds": rounds,
         "horizons": list(HORIZONS),
         "prefix_len": PREFIX_LEN,
         "delta_nu_floor": DELTA_NU_FLOOR,
+        "candidate_sha": candidate_sha,
+        "checkpoint_sha256": checkpoint_sha,
+        "hidden_dim": hidden_dim,
+        "sans_dir": sans_dir_name,
         "verdict": verdict,
         "reason": reason,
         "counters": {
             "resets": c.resets,
             "reset_failures": c.reset_failures,
             "replay_mismatches": c.replay_mismatches,
+            "unmatched_branches": c.unmatched_branches,
+            "matched_branches": c.matched_branches,
+            "hidden_failures": c.hidden_failures,
             "env_step_errors": c.env_step_errors,
             "egress_failures": c.egress_failures,
             "scorecard_failures": c.scorecard_failures,
@@ -567,6 +832,7 @@ def run_env_replay(
             "initial_frame_hash": c.initial_frame_hash,
         },
         "sans_rows": rows,
+        "blocked_rows": blocked_rows,
     }
     return c, payload
 
@@ -603,12 +869,16 @@ def decide_verdict(c: EnvCounters, rounds: int) -> Tuple[str, str]:
 
 
 def sans_buffer_status(payloads: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Discovery-gate status. Held-out rows NEVER count (split filter)."""
     rows = []
     for p in payloads:
-        if p["verdict"] in (VERDICT_PROGRESS_FOUND, VERDICT_SPARSE):
-            rows.extend(p["sans_rows"])
+        if p.get("verdict") not in (VERDICT_PROGRESS_FOUND, VERDICT_SPARSE):
+            continue
+        for r in p.get("sans_rows", []):
+            if r.get("split", p.get("split", "discovery")) == "discovery":
+                rows.append(r)
     distinct = len({r["action"] for r in rows})
-    envs = len({p["env"] for p in payloads if p["sans_rows"]})
+    envs = len({r["env"] for r in rows})
     active = (len(rows) >= SANS_MIN_ROWS and distinct >= SANS_MIN_DISTINCT_LABELS
               and envs >= 1)
     return {
@@ -774,7 +1044,8 @@ def main() -> int:
             allowed_actions=allowed)
         counters, payload = run_env_replay(
             game, arcade, env_name, args.rounds, args.seed, policy,
-            out_dir=out_dir, env_id=full_id)
+            out_dir=out_dir, env_id=full_id,
+            split=("heldout" if args.phase == "heldout" else "discovery"))
         # Immutable write: refuse to overwrite an existing artifact.
         with open(payload_path, "x", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, sort_keys=True)
