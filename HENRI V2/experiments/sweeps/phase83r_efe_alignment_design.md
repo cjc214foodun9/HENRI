@@ -200,3 +200,49 @@ pre-registered G4 gate. NOT cost-function tuning. Reflection remains
 out-of-scope (Clifford non-commutativity). Demo boundary unchanged (20/20
 BLOCKED); score_eligible=false; no rollout. This experiment is sealed and
 unpromoted; main untouched at `2218ec4`.
+
+---
+
+## Delegated audit reconciliation (2026-08-14, deleg_8eb86472)
+
+Three read-only leaves (I4 code audit, scientific evaluation, governance
+checklist) completed after the seal. Verdict UNCHANGED:
+`EFE_ALIGNMENT_FALSIFIED`. Corrections folded in:
+
+1. **EFE sign convention — corroborated, no inversion.** Production MINIMIZES
+   EFE (ascending sort, efe_planner.py:992); pragmatic is a POSITIVE
+   dissimilarity/surprise cost `1−⟨p,a⟩` (line 667, enters +1× at 939–943);
+   epistemic enters negatively (−w_e); constraint penalty enters +λ with hard
+   rejection. Higher similarity → lower pragmatic → lower EFE → preferred.
+   The packet's "sign-convention conflict turns the attractor into a
+   repeller" attribution is NOT SUPPORTED by the live code.
+2. **Selection path — corroborated.** `plan_action → select_action`
+   MINIMIZES EFE with T4 accuracy-gated exploration (`loss_ema > floor` →
+   max-epistemic pick, 1030–1032); `top_k=4` truncates candidates only; the
+   Sagnac advisory veto re-rank is default-OFF. Raw EFE order is
+   authoritative in the default production run.
+3. **Reflection attribution DOWNGRADED — NEEDS_MORE_EVIDENCE.** The
+   phase-conjugation asymmetry exists only in the complex binding step
+   (bind() returns complex64, line 156); `LowRankCoupledTransition.forward`
+   casts to `.real` (lines 175–178) and `pragmatic_value` scores REAL
+   tensors, where reflection is a real symmetric isometry. Conjugation does
+   not survive to the scored quantity. Sealed OBSERVED: reflection margin
+   +0.0129 < +0.05 (R1_FALSIFIED, d1edd9b3). Cause of the small margin:
+   UNRESOLVED. Clifford non-commutative parity: HYPOTHESIS ONLY.
+4. **Governance overreach rejected (leaf 3).** Synthetic known-transform
+   integrity pairs for a diagnostic probe are NOT fabricated ARC
+   demonstrations. The immutable prohibition applies only to presenting such
+   pairs as authentic environment demonstrations or score-bearing data.
+   This experiment used exactly that permitted diagnostic construction;
+   score_eligible=false and no env stepping, unchanged.
+5. **Receipt limitation recorded.** The 4-arm matrix ran as one sequential
+   Python process; the result artifact contains all 8 arm records + terminal
+   verdict + gate flags with NO infrastructure exceptions, but the launcher
+   did not capture an explicit process exit status.
+   `exit_status_not_captured=true`; process completed and wrote the sealed
+   artifact (log tail shows VERDICT line). Scientific threshold UNCHANGED;
+   no rerun performed for receipt cosmetics. Not release verification.
+6. **Worktree integrity confirmed.** The I4 leaf checked out the preserved
+   dev worktree to detached `2218ec4`; restored to
+   `phase/8.0-batched-nav-swarm` @ `4564dc4` with status digest byte-identity
+   (`19ea2b0d…` pre/post). No content was changed or lost.
