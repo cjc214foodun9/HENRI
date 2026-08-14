@@ -61,3 +61,55 @@ or rank 1 (spec PASS) under the COMPLETE production selection path.
 - `HENRI V2/experiments/performance/jepa_transition_training_cuda_check.py` (runner).
 - `HENRI V2/tests/contract/test_jepa_transition_training.py` (contracts).
 - This doc: `HENRI V2/experiments/sweeps/phase84_jepa_transition_training_design.md`.
+
+---
+
+## SEALED VERDICT (2026-08-14) — JEPA_TRAINING_INERT (G1 fired)
+
+Remote CUDA run @ `9f27d99`, RTX 5090, D=65,536, GPU-exclusive, Zone C prod
+env. Evidence: `phase8_evidence/jepa_transition_training/` — result
+`9b3d39b8…` (json), log `5c00fd99…`. Elapsed 73.8 s. No infra exceptions
+(G0 all PASS); pre-registered gates, NO post-hoc tuning, NO rerun.
+
+| Gate | Result |
+|---|---|
+| G0 boundary integrity | PASS (11 axioms, per-block norm 0.9999998–1.0000002, sha 7d272f83…) |
+| G0 decomposition consistency | PASS (≤5.96e-08) |
+| G0 loop/vmap identity | PASS (0.0) |
+| G1 loss_ema < 0.30 after K=200 | **FAIL — loss_ema_final = 0.99918** |
+| G1 secondary raw loss ≤ 0.15 | FAIL — loss_final 0.998368 (min 0.997725) |
+| G2 rank pass (rank 1 both) | FAIL — A: translation 3, rotation 2 |
+| G2 partial (≤2 + beat control) | FAIL — A ranks 3/2, B (untrained) ranks 3/2: **NO improvement vs control** |
+| Verdict | **JEPA_TRAINING_INERT** |
+
+Training: 9 real known-transform pairs (3 kinds × 3 seeds), production
+`train_transition_step`, K=200, lr=0.05, valence=1.0. EMA checkpoints
+1.0 → 0.9992 over 200 steps (drift 0.0008 ≈ noise). Both arms chose
+rotate(180), explored=True (T4-explore regime), margin ≈ 0.0011.
+
+### Findings (DERIVED)
+
+1. Production `train_transition_step` is INERT at D=65,536 under this
+   protocol: Sagnac loss moves 0.9984 → 0.9977 (0.07% descent); the
+   quasi-orthogonal regime (cos ≈ 0.002–0.007) persists after 200 updates.
+2. Zero selection change: trained arm ranks are byte-identical to the
+   untrained twin (3/2 both) — training had NO measurable effect on EFE
+   ranking or production selection.
+3. This FALSIFIES the R3 spec's protocol claim (loss ≤ 0.15, rank-1 G4) at
+   K=200 / lr=0.05 / valence=1.0. The Wavejepatrain.txt mock G4
+   (self-generated target) would have returned a false PASS — its rejection
+   was correct.
+4. Valence=1.0 halves lr_eff (damping); surprise gate scales lr_eff by
+   (0.25 + delta/2) ≈ 0.75; QR retraction re-projects each step. At
+   quasi-orthogonality the Wirtinger gradient is nearly isotropic noise.
+
+### Kill discipline
+
+Pre-registered: any gate fire → verdict verbatim, evidence sealed,
+NO rollout/eligibility/promotion. Verdict sealed 2026-08-14, branch
+`phase/8.4-jepa-transition-training` @ `9f27d99` + seal commit, unpromoted.
+`main` untouched `2218ec4`. Next lever (NOT started, awaits explicit user
+go): a NEW pre-registered protocol — train_transition_batch (EDMD dual
+Woodbury, the L2/L3 path) and/or learnable action embeddings
+(learnable_actions=True) and/or valence=0 + K≥1000. No rerun of the sealed
+protocol; no relaxed gates.
