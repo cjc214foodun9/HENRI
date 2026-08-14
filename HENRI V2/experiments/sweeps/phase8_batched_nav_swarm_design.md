@@ -198,3 +198,48 @@ probe (`experiments/performance/phase8_batched_nav_probe.py`,
 implementation, local contract tests, and remote GPU-exclusive execution.
 Arms B–D environment matrices remain gated on main-first convergence and
 separate approval.
+
+## 15. Revision 2 (2026-08-14) — probe outcome (OBSERVED, RTX 5090)
+
+Sealed receipt: `phase8_probe_receipt_20260814.md` (result SHA-256
+`0a67efcd…`; probe source `88fe140b…`; worktree base `ff8bfa0`).
+
+| B | particles/s | latency_ms/particle | LBW_gbps | ESS | VRAM peak MiB |
+|---|---|---|---|---|---|
+| 1 | 496.5 | 2.014 | 0.130 | 1.000 | 9,125 |
+| 4 | 498.6 | 2.006 | 0.131 | 4.000 | 9,128 |
+| 64 | 477.2 | 2.095 | 0.125 | 10.000 | 9,196 |
+| 256 | 478.4 | 2.091 | 0.125 | 10.000 | 9,442 |
+| 512 | 478.2 | 2.091 | 0.125 | 10.000 | 9,826 |
+| 1024 | 477.0 | 2.097 | 0.125 | 10.000 | 10,530 |
+
+Findings (all OBSERVED on the sealed run):
+
+1. **H1-naive FALSIFIED.** Throughput is flat (477–499 pps) across
+   B=1→1024. The per-particle loop scoring is Python/launch-bound; batch
+   size does not change measured throughput. Naive batching is not the
+   saturating mechanism.
+2. **Vectorized core verified.** `torch.vmap` of the production
+   transition+pragmatic+epistemic+penalty core agrees with the loop to
+   `0.0` max-abs-diff. The production kernel CAN be vectorized
+   byte-identically; this is the required implementation path for arms
+   B–D, not the loop.
+3. **CUDA-graph capture blocked (typed).** Dynamic einsum subscripts in
+   the transition raise `einsum(): the number of subscripts ... does not
+   match`. Graph capture requires a static-subscript transition or custom
+   kernel — a concrete bounded fix candidate, out of probe scope.
+4. **B=1 identity holds.** Probe loop ≡ production `plan_action`
+   (`production_action_match=True`), deterministic replay digest.
+5. **K2 not triggered.** ESS ≥ 1 (uniform, capped at iterations); distinct
+   actions = 4 (candidate-set size, descriptor only). No collapse.
+6. **K1 informational only** (per Revision 1): no Nsight hardware counters
+   on this run; LBW values are one-logical-read lower bounds.
+7. **VRAM is not the constraint.** ~9.1 GiB baseline (1024-expert
+   orchestrator) + ~1.4 GiB at B=1024.
+
+Consequence: compute saturation is not the missing variable. The sealed
+zero-progress wall (7.9e/7.9f) is a grounding/action-selection failure.
+Arms B–D proceed ONLY via the vectorized core, behind the main-first gate,
+with separate approval; milestone remains one reproducible strict
+`levels_completed` increase, `diagnostic_only=true`,
+`score_eligible=false` until then.
