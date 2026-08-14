@@ -129,7 +129,7 @@ Verdicts:
 4. **A0/A3 infrastructure PASS** — default path byte-identical; reuse
    adapter + combined smoke OK on CUDA.
 
-Branch sealed @ (seal commit); `main` untouched `2218ec4`. No promotion.
+Branch sealed @ `768206a` (seal commit); `main` untouched `2218ec4`. No promotion.
 Next levers (each a NEW pre-registered protocol): (a) D2 revision to the
 corpus-prescribed spectral projector I - P_low; (b) D1 batch EDMD path
 (train_transition_batch); (c) learnable action embeddings; (d) valence=0
