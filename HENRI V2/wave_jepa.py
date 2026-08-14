@@ -43,8 +43,11 @@ class WaveJEPA(nn.Module):
         self.use_lowrank_coupled = use_lowrank_coupled or os.environ.get(
             "HENRI_WAVEJEPA_LOWRANK_COUPLED", "0") == "1"
         if self.use_lowrank_coupled:
+            # The adapter allocates CPU params (LowRankCoupledTransition has
+            # no device arg); move it to the WaveJEPA device so the CUDA
+            # encoder path and the adapter share one device.
             self.predictor = _LowRankCoupledPredictorAdapter(
-                num_blocks=num_blocks, rank=transition_rank)
+                num_blocks=num_blocks, rank=transition_rank).to(self.device)
         else:
             self.predictor = RecursiveDualEDMD(
                 d_model=d_model, r_rank=r_rank, lambda_forget=0.98)
