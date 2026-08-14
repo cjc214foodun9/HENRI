@@ -129,8 +129,9 @@ def test_telemetry_schema(probe, monkeypatch):
     assert result["schema_id"] == "henri.phase8-compute-probe.v1"
     for key in ["status", "feature_gate", "scale", "device", "shapes",
                 "b1_identity", "batches", "egress", "checkpoint", "git",
-                "raw_log_sha256"]:
+                "probe_file_sha256", "raw_log_sha256"]:
         assert key in result, f"missing schema key {key}"
+    assert len(result["probe_file_sha256"]) == 64
     row = result["batches"][0]
     for key in ["B", "total_scored_particles", "particles_per_s",
                 "latency_mean_ms_per_particle",

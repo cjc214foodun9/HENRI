@@ -46,6 +46,15 @@ def _git_sha() -> str:
         return "unknown"
 
 
+def _self_sha256() -> str:
+    """SHA-256 of the probe source file itself (provenance in detached
+    worktrees where git HEAD is the base production SHA, not the branch)."""
+    try:
+        return hashlib.sha256(Path(__file__).resolve().read_bytes()).hexdigest()
+    except Exception:
+        return "unknown"
+
+
 def _fail_closed(reason: str, **extra) -> dict:
     return {
         "schema_id": _SCHEMA_ID,
@@ -340,6 +349,7 @@ def run_probe(scale: str = "prod", batches=None, iterations: int = 10,
         "gpu_name": (torch.cuda.get_device_name(0)
                      if torch.cuda.is_available() else None),
         "candidate_sha": _git_sha(),
+        "probe_file_sha256": _self_sha256(),
         "started_utc": datetime.now(timezone.utc).isoformat(),
         "finished_utc": datetime.now(timezone.utc).isoformat(),
         "shapes": {
