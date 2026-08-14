@@ -83,4 +83,55 @@ Implementation in `AdaptiveViscoelasticThermostat`:
 - Verdicts: D1 PASS/INERT per G1; D2 PASS/FAIL per A2 with A1/A3 contract
   evidence. Independent verdicts (a combined improvement cannot conceal an
   inert mechanism).
+
+---
+
+## SEALED VERDICT (2026-08-14) — feat/low-rank-wave-jepa
+
+Remote CUDA matrix @ RTX 5090 (torch 2.12.0+cu130, CUDA 13.0, D=65,536),
+candidate SHA `b836c04b223971187f279da35d6c318b66439eef`, all arms rc=0,
+DONE_MARKER rc=0.
+
+Evidence: `phase8_evidence/decision_matrix_d1d2/`
+- `jepa_dm_result.json` SHA-256 `1c1415194dd079ef5534a935537c858870bf9758419c5851ee4f59a9617bad30`
+- `jepa_dm.log` SHA-256 `f419173651e27e1201dd2cf6e491f23742a49838afb1f57a2ba0ae5d95f4f0eb`
+- decoder checkpoint loaded: SHA `75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060` (symlink overlay)
+
+| Arm | Result | Key metrics |
+|---|---|---|
+| A0 OFF | OK | predictor=RecursiveDualEDMD, projection inactive (default-path identity) |
+| A1 D1 | **D1_INERT** (G1 fired) | loss_first 1.0037, loss_ema_30 0.99957, loss_last 0.9934, decrease 0.41% < 5% gate; wall 6.68s/30 steps |
+| A2 D2 | **D2_FAIL** (PDF gate fired) | prod r/D=0.000977: resid_proj 1.3e-08 (ortho OK), energy_ratio 0.9995, variance-drift reduction 0.16% << 40%; sanity r/D=0.25: reduction -10.6% (projection does not accelerate recovery) |
+| A3 D1+D2 | OK | adapter forward [8192,8], loss finite, combined energy_ratio 0.9996 |
+
+Verdicts:
+1. **D1 INERT** — production per-step Sagnac transition training remains
+   inert at D=65,536 (0.41%/30 steps ≈ sealed E1's 0.07%/200 steps regime).
+   Cross-block Jacobian probe UNMEASURED (informational; input detached in
+   train_transition_step → "does not require grad"); not a gate, recorded
+   honestly. No promotion.
+2. **D2 FAIL on the PDF's quantitative gate** — the mechanism IS implemented
+   and orthogonality is exact (resid_proj 1.3e-08), energy ratio matches the
+   dimensional prediction sqrt(1 - r/D) ≈ 0.9995 at production scale, but the
+   >40% variance-drift-reduction gate is dimensionally unattainable when
+   P_null removes only r/D ≈ 0.1% of isotropic noise energy; the sanity arm
+   (r/D=0.25) shows NO recovery benefit (drift slightly worse, -10.6%),
+   confirming P_null projection is a noise-shape change, not a recovery
+   accelerator. Wavelet gating (Phase 5 P2 ACCEPT) remains the proven
+   recovery mechanism. No promotion.
+3. **Corpus consult (INFERRED)**: the HENRI wave-mechanics corpus prescribes
+   the anisotropic thermostat as spectral projection through I - P_low
+   (high-frequency residual of the UWE frequency comb), NOT through the
+   transition null space I - V V†; the corpus marks P_null as the violation
+   detector and warns against coupling noise to the dynamic V subspace.
+   The PDF's D2 spec follows a different projector; the empirical gate
+   failed as dimensionally predicted.
+4. **A0/A3 infrastructure PASS** — default path byte-identical; reuse
+   adapter + combined smoke OK on CUDA.
+
+Branch sealed @ (seal commit); `main` untouched `2218ec4`. No promotion.
+Next levers (each a NEW pre-registered protocol): (a) D2 revision to the
+corpus-prescribed spectral projector I - P_low; (b) D1 batch EDMD path
+(train_transition_batch); (c) learnable action embeddings; (d) valence=0
+training. All await explicit approval.
 - Seal on branch; NO promotion; `main` untouched `2218ec4`.
