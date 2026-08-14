@@ -45,6 +45,7 @@ import torch
 import torch.nn.functional as F
 
 FEATURE_FLAG = "HENRI_ARC_PSG"
+FEATURE_FLAG_ZERO_SHOT = "HENRI_ARC_PSG_ZERO_SHOT"
 SCHEMA_ID = "henri.psg-engine.v1"
 STATUS_FEATURE_DISABLED = "FEATURE_DISABLED"
 STATUS_NO_DEMOS = "BLOCKED_NO_DEMONSTRATIONS"
@@ -54,6 +55,10 @@ STATUS_EMPTY = "EMPTY_OBJECTS"
 RECOVERY_COS_THRESHOLD = 0.35  # Stage-1 target: Sim(Psi_state, Psi_goal) > 0.35
 IDENTITY_MARGIN = 0.05
 MAX_OPTIONS = 128
+# Phase 8.1: zero-shot symmetry self-consistency mode.
+GOAL_SOURCE_SYMMETRY = "SYMMETRY_ORBIT"
+FUNCTOR_ZERO_SHOT = "ZERO_SHOT_SYMMETRY"
+D4_ORBIT_SIZE = 8
 
 
 def _wave_digest(wave: torch.Tensor) -> str:
@@ -424,6 +429,125 @@ class ProgressiveSemanticGroundingEngine:
                      opt: MacroOption) -> List[List[int]]:
         """Apply a macro-option to a grid (public wrapper)."""
         return _apply_option_to_grid(grid, opt)
+
+    # -- Phase 8.1: zero-shot symmetry self-consistency ---------------------
+    def d4_orbit_goal(self, grid: List[List[int]]) -> Tuple[torch.Tensor, torch.Tensor, int]:
+        """Psi_goal = Normalize((1/8) sum_{g in D4} rho(g) Psi_obs).
+
+        Phase 8.1 packet Stage 1 (docs-phase8_1_preflight_postmortem_and_roadmap
+        .md.pdf.pdf, SHA 6d8c5383). Full D4 (8 elements) on square grids;
+        restricted D2 subgroup {I, r180, flip_h, flip_v} on rectangular grids
+        (90/270 rotations and diagonal reflections are shape-changing there).
+        Returns (goal_wave, orbit_waves, orbit_size).
+        """
+        import numpy as np
+
+        arr = np.ascontiguousarray(np.array(grid, dtype=np.int64))
+        h, w = arr.shape
+        if h == w:
+            transforms = [
+                arr,
+                np.ascontiguousarray(np.rot90(arr, 1)),
+                np.ascontiguousarray(np.rot90(arr, 2)),
+                np.ascontiguousarray(np.rot90(arr, 3)),
+                np.ascontiguousarray(np.fliplr(arr)),
+                np.ascontiguousarray(np.flipud(arr)),
+                np.ascontiguousarray(np.transpose(arr, (1, 0))),
+                np.ascontiguousarray(np.fliplr(np.rot90(arr, 1))),
+            ]
+        else:
+            transforms = [
+                arr,
+                np.ascontiguousarray(np.rot90(arr, 2)),
+                np.ascontiguousarray(np.fliplr(arr)),
+                np.ascontiguousarray(np.flipud(arr)),
+            ]
+        waves = []
+        for g in transforms:
+            wv = self.tokenizer.encode_spatial_grid(
+                g.tolist()).squeeze(0).to(self.device)
+            waves.append(wv)
+        orbit = torch.stack(waves)  # [orbit_size, num_blocks, 8]
+        goal = F.normalize(orbit.mean(dim=0), p=2, dim=-1)
+        return goal, orbit, len(transforms)
+
+    def zero_shot_plan(
+        self, grid: List[List[int]], boundary_batch: torch.Tensor,
+        task_id: str = "", top_k: int = 1, use_batched: bool = True,
+    ) -> Dict[str, Any]:
+        """Phase 8.1 zero-shot symmetry plan (default-OFF, diagnostic-only).
+
+        Separate typed policy from ``plan()``: when the demo boundary holds
+        (BLOCKED_NO_DEMONSTRATIONS), the demo-conditioned W_task cannot
+        compile. This mode builds the D4 orbit-mean goal and ranks object
+        macro-options through the vectorized EFE kernel. Kills K1-K5 are
+        pre-registered in experiments/sweeps/phase81_zero_shot_design.md.
+        Never grants score eligibility; never steps an environment.
+        """
+        out: Dict[str, Any] = {
+            "schema_id": SCHEMA_ID,
+            "feature_gate": FEATURE_FLAG_ZERO_SHOT,
+            "status": STATUS_FEATURE_DISABLED,
+            "diagnostic_only": True,
+            "score_eligible": False,
+            "reason": "",
+            "functor_status": FUNCTOR_ZERO_SHOT,
+            "goal_source": GOAL_SOURCE_SYMMETRY,
+            "goal_sim_obs": None,
+            "orbit_norm_raw": None,
+            "orbit_size": 0,
+            "num_objects": 0,
+            "num_options": 0,
+            "ranked": [],
+            "agreement_max_abs_diff": None,
+        }
+        if os.environ.get(FEATURE_FLAG_ZERO_SHOT, "0") != "1":
+            out["reason"] = f"{FEATURE_FLAG_ZERO_SHOT} != 1; engine did not allocate"
+            return out
+
+        objects = self.segment(grid)
+        out["num_objects"] = len(objects)
+        options = build_macro_options(
+            objects, (len(grid), len(grid[0])), max_options=self.max_options)
+        out["num_options"] = len(options)
+        if not options:
+            out["status"] = STATUS_EMPTY
+            out["reason"] = "no objects segmented in grid"
+            return out
+        if boundary_batch is None:
+            out["status"] = "BLOCKED_BOUNDARY"
+            out["reason"] = "boundary_batch is required (fail-closed)"
+            return out
+
+        state_wave = self.tokenizer.encode_spatial_grid(
+            grid).squeeze(0).to(self.device)
+        goal_wave, orbit, orbit_size = self.d4_orbit_goal(grid)
+        out["orbit_size"] = orbit_size
+        out["goal_sim_obs"] = float(F.cosine_similarity(
+            goal_wave.reshape(-1), state_wave.reshape(-1), dim=0).item())
+        out["orbit_norm_raw"] = float(torch.norm(orbit.mean(dim=0)).item())
+
+        option_waves, _labels = self.option_waves(grid, options)
+        efe_loop = self.score(state_wave, option_waves, boundary_batch, goal_wave)
+        efe_bat = self.score_batched(state_wave, option_waves, boundary_batch,
+                                     goal_wave)
+        agreement = float((efe_loop - efe_bat).abs().max().item())
+        out["agreement_max_abs_diff"] = agreement
+
+        order = torch.argsort(efe_bat).tolist()
+        ranked = []
+        for i, idx in enumerate(order[:top_k]):
+            ranked.append({
+                "rank": i,
+                "option": options[idx].to_dict(),
+                "efe": float(efe_bat[idx].item()),
+                "payload": options[idx].to_payload(),
+            })
+        out["status"] = STATUS_OK
+        out["ranked"] = ranked
+        out["reason"] = (f"zero-shot D4-orbit goal; top-{top_k} macro-options "
+                         f"ranked; vmap-loop agreement {agreement:.2e}")
+        return out
 
     def option_waves(
         self, grid: List[List[int]], options: List[MacroOption]

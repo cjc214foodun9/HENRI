@@ -389,6 +389,9 @@ def run():
     # macro-option search (W_task functor + object options + vmap EFE).
     # Diagnostic-only; never grants score eligibility.
     HENRI_ARC_PSG = os.environ.get("HENRI_ARC_PSG", "0") == "1"
+    # Phase 8.1: zero-shot symmetry self-consistency mode (default OFF).
+    # Demo-free D4-orbit goal for object macro-option ranking; diagnostic.
+    HENRI_ARC_PSG_ZERO_SHOT = os.environ.get("HENRI_ARC_PSG_ZERO_SHOT", "0") == "1"
     # Phase 7.8 P0-A1: production encoder-basis default is the G1-ACCEPTED
     # incommensurate ramp + CC-OS background masking (invertible phase map,
     # LUT coordinate recovery 100% at D=65,536). Legacy collinear basis
@@ -529,7 +532,7 @@ def run():
     # Phase 8: PSG engine (default-OFF, planner-side, diagnostic-only).
     # Fail-closed: any init error leaves psg_engine None -> EFE control arm.
     psg_engine = None
-    if HENRI_ARC_PSG:
+    if HENRI_ARC_PSG or HENRI_ARC_PSG_ZERO_SHOT:
         try:
             from progressive_semantic_grounding_engine import (
                 ProgressiveSemanticGroundingEngine,
@@ -538,7 +541,9 @@ def run():
                 planner=orch.planner, tokenizer=tokenizer, device=DEVICE,
                 num_blocks=SCALE["num_blocks"], block_dim=8,
             )
-            print("[init] PSG engine armed (HENRI_ARC_PSG=1)")
+            print("[init] PSG engine armed "
+                  f"(HENRI_ARC_PSG={int(HENRI_ARC_PSG)}, "
+                  f"HENRI_ARC_PSG_ZERO_SHOT={int(HENRI_ARC_PSG_ZERO_SHOT)})")
         except Exception as _psg_exc:
             print(f"  [psg] init failed (fail-closed to control arm): {_psg_exc}")
             psg_engine = None
@@ -1051,7 +1056,8 @@ def run():
             # control arm. Never fabricates demos.
             psg_engaged = False
             psg_payload_override = None
-            if (HENRI_ARC_PSG and psg_engine is not None
+            if ((HENRI_ARC_PSG or HENRI_ARC_PSG_ZERO_SHOT)
+                    and psg_engine is not None
                     and policy_mode() != "action1"
                     and not HENRI_ARC_ACTION_PAYLOADS):
                 # ARC action completeness: (GameAction, data), not a bare
@@ -1114,6 +1120,60 @@ def run():
                 except Exception as _psg_exc:
                     psg_status = f"PSG_ERROR: {type(_psg_exc).__name__}"
                     print(f"  [psg] error (fail-closed to control arm): {_psg_exc}")
+            if (HENRI_ARC_PSG_ZERO_SHOT and psg_engine is not None
+                    and policy_mode() != "action1"
+                    and HENRI_ARC_ACTION_PAYLOADS
+                    and not psg_engaged):
+                # Phase 8.1: zero-shot symmetry self-consistency (default
+                # OFF). Demo-free D4-orbit goal; never grants eligibility.
+                try:
+                    zs_result = psg_engine.zero_shot_plan(
+                        grid, boundary_batch, task_id=env_name,
+                        top_k=1, use_batched=True)
+                    psg_status = zs_result.get("status")
+                    _top = (zs_result.get("ranked") or [None])[0]
+                    tele.emit({
+                        "env": env_name, "step": step,
+                        "event_type": "PSG_ZERO_SHOT",
+                        "status": psg_status,
+                        "reason": zs_result.get("reason", ""),
+                        "num_objects": zs_result.get("num_objects"),
+                        "num_options": zs_result.get("num_options"),
+                        "functor_status": zs_result.get("functor_status"),
+                        "goal_source": zs_result.get("goal_source"),
+                        "goal_sim_obs": zs_result.get("goal_sim_obs"),
+                        "orbit_norm_raw": zs_result.get("orbit_norm_raw"),
+                        "orbit_size": zs_result.get("orbit_size"),
+                        "agreement_max_abs_diff": zs_result.get("agreement_max_abs_diff"),
+                        "top_option": (_top or {}).get("option"),
+                        "top_efe": (_top or {}).get("efe"),
+                    })
+                    if (psg_status == "OK" and _top is not None
+                            and GameAction.ACTION6 in allowed_actions):
+                        _payload = _top.get("payload") or {}
+                        psg_payload_override = {
+                            "x": int(_payload.get("x", 0)),
+                            "y": int(_payload.get("y", 0)),
+                        }
+                        action = GameAction.ACTION6
+                        predicted_wave = state_wave.clone()
+                        efe_table = [{"efe": float(_top.get("efe", 0.0)),
+                                      "source": "psg_zero_shot"}]
+                        chosen = {"efe": float(_top.get("efe", 0.0)),
+                                  "predicted_wave": predicted_wave,
+                                  "explored": True}
+                        psg_engaged = True
+                        print(f"  [psg-zero-shot] macro-option "
+                              f"{(_top.get('option') or {}).get('description')} "
+                              f"efe={_top.get('efe'):.4f} "
+                              f"payload={psg_payload_override}")
+                    else:
+                        print(f"  [psg-zero-shot] blocked -> EFE control arm "
+                              f"({psg_status})")
+                except Exception as _zs_exc:
+                    psg_status = f"PSG_ZERO_SHOT_ERROR: {type(_zs_exc).__name__}"
+                    print(f"  [psg-zero-shot] error (fail-closed to control "
+                          f"arm): {_zs_exc}")
             if policy_mode() == "action1":
                 # P2 deterministic baseline: no EFE planning, no exploration,
                 # no planner state mutation. Diagnostic only.

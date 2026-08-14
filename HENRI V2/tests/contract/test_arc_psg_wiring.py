@@ -34,9 +34,10 @@ def test_psg_flag_defaults_off():
 def test_psg_engine_init_fail_closed():
     # psg_engine must default None and only arm inside the flag branch.
     assert "psg_engine = None" in RUNNER_TEXT
-    assert "if HENRI_ARC_PSG:" in RUNNER_TEXT
+    assert "if HENRI_ARC_PSG or HENRI_ARC_PSG_ZERO_SHOT:" in RUNNER_TEXT
     assert "ProgressiveSemanticGroundingEngine(" in RUNNER_TEXT
-    assert "psg_engine = None" in RUNNER_TEXT.split("if HENRI_ARC_PSG:")[1].split(
+    assert "psg_engine = None" in RUNNER_TEXT.split(
+        "if HENRI_ARC_PSG or HENRI_ARC_PSG_ZERO_SHOT:")[1].split(
         "except Exception as _psg_exc:")[1]
 
 
