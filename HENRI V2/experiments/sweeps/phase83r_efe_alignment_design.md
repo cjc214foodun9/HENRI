@@ -123,3 +123,80 @@ epistemic, constraint_penalty, goal_distance, efe, rejected) +
   the full gate chain (local suite + isolated remote CUDA suite + approval +
   fast-forward + clean deployment reconcile). FALSIFIED or BLOCKED →
   evidence seal, no promotion, no rollout.
+
+---
+
+## Sealed verdict (2026-08-14) — EFE_ALIGNMENT_FALSIFIED (G4 fired)
+
+Candidate `4a9eb25` (branch `phase/8.3r-efe-alignment`, unpromoted). Remote
+RTX 5090, D=65,536, GPU exclusive (2 MiB, 0 procs), Zone C prod env sourced,
+11-axiom canonical boundary preflight receipt `7d272f83…`.
+Evidence: `phase8_evidence/efe_alignment/` — result `b196d67f…`, log
+`4c19e8b1…`, axiom receipt `d871eb9a…`.
+
+### Gates (all pre-registered, no tuning)
+
+| Gate | Result |
+|---|---|
+| G1 boundary integrity (11 axioms, per-block norm) | PASS (1.0 ± 2e-7) |
+| G2 decomposition consistency (recomputed vs logged EFE) | PASS (≤ 6e-8) |
+| G3 loop/vmap identity | PASS (0.0) |
+| G4 alignment arm A (true EFE rank == 1, margin ≥ 1e-3, both transforms) | **FAIL** — translation rank 3, rotation rank 2 |
+| G5 production selection (reported, not gating) | chosen=rotate(180), explored=True, chosen_was_true=False |
+
+### Arms (efe_true_rank)
+
+| Arm | boundary | lambda_goal | translation | rotation |
+|---|---|---|---|---|
+| A | canonical 11-axiom | 0.0 (prod) | **3** | **2** |
+| B | canonical 11-axiom | 0.5 | 3 | 2 |
+| C | single-pixel | 0.0 | 8 | 7 |
+| D | single-pixel | 0.5 | 8 | 7 |
+
+### Measured decomposition (arm A translation, top-3 by EFE)
+
+| candidate | efe | pragmatic | epistemic | goal_dist |
+|---|---|---|---|---|
+| translate(dx=0,dy=1) | -1.0860 | 0.9931 | 2.0792 | 1.0002 |
+| rotate(90) | -1.0849 | 0.9938 | 2.0787 | 1.0003 |
+| **translate(dx=1,dy=0) TRUE** | -1.0845 | 0.9934 | 2.0779 | 1.0003 |
+
+### Scientific findings (DERIVED from decomposition)
+
+1. **Packet root cause (ii) FALSIFIED.** The single-pixel boundary was NOT the
+   inversion cause. The canonical 11-axiom baseplate improved rank (8→3) but
+   did NOT achieve alignment (required 1). Arms C/D (single-pixel) rank 8/7;
+   arms A/B (canonical) rank 3/2. Boundary is a partial signal, not the fix.
+2. **Packet root cause (i) re-interpreted.** The epistemic term is FLAT:
+   2.0779–2.0792 ≈ ln(8) (uniform retrieval entropy) for every candidate.
+   It dominates EFE magnitude but carries zero ranking signal. The ranking is
+   driven by noise-level pragmatic differences (0.9931–0.9934, Δ≈5e-4).
+3. **Packet root cause (iii) NOT SUPPORTED.** Decomposition consistency (G2)
+   proves the cost function arithmetic is correct; min-EFE correctly prefers
+   lower pragmatic. There is no sign-convention error. The pragmatic
+   "attractor" is directionless because the canonical axioms are seeded
+   RANDOM unit waves (zone_c_axiom_seeder seeds 1001–11011) — measured
+   closest-axiom cos ≈ 0.007 (prag ≈ 0.993) for ALL grid-transform candidates.
+4. **NEW measured fact — goal_distance is FLAT ≈ 1.0000–1.0003 across all
+   candidates and all arms.** The functor-bound goal wave (W_task ⊗ Ψ_obs) is
+   orthogonal to every option prediction. Even at lambda_goal=0.5 (arms B/D),
+   goal conditioning adds zero discrimination. Cause: the fresh UNTRAINED
+   transition produces predictions with no action-conditioned structure;
+   a bound goal is orthogonal to any ~state-like prediction in D=65,536.
+5. **Root-cause synthesis (INFERRED):** the EFE cost function is
+   information-dead under this configuration because NO term carries
+   directional action signal — axioms are random (no grid geometry), the
+   transition is untrained (no action-conditioned predictions), and the goal
+   is bound (orthogonal to predictions). Re-calibrating cost weights cannot
+   fix flat terms (and threshold tuning is prohibited). The packet's "sign
+   convention error" attribution is superseded by the measured decomposition.
+
+### Next lever (per roadmap R1→R6)
+
+R3 JEPA next-state predictive objective: train the transition operator on
+observed (state, action, next_state) transitions so option predictions carry
+action-conditioned structure, then re-probe EFE alignment with the SAME
+pre-registered G4 gate. NOT cost-function tuning. Reflection remains
+out-of-scope (Clifford non-commutativity). Demo boundary unchanged (20/20
+BLOCKED); score_eligible=false; no rollout. This experiment is sealed and
+unpromoted; main untouched at `2218ec4`.
