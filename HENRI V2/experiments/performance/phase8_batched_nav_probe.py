@@ -32,6 +32,8 @@ _DEFAULT_BATCHES = [1, 4, 64, 256, 512, 1024]
 _LOGICAL_BYTES_PER_PARTICLE = 65536 * 4  # D=65536 x float32
 _PEAK_BW_TBPS = 2.1  # RTX 5090 nominal; label is LOWER_BOUND_LOGICAL_BANDWIDTH
 _REPO_ROOT = Path(__file__).resolve().parents[2]  # HENRI V2/
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 
 def _git_sha() -> str:
