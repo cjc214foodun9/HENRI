@@ -158,6 +158,43 @@ Aggregate: `env_count == expected_env_count` (12 per arm), `rc_sum == 0`, DONE m
 
 ---
 
-## 12. Sign-off
+## 13. Revision 1 (2026-08-14) — probe corrections per arbiter review
 
-This packet is pre-registered before any implementation. Any change to arms, budgets, thresholds, or the split requires a new pre-registration revision. Implementation begins only after: (1) this packet committed, (2) probe design approved, (3) one bounded default-OFF change at a time, (4) remote CUDA verification of each change.
+Adopted before any implementation:
+
+1. **Production wave shape:** the probe uses the exact continuous-UWE shape
+   `[B, num_blocks, 8]` (`num_blocks=8192`, `D=65536` at prod scale;
+   `num_blocks=64`, `D=512` at reduced CPU-test scale). The earlier
+   `[B, 8, 8, 8]` sketch (512 values/particle) is discarded. Flattening is
+   verified against the live `flatten_uwe` contract
+   (`arc_egress_contract.py:90`: strict `[num_blocks, 8] -> [1, D]`).
+2. **Bandwidth label:** the probe records
+   `lower_bound_logical_bandwidth_gbps` with
+   `bandwidth_label: "LOWER_BOUND_LOGICAL_BANDWIDTH"` (one logical state
+   read per particle per step). It is NOT an achieved-DRAM-bandwidth
+   measurement. Kill K1 is amended: a hard kill may fire ONLY on
+   Nsight hardware-counter evidence (< 60% of peak measured); the
+   lower-bound number alone is informational, never a kill.
+3. **Fixed batch ladder:** B ∈ {1, 4, 64, 256, 512, 1024}.
+4. **B=1 identity gate:** the probe must match the production
+   `orch.plan_action(...)` chosen action at B=1 (same inputs) and emit a
+   deterministic replay digest.
+5. **ESS / action entropy are descriptors only**, never task-capability
+   evidence.
+6. **Main-first:** production batched-planner implementation (arms B–D)
+   is gated behind the main-first convergence procedure; the probe is an
+   experiment artifact under `experiments/performance/` on this branch.
+7. **Milestone restatement:** the first meaningful milestone is ONE
+   reproducible strict `levels_completed` increase with matched
+   counterfactual attribution on the frozen discovery split — not SOTA.
+   Until then every run stays `diagnostic_only=true`,
+   `score_eligible=false`.
+
+## 14. Sign-off (Revision 1)
+
+This revision is part of the pre-registered packet. The compute-envelope
+probe (`experiments/performance/phase8_batched_nav_probe.py`,
+`HENRI_ARC_BATCHED_NAV_SWARM=1`, default OFF) is approved for
+implementation, local contract tests, and remote GPU-exclusive execution.
+Arms B–D environment matrices remain gated on main-first convergence and
+separate approval.
