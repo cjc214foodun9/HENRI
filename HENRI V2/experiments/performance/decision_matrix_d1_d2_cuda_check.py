@@ -99,7 +99,7 @@ def arm_a1_d1_gate(device):
     """G1: Sagnac loss decrease > 5% within 30 online steps @ D=65,536."""
     num_blocks = 8192
     encoder = HENRIVisionEncoder(d_model=65536, k_blocks=num_blocks, device=device)
-    planner = efe_planner.EFEPlanner(num_blocks=num_blocks, d_model=65536)
+    planner = efe_planner.EFEPlanner(num_blocks=num_blocks, d_model=65536).to(device)
     pairs = _known_transform_pairs(encoder, num_blocks, device)
     losses = []
     t0 = time.perf_counter()
