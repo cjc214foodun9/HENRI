@@ -59,7 +59,7 @@ def _known_transform_pairs(encoder, num_blocks, device, seed=1):
     return pairs
 
 
-def _cross_block_jacobian_info(planner, state, action, device, n_pairs=3):
+def _cross_block_jacobian_info(planner, state, action, device, num_blocks, n_pairs=3):
     """Informational mechanism evidence: |d psi_i / d psi_j| for i != j."""
     outs = []
     for (i, j) in [(0, 1), (1, 0), (0, num_blocks // 2), (num_blocks // 2, 0)]:
@@ -117,7 +117,7 @@ def arm_a1_d1_gate(device):
     # informational mechanism evidence
     state = pairs[0][0]
     action = F.normalize(torch.randn(num_blocks, 8, device=device), dim=-1)
-    jac = _cross_block_jacobian_info(planner, state, action, device)
+    jac = _cross_block_jacobian_info(planner, state, action, device, num_blocks)
     return {
         "loss_first": loss1,
         "loss_ema_30": ema,
