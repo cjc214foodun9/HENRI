@@ -243,3 +243,43 @@ Arms B–D proceed ONLY via the vectorized core, behind the main-first gate,
 with separate approval; milestone remains one reproducible strict
 `levels_completed` increase, `diagnostic_only=true`,
 `score_eligible=false` until then.
+
+## 16. Revision 3 (2026-08-14) — PSG engine per Phase8.pdf (OBSERVED)
+
+Authoritative packet: `G:/My Drive/HENRI_Inbox/Phase8.pdf` (SHA-256
+`018df85d…`, extracted text `217606cc…`, 5 pages). Its claim that
+`HENRI V2/progressive_semantic_grounding_engine.py` already exists is
+FALSIFIED (not in repo, git history, or remote) — the implementation was
+the deliverable. CoE receipt: `phase8_psg_receipt_20260814.md`.
+
+Engine `progressive_semantic_grounding_engine.py` (default-OFF
+`HENRI_ARC_PSG`, planner-side, diagnostic-only, fail-closed no-demo
+gate) implements the PSG pipeline:
+
+1. **W_task functor compiler**: `Normalize(Σ_i conj(X_i) · Y_i)` complex
+   Hadamard binding + goal anchor; held-out recovery gate (threshold 0.35,
+   identity margin 0.05) fails closed.
+2. **Object-centric macro-option head**: `ConnectedComponentSegmenter`
+   reuse; options = identity + bounded translations + rotations + color
+   swaps; horizon compression H > 100 → H_eff ≤ 5.
+3. **Vectorized vmap EFE macro-kernel**: production-exact EFE composition
+   (`pragmatic_weight·prag − epistemic_weight·epis + λ·pen`, penalty
+   None-guarded) over B macro-option waves.
+
+Evidence (OBSERVED):
+
+- Contract tests 10/10; full local suite 388p/1s (no regressions).
+- Remote CUDA @ production scale (RTX 5090, exclusive, staged SHA
+  `c752a877`/`c98c7a69`): functor OK on synthetic pairs (held 0.5426 vs
+  identity 0.4067); 66 objects/128 options, B=64 scored; vmap 1.40 ms
+  (0.0219 ms/option) vs loop 30.59 ms (0.478 ms/option) ≈ 21.9×; vmap-loop
+  agreement 2.384e-07 (float32 reduction order); VRAM 9.20 GiB. Log SHA
+  `3e282e9c…`.
+
+Deferred/blocked (unchanged): Stage 4 SANS calibration + scorecard
+validation (requires progress rows — sealed 0); freeze-guard audit fixes
+(novelty/external-outcome/Zone C eval writes, `orch.eval()`, stale
+`ARC_LEARNED_COMPONENT_ON_ACTION_PATH`) remain the release precondition
+for any score-bearing run and are NOT superseded by the PDF; Stage-3
+target P(Δν ≥ 2) ≥ 0.20 is unmeasurable until progress exists. No
+scorecard progress observed; held-out split remains sealed.
