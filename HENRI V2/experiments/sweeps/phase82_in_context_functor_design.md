@@ -48,3 +48,26 @@ Rollout (Stage 3: vmap EFE on the progress suite) requires BOTH: K1 pass on synt
 ## Flag
 
 `HENRI_ARC_IN_CONTEXT_FUNCTOR=1` (default OFF). Engine never steps an environment; no runner wiring until rollout is authorized.
+
+---
+
+## Sealed verdict (2026-08-14) — FALSIFIED_K1_AND_BLOCKED_NO_DEMONSTRATIONS
+
+Candidate: `0417a98` (branch `phase/8.2-in-context-functor`; base main `2218ec4`).
+Artifacts:
+- K1 probe result SHA-256 `f978428c846b7b4e82c94235f1c83a30953246805737f3bb52475dd48ad38185`
+- K1 probe log SHA-256 `b1537dafcaaf14f4c5a33dce9397e10af4163b6124f409bc41cf73b3d58b0501`
+- Demo preflight (tu93/re86/ls20/ka59) SHA-256 `ff5fbec7c410f991dd3dff956ad418bc56b32388e44c2824fd4b2590ce31d4ff`
+
+Metrics (remote CUDA, D=65,536, RTX 5090, GPU exclusive):
+- K2 functor held-out gate: `held_out_cos 0.5040` vs `identity_cos 0.3904` → +0.1136 PASS (wave-structure recovery works).
+- K4 vmap-loop agreement: `2.384e-07` ≤ 1e-6 PASS.
+- **K1 ranking gate: FAIL** — true option `translate(dx=1,dy=0)` ranked **37/128** by sim-gate and **120/128** by EFE; margin `-0.02875 < +0.05`. H1 FALSIFIED at the pre-registered gate.
+- `goal_sim_obs 0.4096` ≈ carrier-dominated baseline (consistent with Phase 8.1 orbit-norm 0.980 finding).
+- `score_eligible=false`, `diagnostic_only=true`, `authorizes_rollout=false`.
+
+Demo boundary: 4/4 `BLOCKED_NO_DEMONSTRATIONS` on the PDF progress suite; combined historical total 20/20 envs, 0 demos. Authentic-pair K1 independently impossible.
+
+Interpretation: the in-context functor recovers held-out wave structure (K2) but that structure does not select the true action (K1). Missing capability is directional, action-semantic grounding, not internal coherence or throughput. The probe covered translation; K1 is conjunctive and translation failed, so rotate/color variants cannot rescue this candidate — not executed (budget discipline).
+
+Rollout: PROHIBITED on both grounds. Branch stays default-OFF and unpromoted. No main promotion for a falsified experimental mode.
