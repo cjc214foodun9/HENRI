@@ -82,3 +82,66 @@ num_options, agreement_max_abs_diff, device, sha256(result), score_eligible=fals
 
 `HENRI_ARC_REPRESENTATION_R1=1` (default OFF). Engine never steps an
 environment; no runner wiring; no rollout authorization.
+
+---
+
+## Sealed verdict (2026-08-14) — R1_FALSIFIED (reflection margin kill) + EFE-path inversion observed
+
+Candidate: `3296365` (branch `phase/8.3-r1-representation`; base main `2218ec4`).
+Artifacts:
+- K1 probe result SHA-256 `d1edd9b341d0680e3c2d66dabe54d0cff2038abe4bba0303dc9cd90c3c3091f7`
+- K1 probe log SHA-256 `1f6ce0fc280149a84f9d803848b1f2ba62df238de2af053890a429a608647d34`
+- GPU: RTX 5090, D=65,536, exclusive (2 MiB, 0 procs), remote worktree @ `3296365`.
+
+Metrics (per transform; full production ranking path: functor -> goal bind ->
+sim-K1 gate -> vmap EFE):
+
+| transform | K1 status | true_rank | true_margin | sim_true | best_false | EFE rank | goal_sim |
+|---|---|---|---|---|---|---|---|
+| translation | PASS | 1 | +0.2175 | 0.7517 | 0.5342 | 10/10 | 0.5342 |
+| rotation | PASS | 1 | +0.3247 | 0.7024 | 0.3777 | 7/10 | 0.1485 |
+| reflection | **FAIL** | 1 | **+0.0129** | 0.7749 | 0.7620 | 8/10 | 0.7620 |
+
+Verdict: **R1_FALSIFIED** — K1 is conjunctive per transform; reflection margin
+(+0.0129) < +0.05. No threshold tuning (Reference 3 rule). Flag stays
+default-OFF; branch unpromoted; main untouched (`2218ec4`).
+
+### What this proves (positive, measured)
+
+Carrier-dominance diagnosis CONFIRMED. Legacy arm measured rank 37/128,
+margin −0.0287 (Phase 8.2, `f978428c…`). The full mask+ramp variant restores
+directional goal-wave signal for translation and rotation: rank 1 with margins
++0.2175 / +0.3247. Foreground masking + incommensurate ramps are the correct
+representation fix for the similarity signal.
+
+### What this falsifies (kill)
+
+1. H1-R1 as stated (ALL THREE transforms rank ≤2 with margin ≥+0.05) is
+   FALSE: reflection cannot separate mirror direction in wave space
+   (best_false 0.7620 vs true 0.7749; margin +0.0129). Reflection is the
+   discriminating hard case.
+2. NEW: the production EFE path INVERTS the sim-gate signal — the true option
+   is ranked LAST (translation 10/10) or near-last (rotation 7/10,
+   reflection 8/10). CONDITIONAL finding: this probe substituted a
+   single-pixel diagnostic boundary because the masked encoder rejects
+   all-zero grids (fail-closed); the production boundary is the 11-axiom
+   Zone C batch `[11, num_blocks, 8]`. EFE inversion attribution requires a
+   canonical-boundary re-probe before any claim.
+
+### Discipline
+
+`score_eligible=false`, `diagnostic_only=true`, `authorizes_rollout=false`,
+vmap-loop agreement ≤ 1.19e-07, no game.step, no SANS rows, held-out
+untouched. Rollout remains BLOCKED (20/20 no demos; action-semantic gate
+uncalibrated).
+
+### Next step (bounded, from sealed R1)
+
+R2 lead = EFE/action-selection alignment, NOT encoder tuning:
+1. Re-probe EFE ranking with the canonical 11-axiom boundary batch
+   (Zone C prod waves) to remove the boundary-substitution confound;
+2. If inversion persists: audit `pragmatic_value` goal-binding direction
+   and the EFE composition against the goal wave;
+3. Reflection remains the discrimination wall — direction-unaware under
+   this encoder; a reflection-aware objective (parity term) is a separate
+   pre-registered experiment.
