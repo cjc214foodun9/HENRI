@@ -48,3 +48,34 @@ Acceptance = K1 + K2 + K4 + K5 pass AND K3 engages with ≥ 1 frame change per e
 ## Flag
 
 `HENRI_ARC_PSG_ZERO_SHOT=1` (default OFF), orthogonal to `HENRI_ARC_PSG` (demo-conditioned). Requires `HENRI_ARC_ACTION_PAYLOADS=1` (action completeness); else typed `BLOCKED_PAYLOAD_CHANNEL`.
+
+---
+
+## SEALED VERDICT (2026-08-14, Revision 1) — H1 FALSIFIED
+
+Production-scale CUDA probe at `ac4ae1d` (RTX 5090, D=65,536, GPU-exclusive, boundary shape contract fixed; invalid probe `d529ccd1…` preserved, valid run sealed):
+
+| Metric | Value | Kill |
+|---|---|---|
+| true_rank (translate(1,0)) | 6/8 | **K1 FIRED** |
+| true_margin | −0.0786 | **K1 FIRED** (negative) |
+| efe_spread | 0.0786 | K2 PASS (not flat) |
+| vmap-loop agreement | 2.384e-07 | K4 PASS |
+| goal_sim_obs | 0.606 | — |
+| orbit_norm_raw | **0.980** | **packet premise FALSIFIED** (theory 1/√8 ≈ 0.354) |
+| cell_acc (top vs true target) | 0.75 (identity) | consistent with wrong ranking |
+| score_eligible | false | K5 PASS |
+
+Evidence: `psg_zero_shot_result.json` SHA `5a15a9d5…`, log `a5735f13…`.
+
+### Two independent falsifications
+
+1. **K1 (pre-registered primary kill):** the D₄-orbit goal ranks the TRUE macro-option (translate dx=1) at rank 6/8 with negative margin. The goal wave is not a directional task signal; it is dominated by the shared color-0 background carrier in the UWE superposition (same mechanism class as the original vacuous 0.30 gate, opposite direction: orbit waves are HIGHLY correlated, not near-orthogonal).
+2. **Packet's theoretical premise is false at production scale:** measured orbit-mean norm 0.980 vs the packet's implied ~0.354 (1/√8 near-orthogonality). `goal_sim_obs` 0.606 confirms the goal ≈ observation; it carries essentially no new direction.
+
+### Consequences
+
+- `HENRI_ARC_PSG_ZERO_SHOT` stays default-OFF; the implementation and tests remain as the sealed negative artifact (validated kill harness, re-usable for any future demo-free goal source).
+- No demo reconstruction, no score change, SANS rows=0, held-out untouched, `score_eligible=false` throughout.
+- The demo boundary remains the binding constraint; the next viable candidate for a demo-free directional signal must be pre-registered with a K1-class discriminative kill BEFORE any rollout.
+- Experiment branch `phase/8.2-zero-shot` @ `ac4ae1d`; NOT promoted to main (main stays `2218ec4`, clean, verified).
