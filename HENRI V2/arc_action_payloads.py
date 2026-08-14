@@ -334,6 +334,7 @@ def step_with_payload(
     wave: Any = None,
     phase_map_verdict: Any = None,
     wave_grid_dim: int = 30,
+    payload_override: Optional[dict] = None,
 ) -> Tuple[Any, dict]:
     """Execute ``game.step`` with the correct payload contract.
 
@@ -380,6 +381,32 @@ def step_with_payload(
 
     name = getattr(game_action, "name", str(game_action))
     if name in complex_action_names:
+        # Phase 8 PSG macro-option override (highest priority, deterministic):
+        # grid-space centroid from the ranked option; no candidate machinery.
+        if payload_override is not None:
+            _ox = payload_override.get("x")
+            _oy = payload_override.get("y")
+            if isinstance(_ox, (int, float)) and isinstance(_oy, (int, float)):
+                if camera is not None:
+                    sx, sy = grid_to_display(int(_ox), int(_oy), camera)
+                    payload = {"x": sx, "y": sy}
+                else:
+                    payload = {"x": int(_ox), "y": int(_oy)}
+                info.update({
+                    "payload_present": True,
+                    "payload_x": payload["x"],
+                    "payload_y": payload["y"],
+                    "payload_source": "psg_macro_option",
+                    "payload_complete": True,
+                    "coordinate_space": "screen" if camera is not None else "grid",
+                    "grid_x": int(_ox),
+                    "grid_y": int(_oy),
+                    "camera_scale": camera.scale if camera is not None else None,
+                    "camera_offset": (camera.x_offset, camera.y_offset) if camera is not None else None,
+                    "wave_unbind_status": "PSG_OVERRIDE",
+                })
+                obs = game.step(game_action, data=payload)
+                return obs, info
         candidates = build_payload_candidates(grid, [game_action],
                                               complex_action_names,
                                               seed=seed, camera=camera)
@@ -415,7 +442,7 @@ def step_with_payload(
             # Environment-provided valid ActionInputs are the semantic
             # oracle: prefer the one nearest the segmented object target.
             oracle = _env_action_inputs(game)
-            if oracle and unbind_payload is None:
+            if oracle and unbind_payload is None and payload_override is None:
                 tx, ty = selected.x, selected.y
                 px, py = min(
                     oracle,

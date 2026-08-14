@@ -385,6 +385,10 @@ def run():
     # (default OFF). Probe: FUNCTOR_FALSIFIED on live geometry — stays
     # diagnostic until the held-out gate flips.
     HENRI_ARC_FUNCTOR = int(os.environ.get("HENRI_ARC_FUNCTOR", "0") or 0)
+    # Phase 8: Progressive Semantic Grounding (default OFF). Planner-side
+    # macro-option search (W_task functor + object options + vmap EFE).
+    # Diagnostic-only; never grants score eligibility.
+    HENRI_ARC_PSG = os.environ.get("HENRI_ARC_PSG", "0") == "1"
     # Phase 7.8 P0-A1: production encoder-basis default is the G1-ACCEPTED
     # incommensurate ramp + CC-OS background masking (invertible phase map,
     # LUT coordinate recovery 100% at D=65,536). Legacy collinear basis
@@ -522,6 +526,23 @@ def run():
         bg_mask=HENRI_ARC_BG_MASK,
     )
 
+    # Phase 8: PSG engine (default-OFF, planner-side, diagnostic-only).
+    # Fail-closed: any init error leaves psg_engine None -> EFE control arm.
+    psg_engine = None
+    if HENRI_ARC_PSG:
+        try:
+            from progressive_semantic_grounding_engine import (
+                ProgressiveSemanticGroundingEngine,
+            )
+            psg_engine = ProgressiveSemanticGroundingEngine(
+                planner=orch.planner, tokenizer=tokenizer, device=DEVICE,
+                num_blocks=SCALE["num_blocks"], block_dim=8,
+            )
+            print("[init] PSG engine armed (HENRI_ARC_PSG=1)")
+        except Exception as _psg_exc:
+            print(f"  [psg] init failed (fail-closed to control arm): {_psg_exc}")
+            psg_engine = None
+
     # Phase 7.2 Step 3: spatial phase-map invertibility verdict (diagnostic).
     # The production basis is collinear (x == y ramps); fractional unbinding
     # for ACTION6 stays BLOCKED_PHASE_MAP_NONINVERTIBLE until a load-bearing
@@ -567,6 +588,8 @@ def run():
         ext_beta_start = [1.0] * len(orch.planner.external_beta)
         # Phase 7.5 D3: last observed scorecard levels-completed count per env.
         scorecard_levels_prev = 0
+        # Phase 8: PSG plan status per env (None until the loop runs).
+        psg_status = None
 
         # Only use demonstrations exposed by the public environment API.  A
         # private level list can contain hidden targets and is not admissible
@@ -1022,6 +1045,75 @@ def run():
             # P0: pass the environment's valid action set so the planner
             # cannot select an un-executable action.
             allowed_actions = list(getattr(game, "action_space", []))
+            # Phase 8: Progressive Semantic Grounding macro-search (default
+            # OFF, diagnostic-only). Top macro-option -> (ACTION6, payload)
+            # when the functor gate passes; otherwise fail-closed to the EFE
+            # control arm. Never fabricates demos.
+            psg_engaged = False
+            psg_payload_override = None
+            if (HENRI_ARC_PSG and psg_engine is not None
+                    and policy_mode() != "action1"
+                    and not HENRI_ARC_ACTION_PAYLOADS):
+                # ARC action completeness: (GameAction, data), not a bare
+                # enum. PSG macro-options are ACTION6 coordinate actions;
+                # without the payload channel they cannot carry data ->
+                # fail closed to the EFE control arm.
+                psg_status = "BLOCKED_PAYLOAD_CHANNEL"
+                tele.emit({
+                    "env": env_name, "step": step,
+                    "event_type": "PSG_PLAN",
+                    "status": psg_status,
+                    "reason": "HENRI_ARC_ACTION_PAYLOADS=0; ACTION6 macro-options need payload data",
+                    "num_objects": None, "num_options": None,
+                    "functor_status": None, "held_out_cos": None,
+                    "identity_cos": None, "agreement_max_abs_diff": None,
+                    "top_option": None, "top_efe": None,
+                })
+            if (HENRI_ARC_PSG and psg_engine is not None
+                    and policy_mode() != "action1"
+                    and HENRI_ARC_ACTION_PAYLOADS):
+                try:
+                    psg_result = psg_engine.plan(
+                        grid, demo_pairs, boundary_batch,
+                        task_id=env_name, top_k=1, use_batched=True)
+                    psg_status = psg_result.get("status")
+                    _top = (psg_result.get("ranked") or [None])[0]
+                    tele.emit({
+                        "env": env_name, "step": step,
+                        "event_type": "PSG_PLAN",
+                        "status": psg_status,
+                        "reason": psg_result.get("reason", ""),
+                        "num_objects": psg_result.get("num_objects"),
+                        "num_options": psg_result.get("num_options"),
+                        "functor_status": (psg_result.get("functor") or {}).get("status"),
+                        "held_out_cos": (psg_result.get("functor") or {}).get("held_out_cos"),
+                        "identity_cos": (psg_result.get("functor") or {}).get("identity_cos"),
+                        "agreement_max_abs_diff": psg_result.get("agreement_max_abs_diff"),
+                        "top_option": (_top or {}).get("option"),
+                        "top_efe": (_top or {}).get("efe"),
+                    })
+                    if (psg_status == "OK" and _top is not None
+                            and GameAction.ACTION6 in allowed_actions):
+                        _payload = _top.get("payload") or {}
+                        psg_payload_override = {
+                            "x": int(_payload.get("x", 0)),
+                            "y": int(_payload.get("y", 0)),
+                        }
+                        action = GameAction.ACTION6
+                        predicted_wave = state_wave.clone()
+                        efe_table = [{"efe": float(_top.get("efe", 0.0)),
+                                      "source": "psg_macro_option"}]
+                        chosen = {"efe": float(_top.get("efe", 0.0)),
+                                  "predicted_wave": predicted_wave,
+                                  "explored": True}
+                        psg_engaged = True
+                        print(f"  [psg] macro-option {(_top.get('option') or {}).get('description')} "
+                              f"efe={_top.get('efe'):.4f} payload={psg_payload_override}")
+                    else:
+                        print(f"  [psg] blocked -> EFE control arm ({psg_status})")
+                except Exception as _psg_exc:
+                    psg_status = f"PSG_ERROR: {type(_psg_exc).__name__}"
+                    print(f"  [psg] error (fail-closed to control arm): {_psg_exc}")
             if policy_mode() == "action1":
                 # P2 deterministic baseline: no EFE planning, no exploration,
                 # no planner state mutation. Diagnostic only.
@@ -1030,6 +1122,11 @@ def run():
                 efe_table = [{"efe": 0.0}]
                 chosen = {"efe": 0.0, "predicted_wave": predicted_wave,
                           "explored": False}
+            elif psg_engaged:
+                # Phase 8: the PSG macro-option already set action/efe_table/
+                # chosen; skip the EFE path (control arm remains for the
+                # blocked case above).
+                pass
             elif allowed_actions:
                 action, predicted_wave, efe_table, chosen = orch.plan_action(
                     state_wave, boundary_batch, top_k=4, return_chosen=True,
@@ -1052,7 +1149,8 @@ def run():
             # first non-vetoed candidate wins. FAIL-OPEN: any anomaly leaves
             # the EFE order byte-identical.
             veto_info = None
-            if HENRI_ARC_SAGNAC_VETO and policy_mode() != "action1":
+            if (HENRI_ARC_SAGNAC_VETO and policy_mode() != "action1"
+                    and not psg_engaged):
                 try:
                     from arc_sagnac_veto import apply_advisory_rerank, evaluate_veto
                     _axiom_ref = boundary_batch[0].detach()
@@ -1115,7 +1213,7 @@ def run():
             # action. Decode failure ends the episode with typed evidence; there
             # is NO silent fallback to a bare enum.
             if (HENRI_ARC_EGRESS and egress_transducer is not None
-                    and policy_mode() != "action1"):
+                    and policy_mode() != "action1" and not psg_engaged):
                 try:
                     _vocab = ActionEgressVocabulary(GameAction, allowed_actions)
                     _head_active = bool(
@@ -1227,7 +1325,8 @@ def run():
                         obs_next, payload_info = step_with_payload(
                             game, game_action, grid, enabled=True,
                             seed=int(os.environ.get("HENRI_SEED", "0") or 0),
-                            camera=cam_params, **wave_unbind_args)
+                            camera=cam_params, **wave_unbind_args,
+                            payload_override=psg_payload_override)
                         payload_infos.append(payload_info)
                     else:
                         obs_next = game.step(game_action)
@@ -1670,6 +1769,7 @@ def run():
             trace_data["functor_status"] = (
                 functor_result.status if functor_result is not None else None
             )
+            trace_data["psg_status"] = psg_status
             for _k in ActionHeadState.fingerprint_keys():
                 trace_data[_k] = getattr(action_head_state, _k)
             tele.emit({

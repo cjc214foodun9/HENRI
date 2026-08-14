@@ -144,6 +144,21 @@ class MacroOption:
             "description": self.description,
         }
 
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "MacroOption":
+        return cls(
+            object_id=int(d.get("object_id", 0)),
+            kind=str(d.get("kind", "translate")),
+            dx=int(d.get("dx", 0)),
+            dy=int(d.get("dy", 0)),
+            angle_deg=int(d.get("angle_deg", 0)),
+            color_map=d.get("color_map"),
+            bbox=tuple(d.get("bbox", (0, 0, 0, 0))),
+            area=int(d.get("area", 0)),
+            color=int(d.get("color", 0)),
+            description=str(d.get("description", "")),
+        )
+
 
 def compile_functor_wave(
     demo_pairs: Sequence[Tuple[Any, Any]],
@@ -404,6 +419,11 @@ class ProgressiveSemanticGroundingEngine:
             return []
         return build_macro_options(
             objects, (len(grid), len(grid[0])), max_options=self.max_options)
+
+    def apply_option(self, grid: List[List[int]],
+                     opt: MacroOption) -> List[List[int]]:
+        """Apply a macro-option to a grid (public wrapper)."""
+        return _apply_option_to_grid(grid, opt)
 
     def option_waves(
         self, grid: List[List[int]], options: List[MacroOption]
