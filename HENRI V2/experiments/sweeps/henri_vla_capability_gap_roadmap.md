@@ -80,3 +80,23 @@ HYPOTHESIS until a live consumer proves them.
 R1 → R2 → (R3 ∥ R4) → R5 → R6. No functor tuning, no throughput work, no
 rollout before R1 passes. Score/SOTA claims stay BLOCKED until R5 produces a
 reproducible strict progress increase with matched-counterfactual attribution.
+
+## Research audit receipt (deleg_f79b40b0, sealed 2026-08-14)
+
+Full audit text preserved: `phase8_evidence/in_context/vla_capability_gap_audit.md`
+(sha256 `43bac0dc4b124127…` — full hash in the local receipt dir).
+
+- Method: public arXiv API (export.arxiv.org) only; `web_search`/Firecrawl
+  unavailable (no credits). Bibliography title/abstract checks = OBSERVED;
+  comparative "SOTA leadership" = INFERRED (title-level only).
+- Citation corrections applied here: Frady VSA/FHRR = 2109.03429 (not 1806.03391);
+  GEM = 1706.08840; ARC `2408.10234` REJECTED (misattributed — actually
+  "The Unbearable Slowness of Being"); ARCLE RL env verified = 2407.20806.
+- Highest-risk findings: (1) zero-pretraining × zero-demonstration is a
+  structural contradiction for the current in-context-only design; (2) no
+  calibrated/rewarded action head → EFE/W_task quality unmeasurable; (3) no
+  predictive next-state objective; (4) EFEPlanner unvalidated against
+  active-inference baselines (2002.12636); (5) milestone order confirmed:
+  predictive head → offline legitimate pair source → planner baseline vs
+  ARCLE → object-consistent causal dynamics → zero-demo search only after
+  discriminative representation passes.
