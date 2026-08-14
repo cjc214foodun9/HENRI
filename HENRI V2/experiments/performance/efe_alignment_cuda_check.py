@@ -101,14 +101,24 @@ def _single_pixel_boundary(tokenizer: Any, device: str) -> torch.Tensor:
 
 
 def _canonical_receipt(axioms: torch.Tensor) -> Dict[str, Any]:
-    flat = axioms.detach().cpu().float()
-    norms = torch.norm(flat.view(flat.shape[0], -1), p=2, dim=-1)
+    """Per-block (8-dim) unit-norm integrity receipt for the 11 axioms.
+
+    Storage contract (zone_c loader docstring + skill invariant): each
+    [num_blocks, 8] row is PER-BLOCK unit normalized, so the flat D=65,536
+    row norm is sqrt(num_blocks) ~= 90.5, NOT 1.0. The integrity check must
+    reshape to [N*num_blocks, 8] and verify each 8-dim block has norm ~1.
+    """
+    flat = axioms.detach().cpu().float()  # [N, num_blocks, 8]
+    per_block = flat.reshape(-1, 8)       # [N*num_blocks, 8]
+    norms = torch.norm(per_block, p=2, dim=-1)
     payload_sha = hashlib.sha256(flat.numpy().tobytes()).hexdigest()
     return {
         "num_axioms": int(flat.shape[0]),
         "shape": list(flat.shape),
         "per_block_norm_min": float(norms.min().item()),
         "per_block_norm_max": float(norms.max().item()),
+        "flat_row_norm_reference": float(
+            torch.norm(flat.view(flat.shape[0], -1), p=2, dim=-1).mean().item()),
         "payload_sha256": payload_sha,
     }
 
