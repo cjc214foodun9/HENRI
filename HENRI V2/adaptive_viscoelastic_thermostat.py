@@ -59,6 +59,7 @@ class AdaptiveViscoelasticThermostat(nn.Module):
         use_wavelet_gating: bool = False,
         signal_mask_kappa: float = 4.0,
         signal_dominance_threshold: float = 0.5,
+        use_null_subspace_projection: bool = False,
     ):
         super().__init__()
         self.d_model = d_model
@@ -80,6 +81,11 @@ class AdaptiveViscoelasticThermostat(nn.Module):
         self.use_wavelet_gating = use_wavelet_gating
         self.signal_mask_kappa = signal_mask_kappa
         self.signal_dominance_threshold = signal_dominance_threshold
+        # Decision Matrix D2 (default OFF): project Langevin noise through
+        # P_null = I - V V† when a basis is supplied (set_null_basis). The
+        # legacy isotropic path is byte-identical when OFF or no basis set.
+        self.use_null_subspace_projection = use_null_subspace_projection
+        self._null_basis: Optional[torch.Tensor] = None
 
     def compute_anisotropic_friction(
         self,
@@ -113,6 +119,28 @@ class AdaptiveViscoelasticThermostat(nn.Module):
             W = 0.5 * W @ (3.0 * identity - W.T @ W)
             
         return W.T if rows < cols else W
+
+    def set_null_basis(self, V: Optional[torch.Tensor]) -> None:
+        """Supply the [d, r] column basis for P_null noise projection.
+
+        Fail-closed: non-2D, non-floating, non-finite, zero/negative rank, or
+        leading dim < rank raise ValueError before any update is possible.
+        None clears the basis (projection disabled at the next step).
+        """
+        if V is None:
+            self._null_basis = None
+            return
+        if not isinstance(V, torch.Tensor) or V.dim() != 2:
+            raise ValueError("null basis must be a 2D tensor [d, r]")
+        if V.shape[1] <= 0:
+            raise ValueError(f"null basis rank must be > 0, got {V.shape[1]}")
+        if V.shape[0] < V.shape[1]:
+            raise ValueError(f"null basis leading dim {V.shape[0]} < rank {V.shape[1]}")
+        if not torch.is_floating_point(V):
+            raise ValueError("null basis must be a floating-point tensor")
+        if not bool(torch.isfinite(V).all()):
+            raise ValueError("null basis must be finite")
+        self._null_basis = V.detach().clone()
 
     def compute_wavelet_gated_noise(
         self,
@@ -212,6 +240,25 @@ class AdaptiveViscoelasticThermostat(nn.Module):
                 noise = base_noise * math.sqrt(2.0 * temperature * effective_lr)
             else:
                 noise = torch.randn_like(weight_matrix) * math.sqrt(2.0 * temperature * effective_lr)
+
+        # Decision Matrix D2 (default OFF): inject noise only into the null
+        # subspace of the supplied basis: xi_proj = xi - V (V^T xi).
+        if self.use_null_subspace_projection:
+            V = self._null_basis
+            if V is None:
+                raise ValueError(
+                    "null-subspace projection enabled but no basis set: "
+                    "call set_null_basis(V)")
+            flat = noise.reshape(-1)
+            if V.shape[0] != flat.shape[0]:
+                raise ValueError(
+                    f"null basis leading dim {V.shape[0]} != noise numel "
+                    f"{flat.shape[0]}")
+            if V.dtype != flat.dtype:
+                raise ValueError(
+                    f"null basis dtype {V.dtype} != noise dtype {flat.dtype}")
+            pre_norm = float(torch.norm(flat).item())
+            noise = (flat - V @ (V.T @ flat)).reshape(noise.shape)
         
         # SDE update: dW = - (eta / gamma) * grad + noise
         updated_weight = weight_matrix - effective_lr * grad_loss + noise
@@ -227,6 +274,10 @@ class AdaptiveViscoelasticThermostat(nn.Module):
             "lambda_active": lambda_active,
             "weight_norm": float(torch.norm(updated_weight).item())
         }
+        if self.use_null_subspace_projection:
+            telemetry["null_projection_active"] = True
+            telemetry["null_projection_energy_ratio"] = float(
+                torch.norm(noise).item() / (pre_norm + 1e-12))
         if self.use_wavelet_gating:
             telemetry["wavelet_dominance"] = dominance
             telemetry["wavelet_locked"] = locked

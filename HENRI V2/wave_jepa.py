@@ -9,6 +9,7 @@ Implements Yann LeCun's JEPA paradigm mapped onto continuous wave mechanics and 
 """
 
 import math
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -24,7 +25,7 @@ class WaveJEPA(nn.Module):
     Predicts future environment states strictly in d=65,536 latent phase wave space without pixel/token decoders.
     """
 
-    def __init__(self, d_model: int = 65536, num_blocks: int = 8192, r_rank: int = 16, device: Optional[str] = None):
+    def __init__(self, d_model: int = 65536, num_blocks: int = 8192, r_rank: int = 16, device: Optional[str] = None, use_lowrank_coupled: bool = False, transition_rank: int = 64):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
@@ -34,8 +35,19 @@ class WaveJEPA(nn.Module):
         # 1. Context & Target Ingress Encoder (HENRIVisionEncoder)
         self.encoder = HENRIVisionEncoder(d_model=d_model, k_blocks=num_blocks, device=self.device)
 
-        # 2. Action-Conditioned Latent Predictor (R-EDMD Koopman Operator p_psi)
-        self.predictor = RecursiveDualEDMD(d_model=d_model, r_rank=r_rank, lambda_forget=0.98)
+        # 2. Action-Conditioned Latent Predictor (p_psi).
+        # Default path: R-EDMD Koopman operator (unchanged, byte-identical).
+        # Decision Matrix D1 (default OFF): reuse adapter around the
+        # PRODUCTION LowRankCoupledTransition from efe_planner — no new
+        # operator family (Phase 8.4 protocol reconciliation).
+        self.use_lowrank_coupled = use_lowrank_coupled or os.environ.get(
+            "HENRI_WAVEJEPA_LOWRANK_COUPLED", "0") == "1"
+        if self.use_lowrank_coupled:
+            self.predictor = _LowRankCoupledPredictorAdapter(
+                num_blocks=num_blocks, rank=transition_rank)
+        else:
+            self.predictor = RecursiveDualEDMD(
+                d_model=d_model, r_rank=r_rank, lambda_forget=0.98)
 
     def encode_context(self, grid_state: torch.Tensor) -> torch.Tensor:
         """Context Encoder f_theta: maps input spatial observation x_t to Psi_t in S^{D-1}."""
@@ -91,6 +103,47 @@ class WaveJEPA(nn.Module):
         }
 
         return energy, metrics
+
+
+class _LowRankCoupledPredictorAdapter(nn.Module):
+    """WaveJEPA training-contract adapter around the PRODUCTION transition.
+
+    Reuses efe_planner.LowRankCoupledTransition (V·W† + R_block, QR
+    retractions) — Decision Matrix D1, reuse-only. The online update mirrors
+    EFEPlanner.train_transition_step's Sagnac-loss Wirtinger step, so the
+    WaveJEPA training contract (update_online_step) is satisfied without a
+    second operator implementation. Default OFF (WaveJEPA flag).
+    """
+
+    def __init__(self, num_blocks: int = 8192, block_dim: int = 8, rank: int = 64):
+        super().__init__()
+        from efe_planner import LowRankCoupledTransition  # lazy import
+        self.transition = LowRankCoupledTransition(
+            num_blocks=num_blocks, block_dim=block_dim, rank=rank)
+        self._lr = 0.05
+
+    def forward(self, state_wave: torch.Tensor, action_wave: torch.Tensor) -> torch.Tensor:
+        return self.transition(state_wave, action_wave)
+
+    def update_online_step(self, state_wave: torch.Tensor, action_wave: torch.Tensor,
+                           observed_next_wave: torch.Tensor) -> float:
+        """Single Sagnac-loss Wirtinger update (mirror of train_transition_step)."""
+        with torch.enable_grad():
+            predicted = self.transition(state_wave.detach(), action_wave.detach())
+            p = predicted.view(-1)
+            o = observed_next_wave.detach().view(-1)
+            loss = 1.0 - torch.dot(p, o) / (torch.norm(p) * torch.norm(o)).clamp(min=1e-12)
+            gV, gW, gR = torch.autograd.grad(
+                loss, [self.transition.field_V, self.transition.field_W,
+                       self.transition.block_residual])
+        with torch.no_grad():
+            delta = float(loss.detach())
+            lr_eff = self._lr * min(1.25, 0.25 + 0.5 * delta)
+            self.transition.field_V.add_(-lr_eff * gV)
+            self.transition.field_W.add_(-lr_eff * gW)
+            self.transition.block_residual.add_(-lr_eff * gR)
+            self.transition._retract()
+        return float(loss.detach())
 
 
 if __name__ == "__main__":
