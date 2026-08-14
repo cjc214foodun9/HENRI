@@ -72,8 +72,9 @@ def main():
             [0, 1, 1, 0],
             [0, 1, 0, 0],
             [0, 0, 0, 0]]
-    boundary = tokenizer.encode_spatial_grid(
-        [[0] * 4 for _ in range(4)]).squeeze(0).to(device)
+    boundary = torch.stack([
+        tokenizer.encode_spatial_grid([[0] * 4 for _ in range(4)]).squeeze(0),
+    ]).to(device)  # production boundary shape [1, num_blocks, 8]
 
     t1 = time.time()
     r = eng.zero_shot_plan(grid, boundary, task_id="synthetic-k1",
