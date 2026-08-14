@@ -47,12 +47,13 @@ SANS_HEAD_NOT_TASK_VALIDATED = "SANS_HEAD_NOT_TASK_VALIDATED"
 ACTION_HEAD_NOT_CALIBRATED = "ACTION_HEAD_NOT_CALIBRATED"
 
 
-# Causal-path audit (2026-08-09, e6a346c/001fec8): the ARC action path in
-# production_arc_run.py uses HolographicActionDecoder (random phase engrams,
-# darwinian_phase_swarm.py:319). HENRIUnifiedEgressTransducer is NOT
-# instantiated in the ARC runner. Set this True ONLY when a trained,
-# checkpoint-validated learned component is actually consumed on the
-# action-producing path of production_arc_run.py.
+# Causal-path audit (2026-08-09, e6a346c/001fec8; corrected 2026-08-14):
+# this is the STATIC audit baseline only. The LIVE causal-path value is
+# computed per run in production_arc_run.py (`_egress_active`, ~line 1602)
+# and emitted under `learned_component_on_action_path` in the
+# SCORE_ELIGIBILITY event; this constant is emitted only under the separate
+# audit key `arc_learned_component_constant` for comparison, and is never
+# the gate input. It stays False as the static baseline.
 ARC_LEARNED_COMPONENT_ON_ACTION_PATH = False
 
 

@@ -437,6 +437,10 @@ def run():
         task_eig_gamma=TASK_EIG_GAMMA,
         **SCALE,
     ).to(DEVICE)
+    # Freeze-closure (audit deleg_a003e770): explicit eval mode. The planner
+    # and swarm have no dropout/batchnorm today, but eval() makes the
+    # eval-write isolation contract explicit and future-proof.
+    orch.eval()
     # Phase 7.5 CONN Module A: advisory Sagnac veto sidecar (default-OFF).
     # The sidecar (arc_sagnac_veto.py) is self-contained; it computes the
     # dual-channel deltas with the canonical norm-consistent metric. Fail-open:
@@ -1096,7 +1100,9 @@ def run():
 
             # Epistemic novelty: record the chosen action's predicted outcome so
             # repeating it later is discounted (breaks RESET-spam loops).
-            if policy_mode() != "action1":
+            # Freeze-closure (audit deleg_a003e770): the novelty memory must
+            # not mutate during frozen eval.
+            if policy_mode() != "action1" and not learning_frozen():
                 orch.planner.remember_outcome(chosen["predicted_wave"])
 
             # Fail-closed step-loop guard state (initialized BEFORE the egress
@@ -1332,13 +1338,17 @@ def run():
                      if a == game_action),
                     -1,
                 )
-                orch.planner.observe_external_outcome(
-                    action_idx,
-                    frame_changed=post_frame_changed,
-                    task_progressed=task_progressed,
-                    observed_next_wave=observed_next_wave,
-                    grid_dist=grid_dist if TASK_WEIGHTED_EIG else None,
-                )
+                # Freeze-closure (audit deleg_a003e770): the outcome store
+                # must not mutate during frozen eval; telemetry reads above
+                # stay live, only the posterior write is suppressed.
+                if not learning_frozen():
+                    orch.planner.observe_external_outcome(
+                        action_idx,
+                        frame_changed=post_frame_changed,
+                        task_progressed=task_progressed,
+                        observed_next_wave=observed_next_wave,
+                        grid_dist=grid_dist if TASK_WEIGHTED_EIG else None,
+                    )
                 # Telemetry: expose the new P0 statistics.
                 _p0_extra = {}
                 if HENRI_ARC_SCORECARD_DELTA:
@@ -1476,8 +1486,10 @@ def run():
                     phase_delta=sagnac_delta, is_valid=sagnac_delta < 0.5,
                 )
 
-            # Zone C checkpoint on schedule
-            if step % CHECKPOINT_EVERY == 0:
+            # Zone C checkpoint on schedule. Freeze-closure (audit
+            # deleg_a003e770): persistent engram writes are suppressed during
+            # frozen eval.
+            if step % CHECKPOINT_EVERY == 0 and not learning_frozen():
                 orch.checkpoint_wave(state_wave.cpu(), domain=f"arc3/{env_name}",
                                       sagnac_stress=sagnac_delta)
 
