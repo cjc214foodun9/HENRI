@@ -21,6 +21,7 @@ HENRI_SMOKE=1 -> bounded smoke (fewer seeds/trajectories; gates marked
 """
 
 import json
+import math
 import os
 import time
 
