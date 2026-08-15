@@ -215,6 +215,7 @@ class EFEPlanner(nn.Module):
         num_actions: int = 8,
         action_lr_scale: float = 0.2,
         transition_rank: int = 64,
+        use_diagonal_transition: bool = False,
     ):
         super().__init__()
         self.num_blocks = num_blocks
@@ -248,8 +249,25 @@ class EFEPlanner(nn.Module):
         # retained for telemetry; effective_rank = min(rank, num_blocks*8).
         self.transition_requested_rank, _ = validate_rank(
             transition_rank, num_blocks * 8, name="transition_rank")
-        self.transition = LowRankCoupledTransition(
-            num_blocks=num_blocks, rank=transition_rank)
+        self._use_diagonal_transition = use_diagonal_transition
+        if use_diagonal_transition:
+            # Phase 8.10: frequency-domain diagonal phase rotator (sealed 8.9)
+            # behind the production real-wave interface. Default-OFF; when OFF
+            # the legacy LowRankCoupledTransition path is byte-identical.
+            # Learnable action embeddings are incompatible with the diagonal
+            # path (fingerprint indexing requires deterministic action waves):
+            # fail closed rather than silently corrupt the action map.
+            if learnable_actions:
+                raise ValueError(
+                    "use_diagonal_transition=True requires learnable_actions=False "
+                    "(diagonal action indexing needs deterministic action waves)")
+            from henri_frequency_domain_transition import FrequencyDomainDiagonalAdapter
+            self.transition = FrequencyDomainDiagonalAdapter(
+                num_blocks=num_blocks, block_dim=8, num_actions=num_actions,
+                device="cpu", d_model=d_model)
+        else:
+            self.transition = LowRankCoupledTransition(
+                num_blocks=num_blocks, rank=transition_rank)
         # Learnable action wave embeddings (Fallacy #3 fix).
         # When enabled, action waves are nn.Parameter — the transition model
         # learns to encode each action's semantic effect through gradient
@@ -595,6 +613,8 @@ class EFEPlanner(nn.Module):
     def field_channel_wave(self) -> torch.Tensor:
         """Pack the transition operator (field_W, field_V, residual) into a
         single wave-shaped tensor for Zone C engram storage."""
+        if self._use_diagonal_transition:
+            return self.transition.field_channel_wave()
         t = self.transition
         return torch.cat([
             t.field_W.detach().reshape(-1).cpu(),
@@ -606,6 +626,9 @@ class EFEPlanner(nn.Module):
     @torch.no_grad()
     def load_field_channel_wave(self, wave: torch.Tensor):
         """Inverse of field_channel_wave: restore the operator from a wave."""
+        if self._use_diagonal_transition:
+            self.transition.load_field_channel_wave(wave)
+            return
         t = self.transition
         d, r, B, b = t.d, t.rank, t.num_blocks, t.block_dim
         nW, nV, nR = 2 * d * r, d * r, B * b * b
@@ -1093,6 +1116,13 @@ class EFEPlanner(nn.Module):
 
         Returns the pre-update loss (the Sagnac delta this step).
         """
+        if self._use_diagonal_transition:
+            # Phase 8.10 diagonal branch: closed-form elementwise Wirtinger
+            # update (exact in 1 step for any diagonal phase rotation).
+            # Surprise/valence modulation is intentionally skipped: the
+            # closed-form update is exact, so no lr modulation applies.
+            return self.transition.update_wirtinger(
+                state_wave, action_wave, observed_next_wave, lr=lr)
         with torch.enable_grad():
             predicted = self.transition(state_wave.detach(), action_wave.detach())
             p = predicted.view(-1)
@@ -1194,6 +1224,12 @@ class EFEPlanner(nn.Module):
 
         Returns the mean pre-fit batch Sagnac loss (the quantity minimized).
         """
+        if self._use_diagonal_transition:
+            # Phase 8.10 diagonal branch: closed-form elementwise phase fit
+            # (exact for any diagonal phase rotation). Same signature; returns
+            # the pre-fit mean real-metric Sagnac loss.
+            return self.transition.fit_batch(
+                states, actions, observed_nexts, iters=iters, lr=1.0)
         N = states.shape[0]
         device = self.transition.field_V.device
         states = states.detach().to(device)

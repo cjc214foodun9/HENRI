@@ -197,6 +197,10 @@ HENRI_ARC_SAGNAC_VETO = os.environ.get("HENRI_ARC_SAGNAC_VETO", "0") == "1"
 # telemetry ONLY. It NEVER mutates weights and NEVER influences policy.
 # Default OFF: the default path stays byte-identical.
 HENRI_ARC_THERMOSTAT = os.environ.get("HENRI_ARC_THERMOSTAT", "0") == "1"
+# Phase 8.10: frequency-domain diagonal phase transition in the production
+# transition path. Default OFF: legacy LowRankCoupledTransition path
+# byte-identical; the adapter is never constructed when OFF.
+HENRI_ARC_DIAGONAL_TRANSITION = os.environ.get("HENRI_ARC_DIAGONAL_TRANSITION", "0") == "1"
 
 # Phase 7.5 CPX: read-only complex third-family diagnostic sidecar
 # (arc_complex_sidecar.py). When set, the live [K, 8] Cl(3,0) UWE wave is
@@ -439,6 +443,7 @@ def run():
         external_task_weight=EXTERNAL_TASK_WEIGHT,
         task_weighted_eig=TASK_WEIGHTED_EIG,
         task_eig_gamma=TASK_EIG_GAMMA,
+        use_diagonal_transition=HENRI_ARC_DIAGONAL_TRANSITION,
         **SCALE,
     ).to(DEVICE)
     # Freeze-closure (audit deleg_a003e770): explicit eval mode. The planner

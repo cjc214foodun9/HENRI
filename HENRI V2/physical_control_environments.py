@@ -19,12 +19,15 @@ class InvertedPendulumEnvironment:
       theta'' = (g/l) * sin(theta) + (1/(m*l^2)) * u(t) - b * theta'
     """
 
-    def __init__(self, dt: float = 0.02, g: float = 9.81, l: float = 1.0, m: float = 1.0, b: float = 0.1):
+    def __init__(self, dt: float = 0.02, g: float = 9.81, l: float = 1.0, m: float = 1.0, b: float = 0.1,
+                 use_carrier_ingress: bool = False):
         self.dt = dt
         self.g = g
         self.l = l
         self.m = m
         self.b = b
+        self.use_carrier_ingress = use_carrier_ingress
+        self._ingress = None
         self.reset()
 
     def reset(self, theta_init: float = 0.1, dtheta_init: float = 0.0):
@@ -51,6 +54,16 @@ class InvertedPendulumEnvironment:
     def state_to_wave(self, num_blocks: int, device: torch.device) -> torch.Tensor:
         """Encodes state array into [num_blocks, 8] Clifford wave."""
         st = self._get_state_array()
+        if self.use_carrier_ingress:
+            if self._ingress is None:
+                from henri_spatial_carrier_ingress import VectorizedIncommensurateSpatialIngress
+                self._ingress = VectorizedIncommensurateSpatialIngress(
+                    dimension=num_blocks * 8, device=device
+                )
+            cx = float(st[0]) * 8.0   # cos(theta) in [-1, 1] -> [-8, 8]
+            cy = float(st[1]) * 8.0   # sin(theta)
+            wave = self._ingress.encode_single_object(color=1, cx=cx, cy=cy)
+            return F.normalize(wave.reshape(num_blocks, 8), p=2, dim=-1)
         seed_val = int(abs(st[0] * 1000 + st[1] * 2000 + st[2] * 3000)) % 100000
         g = torch.Generator(device="cpu").manual_seed(seed_val)
         w = torch.randn(num_blocks, 8, generator=g).to(device)
@@ -63,7 +76,8 @@ class CartPolePhysicsEnvironment:
       x'' = (F + m_p*l*(theta'^2 * sin(theta) - theta''*cos(theta))) / (m_c + m_p)
     """
 
-    def __init__(self, dt: float = 0.02, g: float = 9.81, m_c: float = 1.0, m_p: float = 0.1, l: float = 0.5):
+    def __init__(self, dt: float = 0.02, g: float = 9.81, m_c: float = 1.0, m_p: float = 0.1, l: float = 0.5,
+                 use_carrier_ingress: bool = False):
         self.dt = dt
         self.g = g
         self.m_c = m_c
@@ -71,6 +85,8 @@ class CartPolePhysicsEnvironment:
         self.l = l
         self.total_mass = m_c + m_p
         self.polemass_length = m_p * l
+        self.use_carrier_ingress = use_carrier_ingress
+        self._ingress = None
         self.reset()
 
     def reset(self):
@@ -101,6 +117,16 @@ class CartPolePhysicsEnvironment:
 
     def state_to_wave(self, num_blocks: int, device: torch.device) -> torch.Tensor:
         st = self.state
+        if self.use_carrier_ingress:
+            if self._ingress is None:
+                from henri_spatial_carrier_ingress import VectorizedIncommensurateSpatialIngress
+                self._ingress = VectorizedIncommensurateSpatialIngress(
+                    dimension=num_blocks * 8, device=device
+                )
+            cx = float(st[0]) * 8.0   # cart x in [-2.4, 2.4] -> [-19.2, 19.2]
+            cy = float(st[2]) * 8.0   # pole angle theta (radians)
+            wave = self._ingress.encode_single_object(color=1, cx=cx, cy=cy)
+            return F.normalize(wave.reshape(num_blocks, 8), p=2, dim=-1)
         seed_val = int(abs(sum(st) * 10000.0)) % 100000
         g = torch.Generator(device="cpu").manual_seed(seed_val)
         w = torch.randn(num_blocks, 8, generator=g).to(device)
