@@ -59,6 +59,8 @@ class AdaptiveViscoelasticThermostat(nn.Module):
         use_wavelet_gating: bool = False,
         signal_mask_kappa: float = 4.0,
         signal_dominance_threshold: float = 0.5,
+        use_spectral_gating: bool = False,
+        spectral_cutoff_harmonic: int = 512,
     ):
         super().__init__()
         self.d_model = d_model
@@ -80,6 +82,50 @@ class AdaptiveViscoelasticThermostat(nn.Module):
         self.use_wavelet_gating = use_wavelet_gating
         self.signal_mask_kappa = signal_mask_kappa
         self.signal_dominance_threshold = signal_dominance_threshold
+        # Phase 8.6 Lever (a): spectral (high-pass) thermostat. Default OFF —
+        # when False, step_viscoelastic_creep is byte-identical to the legacy
+        # isotropic path. When True, thermal noise is projected onto
+        # high-frequency Fourier modes, preserving low-frequency macro-state
+        # (invariant basin structure) while permitting micro-mode adaptation.
+        self.use_spectral_gating = use_spectral_gating
+        self.spectral_cutoff_harmonic = spectral_cutoff_harmonic
+
+    def compute_spectral_gated_noise(
+        self,
+        weight_matrix: torch.Tensor,
+        temperature: float,
+        effective_lr: float,
+        base_noise: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        """High-pass (spectral) Langevin noise injection (Phase 8.6 Lever a).
+
+        Projects the thermal draw onto high-frequency Fourier modes:
+            psi_high = psi - lowpass(psi),  P_high = I - F^-1 M_low F
+        preserving the low-frequency macro-state while injecting variance
+        into micro-state modes. Operates on the FLATTENED wave (length
+        d_model); the length-8 block dim cannot carry a 512-harmonic cutoff
+        (trap: 2k > n zeroes all noise). Degenerate n <= 4k clamps to
+        k = max(1, n//8); if still degenerate, returns the raw draw (never
+        zeroes noise).
+        """
+        noise = (
+            base_noise if base_noise is not None else torch.randn_like(weight_matrix)
+        )
+        flat = noise.reshape(-1).float()
+        n = flat.shape[0]
+        k = self.spectral_cutoff_harmonic
+        kk = k if n > 4 * k else max(1, n // 8)
+        if n <= 4 * kk:
+            # Fully degenerate: cannot resolve even the clamped cutoff.
+            return noise * math.sqrt(2.0 * temperature * effective_lr)
+        psi_fft = torch.fft.fft(flat.to(torch.float64), dim=-1)
+        mask = torch.zeros_like(psi_fft)
+        mask[:kk] = 1.0
+        mask[-kk:] = 1.0
+        psi_low = torch.fft.ifft(psi_fft * mask, dim=-1).real
+        psi_high = flat.to(torch.float64) - psi_low
+        out = psi_high.to(weight_matrix.dtype).reshape(weight_matrix.shape)
+        return out * math.sqrt(2.0 * temperature * effective_lr)
 
     def compute_anisotropic_friction(
         self,
@@ -200,7 +246,10 @@ class AdaptiveViscoelasticThermostat(nn.Module):
         # Default path (use_wavelet_gating=False) is byte-identical to the
         # legacy isotropic Langevin injection. Friction/LR/veto math is
         # untouched in both paths.
-        if self.use_wavelet_gating:
+        if self.use_spectral_gating:
+            noise = self.compute_spectral_gated_noise(
+                weight_matrix, temperature, effective_lr, base_noise=base_noise)
+        elif self.use_wavelet_gating:
             gated_noise, dominance, locked = self.compute_wavelet_gated_noise(
                 weight_matrix, grad_loss, temperature, effective_lr,
                 base_noise=base_noise)
