@@ -108,20 +108,18 @@ def main() -> int:
                 g0 = torch.Generator(device="cpu").manual_seed(seed)
                 r = start_r + int(torch.randint(0, 3, (1,), generator=g0).item())
                 c = 4 + int(torch.randint(0, 8, (1,), generator=g0).item())
-                for t in range(steps_per):
+                for t in range(steps_per - 1):
                     s = ingress.encode_grid(grid_single(color=1 + (seed % 5), r=r, c=c + t))
-                    S.append(s)
-                    if t < steps_per - 1:
-                        nxt = ingress.encode_grid(grid_single(color=1 + (seed % 5), r=r, c=c + t + 1))
-                        N.append(nxt)
-                        A.append(ingress.to_blocks(
-                            torch.cat([ingress.translation_wave(1.0, 0.0).real,
-                                       ingress.translation_wave(1.0, 0.0).imag], dim=-1), NUM_BLOCKS))
-            S = torch.stack(S)
+                    S.append(ingress.to_blocks(s, NUM_BLOCKS))
+                    nxt = ingress.encode_grid(grid_single(color=1 + (seed % 5), r=r, c=c + t + 1))
+                    N.append(ingress.to_blocks(nxt, NUM_BLOCKS))
+                    A.append(ingress.to_blocks(
+                        torch.cat([ingress.translation_wave(1.0, 0.0).real,
+                                   ingress.translation_wave(1.0, 0.0).imag], dim=-1), NUM_BLOCKS))
+            S = torch.stack(S) if S else torch.empty(0, NUM_BLOCKS, 8, device=DEVICE)
             A = torch.stack(A) if A else torch.empty(0, NUM_BLOCKS, 8, device=DEVICE)
             N = torch.stack(N) if N else torch.empty(0, NUM_BLOCKS, 8, device=DEVICE)
-            # align: transitions are (s_t, a_t) -> s_{t+1}; keep the FIRST steps-1 states
-            return S[:len(N)] if len(N) else S, A, N
+            return S, A, N
 
         train_seeds = list(range(n_train))
         eval_seeds = list(range(1000, 1000 + n_eval))
@@ -130,13 +128,16 @@ def main() -> int:
         planner.train_transition_batch(S_tr, A_tr, N_tr, iters=iters, ridge=1e-4, blend=0.5)
 
         S_ev, A_ev, N_ev = build(eval_seeds, steps)
-        preds = torch.stack([planner.transition(S_ev[i], A_ev[i]) for i in range(S_ev.shape[0])])
-        p = preds.reshape(preds.shape[0], -1)
-        o = N_ev.reshape(N_ev.shape[0], -1)
-        held_out = float((1.0 - (p * o).sum(-1) / (p.norm(dim=-1) * o.norm(dim=-1)).clamp(min=1e-12)).mean())
+        losses = []
+        for i in range(N_ev.shape[0]):  # aligned transition count (steps-1 per seed)
+            pred = planner.transition(S_ev[i], A_ev[i])
+            p = pred.reshape(-1)
+            o = N_ev[i].reshape(-1)
+            losses.append(1.0 - (p * o).sum() / (p.norm() * o.norm()).clamp(min=1e-12))
+        held_out = float(torch.tensor(losses).mean())
         ok = held_out < 0.30
         return ok, {"held_out_sagnac": round(held_out, 4), "n_train": int(S_tr.shape[0]),
-                    "n_eval": int(S_ev.shape[0]), "gate": "<0.30"}
+                    "n_eval": int(N_ev.shape[0]), "gate": "<0.30"}
 
     # ---------------- S3 8.8-B latency ----------------
     def s3():
