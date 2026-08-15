@@ -54,21 +54,29 @@ def main():
     # ---------------- F0: module self-test ----------------
     try:
         m = FrequencyDomainDiagonalTransition(dimension=D, num_actions=NUM_ACTIONS, device=DEVICE)
+        # unit-modulus check requires a PHASOR input (rotation preserves, does not create, modulus)
+        phasor_in = torch.polar(torch.ones(D, dtype=torch.float32, device=DEVICE),
+                                torch.randn(D, device=DEVICE) * 2.0 * math.pi)
+        out_phasor = m.forward(phasor_in, torch.tensor(0, device=DEVICE))
+        unit = bool(torch.allclose(torch.abs(out_phasor), torch.ones_like(torch.abs(out_phasor)), atol=1e-6))
+        # modulus-preservation on arbitrary input
         st = torch.randn(D, dtype=torch.complex64, device=DEVICE)
         st = st / torch.norm(st)
-        t0 = time.perf_counter()
         out = m.forward(st, torch.tensor(0, device=DEVICE))
+        mod_preserved = bool(torch.allclose(torch.abs(out), torch.abs(st), atol=1e-6))
+        t0 = time.perf_counter()
+        out2 = m.forward(st, torch.tensor(0, device=DEVICE))
         dt = (time.perf_counter() - t0) * 1000.0
-        ident = torch.allclose(out, st, atol=1e-6)
-        unit = torch.allclose(torch.abs(out), torch.ones_like(torch.abs(out)), atol=1e-6)
+        ident = bool(torch.allclose(out, st, atol=1e-6))
         c64 = out.dtype == torch.complex64
-        det = torch.equal(m.forward(st, torch.tensor(0, device=DEVICE)), out)
+        det = bool(torch.equal(out2, out))
         alloc = m.phasor(torch.tensor(0, device=DEVICE)).shape == (D,)
-        ok = bool(ident and unit and c64 and det and alloc)
+        ok = bool(ident and unit and mod_preserved and c64 and det and alloc)
         results["F0"] = {"ok": ok, "rc": 0, "dt_ms": round(dt, 4),
-                         "identity": bool(ident), "unit_modulus": bool(unit),
-                         "complex64": bool(c64), "deterministic": bool(det),
-                         "no_dd_alloc": bool(alloc)}
+                         "identity": ident, "unit_modulus_phasor": unit,
+                         "modulus_preserved": mod_preserved,
+                         "complex64": c64, "deterministic": det,
+                         "no_dd_alloc": alloc}
         if not ok:
             failures.append("F0")
     except Exception as e:  # noqa: BLE001
@@ -190,7 +198,10 @@ def main():
         rc = 1
         failures.append("F4")
 
-    # ---------------- DONE marker (aggregated) ----------------
+    # ---------------- DONE marker (aggregated: rc=1 if ANY arm gate failed) ----------------
+    # Multi-arm discipline: a terminal marker may claim rc=0 ONLY when every arm passed.
+    if failures and not SMOKE:
+        rc = 1
     results["DONE_MARKER"] = {"rc": rc, "failures": failures,
                               "smoke": SMOKE, "device": DEVICE, "D": D}
     with open(OUT, "w") as f:
