@@ -107,7 +107,7 @@ def main() -> int:
             for seed in seeds:
                 g0 = torch.Generator(device="cpu").manual_seed(seed)
                 r = start_r + int(torch.randint(0, 3, (1,), generator=g0).item())
-                c = 4 + int(torch.randint(0, 8, (1,), generator=g0).item())
+                c = 1 + int(torch.randint(0, 6, (1,), generator=g0).item())  # c<=7; +7 -> 14 < 16 wide
                 for t in range(steps_per - 1):
                     s = ingress.encode_grid(grid_single(color=1 + (seed % 5), r=r, c=c + t))
                     S.append(ingress.to_blocks(s, NUM_BLOCKS))
