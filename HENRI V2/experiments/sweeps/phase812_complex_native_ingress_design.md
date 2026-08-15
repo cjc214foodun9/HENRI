@@ -73,3 +73,36 @@ carriers:
 
 ## Evidence class
 G1/G2/G3 OBSERVED on remote RTX 5090 (CUDA). G4 local contract. G6 BLOCKED.
+
+## VERDICT — SEALED KILL (OBSERVED 2026-08-15, RTX 5090, D=65,536, commit 85f241b)
+G1 KILL_FIRED: no bandwidth s satisfies adj>=0.85 AND distinct<0.95
+  (s=0.10: adj 0.9935 / distinct 0.9999; s=0.40: adj 0.9025 / distinct 0.9999).
+G2 KILL_EVIDENCE: A_C=0.99989, A_D=0.99903 — amplitude-normalized per-element
+  superposition collapses ALL grids onto the shared carrier subspace; the
+  color term theta_v is swamped; pattern content (amplitude) is discarded
+  by unit-modulus renormalization.
+G3 LEGACY_DISCRIMINATES (blueprint premise FALSIFIED): legacy
+  HENRIVisionEncoder incommensurate+bg_mask -> A_C=0.00036, A_D=-6e-05
+  (near-orthogonal) vs complex ingress 0.9999. The 8.11 G2@scale vacuity
+  root cause = DEFAULT collinear basis, NOT real-vs-complex.
+G4 8_13_LEVER_NEEDS_WORK: 32-pair transfer improvement incommensurate
+  0.0191 (< 0.02); default 0.0612 (wrong lever basis); post ~0.83 far from
+  G2 absolute 0.10. The acos-lift transfer boundary stands.
+G5 CYCLE_PASS: ingress+transition 0.218 ms <= 2.0 ms (ingress 2.6x faster
+  than legacy real encoder).
+G6 DEFAULT_OFF PASS: EFEPlanner legacy LowRankCoupledTransition unchanged.
+DONE_MARKER rc=0 failures=[] (kill gates fired = expected evidence).
+Evidence: p812_matrix_d65536.json SHA 700c3bf721f35b2e05b5fb714ff77b0f913df0491d51593c77c9fbea0aade18a;
+p812_full.log SHA 77d5862fd1b0a8abe374a528e3673b28da208e55d0b9720def810abfcd65929a
+(local: phase8_evidence/phase812_complex_ingress/). Local contract 4/4; full suite 418p/1s.
+main UNTOUCHED @ 2218ec4. NO promotion. ARC-AGI-3 SOTA stays BLOCKED_NO_DEMONSTRATIONS (20/20; G6).
+
+## Phase 8.13 redirect (from evidence, NOT speculation)
+- The lever is the 7.3/7.4-verified encoder: incommensurate spatial basis +
+  bg_mask (discriminates cos~0.005). Wire THAT to the 8.11 complex transition
+  (real-lift at ingress remains lossy; transfer improvement 0.019<0.02 needs
+  a complex-native encoder AT THE PLANNER BOUNDARY, or an amplitude-preserving
+  complex superposition that does NOT unit-modulus-renormalize).
+- Real/complex axis = RED HERRING for the discrimination gap. The
+  discriminative information is AMPLITUDE (pattern occupancy), which FHRR
+  unit-modulus convention discards by design.
