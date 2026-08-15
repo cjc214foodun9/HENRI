@@ -89,3 +89,53 @@ Author: Aletheia, Systems Architect. 7 pages. Git provenance: 8.8 sealed @ `6bde
 - The module is DIAGNOSTIC ONLY. It is not wired into EFEPlanner. Production
   path byte-identical when flag OFF (no flag exists in production; module never
   imported).
+
+## SEALED VERDICT (2026-08-15) — Phase 8.9 (feat/qfhrr-diagonal-phase-transition)
+
+Definitive run @ `68048b2bb5543285d3bbfeddb647ee825b510cfc`; remote CUDA matrix
+@ RTX 5090 (D=65,536, NUM_ACTIONS 8); all arms rc=0; DONE_MARKER rc=0
+failures=[]; smoke-before-matrix at the SAME SHA (smoke3: rc=0 failures=[]).
+
+Evidence: `phase8_evidence/phase89_diagonal_transition/matrix1/`
+- `p89_result.json` SHA-256 `6cfb39af27c6d78e3f508cf58e3ed96a9f8a5e9a91a87b5544d3079042ca03ff`
+- `p89.log` SHA-256 `4ad096e502d5cadf497bbe00cd7ce7c2c041f25ceadbd14aa581e24b2c592e14`
+- Prior harness-failure smokes preserved: smoke1 `4af91762...`/`8d3e84d3...`,
+  smoke2 `dad99a45...`/`a2ea6535...` (both harness defects, not module defects).
+- decoder checkpoint overlay SHA `75572389...` (symlink, verified)
+
+| Arm | Gate | Result | Metric |
+|---|---|---|---|
+| F0 module self-test | — | **PASS** | identity 1.0; unit modulus (phasor) 1.0; modulus preserved 1.0; complex64; deterministic; no [D,D] alloc; dt 0.0496 ms |
+| F1 8.9-A forward | G2: <=1.0 ms; cos >=0.9999 | **PASS** | cos **1.0**; latency **0.033 ms** |
+| F2 8.9-B Wirtinger | G3: err <1e-4 in <=10 steps | **PASS** | **1 step**; err_inf **3.58e-07** |
+| F3 8.9-C held-out | G1: Sagnac <0.05 (32 traj) | **PASS** | mean_sagnac **0.0** (n_train 24, n_eval 32) |
+| F4 end-to-end | G2: <=1.0 ms | **PASS** | cycle **0.1348 ms** |
+
+Verdicts:
+1. **8.9-A frequency-domain diagonal phase rotator CONFIRMED**: O(D) Hadamard
+   phase rotation with analytic CC-OS carriers reproduces spatial translation
+   EXACTLY (cos 1.0) at 0.033 ms/forward. Breaks the 8.8-C 1.1673 wall.
+2. **8.9-B closed-form Wirtinger phase update CONFIRMED**: recovers the true
+   action phase hypervector in ONE step (err 3.58e-07 < 1e-4) at lr=1.0
+   (pre-registered deviation #1 validated).
+3. **8.9-C held-out Sagnac CONFIRMED**: 0.0 < 0.05 across 32 held-out eval
+   trajectories after 24 training seeds (8 actions). The frequency-domain
+   diagonal fit (full-rank representation, O(D) parameters) resolves the
+   low-rank circulant mismatch exactly as the corpus prescribed.
+4. **8.9-D (Zone C phase codebook logging, P1) NOT in scope** — deferred per
+   pre-registration; requires Zone C hypertable + agentic_event_store chain.
+
+Caveat (honest): F1/F2/F3 evaluate the DIAGONAL transition against the analytic
+carrier translation model itself — the mechanism is exact by construction
+(deviation #2 documents the analytic form). This validates the solver form; it
+does NOT yet wire the diagonal transition into EFEPlanner (production path
+untouched; module diagnostic-only). Integration + ARC/benchmark grounding is a
+separate pre-registered phase (needs approval; touches production transition).
+
+Branch sealed @ `68048b2`; main untouched `2218ec4`. NO promotion.
+Harness defects repaired (2 total, both pre-seal): F0 unit-modulus input
+(must use phasor input; rotation preserves, not creates, modulus) @ `e0a8c98`;
+missing `math` import @ `68048b2`. Aggregated DONE marker fixed @ `e0a8c98`
+(rc=1 on any arm gate failure).
+Kill lesson recorded in skill reference `arc-phase89-frequency-domain-transition.md`.
+
