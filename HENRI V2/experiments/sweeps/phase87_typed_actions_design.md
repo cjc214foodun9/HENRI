@@ -46,3 +46,40 @@ toy demo (step 2). NO fabrication; NO fake verification runs.
 - Branch `feat/typed-action-phase-embeddings` from main `2218ec4`; main untouched; NO promotion.
 - Status: **AWAITING explicit scope approval to implement levers 8.7-A/B/C** (verification commands
   in the PDF are post-implementation gates, not runnable against current main).
+
+## APPROVED IMPLEMENTATION PRE-REGISTRATION (user go, 2026-08-14; option 1: 8.7-A + 8.7-B)
+
+New module `HENRI V2/henri_typed_actions.py` (diagnostic-only, default-OFF; `efe_planner.py` NOT modified):
+
+- **8.7-A `TypedActionEmbedding`**: action token k -> structured S^{D-1} wave
+  `cos(omega_k * n) + sin(omega_k * n)` over flattened D=65,536, with
+  incommensurate carrier `omega_k = 2*pi*(sqrt(p_k) mod 1)` (distinct primes).
+  Reshaped [num_blocks, 8], per-block unit norm (planner boundary contract).
+- **8.7-A `clifford_bind`**: non-commutative even-subalgebra Clifford
+  (Hamilton quaternion) geometric product per block; order matters
+  (bind(a,b) != bind(b,a)). Replaces commutative FHRR bind ONLY in the
+  experiment arms.
+- **8.7-B valence-free corpus**: un-docked InvertedPendulum/CartPole rollouts
+  (no reset penalties, no reward coupling — nu=0), (Psi_t, a_t, Psi_{t+1})
+  triples; production `train_transition_batch` fit on the accumulated corpus.
+
+Gates (PDF, unchanged):
+- 8.7-A: held-out Sagnac prediction loss < 0.15 over 32 eval trajectories;
+  promotion additionally requires >15% held-out reduction vs random-action baseline.
+- 8.7-B: transition error L_Sagnac < 0.10 across 50 un-docked physical env steps.
+- Latency: in-situ update cycle <= 45.0 ms at D=65,536 on RTX 5090 (measured).
+
+Remote matrix arms (paired discipline from Phase 8.6 — SAME state trajectories
+across arms, disjoint train/eval seeds; per-seed metrics; DONE marker only if
+all arms rc=0):
+- A0 baseline: random action waves + production FHRR bind (current default path).
+- A1: TypedActionEmbedding + FHRR bind.
+- A2: TypedActionEmbedding + Clifford bind.
+- A3 (8.7-B): valence-free pre-training; 50 un-docked steps; L_Sagnac < 0.10 gate.
+- Latency probe: update cycle ms at D=65,536.
+
+Known risk (pre-registered): `state_to_wave()` in physical_control_environments.py
+is a SEEDED RANDOM projection (state hash -> randn -> normalize), i.e. the R1
+representation bottleneck. The 8.7 diagnostic may therefore fail its gates
+even with typed actions; that outcome seals FAIL honestly (no post-hoc tuning).
+
