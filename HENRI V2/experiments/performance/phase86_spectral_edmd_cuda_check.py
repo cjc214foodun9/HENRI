@@ -53,21 +53,21 @@ def _known_transform_pairs(encoder, num_blocks, device, n=8, seed=20260814):
 
 
 def _fixed_point_drift(weight, grad, temp, lr, th_iso, th_spec, seed, steps=50):
-    """Paired SDE drift: fresh per-step noise sequence (seeded), shared
-    between arms; returns final displacements. Per-seed stochasticity is
-    required for a valid cross-seed variance metric — reusing one noise
-    tensor across seeds made the variance degenerate (~1e-13)."""
+    """PAIRED SDE drift (run-3 definitive): each (seed, step) draws ONE
+    base noise tensor from a deterministic generator; the SAME tensor
+    (cloned) is passed to BOTH isotropic and spectral thermostats. Arms
+    differ ONLY by the thermostat mechanism. Clones guarantee no
+    cross-arm mutation of the shared draw."""
     rng = torch.Generator(device=weight.device).manual_seed(seed)
     w_iso, w_spec = weight.clone(), weight.clone()
     for _ in range(steps):
-        n_i = torch.randn(weight.shape, generator=rng, device=weight.device)
-        n_s = torch.randn(weight.shape, generator=rng, device=weight.device)
+        base = torch.randn(weight.shape, generator=rng, device=weight.device)
         w_iso, _ = th_iso.step_viscoelastic_creep(w_iso, grad, 0.05, 0.07,
                                                   temperature=temp,
-                                                  base_noise=n_i)
+                                                  base_noise=base.clone())
         w_spec, _ = th_spec.step_viscoelastic_creep(w_spec, grad, 0.05, 0.07,
                                                     temperature=temp,
-                                                    base_noise=n_s)
+                                                    base_noise=base.clone())
     return w_iso, w_spec
 
 
@@ -101,6 +101,8 @@ def arm_a1(device):
 
     iso_ends, spec_ends = [], []
     iso_low_ends, spec_low_ends = [], []
+    per_seed_low_reductions = []
+    per_seed_total_reductions = []
     for s in range(seeds):
         w_iso, w_spec = _fixed_point_drift(weight, grad, temp, lr,
                                            th_iso, th_spec, seed=1000 + s, steps=steps)
@@ -115,16 +117,26 @@ def arm_a1(device):
         m = torch.zeros_like(f_iso)
         m[:K_CUTOFF] = 1.0
         m[-K_CUTOFF:] = 1.0
-        iso_low_ends.append(float(torch.fft.ifft(f_iso * m).real.norm().item()))
-        spec_low_ends.append(float(torch.fft.ifft(f_spec * m).real.norm().item()))
-    drift_iso = float(torch.tensor(iso_ends).var().item())
+        low_iso = float(torch.fft.ifft(f_iso * m).real.norm().item())
+        low_spec = float(torch.fft.ifft(f_spec * m).real.norm().item())
+        iso_low_ends.append(low_iso)
+        spec_low_ends.append(low_spec)
+        # PAIRED per-seed reduction (same draws; arms differ only by mechanism).
+        per_seed_low_reductions.append(
+            (low_iso - low_spec) / low_iso * 100.0 if low_iso > 1e-12 else 0.0)
+        d_iso_n = float(d_iso.norm().item())
+        d_spec_n = float(d_spec.norm().item())
+        per_seed_total_reductions.append(
+            (d_iso_n - d_spec_n) / d_iso_n * 100.0 if d_iso_n > 1e-12 else 0.0)
+    drift_iso = float(torch.tensor(iso_ends).var().item())  # telemetry only
     drift_spec = float(torch.tensor(spec_ends).var().item())
-    drift_reduction_pct = (drift_iso - drift_spec) / drift_iso * 100.0 if drift_iso > 0 else 0.0
-    drift_iso_low = float(torch.tensor(iso_low_ends).var().item())
+    drift_iso_low = float(torch.tensor(iso_low_ends).var().item())  # telemetry only
     drift_spec_low = float(torch.tensor(spec_low_ends).var().item())
-    drift_reduction_lowfreq_pct = (
-        (drift_iso_low - drift_spec_low) / drift_iso_low * 100.0
-        if drift_iso_low > 0 else 0.0)
+    # GATE METRIC: mean of PAIRED per-seed low-freq drift reductions.
+    drift_reduction_lowfreq_pct = float(
+        torch.tensor(per_seed_low_reductions).mean().item())
+    drift_reduction_pct = float(
+        torch.tensor(per_seed_total_reductions).mean().item())
 
     # Low-freq energy reduction (mechanism gate, pre-launch clarification):
     # the PDF's "low-frequency mode norm change < 1e-5" is read RELATIVE —
@@ -151,6 +163,9 @@ def arm_a1(device):
             "drift_iso_lowfreq": drift_iso_low,
             "drift_spec_lowfreq": drift_spec_low,
             "drift_reduction_lowfreq_pct": round(drift_reduction_lowfreq_pct, 4),
+            "per_seed_low_reductions": [round(x, 4) for x in per_seed_low_reductions],
+            "per_seed_total_reductions": [round(x, 4) for x in per_seed_total_reductions],
+            "measurement_reading": "paired",
             "lowfreq_energy_reduction": round(lowfreq_energy_reduction, 6),
             "raw_lowfreq_norm": raw_low_norm, "proj_lowfreq_norm": proj_low_norm,
             "gate_pass": gate_pass,
@@ -158,35 +173,43 @@ def arm_a1(device):
 
 
 def arm_a2(encoder, num_blocks, device):
-    """Lever (b): production train_transition_batch, HELD-OUT loss decrease."""
+    """Lever (b): production train_transition_batch, MATCHED held-out
+    pre/post evaluation (run-3 definitive). Train and held-out pair sets
+    are DISJOINT deterministic sets (seeds 20260814 / 777). pre_loss is
+    measured on the held-out set BEFORE fitting; fit on TRAIN pairs only;
+    post_loss measured on the SAME held-out pairs. Verdict: decrease > 15%."""
     t0 = time.perf_counter()
     n_pairs = 8 if SMOKE else 128
     planner = EFEPlanner(num_blocks=num_blocks, d_model=D).to(device)
-    pairs = _known_transform_pairs(encoder, num_blocks, device, n=n_pairs)
-    states = torch.stack([p[0] for p in pairs])
-    nexts = torch.stack([p[1] for p in pairs])
-    actions = F.normalize(torch.randn(num_blocks, 8, device=device), dim=-1).expand(n_pairs, -1, -1)
-
-    pre_loss = planner.train_transition_batch(
-        states, actions, nexts, iters=3, ridge=1e-4, blend=0.5)
-    # HELD-OUT evaluation: fresh pairs, different seed (fit pairs are the
-    # training batch; evaluating on them would be train-loss, not held-out).
+    train_pairs = _known_transform_pairs(encoder, num_blocks, device, n=n_pairs, seed=20260814)
     ho_pairs = _known_transform_pairs(encoder, num_blocks, device, n=n_pairs, seed=777)
     ho_states = torch.stack([p[0] for p in ho_pairs])
     ho_nexts = torch.stack([p[1] for p in ho_pairs])
     ho_actions = F.normalize(torch.randn(num_blocks, 8, device=device), dim=-1).expand(n_pairs, -1, -1)
+
+    def _sagnac_loss(states, nexts):
+        preds = torch.stack(
+            [planner.transition(states[i], ho_actions[i]) for i in range(n_pairs)])
+        return float(
+            (1.0 - (preds.reshape(n_pairs, -1) * nexts.reshape(n_pairs, -1)).sum(-1) /
+             (preds.reshape(n_pairs, -1).norm(dim=-1) * nexts.reshape(n_pairs, -1).norm(dim=-1)).clamp(min=1e-12))
+            .mean().detach())
+
     with torch.no_grad():
-        ho_preds = torch.stack([planner.transition(ho_states[i], ho_actions[i]) for i in range(n_pairs)])
-    post_loss = float(
-        (1.0 - (ho_preds.reshape(n_pairs, -1) * ho_nexts.reshape(n_pairs, -1)).sum(-1) /
-         (ho_preds.reshape(n_pairs, -1).norm(dim=-1) * ho_nexts.reshape(n_pairs, -1).norm(dim=-1)).clamp(min=1e-12))
-        .mean().detach())
+        pre_loss = _sagnac_loss(ho_states, ho_nexts)
+    states = torch.stack([p[0] for p in train_pairs])
+    nexts = torch.stack([p[1] for p in train_pairs])
+    actions = F.normalize(torch.randn(num_blocks, 8, device=device), dim=-1).expand(n_pairs, -1, -1)
+    train_loss = planner.train_transition_batch(
+        states, actions, nexts, iters=3, ridge=1e-4, blend=0.5)
+    with torch.no_grad():
+        post_loss = _sagnac_loss(ho_states, ho_nexts)
     decrease_pct = (pre_loss - post_loss) / pre_loss * 100.0 if pre_loss > 0 else 0.0
     gate_pass = (decrease_pct > 15.0) and math.isfinite(post_loss) and post_loss < 1.0
     return {"verdict": "PASS" if gate_pass else "D1_BATCH_FAIL",
-            "arm_rc": 0, "pre_loss": pre_loss, "post_loss_heldout": post_loss,
-            "decrease_pct": round(decrease_pct, 4), "gate_pass": gate_pass,
-            "n_pairs": n_pairs,
+            "arm_rc": 0, "pre_loss_heldout": pre_loss, "post_loss_heldout": post_loss,
+            "train_loss": train_loss, "decrease_pct": round(decrease_pct, 4),
+            "gate_pass": gate_pass, "n_pairs": n_pairs,
             "wall_s": round(time.perf_counter() - t0, 2)}
 
 

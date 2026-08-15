@@ -143,6 +143,52 @@ def test_b_train_transition_batch_live():
     assert math.isfinite(post_loss)
 
 
+# ---------- Run-3 measurement-validity guards (Reference 3 audit) ----------
+
+def test_a_paired_noise_shared_not_mutated():
+    """The paired A1 design passes the SAME noise tensor (cloned) to both
+    thermostats; if either mutated the shared draw, pairing would break.
+    Guards: neither isotropic nor spectral step mutates base_noise."""
+    th_iso = AdaptiveViscoelasticThermostat(d_model=1024)
+    th_spec = AdaptiveViscoelasticThermostat(
+        d_model=1024, use_spectral_gating=True, spectral_cutoff_harmonic=64)
+    w = torch.randn(1024)
+    g = torch.randn(1024)
+    base = torch.randn(1024)
+    snapshot = base.clone()
+    th_iso.step_viscoelastic_creep(w, g, 0.05, 0.07, temperature=1e-4,
+                                   base_noise=base)
+    th_spec.step_viscoelastic_creep(w, g, 0.05, 0.07, temperature=1e-4,
+                                    base_noise=base)
+    assert torch.equal(base, snapshot), "thermostat mutated the shared paired noise draw"
+
+
+def _grids_for_seed(seed, n=8):
+    """Deterministic (grid, shifted-grid) pair generator mirroring the
+    runner's _known_transform_pairs seeds (20260814 train / 777 held-out)."""
+    rng = torch.Generator().manual_seed(seed)
+    grids = []
+    for _ in range(n):
+        g = torch.randint(0, 10, (5, 5), generator=rng)
+        idx = torch.randperm(5, generator=rng)
+        shift = int(torch.randint(1, 5, (1,), generator=rng).item())
+        h = torch.zeros_like(g)
+        h[:, shift:] = g[:, :-shift]
+        grids.append((g, h))
+    return grids
+
+
+def test_b_train_heldout_disjoint_sets():
+    """A2 run-3 validity: the deterministic train set (seed 20260814) and
+    held-out set (seed 777) must be disjoint — no shared grid tensor."""
+    train = _grids_for_seed(20260814, n=8)
+    ho = _grids_for_seed(777, n=8)
+    for tg, th in train:
+        for hg, hh in ho:
+            assert not torch.equal(tg, hg), "train/held-out grid overlap"
+            assert not torch.equal(th, hh), "train/held-out shifted-grid overlap"
+
+
 def test_b_sealed_doc_untouched():
     """Seal integrity: sealed branch ref, main ref, and sealed doc bytes.
 

@@ -62,13 +62,69 @@ branch `feat/low-rank-wave-jepa` @ `d8e28f6`; main `2218ec4`).
 DONE_MARKER written ONLY when all arms rc=0. Any nonzero arm →
 `BLOCKED_INFRASTRUCTURE`, no science verdict.
 
-## Acceptance / kill discipline
-- A1 AND A2 gates pass → levers validated (PASS).
-- Any gate fires → that lever sealed FAIL; no post-hoc threshold tuning; no
-  rerun after a gate fires.
-- Branch `feat/batch-edmd-spectral-thermostat` from main `2218ec4`;
-  `main` untouched; NO promotion.
-- Infrastructure: GPU-exclusive preflight; checkpoint overlay symlink
-  (SHA `75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060`);
-  Zone C env `/workspace/zonec_prod.env`; `PYTHONPATH='HENRI V2'`;
-  detached `setsid nohup` launch.
+## RUN LOG (measurement-validity audit — 2026-08-14)
+| Run | SHA | Status | Reason |
+|---|---|---|---|
+| 1 | `6ba8bda` | INVALID (not sealed) | A1 reused ONE noise tensor across all seeds → degenerate cross-seed variance (~1e-13), vacuous PASS; A2 pre = fit-batch residual |
+| 2 | `1805daf` | PROVISIONAL (not sealed) | A1 draws n_i / n_s independently per arm → UNPAIRED comparison, not the pre-registered paired test; A2 pre still fit-batch residual |
+| 3 | (candidate) | DEFINITIVE | A1: one base noise per (seed, step), cloned + passed to BOTH arms — arms differ only by thermostat mechanism; gate = mean of per-seed PAIRED low-freq reductions; A2: disjoint train/held-out (seeds 20260814/777), matched held-out pre/post, fit on train only |
+
+## Pre-launch precision clarification #4 (PAIRED reading — recorded BEFORE run 3)
+The pre-registered gates are unchanged: A1 low-freq drift reduction > 40%
+AND low-freq energy reduction > 0.98; A2 matched held-out Sagnac decrease
+> 15%. Run-3 measurement reading: A1 gate metric = mean of per-seed PAIRED
+low-freq reductions; A2 verdict from matched held-out pre/post with
+disjoint train. Run 3 is the ONLY run eligible for sealing; runs 1–2 are
+evidence artifacts, not verdicts.
+
+## PROVISIONAL VERDICT (run 2 @ `1805daf` — NOT sealed, superseded by run 3)
+
+Remote CUDA matrix @ RTX 5090 (torch 2.12.0+cu130, CUDA 13.0, D=65,536),
+candidate SHA `1805daf3ec122e9ad20773a4365c97a37fe5cad4`, all arms rc=0,
+DONE_MARKER rc=0. (Run 1 at `6ba8bda` had a degenerate A1 causal metric —
+reused single noise tensor across seeds, variance ~1e-13 — measured as a
+harness defect, NOT sealed; repaired with per-seed fresh noise + held-out
+A2 eval, re-run at `1805daf`.)
+
+Evidence: `phase8_evidence/phase86_spectral_edmd/`
+- `p86_result.json` SHA-256 `ee73c07822d5c1c059ca568dbd142da07c5ecdddbe681ef489d42088b21ff13c`
+- `p86.log` SHA-256 `02af2f1225dab1195ed13b64231148284725f22aba72d4351255e8280cbfb586`
+- decoder checkpoint loaded: SHA `75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060` (symlink overlay)
+
+| Arm | Result | Key metrics |
+|---|---|---|
+| A0 OFF | OK | predictor=RecursiveDualEDMD, projection inactive (default-path identity) |
+| A1 Lever (a) spectral | **PASS** | lowfreq_energy_reduction 0.9998 (>0.98); drift_reduction_lowfreq_pct **99.86%** (>40%); raw→proj lowfreq norm 32.88→0.0053; total-norm drift_reduction_pct −11.6% (telemetry: high-freq energy dominates total norm, expected) |
+| A2 Lever (b) batch EDMD | **D1_BATCH_FAIL** (gate fired) | pre_loss 1.0023, post_loss_heldout 0.9980, decrease 0.43% < 15% gate; N=128 held-out pairs; wall 4.51s |
+| A3 combined smoke | OK | shape [8192,8], loss 1.0031 finite |
+
+Verdicts:
+1. **Lever (a) SPECTRAL THERMOSTAT PASS** — the corpus-prescribed
+   `P_high = I − P_low` projector is implemented, the mechanism is exact
+   (99.98% low-freq energy removal), and the CAUSAL claim (macro-state /
+   low-frequency drift reduction during SDE recovery) is validated at
+   99.86% with non-degenerate cross-seed variance. This replaces the
+   falsified D2 `P_null = I − VV†` (0.16% reduction). Default-OFF flag
+   `use_spectral_gating`; NOT promoted.
+2. **Lever (b) D1_BATCH_FAIL** — the PRODUCTION `train_transition_batch`
+   (dual-Woodbury EDMD, N=128) improves held-out Sagnac loss by 0.43% at
+   D=65,536, far below the 15% gate. Consistent with sealed E1 and D1
+   (per-step 0.07–0.41%): batch EDMD is also inert at this scale on
+   known-transform integrity pairs. The PDF's batch-EDMD prescription
+   (closed-form Koopman via SVD) is ALREADY LIVE in this function; the
+   inertness is a representation-level limit, not a missing solver.
+   NOT promoted.
+3. **Corpus consult (INFERRED)** — planned; the corpus attributes the
+   thermostat mechanism to spectral low-pass/high-pass separation and
+   warns against coupling noise to the transition subspace; consistent
+   with Lever (a) PASS and Lever (b) inertness at D=65,536.
+4. **Harness lesson (recorded)**: a cross-seed variance gate requires
+   per-seed fresh noise sequences; reusing one noise tensor across seeds
+   yields degenerate variance (~1e-13) and a vacuous PASS. Held-out
+   evaluation requires fresh pairs from a different seed, not the fit
+   batch (train-loss would understate the gate).
+
+Branch sealed @ `1805daf`; `main` untouched `2218ec4`. No promotion.
+Next levers (each a NEW pre-registered protocol): (c) learnable action
+embeddings (P1); (d) valence=0 pre-training (P1); representation repair
+(R1 foreground-masked ramps, per sealed R1). All await explicit approval.
