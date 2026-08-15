@@ -30,6 +30,7 @@ Env: JEPA_DM_OUT=/tmp/p811_matrix_d65536.json; HENRI_SMOKE=1 -> bounded seeds.
 """
 
 import json
+import math
 import os
 import time
 
