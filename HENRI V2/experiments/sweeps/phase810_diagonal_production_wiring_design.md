@@ -108,6 +108,15 @@ Local CPU contract evidence (deterministic seeds, NB=64, D=512):
   fail-closed guard vs learnable_actions.
 - Evidence: contract test run 2026-08-15 (9/9), full suite 414p/1s; this
   document = sealed verdict record.
+- REMOTE CUDA EVIDENCE (RTX 5090, D=65,536, commit `215bb84`, smoke arm):
+  G1 identity cos 1.0 PASS; G5 latency 0.82 ms PASS; G3 kill post 0.2775 >= 0.05
+  (kill reproduced at production scale); G2 kill pre 0.03477 -> post 0.03477
+  (no improvement, kill reproduced); G4 default-OFF PASS; WIRE select_action +
+  train_step PASS at scale; DONE_MARKER rc=0 (all pre-registered kill gates fired
+  as designed). Evidence: `p810_smoke_d65536.json` SHA
+  `6226d93306e43233ea109f6c80d5820990cf235affa5f0a002249fbec243f78a`; log SHA
+  `bb7b1727972352eeecd5fb10fab43766bcf6d9c6c3f8fab77e09ca2189069d90`.
+  Kill CONFIRMED OBSERVED at production scale on GPU hardware.
 
 ## Deviations (pre-registered)
 - Bridge uses arccos/pi-linear mapping (production real interface), not the
