@@ -215,8 +215,14 @@ class EFEPlanner(nn.Module):
         num_actions: int = 8,
         action_lr_scale: float = 0.2,
         transition_rank: int = 64,
+        use_diagonal_transition: bool = False,
+        use_complex_transition: bool = False,
     ):
         super().__init__()
+        if use_diagonal_transition and use_complex_transition:
+            raise ValueError(
+                "use_diagonal_transition and use_complex_transition are mutually "
+                "exclusive; enable at most one.")
         self.num_blocks = num_blocks
         self.d_model = d_model
         self.epistemic_weight = epistemic_weight
@@ -248,8 +254,24 @@ class EFEPlanner(nn.Module):
         # retained for telemetry; effective_rank = min(rank, num_blocks*8).
         self.transition_requested_rank, _ = validate_rank(
             transition_rank, num_blocks * 8, name="transition_rank")
-        self.transition = LowRankCoupledTransition(
-            num_blocks=num_blocks, rank=transition_rank)
+        self._use_complex_transition = use_complex_transition
+        if use_complex_transition:
+            # Phase 8.11: native complex wave-space transition (default-OFF).
+            # Executes latent dynamics in C^D per-element unit-modulus phasors;
+            # real conversion ONLY at egress. Learnable action embeddings are
+            # incompatible (fingerprint indexing requires deterministic waves):
+            # fail closed rather than silently corrupt the action map.
+            if learnable_actions:
+                raise ValueError(
+                    "use_complex_transition=True requires learnable_actions=False "
+                    "(complex action indexing needs deterministic action waves)")
+            from complex_phase_transition import NativeComplexWaveTransition
+            self.transition = NativeComplexWaveTransition(
+                dimension=d_model, num_actions=num_actions,
+                device="cpu", num_blocks=num_blocks, block_dim=8)
+        else:
+            self.transition = LowRankCoupledTransition(
+                num_blocks=num_blocks, rank=transition_rank)
         # Learnable action wave embeddings (Fallacy #3 fix).
         # When enabled, action waves are nn.Parameter — the transition model
         # learns to encode each action's semantic effect through gradient
@@ -596,6 +618,9 @@ class EFEPlanner(nn.Module):
         """Pack the transition operator (field_W, field_V, residual) into a
         single wave-shaped tensor for Zone C engram storage."""
         t = self.transition
+        if getattr(self, "_use_complex_transition", False):
+            # Phase 8.11: pack the complex action-phase buffer [num_actions, D].
+            return t.action_phases.detach().reshape(-1).cpu()
         return torch.cat([
             t.field_W.detach().reshape(-1).cpu(),
             t.field_V.detach().reshape(-1).cpu(),
@@ -607,6 +632,15 @@ class EFEPlanner(nn.Module):
     def load_field_channel_wave(self, wave: torch.Tensor):
         """Inverse of field_channel_wave: restore the operator from a wave."""
         t = self.transition
+        if getattr(self, "_use_complex_transition", False):
+            # Phase 8.11: restore the complex action-phase buffer.
+            wave = wave.detach().cpu().float()
+            expected = t.num_actions * t.d
+            assert wave.numel() >= expected, (
+                f"complex phase wave too short: {wave.numel()} < {expected}")
+            dev = t.action_phases.device
+            t.action_phases.copy_(wave[:expected].reshape(t.num_actions, t.d).to(dev))
+            return
         d, r, B, b = t.d, t.rank, t.num_blocks, t.block_dim
         nW, nV, nR = 2 * d * r, d * r, B * b * b
         wave = wave.detach().cpu().float()
@@ -1093,6 +1127,14 @@ class EFEPlanner(nn.Module):
 
         Returns the pre-update loss (the Sagnac delta this step).
         """
+        if getattr(self, "_use_complex_transition", False):
+            # Phase 8.11: complex closed-form angle-residual update. The
+            # production interface is real -> real; the adapter lifts to
+            # phasors, rotates exactly, and egress-projects. Never touches
+            # field_V/field_W/block_residual.
+            return self.transition.update_wirtinger(
+                state_wave.detach(), action_wave.detach(),
+                observed_next_wave.detach(), lr=lr)
         with torch.enable_grad():
             predicted = self.transition(state_wave.detach(), action_wave.detach())
             p = predicted.view(-1)
@@ -1194,6 +1236,10 @@ class EFEPlanner(nn.Module):
 
         Returns the mean pre-fit batch Sagnac loss (the quantity minimized).
         """
+        if getattr(self, "_use_complex_transition", False):
+            # Phase 8.11: complex closed-form batch fit (same signature).
+            return self.transition.fit_batch(
+                states, actions, observed_nexts, iters=iters, lr=1.0)
         N = states.shape[0]
         device = self.transition.field_V.device
         states = states.detach().to(device)

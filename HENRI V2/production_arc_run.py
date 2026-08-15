@@ -206,6 +206,13 @@ HENRI_ARC_THERMOSTAT = os.environ.get("HENRI_ARC_THERMOSTAT", "0") == "1"
 # Default OFF: the default path stays byte-identical.
 HENRI_ARC_COMPLEX_SIDECAR = os.environ.get("HENRI_ARC_COMPLEX_SIDECAR", "0") == "1"
 
+# Phase 8.11: native complex wave-space transition (default OFF). When set,
+# the EFE planner's transition operator executes in C^D as per-element
+# unit-modulus phasors with real conversion ONLY at egress
+# (complex_phase_transition.NativeComplexWaveTransition). Default OFF: the
+# production path stays byte-identical.
+HENRI_ARC_COMPLEX_TRANSITION = os.environ.get("HENRI_ARC_COMPLEX_TRANSITION", "0") == "1"
+
 # P2 ARC diagnostic baseline harness. All flags default OFF so the production
 # path stays byte-identical. Runs under these flags are DIAGNOSTIC only and
 # are NOT score-eligible (no runner-level LOADED-checkpoint gate yet).

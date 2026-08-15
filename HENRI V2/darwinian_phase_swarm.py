@@ -306,7 +306,9 @@ class HenriSwarmOrchestrator(nn.Module):
                  external_eig_weight: float = 0.25,
                  external_task_weight: float = 1.0,
                  task_weighted_eig: bool = False,
-                 task_eig_gamma: float = 4.0):
+                 task_eig_gamma: float = 4.0,
+                 use_diagonal_transition: bool = False,
+                 use_complex_transition: bool = False):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
@@ -333,8 +335,9 @@ class HenriSwarmOrchestrator(nn.Module):
                                   external_task_weight=external_task_weight,
                                   task_weighted_eig=task_weighted_eig,
                                   task_eig_gamma=task_eig_gamma,
-                                  num_actions=num_actions)
-        # Seed the planner's retrieval store with the decoder's action waves,
+                                  num_actions=num_actions,
+                                  use_diagonal_transition=use_diagonal_transition,
+                                  use_complex_transition=use_complex_transition)
         # flattened to real width d_model to match the planner's store.
         action_real = torch.stack([
             torch.view_as_real(self.decoder.get_action_wave(a)).reshape(-1)[:d_model]
