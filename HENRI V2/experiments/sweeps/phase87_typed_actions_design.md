@@ -83,3 +83,52 @@ is a SEEDED RANDOM projection (state hash -> randn -> normalize), i.e. the R1
 representation bottleneck. The 8.7 diagnostic may therefore fail its gates
 even with typed actions; that outcome seals FAIL honestly (no post-hoc tuning).
 
+## SEALED VERDICT (2026-08-14) — Phase 8.7 (feat/typed-action-phase-embeddings)
+
+Definitive run @ `03609d902971e1c494081b8407aa8843b9891a67`; remote CUDA
+matrix @ RTX 5090 (torch 2.12.0+cu130, CUDA 13.0, D=65,536, num_blocks
+8192); all arms rc=0; DONE_MARKER rc=0. Bounded CUDA smoke (HENRI_SMOKE=1)
+at the same SHA ran all 5 arms rc=0 before the full matrix.
+
+Evidence: `phase8_evidence/phase87_typed_actions/`
+- `p87_result.json` SHA-256 `d956fc446dc8ab5f3fac2a0895c42918063dd3c9856266b14dac54a8632519c5`
+- `p87.log` SHA-256 `ab7199d23a36389fa51761be37660c65e6c2c15a459ca6a011368ddd052edfe9`
+- decoder checkpoint loaded: SHA `75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060` (symlink overlay)
+
+| Arm | Result | Key metrics |
+|---|---|---|
+| A0 baseline | OK | random action waves + production FHRR bind; held-out Sagnac 0.9987 (quasi-orthogonal floor ~1.0) |
+| A1 8.7-A typed + FHRR | P87_FAIL | held-out 0.9991; reduction vs A0 **−0.04%** (no improvement) |
+| A2 8.7-A typed + Clifford | P87_FAIL | held-out 0.9997; reduction vs A0 **−0.10%** (no improvement) |
+| A3 8.7-B valence-free | P87_B_FAIL | held-out 0.9999 vs gate < 0.10 over 50 un-docked steps |
+| LAT | LAT_FAIL | update cycle **294.2 ms** vs <= 45.0 ms gate (fwd 433.2 ms) |
+
+Verdicts:
+1. **Lever 8.7-A (typed action embeddings) FALSIFIED** — structured action
+   carriers + non-commutative Clifford binding give ZERO held-out improvement
+   over random action waves (delta -0.04% / -0.10%, slightly worse). Actions
+   were not the bottleneck.
+2. **Lever 8.7-B (valence-free pre-training) FALSIFIED** — transition error
+   0.9999 >> 0.10 gate. Valence decoupling alone cannot train the transition
+   on seeded-random state projections.
+3. **Latency gate FAIL** — in-situ update 294.2 ms (6.5x over the 45.0 ms
+   gate) at D=65,536; promotion impossible regardless.
+4. **Attribution (INFERRED, corpus-confirmed)**: the state encoder
+   `state_to_wave()` is a SEEDED RANDOM projection (state hash -> randn ->
+   normalize) with NO spatial carrier structure — the R1 representation
+   bottleneck. Corpus: with un-factored random state projections, typed
+   actions and valence-free pre-training cannot help; held-out Sagnac clamps
+   at the quasi-orthogonal floor ~0.999-1.0. Prescribes representation
+   repair (CC-OS foreground-masked spatial carriers, incommensurate P_x/P_y
+   bases) as the NON-NEGOTIABLE next lever before any action featurization.
+5. This outcome was PRE-REGISTERED as a known risk above (lines 81-84):
+   "state_to_wave() is a SEEDED RANDOM projection... the 8.7 diagnostic may
+   therefore fail its gates even with typed actions; that outcome seals FAIL
+   honestly." The sealed failure CONFIRMS the pre-registration.
+
+Branch sealed @ `03609d9`; `main` untouched `2218ec4`. NO promotion.
+Next lever: representation repair (R1 foreground-masked ramps) — the
+corpus-prescribed non-negotiable prerequisite; requires a new pre-registered
+protocol and explicit approval.
+
+
