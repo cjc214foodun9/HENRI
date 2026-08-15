@@ -139,3 +139,19 @@ Flag OFF = production path byte-identical (adapter never constructed).
    fingerprint insertion on every call, spreading the fit across buffers).
 5. Local results: contract 9/9 PASS; full suite 414 passed / 1 skipped (baseline
    unchanged). Committed as Step 2; remote CUDA matrix = Step 3.
+
+## VERDICT — SEALED (OBSERVED 2026-08-15, RTX 5090, D=65,536, commit 7418a3b)
+G1 ACCEPT — native-complex mechanism EXACT at production scale:
+- G1b: pre=0.062951 -> post=-1.19e-07 (machine precision), 32 held-out
+  phasor pairs, <= 3 closed-form angle-residual calls.
+- G1a identity cos=1.0; G3 egress PASS; G4 default-OFF PASS;
+  G5 0.983 ms <= 1.0 ms; WIRE 3/3 PASS; DONE_MARKER rc=0 failures=[].
+G2@scale VACUOUS (honest flag): encoder default collinear carrier dominance
+(pre≈0) makes the improvement gate degenerate at scale; the MEANINGFUL G2
+boundary is the local contract test (d=512: pre 0.176 -> post 0.429,
+EXPECTED FAIL OBSERVED — lossy real-lift boundary recorded; next lever =
+complex-native encoder at ingress, NOT a mechanism kill).
+Evidence: p811_matrix_d65536.json SHA 447248f1...; p811_full.log SHA
+b5909f24... (local: phase8_evidence/phase811_native_complex/).
+Local: contract 9/9; full suite 414p/1s. main UNTOUCHED @ 2218ec4.
+NO promotion. ARC-AGI-3 SOTA stays BLOCKED_NO_DEMONSTRATIONS (20/20).
