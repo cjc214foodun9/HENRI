@@ -125,7 +125,7 @@ def main():
 
     # ---------------- G4 default-OFF + WIRE at scale ----------------
     from efe_planner import EFEPlanner, LowRankCoupledTransition
-    planner_off = EFEPlanner(num_blocks=NB, d_model=D, num_actions=NA)
+    planner_off = EFEPlanner(num_blocks=NB, d_model=D, num_actions=NA).to(DEVICE)
     legacy_ok = isinstance(planner_off.transition, LowRankCoupledTransition) and not planner_off._use_diagonal_transition
     s4 = unit_wave(11)
     a4 = unit_wave(12)
@@ -135,7 +135,7 @@ def main():
     record("G4_default_off", legacy_ok and legacy_unit and bool(torch.isfinite(out4).all()))
 
     planner_on = EFEPlanner(
-        num_blocks=NB, d_model=D, num_actions=NA, use_diagonal_transition=True)
+        num_blocks=NB, d_model=D, num_actions=NA, use_diagonal_transition=True).to(DEVICE)
     from henri_frequency_domain_transition import FrequencyDomainDiagonalAdapter
     wired = isinstance(planner_on.transition, FrequencyDomainDiagonalAdapter)
     cands = [(i, unit_wave(30 + i)) for i in range(NA)]
