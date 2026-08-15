@@ -72,3 +72,54 @@ BANDWIDTH is corrected to satisfy the stated gate.
   the attribution is block-coupling structure, NOT the carrier mechanism (S1/S4 isolate it).
 - Smoke-before-matrix; GPU-exclusive; paired/seeded trajectories; DONE marker only if
   all arms rc=0. Evidence hashed; seal commit; kill lesson recorded.
+
+## SEALED VERDICT (2026-08-15) — Phase 8.8 (feat/ccos-incommensurate-spatial-carriers)
+
+Definitive run @ `5621ea754f1f4d3e15d24a1e8fcb0e0f9dea1f3d`; remote CUDA matrix
+@ RTX 5090 (D=65,536, num_blocks 8192); all arms rc=0; DONE_MARKER rc=0.
+Smoke-before-matrix at the SAME SHA (all 5 arms rc=0) preceded the full matrix.
+
+Evidence: `phase8_evidence/phase88_spatial_carriers/matrix2/`
+- `p88_result.json` SHA-256 `c4860b31b8a4321ed2404e5e2f823785de0db5bc5e40d941df35f5e9a449fbd0`
+- `p88.log` SHA-256 `7bb70141fde735f5d92afd3109cd7c34263e184bbb35fc50398304651d9a3974`
+- Prior failed matrix1 (S2 IndexError, harness defect) preserved: `c8884c34...`/`3182640b...`
+- Prior failed smoke1 (S2 flat-vs-blocks bind mismatch) preserved: `b3f4f321...`/`44ad7f6d...`
+- decoder checkpoint overlay SHA `75572389...` (symlink, verified)
+
+| Arm | Gate | Result | Metric |
+|---|---|---|---|
+| S0 carrier self-test | — | PASS | mean cos 0.9355, deterministic, incommensurate |
+| S1 8.8-A mechanism | gate 1: >=0.85 | **PASS** | adjacent_cos 0.9355; identity 1.0; distant -0.2056; per-block unit; fail-closed |
+| S2 8.8-C transition | gate 2: <0.30 | **FAIL** | held-out Sagnac **1.1673** (n_train 224, n_eval 224) |
+| S3 8.8-B latency | gate 3: <=45.0 ms | **PASS** | in-situ **0.65 ms** (450x under budget) |
+| S4 Lie structure | >=0.99 | **PASS** | operator(translation) vs encode(translated) cos **1.0** |
+
+Verdicts:
+1. **8.8-A representation repair CONFIRMED** — CC-OS masked incommensurate spatial
+   carriers restore smooth spatial continuity (0.9355 >= 0.85) and EXACT Lie-group
+   phase-rotation structure (operator-vs-encode cos 1.0). The R1 seeded-random
+   projection bottleneck is FIXED at ingress. Pre-registered sketch-fix
+   (band-limited s=0.10 carriers, sinc(2πs)=0.937) validated on CUDA.
+2. **8.8-B vectorized O(D) kernel CONFIRMED** — 0.65 ms end-to-end vs the 45.0 ms
+   budget (vs Phase 8.7's 294.2 ms: 450x improvement). Kronecker O(D^2) eliminated.
+3. **8.8-C transition fitting FALSIFIED for the low-rank spatial form** — held-out
+   Sagnac 1.1673 >= 0.30 (anti-correlated: worse than the 1.0 random floor).
+   Attribution (INFERRED, corpus-confirmed with citations): spatial translation is
+   a FULL-RANK circulant in the spatial domain but a DIAGONAL multiplier in the
+   frequency domain (Convolution Theorem; Plate 1995 — all HRR ops can run in the
+   frequency domain). The rank-64 global field + per-block unitary residual
+   structurally cannot fit the full-rank diagonal phase rotation: severe out-of-band
+   phase leakage collapses Sagnac coherence. This is NOT a carrier-mechanism failure
+   (S1/S4 isolate the mechanism as PASS).
+4. **Next lever (corpus-prescribed, needs fresh pre-registered protocol + approval)**:
+   fit the transition IN THE FREQUENCY DOMAIN — diagonal phase-rotation multiplier
+   T_a = e^{j(dx*Omega + dy*Theta)}, element-wise (Hadamard) phase binding
+   replacing FHRR circular convolution in the transition path (qFHRR phase ring
+   Z_256; Plate 1995; UWE/RFC corpus). This converts the full-rank spatial problem
+   into a rank-1 diagonal fit with Sagnac loss -> ~0.
+
+Branch sealed @ `5621ea7`; main untouched `2218ec4`. NO promotion.
+Harness defects repaired (3 total, all pre-seal): S2 flat-vs-blocks bind mismatch
+(smoke1), S2 cross-seed alignment (1400176), S2 column-bound IndexError (5621ea7).
+Kill lesson recorded in skill reference `arc-phase88-spatial-carriers.md`.
+
