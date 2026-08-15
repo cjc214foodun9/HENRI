@@ -37,10 +37,10 @@ K_CUTOFF = 512
 SMOKE = os.environ.get("HENRI_SMOKE", "0") == "1"
 
 
-def _known_transform_pairs(encoder, num_blocks, device, n=8):
+def _known_transform_pairs(encoder, num_blocks, device, n=8, seed=20260814):
     """Synthetic known-transform integrity pairs (diagnostic_only)."""
     pairs = []
-    rng = torch.Generator(device="cpu").manual_seed(20260814)
+    rng = torch.Generator(device="cpu").manual_seed(seed)
     for _ in range(n):
         g = torch.randint(0, 10, (5, 5), generator=rng)
         idx = torch.randperm(5, generator=rng)
@@ -52,16 +52,22 @@ def _known_transform_pairs(encoder, num_blocks, device, n=8):
     return pairs
 
 
-def _fixed_point_drift(weight, grad, temp, lr, th_iso, th_spec, base_noise, steps=50):
-    """Paired SDE drift: variance of distance to fixed point over steps."""
+def _fixed_point_drift(weight, grad, temp, lr, th_iso, th_spec, seed, steps=50):
+    """Paired SDE drift: fresh per-step noise sequence (seeded), shared
+    between arms; returns final displacements. Per-seed stochasticity is
+    required for a valid cross-seed variance metric — reusing one noise
+    tensor across seeds made the variance degenerate (~1e-13)."""
+    rng = torch.Generator(device=weight.device).manual_seed(seed)
     w_iso, w_spec = weight.clone(), weight.clone()
     for _ in range(steps):
+        n_i = torch.randn(weight.shape, generator=rng, device=weight.device)
+        n_s = torch.randn(weight.shape, generator=rng, device=weight.device)
         w_iso, _ = th_iso.step_viscoelastic_creep(w_iso, grad, 0.05, 0.07,
                                                   temperature=temp,
-                                                  base_noise=base_noise)
+                                                  base_noise=n_i)
         w_spec, _ = th_spec.step_viscoelastic_creep(w_spec, grad, 0.05, 0.07,
                                                     temperature=temp,
-                                                    base_noise=base_noise)
+                                                    base_noise=n_s)
     return w_iso, w_spec
 
 
@@ -95,9 +101,9 @@ def arm_a1(device):
 
     iso_ends, spec_ends = [], []
     iso_low_ends, spec_low_ends = [], []
-    for _ in range(seeds):
+    for s in range(seeds):
         w_iso, w_spec = _fixed_point_drift(weight, grad, temp, lr,
-                                           th_iso, th_spec, base, steps=steps)
+                                           th_iso, th_spec, seed=1000 + s, steps=steps)
         d_iso = (w_iso - weight)
         d_spec = (w_spec - weight)
         iso_ends.append(float(d_iso.norm().item()))
@@ -152,7 +158,7 @@ def arm_a1(device):
 
 
 def arm_a2(encoder, num_blocks, device):
-    """Lever (b): production train_transition_batch, held-out loss decrease."""
+    """Lever (b): production train_transition_batch, HELD-OUT loss decrease."""
     t0 = time.perf_counter()
     n_pairs = 8 if SMOKE else 128
     planner = EFEPlanner(num_blocks=num_blocks, d_model=D).to(device)
@@ -163,16 +169,24 @@ def arm_a2(encoder, num_blocks, device):
 
     pre_loss = planner.train_transition_batch(
         states, actions, nexts, iters=3, ridge=1e-4, blend=0.5)
-    post_preds = torch.stack([planner.transition(states[i], actions[i]) for i in range(n_pairs)])
+    # HELD-OUT evaluation: fresh pairs, different seed (fit pairs are the
+    # training batch; evaluating on them would be train-loss, not held-out).
+    ho_pairs = _known_transform_pairs(encoder, num_blocks, device, n=n_pairs, seed=777)
+    ho_states = torch.stack([p[0] for p in ho_pairs])
+    ho_nexts = torch.stack([p[1] for p in ho_pairs])
+    ho_actions = F.normalize(torch.randn(num_blocks, 8, device=device), dim=-1).expand(n_pairs, -1, -1)
+    with torch.no_grad():
+        ho_preds = torch.stack([planner.transition(ho_states[i], ho_actions[i]) for i in range(n_pairs)])
     post_loss = float(
-        (1.0 - (post_preds.reshape(n_pairs, -1) * nexts.reshape(n_pairs, -1)).sum(-1) /
-         (post_preds.reshape(n_pairs, -1).norm(dim=-1) * nexts.reshape(n_pairs, -1).norm(dim=-1)).clamp(min=1e-12))
-        .mean())
+        (1.0 - (ho_preds.reshape(n_pairs, -1) * ho_nexts.reshape(n_pairs, -1)).sum(-1) /
+         (ho_preds.reshape(n_pairs, -1).norm(dim=-1) * ho_nexts.reshape(n_pairs, -1).norm(dim=-1)).clamp(min=1e-12))
+        .mean().detach())
     decrease_pct = (pre_loss - post_loss) / pre_loss * 100.0 if pre_loss > 0 else 0.0
     gate_pass = (decrease_pct > 15.0) and math.isfinite(post_loss) and post_loss < 1.0
     return {"verdict": "PASS" if gate_pass else "D1_BATCH_FAIL",
-            "arm_rc": 0, "pre_loss": pre_loss, "post_loss": post_loss,
+            "arm_rc": 0, "pre_loss": pre_loss, "post_loss_heldout": post_loss,
             "decrease_pct": round(decrease_pct, 4), "gate_pass": gate_pass,
+            "n_pairs": n_pairs,
             "wall_s": round(time.perf_counter() - t0, 2)}
 
 
