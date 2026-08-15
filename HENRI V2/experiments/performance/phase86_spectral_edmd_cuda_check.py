@@ -47,8 +47,8 @@ def _known_transform_pairs(encoder, num_blocks, device, n=8):
         shift = int(torch.randint(1, 5, (1,), generator=rng).item())
         h = torch.zeros_like(g)
         h[:, shift:] = g[:, :-shift]
-        pairs.append((encoder.encode_grid(g, device=device),
-                      encoder.encode_grid(h, device=device)))
+        pairs.append((encoder.encode_grid(g),
+                      encoder.encode_grid(h)))
     return pairs
 
 
