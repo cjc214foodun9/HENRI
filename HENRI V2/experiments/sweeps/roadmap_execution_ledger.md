@@ -32,3 +32,11 @@ D11: SU(3) Triton kernel lives in chromodynamic_grounding.py (additive module); 
 D12: G3-QCD realized as fitted-gauge held-out SU(3) transport loss at D=65,536 (PDF cites phantom tests/test_henri_core.py).
 D13: fixed deterministic DEFAULT_COLOR_PROJECTION [10,8] pre-registered constant.
 Phantom CLIs: gpu_verification_suite.py --kernel su3_matrix_mul (file MISSING, #11), production_arc_run.py --mode phase815_benchmark (no --mode, #12), o_vsa_ingress_tokenizer.py --mode su3_binding_test (no argparse), efe_planner.py --mode verify_confinement (no argparse).
+
+## 2026-08-16 — Roadmap R8.16 pre-registration (from Project HENRI V2 Strategic R&D Roadmap.pdf, SHA 0ca9f7a1...)
+R8.16 = egress unbinder obstruction term L_obstruct + Triton LUT (~50 us target).
+Status: PENDING OWN PDF / explicit go-ahead. Pre-registered acceptance: L_obstruct
+must change candidate ranking on held-out ARC-style inputs (not rescale-all); Triton
+LUT must beat the Phase 8.15 SU(3) kernel sustained interval 38.6 us @ D=65,536.
+NOTE: Phase 8.15 G4-QCD (38.6 us sustained) already covers the Triton-latency
+budget portion; the L_obstruct egress term remains the genuinely new work.
