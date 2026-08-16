@@ -75,6 +75,79 @@ class FunctorFlowAligner(nn.Module):
         return commutativity_error
 
 
+class DiagrammaticEgressEvaluator(nn.Module):
+    """Phase 8.16 Component 1: diagrammatic obstruction loss L_obstruct.
+
+    Spec: HENRI-SPEC-2026-08-PHASE8.16-EGRESS. Natural transformation
+    eta: F => G over wave->action / AST->action categories. For a candidate
+    transition pair (wave_f, ast_f):
+
+        L_obstruct(f) = || eta_Y(wave_f) - eta_X(ast_f) ||_F^2  (spec Eq. 1.1)
+
+    The projections eta_X/eta_Y share a pinned Frobenius scale
+    (||A||_F^2 = scale * dim) so loss magnitudes are determined by the DATA
+    geometry (matched round-trip quantization noise vs cross-pair distance),
+    not by learnable gain collapse. Additive / diagnostic-only; no production
+    caller is wired by this phase.
+    """
+
+    def __init__(self, dim: int = 65536, latent_dim: int = 2048, scale: float = 1e-3):
+        super().__init__()
+        self.dim = dim
+        self.latent_dim = latent_dim
+        self.scale = scale
+        self.eta_X = nn.Linear(dim, latent_dim, bias=False)
+        self.eta_Y = nn.Linear(dim, latent_dim, bias=False)
+        self._pin_scale()
+
+    def _pin_scale(self) -> None:
+        with torch.no_grad():
+            target = float(self.scale * self.dim) ** 0.5
+            for w in (self.eta_X.weight, self.eta_Y.weight):
+                s = w.norm(p=2).clamp_min(1e-12)
+                w.mul_(target / s)
+
+    def forward(self, wave_f: torch.Tensor, ast_f: torch.Tensor) -> torch.Tensor:
+        """Returns scalar L_obstruct for candidate pair(s)."""
+        fx = self.eta_X(wave_f)
+        fy = self.eta_Y(ast_f)
+        return torch.mean((fx - fy) ** 2)
+
+    def sym_error(self) -> torch.Tensor:
+        """Structural fidelity: ||eta_X - eta_Y||_F^2 (eta components aligned)."""
+        return torch.mean((self.eta_X.weight - self.eta_Y.weight) ** 2)
+
+    def reject(self, wave_f: torch.Tensor, ast_f: torch.Tensor, threshold: float = 1e-4) -> torch.Tensor:
+        """Spec gate: reject candidate AST transitions where L_obstruct > threshold."""
+        return self.forward(wave_f, ast_f) > threshold
+
+
+    def calibrate(
+        self,
+        wave_f: torch.Tensor,
+        ast_f: torch.Tensor,
+        steps: int = 200,
+        lr: float = 1e-3,
+        sym_lambda: float = 1e-2,
+    ) -> list[float]:
+        """Fit eta_X/eta_Y so L_obstruct -> 0 on matched pairs (spec 1.1).
+
+        Symmetric data (matched pairs) + sym regularizer drive eta_X -> eta_Y;
+        the gate is then evaluated on HELD-OUT pairs. Returns loss history.
+        """
+        opt = torch.optim.AdamW(self.parameters(), lr=lr)
+        hist = []
+        for _ in range(steps):
+            opt.zero_grad()
+            obj = self.forward(wave_f, ast_f) + sym_lambda * self.sym_error()
+            obj.backward()
+            opt.step()
+            hist.append(obj.item())
+        with torch.no_grad():
+            self._pin_scale()
+        return hist
+
+
 def main():
     print("=========================================================================")
     print("=== HENRI V2: FUNCTORFLOW CATEGORY-THEORETIC ALIGNMENT ENGINE ==========")
