@@ -25,3 +25,10 @@ Branch base per roadmap §4: tip @ `9f1c207` (sealed 8.12 tip = 8.11+8.12 machin
 - D6: Branch `feat/complex-boundary-wiring` @ `9f1c207` (roadmap-mandated base). `main` untouched @ `2218ec4`.
 - D7: Gate thresholds: roadmap G1 (<0.05 distinct) adopted for 8.14 G1; roadmap G6 (ARC score > 0.0) stays BLOCKED_NO_DEMONSTRATIONS (standing; G4 in 8.14 runner asserts the block state, never fabricates).
 - D8: Roadmap G5 (Triton ≤50 µs) measured in 8.16 phase, not 8.14 (Triton kernel does not exist yet).
+
+## 2026-08-16 — Phase 8.15 PDF ingestion (HENRI-SPEC-2026-08-PHASE8.15-QCD, SHA 621d2456...)
+D10: 8.15 branch base = 9b507da (8d6da01 + R8.14 G4 test commit, additive). PDF-mandated base 8d6da01 is an ancestor.
+D11: SU(3) Triton kernel lives in chromodynamic_grounding.py (additive module); qfhrr_kernels.py untouched (verified real Triton anchors @132/@156 — used for reference only).
+D12: G3-QCD realized as fitted-gauge held-out SU(3) transport loss at D=65,536 (PDF cites phantom tests/test_henri_core.py).
+D13: fixed deterministic DEFAULT_COLOR_PROJECTION [10,8] pre-registered constant.
+Phantom CLIs: gpu_verification_suite.py --kernel su3_matrix_mul (file MISSING, #11), production_arc_run.py --mode phase815_benchmark (no --mode, #12), o_vsa_ingress_tokenizer.py --mode su3_binding_test (no argparse), efe_planner.py --mode verify_confinement (no argparse).

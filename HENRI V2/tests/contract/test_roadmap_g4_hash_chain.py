@@ -28,6 +28,13 @@ HERMES_HOME = Path(os.environ.get("HERMES_HOME", "")) or (
 AUDIT_PATH = HERMES_HOME / "scripts" / "henri_audit.py"
 STORE_PATH = Path(__file__).resolve().parents[3] / "scripts" / "agentic_event_store.py"
 
+# Windows-local governance test: skip on hosts without the Hermes audit ledger
+# (e.g. the Vast CUDA target) so the remote suite is not broken by a
+# host-specific path.
+pytestmark = pytest.mark.skipif(
+    not AUDIT_PATH.exists(), reason="Hermes audit ledger not present on this host"
+)
+
 
 def _load_audit(tmp_path):
     """Import the REAL henri_audit module with the ledger redirected to tmp."""
