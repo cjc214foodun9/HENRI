@@ -51,12 +51,12 @@ def main():
 
     # ---- G1/G2: shared evaluator at production D ----
     gen = torch.Generator().manual_seed(7)
-    q1 = torch.randint(0, 256, (M_SYMBOLS, NB, 4), generator=gen, device=DEVICE).to(torch.uint8)
+    q1 = torch.randint(0, 256, (M_SYMBOLS, NB, 4), generator=gen, device="cpu").to(torch.uint8).to(DEVICE)
     w1 = _bc2w(q1)
     q1_rt = _bw2c(w1)
     w1_rt = _bc2w(q1_rt)
     q2 = torch.randint(0, 256, (M_SYMBOLS, NB, 4), generator=torch.Generator().manual_seed(9),
-                       device=DEVICE).to(torch.uint8)
+                       device="cpu").to(torch.uint8).to(DEVICE)
     w2 = _bc2w(q2)
 
     ev = DiagrammaticSharedEgressEvaluator(dim=D, latent_dim=LAT, scale=S).to(DEVICE)
@@ -78,7 +78,7 @@ def main():
     q_flat_cb = wave_to_phase_codes(w1.reshape(M_SYMBOLS * NB, 8)).reshape(M_SYMBOLS, -1).to(torch.uint8)
     recalls = {}
     for sigma in (0.01, 0.05, 0.1):
-        noise = torch.randn(M_SYMBOLS, NB, 8, device=DEVICE, generator=torch.Generator().manual_seed(3)) * sigma
+        noise = (torch.randn(M_SYMBOLS, NB, 8, generator=torch.Generator().manual_seed(3)) * sigma).to(DEVICE)
         q_noisy = _bw2c((w1 + noise).reshape(M_SYMBOLS, NB, 8)).reshape(M_SYMBOLS, -1).to(torch.uint8)
         top1 = 0
         for i in range(M_SYMBOLS):
