@@ -44,3 +44,19 @@ Ratio defined with denominator clamp max(L_valid, 1e-12); L_valid < 1e-12 -> rat
   phantom CLI #17). Tests at tests/contract/ (repo convention; spec cites tests/test_phase816_1_calibration.py).
 - G3/G4 suite CLI (gpu_verification_suite.py --kernel phase_ring_lut_unbinder) is a phantom CLI #18;
   re-measurement runs through our CUDA check runner.
+
+## VERDICT — SEALED ACCEPT (OBSERVED 2026-08-16, RTX 5090, D=65,536, commit 6f710e1)
+
+Full-scale confirmation @ D=65,536 (evidence: p8161_matrix_d65536.json SHA f4b26c82..., log 6eeb8fad..., DONE_MARKER rc=0 failures=[]):
+- G1-8.16.1: PASS — L_valid = 0.0 < 1e-4 (codebook round-trip pairs, exact).
+- G2-8.16.1: PASS — ratio 51,041 >= 10 (L_mism 5.104e-8 / max(L_valid,1e-12)).
+- G3-8.16.1: PASS — Triton LUT sustained 38.31 us <= 50.0 us (CUDA-event, 20 launches, m=3, D=65,536).
+- G4-8.16.1: PASS — top-1 recall 1.0000 @ sigma 0.01/0.05/0.1 (n=256, Triton path).
+- DERIVED THEORY CONFIRMED at production D: L_mism = s^2*k = 5.12e-8 (D-independent),
+  observed 5.104e-8 (0.3% agreement). L_valid = 0 (codec round-trip lossless).
+
+Phase verdict: ACCEPT (all four pre-registered gates pass). Corrected-gate reformulation
+of the 8.16 G1 KILL is validated: shared projection + pinned scale resolves the noise-floor
+inversion (8.16: valid 3.26e-2 vs mism 3.30e-2; 8.16.1: valid 0.0 vs mism 5.1e-8, ratio 5.1e4).
+Component acceptance only: diagnostic evaluator, additive, default-OFF; G4 is component
+recall, NOT ARC task grounding. ARC-AGI-3 SOTA remains BLOCKED_NO_DEMONSTRATIONS (20/20).
