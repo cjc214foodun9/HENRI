@@ -74,7 +74,7 @@ def main():
     }
 
     # ---- G4: codebook recall (Triton path) ----
-    lut = build_cos_lut(256, device=DEVICE)
+    lut = build_cos_lut(DEVICE)
     q_flat_cb = wave_to_phase_codes(w1.reshape(M_SYMBOLS * NB, 8)).reshape(M_SYMBOLS, -1).to(torch.uint8)
     recalls = {}
     for sigma in (0.01, 0.05, 0.1):
