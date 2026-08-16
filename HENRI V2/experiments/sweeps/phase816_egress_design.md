@@ -54,3 +54,19 @@ Proposed s = 5e-6: L_valid 2.7e-5 (3.7x margin), L_mism 3.2e-4 (3.2x margin).
 
 Phase verdict on completion: KILL (G1 falsified; G2/G3 component evidence;
 G4 blocked). Corrected gate gated on user approval.
+
+## VERDICT — SEALED KILL (OBSERVED 2026-08-16, RTX 5090, D=65,536, commits 2765295..d4c1d34)
+
+Full-scale confirmation @ D=65,536 (evidence: p816_matrix_d65536.json SHA 07b4a00e..., log fad974d5..., rc=1 failures=['G4']):
+- G1-EGRESS: FALSIFIED as specified — valid_loss 3.264e-02 >= 1e-4 (326x over gate),
+  ordering INVERTED (valid 3.264e-02 > mism 3.295e-02). Matches D=4096 probe exactly
+  (D-independent noise floor ~2/3 with spec default Linear init). Pre-registered kill
+  criterion FIRED.
+- G2-EGRESS: PASS — top-1 recall 1.0000 @ sigma 0.01/0.05/0.1 (256-symbol codebook, Triton path).
+- G3-EGRESS: PASS — Triton LUT sustained 40.8 us <= 50.0 us (CUDA-event, 20 launches).
+- G4-EGRESS: BLOCKED_NO_DEMONSTRATIONS (standing, 20/20, not attempted).
+
+Phase verdict: KILL (G1 falsified as specified). G2/G3 recorded as component evidence.
+Corrected-gate proposal (single shared projection + pinned scale band) in §3 —
+requires user approval before any re-implementation. Diagnostic-only module retained
+(additive; no production caller wired).
