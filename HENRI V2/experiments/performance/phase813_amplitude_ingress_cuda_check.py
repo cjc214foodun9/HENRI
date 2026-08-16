@@ -155,7 +155,7 @@ def main():
            expected="BLOCKED_NO_DEMONSTRATIONS (never fabricated)")
 
     # ---- G5 default-OFF ----
-    p = EFEPlanner(num_blocks=NB, d_model=D, device=DEVICE)
+    p = EFEPlanner(num_blocks=NB, d_model=D)
     record("G5_DEFAULT_OFF", type(p.transition).__name__ == "LowRankCoupledTransition",
            transition_type=type(p.transition).__name__)
 
