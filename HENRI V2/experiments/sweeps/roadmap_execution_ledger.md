@@ -40,3 +40,15 @@ must change candidate ranking on held-out ARC-style inputs (not rescale-all); Tr
 LUT must beat the Phase 8.15 SU(3) kernel sustained interval 38.6 us @ D=65,536.
 NOTE: Phase 8.15 G4-QCD (38.6 us sustained) already covers the Triton-latency
 budget portion; the L_obstruct egress term remains the genuinely new work.
+
+## 2026-08-16 — Phase 8.16 Egress Spec deviations (D14/D15) + phantom CLIs #13-#16
+D14: spec cites `functor_flow.py` (phantom; real `henri_functor_flow.py`) and
+     `gpu_verification_suite.py` (phantom #13), `--mode verify_lobstruct` (#14),
+     `--mode test_unbinder_recall` (#15), `--mode phase816_benchmark` (#16 —
+     production_arc_run.py has only --envs/--steps).
+D15: G1-EGRESS threshold 1e-4 is BELOW the as-shipped metric's own noise floor
+     (2*scale_eff*dim/latent = 2/3 with default Linear init, D-INDEPENDENT);
+     probe @D=4096: L_valid 3.2e-2 >= 1e-4, ordering INVERTED (valid > mism).
+     G1 FALSIFIED as specified -> phase verdict KILL (pre-registered criterion).
+     Corrected-gate proposal (single shared projection + pinned scale band) in
+     phase816_egress_design.md §3 — requires user approval, NOT auto-applied.
