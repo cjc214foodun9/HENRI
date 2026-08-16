@@ -92,3 +92,42 @@ G4 = BLOCKED_NO_DEMONSTRATIONS (expected). G5 default-OFF. main untouched.
 NO promotion. Redirect: COLOR-PHASE ingress (7.3/7.4 pc term) wired to the
 8.11 complex transition at the planner boundary — the amplitude channel
 was the 8.12 error; the color-PHASE channel is the verified one.
+
+## VERDICT — SEALED KILL (OBSERVED 2026-08-15/16, RTX 5090, D=65,536, commits d82a8c7/7284cbc)
+G1 KILL CONFIRMED at scale:
+- COLOR pair cos = 1.000000 (blueprint gate <0.0100 UNREACHABLE; cosine
+  scale-invariance of amplitude color weighting, any D, any carriers).
+- SHARED-support pair cos = 0.612392 (position-carrier superposition adds
+  shared cells coherently; D cancels, O(1/sqrt(D)) finite-D correction).
+G3 LEGACY CONTROL DOMINANCE at scale: 6.75e-07 (color) / 7.02e-05
+(shared) — verified 7.3/7.4 encoder (incommensurate+bg_mask, color-PHASE
+pc term) is ~1e6x / ~8700x better than the amplitude ingress. The
+discriminative channel is COLOR PHASE, not amplitude.
+G2 FIT survives (transition property, NOT promotion): held-out translation
+loss 2.16e-07 <= 0.05. G1X translation exactness holds for any
+position-carrier superposition (8.11 transition amplitude-invariant).
+G3 LATENCY FAILS (pre-registered perf kill): 2.221 ms > 1.0 ms for
+30x30 grid (blueprint's own [N_fg, D] mechanism class; vectorized
+superposition of 900 fg pixels over 65,536 dims).
+G4 = BLOCKED_NO_DEMONSTRATIONS (expected; never fabricated).
+G5 DEFAULT-OFF PASS (LowRankCoupledTransition).
+DONE_MARKER rc=1 failures=['G3_LATENCY'] (honest aggregation; G1/G3 kills
+are expected-evidence gates that fired correctly — rc=1 because the
+blueprint gates were violated, which IS the kill verdict).
+Evidence: p813_matrix_d65536.json SHA b976b037c04837a4846ffc9f189eab874018b5018d41afe21671c01783266701;
+p813_full.log SHA 9b437462ad86e907c5718e90d5eb4be81313bd59dbb81a1c908276b0ac9e20cc
+(local: phase8_evidence/phase813_amplitude_ingress/). Local contract 9/9;
+full suite 423p/1s. main UNTOUCHED @ 2218ec4. NO promotion.
+ARC-AGI-3 SOTA stays BLOCKED_NO_DEMONSTRATIONS (20/20; G4).
+
+## Phase 8.14 redirect (from evidence, NOT speculation)
+- The lever is COLOR-PHASE ingress: wire the verified 7.3/7.4 encoder
+  (incommensurate spatial carriers + bg_mask + color-phase pc term) to the
+  8.11 NativeComplexWaveTransition AT THE PLANNER BOUNDARY. 8.13 proved
+  amplitude-only is color-blind; 7.3/7.4 already achieves 1e-6..3e-3
+  discrimination on every hard pair at scale.
+- The complex transition is amplitude-invariant (proved 8.13 G2) and
+  exact for translations (8.11 G1b) — the remaining gap is a REAL-egress
+  boundary loss (8.11 G2@scale: 0.019 < 0.02 improvement). A complex
+  egress contract (complex state at the planner boundary, real only at
+  the environment edge) is the concrete next falsifiable step.
