@@ -44,3 +44,13 @@ Base: e407dd4 (Phase 8.16.1 SEALED ACCEPT). Branch: feat/phase817-in-context-tas
 --mode phase817_live_benchmark (production_arc_run.py exposes --envs/--steps only).
 Verification runs via contract tests + CUDA runner (equivalent deterministic paths);
 no phantom CLIs are added to production modules.
+
+## VERDICT — SEALED ACCEPT (component; G4 standing blocked) (OBSERVED 2026-08-16, RTX 5090, commit 9f6fc09)
+
+Full-scale CUDA confirmation @ NB=8192, D=65,536 host (evidence: p817_matrix_d65536.json SHA 4ba3da3d..., log d8f62896..., DONE_MARKER rc=1 failures=["G4"] by design):
+- G1-8.17 PASS — c128 unitarity err 2.93e-13 < 1e-6 (math gate); c64 1.56e-4 < 1e-3 (live fidelity; det_min 0.999995 = SU(3) membership intact). Compile 35-132 ms @ NB=8192.
+- G2-8.17 PASS — recovery err 1.81e-13 < 0.05 on det-1 consistent pairs; inconsistent err 155.9 >= 0.05 (discriminating).
+- G3-8.17 PASS — thermal ratio 141.2x >= 100x; per-channel variance ratio 127.3x >= 50x; n_failing 10; SU(3) det_min 0.999995 preserved post-creep.
+- G4-8.17 BLOCKED (standing) — demo preflight at this SHA: r11l-495a7899/ft09-0d8bbf25/sk48-d8078629 all expose examples: None -> BLOCKED_NO_DEMONSTRATIONS; solved 0/20; not attempted by design.
+
+Phase verdict: SEALED ACCEPT for the three component gates (C1 Procrustes compiler, C2 fail-closed in-context driver, C3 anisotropic creep). Additive, default-OFF (HENRI_ARC_IN_CONTEXT_ALIGN). C2 goal bridge typed BLOCKED_MISSING_FIELD_WAVE_TRANSDUCER (no field->wave transducer exists; no silent goal-path change). G4 live-ARC progression remains BLOCKED_NO_DEMONSTRATIONS — Phase 8.17 does NOT claim task grounding. Honest SOTA status unchanged: NO.
