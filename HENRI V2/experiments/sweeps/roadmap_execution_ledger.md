@@ -64,3 +64,8 @@ D16 (8.16.1): SPEC CONSTANT ERRORS — claimed L_valid 2.7e-5 / L_mism 3.2e-4 @ 
 D17 (8.16.1): phantom CLIs #17 (functor_flow.py — real: henri_functor_flow.py) and
    #18 (gpu_verification_suite.py --kernel phase_ring_lut_unbinder) confirmed missing;
    spec test path tests/test_phase816_1_calibration.py -> repo convention tests/contract/.
+
+## 2026-08-16 — Phase 8.17 In-Context Task Alignment (PDF 1342944c...)
+
+D18: spec C1 reference code has an indentation bug (7-space body) — fixed at implementation (spec-exact semantics).
+D19: G1 gate is dtype-blind — c64 SVD rounding floor over 8192 blocks ~5e-5 exceeds literal 1e-6 even for exact algebra; pre-registered dual-dtype (c128 = math gate <1e-6, c64 = live fidelity <1e-3). G2 oracle must be det-1 SU(3) (live matrix-exp producer); random-QR oracle FAILS (112.2, phase artifact). G3 141x >= 100x. G4 standing BLOCKED_NO_DEMONSTRATIONS; C2 goal bridge typed BLOCKED_MISSING_FIELD_WAVE_TRANSDUCER (no field->wave transducer exists). Phantom CLIs #19-#21 (--mode verify_procrustes_compiler, --mode test_anisotropic_creep, --mode phase817_live_benchmark).

@@ -234,6 +234,59 @@ class AdaptiveViscoelasticThermostat(nn.Module):
         return updated_weight, telemetry
 
 
+    def apply_anisotropic_langevin_creep(
+        self,
+        task_operator: torch.Tensor,
+        grad_operator: torch.Tensor,
+        sagnac_delta: torch.Tensor,
+        t_base: float = 1e-4,
+        alpha: float = 5.0,
+        threshold: float = 0.1000,
+        step_lr: float = 1e-3,
+        noise: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, Dict[str, Any]]:
+        """Phase 8.17 C3: channel-wise viscoelastic Langevin creep on W_task.
+
+        Spec: HENRI-SPEC-2026-08-PHASE8.17-ALIGNMENT (SHA 1342944c...).
+        T_d = t_base * exp(alpha * sagnac_delta_d); thermal variance is
+        injected into failing channels (delta_d > threshold) only, preserving
+        Lie invariants on stable channels. SU(3) polar retraction per block
+        (SVD -> U V^dag -> det-correction) after the SDE step.
+        """
+        delta = sagnac_delta.reshape(-1)
+        t_d = t_base * torch.exp(alpha * delta)  # [NB] channel temperatures
+        failing = delta > threshold  # [NB] bool mask
+        if noise is None:
+            n = torch.randn(
+                task_operator.shape,
+                device=task_operator.device,
+                dtype=task_operator.dtype,
+            )
+        else:
+            n = noise
+        # complex noise: std per real component = sqrt(T_d), E|n|^2 = 2 T_d
+        scale = torch.sqrt(t_d).to(task_operator.dtype)[:, None, None]
+        injected = n * scale
+        updated = task_operator - step_lr * grad_operator + injected
+        # polar retraction per block onto SU(3)
+        uu, _s, vhv = torch.linalg.svd(updated)
+        proj = torch.einsum("bij,bjk->bik", uu, vhv)
+        det = torch.linalg.det(proj)
+        phase = torch.pow(det.conj(), 1.0 / 3.0).unsqueeze(-1).unsqueeze(-1)
+        proj = proj * phase
+        t_f = float(t_d[failing].max().item()) if bool(failing.any()) else 0.0
+        t_s = float(t_d[~failing].min().item()) if bool((~failing).any()) else t_base
+        ratio = (t_f / t_s) if t_s > 0 else float("inf")
+        telemetry = {
+            "n_failing": int(failing.sum().item()),
+            "t_failing": t_f,
+            "t_stable": t_s,
+            "thermal_ratio": ratio,
+            "su3_det_min": float(torch.linalg.det(proj).abs().min().item()),
+        }
+        return proj, telemetry
+
+
 def verify_thermostat_adaptation() -> bool:
     """Verification routine for the Adaptive Viscoelastic Thermostat."""
     device = "cuda" if torch.cuda.is_available() else "cpu"

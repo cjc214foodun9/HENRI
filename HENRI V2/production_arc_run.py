@@ -307,6 +307,19 @@ class LatentTelemetry:
 # Core per-step pipeline
 # ---------------------------------------------------------------------------
 
+def _pad_su3_field(
+    field: torch.Tensor, nb: int = 8192, device=None
+) -> torch.Tensor:
+    """Pad a [K,3,3] SU(3) field to [nb,3,3] with identity blocks (SU(3))."""
+    field = field.to(device) if device is not None else field
+    k = field.shape[0]
+    if k >= nb:
+        return field[:nb]
+    eye = torch.eye(3, dtype=field.dtype, device=field.device).unsqueeze(0)
+    pad = eye.repeat(nb - k, 1, 1)
+    return torch.cat([field, pad], dim=0)
+
+
 def kuramoto_order_parameter(phases: torch.Tensor) -> float:
     """r = |mean(e^{i theta})| over expert phases; 1 = perfect phase-lock."""
     z = torch.exp(1j * phases)
@@ -392,6 +405,9 @@ def run():
     # (default OFF). Probe: FUNCTOR_FALSIFIED on live geometry — stays
     # diagnostic until the held-out gate flips.
     HENRI_ARC_FUNCTOR = int(os.environ.get("HENRI_ARC_FUNCTOR", "0") or 0)
+    HENRI_ARC_IN_CONTEXT_ALIGN = os.environ.get(
+        "HENRI_ARC_IN_CONTEXT_ALIGN", "0"
+    ) == "1"
     # Phase 8: Progressive Semantic Grounding (default OFF). Planner-side
     # macro-option search (W_task functor + object options + vmap EFE).
     # Diagnostic-only; never grants score eligibility.
@@ -681,6 +697,59 @@ def run():
                            "status": "BLOCKED_IMPORT_FAILED",
                            "reason": str(_fn_exc)})
                 print(f"  [functor] failed: {_fn_exc}")
+
+        # Phase 8.17 C2: In-Context Task Alignment (default OFF). Compile
+        # W_task from public demo pairs via the SU(3) color-field encoder +
+        # block-wise Procrustes compiler. The goal bridge from the complex
+        # SU(3) field domain to the real [num_blocks,8] planner wave domain
+        # does NOT exist (no field->wave transducer) -> typed fail-closed
+        # status, never a silent goal-path change.
+        ic_align = None
+        if HENRI_ARC_IN_CONTEXT_ALIGN:
+            try:
+                from chromodynamic_grounding import encode_su3_color_field
+                from efe_planner import compile_in_context_task_operator
+
+                if not demo_pairs:
+                    ic_align = {"status": "BLOCKED_NO_DEMOS",
+                                "reason": "no public demo pairs",
+                                "demo_pair_count": 0}
+                else:
+                    xs = torch.tensor(np.stack([p[0] for p in demo_pairs]))
+                    ys = torch.tensor(np.stack([p[1] for p in demo_pairs]))
+                    m = xs.shape[0]
+                    fx = encode_su3_color_field(xs).reshape(m, -1, 3, 3)
+                    fy = encode_su3_color_field(ys).reshape(m, -1, 3, 3)
+                    fx = torch.stack([_pad_su3_field(f) for f in fx])
+                    fy = torch.stack([_pad_su3_field(f) for f in fy])
+                    w_task = compile_in_context_task_operator(fx, fy)
+                    unit_err = float(
+                        (w_task.conj().transpose(-1, -2) @ w_task
+                         - torch.eye(3, dtype=w_task.dtype, device=w_task.device))
+                        .norm().item()
+                    )
+                    ic_align = {
+                        "status": "W_TASK_COMPILED_GOAL_BRIDGE_BLOCKED",
+                        "reason": "BLOCKED_MISSING_FIELD_WAVE_TRANSDUCER",
+                        "w_task_shape": list(w_task.shape),
+                        "w_task_unitary_err": unit_err,
+                        "demo_pair_count": len(demo_pairs),
+                    }
+            except Exception as _ic_exc:
+                ic_align = {"status": "BLOCKED_IMPORT_FAILED",
+                            "reason": str(_ic_exc)}
+                print(f"  [in-context-align] failed: {_ic_exc}")
+            tele.emit({
+                "env": env_name,
+                "event_type": "IN_CONTEXT_ALIGN",
+                "status": ic_align.get("status"),
+                "reason": ic_align.get("reason"),
+                "demo_pair_count": ic_align.get("demo_pair_count", 0),
+                "w_task_shape": ic_align.get("w_task_shape"),
+                "w_task_unitary_err": ic_align.get("w_task_unitary_err"),
+            })
+            print(f"  [in-context-align] {ic_align.get('status')}: "
+                  f"{ic_align.get('reason')}")
 
         if demo_pairs:
             # The current Arcade adapter exposes demonstrations but not the

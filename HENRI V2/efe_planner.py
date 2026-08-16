@@ -1453,3 +1453,27 @@ class INTACTIsomorphicConjugacyHead(nn.Module):
 
         return action_idx, sagnac_delta, requires_fallback
 
+
+def compile_in_context_task_operator(
+    demo_inputs: torch.Tensor,
+    demo_outputs: torch.Tensor,
+) -> torch.Tensor:
+    """Phase 8.17 C1: block-wise Orthogonal Procrustes in-context task compiler.
+
+    demo_inputs:  [M, NB, 3, 3] complex SU(3) input fields
+    demo_outputs: [M, NB, 3, 3] complex SU(3) output fields
+    Returns:      [NB, 3, 3] unitary SU(3) task operator W_task
+
+    Spec: HENRI-SPEC-2026-08-PHASE8.17-ALIGNMENT (SHA 1342944c...).
+    Cross-covariance K_d = (1/M) sum_i Y_i X_i^dag, block-wise SVD,
+    unitary Procrustes projection W = U V^dag, det-correction to SU(3).
+    (Spec code indent bug fixed at implementation; deviation D18.)
+    """
+    M = demo_inputs.shape[0]
+    K = torch.einsum("mbij,mbkj->bik", demo_outputs, demo_inputs.conj()) / float(M)
+    U, S, Vh = torch.linalg.svd(K)
+    W_task = torch.einsum("bij,bjk->bik", U, Vh)
+    det = torch.linalg.det(W_task)
+    phase_correction = torch.pow(det.conj(), 1.0 / 3.0).unsqueeze(-1).unsqueeze(-1)
+    W_task = W_task * phase_correction
+    return W_task
