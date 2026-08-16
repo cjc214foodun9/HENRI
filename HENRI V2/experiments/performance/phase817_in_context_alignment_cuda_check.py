@@ -111,14 +111,23 @@ def main():
         w3, grad, delta, t_base=1e-4, alpha=5.0, noise=noise)
     disp_fail = float((out[:10] - w3[:10]).abs().norm().item())
     disp_stable = float((out[10:] - w3[10:]).abs().norm().item())
+    # Per-channel mean squared displacement (dimensionally correct): the raw
+    # aggregate norms compare 10 channels vs 8182 channels — invalid. Variance
+    # ratio mean_sq_fail/mean_sq_stable ~ T_f/T_s = 141x.
+    mean_sq_fail = disp_fail ** 2 / 10.0
+    mean_sq_stable = disp_stable ** 2 / float(NB - 10)
+    var_ratio = mean_sq_fail / mean_sq_stable if mean_sq_stable > 0 else float("inf")
     g3_pass = (tele["thermal_ratio"] >= 100.0 and tele["n_failing"] == 10
                and tele["su3_det_min"] > 0.999
-               and disp_fail > 10.0 * disp_stable + 1e-6)
+               and var_ratio >= 50.0)
     results["G3_817"] = {"pass": g3_pass, **tele,
-                         "disp_failing": disp_fail, "disp_stable": disp_stable}
+                         "disp_failing": disp_fail, "disp_stable": disp_stable,
+                         "mean_sq_fail": mean_sq_fail,
+                         "mean_sq_stable": mean_sq_stable,
+                         "var_ratio": var_ratio}
     print(f"G3_817: pass={g3_pass} ratio={tele['thermal_ratio']:.1f}x "
-          f"det_min={tele['su3_det_min']:.6f} disp_fail={disp_fail:.3e} "
-          f"disp_stable={disp_stable:.3e}")
+          f"det_min={tele['su3_det_min']:.6f} var_ratio={var_ratio:.1f}x "
+          f"disp_fail={disp_fail:.3e} disp_stable={disp_stable:.3e}")
     if not g3_pass:
         failures.append("G3")
 
