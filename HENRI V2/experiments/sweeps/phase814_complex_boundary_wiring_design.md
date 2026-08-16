@@ -88,3 +88,35 @@ Variant A (value-lift) FALSIFIED locally: surrogate phases re-encode
   ≤ 2.0 ms @ D=65,536.
 - G5 default-OFF: EFEPlanner.transition remains LowRankCoupledTransition.
 - G6 round-trip: re_realify(un_realify(w)) == w, max err < 1e-6 @ scale.
+
+## VERDICT — SEALED ACCEPT (OBSERVED 2026-08-16, RTX 5090, D=65,536, commits e618bec..8e06374)
+G1 SCALE_PASS: complex_cos == real_cos exactly on every hard pair
+(color 0.2002774, shared 0.0002753, disjoint 0.0003604 — identity delta
+0.0 everywhere). The boundary reproduces the production encoder
+byte-exactly; the real-egress boundary loss is eliminated by
+construction (the complex inner product IS the real cosine).
+G2 ACCEPT (32 pairs, 24 fit / 8 held-out): complex arm
+pre 0.82825 -> post 0.4199 (improvement +0.40835); real arm
+pre 0.87222 -> post 0.82733 (improvement +0.04489);
+post_real - post_complex = 0.40743 >= 0.02; post_complex <= 0.90.
+The complex transition learns translation operators ~9x more effectively
+than the real acos-lift path (8.11 G2@scale gap +0.019 is now bridged:
++0.408 complex vs +0.045 real on matched held-out pairs).
+G3 BLOCKED_NO_DEMONSTRATIONS (never fabricated).
+G4 CYCLE_PASS 0.079 ms <= 2.0 ms.
+G5 DEFAULT_OFF_PASS (LowRankCoupledTransition).
+G6 ROUNDTRIP_PASS max_err 0.0.
+DONE_MARKER rc=0 failures=[] verdict=ACCEPT.
+Evidence: p814_matrix_d65536.json SHA fb4f2a2a165b8a5686a8aee2d52ef71f301440f5695f80a03b803ca0d8f7e498;
+p814_full.log SHA c89238aa77eebd052de72ca715793d1d031d38d489127bb2f84054f5c1384cc5
+(local: phase8_evidence/phase814_complex_boundary/).
+Local contract 5/5; full suite 423p/1s. main UNTOUCHED @ 2218ec4.
+NO promotion yet — default-OFF component, sealed on feature branch.
+ARC-AGI-3 SOTA stays BLOCKED_NO_DEMONSTRATIONS (20/20; G3).
+
+## Phase 8.15 redirect (from evidence)
+The complex boundary (variant B) is verified and default-OFF. The
+roadmap's R8.15 (holographic egress head, L_obstruct < 1e-4) and R8.16
+(Triton LUT <= 50 us) are the next staged phases; R8.14 (Zone C
+hash-chained ledger, G4 1,000-update verification) is a deterministic
+store test pending in the execution ledger.
