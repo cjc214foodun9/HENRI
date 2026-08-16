@@ -48,7 +48,8 @@ def gell_mann_basis(dtype=torch.complex64):
 def rand_su3(n, basis, theta_scale=1.0, seed=0):
     g = torch.Generator().manual_seed(seed)
     theta = (torch.rand(n, 8, generator=g) * 2 - 1) * theta_scale
-    alg = 1j * torch.einsum("na,abc->nbc", theta.to(basis.dtype), basis)
+    theta = theta.to(basis.device).to(basis.dtype)  # CPU gen -> device (CUDA trap)
+    alg = 1j * torch.einsum("na,abc->nbc", theta, basis)
     return torch.matrix_exp(alg)
 
 
@@ -80,8 +81,9 @@ d_nc = float((trans.field_to_wave((UA @ UB).unsqueeze(0))
               - trans.field_to_wave((UB @ UA).unsqueeze(0))).norm().item())
 g = torch.Generator().manual_seed(4)
 theta = (torch.rand(NB, 8, generator=g) * 2 - 1) * 0.5
-alg1 = 1j * torch.einsum("na,abc->nbc", theta.to(trans.basis.dtype), trans.basis)
-U_same = torch.matrix_exp(alg1).to(DEVICE)
+theta = theta.to(trans.basis.device).to(trans.basis.dtype)  # CPU gen -> device
+alg1 = 1j * torch.einsum("na,abc->nbc", theta, trans.basis)
+U_same = torch.matrix_exp(alg1)
 U_com = U_same @ U_same
 d_com = float((trans.field_to_wave((U_same @ U_com).unsqueeze(0))
                - trans.field_to_wave((U_com @ U_same).unsqueeze(0))).norm().item())
