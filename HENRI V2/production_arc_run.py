@@ -618,6 +618,7 @@ def run():
         # private level list can contain hidden targets and is not admissible
         # evidence for an unseen-task episode.
         demo_pairs = []
+        bridged_goal_wave = None  # Phase 8.18 C2 transducer bridge (default OFF)
         if hasattr(game, "examples") and game.examples:
             for ex in game.examples:
                 if isinstance(ex, dict) and "input" in ex and "output" in ex:
@@ -728,13 +729,44 @@ def run():
                          - torch.eye(3, dtype=w_task.dtype, device=w_task.device))
                         .norm().item()
                     )
-                    ic_align = {
-                        "status": "W_TASK_COMPILED_GOAL_BRIDGE_BLOCKED",
-                        "reason": "BLOCKED_MISSING_FIELD_WAVE_TRANSDUCER",
-                        "w_task_shape": list(w_task.shape),
-                        "w_task_unitary_err": unit_err,
-                        "demo_pair_count": len(demo_pairs),
-                    }
+                    # Phase 8.18 C2: field-to-wave isomorphic transducer bridge
+                    # (replaces BLOCKED_MISSING_FIELD_WAVE_TRANSDUCER).
+                    # goal_wave = angle(field_to_wave(W_task @ U_test)) -> real
+                    # [num_blocks, 8] planner-domain wave. Default-OFF (flag).
+                    bridged_goal_wave = None
+                    try:
+                        from universal_data_transducer import SU3FieldWaveTransducer
+                        from chromodynamic_grounding import GELL_MANN_BASIS
+
+                        trans = SU3FieldWaveTransducer(GELL_MANN_BASIS).to(DEVICE)
+                        init_grid = obs.frame[0].tolist()
+                        u_test = encode_su3_color_field(
+                            torch.tensor(np.array(init_grid), device=DEVICE)
+                        ).reshape(-1, 3, 3)
+                        u_test = _pad_su3_field(u_test, device=DEVICE)
+                        u_transformed = w_task @ u_test          # [8192, 3, 3]
+                        w_goal = trans.field_to_wave(u_transformed.unsqueeze(0))
+                        bridged_goal_wave = torch.angle(w_goal).reshape(
+                            8192, 8
+                        ).detach()
+                        ic_align = {
+                            "status": "W_TASK_GOAL_BRIDGED",
+                            "reason": "phase818_su3_field_wave_transducer",
+                            "w_task_shape": list(w_task.shape),
+                            "w_task_unitary_err": unit_err,
+                            "goal_wave_shape": list(bridged_goal_wave.shape),
+                            "demo_pair_count": len(demo_pairs),
+                        }
+                    except Exception as _tr_exc:
+                        ic_align = {
+                            "status": "W_TASK_COMPILED_GOAL_BRIDGE_BLOCKED",
+                            "reason": "BLOCKED_MISSING_FIELD_WAVE_TRANSDUCER",
+                            "w_task_shape": list(w_task.shape),
+                            "w_task_unitary_err": unit_err,
+                            "bridge_error": str(_tr_exc),
+                            "demo_pair_count": len(demo_pairs),
+                        }
+                        print(f"  [in-context-align] bridge failed: {_tr_exc}")
             except Exception as _ic_exc:
                 ic_align = {"status": "BLOCKED_IMPORT_FAILED",
                             "reason": str(_ic_exc)}
@@ -884,17 +916,23 @@ def run():
         if LAMBDA_GOAL > 0.0:
             init_grid = obs.frame[0].tolist()
             init_wave = tokenizer.encode_spatial_grid(init_grid).squeeze(0).to(DEVICE)
+            # Layer 0: Phase 8.18 in-context transducer-bridged goal (default OFF)
+            if bridged_goal_wave is not None:
+                goal_wave = bridged_goal_wave.to(DEVICE)
+                print(f"  [goal] Phase 8.18 transducer bridge — "
+                      f"W_task @ U_test -> goal wave")
             # Layer 1: try Zone C analogical retrieval
-            try:
-                res = orch.segment_cache.retrieve(init_wave.cpu())
-                if res["hits"] > 0 and res.get("top_similarity", 0) > 0.7:
-                    # Retrieved wave is a similar past state — use as goal
-                    goal_wave = res["conditioning_wave"]
-                    if goal_wave is not None:
-                        goal_wave = goal_wave.to(DEVICE)
-                        print(f"  [goal] Zone C analogical — top_sim={res['top_similarity']:.3f}")
-            except Exception as e:
-                pass  # Zone C may be offline; fall through
+            if goal_wave is None:
+                try:
+                    res = orch.segment_cache.retrieve(init_wave.cpu())
+                    if res["hits"] > 0 and res.get("top_similarity", 0) > 0.7:
+                        # Retrieved wave is a similar past state — use as goal
+                        goal_wave = res["conditioning_wave"]
+                        if goal_wave is not None:
+                            goal_wave = goal_wave.to(DEVICE)
+                            print(f"  [goal] Zone C analogical — top_sim={res['top_similarity']:.3f}")
+                except Exception as e:
+                    pass  # Zone C may be offline; fall through
             # Layer 2: preference-blend goal (blend top-k preference engrams into a
             # "desired outcome basin" — more meaningful than identity goal)
             if goal_wave is None:

@@ -90,6 +90,59 @@ class UniversalDataTransducer(nn.Module):
         return torch.full((self.d_model,), phase_code, dtype=torch.uint8, device=self.device)
 
 
+class SU3FieldWaveTransducer(torch.nn.Module):
+    """Bijective, gauge-invariant transducer connecting SU(3)^N Lie group fields
+    to complex unit hypervectors on S^(D-1) (D = N*8).
+
+    Spec: HENRI-SPEC-2026-08-PHASE8.18-TRANSDUCER (SHA 158c02c7...).
+    Deviations applied (see experiments/sweeps/phase818_transducer_design.md):
+    D19 eigendecomposition matrix log (torch.linalg.matrix_log absent on
+    torch 2.12.0+cu130 — VERIFIED local + remote); D20 corrected projection
+    einsum 'aij,bnji->bna' (spec 'abc,bncb->bna' has a b-index collision);
+    D21 corrected reconstruction einsum 'bna,aij->bnij' (spec 'bna,abc->bnabc'
+    never contracts the generator index).
+    """
+
+    def __init__(self, gell_mann_basis: torch.Tensor):
+        super().__init__()
+        basis = gell_mann_basis.detach().clone()
+        self.register_buffer("basis", basis)  # [8, 3, 3] complex
+
+    @staticmethod
+    def _matrix_log(U: torch.Tensor) -> torch.Tensor:
+        """Matrix log for unitary U via eigendecomposition (D19)."""
+        evals, evecs = torch.linalg.eig(U)
+        return evecs @ torch.diag_embed(torch.log(evals)) @ evecs.conj().transpose(-2, -1)
+
+    def field_to_wave(self, su3_field: torch.Tensor) -> torch.Tensor:
+        """su3_field: [B, N, 3, 3] complex SU(3). Returns [B, N*8] complex
+        unit-modulus wave hypervector on S^(D-1)."""
+        B, N, _, _ = su3_field.shape
+        log_u = self._matrix_log(su3_field)                  # [B, N, 3, 3]
+        algebra = -1j * log_u                                # su(3) Hermitian
+        theta = 0.5 * torch.real(
+            torch.einsum("aij,bnji->bna", self.basis, algebra)
+        )                                                    # [B, N, 8]
+        return torch.exp(1j * theta.reshape(B, N * 8))
+
+    def wave_to_field(self, wave_vector: torch.Tensor) -> torch.Tensor:
+        """wave_vector: [B, D] complex unit hypervector. Returns [B, D//8, 3, 3]
+        complex SU(3) matrices."""
+        B, D = wave_vector.shape
+        N = D // 8
+        theta = torch.angle(wave_vector).reshape(B, N, 8)
+        alg = 1j * torch.einsum(
+            "bna,aij->bnij", theta.to(self.basis.dtype), self.basis
+        )                                                    # [B, N, 3, 3]
+        return torch.matrix_exp(alg)
+
+    def round_trip_error(self, su3_field: torch.Tensor) -> torch.Tensor:
+        """Mean per-block round-trip ||U - Phi^-1(Phi(U))||_F (G1-8.18 metric)."""
+        w = self.field_to_wave(su3_field)
+        rec = self.wave_to_field(w)
+        return (su3_field - rec).norm(dim=(-2, -1)).mean()
+
+
 if __name__ == "__main__":
     udt = UniversalDataTransducer(d_model=65536)
     wave = udt.transduce_string("hello henri")
