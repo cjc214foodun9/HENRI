@@ -96,7 +96,7 @@ def main():
     for sigma in (0.01, 0.05, 0.1):
         gen = torch.Generator(device=DEVICE).manual_seed(31)
         noise = torch.randn(M_SYMBOLS, NB, 8, device=DEVICE, generator=gen) * sigma
-        q_noisy = _bw2c((w_cb + noise).reshape(M_SYMBOLS, NB, 8), NB).reshape(M_SYMBOLS, -1)
+        q_noisy = _bw2c((w_cb.reshape(M_SYMBOLS, NB, 8) + noise), NB).reshape(M_SYMBOLS, -1)
         hits = 0
         for i in range(M_SYMBOLS):
             sims = qfhrr_similarity_triton(q_noisy[i], q_flat, lut)
