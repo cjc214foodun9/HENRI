@@ -64,23 +64,33 @@ try:
     def _su3_cmatmul_kernel(
         a_ptr, b_ptr, c_ptr, n, BLOCK_N: tl.constexpr
     ):
-        """Batched 3x3 complex matmul. Layout [n, 18]: c*9 + i*3 + j, c=0 re, c=1 im."""
+        """Batched 3x3 complex matmul. Layout [n, 18]: c*9 + i*3 + j, c=0 re, c=1 im.
+
+        Each A/B element is loaded exactly once into registers (single-load
+        register blocking); the 27 complex MACs run from registers.
+        """
         pid = tl.program_id(0)
         offs = pid * BLOCK_N + tl.arange(0, BLOCK_N)
         mask = offs < n
+        base = offs * 18
+        # Single-load: 18 re + 18 im vectors per operand, kept in registers.
+        a_re = [tl.load(a_ptr + base + 0 * 9 + i * 3 + k, mask=mask, other=0.0) for i in tl.static_range(3) for k in tl.static_range(3)]
+        a_im = [tl.load(a_ptr + base + 1 * 9 + i * 3 + k, mask=mask, other=0.0) for i in tl.static_range(3) for k in tl.static_range(3)]
+        b_re = [tl.load(b_ptr + base + 0 * 9 + k * 3 + j, mask=mask, other=0.0) for k in tl.static_range(3) for j in tl.static_range(3)]
+        b_im = [tl.load(b_ptr + base + 1 * 9 + k * 3 + j, mask=mask, other=0.0) for k in tl.static_range(3) for j in tl.static_range(3)]
         for i in tl.static_range(3):
             for j in tl.static_range(3):
                 acc_re = tl.zeros([BLOCK_N], dtype=tl.float32)
                 acc_im = tl.zeros([BLOCK_N], dtype=tl.float32)
                 for k in tl.static_range(3):
-                    a_re = tl.load(a_ptr + offs * 18 + 0 * 9 + i * 3 + k, mask=mask, other=0.0)
-                    a_im = tl.load(a_ptr + offs * 18 + 1 * 9 + i * 3 + k, mask=mask, other=0.0)
-                    b_re = tl.load(b_ptr + offs * 18 + 0 * 9 + k * 3 + j, mask=mask, other=0.0)
-                    b_im = tl.load(b_ptr + offs * 18 + 1 * 9 + k * 3 + j, mask=mask, other=0.0)
-                    acc_re += a_re * b_re - a_im * b_im
-                    acc_im += a_re * b_im + a_im * b_re
-                tl.store(c_ptr + offs * 18 + 0 * 9 + i * 3 + j, acc_re, mask=mask)
-                tl.store(c_ptr + offs * 18 + 1 * 9 + i * 3 + j, acc_im, mask=mask)
+                    ai = a_re[i * 3 + k]
+                    aim = a_im[i * 3 + k]
+                    bj = b_re[k * 3 + j]
+                    bjm = b_im[k * 3 + j]
+                    acc_re += ai * bj - aim * bjm
+                    acc_im += ai * bjm + aim * bj
+                tl.store(c_ptr + base + 0 * 9 + i * 3 + j, acc_re, mask=mask)
+                tl.store(c_ptr + base + 1 * 9 + i * 3 + j, acc_im, mask=mask)
 
     TRITON_AVAILABLE = True
 except Exception:  # pragma: no cover - environment dependent

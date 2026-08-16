@@ -83,19 +83,24 @@ def main() -> int:
     check("G3-QCD", loss < 0.1500, {"heldout_loss": loss, "fit_steps": fit_n, "eval_steps": STEPS - fit_n - 1})
 
     # ---- G4-QCD: Triton kernel latency + correctness ----
+    # Latency gate = sustained throughput under the 20 kHz budget: median of 20
+    # post-warmup launches (single-shot wall time includes host launch noise).
     if cg.TRITON_AVAILABLE:
         ba = torch.randn(N, 3, 3, dtype=torch.complex64, device=DEVICE)
         bb = torch.randn(N, 3, 3, dtype=torch.complex64, device=DEVICE)
         ref = cg.su3_matmul_torch(ba, bb)
-        # warmup
-        cg.su3_matmul_triton(ba, bb)
+        cg.su3_matmul_triton(ba, bb)  # warmup (JIT + allocations)
         torch.cuda.synchronize()
-        t0 = time.perf_counter()
-        got = cg.su3_matmul_triton(ba, bb)
-        torch.cuda.synchronize()
-        lat_us = (time.perf_counter() - t0) * 1e6
+        lats = []
+        for _ in range(20):
+            t0 = time.perf_counter()
+            got = cg.su3_matmul_triton(ba, bb)
+            torch.cuda.synchronize()
+            lats.append((time.perf_counter() - t0) * 1e6)
+        lats.sort()
+        lat_us = lats[len(lats) // 2]
         err = (got - ref).abs().max().item()
-        check("G4-QCD", lat_us <= 50.0 and err < 1e-4, {"latency_us": round(lat_us, 3), "max_err": err})
+        check("G4-QCD", lat_us <= 50.0 and err < 1e-4, {"latency_median_us": round(lat_us, 3), "min_us": round(lats[0], 3), "max_us": round(lats[-1], 3), "max_err": err})
     else:
         check("G4-QCD", False, "triton_unavailable")
 
