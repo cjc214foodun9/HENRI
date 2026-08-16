@@ -55,3 +55,24 @@ rc=1 iff failures non-empty (honest aggregation).
 - G2 veto rates not exact -> KILL (confinement machinery inert).
 - G3 fit loss >= 0.15 -> transport NOT learnable at scale -> KILL.
 - G4 > 50 us after warmup -> Triton kernel does not meet 20 kHz budget -> KILL.
+
+## VERDICT — SEALED ACCEPT (OBSERVED 2026-08-16, RTX 5090, D=65,536, commits 41fa119..42acdd3)
+
+Evidence: p815_matrix_d65536.json (SHA 06dbf170...) + p815_full.log (SHA d5b9bf1d...),
+retrieved from /workspace/p815-wt @ 42acdd3, remote /tmp.
+
+| Gate | Result | Detail |
+|---|---|---|
+| G1-QCD | PASS | min ||U_A U_B - U_B U_A||_F = 1.806 > 0.5 (all 45 distinct pairs) |
+| G2-QCD | PASS | singlet veto rate 0.0, nonsinglet veto rate 1.0 (N=65,536) |
+| G3-QCD | PASS | held-out gauge-transport loss 4.5e-13 < 0.15 (fit 10, eval 39 steps) |
+| G4-QCD | PASS | sustained interval 38.6 us <= 50 us; wall median 46.0 us; max err 1.07e-6 < 1e-4 |
+
+DONE_MARKER rc=0 failures=[] verdict=ACCEPT, seed 20260816, smoke False.
+
+Notes: G3 fit on the true-constant-gauge trajectory is exact by construction
+(least-squares recovers U to solver precision); the gate validates the
+machinery, not learning from noise. G4 wall_max 58.7 us includes host launch
+jitter; the sustained CUDA-event interval (38.6 us) is the 20 kHz budget
+metric per design. Module remains default-OFF (HENRI_ARC_CHROMODYNAMIC);
+production ARC path untouched. ARC-AGI-3 task score remains BLOCKED_NO_DEMONSTRATIONS.
