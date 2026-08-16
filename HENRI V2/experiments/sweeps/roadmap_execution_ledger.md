@@ -52,3 +52,15 @@ D15: G1-EGRESS threshold 1e-4 is BELOW the as-shipped metric's own noise floor
      G1 FALSIFIED as specified -> phase verdict KILL (pre-registered criterion).
      Corrected-gate proposal (single shared projection + pinned scale band) in
      phase816_egress_design.md §3 — requires user approval, NOT auto-applied.
+
+## 2026-08-16 — Phase 8.16.1 Shared-Projection Reform (PDF bdf4602b...)
+
+D14 (8.16): G1 noise floor 2/3 vs 1e-4 = unfalsifiable gate; KILL sealed e0745d7.
+D15 (8.16): phantom CLIs #13-#16 confirmed missing.
+D16 (8.16.1): SPEC CONSTANT ERRORS — claimed L_valid 2.7e-5 / L_mism 3.2e-4 @ s=5e-6
+   require ||w-a||^2 ~ 1e7 (impossible); actual (probe OBSERVED) L_valid = 0.0 exact,
+   L_mism = s^2*k (D-independent, 5.1e-8 @k=2048); "2s^2" omits k/D projector factor.
+   GATES UNCHANGED and satisfiable: G1 (0 < 1e-4), G2 (ratio inf >= 10).
+D17 (8.16.1): phantom CLIs #17 (functor_flow.py — real: henri_functor_flow.py) and
+   #18 (gpu_verification_suite.py --kernel phase_ring_lut_unbinder) confirmed missing;
+   spec test path tests/test_phase816_1_calibration.py -> repo convention tests/contract/.

@@ -148,6 +148,34 @@ class DiagrammaticEgressEvaluator(nn.Module):
         return hist
 
 
+class DiagrammaticSharedEgressEvaluator(nn.Module):
+    """Phase 8.16.1: scale-pinned shared-projection obstruction evaluator.
+
+    Spec: HENRI-SPEC-2026-08-PHASE8.16.1-REFORM. Single projection
+    eta_X == eta_Y == A_shared enforces category-theoretic gauge alignment
+    (target category D_X == D_Y); spectral scale pinned by construction
+    s = 5.0e-6 via orthogonal init. L_obstruct(w, a) = mean_b ||A(w - a)||_2^2.
+    """
+
+    def __init__(self, dim: int = 65536, latent_dim: int = 2048, scale: float = 5.0e-6):
+        super().__init__()
+        self.dim = dim
+        self.latent_dim = latent_dim
+        self.scale = scale
+        # Single shared projection matrix A_shared in R^(latent_dim x dim)
+        self.eta_shared = nn.Linear(dim, latent_dim, bias=False)
+        # Pin spectral scale by construction
+        with torch.no_grad():
+            nn.init.orthogonal_(self.eta_shared.weight)
+            self.eta_shared.weight.mul_(self.scale)
+
+    def forward(self, wave_w: torch.Tensor, ast_a: torch.Tensor) -> torch.Tensor:
+        """wave_w/ast_a: [B, D]; returns scalar diagrammatic obstruction loss."""
+        diff = wave_w - ast_a
+        projected_diff = self.eta_shared(diff)
+        return torch.mean(torch.sum(projected_diff ** 2, dim=-1))
+
+
 def main():
     print("=========================================================================")
     print("=== HENRI V2: FUNCTORFLOW CATEGORY-THEORETIC ALIGNMENT ENGINE ==========")
