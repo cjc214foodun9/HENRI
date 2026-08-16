@@ -182,7 +182,7 @@ def main():
         failures.append("G5")
 
     # ---------------- G6 round-trip @ scale -----------------------------------
-    rt = re_realify(un_realify(wa))
+    rt = re_realify(un_realify(wa)).reshape(wa.shape)
     err = float((rt - wa).abs().max())
     out["arms"]["G6_roundtrip"] = {"max_err": err, "ok": bool(err < 1e-6)}
     out["verdicts"]["G6"] = "ROUNDTRIP_PASS" if err < 1e-6 else "ROUNDTRIP_FAIL"
