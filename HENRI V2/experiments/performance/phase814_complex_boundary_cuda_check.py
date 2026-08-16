@@ -72,9 +72,10 @@ def main():
     tr_c = NativeComplexWaveTransition(dimension=D // 2, num_actions=16,
                                        device=DEVICE, num_blocks=D // 2,
                                        block_dim=1)
-    tr_r = NativeComplexWaveTransition(dimension=D // 2, num_actions=16,
-                                       device=DEVICE, num_blocks=D // 2,
-                                       block_dim=1)
+    # real arm = 8.12 G4 recipe: full-D transition (forward acos-lifts 65536-dim real wave)
+    tr_r = NativeComplexWaveTransition(dimension=D, num_actions=16,
+                                       device=DEVICE, num_blocks=NB,
+                                       block_dim=BD)
 
     # ---------------- G1 scale discrimination ------------------------------
     g1 = {}
@@ -126,7 +127,7 @@ def main():
             losses.append(1.0 - complex_cosine(zp, zb))
         return float(sum(losses) / len(losses))
 
-    action_wave = torch.randn(D // 2, device=DEVICE)
+    action_wave = torch.randn(NB, BD, device=DEVICE)
     action_wave = action_wave / action_wave.norm()
 
     pre_r = real_loss(hold_pairs, tr_r, action_wave)
