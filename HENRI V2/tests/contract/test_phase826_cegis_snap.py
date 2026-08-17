@@ -32,6 +32,19 @@ def test_826_snap_fail_closed_consumer():
     assert "SNAP_CONSERVATION_VIOLATION" in src
 
 
+def test_826_snap_scope_safe():
+    # The snap block must be self-contained: it must derive the grid from
+    # obs directly, NOT reference the loop's `grid` variable (assigned
+    # ~113 lines later in the iteration — a latent NameError that compile
+    # cannot catch). Reverse-review catch 2026-08-17.
+    src = _read(RUNNER)
+    block = src.split("snap_status = \"SNAP_NO_GRID_SOURCE\"")[1]
+    block = block.split("if LAMBDA_GOAL > 0.0 or HENRI_ARC_TARGET_GROUNDING")[0]
+    assert "obs.frame[0].tolist()" in block, (
+        "snap block must derive grid from obs (scope-safe)")
+    assert "np.asarray(_snap_grid, dtype=float)" in block
+
+
 def test_826_snap_functional():
     # Real functional check: isolated-pixel noise is removed and
     # conservation invariants hold (not a mock loop).

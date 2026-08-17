@@ -1049,11 +1049,16 @@ def run():
         # without a grid source the snap emits SNAP_NO_GRID_SOURCE and
         # never fabricates a grid path.
         snap_status = "SNAP_NO_GRID_SOURCE"
-        if HENRI_ARC_CEGIS_SNAP and grid is not None:
+        if HENRI_ARC_CEGIS_SNAP and obs is not None:
             try:
                 from cegis_grid_snap import cegis_grid_snap
+                # Self-contained grid derivation: `grid` is assigned later
+                # in this loop iteration (line ~1149), so referencing it
+                # here would raise NameError on every step with the snap
+                # flag ON. Derive from obs directly (scope-safe).
+                _snap_grid = obs.frame[0].tolist()
                 _snap = cegis_grid_snap(
-                    np.asarray(grid, dtype=float), ref_grid=grid)
+                    np.asarray(_snap_grid, dtype=float), ref_grid=_snap_grid)
                 if _snap["conservation_ok"]:
                     snap_status = (
                         f"SNAP_OK removed={_snap['isolated_pixels_removed']}")
