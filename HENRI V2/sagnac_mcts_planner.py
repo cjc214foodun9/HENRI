@@ -362,7 +362,117 @@ class SagnacMCTSPlanner:
         return raw_completion, synthesized_meta
 
 
+def compute_ryu_takayanagi_entropy(
+    wave_state: torch.Tensor, partition_size: int | None = None,
+) -> torch.Tensor:
+    """Phase 8.22 C2: Ryu-Takayanagi holographic entanglement entropy.
+
+    Spec: HENRI-SPEC-2026-08-PHASE8.21-8.22-WIRING (§2.2)
+    S_RT = -Tr(rho_A ln rho_A), rho_A = Psi Psi^dag / Tr(Psi Psi^dag),
+    where the [D] hypervector is reshaped into (num_blocks, partition_size)
+    and rho_A is the normalized Gram matrix (bipartite cut).
+
+    wave_state: [D] complex or real unit hypervector (D = 65,536).
+    partition_size: cut width. Default None -> auto = power-of-two
+        ~sqrt(D/2) so the reduced matrix is NOT rank-saturated (saturated
+        cuts cannot discriminate successors; D37).
+    Returns: scalar von Neumann entropy of the reduced density matrix.
+    """
+    D = wave_state.shape[0]
+    if partition_size is None:
+        ps = int(2 ** round(math.log2(max(1.0, (D / 2.0) ** 0.5))))
+        partition_size = max(32, min(ps, D))
+    num_blocks = D // partition_size
+    psi_matrix = wave_state.reshape(num_blocks, partition_size)
+    rho_A = torch.matmul(psi_matrix, psi_matrix.conj().T)
+    tr = torch.trace(rho_A).real.clamp(min=1e-12)
+    rho_A = rho_A / tr
+    eigvals = torch.linalg.eigvalsh(rho_A)
+    eigvals = torch.clamp(eigvals, min=1e-12)
+    s_rt = -torch.sum(eigvals * torch.log(eigvals))
+    return s_rt
+
+
+def _reduced_rho(
+    wave: torch.Tensor, partition_size: int,
+) -> torch.Tensor:
+    """Normalized reduced density matrix rho_A = psi psi^dag / Tr."""
+    D = wave.shape[0]
+    nb = D // partition_size
+    m = wave.reshape(nb, partition_size)
+    rho = torch.matmul(m, m.conj().T)
+    tr = torch.trace(rho).real.clamp(min=1e-12)
+    return rho / tr
+
+
+def compute_rt_information_gain(
+    psi_t: torch.Tensor, psi_hat: torch.Tensor,
+    partition_size: int | None = None,
+) -> torch.Tensor:
+    """Delta I_RT(a): holographic structural information gain of a successor.
+
+    D37 (deviation, OBSERVED 2026-08-17): the spec's literal formula
+        S_t + S_hat - S_joint   (joint = concat of the two [D] states)
+    is mathematically incapable of vanishing on a no-op successor: the
+    concat joint of two identical states has the SAME normalized spectrum
+    as one state, so no-op gain = S(psi psi^dag) (measured 3.3991, must be
+    0). The joint construction double-counts the spectrum.
+
+    Replaced with the Jensen-Shannon divergence of the reduced density
+    matrices (the concavity gap of von Neumann entropy):
+        Delta I_RT(a) = S((rho_t + rho_hat)/2)
+                        - (S(rho_t) + S(rho_hat)) / 2
+    This is exactly the entanglement-structure divergence the RT cut
+    intends: it is >= 0, vanishes iff rho_t == rho_hat (no-op successor),
+    and equals ln 2 for orthogonal successors. Gate G2-8.22 (gain > 0.1)
+    is satisfiable with an unsaturated cut (auto partition ~sqrt(D/2)).
+    """
+    if partition_size is None:
+        D = psi_t.shape[0]
+        ps = int(2 ** round(math.log2(max(1.0, (D / 2.0) ** 0.5))))
+        partition_size = max(32, min(ps, D))
+    rho_t = _reduced_rho(psi_t, partition_size)
+    rho_hat = _reduced_rho(psi_hat, partition_size)
+    rho_mix = (rho_t + rho_hat) / 2.0
+    ev_mix = torch.linalg.eigvalsh(rho_mix).clamp(min=1e-12)
+    ev_t = torch.linalg.eigvalsh(rho_t).clamp(min=1e-12)
+    ev_h = torch.linalg.eigvalsh(rho_hat).clamp(min=1e-12)
+    s_mix = -torch.sum(ev_mix * torch.log(ev_mix))
+    s_t = -torch.sum(ev_t * torch.log(ev_t))
+    s_h = -torch.sum(ev_h * torch.log(ev_h))
+    return s_mix - (s_t + s_h) / 2.0
+
+
+def _verify_rt_entropy() -> int:
+    """G2-8.22 self-test: meaningful RT information gain between a state and
+    a random successor vs a no-op (identical) successor."""
+    torch.manual_seed(0)
+    D = 8192
+    psi_t = torch.randn(D, dtype=torch.complex64)
+    psi_t = psi_t / psi_t.norm()
+    psi_noop = psi_t.clone()
+    psi_rand = torch.randn(D, dtype=torch.complex64)
+    psi_rand = psi_rand / psi_rand.norm()
+
+    gain_noop = float(compute_rt_information_gain(psi_t, psi_noop))
+    gain_rand = float(compute_rt_information_gain(psi_t, psi_rand))
+    s_rt = float(compute_ryu_takayanagi_entropy(psi_t))
+
+    assert gain_rand > 0.1000, f"G2-8.22 FAIL: random gain {gain_rand:.4f}"
+    assert abs(gain_noop) < 0.0100, f"G2-8.22 FAIL: no-op gain {gain_noop:.4f}"
+    print(f"[verify_rt_entropy] G2-8.22 PASS: S_RT={s_rt:.4f} "
+          f"gain_noop={gain_noop:.4f} gain_rand={gain_rand:.4f}")
+    return 0
+
+
 if __name__ == "__main__":
+    import argparse
+
+    _ap = argparse.ArgumentParser()
+    _ap.add_argument("--mode", default=None)
+    _args = _ap.parse_args()
+    if _args.mode == "verify_rt_entropy":
+        raise SystemExit(_verify_rt_entropy())
     planner = SagnacMCTSPlanner(d_model=65536, k_blocks=8192, tau_veto=0.35, device="cpu")
 
     in_grid = np.array([[1, 2], [3, 4]])

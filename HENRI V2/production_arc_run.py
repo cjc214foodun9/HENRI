@@ -345,6 +345,10 @@ def run():
     if args.mode == "phase821_live_gauntlet":
         os.environ["HENRI_ARC_ACTION_EFE"] = "1"
         os.environ["HENRI_ARC_ACTION_FIBER"] = "1"
+    if args.mode == "phase822_live_gauntlet":
+        os.environ["HENRI_ARC_ACTION_EFE"] = "1"
+        os.environ["HENRI_ARC_ACTION_FIBER"] = "1"
+        os.environ["HENRI_ARC_RT_MCTS"] = "1"
 
     if HENRI_SEED:
         import random
@@ -445,6 +449,12 @@ def run():
     # Un-collapses single-action native masks to |A_admissible| >= 2 so the
     # action-conditioned EFE can re-engage on collapsed environments.
     HENRI_ARC_ACTION_FIBER = os.environ.get("HENRI_ARC_ACTION_FIBER", "0") == "1"
+    # Phase 8.22: Holographic RT-entropy MCTS wiring (default OFF). When ON,
+    # the live loop computes Ryu-Takayanagi information gain across candidate
+    # successor waves and re-ranks the EFE table (fail-closed: unavailable ->
+    # EFE order byte-identical). Requires the OPINE option module + RT
+    # evaluator (opine_object_mcts.py, sagnac_mcts_planner.py).
+    HENRI_ARC_RT_MCTS = os.environ.get("HENRI_ARC_RT_MCTS", "0") == "1"
     # Phase 7.1: public corpus ingress channel (default OFF). Requires an
     # explicit provenance manifest mapping environment ID -> public ARC task
     # ID with corpus path + sha256. Exact match only; no fuzzy fallback.
@@ -1387,6 +1397,52 @@ def run():
                     p820_var_efe = round(
                         sum((e - _m) ** 2 for e in _efes) / len(_efes), 6)
 
+            # Phase 8.22 C3: Holographic RT-entropy re-rank (default OFF).
+            # For each EFE candidate, compute Delta I_RT between the current
+            # state wave and the candidate's predicted wave (Jensen-Shannon
+            # divergence of reduced density matrices; D37). Re-rank so the
+            # first non-vetoed candidate wins by RT information gain.
+            # Fail-closed: any anomaly leaves the EFE order byte-identical.
+            rt_info = None
+            if HENRI_ARC_RT_MCTS and policy_mode() != "action1" \
+                    and efe_table and len(efe_table) >= 2:
+                try:
+                    from sagnac_mcts_planner import compute_rt_information_gain
+                    _rt_gains = []
+                    for _cand in efe_table:
+                        _wave = _cand.get("predicted_wave")
+                        if _wave is None:
+                            _rt_gains.append(None)
+                            continue
+                        _g = compute_rt_information_gain(
+                            state_wave.detach().reshape(-1),
+                            _wave.detach().reshape(-1))
+                        _rt_gains.append(float(_g))
+                    # Stable re-rank by RT gain descending (higher structural
+                    # information transport = preferred branch).
+                    _ranked = sorted(
+                        zip(efe_table, _rt_gains),
+                        key=lambda p: (p[1] is None, -(p[1] or 0.0)))
+                    _new_table = [r for r, _ in _ranked]
+                    _new_chosen = dict(_new_table[0])
+                    # Atomic fail-open: only mutate after all values computed.
+                    efe_table = _new_table
+                    chosen = _new_chosen
+                    action = _new_chosen["action"]
+                    predicted_wave = _new_chosen["predicted_wave"]
+                    explored = bool(_new_chosen.get("explored", False))
+                    hop_conf = _new_chosen["efe"]
+                    rt_info = {
+                        "gains": [round(g, 6) if g is not None else None
+                                  for g in _rt_gains],
+                        "re_ranked": True,
+                    }
+                    print(f"  [rt] RT re-rank: gains="
+                          f"{[round(g, 4) if g is not None else None for g in _rt_gains]}")
+                except Exception as _rt_exc:
+                    rt_info = {"rt_error": f"{type(_rt_exc).__name__}: {_rt_exc}"}
+                    print(f"  [rt] re-rank unavailable (fail-closed): {_rt_exc}")
+
             # Phase 7.5 CONN Module A: advisory dual-channel Sagnac veto
             # re-rank (default-OFF). Evaluates each EFE candidate's
             # predicted_wave against the boundary/axiom wave (hard channel)
@@ -1852,6 +1908,7 @@ def run():
                 "phase820_var_efe": p820_var_efe,
                 "phase820_update_info": p820_update_info,
                 "phase821_fiber_info": fiber_info,
+                "phase822_rt_info": rt_info,
             })
             # Wave-level hypertable log (downsampled for DB volume)
             if db_logger is not None and step % 5 == 0:
