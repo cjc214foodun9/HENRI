@@ -408,6 +408,12 @@ def run():
     HENRI_ARC_IN_CONTEXT_ALIGN = os.environ.get(
         "HENRI_ARC_IN_CONTEXT_ALIGN", "0"
     ) == "1"
+    # Phase 8.19: SU(3) MCTS demo-free fallback router (default OFF). When
+    # the environment exposes no demonstrations, route goal synthesis to
+    # the active counterfactual Lie search planner (su3_mcts_planner.py)
+    # instead of the blocked in-context Procrustes path. Diagnostic-only;
+    # never grants score eligibility.
+    HENRI_ARC_SU3_MCTS = os.environ.get("HENRI_ARC_SU3_MCTS", "0") == "1"
     # Phase 8: Progressive Semantic Grounding (default OFF). Planner-side
     # macro-option search (W_task functor + object options + vmap EFE).
     # Diagnostic-only; never grants score eligibility.
@@ -619,10 +625,61 @@ def run():
         # evidence for an unseen-task episode.
         demo_pairs = []
         bridged_goal_wave = None  # Phase 8.18 C2 transducer bridge (default OFF)
+        su3_mcts_status = None    # Phase 8.19 demo-free fallback router
         if hasattr(game, "examples") and game.examples:
             for ex in game.examples:
                 if isinstance(ex, dict) and "input" in ex and "output" in ex:
                     demo_pairs.append((np.array(ex["input"]), np.array(ex["output"])))
+
+        # Phase 8.19 C1: Demonstration Fallback Router (default OFF). When
+        # the environment exposes no demonstrations (examples None or
+        # empty), bypass single-pass Procrustes compilation and synthesize
+        # the goal attractor via active counterfactual SU(3) MCTS search.
+        # Fail-closed: any error leaves bridged_goal_wave None so the
+        # standard goal layers run unchanged. Never grants score eligibility.
+        if HENRI_ARC_SU3_MCTS and not demo_pairs:
+            try:
+                from su3_mcts_planner import SU3MCTSPlanner
+                from chromodynamic_grounding import (
+                    GELL_MANN_BASIS, encode_su3_color_field,
+                )
+                init_grid = obs.frame[0].tolist()
+                u_test = encode_su3_color_field(
+                    torch.tensor(np.array(init_grid), device=DEVICE)
+                ).reshape(-1, 3, 3)
+                u_test = _pad_su3_field(u_test, device=DEVICE)
+                planner = SU3MCTSPlanner(
+                    GELL_MANN_BASIS, num_channels=u_test.shape[0],
+                    device=DEVICE,
+                ).to(DEVICE)
+                w_goal = planner.search_goal_attractor(
+                    u_test, max_rollouts=64
+                )
+                bridged_goal_wave = w_goal.detach().to(DEVICE)
+                su3_mcts_status = {
+                    "status": "SU3_MCTS_GOAL_SYNTHESIZED",
+                    "reason": "demo-free fallback router (phase819)",
+                    "goal_wave_shape": list(bridged_goal_wave.shape),
+                    "rollouts": 64,
+                    "epsilon": planner.epsilon,
+                    "veto_threshold": planner.veto_threshold,
+                }
+                print(f"  [su3-mcts] {su3_mcts_status['status']}: "
+                      f"{bridged_goal_wave.shape} goal wave")
+            except Exception as _su3_exc:
+                bridged_goal_wave = None
+                su3_mcts_status = {
+                    "status": "SU3_MCTS_BLOCKED",
+                    "reason": str(_su3_exc),
+                    "demo_pair_count": len(demo_pairs),
+                }
+                print(f"  [su3-mcts] blocked: {_su3_exc}")
+        if su3_mcts_status is not None:
+            tele.emit({
+                "env": env_name,
+                "event_type": "SU3_MCTS_ROUTER",
+                **su3_mcts_status,
+            })
 
         # Phase 7.1: public corpus ingress channel (default OFF). The corpus
         # is (input, output) grid pairs; it is NOT an action-trajectory
