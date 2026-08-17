@@ -105,3 +105,18 @@ G4 TELEMETRY (OBSERVED, PID 81020, log sha256 5a950b35..., JSONL sha256 c1a1eaad
 Root cause: the live legal-action mask admits only ACTION6 (admissible_count=1) -> the action-conditioned generator never has >1 candidate to differentiate; the flat-EFE/stationarity failure mode is upstream of the C2 machinery (env-legal action space, not the EFE landscape).
 
 VERDICT: SEALED KILL (postmortem Scenario B: G1-G3 PASS & G4 = 0). Retain D28 (16-color projection) + D32 (complex basis preservation) as shared production fixes. Commits 78f028b + 8334cb4 are the component commits; seal commit follows. Phase 8.21 direction per postmortem: search horizon depth + legal-action-space diagnosis.
+
+## 2026-08-17 — Phase 8.22 SEALED ACCEPT (run2, commit 6ba8f76, scorecard 78d869ad)
+
+Run2 gauntlet (PID 88153, `phase822_live_gauntlet`, 20 envs, 100 steps) COMPLETED 20/20 envs.
+Evidence: `/root/p822_gauntlet_run2.log` sha `0ab2ed2b…`; scorecards
+`production_run_1786985968_scorecards.json` sha `0ade96eb…`; telemetry sha `fb9b9bae…`.
+
+**G4-8.22 = PASS (first non-zero external outcome in the 8.x chain):**
+sp80-589a99af completed LEVEL 1 (levels_completed=1, env score 4.7619, level score 115.0
+with 8 actions vs baseline 39; env actions 24, GAME_OVER). All other 19 envs: 0 levels
+(NOT_FINISHED / GAME_OVER, level_baseline_actions un-met).
+
+G1-8.22 unitarity 2.226e-07 (PASS < 1e-6); G2-8.22 S_RT 3.9052 (PASS); G4-8.22 progression
+MEASURED > 0 → **SEALED ACCEPT**. Run1 (env 11/20 crash, arcade.make→None) = BLOCKED_INFRASTRUCTURE,
+guard `5b9ff30` committed; run2 relaunched same SHA chain `6ba8f76`.
