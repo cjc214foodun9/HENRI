@@ -184,21 +184,34 @@ if _HAS_TRITON:
         offs = pid * BLOCK_N + tl.arange(0, BLOCK_N)
         mask = offs < n
         base = offs
-        # ---- load 9 real + 9 imag ----
-        mre = [tl.load(a_ptr + base + i * 3 + j, mask=mask, other=0.0)
-               for i in tl.static_range(3) for j in tl.static_range(3)]
-        mim = [tl.load(a_ptr + 9 + base + i * 3 + j, mask=mask, other=0.0)
-               for i in tl.static_range(3) for j in tl.static_range(3)]
+        # ---- load 9 real + 9 imag (fully unrolled, no comprehensions) ----
+        mre00 = tl.load(a_ptr + base + 0, mask=mask, other=0.0)
+        mre01 = tl.load(a_ptr + base + 1, mask=mask, other=0.0)
+        mre02 = tl.load(a_ptr + base + 2, mask=mask, other=0.0)
+        mre10 = tl.load(a_ptr + base + 3, mask=mask, other=0.0)
+        mre11 = tl.load(a_ptr + base + 4, mask=mask, other=0.0)
+        mre12 = tl.load(a_ptr + base + 5, mask=mask, other=0.0)
+        mre20 = tl.load(a_ptr + base + 6, mask=mask, other=0.0)
+        mre21 = tl.load(a_ptr + base + 7, mask=mask, other=0.0)
+        mre22 = tl.load(a_ptr + base + 8, mask=mask, other=0.0)
+        mim00 = tl.load(a_ptr + 9 + base + 0, mask=mask, other=0.0)
+        mim01 = tl.load(a_ptr + 9 + base + 1, mask=mask, other=0.0)
+        mim02 = tl.load(a_ptr + 9 + base + 2, mask=mask, other=0.0)
+        mim10 = tl.load(a_ptr + 9 + base + 3, mask=mask, other=0.0)
+        mim11 = tl.load(a_ptr + 9 + base + 4, mask=mask, other=0.0)
+        mim12 = tl.load(a_ptr + 9 + base + 5, mask=mask, other=0.0)
+        mim20 = tl.load(a_ptr + 9 + base + 6, mask=mask, other=0.0)
+        mim21 = tl.load(a_ptr + 9 + base + 7, mask=mask, other=0.0)
+        mim22 = tl.load(a_ptr + 9 + base + 8, mask=mask, other=0.0)
         # ---- trace tr = sum diag ----
-        tr_r = mre[0] + mre[4] + mre[8]
-        tr_i = mim[0] + mim[4] + mim[8]
+        tr_r = mre00 + mre11 + mre22
+        tr_i = mim00 + mim11 + mim22
         # ---- cubic x^3 + a x^2 + b x + c: a = -tr, b = conj(tr), c = -1 ----
         a_r = -tr_r
         a_i = -tr_i
         b_r = tr_r
         b_i = -tr_i
         c_r = tl.full([BLOCK_N], -1.0, dtype=tl.float32)
-        c_i = tl.zeros([BLOCK_N], dtype=tl.float32)
         # p = b - a^2/3
         a2_r = a_r * a_r - a_i * a_i
         a2_i = 2.0 * a_r * a_i
@@ -210,7 +223,7 @@ if _HAS_TRITON:
         ab_r = a_r * b_r - a_i * b_i
         ab_i = a_r * b_i + a_i * b_r
         q_r = 2.0 * a3_r / 27.0 - ab_r / 3.0 + c_r
-        q_i = 2.0 * a3_i / 27.0 - ab_i / 3.0 + c_i
+        q_i = 2.0 * a3_i / 27.0 - ab_i / 3.0
         # D = (q/2)^2 + (p/3)^3
         q2_r = q_r / 2.0
         q2_i = q_i / 2.0
@@ -230,72 +243,342 @@ if _HAS_TRITON:
         u3_mag = tl.sqrt(u3_r * u3_r + u3_i * u3_i)
         u3_ang = tl.math.atan2(u3_i, u3_r)
         u_mag = tl.exp2(tl.log2(tl.maximum(u3_mag, 1e-30)) * (1.0 / 3.0))
+        # ---- U^2 = U @ U (explicit 3x3 complex) ----
+        u2r00 = mre00 * mre00 - mim00 * mim00 + mre01 * mre10 - mim01 * mim10 + mre02 * mre20 - mim02 * mim20
+        u2r01 = mre00 * mre01 - mim00 * mim01 + mre01 * mre11 - mim01 * mim11 + mre02 * mre21 - mim02 * mim21
+        u2r02 = mre00 * mre02 - mim00 * mim02 + mre01 * mre12 - mim01 * mim12 + mre02 * mre22 - mim02 * mim22
+        u2r10 = mre10 * mre00 - mim10 * mim00 + mre11 * mre10 - mim11 * mim10 + mre12 * mre20 - mim12 * mim20
+        u2r11 = mre10 * mre01 - mim10 * mim01 + mre11 * mre11 - mim11 * mim11 + mre12 * mre21 - mim12 * mim21
+        u2r12 = mre10 * mre02 - mim10 * mim02 + mre11 * mre12 - mim11 * mim12 + mre12 * mre22 - mim12 * mim22
+        u2r20 = mre20 * mre00 - mim20 * mim00 + mre21 * mre10 - mim21 * mim10 + mre22 * mre20 - mim22 * mim20
+        u2r21 = mre20 * mre01 - mim20 * mim01 + mre21 * mre11 - mim21 * mim11 + mre22 * mre21 - mim22 * mim21
+        u2r22 = mre20 * mre02 - mim20 * mim02 + mre21 * mre12 - mim21 * mim12 + mre22 * mre22 - mim22 * mim22
+        u2i00 = mre00 * mim00 + mim00 * mre00 + mre01 * mim10 + mim01 * mre10 + mre02 * mim20 + mim02 * mre20
+        u2i01 = mre00 * mim01 + mim00 * mre01 + mre01 * mim11 + mim01 * mre11 + mre02 * mim21 + mim02 * mre21
+        u2i02 = mre00 * mim02 + mim00 * mre02 + mre01 * mim12 + mim01 * mre12 + mre02 * mim22 + mim02 * mre22
+        u2i10 = mre10 * mim00 + mim10 * mre00 + mre11 * mim10 + mim11 * mre10 + mre12 * mim20 + mim12 * mre20
+        u2i11 = mre10 * mim01 + mim10 * mre01 + mre11 * mim11 + mim11 * mre11 + mre12 * mim21 + mim12 * mre21
+        u2i12 = mre10 * mim02 + mim10 * mre02 + mre11 * mim12 + mim11 * mre12 + mre12 * mim22 + mim12 * mre22
+        u2i20 = mre20 * mim00 + mim20 * mre00 + mre21 * mim10 + mim21 * mre10 + mre22 * mim20 + mim22 * mre20
+        u2i21 = mre20 * mim01 + mim20 * mre01 + mre21 * mim11 + mim21 * mre11 + mre22 * mim21 + mim22 * mre21
+        u2i22 = mre20 * mim02 + mim20 * mre02 + mre21 * mim12 + mim21 * mre12 + mre22 * mim22 + mim22 * mre22
         # ---- 3 roots via per-branch pairing v = -p/(3u) ----
-        xs_re = []
-        xs_im = []
-        for k in tl.static_range(3):
-            ang = (u3_ang + 2.0 * 3.141592653589793 * k) / 3.0
-            u_r = u_mag * tl.cos(ang)
-            u_i = u_mag * tl.sin(ang)
-            den = 3.0 * (u_r * u_r + u_i * u_i)
-            v_r = (-p_r * u_r - p_i * u_i) / den
-            v_i = (p_r * u_i - p_i * u_r) / den
-            y_r = u_r + v_r
-            y_i = u_i + v_i
-            xs_re.append(y_r - a_r / 3.0)
-            xs_im.append(y_i - a_i / 3.0)
-        # ---- Lagrange projectors: log U = sum_k i theta_k P_k ----
-        log_re = [tl.zeros([BLOCK_N], dtype=tl.float32) for _ in tl.static_range(9)]
-        log_im = [tl.zeros([BLOCK_N], dtype=tl.float32) for _ in tl.static_range(9)]
-        for k in tl.static_range(3):
-            th = tl.math.atan2(xs_im[k], xs_re[k])
-            P_re = [tl.where(mask, 1.0, 0.0) if (i == j) else tl.zeros([BLOCK_N], dtype=tl.float32)
-                    for i in tl.static_range(3) for j in tl.static_range(3)]
-            P_im = [tl.zeros([BLOCK_N], dtype=tl.float32) for _ in tl.static_range(9)]
-            for jj in tl.static_range(3):
-                if jj == k:
-                    continue
-                lj_r = xs_re[jj]
-                lj_i = xs_im[jj]
-                # M = U - l_j I
-                M_re = [(mre[i * 3 + j] - (lj_r if i == j else 0.0))
-                        for i in tl.static_range(3) for j in tl.static_range(3)]
-                M_im = [(mim[i * 3 + j] - (lj_i if i == j else 0.0))
-                        for i in tl.static_range(3) for j in tl.static_range(3)]
-                # P = P @ M (complex 3x3, unrolled)
-                N_re = []
-                N_im = []
-                for i in tl.static_range(3):
-                    for j in tl.static_range(3):
-                        s_re = tl.zeros([BLOCK_N], dtype=tl.float32)
-                        s_im = tl.zeros([BLOCK_N], dtype=tl.float32)
-                        for kk in tl.static_range(3):
-                            s_re += P_re[i * 3 + kk] * M_re[kk * 3 + j] - P_im[i * 3 + kk] * M_im[kk * 3 + j]
-                            s_im += P_re[i * 3 + kk] * M_im[kk * 3 + j] + P_im[i * 3 + kk] * M_re[kk * 3 + j]
-                        N_re.append(s_re)
-                        N_im.append(s_im)
-                P_re = N_re
-                P_im = N_im
-                # divide by (l_k - l_j) complex scalar
-                d_r = xs_re[k] - lj_r
-                d_i = xs_im[k] - lj_i
-                d_mag = d_r * d_r + d_i * d_i
-                for i in tl.static_range(3):
-                    for j in tl.static_range(3):
-                        idx = i * 3 + j
-                        P_re[idx] = (P_re[idx] * d_r + P_im[idx] * d_i) / d_mag
-                        P_im[idx] = (P_im[idx] * d_r - P_re[idx] * d_i) / d_mag
-            # accumulate i*theta*P: re = -th*P_im, im = th*P_re
-            for i in tl.static_range(3):
-                for j in tl.static_range(3):
-                    idx = i * 3 + j
-                    log_re[idx] += -th * P_im[idx]
-                    log_im[idx] += th * P_re[idx]
-        for i in tl.static_range(3):
-            for j in tl.static_range(3):
-                idx = i * 3 + j
-                tl.store(o_ptr + base + idx, log_re[idx], mask=mask)
-                tl.store(o_ptr + 9 + base + idx, log_im[idx], mask=mask)
+        # root k = 0, 1, 2 (static unroll)
+        ang0 = (u3_ang + 0.0) / 3.0
+        ang1 = (u3_ang + 6.283185307179586) / 3.0
+        ang2 = (u3_ang + 12.566370614359172) / 3.0
+        u0_r = u_mag * tl.cos(ang0)
+        u0_i = u_mag * tl.sin(ang0)
+        u1_r = u_mag * tl.cos(ang1)
+        u1_i = u_mag * tl.sin(ang1)
+        u2_r = u_mag * tl.cos(ang2)
+        u2_i = u_mag * tl.sin(ang2)
+        den0 = 3.0 * (u0_r * u0_r + u0_i * u0_i)
+        den1 = 3.0 * (u1_r * u1_r + u1_i * u1_i)
+        den2 = 3.0 * (u2_r * u2_r + u2_i * u2_i)
+        v0_r = (-p_r * u0_r - p_i * u0_i) / den0
+        v0_i = (p_r * u0_i - p_i * u0_r) / den0
+        v1_r = (-p_r * u1_r - p_i * u1_i) / den1
+        v1_i = (p_r * u1_i - p_i * u1_r) / den1
+        v2_r = (-p_r * u2_r - p_i * u2_i) / den2
+        v2_i = (p_r * u2_i - p_i * u2_r) / den2
+        x0_r = u0_r + v0_r - a_r / 3.0
+        x0_i = u0_i + v0_i - a_i / 3.0
+        x1_r = u1_r + v1_r - a_r / 3.0
+        x1_i = u1_i + v1_i - a_i / 3.0
+        x2_r = u2_r + v2_r - a_r / 3.0
+        x2_i = u2_i + v2_i - a_i / 3.0
+        th0 = tl.math.atan2(x0_i, x0_r)
+        th1 = tl.math.atan2(x1_i, x1_r)
+        th2 = tl.math.atan2(x2_i, x2_r)
+        # ---- Lagrange projectors via Cayley-Hamilton: Pk = (U^2 - S_k U + P_k I) * s_k ----
+        # k=0: j1=1, j2=2
+        S_r = x1_r + x2_r
+        S_i = x1_i + x2_i
+        P_r = x1_r * x2_r - x1_i * x2_i
+        P_i = x1_r * x2_i + x1_i * x2_r
+        d1_r = x0_r - x1_r
+        d1_i = x0_i - x1_i
+        d2_r = x0_r - x2_r
+        d2_i = x0_i - x2_i
+        de_r = d1_r * d2_r - d1_i * d2_i
+        de_i = d1_r * d2_i + d1_i * d2_r
+        de_mag = tl.maximum(de_r * de_r + de_i * de_i, 1e-30)
+        s_r = de_r / de_mag
+        s_i = -de_i / de_mag
+        # T1 = U2 * s
+        t1r00 = u2r00 * s_r - u2i00 * s_i
+        t1i00 = u2r00 * s_i + u2i00 * s_r
+        t1r01 = u2r01 * s_r - u2i01 * s_i
+        t1i01 = u2r01 * s_i + u2i01 * s_r
+        t1r02 = u2r02 * s_r - u2i02 * s_i
+        t1i02 = u2r02 * s_i + u2i02 * s_r
+        t1r10 = u2r10 * s_r - u2i10 * s_i
+        t1i10 = u2r10 * s_i + u2i10 * s_r
+        t1r11 = u2r11 * s_r - u2i11 * s_i
+        t1i11 = u2r11 * s_i + u2i11 * s_r
+        t1r12 = u2r12 * s_r - u2i12 * s_i
+        t1i12 = u2r12 * s_i + u2i12 * s_r
+        t1r20 = u2r20 * s_r - u2i20 * s_i
+        t1i20 = u2r20 * s_i + u2i20 * s_r
+        t1r21 = u2r21 * s_r - u2i21 * s_i
+        t1i21 = u2r21 * s_i + u2i21 * s_r
+        t1r22 = u2r22 * s_r - u2i22 * s_i
+        t1i22 = u2r22 * s_i + u2i22 * s_r
+        # T2 = S * U * s
+        su00_r = S_r * mre00 - S_i * mim00
+        su00_i = S_r * mim00 + S_i * mre00
+        su01_r = S_r * mre01 - S_i * mim01
+        su01_i = S_r * mim01 + S_i * mre01
+        su02_r = S_r * mre02 - S_i * mim02
+        su02_i = S_r * mim02 + S_i * mre02
+        su10_r = S_r * mre10 - S_i * mim10
+        su10_i = S_r * mim10 + S_i * mre10
+        su11_r = S_r * mre11 - S_i * mim11
+        su11_i = S_r * mim11 + S_i * mre11
+        su12_r = S_r * mre12 - S_i * mim12
+        su12_i = S_r * mim12 + S_i * mre12
+        su20_r = S_r * mre20 - S_i * mim20
+        su20_i = S_r * mim20 + S_i * mre20
+        su21_r = S_r * mre21 - S_i * mim21
+        su21_i = S_r * mim21 + S_i * mre21
+        su22_r = S_r * mre22 - S_i * mim22
+        su22_i = S_r * mim22 + S_i * mre22
+        t2r00 = su00_r * s_r - su00_i * s_i
+        t2i00 = su00_r * s_i + su00_i * s_r
+        t2r01 = su01_r * s_r - su01_i * s_i
+        t2i01 = su01_r * s_i + su01_i * s_r
+        t2r02 = su02_r * s_r - su02_i * s_i
+        t2i02 = su02_r * s_i + su02_i * s_r
+        t2r10 = su10_r * s_r - su10_i * s_i
+        t2i10 = su10_r * s_i + su10_i * s_r
+        t2r11 = su11_r * s_r - su11_i * s_i
+        t2i11 = su11_r * s_i + su11_i * s_r
+        t2r12 = su12_r * s_r - su12_i * s_i
+        t2i12 = su12_r * s_i + su12_i * s_r
+        t2r20 = su20_r * s_r - su20_i * s_i
+        t2i20 = su20_r * s_i + su20_i * s_r
+        t2r21 = su21_r * s_r - su21_i * s_i
+        t2i21 = su21_r * s_i + su21_i * s_r
+        t2r22 = su22_r * s_r - su22_i * s_i
+        t2i22 = su22_r * s_i + su22_i * s_r
+        # T3 = P * s * I (diagonal only)
+        diag_r = P_r * s_r - P_i * s_i
+        diag_i = P_r * s_i + P_i * s_r
+        # Pk0 = T1 - T2 + T3; accumulate i*th0*Pk0: re = -th*im, im = th*re
+        lr00 = -th0 * (t1i00 - t2i00 + diag_i)
+        li00 = th0 * (t1r00 - t2r00 + diag_r)
+        lr01 = -th0 * (t1i01 - t2i01)
+        li01 = th0 * (t1r01 - t2r01)
+        lr02 = -th0 * (t1i02 - t2i02)
+        li02 = th0 * (t1r02 - t2r02)
+        lr10 = -th0 * (t1i10 - t2i10)
+        li10 = th0 * (t1r10 - t2r10)
+        lr11 = -th0 * (t1i11 - t2i11 + diag_i)
+        li11 = th0 * (t1r11 - t2r11 + diag_r)
+        lr12 = -th0 * (t1i12 - t2i12)
+        li12 = th0 * (t1r12 - t2r12)
+        lr20 = -th0 * (t1i20 - t2i20)
+        li20 = th0 * (t1r20 - t2r20)
+        lr21 = -th0 * (t1i21 - t2i21)
+        li21 = th0 * (t1r21 - t2r21)
+        lr22 = -th0 * (t1i22 - t2i22 + diag_i)
+        li22 = th0 * (t1r22 - t2r22 + diag_r)
+        # k=1: j1=0, j2=2
+        S_r = x0_r + x2_r
+        S_i = x0_i + x2_i
+        P_r = x0_r * x2_r - x0_i * x2_i
+        P_i = x0_r * x2_i + x0_i * x2_r
+        d1_r = x1_r - x0_r
+        d1_i = x1_i - x0_i
+        d2_r = x1_r - x2_r
+        d2_i = x1_i - x2_i
+        de_r = d1_r * d2_r - d1_i * d2_i
+        de_i = d1_r * d2_i + d1_i * d2_r
+        de_mag = tl.maximum(de_r * de_r + de_i * de_i, 1e-30)
+        s_r = de_r / de_mag
+        s_i = -de_i / de_mag
+        t1r00 = u2r00 * s_r - u2i00 * s_i
+        t1i00 = u2r00 * s_i + u2i00 * s_r
+        t1r01 = u2r01 * s_r - u2i01 * s_i
+        t1i01 = u2r01 * s_i + u2i01 * s_r
+        t1r02 = u2r02 * s_r - u2i02 * s_i
+        t1i02 = u2r02 * s_i + u2i02 * s_r
+        t1r10 = u2r10 * s_r - u2i10 * s_i
+        t1i10 = u2r10 * s_i + u2i10 * s_r
+        t1r11 = u2r11 * s_r - u2i11 * s_i
+        t1i11 = u2r11 * s_i + u2i11 * s_r
+        t1r12 = u2r12 * s_r - u2i12 * s_i
+        t1i12 = u2r12 * s_i + u2i12 * s_r
+        t1r20 = u2r20 * s_r - u2i20 * s_i
+        t1i20 = u2r20 * s_i + u2i20 * s_r
+        t1r21 = u2r21 * s_r - u2i21 * s_i
+        t1i21 = u2r21 * s_i + u2i21 * s_r
+        t1r22 = u2r22 * s_r - u2i22 * s_i
+        t1i22 = u2r22 * s_i + u2i22 * s_r
+        su00_r = S_r * mre00 - S_i * mim00
+        su00_i = S_r * mim00 + S_i * mre00
+        su01_r = S_r * mre01 - S_i * mim01
+        su01_i = S_r * mim01 + S_i * mre01
+        su02_r = S_r * mre02 - S_i * mim02
+        su02_i = S_r * mim02 + S_i * mre02
+        su10_r = S_r * mre10 - S_i * mim10
+        su10_i = S_r * mim10 + S_i * mre10
+        su11_r = S_r * mre11 - S_i * mim11
+        su11_i = S_r * mim11 + S_i * mre11
+        su12_r = S_r * mre12 - S_i * mim12
+        su12_i = S_r * mim12 + S_i * mre12
+        su20_r = S_r * mre20 - S_i * mim20
+        su20_i = S_r * mim20 + S_i * mre20
+        su21_r = S_r * mre21 - S_i * mim21
+        su21_i = S_r * mim21 + S_i * mre21
+        su22_r = S_r * mre22 - S_i * mim22
+        su22_i = S_r * mim22 + S_i * mre22
+        t2r00 = su00_r * s_r - su00_i * s_i
+        t2i00 = su00_r * s_i + su00_i * s_r
+        t2r01 = su01_r * s_r - su01_i * s_i
+        t2i01 = su01_r * s_i + su01_i * s_r
+        t2r02 = su02_r * s_r - su02_i * s_i
+        t2i02 = su02_r * s_i + su02_i * s_r
+        t2r10 = su10_r * s_r - su10_i * s_i
+        t2i10 = su10_r * s_i + su10_i * s_r
+        t2r11 = su11_r * s_r - su11_i * s_i
+        t2i11 = su11_r * s_i + su11_i * s_r
+        t2r12 = su12_r * s_r - su12_i * s_i
+        t2i12 = su12_r * s_i + su12_i * s_r
+        t2r20 = su20_r * s_r - su20_i * s_i
+        t2i20 = su20_r * s_i + su20_i * s_r
+        t2r21 = su21_r * s_r - su21_i * s_i
+        t2i21 = su21_r * s_i + su21_i * s_r
+        t2r22 = su22_r * s_r - su22_i * s_i
+        t2i22 = su22_r * s_i + su22_i * s_r
+        diag_r = P_r * s_r - P_i * s_i
+        diag_i = P_r * s_i + P_i * s_r
+        lr00 += -th1 * (t1i00 - t2i00 + diag_i)
+        li00 += th1 * (t1r00 - t2r00 + diag_r)
+        lr01 += -th1 * (t1i01 - t2i01)
+        li01 += th1 * (t1r01 - t2r01)
+        lr02 += -th1 * (t1i02 - t2i02)
+        li02 += th1 * (t1r02 - t2r02)
+        lr10 += -th1 * (t1i10 - t2i10)
+        li10 += th1 * (t1r10 - t2r10)
+        lr11 += -th1 * (t1i11 - t2i11 + diag_i)
+        li11 += th1 * (t1r11 - t2r11 + diag_r)
+        lr12 += -th1 * (t1i12 - t2i12)
+        li12 += th1 * (t1r12 - t2r12)
+        lr20 += -th1 * (t1i20 - t2i20)
+        li20 += th1 * (t1r20 - t2r20)
+        lr21 += -th1 * (t1i21 - t2i21)
+        li21 += th1 * (t1r21 - t2r21)
+        lr22 += -th1 * (t1i22 - t2i22 + diag_i)
+        li22 += th1 * (t1r22 - t2r22 + diag_r)
+        # k=2: j1=0, j2=1
+        S_r = x0_r + x1_r
+        S_i = x0_i + x1_i
+        P_r = x0_r * x1_r - x0_i * x1_i
+        P_i = x0_r * x1_i + x0_i * x1_r
+        d1_r = x2_r - x0_r
+        d1_i = x2_i - x0_i
+        d2_r = x2_r - x1_r
+        d2_i = x2_i - x1_i
+        de_r = d1_r * d2_r - d1_i * d2_i
+        de_i = d1_r * d2_i + d1_i * d2_r
+        de_mag = tl.maximum(de_r * de_r + de_i * de_i, 1e-30)
+        s_r = de_r / de_mag
+        s_i = -de_i / de_mag
+        t1r00 = u2r00 * s_r - u2i00 * s_i
+        t1i00 = u2r00 * s_i + u2i00 * s_r
+        t1r01 = u2r01 * s_r - u2i01 * s_i
+        t1i01 = u2r01 * s_i + u2i01 * s_r
+        t1r02 = u2r02 * s_r - u2i02 * s_i
+        t1i02 = u2r02 * s_i + u2i02 * s_r
+        t1r10 = u2r10 * s_r - u2i10 * s_i
+        t1i10 = u2r10 * s_i + u2i10 * s_r
+        t1r11 = u2r11 * s_r - u2i11 * s_i
+        t1i11 = u2r11 * s_i + u2i11 * s_r
+        t1r12 = u2r12 * s_r - u2i12 * s_i
+        t1i12 = u2r12 * s_i + u2i12 * s_r
+        t1r20 = u2r20 * s_r - u2i20 * s_i
+        t1i20 = u2r20 * s_i + u2i20 * s_r
+        t1r21 = u2r21 * s_r - u2i21 * s_i
+        t1i21 = u2r21 * s_i + u2i21 * s_r
+        t1r22 = u2r22 * s_r - u2i22 * s_i
+        t1i22 = u2r22 * s_i + u2i22 * s_r
+        su00_r = S_r * mre00 - S_i * mim00
+        su00_i = S_r * mim00 + S_i * mre00
+        su01_r = S_r * mre01 - S_i * mim01
+        su01_i = S_r * mim01 + S_i * mre01
+        su02_r = S_r * mre02 - S_i * mim02
+        su02_i = S_r * mim02 + S_i * mre02
+        su10_r = S_r * mre10 - S_i * mim10
+        su10_i = S_r * mim10 + S_i * mre10
+        su11_r = S_r * mre11 - S_i * mim11
+        su11_i = S_r * mim11 + S_i * mre11
+        su12_r = S_r * mre12 - S_i * mim12
+        su12_i = S_r * mim12 + S_i * mre12
+        su20_r = S_r * mre20 - S_i * mim20
+        su20_i = S_r * mim20 + S_i * mre20
+        su21_r = S_r * mre21 - S_i * mim21
+        su21_i = S_r * mim21 + S_i * mre21
+        su22_r = S_r * mre22 - S_i * mim22
+        su22_i = S_r * mim22 + S_i * mre22
+        t2r00 = su00_r * s_r - su00_i * s_i
+        t2i00 = su00_r * s_i + su00_i * s_r
+        t2r01 = su01_r * s_r - su01_i * s_i
+        t2i01 = su01_r * s_i + su01_i * s_r
+        t2r02 = su02_r * s_r - su02_i * s_i
+        t2i02 = su02_r * s_i + su02_i * s_r
+        t2r10 = su10_r * s_r - su10_i * s_i
+        t2i10 = su10_r * s_i + su10_i * s_r
+        t2r11 = su11_r * s_r - su11_i * s_i
+        t2i11 = su11_r * s_i + su11_i * s_r
+        t2r12 = su12_r * s_r - su12_i * s_i
+        t2i12 = su12_r * s_i + su12_i * s_r
+        t2r20 = su20_r * s_r - su20_i * s_i
+        t2i20 = su20_r * s_i + su20_i * s_r
+        t2r21 = su21_r * s_r - su21_i * s_i
+        t2i21 = su21_r * s_i + su21_i * s_r
+        t2r22 = su22_r * s_r - su22_i * s_i
+        t2i22 = su22_r * s_i + su22_i * s_r
+        diag_r = P_r * s_r - P_i * s_i
+        diag_i = P_r * s_i + P_i * s_r
+        lr00 += -th2 * (t1i00 - t2i00 + diag_i)
+        li00 += th2 * (t1r00 - t2r00 + diag_r)
+        lr01 += -th2 * (t1i01 - t2i01)
+        li01 += th2 * (t1r01 - t2r01)
+        lr02 += -th2 * (t1i02 - t2i02)
+        li02 += th2 * (t1r02 - t2r02)
+        lr10 += -th2 * (t1i10 - t2i10)
+        li10 += th2 * (t1r10 - t2r10)
+        lr11 += -th2 * (t1i11 - t2i11 + diag_i)
+        li11 += th2 * (t1r11 - t2r11 + diag_r)
+        lr12 += -th2 * (t1i12 - t2i12)
+        li12 += th2 * (t1r12 - t2r12)
+        lr20 += -th2 * (t1i20 - t2i20)
+        li20 += th2 * (t1r20 - t2r20)
+        lr21 += -th2 * (t1i21 - t2i21)
+        li21 += th2 * (t1r21 - t2r21)
+        lr22 += -th2 * (t1i22 - t2i22 + diag_i)
+        li22 += th2 * (t1r22 - t2r22 + diag_r)
+        # ---- store 9 real + 9 imag ----
+        tl.store(o_ptr + base + 0, lr00, mask=mask)
+        tl.store(o_ptr + base + 1, lr01, mask=mask)
+        tl.store(o_ptr + base + 2, lr02, mask=mask)
+        tl.store(o_ptr + base + 3, lr10, mask=mask)
+        tl.store(o_ptr + base + 4, lr11, mask=mask)
+        tl.store(o_ptr + base + 5, lr12, mask=mask)
+        tl.store(o_ptr + base + 6, lr20, mask=mask)
+        tl.store(o_ptr + base + 7, lr21, mask=mask)
+        tl.store(o_ptr + base + 8, lr22, mask=mask)
+        tl.store(o_ptr + 9 + base + 0, li00, mask=mask)
+        tl.store(o_ptr + 9 + base + 1, li01, mask=mask)
+        tl.store(o_ptr + 9 + base + 2, li02, mask=mask)
+        tl.store(o_ptr + 9 + base + 3, li10, mask=mask)
+        tl.store(o_ptr + 9 + base + 4, li11, mask=mask)
+        tl.store(o_ptr + 9 + base + 5, li12, mask=mask)
+        tl.store(o_ptr + 9 + base + 6, li20, mask=mask)
+        tl.store(o_ptr + 9 + base + 7, li21, mask=mask)
+        tl.store(o_ptr + 9 + base + 8, li22, mask=mask)
 
     def su3_matrix_log_triton(field: torch.Tensor) -> torch.Tensor:
         """GPU 3x3 complex matrix log via Triton. field: [N,3,3] complex cuda."""
