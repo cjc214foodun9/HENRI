@@ -112,18 +112,18 @@ class SU3FieldWaveTransducer(torch.nn.Module):
     def _matrix_log(U: torch.Tensor) -> torch.Tensor:
         """Matrix log for unitary U via eigendecomposition (D19)."""
         evals, evecs = torch.linalg.eig(U)
-        return evecs @ torch.diag_embed(torch.log(evals)) @ evecs.conj().transpose(-2, -1)
+        return (evecs @ torch.diag_embed(torch.log(evals)) @ evecs.conj().transpose(-2, -1)).to(U.dtype)
 
     def field_to_wave(self, su3_field: torch.Tensor) -> torch.Tensor:
         """su3_field: [B, N, 3, 3] complex SU(3). Returns [B, N*8] complex
         unit-modulus wave hypervector on S^(D-1)."""
         B, N, _, _ = su3_field.shape
         log_u = self._matrix_log(su3_field)                  # [B, N, 3, 3]
-        algebra = -1j * log_u                                # su(3) Hermitian
+        algebra = (-1j * log_u).to(self.basis.dtype)         # su(3) Hermitian, c64
         theta = 0.5 * torch.real(
             torch.einsum("aij,bnji->bna", self.basis, algebra)
         )                                                    # [B, N, 8]
-        return torch.exp(1j * theta.reshape(B, N * 8))
+        return torch.exp(1j * theta.reshape(B, N * 8)).to(self.basis.dtype)
 
     def wave_to_field(self, wave_vector: torch.Tensor) -> torch.Tensor:
         """wave_vector: [B, D] complex unit hypervector. Returns [B, D//8, 3, 3]
@@ -131,9 +131,9 @@ class SU3FieldWaveTransducer(torch.nn.Module):
         B, D = wave_vector.shape
         N = D // 8
         theta = torch.angle(wave_vector).reshape(B, N, 8)
-        alg = 1j * torch.einsum(
+        alg = (1j * torch.einsum(
             "bna,aij->bnij", theta.to(self.basis.dtype), self.basis
-        )                                                    # [B, N, 3, 3]
+        )).to(self.basis.dtype)                               # [B, N, 3, 3] c64
         return torch.matrix_exp(alg)
 
     def round_trip_error(self, su3_field: torch.Tensor) -> torch.Tensor:

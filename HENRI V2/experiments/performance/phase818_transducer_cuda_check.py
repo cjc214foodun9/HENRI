@@ -49,7 +49,7 @@ def rand_su3(n, basis, theta_scale=1.0, seed=0):
     g = torch.Generator().manual_seed(seed)
     theta = (torch.rand(n, 8, generator=g) * 2 - 1) * theta_scale
     theta = theta.to(basis.device).to(basis.dtype)  # CPU gen -> device (CUDA trap)
-    alg = 1j * torch.einsum("na,abc->nbc", theta, basis)
+    alg = (1j * torch.einsum("na,abc->nbc", theta, basis)).to(basis.dtype)  # c64 (CUDA promotion trap)
     return torch.matrix_exp(alg)
 
 
@@ -82,7 +82,7 @@ d_nc = float((trans.field_to_wave((UA @ UB).unsqueeze(0))
 g = torch.Generator().manual_seed(4)
 theta = (torch.rand(NB, 8, generator=g) * 2 - 1) * 0.5
 theta = theta.to(trans.basis.device).to(trans.basis.dtype)  # CPU gen -> device
-alg1 = 1j * torch.einsum("na,abc->nbc", theta, trans.basis)
+alg1 = (1j * torch.einsum("na,abc->nbc", theta, trans.basis)).to(trans.basis.dtype)  # c64
 U_same = torch.matrix_exp(alg1)
 U_com = U_same @ U_same
 d_com = float((trans.field_to_wave((U_same @ U_com).unsqueeze(0))
