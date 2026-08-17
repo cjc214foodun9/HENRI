@@ -69,3 +69,21 @@ D17 (8.16.1): phantom CLIs #17 (functor_flow.py — real: henri_functor_flow.py)
 
 D18: spec C1 reference code has an indentation bug (7-space body) — fixed at implementation (spec-exact semantics).
 D19: G1 gate is dtype-blind — c64 SVD rounding floor over 8192 blocks ~5e-5 exceeds literal 1e-6 even for exact algebra; pre-registered dual-dtype (c128 = math gate <1e-6, c64 = live fidelity <1e-3). G2 oracle must be det-1 SU(3) (live matrix-exp producer); random-QR oracle FAILS (112.2, phase artifact). G3 141x >= 100x. G4 standing BLOCKED_NO_DEMONSTRATIONS; C2 goal bridge typed BLOCKED_MISSING_FIELD_WAVE_TRANSDUCER (no field->wave transducer exists). Phantom CLIs #19-#21 (--mode verify_procrustes_compiler, --mode test_anisotropic_creep, --mode phase817_live_benchmark).
+
+ ## 2026-08-17 — Phase 8.18 SU(3) Field→Wave Transducer (spec 158c02c7..., brief 19f27caa...)
+
+ D19: `torch.linalg.matrix_log` absent in PyTorch 2.12.0+cu130 (local AND remote) → eigendecomposition fallback (exact for unitary).
+ D20: projection einsum index collision — spec `abc,bncb->bna` corrected to `aij,bnji->bna` (field-trace over generator pairs).
+ D21: Cardano per-branch pairing `v_k = -p/(3u_k)` mandatory — unpaired roots error 0.79 → 1.25e-6 (probe OBSERVED).
+ D22: latency gate unified to 50.0 µs (gate table wins over §2.3's 45 µs).
+ D23: CUDA-only dtype promotion — Python `1j` × c64 → c128 on CUDA (weak-scalar promotion differs CPU/CUDA) → einsum type error; explicit `.to(basis.dtype)` at every complex construction site (C1 `_matrix_log`, runner `rand_su3`, commuting control). CPU probes CANNOT catch this class (2nd CUDA-only trap of the phase).
+ D24: Triton JIT rejects nested comprehensions → `_su3_log_kernel` fully unrolled via Cayley–Hamilton projectors `P_k=(U²−S_k U+P_k I)·s_k`; probe-4 validated 3.659e-07 / 3.008e-06 vs eig-log BEFORE rewrite.
+ D25: remote Triton is 3.7.0 (brief claims 3.1 — probe-beats-document); `tl.math.atan2` AND `tl.atan2` absent → libdevice `_tlib.atan2` (version-safe import).
+ D26: float32 principal-root cancellation — sqrt(D) radicand rounds −1 ulp below |D_r| → NaN poisoned 208/8192 rows (290 NaN elements); clamp radicands ≥ 0 (mathematically always ≥ 0).
+ D27: Triton kernel [N,18] row-major buffer addressed with stride 1 instead of stride 18 — rows 1+ read/wrote wrong flat offsets (row 0 matched by coincidence 0*18==0); remote bisect + raw-load probe isolated the mim11 load divergence; stride-18 fix → kernel-vs-eig 1.434e-06.
+ Phantom CLIs #25-#26 (8.19 brief): `--mode verify_mcts_planner`, `--mode phase819_live_gauntlet` — production_arc_run.py exposes only --envs/--steps; real self-test via `su3_mcts_planner.py __main__`, live via the real runner interface (8.19 carries the fix).
+
+ EVIDENCE (OBSERVED @ 69313c8, PID 78811, remote RTX 5090, JSON sha256 b51a0e0902445ba8981b184d01de39a8a1263787bdea1f15f5937fd56637ec5a):
+ G1 c128 5.485e-07 / c64 8.093e-07 (PASS < 1e-5); G2 227.38 vs commuting control 1.34e-03 (PASS > 0.5); G3 latency 27.79 µs (PASS ≤ 50) + log err vs eig 1.434e-06 (PASS ≤ 1e-3); G4 BLOCKED_NO_DEMONSTRATIONS (lp85/dc22/cn04 examples None — by design, 8.17 precedent).
+
+ VERDICT: SEALED ACCEPT (CASE A per brief 19f27caa...; G1–G3 PASS, G4 blocked acceptable). Commit `69313c8` is the component commit; seal commit follows.
