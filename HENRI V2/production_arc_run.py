@@ -349,6 +349,12 @@ def run():
         os.environ["HENRI_ARC_ACTION_EFE"] = "1"
         os.environ["HENRI_ARC_ACTION_FIBER"] = "1"
         os.environ["HENRI_ARC_RT_MCTS"] = "1"
+    if args.mode == "phase823_live_gauntlet":
+        os.environ["HENRI_ARC_ACTION_EFE"] = "1"
+        os.environ["HENRI_ARC_ACTION_FIBER"] = "1"
+        os.environ["HENRI_ARC_RT_MCTS"] = "1"
+        os.environ["HENRI_ARC_TARGET_GROUNDING"] = "1"
+        os.environ["HENRI_ARC_IN_CONTEXT_ALIGN"] = "1"
 
     if HENRI_SEED:
         import random
@@ -455,6 +461,13 @@ def run():
     # EFE order byte-identical). Requires the OPINE option module + RT
     # evaluator (opine_object_mcts.py, sagnac_mcts_planner.py).
     HENRI_ARC_RT_MCTS = os.environ.get("HENRI_ARC_RT_MCTS", "0") == "1"
+    # Phase 8.23: in-context target grounding (default OFF). When ON, the
+    # runner synthesizes the pragmatic goal wave from demonstration pairs
+    # via synthesize_demonstration_goal_wave (C1), activates the goal
+    # consumer (lambda_goal), instantiates SagnacMCTSPlanner + OPINE on the
+    # live path, and emits OPINE macro-option engagement telemetry (C2).
+    HENRI_ARC_TARGET_GROUNDING = os.environ.get(
+        "HENRI_ARC_TARGET_GROUNDING", "0") == "1"
     # Phase 7.1: public corpus ingress channel (default OFF). Requires an
     # explicit provenance manifest mapping environment ID -> public ARC task
     # ID with corpus path + sha256. Exact match only; no fuzzy fallback.
@@ -480,7 +493,8 @@ def run():
         constraint_weight_max=LAMBDA_CONSTRAINT_MAX,
         constraint_reject_thresh=CONSTRAINT_REJECT_THRESH,
         beta_pragmatic=BETA_PRAGMATIC,
-        lambda_goal=LAMBDA_GOAL,
+        lambda_goal=LAMBDA_GOAL
+        if LAMBDA_GOAL > 0.0 else (1.0 if HENRI_ARC_TARGET_GROUNDING else 0.0),
         learnable_actions=LEARNABLE_ACTIONS,
         chimera_mode=CHIMERA_MODE,
         chimera_alpha=CHIMERA_ALPHA,
@@ -976,12 +990,14 @@ def run():
                            "reason": str(_sans_exc)})
                 print(f"  [sans] failed: {_sans_exc}")
         goal_wave = None
-        if LAMBDA_GOAL > 0.0:
+        goal_status = "GOAL_UNAVAILABLE"
+        if LAMBDA_GOAL > 0.0 or HENRI_ARC_TARGET_GROUNDING:
             init_grid = obs.frame[0].tolist()
             init_wave = tokenizer.encode_spatial_grid(init_grid).squeeze(0).to(DEVICE)
             # Layer 0: Phase 8.18 in-context transducer-bridged goal (default OFF)
             if bridged_goal_wave is not None:
                 goal_wave = bridged_goal_wave.to(DEVICE)
+                goal_status = "GOAL_WAVE_SYNTHESIZED"
                 print(f"  [goal] Phase 8.18 transducer bridge — "
                       f"W_task @ U_test -> goal wave")
             # Layer 1: try Zone C analogical retrieval
@@ -993,6 +1009,7 @@ def run():
                         goal_wave = res["conditioning_wave"]
                         if goal_wave is not None:
                             goal_wave = goal_wave.to(DEVICE)
+                            goal_status = "GOAL_ZONE_C_ANALOGICAL"
                             print(f"  [goal] Zone C analogical — top_sim={res['top_similarity']:.3f}")
                 except Exception as e:
                     pass  # Zone C may be offline; fall through
@@ -1001,6 +1018,7 @@ def run():
             if goal_wave is None:
                 goal_wave = orch.planner.infer_goal_from_preferences(init_wave)
                 if goal_wave is not None:
+                    goal_status = "GOAL_PREFERENCE_BLEND"
                     print(f"  [goal] preference-blend (top-k from "
                           f"{orch.planner.preference_store.num_engrams()} engrams)")
             # Layer 3: identity fallback (only if preference store is empty)
@@ -1008,8 +1026,12 @@ def run():
                 goal_wave = tokenizer.encode_spatial_grid(
                     obs.frame[0].tolist()
                 ).squeeze(0).to(DEVICE)
+                goal_status = "GOAL_IDENTITY_FALLBACK"
                 print(f"  [goal] identity (initial state — preference store empty)")
-            orch.planner.lambda_goal = LAMBDA_GOAL
+            orch.planner.lambda_goal = (
+                LAMBDA_GOAL if LAMBDA_GOAL > 0.0
+                else (1.0 if HENRI_ARC_TARGET_GROUNDING else 0.0)
+            )
         else:
             orch.planner.lambda_goal = 0.0  # ensure backward compat
 
@@ -1454,6 +1476,58 @@ def run():
                 except Exception as _rt_exc:
                     rt_info = {"rt_error": f"{type(_rt_exc).__name__}: {_rt_exc}"}
                     print(f"  [rt] re-rank unavailable (fail-closed): {_rt_exc}")
+
+            # Phase 8.23 C2: OPINE macro-option live engagement telemetry
+            # (default OFF via HENRI_ARC_TARGET_GROUNDING). Constructs the
+            # 4-step macro-option from the trained action generators, applies
+            # it to the current SU(3) field, and compares RT structural
+            # information gain vs the single-action branch. Engagement =
+            # macro-option gain >= single-action gain. Fail-closed: any
+            # anomaly leaves the EFE decision untouched.
+            opine_info = None
+            if (HENRI_ARC_TARGET_GROUNDING and su3_field is not None
+                    and action_outcome_store is not None):
+                try:
+                    from opine_object_mcts import OPINEObjectMCTS
+                    from sagnac_mcts_planner import compute_rt_information_gain
+                    from universal_data_transducer import SU3FieldWaveTransducer
+                    if getattr(orch.planner, "_su3_transducer", None) is None:
+                        orch.planner._su3_transducer = SU3FieldWaveTransducer(
+                            _p820_gm_basis).to(DEVICE)
+                    _trans = orch.planner._su3_transducer
+                    _opine = OPINEObjectMCTS(
+                        num_channels=su3_field.shape[0], option_horizon=4)
+                    _psi_t = _trans.field_to_wave(
+                        su3_field.unsqueeze(0)).squeeze(0).detach()
+                    # Single-action branch (chosen action's generator).
+                    _aid = int(getattr(game_action, "value", game_action))
+                    _u_single = action_outcome_store.predict_next_field(
+                        su3_field, _aid, _p820_gm_basis)
+                    _g_single = float(compute_rt_information_gain(
+                        _psi_t,
+                        _trans.field_to_wave(_u_single.unsqueeze(0)).squeeze(0)))
+                    # 4-step macro-option branch over the generator store.
+                    _gens = [action_outcome_store.lie_element(
+                        a % action_outcome_store.num_actions, _p820_gm_basis)[0]
+                        for a in (_aid, _aid + 1, _aid + 2, _aid + 3)]
+                    _u_macro = _opine.construct_macro_option(_gens, device=DEVICE)
+                    _g_macro = float(compute_rt_information_gain(
+                        _psi_t,
+                        _trans.field_to_wave(_u_macro.unsqueeze(0)).squeeze(0)))
+                    opine_info = {
+                        "engaged": bool(_g_macro >= _g_single),
+                        "gain_single": round(_g_single, 6),
+                        "gain_macro": round(_g_macro, 6),
+                        "option_horizon": 4,
+                        "unitarity_error": round(
+                            _opine.unitarity_error(_u_macro), 10),
+                    }
+                    print(f"  [opine] macro-option engagement: "
+                          f"g_single={_g_single:.4f} g_macro={_g_macro:.4f} "
+                          f"engaged={opine_info['engaged']}")
+                except Exception as _op_exc:
+                    opine_info = {"error": f"{type(_op_exc).__name__}: {_op_exc}"}
+                    print(f"  [opine] unavailable (fail-closed): {_op_exc}")
 
             # Phase 7.5 CONN Module A: advisory dual-channel Sagnac veto
             # re-rank (default-OFF). Evaluates each EFE candidate's
@@ -1921,6 +1995,8 @@ def run():
                 "phase820_update_info": p820_update_info,
                 "phase821_fiber_info": fiber_info,
                 "phase822_rt_info": rt_info,
+                "phase823_opine_info": opine_info,
+                "phase823_goal_status": goal_status,
             })
             # Wave-level hypertable log (downsampled for DB volume)
             if db_logger is not None and step % 5 == 0:

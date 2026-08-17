@@ -76,6 +76,77 @@ def _verify_opine_option() -> int:
     return 0
 
 
+def _verify_opine_mcts() -> int:
+    """G3-8.23 self-test (spec execution protocol step 3): macro-option
+    engagement on >= 25% of synthetic planner steps.
+
+    Simulates 100 planner steps; at each step two successor branches are
+    scored by RT structural information gain: the single-action branch
+    (trained action 1) vs the 4-step OPINE macro-option branch over the
+    trained actions (1, 2, 1, 2). The macro-option is engaged when its
+    successor carries at least as much structural information as the
+    single action. Gate: engaged fraction >= 0.25.
+    """
+    import math
+
+    from chromodynamic_grounding import GELL_MANN_BASIS
+    from henri_external_outcome_refactor_module import (
+        ActionOutcomeGeneratorStore, _rand_small_displacement,
+        _rand_special_unitary)
+    from sagnac_mcts_planner import compute_rt_information_gain
+    from universal_data_transducer import SU3FieldWaveTransducer
+
+    torch.manual_seed(823)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    nb = 64
+    basis = GELL_MANN_BASIS.to(device)
+    trans = SU3FieldWaveTransducer(GELL_MANN_BASIS).to(device)
+    store = ActionOutcomeGeneratorStore(
+        num_actions=8, num_channels=nb, lr=0.5).to(device)
+    opine = OPINEObjectMCTS(num_channels=nb, option_horizon=4)
+
+    # Train two actions on distinct displacements so options are meaningful.
+    u_t = _rand_special_unitary(nb, device, seed=1)
+    u_na = _rand_small_displacement(nb, device, seed=2, eps=0.4) @ u_t
+    u_nb = _rand_small_displacement(nb, device, seed=3, eps=0.4) @ u_t
+    for _ in range(20):
+        store.update_generator(u_t, 1, u_na, basis)
+        store.update_generator(u_t, 2, u_nb, basis)
+
+    def _wave(field: torch.Tensor) -> torch.Tensor:
+        return trans.field_to_wave(field.unsqueeze(0)).squeeze(0)
+
+    engaged = 0
+    steps = 100
+    for i in range(steps):
+        state = _rand_special_unitary(nb, device, seed=100 + i)
+        psi_t = _wave(state)
+        # Single-action branch (action 1).
+        psi_single = _wave(store.predict_next_field(state, 1, basis))
+        g_single = float(compute_rt_information_gain(psi_t, psi_single))
+        # 4-step macro-option branch (actions 1, 2, 1, 2).
+        u_macro = state
+        for a in (1, 2, 1, 2):
+            u_macro = store.predict_next_field(u_macro, a, basis)
+        psi_macro = _wave(u_macro)
+        g_macro = float(compute_rt_information_gain(psi_t, psi_macro))
+        if g_macro >= g_single:
+            engaged += 1
+    frac = engaged / steps
+    # Unit composition check: the option's per-channel composite stays unitary.
+    gens = [store.lie_element(1, basis)[0], store.lie_element(2, basis)[0]]
+    comp = opine.construct_macro_option([g for g in gens for _ in range(2)])
+    unit_err = opine.unitarity_error(comp)
+    print(f"[verify_opine_mcts] engagement {engaged}/{steps} = {frac:.2f} "
+          f"(gate >= 0.25), option unitarity error {unit_err:.3e}")
+    assert frac >= 0.25, (
+        f"G3-8.23 FAIL: OPINE engagement {frac:.2f} < 0.25")
+    assert unit_err < 1e-6, (
+        f"G3-8.23 FAIL: macro-option unitarity error {unit_err:.3e}")
+    print("[verify_opine_mcts] G3-8.23 PASS")
+    return 0
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -84,5 +155,7 @@ if __name__ == "__main__":
     _args = _ap.parse_args()
     if _args.mode == "verify_opine_option":
         raise SystemExit(_verify_opine_option())
+    if _args.mode == "verify_opine_mcts":
+        raise SystemExit(_verify_opine_mcts())
     raise SystemExit(f"unknown --mode {_args.mode!r} "
-                     f"(expected verify_opine_option)")
+                     f"(expected verify_opine_option|verify_opine_mcts)")

@@ -1531,6 +1531,110 @@ def compile_in_context_task_operator(
     return W_task
 
 
+def synthesize_demonstration_goal_wave(
+    demo_inputs: torch.Tensor,
+    demo_outputs: torch.Tensor,
+    test_input: torch.Tensor,
+    transducer: torch.nn.Module,
+) -> torch.Tensor:
+    """Phase 8.23 C1: in-context demonstration goal synthesizer.
+
+    Spec: HENRI-SPEC-2026-08-PHASE8.23-TARGET-GROUNDING (section 2.1).
+    demo_inputs:  [M, NB, 3, 3] complex SU(3) demonstration input fields
+    demo_outputs: [M, NB, 3, 3] complex SU(3) demonstration output fields
+    test_input:   [NB, 3, 3] complex SU(3) test observation field
+    transducer:   SU3FieldWaveTransducer (field_to_wave / wave_to_field)
+    Returns:      [NB*8] complex unit-modulus goal hypervector Psi_goal.
+
+    Compiles the block-wise Orthogonal-Procrustes task operator
+    W_task in SU(3)^NB (reuses compile_in_context_task_operator), then
+    forward-transports the test observation field U_goal = W_task @ U_test
+    and converts it to the wave domain. This grounds the pragmatic
+    attractor in the exteroceptive physics of the task WITHOUT leaking
+    held-out test targets (resolves SOTA blocker #3).
+    """
+    w_task = compile_in_context_task_operator(demo_inputs, demo_outputs)
+    u_goal = torch.einsum("bij,bjk->bik", w_task, test_input)
+    psi_goal = transducer.field_to_wave(u_goal.unsqueeze(0)).squeeze(0)
+    return psi_goal
+
+
+def _verify_goal_synthesizer() -> int:
+    """Phase 8.23 G1 self-test (spec execution protocol step 2).
+
+    Gate G1-8.23: non-zero pragmatic gradient. The synthesized goal wave
+    must produce a goal-distance term that discriminates candidate action
+    predictions: max_a |G(a) - G(a')| >= 0.0100. A goal that yields a
+    constant scalar offset (the pre-8.23 identity-goal solipsism) FAILS.
+    """
+    import math
+
+    from chromodynamic_grounding import GELL_MANN_BASIS
+    from henri_external_outcome_refactor_module import (
+        ActionOutcomeGeneratorStore, _rand_small_displacement,
+        _rand_special_unitary)
+    from universal_data_transducer import SU3FieldWaveTransducer
+
+    torch.manual_seed(823)
+    nb = 64
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    planner = EFEPlanner(
+        num_blocks=nb, d_model=nb * 8, num_actions=8, transition_rank=16,
+        lambda_goal=1.0,
+    ).to(device)
+    store = ActionOutcomeGeneratorStore(
+        num_actions=8, num_channels=nb, lr=0.1).to(device)
+    basis = GELL_MANN_BASIS.to(device)
+    trans = SU3FieldWaveTransducer(GELL_MANN_BASIS).to(device)
+
+    # Synthetic demonstration pairs: fixed displacement on action class 3.
+    u_demo_in = _rand_special_unitary(nb, device, seed=823)
+    u_demo_out = _rand_small_displacement(nb, device, seed=824, eps=0.4) @ u_demo_in
+    demo_in = torch.stack([u_demo_in, u_demo_in.clone()])
+    demo_out = torch.stack([u_demo_out, u_demo_out.clone()])
+    u_test = _rand_special_unitary(nb, device, seed=825)
+
+    psi_goal_c = synthesize_demonstration_goal_wave(
+        demo_in, demo_out, u_test, trans)
+    # Convert complex unit-modulus [D] to real [nb, 8] planner domain.
+    goal_wave = torch.angle(psi_goal_c).reshape(nb, 8).to(torch.float32)
+
+    # Two candidate predictions must receive DIFFERENT goal distances.
+    with torch.no_grad():
+        # G2: online generator fit — loss BEFORE (untrained, near-identity)
+        # vs AFTER 20 EMA updates on the demo transition. Spec threshold:
+        # fit loss reduction > 50%.
+        fit_before = float((store.predict_next_field(
+            u_demo_in, 3, basis) - u_demo_out).norm(dim=(-2, -1)).mean())
+        for _ in range(20):
+            store.update_generator(u_demo_in, 3, u_demo_out, basis)
+        fit_after = float((store.predict_next_field(
+            u_demo_in, 3, basis) - u_demo_out).norm(dim=(-2, -1)).mean())
+        fit_reduction = 1.0 - fit_after / (fit_before + 1e-12)
+        pred_a = torch.angle(trans.field_to_wave(
+            store.predict_next_field(u_test, 3, basis).unsqueeze(0))
+        ).reshape(nb, 8).to(torch.float32)
+        pred_b = torch.angle(trans.field_to_wave(
+            store.predict_next_field(u_test, 0, basis).unsqueeze(0))
+        ).reshape(nb, 8).to(torch.float32)
+        g_a = float(planner.goal_distance(pred_a, goal_wave).item())
+        g_b = float(planner.goal_distance(pred_b, goal_wave).item())
+    grad = abs(g_a - g_b)
+    print(f"[verify_goal_synthesizer] G2 fit loss {fit_before:.6f} -> "
+          f"{fit_after:.6f} (reduction {fit_reduction*100:.1f}%, "
+          f"gate > 50%)")
+    print(f"[verify_goal_synthesizer] G1 pragmatic gradient "
+          f"|dG|={grad:.6f} (gate >= 0.0100)")
+    assert fit_reduction > 0.50, (
+        f"G2-8.23 FAIL: fit loss reduction {fit_reduction*100:.1f}% <= 50% "
+        f"(action basis not learning)")
+    assert grad >= 0.0100, (
+        f"G1-8.23 FAIL: pragmatic gradient {grad} < 0.0100 "
+        f"(identity-goal solipsism not resolved)")
+    print("[verify_goal_synthesizer] G1+G2-8.23 PASS")
+    return 0
+
+
 def _verify_efe_engagement() -> int:
     """Phase 8.21 G2 self-test (spec execution protocol step 3):
     multi-action EFE engagement — score_actions receives the expanded action
@@ -1587,5 +1691,7 @@ if __name__ == "__main__":
     _args = _ap.parse_args()
     if _args.mode == "verify_efe_engagement":
         raise SystemExit(_verify_efe_engagement())
+    if _args.mode == "verify_goal_synthesizer":
+        raise SystemExit(_verify_goal_synthesizer())
     raise SystemExit(f"unknown --mode {_args.mode!r} "
-                     f"(expected verify_efe_engagement)")
+                     f"(expected verify_efe_engagement|verify_goal_synthesizer)")
