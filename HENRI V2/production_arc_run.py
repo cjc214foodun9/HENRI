@@ -461,6 +461,11 @@ def run():
     # EFE order byte-identical). Requires the OPINE option module + RT
     # evaluator (opine_object_mcts.py, sagnac_mcts_planner.py).
     HENRI_ARC_RT_MCTS = os.environ.get("HENRI_ARC_RT_MCTS", "0") == "1"
+    # Phase 8.26: CEGIS codebook snap (default OFF). Applies the
+    # continuous-to-discrete readout snap + conservation invariant when a
+    # grid source exists in the loop; otherwise emits fail-closed
+    # SNAP_NO_GRID_SOURCE telemetry (no fabricated grid path).
+    HENRI_ARC_CEGIS_SNAP = os.environ.get("HENRI_ARC_CEGIS_SNAP", "0") == "1"
     # Phase 8.23: in-context target grounding (default OFF). When ON, the
     # runner synthesizes the pragmatic goal wave from demonstration pairs
     # via synthesize_demonstration_goal_wave (C1), activates the goal
@@ -1024,6 +1029,22 @@ def run():
                 print(f"  [sans] failed: {_sans_exc}")
         goal_wave = None
         goal_status = "GOAL_UNAVAILABLE"
+        # Phase 8.26: CEGIS codebook snap (default OFF). Fail-closed:
+        # without a grid source the snap emits SNAP_NO_GRID_SOURCE and
+        # never fabricates a grid path.
+        snap_status = "SNAP_NO_GRID_SOURCE"
+        if HENRI_ARC_CEGIS_SNAP and grid is not None:
+            try:
+                from cegis_grid_snap import cegis_grid_snap
+                _snap = cegis_grid_snap(
+                    np.asarray(grid, dtype=float), ref_grid=grid)
+                if _snap["conservation_ok"]:
+                    snap_status = (
+                        f"SNAP_OK removed={_snap['isolated_pixels_removed']}")
+                else:
+                    snap_status = "SNAP_CONSERVATION_VIOLATION"
+            except Exception as _snap_exc:
+                snap_status = f"SNAP_FAIL_CLOSED: {type(_snap_exc).__name__}"
         if LAMBDA_GOAL > 0.0 or HENRI_ARC_TARGET_GROUNDING:
             init_grid = obs.frame[0].tolist()
             init_wave = tokenizer.encode_spatial_grid(init_grid).squeeze(0).to(DEVICE)
@@ -2066,6 +2087,7 @@ def run():
                 "phase822_rt_info": rt_info,
                 "phase823_opine_info": opine_info,
                 "phase823_goal_status": goal_status,
+                "phase826_snap_status": snap_status,
             })
             # Wave-level hypertable log (downsampled for DB volume)
             if db_logger is not None and step % 5 == 0:
