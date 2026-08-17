@@ -177,3 +177,10 @@ Spec: HENRI-SPEC-2026-08-PHASE8.27-PROMOTION-FINAL (sha aa0c0e60…), branch fea
 - Flag renames to spec-canonical: HENRI_ARC_META_PRIORS, HENRI_ARC_SAGNAC_MCTS (contracts updated).
 - D40: verdict JSON /tmp/p823_gauntlet_summary.json (henri.gauntlet-verdict.v1) emitted on completion.
 - Local suite 511 passed / 3 skipped. 8.23 gauntlet PID 90304 LIVE (env 5/20); queue: CUDA verify 8.24-8.27 → 8.27 promotion gauntlet (score > 0.0) → FF merge to main.
+
+## Phase 8.23 run1 seal-cycle (2026-08-17)
+Run: `3d1f904` PID 90304, `--mode phase823_live_gauntlet --envs 20 --steps 100`
+Verdict: **G4 BLOCKED_INFRA** (BLOCKED_NO_DEMOS, 0 levels, 0 actions, 17/17 envs)
+Evidence: scorecards sha `6cc8f733e85a3ea83346092885be74f71847f14dc79d740ce74ed82168bd5c56`; jsonl `production_run_1786993324.jsonl` (1,972,220 B)
+Post-mortem: HENRI-AUDIT-2026-08-PHASE8.23-RUN1-POSTMORTEM (sha `238e9a7b…`)
+Queue: Stage 2 CUDA verify 8.24-8.27 @ `002197f` -> Stage 3 8.27 promotion gauntlet -> Stage 4 FF merge to main
