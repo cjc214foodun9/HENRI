@@ -184,3 +184,6 @@ Verdict: **G4 BLOCKED_INFRA** (BLOCKED_NO_DEMOS, 0 levels, 0 actions, 17/17 envs
 Evidence: scorecards sha `6cc8f733e85a3ea83346092885be74f71847f14dc79d740ce74ed82168bd5c56`; jsonl `production_run_1786993324.jsonl` (1,972,220 B)
 Post-mortem: HENRI-AUDIT-2026-08-PHASE8.23-RUN1-POSTMORTEM (sha `238e9a7b…`)
 Queue: Stage 2 CUDA verify 8.24-8.27 @ `002197f` -> Stage 3 8.27 promotion gauntlet -> Stage 4 FF merge to main
+
+## Phase 8.24 D43 fix (2026-08-17, commit 6f4cbc7)
+CUDA-only device-placement defect: 8.27 promotion gauntlet run1 launch crashed at pretrain_action_generators (einsum mat2 cuda:0 vs cpu). Fix: thread device through _affine_family_theta (default "cpu" preserves local path). Contract test_824_cuda_device_threading_d43 added. 18/18 contracts, 512 passed / 3 skipped. Relaunch run2 @ 6f4cbc7 (PID 93009, watchdog 0b6f9d4f77bb).
