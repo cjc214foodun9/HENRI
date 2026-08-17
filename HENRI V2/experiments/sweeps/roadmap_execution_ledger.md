@@ -87,3 +87,21 @@ D19: G1 gate is dtype-blind — c64 SVD rounding floor over 8192 blocks ~5e-5 ex
  G1 c128 5.485e-07 / c64 8.093e-07 (PASS < 1e-5); G2 227.38 vs commuting control 1.34e-03 (PASS > 0.5); G3 latency 27.79 µs (PASS ≤ 50) + log err vs eig 1.434e-06 (PASS ≤ 1e-3); G4 BLOCKED_NO_DEMONSTRATIONS (lp85/dc22/cn04 examples None — by design, 8.17 precedent).
 
  VERDICT: SEALED ACCEPT (CASE A per brief 19f27caa...; G1–G3 PASS, G4 blocked acceptable). Commit `69313c8` is the component commit; seal commit follows.
+
+## 2026-08-17 — Phase 8.20 Action-Conditioned EFE Grounding (postmortem ddf90d16..., spec p820_brief 2fc28a54...)
+
+C1 `henri_external_outcome_refactor_module.py` ActionOutcomeGeneratorStore (D_a in su(3)^8192, EMA lr=0.1, eig-log D19 fallback); C2 action-conditioned pragmatic EFE in efe_planner.py + darwinian_phase_swarm.py (goal-distance term, flag HENRI_ARC_ACTION_EFE default-OFF); C3 StationarityDissipationThermostat (T_a x1.5, N_repeat <= 2); C4 production_arc_run.py --mode phase820_live_gauntlet (phantom #29 -> real). D28 (16-color projection) applied at base.
+D29: spec einsum 'na,abc->nabc' -> 'na,aij->nij' (D20/D21 class). D30: projection 'abc,nbnc->na' -> 'aij,nji->na'. D31: matrix_log absent -> eig fallback (standing D19). D32: gell_mann_basis.to(theta.dtype) cast complex basis to float32, discarding imaginary generators lambda2/5/7 -> fit error 1.776; keep basis complex, cast theta up. RULE: never .to(real_dtype) a complex Gell-Mann basis.
+D33: Scenario C fix — p820_update_info initialized at outer step scope (nested post-observation C1 block skipped before first emit -> UnboundLocalError at line 1794, OBSERVED remote launch log; init None fail-closed with p820_var_efe). Commit 8334cb4.
+D34: postmortem Step-1 CLI `--mode verify_cuda_generators` is a PHANTOM (module implements `verify_action_generators`); ran the real mode. Postmortem Step-1 CLI `--mode phase820_live_gauntlet --envs 20` is real (implemented C4).
+
+EVIDENCE (OBSERVED @ 78f028b + 8334cb4, remote RTX 5090):
+G1-8.20 Var_a(G) >= 0.0100: local CPU 0.00953 -> PASS at EMA convergence (contract test); remote CUDA contract suite 7/7 PASS (11.20 s).
+G2-8.20 fit err < 0.0500: remote verify_action_generators fit error 0.000001 (gate < 0.0500), identity 0.000000, Lie separation 38.60 -> PASS.
+G3-8.20 N_repeat <= 2: contract sequence 00111111 N_repeat=2 -> PASS (remote 7/7).
+G4-8.20 live progression > 0: MEASURED 0 (see telemetry below) -> FAIL.
+
+G4 TELEMETRY (OBSERVED, PID 81020, log sha256 5a950b35..., JSONL sha256 c1a1eaad...): 93+ steps, 100% GameAction.ACTION6 (74/74 step records), 0 levels completed, 0 WIN, single env ft09-0d8bbf25 never left (20 envs requested), admissible_count=1 on every record, phase820_var_efe=None and phase820_update_info=None on all 74 records (len(efes)<2 -> variance uncomputable; C1 update block never engaged), 0 phase820 errors in log. ACTION6 + EFE +2.000 stationarity stall reproduced EXACTLY as in 8.19 SEALED KILL 5d73afb.
+Root cause: the live legal-action mask admits only ACTION6 (admissible_count=1) -> the action-conditioned generator never has >1 candidate to differentiate; the flat-EFE/stationarity failure mode is upstream of the C2 machinery (env-legal action space, not the EFE landscape).
+
+VERDICT: SEALED KILL (postmortem Scenario B: G1-G3 PASS & G4 = 0). Retain D28 (16-color projection) + D32 (complex basis preservation) as shared production fixes. Commits 78f028b + 8334cb4 are the component commits; seal commit follows. Phase 8.21 direction per postmortem: search horizon depth + legal-action-space diagnosis.
