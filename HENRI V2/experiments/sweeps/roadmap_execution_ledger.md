@@ -105,3 +105,16 @@ G4 TELEMETRY (OBSERVED, PID 81020, log sha256 5a950b35..., JSONL sha256 c1a1eaad
 Root cause: the live legal-action mask admits only ACTION6 (admissible_count=1) -> the action-conditioned generator never has >1 candidate to differentiate; the flat-EFE/stationarity failure mode is upstream of the C2 machinery (env-legal action space, not the EFE landscape).
 
 VERDICT: SEALED KILL (postmortem Scenario B: G1-G3 PASS & G4 = 0). Retain D28 (16-color projection) + D32 (complex basis preservation) as shared production fixes. Commits 78f028b + 8334cb4 are the component commits; seal commit follows. Phase 8.21 direction per postmortem: search horizon depth + legal-action-space diagnosis.
+
+## 2026-08-17 — Phase 8.21 SEALED KILL (Run2 crash + 0 progression; brief 16781ae2..., spec HENRI-SPEC-2026-08-PHASE8.21-8.22-WIRING)
+
+Fiber mechanism VERIFIED (G1-G3 PASS, CUDA + telemetry):
+- Fiber un-collapse: native 1 -> expanded 2 on 332 records; multi-action envs passthrough; 0 errors in transducer path.
+- Action diversity RESTORED: ACTION1 430, ACTION2 403, ACTION3 255, ACTION4 245, ACTION5 41, ACTION6 37, ACTION7 23 (vs 100% ACTION6 in 8.19/8.20 stall).
+- Var_a(EFE) non-null on 1434/1532 step records (mean 0.15091, max 2.319526) -> EFE steering re-engaged.
+
+G4 = 0 measured (18/20 envs, 1526 steps, 0 levels completed, 0 scorecard_delta):
+- Run2 (PID 82663) terminated early: torch.linalg.svd "input matrix contained non-finite values" in train_transition_batch (efe_planner.py:1340 CPU fallback) at env 19 handoff. Crash log /root/p821_gauntlet_run2_crash.log sha 2a275396..., telemetry jsonl sha 5163e71a....
+- 0 NaN predicted waves, 0 NaN update fields in telemetry -> non-finite entered EDMD buffer from another channel (D38: add NaN guard in train_transition_batch / EDMD buffer; SVD fallback cascade currently re-raises on non-finite input).
+- No FINAL SCORECARDS -> per pre-registered matrix and measured zero-level signal: SEALED KILL (Scenario B). Retain D28/D32/D35/D36.
+- Root inference: ingress/action-selection bottleneck resolved; zero progression across 18 diverse envs isolates the residual gap to the SEARCH/PLANNING layer (SagnacMCTSPlanner un-instantiated on the live loop) -> Phase 8.22 pivot (branch feat/phase822-ryu-takayanagi-mcts @ e8759a5, pre-verified locally: G1-8.22 unitarity 2.226e-07, G2-8.22 gain_noop 0.0000 / gain_rand 0.4395).
