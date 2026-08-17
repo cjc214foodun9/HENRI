@@ -332,7 +332,9 @@ def run():
     ap.add_argument("--steps", type=int, default=1000, help="max env steps per environment (unlimited execution until completion)")
     ap.add_argument(
         "--mode", default=None,
-        help="phase820_live_gauntlet: force HENRI_ARC_ACTION_EFE=1 (Phase 8.20 G4)")
+        help="phase820_live_gauntlet: force HENRI_ARC_ACTION_EFE=1 (Phase 8.20 G4); "
+             "phase821_live_gauntlet: force HENRI_ARC_ACTION_EFE=1 + "
+             "HENRI_ARC_ACTION_FIBER=1 (Phase 8.21 action-space reform G4)")
     ap.add_argument(
         "--dsn", type=str, default=None,
         help="Explicit Zone C DSN. CUDA runs still require ZONE_C_ENV=prod."
@@ -340,6 +342,9 @@ def run():
     args = ap.parse_args()
     if args.mode == "phase820_live_gauntlet":
         os.environ["HENRI_ARC_ACTION_EFE"] = "1"
+    if args.mode == "phase821_live_gauntlet":
+        os.environ["HENRI_ARC_ACTION_EFE"] = "1"
+        os.environ["HENRI_ARC_ACTION_FIBER"] = "1"
 
     if HENRI_SEED:
         import random
@@ -436,6 +441,10 @@ def run():
     # stationarity dissipation thermostat (C3), and the online generator
     # update from observed SU(3) field transitions.
     HENRI_ARC_ACTION_EFE = os.environ.get("HENRI_ARC_ACTION_EFE", "0") == "1"
+    # Phase 8.21: Ingress Action-Space Fiber Transducer (default OFF).
+    # Un-collapses single-action native masks to |A_admissible| >= 2 so the
+    # action-conditioned EFE can re-engage on collapsed environments.
+    HENRI_ARC_ACTION_FIBER = os.environ.get("HENRI_ARC_ACTION_FIBER", "0") == "1"
     # Phase 7.1: public corpus ingress channel (default OFF). Requires an
     # explicit provenance manifest mapping environment ID -> public ARC task
     # ID with corpus path + sha256. Exact match only; no fuzzy fallback.
@@ -1290,6 +1299,52 @@ def run():
                           f"(fallback transition): {_p820_exc}")
                     su3_field = None
                     efe_penalties = None
+            # Phase 8.21: Ingress Action-Space Fiber Transducer (default OFF).
+            # Un-collapse a single-action native mask to |A_admissible| >= 2
+            # so the action-conditioned EFE can re-engage on collapsed envs
+            # (spec section 1.2; gates G1/G3). Requires the armed action
+            # outcome store + SU(3) field; fail-closed to the native mask.
+            # D35/D36 deviations documented in o_vsa_ingress_tokenizer.py.
+            fiber_info = None
+            if (HENRI_ARC_ACTION_FIBER and HENRI_ARC_ACTION_EFE
+                    and action_outcome_store is not None
+                    and su3_field is not None
+                    and policy_mode() != "action1"):
+                try:
+                    from o_vsa_ingress_tokenizer import DynamicActionSpaceTransducer
+                    _fiber = DynamicActionSpaceTransducer(
+                        num_canonical_actions=len(orch.decoder.id_to_action),
+                        noop_eps=1e-3)
+                    _native_mask = torch.zeros(
+                        len(orch.decoder.id_to_action), dtype=torch.bool,
+                        device=DEVICE)
+                    for _idx, _act in orch.decoder.id_to_action.items():
+                        _native_mask[_idx] = _act in allowed_actions
+                    _expanded = _fiber.resolve_admissible_actions(
+                        _native_mask, su3_field, action_outcome_store,
+                        _p820_gm_basis)
+                    _expanded_actions = [
+                        orch.decoder.id_to_action[_i]
+                        for _i in range(len(orch.decoder.id_to_action))
+                        if bool(_expanded[_i])]
+                    fiber_info = {
+                        "native_count": int(_native_mask.sum().item()),
+                        "expanded_count": len(_expanded_actions),
+                        "expanded": [
+                            getattr(a, "name", str(a))
+                            for a in _expanded_actions],
+                    }
+                    if (len(_expanded_actions) >= 2
+                            and len(_expanded_actions) > len(allowed_actions)):
+                        print(f"  [fiber] un-collapsed {len(allowed_actions)} -> "
+                              f"{len(_expanded_actions)} admissible actions "
+                              f"({fiber_info['expanded']})")
+                        allowed_actions = _expanded_actions
+                except Exception as _fiber_exc:
+                    fiber_info = {
+                        "fiber_error": f"{type(_fiber_exc).__name__}: {_fiber_exc}"}
+                    print(f"  [fiber] expansion failed (fail-closed to native "
+                          f"mask): {_fiber_exc}")
             if policy_mode() == "action1":
                 # P2 deterministic baseline: no EFE planning, no exploration,
                 # no planner state mutation. Diagnostic only.
@@ -1796,6 +1851,7 @@ def run():
                 "step_ms": round(step_ms, 1),
                 "phase820_var_efe": p820_var_efe,
                 "phase820_update_info": p820_update_info,
+                "phase821_fiber_info": fiber_info,
             })
             # Wave-level hypertable log (downsampled for DB volume)
             if db_logger is not None and step % 5 == 0:

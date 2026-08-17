@@ -1509,3 +1509,63 @@ def compile_in_context_task_operator(
     phase_correction = torch.pow(det.conj(), 1.0 / 3.0).unsqueeze(-1).unsqueeze(-1)
     W_task = W_task * phase_correction
     return W_task
+
+
+def _verify_efe_engagement() -> int:
+    """Phase 8.21 G2 self-test (spec execution protocol step 3):
+    multi-action EFE engagement — score_actions receives the expanded action
+    mask (>= 2 candidates) and returns len(efes) >= 2 with the action-
+    conditioned Lie outcome store armed."""
+    import torch
+    from henri_external_outcome_refactor_module import (
+        ActionOutcomeGeneratorStore)
+    from chromodynamic_grounding import (
+        GELL_MANN_BASIS, encode_su3_color_field)
+
+    torch.manual_seed(0)
+    nb = 64
+    planner = EFEPlanner(
+        num_blocks=nb, d_model=nb * 8, num_actions=8, transition_rank=16)
+    store = ActionOutcomeGeneratorStore(
+        num_actions=8, num_channels=nb, lr=0.1)
+    with torch.no_grad():
+        # Nonzero generators so candidate predictions differ per action.
+        store.theta_a.data.normal_(0.0, 0.5)
+    planner._action_outcome_store = store
+
+    grid = [[0] * 8 for _ in range(8)]
+    grid[0][0] = 3
+    field = encode_su3_color_field(
+        torch.tensor([grid], dtype=torch.long)).reshape(-1, 3, 3)
+    if field.shape[0] < nb:
+        eye = torch.eye(3, dtype=field.dtype).unsqueeze(0)
+        field = torch.cat([field, eye.repeat(nb - field.shape[0], 1, 1)], 0)
+
+    state_wave = torch.randn(nb, 8)
+    state_wave = state_wave / state_wave.norm(dim=-1, keepdim=True)
+    boundary = state_wave.clone().unsqueeze(0)
+    cands = []
+    for i in range(2):
+        w = torch.randn(nb, 8)
+        w = w / w.norm(dim=-1, keepdim=True)
+        cands.append((i + 1, w))
+    results = planner.score_actions(
+        state_wave, cands, boundary, su3_field=field)
+    efes = [r["efe"] for r in results]
+    assert len(efes) >= 2, f"G2 FAIL: len(efes)={len(efes)}"
+    var = sum((e - sum(efes) / len(efes)) ** 2 for e in efes) / len(efes)
+    print(f"[verify_efe_engagement] G2 PASS: len(efes)={len(efes)} "
+          f"var={var:.6f}")
+    return 0
+
+
+if __name__ == "__main__":
+    import argparse
+
+    _ap = argparse.ArgumentParser()
+    _ap.add_argument("--mode", default=None)
+    _args = _ap.parse_args()
+    if _args.mode == "verify_efe_engagement":
+        raise SystemExit(_verify_efe_engagement())
+    raise SystemExit(f"unknown --mode {_args.mode!r} "
+                     f"(expected verify_efe_engagement)")
