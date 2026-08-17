@@ -530,6 +530,18 @@ def run():
         stationarity_thermostat = StationarityDissipationThermostat(
             num_actions=_num_actions)
         _p820_gm_basis = GELL_MANN_BASIS.to(DEVICE)
+        # Phase 8.24: Meta-D_a fast-adaptation prior (default OFF).
+        # Pre-trains action generators on synthetic affine SU(3) families so
+        # in-situ adaptation converges in ~1 update instead of ~15-20
+        # (HENRI-ANALYSIS-2026-08-SOLVING-FRONTIER, sha 8c508808...).
+        # Zero-pretraining invariant: no ARC grids or solutions are used.
+        if os.environ.get("HENRI_ARC_META_PRIOR", "0") == "1":
+            from henri_external_outcome_refactor_module import (
+                pretrain_action_generators)
+            _prior_info = pretrain_action_generators(
+                action_outcome_store, _p820_gm_basis, device=str(DEVICE),
+                num_channels=8192, seed=824)
+            print(f"[phase824] Meta-D_a prior armed: {_prior_info}")
         orch.planner._action_outcome_store = action_outcome_store
         print(f"[phase820] action-outcome store + thermostat armed "
               f"(actions={_num_actions})")

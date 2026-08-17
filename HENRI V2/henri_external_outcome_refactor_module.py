@@ -144,8 +144,8 @@ def _affine_family_theta(action: int, num_channels: int, seed: int,
     Returns [num_channels, 8] real coefficients. Family per action (spec:
     'synthetic 2D/3D affine transformations'):
       0/1 x-translation, 2/3 y-translation, 4/5 rotation, 6/7 scale,
-    each with a +/- direction. Spatial modulation via block-index pattern
-    over a row-major grid (linear ramp for translation, quadratic for
+    Spatial modulation via block-index pattern
+    over a row-major lattice (linear ramp for translation, quadratic for
     rotation, radial for scale). Deterministic; no ARC content.
     """
     g = torch.Generator(device="cpu").manual_seed(seed)
