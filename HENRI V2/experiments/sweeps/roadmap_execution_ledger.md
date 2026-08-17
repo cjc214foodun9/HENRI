@@ -87,3 +87,13 @@ D19: G1 gate is dtype-blind — c64 SVD rounding floor over 8192 blocks ~5e-5 ex
  G1 c128 5.485e-07 / c64 8.093e-07 (PASS < 1e-5); G2 227.38 vs commuting control 1.34e-03 (PASS > 0.5); G3 latency 27.79 µs (PASS ≤ 50) + log err vs eig 1.434e-06 (PASS ≤ 1e-3); G4 BLOCKED_NO_DEMONSTRATIONS (lp85/dc22/cn04 examples None — by design, 8.17 precedent).
 
  VERDICT: SEALED ACCEPT (CASE A per brief 19f27caa...; G1–G3 PASS, G4 blocked acceptable). Commit `69313c8` is the component commit; seal commit follows.
+
+## 2026-08-17 — Phase 8.19 SU(3) MCTS demo-free fallback router (brief a83439e0..., branch feat/phase819-su3-mcts-planner)
+
+ Components: `su3_mcts_planner.py` (8 Gell-Mann branches, Sagnac-gated EFE + singlet veto 0.1, anisotropic Langevin; real `[N,8]` goal wave); C1 router behind `HENRI_ARC_SU3_MCTS` (default OFF, fail-closed); contracts 5/5; self-test PASS.
+ D28 (shared production fix, retained): `encode_su3_color_field` one_hot depth 10 -> 16 (live arcade grids int8 max 15; CUDA ScatterGatherKernel assert on colors >= 10; rows 0-9 byte-identical; sealed 8.15/8.17 tests preserved). Batch-dim call-site fix `.unsqueeze(0)` at both production call sites.
+ EVIDENCE (OBSERVED @ b4afeac, remote RTX 5090):
+  G1-8.19 PASS — demo-free routing on live lp85 (examples None): SU3_MCTS_ROUTER + SU3_MCTS_GOAL_SYNTHESIZED torch.Size([8192,8]); telemetry /root/HENRI_telemetry_exports/production_run_1786931586.jsonl sha256 27dc7768...; score_eligible false (fail-closed correct).
+  G2-8.19 PASS — 8-directional Lie expansion unitarity error 0.0 < 1e-6 (CUDA self-test, verdict PASS).
+  G3-8.19 FAIL — score 0.0, levels_completed 0/8, 10x ACTION6, EFE +2.000 (stationarity penalty) every step, recall 0, delta ~1.0.
+ VERDICT: SEALED KILL (G3 target gate measured fail — no task progression; mode stays default-OFF, unpromoted; negatives = governance wins; D28 retained as shared fix).
