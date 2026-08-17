@@ -238,10 +238,11 @@ if _HAS_TRITON:
         p3c_i = 3.0 * p3_r * p3_r * p3_i - p3_i * p3_i * p3_i
         D_r = q2_r * q2_r - q2_i * q2_i + p3c_r
         D_i = 2.0 * q2_r * q2_i + p3c_i
-        # sqrt(D)
+        # sqrt(D) — radicands are >= 0 by construction; clamp guards float32
+        # rounding where D_mag can land 1 ulp below |D_r| (sqrt(-eps) = NaN).
         D_mag = tl.sqrt(D_r * D_r + D_i * D_i)
-        sD_r = tl.sqrt((D_mag + D_r) / 2.0)
-        sD_i = tl.where(D_i >= 0.0, 1.0, -1.0) * tl.sqrt((D_mag - D_r) / 2.0)
+        sD_r = tl.sqrt(tl.maximum((D_mag + D_r) / 2.0, 0.0))
+        sD_i = tl.where(D_i >= 0.0, 1.0, -1.0) * tl.sqrt(tl.maximum((D_mag - D_r) / 2.0, 0.0))
         # u^3 = -q/2 + sqrt(D); cube root (3 branches)
         u3_r = -q2_r + sD_r
         u3_i = -q2_i + sD_i
