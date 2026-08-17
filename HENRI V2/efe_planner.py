@@ -1278,6 +1278,26 @@ class EFEPlanner(nn.Module):
         actions = actions.detach().to(device)
         observed_nexts = observed_nexts.detach().to(device)
 
+        # D38 (2026-08-17): fail-closed non-finite guard. A single non-finite
+        # entry in the buffer poisons the Gram matrix; neither cholesky nor any
+        # SVD fallback tier (incl. the CPU tier) can repair it — the CPU call
+        # raises 'linalg.svd: input matrix contained non-finite values' and
+        # kills the whole gauntlet (OBSERVED 8.21 run2 crash at env 19). When
+        # the buffer is non-finite, skip the update (no-op, zero credit) and
+        # record the condition instead of raising. The healthy path is
+        # byte-identical: the guard only fires on non-finite inputs.
+        if not (torch.isfinite(states).all() and torch.isfinite(actions).all()
+                and torch.isfinite(observed_nexts).all()):
+            self.last_edmd_diagnostics = {
+                "n_samples": int(N),
+                "non_finite_skip": True,
+                "gram_cond_log10": float("nan"),
+                "jitter_tier": -1,
+                "cholesky_failed": True,
+                "pre_loss": float("nan"),
+            }
+            return 0.0
+
         preds = torch.stack(
             [self.transition(states[i], actions[i]) for i in range(N)]
         )
