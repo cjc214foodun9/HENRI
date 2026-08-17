@@ -138,7 +138,8 @@ def _rand_small_displacement(n: int, device, seed: int,
 
 
 def _affine_family_theta(action: int, num_channels: int, seed: int,
-                         eps: float = 0.3) -> torch.Tensor:
+                         eps: float = 0.3,
+                         device: str = "cpu") -> torch.Tensor:
     """Structured su(3) generator coefficients for a synthetic affine family.
 
     Returns [num_channels, 8] real coefficients. Family per action (spec:
@@ -169,7 +170,7 @@ def _affine_family_theta(action: int, num_channels: int, seed: int,
         pat = torch.sqrt(row ** 2 + col ** 2 + 1e-8)
     pat = pat - pat.mean()
     pat = pat / (pat.std() + 1e-12)
-    return sign * eps * torch.einsum("n,a->na", pat, d)
+    return (sign * eps * torch.einsum("n,a->na", pat, d)).to(device)
 
 
 def pretrain_action_generators(
@@ -199,7 +200,8 @@ def pretrain_action_generators(
     store.lr = 0.5
     with torch.no_grad():
         for a in range(n_act):
-            theta_fam = _affine_family_theta(a, num_channels, seed=seed + a)
+            theta_fam = _affine_family_theta(
+                a, num_channels, seed=seed + a, device=device)
             su3_elem = 1j * torch.einsum(
                 "na,aij->nij", theta_fam.to(basis.dtype), basis)
             disp = torch.matrix_exp(su3_elem)

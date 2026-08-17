@@ -46,3 +46,19 @@ def test_824_gate_pre_registered():
     assert "gate <= 3" in src
     assert "expect >= 15" in src
     assert "default-OFF" in src.lower() or "inert" in src.lower()
+
+
+def test_824_cuda_device_threading_d43():
+    # D43 (2026-08-17): pretrain crashed on the live CUDA promotion path —
+    # RuntimeError in torch.einsum (bmm): mat2 on cuda:0 vs other on cpu.
+    # _affine_family_theta allocates on CPU (seedable generator) but the
+    # caller einsums against the CUDA gell_mann basis. Fix: thread device
+    # through _affine_family_theta and .to(device) the result. Local CPU
+    # gates cannot see this; the live-mode consumer trace can.
+    src = _read(MODULE)
+    assert 'device: str = "cpu"' in src, "device param missing"
+    # Whitespace-normalized match: the call site spans a plain newline.
+    norm = "".join(src.split())
+    assert "_affine_family_theta(a,num_channels,seed=seed+a,device=device)" in norm, (
+        "call site must pass device")
+    assert "torch.einsum(\"n,a->na\", pat, d)).to(device)" in src, "result must .to(device)"
