@@ -32,6 +32,11 @@ try:
     import triton
     import triton.language as tl
     _HAS_TRITON = True
+    # atan2 lives in libdevice on Triton >= 3.3 (tl.math.atan2 removed).
+    try:
+        from triton.language.extra import libdevice as _tlib
+    except ImportError:
+        from triton.language.extra.cuda import libdevice as _tlib
 except ImportError:  # CPU-only box
     _HAS_TRITON = False
 
@@ -241,7 +246,7 @@ if _HAS_TRITON:
         u3_r = -q2_r + sD_r
         u3_i = -q2_i + sD_i
         u3_mag = tl.sqrt(u3_r * u3_r + u3_i * u3_i)
-        u3_ang = tl.math.atan2(u3_i, u3_r)
+        u3_ang = _tlib.atan2(u3_i, u3_r)
         u_mag = tl.exp2(tl.log2(tl.maximum(u3_mag, 1e-30)) * (1.0 / 3.0))
         # ---- U^2 = U @ U (explicit 3x3 complex) ----
         u2r00 = mre00 * mre00 - mim00 * mim00 + mre01 * mre10 - mim01 * mim10 + mre02 * mre20 - mim02 * mim20
@@ -288,9 +293,9 @@ if _HAS_TRITON:
         x1_i = u1_i + v1_i - a_i / 3.0
         x2_r = u2_r + v2_r - a_r / 3.0
         x2_i = u2_i + v2_i - a_i / 3.0
-        th0 = tl.math.atan2(x0_i, x0_r)
-        th1 = tl.math.atan2(x1_i, x1_r)
-        th2 = tl.math.atan2(x2_i, x2_r)
+        th0 = _tlib.atan2(x0_i, x0_r)
+        th1 = _tlib.atan2(x1_i, x1_r)
+        th2 = _tlib.atan2(x2_i, x2_r)
         # ---- Lagrange projectors via Cayley-Hamilton: Pk = (U^2 - S_k U + P_k I) * s_k ----
         # k=0: j1=1, j2=2
         S_r = x1_r + x2_r
