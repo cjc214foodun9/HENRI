@@ -92,3 +92,18 @@ def test_823_g3_engagement_threshold_pre_registered():
     assert "0.25" in src, "G3 engagement threshold not pre-registered"
     assert "unitarity error" in src
     assert "1e-6" in src, "G3 unitarity threshold not pre-registered"
+
+
+def test_823_sagnac_planner_live_instantiation():
+    """SOTA blocker #2: SagnacMCTSPlanner must be instantiated on the live
+    path (not only in its own self-test) and consumed causally."""
+    src = _read(RUNNER)
+    assert "sagnac_planner = None" in src, "fail-closed init missing"
+    assert "from sagnac_mcts_planner import SagnacMCTSPlanner" in src, (
+        "live import missing")
+    assert "SagnacMCTSPlanner(" in src
+    # The consumer must be causal: dual-channel veto inside the OPINE block.
+    assert "dual_channel_sagnac_veto(" in src, "veto consumer missing"
+    assert "sagnac_planner is not None" in src, "consumer guard missing"
+    assert "not _hard_vetoed" in src, "veto must gate engagement"
+    assert "HENRI_ARC_TARGET_GROUNDING" in src

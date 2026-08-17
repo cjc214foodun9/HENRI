@@ -533,6 +533,27 @@ def run():
         orch.planner._action_outcome_store = action_outcome_store
         print(f"[phase820] action-outcome store + thermostat armed "
               f"(actions={_num_actions})")
+    # Phase 8.23 C2: live SagnacMCTSPlanner instantiation (default OFF via
+    # HENRI_ARC_TARGET_GROUNDING). Resolves SOTA blocker #2 (planner never
+    # instantiated on the live path). The full tree search() requires a
+    # held-out target grid (unavailable by design — blocker #3 boundary),
+    # so the live causal consumer is the planner's dual-channel Sagnac veto
+    # (hard axiom channel + soft epistemic channel) gating the OPINE
+    # macro-option branch below. Fail-closed: construction error -> None ->
+    # OPINE block skips veto gating and reports UNAVAILABLE.
+    sagnac_planner = None
+    if HENRI_ARC_TARGET_GROUNDING:
+        try:
+            from sagnac_mcts_planner import SagnacMCTSPlanner
+            sagnac_planner = SagnacMCTSPlanner(
+                d_model=SCALE["d_model"], k_blocks=SCALE["num_blocks"],
+                tau_veto=0.35, device=DEVICE)
+            print("[phase823] SagnacMCTSPlanner instantiated on live path "
+                  "(dual-channel veto consumer)")
+        except Exception as _sag_exc:
+            sagnac_planner = None
+            print(f"[phase823] SagnacMCTSPlanner unavailable "
+                  f"(fail-closed): {_sag_exc}")
     # Phase 7.5 CONN Module A: advisory Sagnac veto sidecar (default-OFF).
     # The sidecar (arc_sagnac_veto.py) is self-contained; it computes the
     # dual-channel deltas with the canonical norm-consistent metric. Fail-open:
@@ -1511,16 +1532,39 @@ def run():
                         a % action_outcome_store.num_actions, _p820_gm_basis)[0]
                         for a in (_aid, _aid + 1, _aid + 2, _aid + 3)]
                     _u_macro = _opine.construct_macro_option(_gens, device=DEVICE)
+                    _psi_macro = _trans.field_to_wave(
+                        _u_macro.unsqueeze(0)).squeeze(0)
                     _g_macro = float(compute_rt_information_gain(
-                        _psi_t,
-                        _trans.field_to_wave(_u_macro.unsqueeze(0)).squeeze(0)))
+                        _psi_t, _psi_macro))
+                    # Live SagnacMCTSPlanner dual-channel veto (C2 consumer).
+                    # Hard axiom channel + soft epistemic channel over the
+                    # macro-option successor. A hard veto suppresses
+                    # engagement (fail-closed to the single-action branch).
+                    _veto = None
+                    _hard_vetoed = False
+                    if sagnac_planner is not None:
+                        try:
+                            _axiom_ref = boundary_batch[0].detach().reshape(-1)
+                            _world_ref = state_wave.detach().reshape(-1)
+                            _d_ax, _d_ep, _hard = (
+                                sagnac_planner.dual_channel_sagnac_veto(
+                                    _psi_macro, _axiom_ref, _world_ref))
+                            _veto = {
+                                "delta_axiom": round(_d_ax, 6),
+                                "delta_epistemic": round(_d_ep, 6),
+                                "hard_vetoed": bool(_hard),
+                            }
+                            _hard_vetoed = bool(_hard)
+                        except Exception as _veto_exc:
+                            _veto = {"error": f"{type(_veto_exc).__name__}"}
                     opine_info = {
-                        "engaged": bool(_g_macro >= _g_single),
+                        "engaged": bool(_g_macro >= _g_single and not _hard_vetoed),
                         "gain_single": round(_g_single, 6),
                         "gain_macro": round(_g_macro, 6),
                         "option_horizon": 4,
                         "unitarity_error": round(
                             _opine.unitarity_error(_u_macro), 10),
+                        "sagnac_veto": _veto,
                     }
                     print(f"  [opine] macro-option engagement: "
                           f"g_single={_g_single:.4f} g_macro={_g_macro:.4f} "
