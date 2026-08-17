@@ -109,3 +109,28 @@ VERDICT: SEALED KILL (postmortem Scenario B: G1-G3 PASS & G4 = 0). Retain D28 (1
 ## 2026-08-17 — Phase 8.23 IN-FLIGHT (spec 75e66d14…, base 6ba8f76, branch feat/phase823-target-grounding-action-alignment)
 
 Implemented + pushed `0388486`: C1 `synthesize_demonstration_goal_wave` (block-SVD Procrustes W_task → field transport → goal wave) + G1/G2 verify (pragmatic gradient 0.5219 ≥ 0.0100 PASS; fit loss −87.0% > 50% PASS); C2 `verify_opine_mcts` (G3 engagement 0.90 ≥ 0.25, unitarity 5.9e-07 PASS) + live SagnacMCTSPlanner instantiation with dual-channel-veto causal consumer (D39: full search() blocked by design — no held-out target); C3 `HENRI_ARC_TARGET_GROUNDING` default-OFF + `phase823_live_gauntlet` + goal consumer activation (fixed real bug: per-env lambda_goal assignment zeroed the constructor activation). Local 23/23 contracts PASS. CUDA verify + G4 gauntlet QUEUED behind 8.22 gauntlet run2 (PID 88153 @ 6ba8f76, GPU exclusivity). SOTA blockers resolved by this phase: #2 (live planner), #3 (goal grounding), #4 (action generator learning), #1 (OPINE live telemetry); residual: #5 CEGIS stub, #6 Zone C recall, #7 transition model, #8 action-head calibration.
+
+## 2026-08-17 — Phase 8.24/8.25/8.26 IMPLEMENTED (spec HENRI-ANALYSIS-2026-08-SOLVING-FRONTIER, sha 8c508808…)
+
+Branches (all pushed, all default-OFF, zero-pretraining invariant preserved):
+
+- **8.24** `feat/phase824-fast-adaptation-meta-prior` @ `87dbb2c` — Meta-D_a prior:
+  pre-train action generators on synthetic affine SU(3) families (translation/rotation/
+  scale prototypes), converged EMA at lr=0.5/K=20, in-situ at production lr=0.1.
+  **G8.24 PASS (OBSERVED, CPU): prior 1 update vs cold 20 to fit error < 0.05.**
+  Flag `HENRI_ARC_META_PRIOR`; contracts 4/4.
+- **8.25** `feat/phase825-macro-option-deep-mcts` @ `6a2a091` — OPINE macro-option
+  synthesis (`synthesize_macro_option` = prod exp(D_a)) + RT-guided deep rollouts
+  (k=8, identity no-op anchor for a discriminative control).
+  **G8.25 PASS (OBSERVED, CPU): best-program beats single-action 48/50 = 0.96,
+  gain spread present.** Flag `HENRI_ARC_DEEP_MCTS`; contracts 4/4.
+- **8.26** `feat/phase826-cegis-codebook-snap` @ `153d26a` — CEGIS codebook snap:
+  continuous predicted grids quantized, isolated single-pixel counterexamples reverted
+  to dominant neighbor (max 3 iterations), discrete conservation invariants enforced.
+  Fail-closed `SNAP_NO_GRID_SOURCE` / `SNAP_CONSERVATION_VIOLATION`.
+  **G8.26 PASS (OBSERVED, CPU): baseline pixel acc 0.9453 -> snapped 1.0000,
+  14 pixels removed, conservation OK.** Flag `HENRI_ARC_CEGIS_SNAP`; contracts 4/4.
+
+Combined contract suite 8.23-8.26: 20/20 PASS; full local suite 506 passed/3 skipped.
+8.23 gauntlet run1 (PID 90304, p823-wt @ `3d1f904`) LIVE — G4 verdict via watchdog `e969bd5632c6`.
+CUDA verification for 8.24/8.25/8.26 queued behind the 8.23 gauntlet (GPU exclusivity).
