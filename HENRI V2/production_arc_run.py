@@ -1321,6 +1321,10 @@ def run():
             loss_ema = orch.planner.loss_ema
             # Phase 8.20 G1: pragmatic EFE variance across candidate actions.
             p820_var_efe = None
+            # Fail-closed guard (Scenario C fix 2026-08-16): the C1 update
+            # block below is nested in the post-observation path and may not
+            # execute before the first emit; initialize at outer scope.
+            p820_update_info = None
             if HENRI_ARC_ACTION_EFE and efe_table:
                 _efes = [r["efe"] for r in efe_table if "efe" in r]
                 if len(_efes) >= 2:
