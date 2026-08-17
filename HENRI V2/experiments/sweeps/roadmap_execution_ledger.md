@@ -134,3 +134,40 @@ Branches (all pushed, all default-OFF, zero-pretraining invariant preserved):
 Combined contract suite 8.23-8.26: 20/20 PASS; full local suite 506 passed/3 skipped.
 8.23 gauntlet run1 (PID 90304, p823-wt @ `3d1f904`) LIVE — G4 verdict via watchdog `e969bd5632c6`.
 CUDA verification for 8.24/8.25/8.26 queued behind the 8.23 gauntlet (GPU exclusivity).
+# HENRI V2 Release Manifest — Phases 8.22–8.27 (production-readiness snapshot)
+
+Date: 2026-08-17. Arbiter: HENRI development arbiter. Specs: HENRI-SPEC-2026-08-PHASE8.23-TARGET-GROUNDING (75e66d14…), HENRI-ANALYSIS-2026-08-SOLVING-FRONTIER (8c508808…).
+Prior main (immutable rollback point): `2218ec4`.
+
+## Included commits (candidate chain, all fast-forwardable onto main; origin/main is ancestor of every head — verified `rev-list --count HEAD..origin/main = 0`)
+
+| Commit | Phase | Class | Evidence |
+|---|---|---|---|
+| `5b9ff30` | 8.22 | production (guard) | D38 non-finite guard; CUDA 16/16 |
+| `6ba8f76` | 8.22 | production | run2 20/20 envs; G4 PASS (sp80 level 1, score 4.76); SEALED ACCEPT `0ad0ac4` |
+| `3d1f904` | 8.23 | default-off component | G1 0.5219 / G2 −87% / G3 0.90; CUDA 16/16 verified remote |
+| `87dbb2c` | 8.24 | default-off component | G8.24 prior 1 vs cold 20; contracts 4/4 |
+| `6a2a091` | 8.25 | default-off component | G8.25 beats 0.96; contracts 4/4 |
+| `6611494` | 8.26 | default-off component | G8.26 snap 1.0000; contracts 5/5 (incl. scope-safety) |
+| `09c53bc`→`5dfbd2d` | 8.27 | default-off promotion mode | 3/3 contracts; full suite 510 passed / 3 skipped |
+
+## Flags (all default OFF; only `phase827_live_gauntlet` mode activates the full stack explicitly)
+
+HENRI_ARC_ACTION_EFE, HENRI_ARC_ACTION_FIBER, HENRI_ARC_RT_MCTS, HENRI_ARC_TARGET_GROUNDING, HENRI_ARC_IN_CONTEXT_ALIGN, HENRI_ARC_META_PRIOR, HENRI_ARC_DEEP_MCTS, HENRI_ARC_CEGIS_SNAP.
+
+## Zero-pretraining invariant (verified by contract scans)
+
+No ARC grids/solutions pre-ingested; all priors synthetic SU(3) affine families; goal waves compiled 100% in-context.
+
+## Excluded
+
+- Experiment branches (8.19/8.20/8.21 KILLs `5d73afb`/`d7f1291`/`6d5cce6`) — sealed, not promoted.
+- `henri_audit_chain.json` — untracked governance artifact, never committed.
+- Dirty persistent checkouts — preserved byte-for-byte.
+
+## Remaining gates (queued, GPU exclusivity)
+
+1. 8.23 gauntlet G4 verdict (PID 90304, watchdog e969bd5632c6).
+2. CUDA verify 8.24/8.25/8.26/8.27 at their SHAs.
+3. 8.27 live promotion gauntlet (score > 0.0 target).
+4. Main fast-forward promotion + GitHub = clean Vast deployment reconcile.
