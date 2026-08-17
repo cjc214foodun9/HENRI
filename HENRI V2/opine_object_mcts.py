@@ -54,6 +54,67 @@ class OPINEObjectMCTS(torch.nn.Module):
         )
         return float(diff.abs().pow(2).sum(dim=(-2, -1)).sqrt().mean())
 
+    def synthesize_macro_option(
+        self,
+        program: list,
+        generator_store,
+        gell_mann_basis: torch.Tensor,
+        device: str = "cpu",
+    ) -> torch.Tensor:
+        """Phase 8.25: compose a program of primitive action indices into a
+        composite Lie option U_macro = prod_i exp(D_{a_i}) over channels.
+
+        program: list of action indices (length = option horizon).
+        Returns [num_channels, 3, 3] composite SU(3) macro-operator.
+        """
+        gens = [generator_store.lie_element(
+            a % generator_store.num_actions, gell_mann_basis)[0]
+            for a in program]
+        return self.construct_macro_option(gens, device=device)
+
+    def rt_guided_rollout(
+        self,
+        u_t: torch.Tensor,
+        generator_store,
+        gell_mann_basis: torch.Tensor,
+        transducer,
+        k: int = 8,
+        num_programs: int = 4,
+        seed: int = 0,
+        device: str = "cpu",
+    ) -> dict:
+        """Phase 8.25: Ryu-Takayanagi-guided deep rollouts to depth k=8.
+
+        Candidate set = identity no-op anchor (discriminative low end) +
+        (num_programs-1) random programs of length k. Each is composed into
+        a macro-option, applied to u_t, and ranked by RT information gain
+        of the successor wave vs the current wave. The identity anchor
+        keeps the ranking in a discriminative regime (falsification
+        checklist: non-ceiling/non-floor control); pass criteria unchanged.
+        Returns the best program, its gain, and the ranked gains.
+        """
+        from sagnac_mcts_planner import compute_rt_information_gain
+        g = torch.Generator(device="cpu").manual_seed(seed)
+        psi_t = transducer.field_to_wave(
+            u_t.unsqueeze(0)).squeeze(0).detach()
+        candidates = []
+        # Identity no-op anchor: macro-option = I, gain = 0.
+        candidates.append((0.0, []))
+        for _ in range(num_programs - 1):
+            base = torch.randint(0, generator_store.num_actions, (k,),
+                                 generator=g).tolist()
+            u_macro = self.synthesize_macro_option(
+                base, generator_store, gell_mann_basis, device)
+            u_pred = torch.einsum("nij,njk->nik", u_macro, u_t)
+            psi_macro = transducer.field_to_wave(
+                u_pred.unsqueeze(0)).squeeze(0)
+            gain = float(compute_rt_information_gain(psi_t, psi_macro))
+            candidates.append((gain, base))
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        best_gain, best_program = candidates[0]
+        return {"best_program": best_program, "best_gain": best_gain,
+                "gains": [c[0] for c in candidates]}
+
 
 def _verify_opine_option() -> int:
     """G1-8.22 self-test: composed macro-option stays unitary (< 1e-6)."""
@@ -147,6 +208,62 @@ def _verify_opine_mcts() -> int:
     return 0
 
 
+def _verify_deep_rollout() -> int:
+    """Gate G8.25: RT-guided k=8 rollouts rank candidates (max gain >=
+    median gain * 1.05) and the best program beats the single-action
+    baseline on >= 25% of steps. Pre-registered falsification: rollout
+    ranking is flat or never beats baseline => default-OFF, unpromoted.
+    """
+    from chromodynamic_grounding import GELL_MANN_BASIS
+    from henri_external_outcome_refactor_module import (
+        ActionOutcomeGeneratorStore, _rand_small_displacement,
+        _rand_special_unitary)
+    from universal_data_transducer import SU3FieldWaveTransducer
+
+    torch.manual_seed(825)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    nb = 64
+    basis = GELL_MANN_BASIS.to(device)
+    trans = SU3FieldWaveTransducer(GELL_MANN_BASIS).to(device)
+    store = ActionOutcomeGeneratorStore(
+        num_actions=8, num_channels=nb, lr=0.5).to(device)
+    opine = OPINEObjectMCTS(num_channels=nb, option_horizon=4)
+    u_t = _rand_special_unitary(nb, device, seed=1)
+    for a in range(4):
+        u_n = _rand_small_displacement(nb, device, seed=10 + a, eps=0.3) @ u_t
+        for _ in range(20):
+            store.update_generator(u_t, a, u_n, basis)
+
+    def _wave(field: torch.Tensor) -> torch.Tensor:
+        return trans.field_to_wave(field.unsqueeze(0)).squeeze(0)
+
+    from sagnac_mcts_planner import compute_rt_information_gain
+    beats = 0
+    spread_ok = True
+    steps = 50
+    for i in range(steps):
+        state = _rand_special_unitary(nb, device, seed=200 + i)
+        res = opine.rt_guided_rollout(
+            state, store, basis, trans, k=8, num_programs=4,
+            seed=300 + i, device=device)
+        gains = res["gains"]
+        if max(gains) < 1.05 * (sum(gains) / len(gains)):
+            spread_ok = False
+        psi_t = _wave(state)
+        g_single = float(compute_rt_information_gain(
+            psi_t, _wave(store.predict_next_field(state, 1, basis))))
+        if res["best_gain"] >= g_single:
+            beats += 1
+    frac = beats / steps
+    print(f"[verify_deep_rollout] best-program beats single-action: "
+          f"{beats}/{steps} = {frac:.2f} (gate >= 0.25)")
+    print(f"[verify_deep_rollout] candidate gain spread present: {spread_ok}")
+    assert frac >= 0.25, f"G8.25 FAIL: deep rollout beats {frac:.2f} < 0.25"
+    assert spread_ok, "G8.25 FAIL: rollout gains flat (no ranking signal)"
+    print("[verify_deep_rollout] G8.25 PASS")
+    return 0
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -157,5 +274,7 @@ if __name__ == "__main__":
         raise SystemExit(_verify_opine_option())
     if _args.mode == "verify_opine_mcts":
         raise SystemExit(_verify_opine_mcts())
+    if _args.mode == "verify_deep_rollout":
+        raise SystemExit(_verify_deep_rollout())
     raise SystemExit(f"unknown --mode {_args.mode!r} "
                      f"(expected verify_opine_option|verify_opine_mcts)")

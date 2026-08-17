@@ -1544,6 +1544,19 @@ def run():
                         a % action_outcome_store.num_actions, _p820_gm_basis)[0]
                         for a in (_aid, _aid + 1, _aid + 2, _aid + 3)]
                     _u_macro = _opine.construct_macro_option(_gens, device=DEVICE)
+                    # Phase 8.25: RT-guided deep rollouts to depth k=8
+                    # (default OFF via HENRI_ARC_DEEP_MCTS). Ranks
+                    # macro-option programs by RT information gain; the
+                    # best program's successor becomes the macro branch.
+                    if os.environ.get("HENRI_ARC_DEEP_MCTS", "0") == "1":
+                        _rollout = _opine.rt_guided_rollout(
+                            su3_field, action_outcome_store, _p820_gm_basis,
+                            _trans, k=8, num_programs=4, seed=step,
+                            device=DEVICE)
+                        _best = _rollout["best_program"]
+                        _u_macro = _opine.synthesize_macro_option(
+                            _best, action_outcome_store, _p820_gm_basis,
+                            device=DEVICE)
                     _psi_macro = _trans.field_to_wave(
                         _u_macro.unsqueeze(0)).squeeze(0)
                     _g_macro = float(compute_rt_information_gain(
