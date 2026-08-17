@@ -308,7 +308,8 @@ class HenriSwarmOrchestrator(nn.Module):
                  task_weighted_eig: bool = False,
                  task_eig_gamma: float = 4.0,
                  use_diagonal_transition: bool = False,
-                 use_complex_transition: bool = False):
+                 use_complex_transition: bool = False,
+                 action_outcome_store=None):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
@@ -337,7 +338,8 @@ class HenriSwarmOrchestrator(nn.Module):
                                   task_eig_gamma=task_eig_gamma,
                                   num_actions=num_actions,
                                   use_diagonal_transition=use_diagonal_transition,
-                                  use_complex_transition=use_complex_transition)
+                                  use_complex_transition=use_complex_transition,
+                                  action_outcome_store=action_outcome_store)
         # flattened to real width d_model to match the planner's store.
         action_real = torch.stack([
             torch.view_as_real(self.decoder.get_action_wave(a)).reshape(-1)[:d_model]
@@ -400,7 +402,8 @@ class HenriSwarmOrchestrator(nn.Module):
 
     def plan_action(self, active_wave: torch.Tensor, boundary_axioms: torch.Tensor, top_k: int = 4,
                     return_chosen: bool = False, goal_wave: torch.Tensor = None,
-                    grid_dist: float = None, allowed_actions=None):
+                    grid_dist: float = None, allowed_actions=None,
+                    su3_field: torch.Tensor = None, efe_penalties: dict = None):
         """
         EFE action selection: score the top-k candidate actions by Expected
         Free Energy and return (action, predicted_wave, score_table).
@@ -409,11 +412,15 @@ class HenriSwarmOrchestrator(nn.Module):
         goal_wave: optional [num_blocks, 8] target wave (Phase 3 goal-conditioned).
         grid_dist: optional pixel frame distance for epistemic novelty.
         allowed_actions: optional subset of valid GameActions to score.
+        su3_field: optional [N,3,3] complex SU(3) field for the Phase 8.20
+            action-conditioned Lie outcome generator (C2).
+        efe_penalties: optional {action_id: float} stationarity-dissipation
+            penalties (C3).
         """
         candidates = self.candidate_action_waves(top_k=top_k, allowed_actions=allowed_actions)
         action, predicted, table, chosen = self.planner.select_action(
             active_wave, candidates, boundary_axioms, goal_wave=goal_wave,
-            grid_dist=grid_dist
+            grid_dist=grid_dist, su3_field=su3_field, efe_penalties=efe_penalties
         )
         if return_chosen:
             return action, predicted, table, chosen

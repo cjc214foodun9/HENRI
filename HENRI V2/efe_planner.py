@@ -217,6 +217,7 @@ class EFEPlanner(nn.Module):
         transition_rank: int = 64,
         use_diagonal_transition: bool = False,
         use_complex_transition: bool = False,
+        action_outcome_store=None,
     ):
         super().__init__()
         if use_diagonal_transition and use_complex_transition:
@@ -231,6 +232,11 @@ class EFEPlanner(nn.Module):
         self._happy_tensor_cut = happy_tensor_cut
         self._interoceptive_viability = interoceptive_viability
         self._external_outcome_efe = external_outcome_efe
+        # Phase 8.20 C2: optional action-conditioned Lie outcome generator.
+        # When provided, score_actions predicts via exp(D_a) * U_t on the
+        # SU(3) field (su3_field argument) instead of the learned transition.
+        self._action_outcome_store = action_outcome_store
+        self._su3_transducer = None
         if not 0.0 <= external_eig_weight <= 0.5:
             raise ValueError("external_eig_weight must be in [0, 0.5]")
         if not 0.0 <= external_task_weight <= 2.0:
@@ -936,7 +942,8 @@ class EFEPlanner(nn.Module):
 
     def score_actions(self, state_wave: torch.Tensor, candidate_actions: list,
                        boundary_axioms: torch.Tensor, goal_wave: torch.Tensor = None,
-                       grid_dist: float = None):
+                       grid_dist: float = None, su3_field: torch.Tensor = None,
+                       efe_penalties: dict = None):
         """
         candidate_actions: list of (action_id, action_wave[num_blocks, 8]).
         goal_wave: optional [num_blocks, 8] target wave (Phase 3 goal-conditioned
@@ -957,7 +964,28 @@ class EFEPlanner(nn.Module):
         sqrt_d = self.d_model ** 0.5
         results = []
         for action_id, action_wave in candidate_actions:
-            predicted = self.transition(state_wave, action_wave)
+            # Phase 8.20 C2: when an action outcome store + SU(3) field are
+            # provided, predict via exp(D_a) * U_t -> wave (Lie algebra
+            # displacement). Otherwise fall back to the learned transition.
+            if self._action_outcome_store is not None and su3_field is not None:
+                try:
+                    if self._su3_transducer is None:
+                        from universal_data_transducer import SU3FieldWaveTransducer
+                        from chromodynamic_grounding import GELL_MANN_BASIS
+                        self._su3_transducer = SU3FieldWaveTransducer(
+                            GELL_MANN_BASIS).to(su3_field.device)
+                    _field = su3_field  # [N, 3, 3] complex
+                    _a = int(action_id)
+                    _pred = self._action_outcome_store.predict_next_field(
+                        _field, _a, self._su3_transducer.basis)
+                    _w = self._su3_transducer.field_to_wave(
+                        _pred.unsqueeze(0))  # [1, N*8] complex
+                    predicted = torch.angle(_w).reshape(
+                        _field.shape[0], 8).to(state_wave.dtype)
+                except Exception:
+                    predicted = self.transition(state_wave, action_wave)
+            else:
+                predicted = self.transition(state_wave, action_wave)
             pragmatic = self.pragmatic_value(predicted, boundary_axioms, goal_wave)
             epistemic = self.epistemic_value(predicted, state_wave=state_wave, grid_dist=grid_dist)
             penalty = self.constraint_penalty(predicted)
@@ -975,6 +1003,9 @@ class EFEPlanner(nn.Module):
                    - self.external_eig_weight * external_eig
                    - self.external_task_weight * external_resonance
                    + lam * penalty)
+            # Phase 8.20 C3: stationarity dissipation penalty (per-action).
+            if efe_penalties:
+                efe = efe + float(efe_penalties.get(int(action_id), 0.0))
             # Stationarity Penalty: If previous step produced zero grid displacement (grid_dist == 0.0)
             # and action_id matches the last executed action, inject penalty (+5.0) to break limit cycles
             if grid_dist is not None and grid_dist == 0.0 and action_id == getattr(self, "last_executed_action", None):
@@ -1032,7 +1063,8 @@ class EFEPlanner(nn.Module):
 
     def select_action(self, state_wave: torch.Tensor, candidate_actions: list, boundary_axioms: torch.Tensor,
                       explore_threshold: float = None, goal_wave: torch.Tensor = None,
-                      grid_dist: float = None):
+                      grid_dist: float = None, su3_field: torch.Tensor = None,
+                      efe_penalties: dict = None):
         """
         Returns (best_action_id, predicted_wave, scores_table, chosen_dict).
 
@@ -1047,7 +1079,7 @@ class EFEPlanner(nn.Module):
         wave (VSA-encoded goal grid). When provided + lambda_goal > 0,
         actions whose predictions are closer to the goal get lower EFE.
         """
-        results = self.score_actions(state_wave, candidate_actions, boundary_axioms, goal_wave, grid_dist=grid_dist)
+        results = self.score_actions(state_wave, candidate_actions, boundary_axioms, goal_wave, grid_dist=grid_dist, su3_field=su3_field, efe_penalties=efe_penalties)
         best = results[0]
         spread = results[-1]["efe"] - results[0]["efe"]
 

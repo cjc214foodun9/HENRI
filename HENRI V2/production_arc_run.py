@@ -331,10 +331,15 @@ def run():
     ap.add_argument("--envs", type=int, default=3)
     ap.add_argument("--steps", type=int, default=1000, help="max env steps per environment (unlimited execution until completion)")
     ap.add_argument(
+        "--mode", default=None,
+        help="phase820_live_gauntlet: force HENRI_ARC_ACTION_EFE=1 (Phase 8.20 G4)")
+    ap.add_argument(
         "--dsn", type=str, default=None,
         help="Explicit Zone C DSN. CUDA runs still require ZONE_C_ENV=prod."
     )
     args = ap.parse_args()
+    if args.mode == "phase820_live_gauntlet":
+        os.environ["HENRI_ARC_ACTION_EFE"] = "1"
 
     if HENRI_SEED:
         import random
@@ -426,6 +431,11 @@ def run():
     HENRI_ARC_ACTION_HEAD_PATH = os.environ.get(
         "HENRI_ARC_ACTION_HEAD_PATH", ""
     ).strip()
+    # Phase 8.20: action-conditioned EFE grounding (default OFF). Enables the
+    # ActionOutcomeGeneratorStore (C1) predictions in score_actions, the
+    # stationarity dissipation thermostat (C3), and the online generator
+    # update from observed SU(3) field transitions.
+    HENRI_ARC_ACTION_EFE = os.environ.get("HENRI_ARC_ACTION_EFE", "0") == "1"
     # Phase 7.1: public corpus ingress channel (default OFF). Requires an
     # explicit provenance manifest mapping environment ID -> public ARC task
     # ID with corpus path + sha256. Exact match only; no fuzzy fallback.
@@ -468,6 +478,28 @@ def run():
     # and swarm have no dropout/batchnorm today, but eval() makes the
     # eval-write isolation contract explicit and future-proof.
     orch.eval()
+    # Phase 8.20 C1/C3: action outcome generator store + stationarity
+    # dissipation thermostat (default OFF via HENRI_ARC_ACTION_EFE). The
+    # store is injected into the planner post-construction (the planner
+    # consults _action_outcome_store in score_actions).
+    action_outcome_store = None
+    stationarity_thermostat = None
+    _p820_gm_basis = None
+    if HENRI_ARC_ACTION_EFE:
+        from henri_external_outcome_refactor_module import (
+            ActionOutcomeGeneratorStore)
+        from adaptive_viscoelastic_thermostat import (
+            StationarityDissipationThermostat)
+        from chromodynamic_grounding import GELL_MANN_BASIS
+        _num_actions = len(orch.decoder.id_to_action)
+        action_outcome_store = ActionOutcomeGeneratorStore(
+            num_actions=_num_actions, num_channels=8192, lr=0.1).to(DEVICE)
+        stationarity_thermostat = StationarityDissipationThermostat(
+            num_actions=_num_actions)
+        _p820_gm_basis = GELL_MANN_BASIS.to(DEVICE)
+        orch.planner._action_outcome_store = action_outcome_store
+        print(f"[phase820] action-outcome store + thermostat armed "
+              f"(actions={_num_actions})")
     # Phase 7.5 CONN Module A: advisory Sagnac veto sidecar (default-OFF).
     # The sidecar (arc_sagnac_veto.py) is self-contained; it computes the
     # dual-channel deltas with the canonical norm-consistent metric. Fail-open:
@@ -1228,6 +1260,36 @@ def run():
                 except Exception as _psg_exc:
                     psg_status = f"PSG_ERROR: {type(_psg_exc).__name__}"
                     print(f"  [psg] error (fail-closed to control arm): {_psg_exc}")
+            # Phase 8.20 C2/C3: SU(3) action-conditioned predictions + stationarity
+            # dissipation penalties (default OFF). Falls back to the learned
+            # transition when the field encode fails (fail-closed to control arm).
+            su3_field = None
+            efe_penalties = None
+            if HENRI_ARC_ACTION_EFE:
+                try:
+                    from chromodynamic_grounding import encode_su3_color_field
+                    _grid_t = torch.tensor(
+                        np.array(grid, dtype=np.int64), device=DEVICE)
+                    _f = encode_su3_color_field(
+                        _grid_t.unsqueeze(0)).reshape(-1, 3, 3)
+                    su3_field = _pad_su3_field(_f, device=DEVICE)
+                    efe_penalties = {}
+                    if stationarity_thermostat is not None:
+                        _cands = (allowed_actions
+                                  or list(orch.decoder.id_to_action.values()))
+                        for _ca in _cands:
+                            try:
+                                _aid = int(getattr(_ca, "value", _ca))
+                            except Exception:
+                                _aid = int(_ca)
+                            _pen = stationarity_thermostat.action_penalty(_aid)
+                            if _pen > 0.0:
+                                efe_penalties[_aid] = _pen
+                except Exception as _p820_exc:
+                    print(f"  [phase820] su3 field prep failed "
+                          f"(fallback transition): {_p820_exc}")
+                    su3_field = None
+                    efe_penalties = None
             if policy_mode() == "action1":
                 # P2 deterministic baseline: no EFE planning, no exploration,
                 # no planner state mutation. Diagnostic only.
@@ -1246,15 +1308,25 @@ def run():
                     state_wave, boundary_batch, top_k=4, return_chosen=True,
                     goal_wave=goal_wave, grid_dist=grid_dist if GRID_DIST_EPISTEMIC else None,
                     allowed_actions=allowed_actions,
+                    su3_field=su3_field, efe_penalties=efe_penalties,
                 )
             else:
                 action, predicted_wave, efe_table, chosen = orch.plan_action(
                     state_wave, boundary_batch, top_k=4, return_chosen=True,
                     goal_wave=goal_wave, grid_dist=grid_dist if GRID_DIST_EPISTEMIC else None,
+                    su3_field=su3_field, efe_penalties=efe_penalties,
                 )
             explored = bool(chosen.get("explored", False))
             hop_conf = chosen["efe"]  # chosen-candidate EFE as confidence proxy
             loss_ema = orch.planner.loss_ema
+            # Phase 8.20 G1: pragmatic EFE variance across candidate actions.
+            p820_var_efe = None
+            if HENRI_ARC_ACTION_EFE and efe_table:
+                _efes = [r["efe"] for r in efe_table if "efe" in r]
+                if len(_efes) >= 2:
+                    _m = sum(_efes) / len(_efes)
+                    p820_var_efe = round(
+                        sum((e - _m) ** 2 for e in _efes) / len(_efes), 6)
 
             # Phase 7.5 CONN Module A: advisory dual-channel Sagnac veto
             # re-rank (default-OFF). Evaluates each EFE candidate's
@@ -1562,6 +1634,35 @@ def run():
                         observed_next_wave=observed_next_wave,
                         grid_dist=grid_dist if TASK_WEIGHTED_EIG else None,
                     )
+                # Phase 8.20 C1: online Lie generator update + C3 thermostat
+                # observe from the observed SU(3) field transition (default OFF).
+                p820_update_info = None
+                if HENRI_ARC_ACTION_EFE and action_outcome_store is not None \
+                        and obs_next is not None and getattr(obs_next, "frame", None):
+                    try:
+                        from chromodynamic_grounding import encode_su3_color_field
+                        _grid_next = np.array(obs_next.frame[0].tolist())
+                        if _grid_next.shape == np.array(grid).shape:
+                            _u_next = encode_su3_color_field(torch.tensor(
+                                _grid_next, dtype=torch.int64,
+                                device=DEVICE).unsqueeze(0)).reshape(-1, 3, 3)
+                            _u_next = _pad_su3_field(_u_next, device=DEVICE)
+                            _aid = next(
+                                (idx for idx, a in orch.decoder.id_to_action.items()
+                                 if a == game_action), -1)
+                            if _aid >= 0 and not learning_frozen() \
+                                    and su3_field is not None:
+                                p820_update_info = action_outcome_store.update_generator(
+                                    su3_field, _aid, _u_next, _p820_gm_basis)
+                            if stationarity_thermostat is not None:
+                                _prog = float(
+                                    (_u_next - su3_field).norm(dim=(-2, -1)).mean()
+                                ) if su3_field is not None else 0.0
+                                _tinfo = stationarity_thermostat.observe(_aid, _prog)
+                                p820_update_info = {
+                                    **(p820_update_info or {}), **_tinfo}
+                    except Exception as _p820u_exc:
+                        print(f"  [phase820] update failed: {_p820u_exc}")
                 # Telemetry: expose the new P0 statistics.
                 _p0_extra = {}
                 if HENRI_ARC_SCORECARD_DELTA:
@@ -1689,6 +1790,8 @@ def run():
                 "num_objects_segmented": num_objects_segmented,
                 "use_object_sagnac_mcts": USE_OBJECT_SAGNAC_MCTS,
                 "step_ms": round(step_ms, 1),
+                "phase820_var_efe": p820_var_efe,
+                "phase820_update_info": p820_update_info,
             })
             # Wave-level hypertable log (downsampled for DB volume)
             if db_logger is not None and step % 5 == 0:

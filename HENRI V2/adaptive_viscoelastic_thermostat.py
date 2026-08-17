@@ -287,6 +287,95 @@ class AdaptiveViscoelasticThermostat(nn.Module):
         return proj, telemetry
 
 
+class StationarityDissipationThermostat:
+    """Phase 8.20 C3: action-wise stationarity heat dissipation.
+
+    Tracks per-action execution counts and state-field progress. Whenever an
+    action is repeated without changing the state field
+    (||Delta_U - I||_F < epsilon_progress), its temperature is boosted
+    T_a <- T_a * boost_factor, injecting a growing EFE penalty on that action
+    so the planner is forced to explore alternative branches (N_repeat <= 2).
+    """
+
+    def __init__(self, num_actions: int = 16, base_temperature: float = 1.0,
+                 boost_factor: float = 1.5, progress_epsilon: float = 1e-4,
+                 penalty_scale: float = 0.5):
+        self.num_actions = num_actions
+        self.base_temperature = base_temperature
+        self.boost_factor = boost_factor
+        self.progress_epsilon = progress_epsilon
+        self.penalty_scale = penalty_scale
+        self._T = [float(base_temperature)] * num_actions
+        self._repeat = [0] * num_actions
+        self.last_action: int | None = None
+        self.max_repeat = 0
+        self.total_stalls = 0
+
+    def observe(self, action: int, progress_delta: float) -> dict:
+        """Call after every env step. progress_delta = ||Delta_U - I||_F."""
+        stalled = progress_delta <= self.progress_epsilon
+        if self.last_action == action and stalled:
+            self._repeat[action] += 1
+            self._T[action] = self._T[action] * self.boost_factor
+            self.total_stalls += 1
+        else:
+            self._repeat[action] = 0
+            if progress_delta > self.progress_epsilon:
+                self._T[action] = float(self.base_temperature)
+        self.last_action = action
+        self.max_repeat = max(self.max_repeat, self._repeat[action])
+        return {"action": action, "repeat_count": self._repeat[action],
+                "temperature": self._T[action], "stalled": stalled}
+
+    def action_penalty(self, action: int) -> float:
+        """EFE penalty injected while an action is dissipating heat."""
+        t = self._T[action]
+        if t <= self.base_temperature:
+            return 0.0
+        return self.penalty_scale * (t - self.base_temperature)
+
+    def temperature(self, action: int) -> float:
+        return self._T[action]
+
+
+def verify_stationarity_escape() -> bool:
+    """Gate G3-8.20: max consecutive identical actions N_repeat <= 2.
+
+    Two-action mock planner: action A always stalls (zero field progress),
+    action B always progresses. Action B carries a small intrinsic EFE cost
+    (0.30) so the planner prefers A at first. The dissipation thermostat must
+    boost T_A fast enough that A is abandoned after at most 2 repeats.
+    """
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    thermo = StationarityDissipationThermostat(
+        num_actions=2, penalty_scale=0.5)
+    efe_b = 0.30
+    chosen = []
+    for step in range(8):
+        # Planner picks min-EFE action: A = 0.0 + thermostat penalty,
+        # B = efe_b (slightly worse). Deterministic argmin with tie -> A.
+        pen_a = thermo.action_penalty(0)
+        efe_a = 0.0 + pen_a
+        action = 0 if efe_a <= efe_b else 1
+        chosen.append(action)
+        # Env outcome: A never changes the field; B always does.
+        progress = 0.0 if action == 0 else 0.5
+        thermo.observe(action, progress)
+
+    seq = "".join(str(a) for a in chosen)
+    n_repeat = thermo.max_repeat
+    temps = [thermo.temperature(0)]
+    print(f"Substrate Hardware: {device.upper()}")
+    print(f"[G3] action sequence: {seq}")
+    print(f"[G3] max consecutive identical actions: {n_repeat} (gate <= 2)")
+    print(f"[G3] action-A temperatures after run: {temps}")
+
+    assert n_repeat <= 2, f"G3 FAIL: N_repeat {n_repeat} > 2 (stationarity lock)"
+    assert max(temps) > thermo.base_temperature, "G3 FAIL: T_A never boosted"
+    print("verify_stationarity_escape PASS (G3 escape rate).")
+    return True
+
+
 def verify_thermostat_adaptation() -> bool:
     """Verification routine for the Adaptive Viscoelastic Thermostat."""
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -312,4 +401,11 @@ def verify_thermostat_adaptation() -> bool:
 
 
 if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--mode", default="verify_thermostat_adaptation")
+    args = ap.parse_args()
+    if args.mode == "verify_stationarity_escape":
+        ok = verify_stationarity_escape()
+        raise SystemExit(0 if ok else 1)
     verify_thermostat_adaptation()

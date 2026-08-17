@@ -34,8 +34,9 @@ GELL_MANN_BASIS = torch.tensor(
     dtype=torch.complex64,
 )
 
-# Fixed deterministic color -> su(3) angle projection [10 colors, 8 generators].
-# All columns populated so distinct colors generically fail to commute (G1-QCD).
+# Fixed deterministic color -> su(3) angle projection [16 colors, 8 generators].
+# Rows 0-9 byte-identical to sealed 8.15. Rows 10-15 extend to live ARC-AGI-3
+# arcade grids (16 colors, OBSERVED lp85 max 15; D28: one_hot 10 -> 16).
 DEFAULT_COLOR_PROJECTION = torch.tensor(
     [
         [1, 0, 1, 0, 1, 0, 1, 0],
@@ -48,6 +49,12 @@ DEFAULT_COLOR_PROJECTION = torch.tensor(
         [0, 0, 0, 1, 1, 1, 0, 0],
         [1, 0, 1, 1, 0, 1, 0, 1],
         [0, 1, 0, 0, 1, 0, 1, 1],
+        [0, 0, 1, 1, 1, 0, 1, 0],
+        [1, 1, 0, 1, 0, 1, 0, 0],
+        [0, 1, 1, 0, 1, 0, 0, 1],
+        [1, 0, 1, 0, 0, 1, 1, 0],
+        [1, 1, 1, 1, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1, 1, 1, 1],
     ],
     dtype=torch.float32,
 )
@@ -100,7 +107,7 @@ def encode_su3_color_field(
     if color_projection is None:
         color_projection = DEFAULT_COLOR_PROJECTION
     theta = torch.matmul(
-        torch.nn.functional.one_hot(grid_colors, 10).float(),
+        torch.nn.functional.one_hot(grid_colors, color_projection.shape[0]).float(),
         color_projection.to(grid_colors.device),
     )  # [B,H,W,8]
     su3_algebra = 1j * torch.einsum(
