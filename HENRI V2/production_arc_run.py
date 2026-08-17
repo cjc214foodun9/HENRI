@@ -355,6 +355,22 @@ def run():
         os.environ["HENRI_ARC_RT_MCTS"] = "1"
         os.environ["HENRI_ARC_TARGET_GROUNDING"] = "1"
         os.environ["HENRI_ARC_IN_CONTEXT_ALIGN"] = "1"
+    if args.mode == "phase827_live_gauntlet":
+        # Phase 8.27 promotion mode: the full verified stack
+        # (HENRI-ANALYSIS-2026-08-SOLVING-FRONTIER, sha 8c508808...).
+        # Activates 8.23 target grounding + 8.24 Meta-D_a prior + 8.25
+        # deep MCTS + 8.26 CEGIS snap. Each component is independently
+        # gated (G8.23/G8.24/G8.25/G8.26 all PASS, CPU + CUDA where run);
+        # this mode is the explicit promotion entrypoint for the live
+        # benchmark gauntlet (target: score > 0.0).
+        os.environ["HENRI_ARC_ACTION_EFE"] = "1"
+        os.environ["HENRI_ARC_ACTION_FIBER"] = "1"
+        os.environ["HENRI_ARC_RT_MCTS"] = "1"
+        os.environ["HENRI_ARC_TARGET_GROUNDING"] = "1"
+        os.environ["HENRI_ARC_IN_CONTEXT_ALIGN"] = "1"
+        os.environ["HENRI_ARC_META_PRIOR"] = "1"
+        os.environ["HENRI_ARC_DEEP_MCTS"] = "1"
+        os.environ["HENRI_ARC_CEGIS_SNAP"] = "1"
 
     if HENRI_SEED:
         import random
