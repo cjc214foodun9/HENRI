@@ -171,3 +171,9 @@ No ARC grids/solutions pre-ingested; all priors synthetic SU(3) affine families;
 2. CUDA verify 8.24/8.25/8.26/8.27 at their SHAs.
 3. 8.27 live promotion gauntlet (score > 0.0 target).
 4. Main fast-forward promotion + GitHub = clean Vast deployment reconcile.
+
+## Phase 8.27 spec alignment (2026-08-17, commit 2d2e2e2)
+Spec: HENRI-SPEC-2026-08-PHASE8.27-PROMOTION-FINAL (sha aa0c0e60…), branch feat/phase827-production-promotion, base 2218ec4.
+- Flag renames to spec-canonical: HENRI_ARC_META_PRIORS, HENRI_ARC_SAGNAC_MCTS (contracts updated).
+- D40: verdict JSON /tmp/p823_gauntlet_summary.json (henri.gauntlet-verdict.v1) emitted on completion.
+- Local suite 511 passed / 3 skipped. 8.23 gauntlet PID 90304 LIVE (env 5/20); queue: CUDA verify 8.24-8.27 → 8.27 promotion gauntlet (score > 0.0) → FF merge to main.
