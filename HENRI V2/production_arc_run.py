@@ -368,8 +368,8 @@ def run():
         os.environ["HENRI_ARC_RT_MCTS"] = "1"
         os.environ["HENRI_ARC_TARGET_GROUNDING"] = "1"
         os.environ["HENRI_ARC_IN_CONTEXT_ALIGN"] = "1"
-        os.environ["HENRI_ARC_META_PRIOR"] = "1"
-        os.environ["HENRI_ARC_DEEP_MCTS"] = "1"
+        os.environ["HENRI_ARC_META_PRIORS"] = "1"
+        os.environ["HENRI_ARC_SAGNAC_MCTS"] = "1"
         os.environ["HENRI_ARC_CEGIS_SNAP"] = "1"
 
     if HENRI_SEED:
@@ -556,7 +556,7 @@ def run():
         # in-situ adaptation converges in ~1 update instead of ~15-20
         # (HENRI-ANALYSIS-2026-08-SOLVING-FRONTIER, sha 8c508808...).
         # Zero-pretraining invariant: no ARC grids or solutions are used.
-        if os.environ.get("HENRI_ARC_META_PRIOR", "0") == "1":
+        if os.environ.get("HENRI_ARC_META_PRIORS", "0") == "1":
             from henri_external_outcome_refactor_module import (
                 pretrain_action_generators)
             _prior_info = pretrain_action_generators(
@@ -1587,10 +1587,10 @@ def run():
                         for a in (_aid, _aid + 1, _aid + 2, _aid + 3)]
                     _u_macro = _opine.construct_macro_option(_gens, device=DEVICE)
                     # Phase 8.25: RT-guided deep rollouts to depth k=8
-                    # (default OFF via HENRI_ARC_DEEP_MCTS). Ranks
+                    # (default OFF via HENRI_ARC_SAGNAC_MCTS). Ranks
                     # macro-option programs by RT information gain; the
                     # best program's successor becomes the macro branch.
-                    if os.environ.get("HENRI_ARC_DEEP_MCTS", "0") == "1":
+                    if os.environ.get("HENRI_ARC_SAGNAC_MCTS", "0") == "1":
                         _rollout = _opine.rt_guided_rollout(
                             su3_field, action_outcome_store, _p820_gm_basis,
                             _trans, k=8, num_programs=4, seed=step,
@@ -2368,6 +2368,28 @@ def run():
         with open(log_path.replace(".jsonl", "_scorecards.json"), "w") as fp:
             json.dump(final_scores, fp, indent=1, default=str)
         print(f"  scorecards -> {log_path.replace('.jsonl', '_scorecards.json')}")
+
+    # D40 (HENRI-SPEC-2026-08-PHASE8.27-PROMOTION-FINAL): emit the
+    # compact verdict JSON consumed by the promotion queue / watchdog
+    # (/tmp/p823_gauntlet_summary.json on the Vast host).
+    try:
+        def _levels(d):
+            return d.get("levels_completed", 0) if isinstance(d, dict) else 0
+        per_env = {k: {"levels_completed": _levels(v)} for k, v in final_scores.items()}
+        verdict = {
+            "schema": "henri.gauntlet-verdict.v1",
+            "mode": args.mode,
+            "completed": True,
+            "envs_attempted": len(final_scores),
+            "envs_scored_gt_zero": sum(1 for v in per_env.values() if v["levels_completed"] > 0),
+            "levels_completed_total": sum(v["levels_completed"] for v in per_env.values()),
+            "per_env": per_env,
+        }
+        with open("/tmp/p823_gauntlet_summary.json", "w") as fp:
+            json.dump(verdict, fp, indent=1, default=str)
+        print("  verdict -> /tmp/p823_gauntlet_summary.json")
+    except Exception as verdict_err:
+        print(f"  [verdict write failed] {verdict_err}")
     print(f"\n[done] telemetry -> {log_path}")
 
     # Dispatch automatic mobile push notification via Photon Notifier

@@ -27,8 +27,8 @@ def test_827_mode_activates_full_stack():
         "HENRI_ARC_RT_MCTS",
         "HENRI_ARC_TARGET_GROUNDING",
         "HENRI_ARC_IN_CONTEXT_ALIGN",
-        "HENRI_ARC_META_PRIOR",
-        "HENRI_ARC_DEEP_MCTS",
+        "HENRI_ARC_META_PRIORS",
+        "HENRI_ARC_SAGNAC_MCTS",
         "HENRI_ARC_CEGIS_SNAP",
     ):
         # The mode block must set every component flag to "1".
@@ -41,8 +41,8 @@ def test_827_mode_independent_of_defaults():
     # The mode must not depend on ambient environment: it sets flags
     # explicitly, so a bare launch (no env vars) still activates the stack.
     src = _read(RUNNER)
-    assert 'os.environ["HENRI_ARC_META_PRIOR"] = "1"' in src
-    assert 'os.environ["HENRI_ARC_DEEP_MCTS"] = "1"' in src
+    assert 'os.environ["HENRI_ARC_META_PRIORS"] = "1"' in src
+    assert 'os.environ["HENRI_ARC_SAGNAC_MCTS"] = "1"' in src
     assert 'os.environ["HENRI_ARC_CEGIS_SNAP"] = "1"' in src
 
 
@@ -50,6 +50,15 @@ def test_827_components_gated_not_fused():
     # Promotion must NOT bypass component gates: each flag remains
     # independently readable (default OFF) elsewhere in the runner.
     src = _read(RUNNER)
-    assert 'os.environ.get("HENRI_ARC_META_PRIOR", "0") == "1"' in src
-    assert 'os.environ.get("HENRI_ARC_DEEP_MCTS", "0") == "1"' in src
+    assert 'os.environ.get("HENRI_ARC_META_PRIORS", "0") == "1"' in src
+    assert 'os.environ.get("HENRI_ARC_SAGNAC_MCTS", "0") == "1"' in src
     assert 'os.environ.get("HENRI_ARC_CEGIS_SNAP", "0") == "1"' in src
+
+
+def test_827_verdict_json_d40():
+    # Spec step 1: verdict JSON at /tmp/p823_gauntlet_summary.json must be
+    # emitted by the runner on completion.
+    src = _read(RUNNER)
+    assert '"/tmp/p823_gauntlet_summary.json"' in src
+    assert "henri.gauntlet-verdict.v1" in src
+    assert "levels_completed_total" in src

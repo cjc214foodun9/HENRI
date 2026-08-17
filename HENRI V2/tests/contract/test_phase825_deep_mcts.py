@@ -18,7 +18,7 @@ def _read(p: Path) -> str:
 
 def test_825_deep_mcts_default_off():
     src = _read(RUNNER)
-    assert 'os.environ.get("HENRI_ARC_DEEP_MCTS", "0") == "1"' in src
+    assert 'os.environ.get("HENRI_ARC_SAGNAC_MCTS", "0") == "1"' in src
     assert "rt_guided_rollout" in src
 
 

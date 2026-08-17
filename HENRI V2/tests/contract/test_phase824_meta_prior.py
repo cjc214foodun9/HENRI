@@ -19,7 +19,7 @@ def _read(p: Path) -> str:
 
 def test_824_meta_prior_default_off():
     src = _read(RUNNER)
-    assert 'os.environ.get("HENRI_ARC_META_PRIOR", "0") == "1"' in src
+    assert 'os.environ.get("HENRI_ARC_META_PRIORS", "0") == "1"' in src
     assert "pretrain_action_generators" in src
 
 
