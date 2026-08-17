@@ -137,6 +137,135 @@ def _rand_small_displacement(n: int, device, seed: int,
     return torch.matrix_exp((1j * eps) * h)
 
 
+def _affine_family_theta(action: int, num_channels: int, seed: int,
+                         eps: float = 0.3) -> torch.Tensor:
+    """Structured su(3) generator coefficients for a synthetic affine family.
+
+    Returns [num_channels, 8] real coefficients. Family per action (spec:
+    'synthetic 2D/3D affine transformations'):
+      0/1 x-translation, 2/3 y-translation, 4/5 rotation, 6/7 scale,
+    each with a +/- direction. Spatial modulation via block-index pattern
+    over a row-major grid (linear ramp for translation, quadratic for
+    rotation, radial for scale). Deterministic; no ARC content.
+    """
+    g = torch.Generator(device="cpu").manual_seed(seed)
+    fam = action // 2
+    sign = 1.0 if action % 2 == 0 else -1.0
+    d = torch.randn(8, generator=g)
+    d = d / (d.norm() + 1e-12)
+    n = num_channels
+    cols = int(round(n ** 0.5))
+    rows = (n + cols - 1) // cols
+    k = torch.arange(n, dtype=torch.float32)
+    row = (k % cols) / max(cols - 1, 1) - 0.5
+    col = (k // cols) / max(rows - 1, 1) - 0.5
+    if fam == 0:
+        pat = row
+    elif fam == 1:
+        pat = col
+    elif fam == 2:
+        pat = row ** 2 + col ** 2
+    else:
+        pat = torch.sqrt(row ** 2 + col ** 2 + 1e-8)
+    pat = pat - pat.mean()
+    pat = pat / (pat.std() + 1e-12)
+    return sign * eps * torch.einsum("n,a->na", pat, d)
+
+
+def pretrain_action_generators(
+    store: ActionOutcomeGeneratorStore,
+    gell_mann_basis: torch.Tensor,
+    device: str = "cpu",
+    num_channels: int = 512,
+    seed: int = 824,
+) -> dict:
+    """Phase 8.24 Meta-D_a prior: pre-train action generators on synthetic
+    AFFINE transformation families (per spec) so in-situ adaptation
+    converges in ~1 update instead of ~15-20.
+
+    For each action a, EMA-fit K synthetic transitions generated from the
+    action's structured affine family prototype. The prior encodes the
+    family DIRECTION; in-situ refinement fits the specific instance.
+    Zero-pretraining invariant: no ARC grids or solutions are used.
+    """
+    basis = gell_mann_basis.to(device)
+    n_act = store.num_actions
+    K = 20
+    # Converge the prior: EMA at production lr (0.1) over K=3 leaves the
+    # prior at only ~27% of the family direction. Pre-train must CONVERGE
+    # theta_a to the family prototype (lr=0.5, K=20 -> residual ~0.5^20).
+    # In-situ stays at production lr=0.1.
+    orig_lr = store.lr
+    store.lr = 0.5
+    with torch.no_grad():
+        for a in range(n_act):
+            theta_fam = _affine_family_theta(a, num_channels, seed=seed + a)
+            su3_elem = 1j * torch.einsum(
+                "na,aij->nij", theta_fam.to(basis.dtype), basis)
+            disp = torch.matrix_exp(su3_elem)
+            for _ in range(K):
+                u_t = _rand_special_unitary(num_channels, device,
+                                            seed=200 + a)
+                u_next = disp @ u_t
+                store.update_generator(u_t, a, u_next, basis)
+    store.lr = orig_lr
+    return {"pretrain_actions": n_act, "synthetic_transitions": n_act * K,
+            "prior_norm": float(store.theta_a.norm().item())}
+
+
+def verify_meta_prior() -> bool:
+    """Gate G8.24: adaptation-from-prior reaches fit error < 0.05 in <= 3
+    updates at PRODUCTION lr=0.1; cold start requires >= 15 updates.
+
+    Test transition for action 3 = family prototype + 10% instance noise
+    (in-situ instance of the pre-trained family). Pre-registered
+    falsification: prior does not reduce in-situ steps below the cold-start
+    count => Meta-D_a prior is inert => default-OFF, unpromoted.
+    """
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    from chromodynamic_grounding import GELL_MANN_BASIS
+    basis = GELL_MANN_BASIS.to(device)
+    N = 256  # fast probe
+    lr = 0.1  # production learning rate (spec EMA)
+    torch.manual_seed(824)
+    prior_store = ActionOutcomeGeneratorStore(num_actions=8, num_channels=N,
+                                              lr=lr).to(device)
+    cold_store = ActionOutcomeGeneratorStore(num_actions=8, num_channels=N,
+                                             lr=lr).to(device)
+    pretrain_action_generators(prior_store, basis, device, num_channels=N,
+                               seed=824)
+    # Test instance for action 3: family prototype + 10% noise.
+    theta_fam = _affine_family_theta(3, N, seed=827)
+    g = torch.Generator(device="cpu").manual_seed(828)
+    theta_test = theta_fam + 0.1 * theta_fam.std() * torch.randn(
+        N, 8, generator=g)
+    su3_elem = 1j * torch.einsum(
+        "na,aij->nij", theta_test.to(basis.dtype), basis)
+    disp = torch.matrix_exp(su3_elem)
+    u_t = _rand_special_unitary(N, device, seed=829)
+    u_next = disp @ u_t
+
+    def _updates_to_threshold(st: ActionOutcomeGeneratorStore,
+                              max_updates: int = 40) -> int:
+        for i in range(max_updates):
+            st.update_generator(u_t, 3, u_next, basis)
+            u_hat = st.predict_next_field(u_t, 3, basis)
+            err = float((u_hat - u_next).norm(dim=(-2, -1)).mean().item())
+            if err < 0.05:
+                return i + 1
+        return max_updates
+
+    n_prior = _updates_to_threshold(prior_store)
+    n_cold = _updates_to_threshold(cold_store)
+    print(f"Substrate Hardware: {device.upper()}")
+    print(f"[G8.24] updates-to-threshold WITH affine meta-prior: {n_prior} (gate <= 3)")
+    print(f"[G8.24] updates-to-threshold cold start:            {n_cold} (expect >= 15)")
+    ok = n_prior <= 3 and n_cold >= 15 and n_prior < n_cold
+    assert ok, f"G8.24 FAIL: prior {n_prior} vs cold {n_cold}"
+    print("verify_meta_prior PASS (Meta-D_a affine prior accelerates in-situ adaptation).")
+    return True
+
+
 def verify_action_generators() -> bool:
     """Gate G1 (C2-level variance probe) + Gate G2 (fit precision) self-test.
 
@@ -153,7 +282,6 @@ def verify_action_generators() -> bool:
     torch.manual_seed(820)
     store = ActionOutcomeGeneratorStore(num_actions=8, num_channels=N, lr=0.5)
     store.to(device)
-
     U_t = _rand_special_unitary(N, device, seed=1)
     # Small-angle displacement: a single ARC action changes a few pixels,
     # so the observed SU(3) field delta is near-identity (no log branch cuts).
@@ -194,5 +322,8 @@ if __name__ == "__main__":
     args = ap.parse_args()
     if args.mode == "verify_action_generators":
         ok = verify_action_generators()
+        raise SystemExit(0 if ok else 1)
+    if args.mode == "verify_meta_prior":
+        ok = verify_meta_prior()
         raise SystemExit(0 if ok else 1)
     raise SystemExit(f"unknown mode: {args.mode}")
