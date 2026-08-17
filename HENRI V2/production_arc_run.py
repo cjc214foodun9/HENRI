@@ -649,6 +649,18 @@ def run():
         except Exception as e:
             print(f"  [skip] make failed: {e}")
             continue
+        if game is None:
+            # Fail-closed: arcade.make returns None on download/API failure
+            # (observed 2026-08-17: requests timeout inside _download_game).
+            # A None game must never reach game.reset().
+            print(f"  [skip] make returned None (network/API failure)")
+            tele.emit({
+                "env": env_name,
+                "event_type": "ENV_LOAD",
+                "status": "BLOCKED_GAME_NONE",
+                "reason": "arcade.make returned None (download/API failure)",
+            })
+            continue
         obs = game.reset()
         if obs is None or not getattr(obs, "frame", None):
             print("  [skip] null initial frame")
