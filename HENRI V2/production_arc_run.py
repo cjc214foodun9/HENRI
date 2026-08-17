@@ -645,7 +645,7 @@ def run():
                 )
                 init_grid = obs.frame[0].tolist()
                 u_test = encode_su3_color_field(
-                    torch.tensor(np.array(init_grid), device=DEVICE)
+                    torch.tensor(np.array(init_grid), device=DEVICE).unsqueeze(0)
                 ).reshape(-1, 3, 3)
                 u_test = _pad_su3_field(u_test, device=DEVICE)
                 planner = SU3MCTSPlanner(
@@ -798,7 +798,7 @@ def run():
                         trans = SU3FieldWaveTransducer(GELL_MANN_BASIS).to(DEVICE)
                         init_grid = obs.frame[0].tolist()
                         u_test = encode_su3_color_field(
-                            torch.tensor(np.array(init_grid), device=DEVICE)
+                            torch.tensor(np.array(init_grid), device=DEVICE).unsqueeze(0)
                         ).reshape(-1, 3, 3)
                         u_test = _pad_su3_field(u_test, device=DEVICE)
                         u_transformed = w_task @ u_test          # [8192, 3, 3]
