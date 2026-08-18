@@ -55,7 +55,7 @@ def main() -> int:
         try:
             obs_next, _ = game.step(action)
         except Exception as exc:
-            changed_flags.append((action, "ERROR", str(exc)[:60]))
+            changed_flags.append((action, "ERROR:" + str(exc)[:60]))
             continue
         grid1 = obs_next.frame[0] if getattr(obs_next, "frame", None) else None
         changed = grid1 is not None and bool((torch.as_tensor(grid0) != torch.as_tensor(grid1)).any())
