@@ -34,9 +34,11 @@ def main() -> int:
     # (production_arc_run.py:732); step() returns (obs, _). No observe() exists
     # on LocalEnvironmentWrapper.
     obs0 = game.reset()
-    grid0 = getattr(obs0, "grid", None)
+    # Production grid source: obs.frame[0] (FrameDataRaw.frame list; no .grid)
+    # (production_arc_run.py:736: initial_grid = obs.frame[0].tolist())
+    grid0 = obs0.frame[0] if getattr(obs0, "frame", None) else None
     if grid0 is None:
-        print(f"BLOCKED: env {args.env} exposes no grid on reset()")
+        print(f"BLOCKED: env {args.env} exposes no frame on reset()")
         return 2
 
     # Exact production call path: plan_action -> game.step(action)
@@ -55,7 +57,7 @@ def main() -> int:
         except Exception as exc:
             changed_flags.append((action, "ERROR", str(exc)[:60]))
             continue
-        grid1 = getattr(obs_next, "grid", None)
+        grid1 = obs_next.frame[0] if getattr(obs_next, "frame", None) else None
         changed = grid1 is not None and bool((torch.as_tensor(grid0) != torch.as_tensor(grid1)).any())
         changed_flags.append((action, changed))
     any_changed = any(isinstance(c, bool) and c for _, c in changed_flags)
