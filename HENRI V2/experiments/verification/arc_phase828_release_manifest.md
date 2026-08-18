@@ -1,7 +1,7 @@
 # Phase 8.27/8.28 Release Manifest — Production-Readiness Audit (2026-08-18)
 
-Audit type: forensic, read-only + bounded fixes. Candidate for main FF: `5983e44`
-(branch `feat/phase827-production-promotion`). Base: `main` @ `2218ec4` (ancestor, FF-OK, 0 commits on main absent from branch).
+Audit type: forensic, read-only + bounded fixes. Candidate for main FF: `1ac47a2`
+(branch `feat/phase827-production-promotion`). Base: `main` @ `2218ec4` (ancestor, FF-OK, 0 commits on main absent from candidate).
 
 ## Included commits (main-bound; classification)
 | Commit | Class | Content |
@@ -45,9 +45,19 @@ Audit type: forensic, read-only + bounded fixes. Candidate for main FF: `5983e44
 - Pre-registration committed: `HENRI V2/experiments/verification/arc_agi3_prereg_phase827.md` (ab270d8).
 - Boundary: run measures EFE/hand-engineered policy; NO calibrated semantic action head exists → not a learned-egress/VLA claim.
 - Gates: one-step state-change proof, branch smoke, Zone C no-persistence probe, scorecard parse test, GPU exclusivity — all required before launch.
-- Launch: after run4 completes (GPU release) at candidate `e263ffb` on Vast; watchdog recurring; exact-artifact retrieval + hashing.
+- Launch: Queue 4 — after FF approval, at candidate `1ac47a2` on Vast (GPU free since run4 completion); watchdog recurring; exact-artifact retrieval + hashing.
+
+## Sealed GPU evidence (2026-08-18)
+| Queue | Result | Evidence |
+|---|---|---|
+| run4 verdict @ 8afbec1 | sp80 4.7619/1/20 + cn04 1.1905/1/158 = 2/20, total 5.9524 → GATE MET | card `caeb3212` / log `2a14b7d6`; watchdog removed |
+| Q1 8.28 CUDA gates @ f3e701d | G1–G6 ALL PASS (Gram 2.19e-06/1.06e-05; drift 1.57e-06; AI 64; Triton diff 0.0; PCIe 33.3% DERIVED; B512 110 Hz / B4096 15 Hz vs 20 kHz TARGET_GOAL) | log `b4d62e8f` |
+| Q2 remote CUDA suite @ 4667f08 | 509p/2f/4s — 2 pre-existing latent CUDA traps (byte-identical to 41fa119/6cd8a6b; NOT candidate regressions) | suite1 log preserved |
+| Q2 fix @ 1ac47a2 | input-device guards: su3_matmul_triton CPU-tensor fallback + rand_su3 device transfer; local contracts 16p/2s; local full 512p/3s | commit `1ac47a2` |
+| Q2 rerun @ 1ac47a2 | **511 passed / 4 skipped / 0 failed** → PDF gate 3.1 condition 1 MET | log `47e22ab5` (remote==local) |
+| PEP-649 latent trap | qfhrr `Optional` NameError on 3.11/3.12 (local 3.14 defers annotations) | fix `f3e701d` |
 
 ## Freshness (separate claims)
-- GitHub main: 2218ec4 (unchanged).
-- Newest verified on branch: e263ffb (local==origin).
-- Active process: run4 PID 97661 @ 8afbec1 (remote worktree /workspace/p827-wt) — running, ~1.1h elapsed, GPU 21.4 GiB.
+- GitHub main: 2218ec4 (unchanged — FF pending architect approval).
+- Newest verified on branch: 1ac47a2 (local==origin; local 512p/3s + remote 511p/4s/0f).
+- Active HENRI process: NONE (run4 exited; GPU idle) → `BLOCKED` for active-service freshness.
