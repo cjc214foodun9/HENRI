@@ -411,7 +411,13 @@ class PhaseRingCodebookDecoder:
                 top_token_id = int(torch.argmax(masked_logits, dim=-1).item())
                 
             generated_token_ids.append(top_token_id)
-            token_str = code_vocab_map.get(top_token_id % len(code_vocab_map), f"token_{top_token_id} ")
+            token_str = code_vocab_map.get(top_token_id)
+            if token_str is None:
+                # Out-of-vocab token id must fail closed — never modulo-alias
+                # into a hand-written stub map (template-skeleton trap).
+                raise DecoderEgressFailClosedError(
+                    f"out-of-vocab token id {top_token_id} in autoregressive decode"
+                )
             token_strings.append(token_str)
             
             # Phase vector unbinding step: W_{t+1} = W_t * Hadamard_shift
@@ -427,7 +433,11 @@ class PhaseRingCodebookDecoder:
                 
         constructed_code = "".join(token_strings)
         if not grammar_masker.is_valid_ast(constructed_code):
-            constructed_code = f"def solution():\n    return True\n"
+            # Toy stub fallback is forbidden: a synthetic `return True`
+            # solution would fabricate task outcomes. Fail closed.
+            raise DecoderEgressFailClosedError(
+                "grammar mask produced invalid AST; refusing to emit a stub solution"
+            )
             
         telemetry = {
             "steps": len(generated_token_ids),
