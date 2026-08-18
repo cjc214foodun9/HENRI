@@ -1,75 +1,124 @@
 # -*- coding: utf-8 -*-
 """
-ARC-AGI-3 publishable run — Preflight Gate 1: one-step exact-action
-state-change proof (deterministic, production call path, public API only).
+ARC-AGI-3 publishable run — Preflight Gate 1: exact-action state-change proof.
 
-Proves that the EXACT action path used by production_arc_run changes real
-environment state on a real arcade game. No demos, no caches, no fabrication.
+Contract:
+- ARC action = (GameAction, data), not a bare enum.
+- Independent episode per candidate (fresh game + reset) — no contamination.
+- ACTION1-5/7 via the EXACT production default-flag path: game.step(act)
+  (production_arc_run.py:1833).
+- ACTION6 payload semantics tested SEPARATELY through the production payload
+  machinery: arc_action_payloads.step_with_payload(enabled=True) with real
+  camera params from the game (production_arc_run.py:1786-1829). Records the
+  payload_info telemetry fields; proves screen-space coordinates are accepted.
+- PASS iff at least one exact production call changes meaningful frame state.
 
 Usage (remote, GPU-exclusive window):
     PYTHONPATH="HENRI V2" /venv/main/bin/python \
         "HENRI V2/experiments/verification/arc_one_step_preflight.py" [--env sp80]
 
-Exit 0 = PASS with evidence lines; nonzero = gate FAIL.
+Exit 0 = PASS; nonzero = gate FAIL.
 """
 import argparse
+import hashlib
 import sys
 
-import torch
+import numpy as np
+
+
+def frame_hash(obs):
+    """(sha16, ndarray) of frame[0]; (None, None) if no frame."""
+    try:
+        arr = np.asarray(obs.frame[0].tolist())
+        return hashlib.sha256(arr.tobytes()).hexdigest()[:16], arr
+    except Exception:
+        return None, None
+
+
+def changed_cells(f0, f1):
+    if f0 is None or f1 is None or f0.shape != f1.shape:
+        return None
+    return int(np.sum(f0 != f1))
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--env", default="sp80", help="ARC env name (production arcade API)")
+    ap.add_argument("--env", default="sp80")
     args = ap.parse_args()
 
-    # Production import path (production_arc_run.py:42): GameAction lives in
-    # `arcengine`, NOT in arc_agi (arc_agi exposes Arcade/OperationMode only).
-    from arc_agi import Arcade, OperationMode
+    # Production import path (production_arc_run.py:41-42).
+    from arc_agi import Arcade
     from arcengine import GameAction
 
     arcade = Arcade()
     game = arcade.make(args.env)
-
-    # Production state-read API: game.reset() returns initial observation
-    # (production_arc_run.py:732); step() returns (obs, _). No observe() exists
-    # on LocalEnvironmentWrapper.
-    obs0 = game.reset()
-    # Production grid source: obs.frame[0] (FrameDataRaw.frame list; no .grid)
-    # (production_arc_run.py:736: initial_grid = obs.frame[0].tolist())
-    grid0 = obs0.frame[0] if getattr(obs0, "frame", None) else None
-    if grid0 is None:
-        print(f"BLOCKED: env {args.env} exposes no frame on reset()")
-        return 2
-
-    # Exact production call path: plan_action -> game.step(action)
-    # Phase 8.21 lesson: action_space is ADVISORY, not legal — probe the full
-    # enum and report per-action state-change flags; PASS iff at least one
-    # action changes the grid.
     allowed = list(getattr(game, "action_space", [])) or []
-    candidates = list(dict.fromkeys(allowed + [GameAction.ACTION1, GameAction.ACTION2,
-                                               GameAction.ACTION3, GameAction.ACTION4,
-                                               GameAction.ACTION5, GameAction.ACTION6,
-                                               GameAction.ACTION7]))
-    changed_flags = []
-    for action in candidates:
-        try:
-            # Production pattern (production_arc_run.py:1833): step returns a
-            # single FrameDataRaw (obs_next = game.step(game_action)); NOT a
-            # (obs, reward) tuple.
-            obs_next = game.step(action)
-        except Exception as exc:
-            changed_flags.append((action, "ERROR:" + str(exc)[:60]))
-            continue
-        grid1 = obs_next.frame[0] if getattr(obs_next, "frame", None) else None
-        changed = grid1 is not None and bool((torch.as_tensor(grid0) != torch.as_tensor(grid1)).any())
-        changed_flags.append((action, changed))
-    any_changed = any(isinstance(c, bool) and c for _, c in changed_flags)
+    allowed_names = [a.name for a in allowed] if allowed and hasattr(allowed[0], "name") else []
+    # Phase 8.21: action_space is ADVISORY — probe the full enum too.
+    candidates = list(dict.fromkeys(
+        allowed_names + ["ACTION1", "ACTION2", "ACTION3", "ACTION4",
+                         "ACTION5", "ACTION6", "ACTION7"]))
+    print(f"env={args.env} action_space={allowed_names}")
 
-    for action, flag in changed_flags:
-        print(f"  action={action} state_changed={flag}")
-    print(f"env={args.env} any_state_change={any_changed}")
-    print("PASS" if any_changed else "FAIL_NO_STATE_CHANGE")
-    return 0 if any_changed else 1
+    results = []
+    for name in candidates:
+        g = arcade.make(args.env)
+        r0 = g.reset()
+        h0, f0 = frame_hash(r0)
+        act = getattr(GameAction, name)
+        try:
+            r1 = g.step(act)  # exact production default-flag call (:1833)
+            h1, f1 = frame_hash(r1)
+            st = getattr(r1, "state", None)
+            st_name = getattr(st, "name", str(st)) if st is not None else None
+            results.append((name, "OK", changed_cells(f0, f1), st_name,
+                            getattr(r1, "levels_completed", None), h0, h1))
+        except Exception as exc:
+            results.append((name, "ERROR:" + type(exc).__name__ + ":" + str(exc)[:80],
+                            None, None, None, h0, None))
+
+    # ACTION6 payload semantics — production payload machinery, separate test.
+    if "ACTION6" in candidates:
+        g2 = arcade.make(args.env)
+        r0b = g2.reset()
+        h0b, f0b = frame_hash(r0b)
+        grid = f0b.tolist() if f0b is not None else None
+        try:
+            from arc_action_payloads import CameraParams, step_with_payload
+            cam_params = None
+            try:
+                _base = getattr(g2, "_game", g2)
+                _cam = _base.camera
+                _s, _xo, _yo = _cam._calculate_scale_and_offset()
+                cam_params = CameraParams(scale=_s, x_offset=_xo, y_offset=_yo)
+            except Exception:
+                cam_params = None
+            r1b, pinfo = step_with_payload(
+                g2, GameAction.ACTION6, grid, enabled=True,
+                seed=0, camera=cam_params)
+            h1b, f1b = frame_hash(r1b)
+            stb = getattr(r1b, "state", None)
+            stb_name = getattr(stb, "name", str(stb)) if stb is not None else None
+            results.append(("ACTION6+payload", "OK", changed_cells(f0b, f1b),
+                            stb_name, getattr(r1b, "levels_completed", None),
+                            h0b, h1b))
+            print(f"  payload_info: source={pinfo.get('payload_source')} "
+                  f"complete={pinfo.get('payload_complete')} "
+                  f"xy={pinfo.get('payload_x')},{pinfo.get('payload_y')} "
+                  f"space={pinfo.get('coordinate_space')} "
+                  f"wave_unbind={pinfo.get('wave_unbind_status')}")
+        except Exception as exc:
+            results.append(("ACTION6+payload", "ERROR:" + type(exc).__name__ + ":" + str(exc)[:80],
+                            None, None, None, h0b, None))
+
+    for name, status, chg, st, lvl, h0, h1 in results:
+        print(f"  action={name:16s} {status:12s} changed_cells={chg!s:6s} "
+              f"state={st!s:12s} levels={lvl!s} frame0={h0} frame1={h1}")
+    any_change = any(isinstance(r[2], int) and r[2] > 0 for r in results)
+    print(f"env={args.env} any_exact_call_changes_state={any_change}")
+    print("PASS" if any_change else "FAIL_NO_STATE_CHANGE")
+    return 0 if any_change else 1
+
 
 if __name__ == "__main__":
     sys.exit(main())
