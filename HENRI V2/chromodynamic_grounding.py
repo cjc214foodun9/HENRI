@@ -165,7 +165,9 @@ def su3_matmul_torch(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 
 def su3_matmul_triton(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     """[N,3,3] complex x [N,3,3] complex via Triton; torch fallback if unavailable."""
-    if not TRITON_AVAILABLE:
+    if not TRITON_AVAILABLE or not (a.is_cuda and b.is_cuda):
+        # Input-device rule: kernel launch requires CUDA inputs; CPU inputs
+        # must use the torch path even when Triton is importable.
         return su3_matmul_torch(a, b)
     n = a.shape[0]
     ab = torch.view_as_real(a).permute(0, 3, 1, 2).reshape(n, 18).contiguous()

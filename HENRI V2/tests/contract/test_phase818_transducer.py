@@ -41,7 +41,7 @@ def gell_mann_basis(dtype=torch.complex64):
 
 def rand_su3(n, basis, theta_scale=1.0, seed=0):
     g = torch.Generator().manual_seed(seed)
-    theta = (torch.rand(n, 8, generator=g) * 2 - 1) * theta_scale
+    theta = ((torch.rand(n, 8, generator=g) * 2 - 1) * theta_scale).to(basis.device)
     alg = 1j * torch.einsum("na,abc->nbc", theta.to(basis.dtype), basis)
     return torch.matrix_exp(alg)
 
