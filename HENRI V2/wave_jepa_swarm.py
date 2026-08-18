@@ -166,18 +166,18 @@ class WaveJEPASwarm(nn.Module):
         hi = torch.matmul(Xr, Vi).to(torch.float32) + torch.matmul(Xi, Vr).to(torch.float32)
         H_t = torch.complex(hr, hi)  # [B, r]
 
-        # Action-conditioned phase modulation
+        # Action-conditioned phase modulation (generators follow INPUT device)
         if action_idx is not None:
             if isinstance(action_idx, int):
-                act_gen = self.action_generators[action_idx]
+                act_gen = self.action_generators[action_idx].to(H_t.device)
                 phase_shift = torch.exp(1j * act_gen.real)
                 H_t = H_t * phase_shift
             elif isinstance(action_idx, torch.Tensor):
                 if action_idx.dim() == 0:
-                    act_gen = self.action_generators[action_idx.item()]
+                    act_gen = self.action_generators[action_idx.item()].to(H_t.device)
                     H_t = H_t * torch.exp(1j * act_gen.real)
                 else:
-                    act_gens = self.action_generators[action_idx]  # [B, r]
+                    act_gens = self.action_generators[action_idx].to(H_t.device)  # [B, r]
                     H_t = H_t * torch.exp(1j * act_gens.real)
 
         # X_pred = H @ W_out : split W_out
