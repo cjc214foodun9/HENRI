@@ -2373,9 +2373,32 @@ def run():
     # compact verdict JSON consumed by the promotion queue / watchdog
     # (/tmp/p823_gauntlet_summary.json on the Vast host).
     try:
-        def _levels(d):
-            return d.get("levels_completed", 0) if isinstance(d, dict) else 0
-        per_env = {k: {"levels_completed": _levels(v)} for k, v in final_scores.items()}
+        def _levels(d, env_name):
+            # Authoritative extraction: the saved scorecard is the SHARED card
+            # object for all envs (one card id covers every env), so its
+            # environments[] list contains ALL envs' EnvironmentScoreList
+            # entries. Attribute levels only to the entry whose id == env_name.
+            # Entries are dataclass objects at runtime (getattr), dicts when
+            # re-loaded from JSON. (D40 undercount bug OBSERVED 2026-08-18 run3:
+            # top-level levels_completed read yielded 0/0 while sp80 + cn04 each
+            # completed 1 level; corrected artifact
+            # /tmp/p823_gauntlet_summary_corrected.json.)
+            if not isinstance(d, dict):
+                return 0
+            def _get(obj, key, default=None):
+                if isinstance(obj, dict):
+                    return obj.get(key, default)
+                return getattr(obj, key, default)
+            for env_entry in d.get("environments", []) or []:
+                if _get(env_entry, "id") != env_name:
+                    continue
+                best = 0
+                for run in _get(env_entry, "runs", []) or []:
+                    lv = _get(run, "levels_completed", 0) or 0
+                    best = max(best, int(lv))
+                return best
+            return 0
+        per_env = {k: {"levels_completed": _levels(v, k)} for k, v in final_scores.items()}
         verdict = {
             "schema": "henri.gauntlet-verdict.v1",
             "mode": args.mode,
