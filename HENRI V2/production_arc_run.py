@@ -1574,8 +1574,11 @@ def run():
                         num_channels=su3_field.shape[0], option_horizon=4)
                     _psi_t = _trans.field_to_wave(
                         su3_field.unsqueeze(0)).squeeze(0).detach()
-                    # Single-action branch (chosen action's generator).
-                    _aid = int(getattr(game_action, "value", game_action))
+                    # Single-action branch (chosen action's generator). Use the
+                    # CURRENT step's EFE-chosen `action` — `game_action` is the
+                    # macro-loop variable bound later (UnboundLocalError on the
+                    # first step; stale previous-step value afterwards).
+                    _aid = int(getattr(action, "value", action))
                     _u_single = action_outcome_store.predict_next_field(
                         su3_field, _aid, _p820_gm_basis)
                     _g_single = float(compute_rt_information_gain(
