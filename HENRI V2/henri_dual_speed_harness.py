@@ -4,8 +4,8 @@ Project HENRI: Dual-Speed Agentic Harness (h1).
 Default-OFF wiring of VERIFIED live components only (no new math):
 
   Zone A lift     -> HENRIVisionEncoder.encode_grid | O_VSA_IngressTokenizer
-  Inner loop      -> WaveJEPA (R-EDMD latent predictor) + SagnacMCTSPlanner
-                     dual_channel_sagnac_veto (tau = 0.35)
+  Inner loop      -> WaveJEPA (R-EDMD latent predictor) + arc_sagnac_veto
+                     evaluate_veto (tau = 0.35, norm-consistent sidecar)
   Memory          -> SegmentCache (Zone C) gated residual retrieval, lazy
                      connect, fail-closed when unavailable
   Egress          -> HENRIUnifiedEgressTransducer (checkpoint policy)
@@ -60,8 +60,10 @@ class HENRIDualSpeedHarness:
     ) -> None:
         from wave_jepa import WaveJEPA  # live module
         from henri_vision_encoder import HENRIVisionEncoder
-        from sagnac_mcts_planner import SagnacMCTSPlanner
+        from arc_sagnac_veto import evaluate_veto as _evaluate_veto
         from henri_universal_repl import HENRIUniversalREPL, DualChannelREPLVeto
+
+        self.evaluate_sagnac_veto = _evaluate_veto
 
         self.d_model = d_model
         self.num_blocks = num_blocks
@@ -74,12 +76,17 @@ class HENRIDualSpeedHarness:
             d_model=d_model, k_blocks=num_blocks, device=self.device
         )
 
-        # Inner loop: latent predictor + Sagnac veto planner
+        # Inner loop: latent predictor + norm-consistent Sagnac veto.
+        # NOTE: SagnacMCTSPlanner.dual_channel_sagnac_veto is FALSIFIED for the
+        # real UWE family (delta = 1 - |mean(cand*axiom)| -> ~1 - 1/D for
+        # unit-norm waves, identical pairs vetoed; record 2026-08-12 in
+        # arc_sagnac_veto.py; re-confirmed by the harness K2 smoke 2026-08-18).
+        # The sidecar evaluate_veto is the canonical norm-consistent advisory
+        # veto (S = 0.5*(1+<a,b>), identical -> delta 0). The planner is NOT
+        # instantiated in harness v1; deliberation (MCTS search) is a future
+        # outer-loop call.
         self.wave_jepa = WaveJEPA(
             d_model=d_model, num_blocks=num_blocks, r_rank=r_rank, device=self.device
-        )
-        self.planner = SagnacMCTSPlanner(
-            d_model=d_model, k_blocks=num_blocks, tau_veto=VETO_TAU, device=self.device
         )
 
         # Outer loop: REPL tools + veto
@@ -134,13 +141,13 @@ class HENRIDualSpeedHarness:
         One bounded inner-loop step: latent transition + Sagnac veto.
 
         Returns typed telemetry:
-          pred_wave, delta_axiom, delta_epistemic, vetoed, latency_ms
+          pred_wave, delta_axiom, delta_epistemic, vetoed, veto_status, latency_ms
         """
         t0 = time.perf_counter()
         pred_wave = self.wave_jepa.predict_future_latent(state_wave, action_wave)
         if axiom_wave is None:
             axiom_wave = state_wave  # self-consistency boundary when no baseplate
-        delta_axiom, delta_epistemic, hard_veto = self.planner.dual_channel_sagnac_veto(
+        delta_axiom, delta_epistemic, hard_veto, veto_status = self.evaluate_sagnac_veto(
             pred_wave, axiom_wave, state_wave
         )
         latency_ms = (time.perf_counter() - t0) * 1000.0
@@ -149,6 +156,7 @@ class HENRIDualSpeedHarness:
             "delta_axiom": float(delta_axiom),
             "delta_epistemic": float(delta_epistemic),
             "vetoed": bool(hard_veto),
+            "veto_status": str(veto_status),
             "latency_ms": latency_ms,
         }
 

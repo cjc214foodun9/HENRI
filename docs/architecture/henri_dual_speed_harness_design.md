@@ -26,7 +26,12 @@ Gap audit (2026-08-17, `references/harness-blueprint-live-surface-gap.md`):
 Dual-speed asynchronous harness over the live wave stack:
 
 - OUTER LOOP (1–100 Hz, CPU): environment I/O, tool execution (`HENRIUniversalREPL.execute_python_repl` or terminal/API), Zone C engram read/write (`SegmentCache`), governance event ledger. Stateful, async controller.
-- INNER LOOP (20 kHz target, GPU): `WaveJEPA` transition + `SagnacMCTSPlanner.search(...)` EFE selection + Sagnac veto (tau=0.35). Runs in `[num_blocks,8]` real phase waves on S^{D-1}.
+- INNER LOOP (20 kHz target, GPU): `WaveJEPA` transition + Sagnac veto via
+  `arc_sagnac_veto.evaluate_veto` (norm-consistent advisory sidecar, tau=0.35).
+  Deliberation (`SagnacMCTSPlanner.search`) is a future outer-loop call;
+  `SagnacMCTSPlanner.dual_channel_sagnac_veto` is NOT used — FALSIFIED for the
+  real UWE family (delta = 1 - |mean(cand·axiom)| -> ~1 - 1/D, identical pairs
+  vetoed; record 2026-08-12, re-confirmed by harness K2 smoke 2026-08-18).
 - ADJOINT PAIR: Zone A lift (`O_VSA_IngressTokenizer` / `HENRIVisionEncoder.encode_grid`) and Zone C egress (`HENRIUnifiedEgressTransducer`, checkpoint_policy="required" at D=65536).
 - MEMORY PARTITION: inner loop holds active trajectory superposition (N_max ≈ D/(2 ln D) ≈ 2,972 concepts); encyclopedic recall lives in Zone C; `SegmentCache.retrieve(query_wave)` returns a gate-weighted fused conditioning wave injected as boundary axioms at cycle start.
 

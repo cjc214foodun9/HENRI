@@ -55,31 +55,30 @@ def l1_repl_layer() -> dict:
 
 
 def l2_wave_layer(d: int = 65536, blocks: int = 8192) -> dict:
-    from sagnac_mcts_planner import SagnacMCTSPlanner
+    from arc_sagnac_veto import evaluate_veto
 
     assert torch.cuda.is_available(), "L2 requires CUDA"
     dev = "cuda"
-    plan = SagnacMCTSPlanner(d_model=d, k_blocks=blocks, tau_veto=0.35, device=dev)
 
     rng = np.random.default_rng(7)
     valid, invalid = [], []
-    for i in range(200):
+    for _ in range(200):
         base = torch.randn(blocks, 8, device=dev)
         base = torch.nn.functional.normalize(base, p=2, dim=-1)
         valid.append(base)  # axiom-consistent: identical wave
         noise = torch.randn(blocks, 8, device=dev)
         noise = torch.nn.functional.normalize(noise, p=2, dim=-1)
-        # orthogonal candidate: ~1/sqrt(D) inner product -> delta ~ 1
+        # orthogonal candidate: ~1/sqrt(D) inner product -> delta ~ 0.5
         ortho = (base - (base * noise).sum(dim=-1, keepdim=True) * noise)
         ortho = torch.nn.functional.normalize(ortho, p=2, dim=-1)
         invalid.append(ortho)
 
     fp = fn = 0
     for wv in valid:
-        _, _, hard = plan.dual_channel_sagnac_veto(wv, wv, wv)  # axiom == cand == world
+        _, _, hard, _ = evaluate_veto(wv, wv, wv)  # cand == axiom == world
         fp += int(hard)
     for wv in invalid:
-        _, _, hard = plan.dual_channel_sagnac_veto(wv, valid[0], valid[0])
+        _, _, hard, _ = evaluate_veto(wv, valid[0], valid[0])
         fn += int(not hard)
     return {
         "layer": "L2_wave",
