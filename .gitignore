@@ -57,3 +57,6 @@ assets/
 
 # Holonic loop runtime state (deterministic router poll cache)
 scripts/.henri_router_state.json
+
+# Runtime environment caches (downloaded by arcade at run time; eval machinery, not source)
+environment_files/

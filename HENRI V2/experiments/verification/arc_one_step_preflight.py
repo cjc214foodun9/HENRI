@@ -53,7 +53,10 @@ def main() -> int:
     changed_flags = []
     for action in candidates:
         try:
-            obs_next, _ = game.step(action)
+            # Production pattern (production_arc_run.py:1833): step returns a
+            # single FrameDataRaw (obs_next = game.step(game_action)); NOT a
+            # (obs, reward) tuple.
+            obs_next = game.step(action)
         except Exception as exc:
             changed_flags.append((action, "ERROR:" + str(exc)[:60]))
             continue
