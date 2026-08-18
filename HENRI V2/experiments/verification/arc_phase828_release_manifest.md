@@ -1,6 +1,6 @@
 # Phase 8.27/8.28 Release Manifest — Production-Readiness Audit (2026-08-18)
 
-Audit type: forensic, read-only + bounded fixes. Candidate for main FF: `28f4615`
+Audit type: forensic, read-only + bounded fixes. Candidate for main FF: `5983e44`
 (branch `feat/phase827-production-promotion`). Base: `main` @ `2218ec4` (ancestor, FF-OK, 0 commits on main absent from branch).
 
 ## Included commits (main-bound; classification)
