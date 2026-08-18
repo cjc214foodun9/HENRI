@@ -59,19 +59,20 @@ def l2_wave_layer(d: int = 65536, blocks: int = 8192) -> dict:
 
     assert torch.cuda.is_available(), "L2 requires CUDA"
     dev = "cuda"
+    torch.manual_seed(7)
 
-    rng = np.random.default_rng(7)
     valid, invalid = [], []
     for _ in range(200):
         base = torch.randn(blocks, 8, device=dev)
         base = torch.nn.functional.normalize(base, p=2, dim=-1)
         valid.append(base)  # axiom-consistent: identical wave
+        # axiom-violating: independent random unit wave. Per-block cosine with
+        # base ~ N(0, 1/8); block-mean |cos| ~ 1/sqrt(8*8192) ~ 0.004
+        # -> delta ~ 0.996 >> tau=0.35. (A base-orthogonalized vector keeps
+        # per-block cos ~ sqrt(1-1/8) ~ 0.935 -> delta ~ 0.065, NOT violating.)
         noise = torch.randn(blocks, 8, device=dev)
         noise = torch.nn.functional.normalize(noise, p=2, dim=-1)
-        # orthogonal candidate: ~1/sqrt(D) inner product -> delta ~ 0.5
-        ortho = (base - (base * noise).sum(dim=-1, keepdim=True) * noise)
-        ortho = torch.nn.functional.normalize(ortho, p=2, dim=-1)
-        invalid.append(ortho)
+        invalid.append(noise)
 
     fp = fn = 0
     for wv in valid:
