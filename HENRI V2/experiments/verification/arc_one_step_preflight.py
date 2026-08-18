@@ -30,10 +30,13 @@ def main() -> int:
     arcade = Arcade()
     game = arcade.make(args.env)
 
-    obs0 = game.observe()
+    # Production state-read API: game.reset() returns initial observation
+    # (production_arc_run.py:732); step() returns (obs, _). No observe() exists
+    # on LocalEnvironmentWrapper.
+    obs0 = game.reset()
     grid0 = getattr(obs0, "grid", None)
     if grid0 is None:
-        print(f"BLOCKED: env {args.env} exposes no grid on observe()")
+        print(f"BLOCKED: env {args.env} exposes no grid on reset()")
         return 2
 
     # Exact production call path: plan_action -> game.step(action)
