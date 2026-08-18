@@ -28,6 +28,8 @@ import math
 
 import torch
 
+from typing import Optional
+
 try:
     import triton
     import triton.language as tl
