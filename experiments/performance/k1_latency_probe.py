@@ -43,8 +43,9 @@ def main() -> int:
         zone_c_required=False,
     )
 
-    # Warmup
-    w = torch.randn(args.blocks, 8, device=dev)
+    # Warmup — canonical flat unit-norm [d] wave (evaluate_veto family contract;
+    # per-block-normalized [blocks,8] waves miscalibrate the veto metric, FN~50%)
+    w = torch.randn(args.d, device=dev)
     w = torch.nn.functional.normalize(w, p=2, dim=-1)
     for _ in range(10):
         h.inner_step(w, w, axiom_wave=w)

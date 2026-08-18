@@ -61,17 +61,16 @@ def l2_wave_layer(d: int = 65536, blocks: int = 8192) -> dict:
     dev = "cuda"
     torch.manual_seed(7)
 
+    # Canonical family: FLAT unit-norm [d] waves (encode_grid / evaluate_veto
+    # contract). Per-block-normalized [blocks,8] inputs miscalibrate the metric
+    # (flattened dot inflated by ~sqrt(blocks); observed FN ~50% at tau=0.35).
     valid, invalid = [], []
     for _ in range(200):
-        base = torch.randn(blocks, 8, device=dev)
-        base = torch.nn.functional.normalize(base, p=2, dim=-1)
+        base = torch.nn.functional.normalize(torch.randn(d, device=dev), p=2, dim=-1)
         valid.append(base)  # axiom-consistent: identical wave
-        # axiom-violating: independent random unit wave. Per-block cosine with
-        # base ~ N(0, 1/8); block-mean |cos| ~ 1/sqrt(8*8192) ~ 0.004
-        # -> delta ~ 0.996 >> tau=0.35. (A base-orthogonalized vector keeps
-        # per-block cos ~ sqrt(1-1/8) ~ 0.935 -> delta ~ 0.065, NOT violating.)
-        noise = torch.randn(blocks, 8, device=dev)
-        noise = torch.nn.functional.normalize(noise, p=2, dim=-1)
+        # axiom-violating: independent random unit wave. Flat cos ~ N(0, 1/d),
+        # |cos| ~ 1/sqrt(65536) ~ 0.004 -> S ~ 0.5 -> delta ~ 0.5 >> tau=0.35.
+        noise = torch.nn.functional.normalize(torch.randn(d, device=dev), p=2, dim=-1)
         invalid.append(noise)
 
     fp = fn = 0
