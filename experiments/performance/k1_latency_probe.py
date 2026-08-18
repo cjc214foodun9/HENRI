@@ -40,7 +40,6 @@ def main() -> int:
         num_blocks=args.blocks,
         r_rank=args.rank,
         device=dev,
-        checkpoint_policy="auto",  # auto: skip incompatible checkpoint at probe time
         zone_c_required=False,
     )
 
