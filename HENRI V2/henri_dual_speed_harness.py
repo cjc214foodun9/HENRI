@@ -55,7 +55,6 @@ class HENRIDualSpeedHarness:
         num_blocks: int = 8192,
         r_rank: int = 16,
         device: Optional[str] = None,
-        checkpoint_policy: str = "auto",
         zone_c_dsn: Optional[str] = None,
         zone_c_required: bool = False,
     ) -> None:
@@ -68,7 +67,6 @@ class HENRIDualSpeedHarness:
         self.num_blocks = num_blocks
         self.r_rank = r_rank
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        self.checkpoint_policy = checkpoint_policy
         self.zone_c_required = zone_c_required
 
         # Zone A: vision ingress (grid -> [num_blocks, 8] S^{D-1} wave)

@@ -95,6 +95,7 @@ def l2_wave_layer(d: int = 65536, blocks: int = 8192) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--l1-only", action="store_true")
     ap.add_argument("--wave-only", action="store_true")
     ap.add_argument("--out", type=str, default="/tmp/k2_veto.json")
     args = ap.parse_args()
@@ -102,7 +103,8 @@ def main() -> int:
     results = []
     if not args.wave_only:
         results.append(l1_repl_layer())
-    results.append(l2_wave_layer())
+    if not args.l1_only:
+        results.append(l2_wave_layer())
 
     accept = all(r["accept"] for r in results)
     telemetry = {"probe": "K2", "layers": results, "accept": bool(accept)}

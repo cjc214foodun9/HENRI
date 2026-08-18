@@ -31,7 +31,6 @@ def harness():
         num_blocks=NB,
         r_rank=RANK,
         device="cpu",
-        checkpoint_policy="disabled",
         zone_c_dsn="offline://surrogate",
         zone_c_required=True,
     )
@@ -102,7 +101,6 @@ class TestZoneC:
             num_blocks=NB,
             r_rank=RANK,
             device="cpu",
-            checkpoint_policy="disabled",
             zone_c_dsn=None,
             zone_c_required=False,
         )
