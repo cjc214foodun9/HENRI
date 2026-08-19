@@ -169,3 +169,47 @@ def test_no_dense_d_matrix_alloc(cal):
     w = cal2.compile_task_operator(e, e, basis_digest="b", calibration_digest="c")
     assert w.shape == (4096, 4)
     assert cal2._proj.shape == (4, 4096)  # [r, D] projection, never [D, D]
+
+
+def test_production_dim_factor_shapes():
+    # D=65,536 production dimension: factor shapes only, no [D,D].
+    d = 65536
+    cal2 = AlgebraicActionHeadCalibrator(d_model=d, r_rank=128, seed=0)
+    g = torch.Generator().manual_seed(11)
+    e = torch.randn(4, d, generator=g)
+    e = e / e.norm(dim=1, keepdim=True)
+    w = cal2.compile_task_operator(e, e, basis_digest="b", calibration_digest="c")
+    assert w.shape == (d, 4)          # effective r = min(128, 4, 65536)
+    assert cal2._proj.shape == (4, d)  # [r, D]
+    assert cal2._inv_scale.shape == (4,)
+    # transduce on production shape [65536] -> same shape, correct dtype
+    out = cal2.transduce(e[0])
+    assert out.shape == (d,)
+    assert out.dtype == e.dtype
+
+
+def test_import_no_production_side_effect():
+    # Default-OFF: importing the calibrator must not load/patch production
+    # modules (no wiring by import).
+    import sys
+    before = {m for m in sys.modules if "production_arc_run" in m or "henri_decoder" in m}
+    import algebraic_action_head  # noqa: F401
+    after = {m for m in sys.modules if "production_arc_run" in m or "henri_decoder" in m}
+    assert after == before, f"import pulled production modules: {after - before}"
+
+
+def test_decoder_on_head_off_remains_ineligible():
+    # Contract G6: generic decoder LOADED + algebraic head OFF -> still
+    # ineligible. Mirrors arc_score_gate dominance rule (Phase 7.4).
+    from arc_score_gate import arc_score_eligibility
+    res = arc_score_eligibility(
+        learned_component_on_action_path=True,
+        checkpoint_policy="required",
+        checkpoint_load_status="LOADED",
+        trained_decoder_active=True,
+        checkpoint_sha256="c" * 64,
+        state_dict_sha256="d" * 64,
+        trained_action_head_active=False,
+    )
+    assert res["score_eligible"] is False
+    assert "ACTION_HEAD_NOT_CALIBRATED" in res["score_block_reason"]
