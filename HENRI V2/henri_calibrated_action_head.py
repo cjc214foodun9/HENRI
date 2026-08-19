@@ -307,5 +307,8 @@ if __name__ == "__main__":
     print(f"  weight_sha256            : {art['weight_sha256'][:16]}...")
     ok, reason = production_activation_eligible(art)
     print(f"  production_activation    : {ok} ({reason})")
-    assert ok is False and reason == "ACTION_HEAD_SYNTHETIC_ONLY"
-    print("  [PASSED] fixture mechanics verified; production activation correctly blocked.")
+    # Honest gate: synthetic fixtures NEVER activate production, regardless of
+    # whether the fixture qualified (at production dims it typically does not).
+    assert ok is False, "synthetic fixture must never activate production"
+    print("  [PASSED] fixture mechanics verified; production activation correctly blocked"
+          f" ({reason}).")
