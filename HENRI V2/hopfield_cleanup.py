@@ -163,6 +163,78 @@ class ContinuousHopfieldCleanup(nn.Module):
         return (num / den).item()
 
 
+class DualScaleAnalogLexicalSnap(nn.Module):
+    """Phase 8.35 T2 (Miller et al. 2026): dual-scale analog lexical snap.
+
+    The document formula (HENRI-SYNTHESIS-MILLER-LEE-2026):
+
+        Psi_gated = Psi_micro ⊙ Softmax(Re(Psi_macro^† W_gate) / tau)
+
+    A top-down macro-option wave Psi_macro (low-D) gates which micro
+    dimensions of Psi_micro participate in Hopfield codebook snapping. The
+    mask is a softmax over micro dimensions (temperature tau); the gated
+    wave is renormalized, then lexical_snap runs inside the active
+    macro-option subspace. This prevents unbinding logit scrambling across
+    non-relevant vocabulary dimensions (the egress bottleneck).
+
+    Controls:
+      - macro_wave = 0  -> uniform mask -> gated == raw wave -> byte-identical
+        to plain lexical_snap (true control arm).
+      - tau -> 0        -> one-hot mask (deterministic subspace restriction).
+
+    Default-OFF: no production consumer; tests and the 8.35 benchmark
+    activate it.
+    """
+
+    def __init__(
+        self,
+        dim_micro: int = 65536,
+        dim_macro: int = 2048,
+        tau: float = 1.0,
+        beta: float = None,
+        seed: int = 835,
+    ):
+        super().__init__()
+        self.dim_micro = dim_micro
+        self.dim_macro = dim_macro
+        self.tau = float(tau)
+        self.cleanup = ContinuousHopfieldCleanup(dim=dim_micro, beta=beta)
+        g = torch.Generator().manual_seed(seed)
+        w_init = torch.randn(dim_macro, dim_micro, generator=g) / math.sqrt(dim_macro)
+        self.register_buffer("W_gate", F.normalize(w_init, p=2, dim=-1))
+
+    @torch.no_grad()
+    def store_engrams(self, waves: torch.Tensor) -> int:
+        return self.cleanup.store_engrams(waves)
+
+    def gate_mask(self, macro_wave: torch.Tensor) -> torch.Tensor:
+        """Softmax(Re(macro^† W_gate) / tau) over micro dims. [micro]"""
+        m = macro_wave.view(-1)
+        if m.is_complex():
+            m = torch.view_as_real(m).reshape(-1).to(torch.float32)
+        m = m / (torch.norm(m) + 1e-12)
+        logits = m @ self.W_gate  # [micro]
+        return torch.softmax(logits / self.tau, dim=-1)
+
+    def gated_wave(self, wave: torch.Tensor, macro_wave: torch.Tensor) -> torch.Tensor:
+        """Psi_micro ⊙ mask, renormalized (complex/real preserved family)."""
+        mask = self.gate_mask(macro_wave).to(wave.device)
+        was_complex = wave.is_complex()
+        r = wave.view(-1)
+        if was_complex:
+            r = torch.view_as_real(r).reshape(-1).to(torch.float32)
+        g = F.normalize(r * mask, p=2, dim=-1)
+        if was_complex:
+            g = torch.view_as_complex(g.reshape(-1, 2).contiguous())
+        return g.reshape(wave.shape)
+
+    def snap(self, wave: torch.Tensor, macro_wave: torch.Tensor, top_k: int = 1):
+        """Macro-gated lexical snap. Returns (indices, confidences) like
+        ContinuousHopfieldCleanup.lexical_snap."""
+        assert self.cleanup.engrams.numel() > 0, "No engrams stored; call store_engrams first."
+        return self.cleanup.lexical_snap(self.gated_wave(wave, macro_wave), top_k=top_k)
+
+
 class HopfieldActionDecoder(nn.Module):
     """
     Drop-in replacement for HolographicActionDecoder.

@@ -191,7 +191,7 @@ class CoupledRecursiveDualEDMD(nn.Module):
         pred_sub = self.V @ (self.A_sub @ phi)
         if self.field_channel:
             mode = self.C.T @ x_t
-            pred_field = self.B @ mode
+            pred_field = self.B @ self._field_mode(mode)
         else:
             pred_field = 0.0
         xb = x_t.view(self.num_blocks, self.block_dim)
@@ -238,7 +238,15 @@ class CoupledRecursiveDualEDMD(nn.Module):
         self.A_sub.copy_(torch.linalg.solve(reg_C.T, self.G_t.T).T)
 
         if self.field_channel:
-            # 2) Global field channel: closed-form RLS on C-projected mode.
+            # 2) Global field channel: closed-form RLS on the UN-shifted mode.
+            #    The RLS fits B to the honest C-projected mode; the directional
+            #    traveling-wave shift is applied at PREDICTION time only
+            #    (_field_mode in _predict_from), so the learned map cannot
+            #    absorb the direction (that absorption made AP==PA after
+            #    training in the first 8.35 implementation). The shift then
+            #    acts as the document's write-map modulation
+            #    V_directional = V ⊙ exp(j(k·x - ωt)), breaking
+            #    time-reversal symmetry during forward prediction.
             mode = self.C.T @ x_t
             self.C_f.mul_(self.lambda_forget).add_(torch.outer(mode, mode))
             self.G_f.mul_(self.lambda_forget).add_(torch.outer(y_t, mode))
@@ -258,6 +266,12 @@ class CoupledRecursiveDualEDMD(nn.Module):
         with torch.no_grad():
             loss = float(F.mse_loss(self._predict_from(x_t), y_t).item())
         return loss
+
+    def _field_mode(self, mode: torch.Tensor) -> torch.Tensor:
+        """Hook: directional subclasses apply a traveling-wave phase shift at
+        PREDICTION time. Identity by default so the 8.34 arm is byte-identical.
+        The RLS update does NOT use this hook (see update_online_step)."""
+        return mode
 
     def cross_block_jacobian(self, state_wave: torch.Tensor, action_wave: torch.Tensor,
                              block_a: int, block_b: int, include_field: bool = True) -> float:
@@ -281,3 +295,84 @@ class CoupledRecursiveDualEDMD(nn.Module):
         finally:
             if saved is not None:
                 self.B.copy_(saved)
+
+
+class DirectionalTravelingWaveCoupler(CoupledRecursiveDualEDMD):
+    """Phase 8.35 T1 (Miller/Lee 2026): directional traveling-wave field channel.
+
+    The document formula (HENRI-SYNTHESIS-MILLER-LEE-2026):
+
+        V_directional(t) = V ⊙ exp(j (k·x − ωt))        (AP: +k, PA: −k)
+
+    is realized in the real domain on the field *mode* (the C-projected
+    low-rank coordinates) via the shift theorem: a mode vector phase-shifted
+    by a spatial ramp in the frequency domain is a circular shift of its
+    samples. Because the field prediction is  B @ shift(mode), the shift is
+    mathematically equivalent to a directional phase gradient applied to the
+    effective write map (B ∘ shift ≡ V_directional), up to the rank-r mode
+    basis. The omega·t term is a unit-step (tau=1) constant phase reference
+    folded into the static gradient (steady-state frame).
+
+    AP (+k) shifts forward along the rank coordinate; PA (−k) shifts
+    backward. Direction flips the sign of the wave-vector k, exactly the
+    document's ±k notation.
+
+    Directional breaking of time-reversal symmetry is measured by
+    shift_ap != shift_pa and by the transition benchmark arms.
+
+    Default-OFF: no production consumer; field_channel=False and k_max=0
+    are valid control arms (k_max=0 -> identity shift).
+    """
+
+    def __init__(
+        self,
+        d_model: int = 65536,
+        r_rank: int = 128,
+        lambda_forget: float = 0.98,
+        regularization: float = 1e-4,
+        num_blocks: int = 8192,
+        block_dim: int = 8,
+        field_channel: bool = True,
+        direction: str = "AP",
+        k_max: float = 1.0,
+    ):
+        if direction not in ("AP", "PA"):
+            raise ValueError(f"direction must be 'AP' or 'PA', got {direction!r}")
+        super().__init__(
+            d_model=d_model,
+            r_rank=r_rank,
+            lambda_forget=lambda_forget,
+            regularization=regularization,
+            num_blocks=num_blocks,
+            block_dim=block_dim,
+            field_channel=field_channel,
+        )
+        self.direction = direction
+        self.k_max = float(k_max)
+        # A spatial phase ramp exp(j k x) in the sample domain is a uniform
+        # circular shift in the frequency domain (dual of the shift theorem).
+        # Realized as an integer circular shift: AP moves the mode forward by
+        # k_shift samples, PA backward. Integer shifts preserve energy exactly
+        # (torch.roll); fractional FFT shifts break conjugate symmetry.
+        if not (0.0 <= self.k_max < self.r_rank):
+            raise ValueError(f"k_max must be in [0, r_rank), got {self.k_max}")
+        sign = 1 if direction == "AP" else -1
+        self.k_shift = sign * int(round(self.k_max))
+
+    def traveling_shift(self, mode: torch.Tensor) -> torch.Tensor:
+        """Circular phase-gradient shift of a rank-r mode (real in, real out).
+
+        AP (+k) rolls the mode forward k_shift samples; PA (-k) backward.
+        k_shift = 0 returns the mode unchanged (control arm). torch.roll is
+        the discrete realization of the shift theorem and preserves norm
+        exactly.
+        """
+        if self.k_shift == 0:
+            return mode
+        return torch.roll(mode, shifts=self.k_shift, dims=-1)
+
+    def _field_mode(self, mode: torch.Tensor) -> torch.Tensor:
+        """Hook override: the field mode is directionally shifted."""
+        if not self.field_channel:
+            return mode
+        return self.traveling_shift(mode)

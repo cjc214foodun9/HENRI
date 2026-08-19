@@ -676,6 +676,48 @@ class EFEPlanner(nn.Module):
         g = g / (torch.norm(g) + 1e-12)
         return 1.0 - torch.dot(p, g)
 
+    def directional_sagnac_delta(self, psi_ap: torch.Tensor, psi_pa: torch.Tensor) -> torch.Tensor:
+        """Phase 8.35 T3 (Lee et al. 2026): directional Sagnac homodyne.
+
+        Document formula (HENRI-SYNTHESIS-MILLER-LEE-2026):
+
+            Delta_Sagnac,directional = 1 - | (1/D) sum_d exp(j(phi_AP,d - phi_PA,d)) |^2
+
+        Measures phase friction between the forward AP observation wave
+        (Psi_AP) and the backward PA goal wave (Psi_PA). When
+        Delta -> 0, backward goal trajectory and forward environmental
+        physics are in perfect directional phase alignment.
+
+        Complex input uses element phase directly. Real input (the planner
+        boundary is real [num_blocks, 8]) is lifted to the analytic signal
+        via FFT (zero negative frequencies) to extract instantaneous phase.
+        Bounded in [0, 1]. Default-OFF: no production consumer; the 8.35
+        benchmark activates it.
+        """
+        a = psi_ap.view(-1)
+        b = psi_pa.view(-1)
+        dev = a.device
+        if a.is_complex() and b.is_complex():
+            ph_a = torch.angle(a)
+            ph_b = torch.angle(b)
+        else:
+            n = a.shape[0]
+            a_f = torch.fft.fft(a.to(torch.float32))
+            b_f = torch.fft.fft(b.to(torch.float32))
+            hilbert = torch.zeros(n, device=dev, dtype=torch.float32)
+            hilbert[0] = 1.0
+            if n % 2 == 0:
+                hilbert[1 : n // 2] = 2.0
+                hilbert[n // 2] = 1.0
+            else:
+                hilbert[1 : (n + 1) // 2] = 2.0
+            ha = torch.fft.ifft(a_f * hilbert)
+            hb = torch.fft.ifft(b_f * hilbert)
+            ph_a = torch.angle(ha)
+            ph_b = torch.angle(hb)
+        delta = 1.0 - torch.abs(torch.mean(torch.exp(1j * (ph_a - ph_b)))) ** 2
+        return delta.real
+
     def pragmatic_value(self, predicted_wave: torch.Tensor, boundary_axioms: torch.Tensor,
                         goal_wave: torch.Tensor = None) -> torch.Tensor:
         """Pragmatic term of the EFE: surprise + goal_distance - preference_resonance.
