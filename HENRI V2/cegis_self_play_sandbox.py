@@ -73,7 +73,7 @@ class QuotaActionSelector:
         counts = np.asarray(counts, dtype=np.int64)
         p = self.rng.dirichlet(np.ones(NUM_ACTIONS))
         need = self.min_support - counts
-        if need.max() > 0 and self.rng.rand() < 0.5:
+        if need.max() > 0 and self.rng.rand() < 0.8:
             # Quota-forcing: pick a random class that is under quota.
             under = np.where(need > 0)[0]
             return int(self.rng.choice(under))
@@ -138,8 +138,10 @@ def harvest_stratified_bank(
         prev_score = float(getattr(obs, "levels_completed", 0) or 0)
         same_state_streak = 0
         env_steps = 0
+        hard_cap = max(target_samples, min_support_per_action * NUM_ACTIONS) * 2
 
-        while accepted < target_samples and env_steps < max_steps:
+        while (int(counts.min()) < min_support_per_action
+               and env_steps < max_steps and accepted < hard_cap):
             # Quota met on every class -> done.
             if int(counts.min()) >= min_support_per_action:
                 break
