@@ -197,9 +197,9 @@ def sgld_adapt_head(
     *,
     lr: float = 1e-4,
     steps: int = 500,
-    t0: float = 0.1,
+    t0: float = 1e-6,
     dt: float = 1.0,
-    yield_stress: float = 0.05,
+    yield_stress: float = 1e-4,
     log_every: int = 100,
     seed: int = 0,
 ) -> dict:
@@ -209,7 +209,18 @@ def sgld_adapt_head(
            Sagnac_stress = 1 - cos^2(softmax_norm, onehot_norm)   (mean)
     Temperature schedule:  T(t) = T0 * (1 + 0.05 t)^-0.55
     Noise:  theta += sqrt(2 T dt) * randn_like(theta)  after each AdamW step
-    Bingham yield: skip the step while total grad norm < yield_stress.
+    Bingham yield: skip the step while MEAN per-param grad norm
+                   < yield_stress (mean, not sum — a summed norm over
+                   millions of parameters can never fall below an absolute
+                   threshold and silently disables the yield).
+
+    NOISE-SCALE CONTRACT (OBSERVED defect 2026-08-19): with t0=0.1 the
+    per-step noise sigma sqrt(2*0.1) = 0.447 dwarfs Linear init scale
+    ~1/sqrt(fan_in) ~ 0.004. A 500-step random walk grows row norms ~300x,
+    logits reach magnitude ~600, and CE explodes (observed final loss
+    594.09 at D=65,536). Default t0=1e-6 gives sigma_total ~ 0.017 over
+    500 steps (~4x init scale), preserving the annealing-exploration
+    regime without logit blowup. Always scale T0 to the parameter scale.
 
     `waves` (N, D) and `targets` (N,) are the in-context demonstration
     pairs; the caller guarantees held-out data is never passed here.
@@ -221,6 +232,7 @@ def sgld_adapt_head(
     targets = targets.to(dev)
     onehot = torch.zeros(targets.shape[0], head.vocab_size, device=dev)
     onehot.scatter_(1, targets.unsqueeze(1), 1.0)
+    n_params = sum(p.numel() for p in head.parameters() if p.requires_grad)
 
     hist = []
     for t in range(1, steps + 1):
@@ -236,7 +248,8 @@ def sgld_adapt_head(
 
         opt.zero_grad()
         loss.backward()
-        gnorm = sum(float(p.grad.norm()) for p in head.parameters() if p.grad is not None)
+        gnorm_sum = sum(float(p.grad.norm()) for p in head.parameters() if p.grad is not None)
+        gnorm = gnorm_sum / max(1, n_params)
         if gnorm < yield_stress:
             opt.zero_grad()
             hist.append({"step": t, "loss": float(loss.item()), "gnorm": gnorm, "yielded": True})
@@ -249,7 +262,7 @@ def sgld_adapt_head(
         hist.append({"step": t, "loss": float(loss.item()), "gnorm": gnorm, "yielded": False})
         if t % log_every == 0:
             print(f"  sgld step {t}: loss={loss.item():.4f} ce={ce.item():.4f} "
-                  f"sagnac={sagnac_stress.item():.4f} T={temp:.4f} gnorm={gnorm:.4f}", flush=True)
+                  f"sagnac={sagnac_stress.item():.4f} T={temp:.2e} gnorm={gnorm:.2e}", flush=True)
 
     with torch.no_grad():
         logits = head(waves)

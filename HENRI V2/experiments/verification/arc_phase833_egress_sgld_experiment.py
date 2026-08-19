@@ -125,7 +125,6 @@ def run_experiment(bank_npz: str, manifest_path: str, device: str,
     head = CompressedProjectionHead(d_model=D, hidden_dim=HIDDEN,
                                     vocab_size=VOCAB, sagnac_lambda=0.25).to(dev)
     res_sgld = sgld_adapt_head(head, psi_tr, y_tr, lr=1e-4, steps=sgld_steps,
-                               t0=0.1, dt=1.0, yield_stress=0.05,
                                log_every=max(1, sgld_steps // 5), seed=seed + 2)
     with torch.no_grad():
         logits_ho = head(psi_ho)
