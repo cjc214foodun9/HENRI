@@ -40,6 +40,7 @@ import torch
 
 import arc_agi
 from arcengine import GameAction
+from henri_trajectory_bank import TrajectoryBank, bank_enabled_from_env
 
 from darwinian_phase_swarm import HenriSwarmOrchestrator
 from exteroceptive_sandbox import ExteroceptiveSandboxTransducer
@@ -507,6 +508,24 @@ def run():
                 "BLOCKED: live Zone C telemetry sink unavailable; refusing JSONL-only production evidence"
             ) from exc
     tele = LatentTelemetry(log_path, db_logger)
+
+    # Phase 8.32: authorized trajectory bank (default-OFF, diagnostic-only).
+    # Captures live (o_t, a_t, o_t+1) tuples when HENRI_ARC_TRAJECTORY_BANK=1.
+    # The bank is a passive recorder: a capture failure is logged and never
+    # aborts the score-bearing loop.
+    trajectory_bank = None
+    if bank_enabled_from_env():
+        try:
+            trajectory_bank = TrajectoryBank(
+                log_dir=os.path.dirname(os.path.abspath(log_path)),
+                run_id=os.path.basename(log_path).replace(".jsonl", ""),
+                provenance=f"arc-live {os.path.basename(log_path)}",
+                store_next_wave=True,
+            )
+            print("[init] trajectory bank ENABLED (authorized capture)")
+        except Exception as _bank_exc:
+            print(f"[init] trajectory bank init failed: {_bank_exc}")
+            trajectory_bank = None
 
     print(f"[init] orchestrator @ {SCALE}")
     orch = HenriSwarmOrchestrator(
@@ -1870,6 +1889,26 @@ def run():
             step_ms = (time.perf_counter() - t0) * 1000
             last_action_was_reset = (macro_actions[0].name == "RESET")
 
+            # Phase 8.32: record authorized (o_t, a_t, o_t+1) tuple when the
+            # bank is enabled. Passive recorder: failures are logged, never
+            # fatal to the run. The next-wave is encoded with the SAME
+            # tokenizer used for state_wave (spatial grid encode).
+            if trajectory_bank is not None and obs_next is not None:
+                try:
+                    _next_wave = None
+                    if getattr(obs_next, "frame", None):
+                        _next_grid = np.array(obs_next.frame[0].tolist())
+                        _next_wave = tokenizer.encode_spatial_grid(
+                            _next_grid).squeeze(0).to(DEVICE)
+                    trajectory_bank.record(
+                        state_wave,
+                        action_name=macro_actions[0].name,
+                        meta={"env": env_name, "step": step},
+                        next_wave=_next_wave,
+                    )
+                except Exception as _bank_exc:
+                    print(f"  [trajectory-bank] record failed: {_bank_exc}")
+
             # P0: observe the executed action's external outcome AFTER the
             # environment returns the next frame.  The Beta-Bernoulli
             # posterior uses only whether the returned frame changed; the
@@ -2340,6 +2379,26 @@ def run():
                 print(f"  [scorecard] {scid}")
         except Exception as e:
             print(f"  [scorecard] capture failed: {e}")
+
+    # Phase 8.32: flush the authorized trajectory bank (diagnostic; a flush
+    # failure never invalidates the score evidence above). Must run BEFORE
+    # tele.close() — tele.emit writes to the open JSONL sink.
+    if trajectory_bank is not None:
+        try:
+            bank_receipt = trajectory_bank.flush()
+            print(f"  trajectory bank flushed: {bank_receipt['records']} records "
+                  f"-> {bank_receipt['npz_path']}")
+            tele.emit({"event_type": "TRAJECTORY_BANK_FLUSH",
+                       "records": bank_receipt["records"],
+                       "dataset_digest": bank_receipt["dataset_digest"],
+                       "npz_sha256": bank_receipt["npz_sha256"]})
+        except Exception as _bank_exc:
+            print(f"  [trajectory-bank] flush failed: {_bank_exc}")
+            try:
+                tele.emit({"event_type": "TRAJECTORY_BANK_FLUSH_ERROR",
+                           "error": str(_bank_exc)})
+            except Exception:
+                pass
 
     tele.close()
     if db_logger is not None:
