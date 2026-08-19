@@ -168,17 +168,20 @@ def run_experiment(bank_npz: str, manifest_path: str, device: str, seed: int,
     psi_ho = psi[held_idx];  nxt_ho = nxt[held_idx]
     y_tr = action_idx[train_idx].numpy(); y_ho = action_idx[held_idx].numpy()
 
-    # ---- Egress codebook: train-split prototype next-waves per action ----
+    # ---- Egress codebook: train-split NEXT-wave prototypes per action ----
+    # The snap compares predicted o_{t+1} against prototypes; using o_t
+    # prototypes (psi_tr) misaligns spaces and collapses egress to chance
+    # (acc 0.1667 observed). Codebook must live in next-wave space.
     codebook = np.zeros((int(onehot.shape[1]), D), dtype=np.float32)
     for a in range(int(onehot.shape[1])):
         sel = np.where(y_tr == a)[0]
         if len(sel):
-            codebook[a] = psi_tr[sel].mean(axis=0)
+            codebook[a] = nxt_tr[sel].mean(axis=0)
     cb = F.normalize(torch.from_numpy(codebook), p=2, dim=-1).to(dev)
     # Macro-option wave: deterministic block-group down-projection of the
-    # train-mean wave [8192, 8] -> 2048 groups of 4 blocks -> [2048].
+    # train-mean NEXT wave [8192, 8] -> 2048 groups of 4 blocks -> [2048].
     # No learned params, no held-out leakage (train-split mean only).
-    mean_wave = torch.from_numpy(psi_tr.mean(axis=0)).view(NUM_BLOCKS, BLOCK_DIM).float()
+    mean_wave = torch.from_numpy(nxt_tr.mean(axis=0)).view(NUM_BLOCKS, BLOCK_DIM).float()
     macro = F.normalize(
         mean_wave.view(2048, 4, BLOCK_DIM).mean(dim=(1, 2)), p=2, dim=0
     ).to(dev)
