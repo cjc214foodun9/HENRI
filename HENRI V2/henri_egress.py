@@ -199,7 +199,7 @@ def sgld_adapt_head(
     steps: int = 500,
     t0: float = 1e-6,
     dt: float = 1.0,
-    yield_stress: float = 1e-4,
+    yield_scale: float = 1e-3,
     log_every: int = 100,
     seed: int = 0,
 ) -> dict:
@@ -210,9 +210,16 @@ def sgld_adapt_head(
     Temperature schedule:  T(t) = T0 * (1 + 0.05 t)^-0.55
     Noise:  theta += sqrt(2 T dt) * randn_like(theta)  after each AdamW step
     Bingham yield: skip the step while MEAN per-param grad norm
-                   < yield_stress (mean, not sum — a summed norm over
-                   millions of parameters can never fall below an absolute
-                   threshold and silently disables the yield).
+                   < yield_scale * gnorm_0, where gnorm_0 is the mean
+                   per-param grad norm measured at the FIRST step and
+                   yield_scale = 1e-3 by default. Absolute thresholds are
+                   dimension-blind at D=65,536 (OBSERVED 2026-08-19):
+                   a summed norm over 67M params can never fall below an
+                   absolute threshold (yield never fires), while a mean
+                   norm ~1e-4 sits exactly on any naive absolute value
+                   (yield fires on every step and nothing learns). Only a
+                   threshold relative to the initial gradient scale is
+                   scale-free.
 
     NOISE-SCALE CONTRACT (OBSERVED defect 2026-08-19): with t0=0.1 the
     per-step noise sigma sqrt(2*0.1) = 0.447 dwarfs Linear init scale
@@ -234,9 +241,7 @@ def sgld_adapt_head(
     onehot.scatter_(1, targets.unsqueeze(1), 1.0)
     n_params = sum(p.numel() for p in head.parameters() if p.requires_grad)
 
-    hist = []
-    for t in range(1, steps + 1):
-        temp = t0 * (1.0 + 0.05 * t) ** -0.55
+    def compute_loss():
         logits = head(waves)
         probs = torch.softmax(logits, dim=-1)
         pn = probs / (torch.norm(probs, p=2, dim=-1, keepdim=True) + 1e-9)
@@ -245,12 +250,27 @@ def sgld_adapt_head(
         sagnac_stress = (1.0 - cos_sq).clamp(min=0.0)
         ce = torch.nn.functional.cross_entropy(logits, targets)
         loss = ce + head.sagnac_lambda * sagnac_stress
+        return loss, ce, sagnac_stress
+
+    # Warmup: measure the initial gradient scale (scale-free yield baseline).
+    opt.zero_grad()
+    loss0, _, _ = compute_loss()
+    loss0.backward()
+    gnorm_0 = sum(float(p.grad.norm()) for p in head.parameters()
+                  if p.grad is not None) / max(1, n_params)
+    opt.zero_grad()
+    yield_threshold = yield_scale * max(gnorm_0, 1e-12)
+
+    hist = []
+    for t in range(1, steps + 1):
+        temp = t0 * (1.0 + 0.05 * t) ** -0.55
+        loss, ce, sagnac_stress = compute_loss()
 
         opt.zero_grad()
         loss.backward()
         gnorm_sum = sum(float(p.grad.norm()) for p in head.parameters() if p.grad is not None)
         gnorm = gnorm_sum / max(1, n_params)
-        if gnorm < yield_stress:
+        if gnorm < yield_threshold:
             opt.zero_grad()
             hist.append({"step": t, "loss": float(loss.item()), "gnorm": gnorm, "yielded": True})
             continue
