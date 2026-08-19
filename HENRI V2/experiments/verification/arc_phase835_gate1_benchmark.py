@@ -57,11 +57,17 @@ def _action_wave_for(idx: int, num_blocks: int = NUM_BLOCKS, block_dim: int = BL
     return w.to(device)
 
 
-def split_indices(n: int, frac: float, seed: int):
-    gen = torch.Generator(device="cpu").manual_seed(seed)
-    perm = torch.randperm(n, generator=gen)
-    n_test = max(1, int(round(n * frac)))
-    return perm[n_test:].tolist(), perm[:n_test].tolist()
+def stratified_split(actions: np.ndarray, n_held_per_class: int, seed: int):
+    """Stratified split: exactly n_held_per_class per action class in the
+    held-out partition (HENRI-SPEC-MI-TRAJECTORY-2026 §2.2: N(a_k)=2)."""
+    rng = np.random.RandomState(seed)
+    train, held = [], []
+    for a in np.unique(actions):
+        idx = np.where(actions == a)[0].tolist()
+        rng.shuffle(idx)
+        held.extend(idx[:n_held_per_class])
+        train.extend(idx[n_held_per_class:])
+    return train, held
 
 
 def _holdout_loss(predict, psi_ho, nxt_ho, y_ho, dev):
@@ -76,6 +82,21 @@ def _holdout_loss(predict, psi_ho, nxt_ho, y_ho, dev):
                             F.normalize(y_w.view(-1), p=2, dim=0))
             total += float(1.0 - cos.item())
     return total / len(psi_ho)
+
+
+def _reference_bladed_inorm(confs: np.ndarray, eps: float = 1e-12) -> float:
+    """HENRI-SPEC-MI-TRAJECTORY-2026 §1.1: continuous softmax τ=1.0 logit
+    distributions; sample-wise conditional entropy; ensemble-mean empirical
+    marginal; I_norm = (H(Y) - H(Y|Ψ)) / H(Y), strictly in [0.0, 1.0]."""
+    q = np.clip(confs, eps, 1.0)
+    q /= q.sum(axis=1, keepdims=True)
+    h_cond = float(-np.sum(q * np.log(q), axis=1).mean())
+    pbar = np.clip(q.mean(axis=0), eps, 1.0)
+    pbar /= pbar.sum()
+    h_y = float(-np.sum(pbar * np.log(pbar)))
+    if h_y <= eps:
+        return 0.0
+    return float(np.clip((h_y - h_cond) / h_y, 0.0, 1.0))
 
 
 def _egress_eval(predict, psi_ho, nxt_ho, y_ho, dev, codebook, macro, snap):
@@ -101,25 +122,11 @@ def _egress_eval(predict, psi_ho, nxt_ho, y_ho, dev, codebook, macro, snap):
             idx, conf = snap.snap(pred, macro, top_k=1)
             preds[i] = int(idx.item())
             sims = torch.nn.functional.normalize(pred, p=2, dim=0) @ codebook.T
-            confs[i] = torch.softmax(10.0 * sims, dim=-1).cpu().numpy()
+            confs[i] = torch.softmax(sims / 1.0, dim=-1).cpu().numpy()
     acc = float((preds == np.asarray(y_ho)).mean())
-    # I(Y; Y_hat) via predicted-vs-empirical distributions.
-    p_yhat = confs.mean(axis=0) + 1e-12
-    p_y = np.bincount(np.asarray(y_ho, dtype=np.int64),
-                      minlength=n_actions).astype(np.float64) / n + 1e-12
-    p_y /= p_y.sum()
-    p_yhat /= p_yhat.sum()
-    joint = np.zeros((n_actions, n_actions))
-    for i, yi in enumerate(y_ho):
-        joint[int(yi), preds[i]] += confs[i, preds[i]]
-    joint /= max(joint.sum(), 1e-12)
-    mi = 0.0
-    for i in range(n_actions):
-        for j in range(n_actions):
-            if joint[i, j] > 0:
-                mi += joint[i, j] * math.log(joint[i, j] / (p_y[i] * p_yhat[j] + 1e-12))
-    h_y = -sum(p * math.log(p) for p in p_y if p > 0)
-    i_norm = mi / h_y if h_y > 0 else 0.0
+    # Reference-bladed I_norm on continuous τ=1.0 softmax logits (no top-1
+    # discretization; bounded in [0.0, 1.0]).
+    i_norm = _reference_bladed_inorm(confs)
     return acc, i_norm, float(np.mean(sags))
 
 
@@ -138,9 +145,23 @@ def run_experiment(bank_npz: str, manifest_path: str, device: str, seed: int,
         raise RuntimeError(f"bank wave dim {psi.shape[1]} != {D} (production only)")
     M = psi.shape[0]
     action_idx = torch.from_numpy(onehot).argmax(dim=-1).long()
+    actions_np = action_idx.numpy()
     run_id = str(data["manifest"].get("run_id", "unknown"))
 
-    train_idx, held_idx = split_indices(M, HELDOUT_FRAC, seed)
+    # ---- Bank contract (HENRI-SPEC-MI-TRAJECTORY-2026 §2): >= 50 records,
+    # non-zero support for all 6 actions, >= 10 per class. Fail closed.
+    n_classes = int(onehot.shape[1])
+    counts = np.bincount(actions_np, minlength=n_classes)
+    if M < 50:
+        raise RuntimeError(f"bank contract: {M} < 50 records")
+    if int((counts > 0).sum()) != n_classes:
+        raise RuntimeError(f"bank contract: actions {np.where(counts == 0)[0].tolist()} "
+                           f"have zero support (counts {counts.tolist()})")
+    if int(counts.min()) < 10:
+        raise RuntimeError(f"bank contract: min per-class support "
+                           f"{int(counts.min())} < 10 (counts {counts.tolist()})")
+
+    train_idx, held_idx = stratified_split(actions_np, n_held_per_class=2, seed=seed)
     if limit > 0:
         train_idx = train_idx[:limit]
     psi_tr = psi[train_idx]; nxt_tr = nxt[train_idx]
