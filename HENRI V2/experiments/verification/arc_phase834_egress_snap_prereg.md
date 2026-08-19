@@ -39,3 +39,29 @@ codebook), which is non-vacuous at production D where engrams are near-orthogona
 ## Promotion linkage (PDF step 2)
 
 Only a non-KILL egress verdict permits the FF merge of `feat/phase834-hopfield-lowrank-coupling` into `main@44cb165bc3`; all components remain default-OFF.
+
+## Verdict (sealed 2026-08-19, full CUDA run @ fe583d8)
+
+Full run on the sealed bank (72/18, seed 20260819, D=65,536, CUDA RTX 5090):
+rc=0, log sha `ecdb9124092216a9`, bank npz sha `a5d8f1b3…`.
+
+- A_raw_cosine_precision = 0.2778
+- B_snap_precision = 0.2778 (5/18)
+- B_retrieval_entropy = 0.0293 nats
+- C_coupled_predict_snap_precision = 0.1111 (2/18)
+- codebook_size = 4 engrams
+
+**Verdict: CONDITIONAL** (prec_B and prec_C far below their gates; H_B passed).
+
+Attribution: prec_B is statistically indistinguishable from random chance
+(binomial p=1/6, n=18: mean 3, sd 1.58; 5 hits ≈ 1.3σ). prec_C is BELOW
+chance. The snap is decisively low-entropy but snaps to the wrong symbols —
+consistent with VLA Gate 1 (Arm D acc 0.222) and the calibrator (A 12.06,
+E_cal 24.22): a THIRD independent confirmation that the bank wave
+representation lacks recoverable action-discriminative structure at the
+prototype/egress boundary.
+
+Promotion note: the PDF gates the FF merge on "verification of the egress
+benchmark" — verification did NOT meet its pre-registered thresholds.
+Promotion is therefore HELD pending explicit user decision (literal prereg
+wording permitted a non-KILL merge; PDF intent requires egress ACCEPT).
