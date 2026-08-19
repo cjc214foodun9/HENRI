@@ -153,9 +153,14 @@ def run_experiment(bank_npz: str, manifest_path: str, device: str, seed: int,
         sel = np.where(y_tr == a)[0]
         if len(sel):
             codebook[a] = psi_tr[sel].mean(axis=0)
-    cb = torch.from_numpy(F.normalize(torch.from_numpy(codebook), p=2, dim=-1).numpy())
     cb = F.normalize(torch.from_numpy(codebook), p=2, dim=-1).to(dev)
-    macro = F.normalize(torch.from_numpy(psi_tr.mean(axis=0)), p=2, dim=0).to(dev)
+    # Macro-option wave: deterministic block-group down-projection of the
+    # train-mean wave [8192, 8] -> 2048 groups of 4 blocks -> [2048].
+    # No learned params, no held-out leakage (train-split mean only).
+    mean_wave = torch.from_numpy(psi_tr.mean(axis=0)).view(NUM_BLOCKS, BLOCK_DIM).float()
+    macro = F.normalize(
+        mean_wave.view(2048, 4, BLOCK_DIM).mean(dim=(1, 2)), p=2, dim=0
+    ).to(dev)
     snap = DualScaleAnalogLexicalSnap(dim_micro=D, dim_macro=2048, tau=1.0,
                                       top_k=SNAP_TOPK).to(dev)
     snap.store_engrams(cb)
