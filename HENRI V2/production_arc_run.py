@@ -2380,6 +2380,26 @@ def run():
         except Exception as e:
             print(f"  [scorecard] capture failed: {e}")
 
+    # Phase 8.32: flush the authorized trajectory bank (diagnostic; a flush
+    # failure never invalidates the score evidence above). Must run BEFORE
+    # tele.close() — tele.emit writes to the open JSONL sink.
+    if trajectory_bank is not None:
+        try:
+            bank_receipt = trajectory_bank.flush()
+            print(f"  trajectory bank flushed: {bank_receipt['records']} records "
+                  f"-> {bank_receipt['npz_path']}")
+            tele.emit({"event_type": "TRAJECTORY_BANK_FLUSH",
+                       "records": bank_receipt["records"],
+                       "dataset_digest": bank_receipt["dataset_digest"],
+                       "npz_sha256": bank_receipt["npz_sha256"]})
+        except Exception as _bank_exc:
+            print(f"  [trajectory-bank] flush failed: {_bank_exc}")
+            try:
+                tele.emit({"event_type": "TRAJECTORY_BANK_FLUSH_ERROR",
+                           "error": str(_bank_exc)})
+            except Exception:
+                pass
+
     tele.close()
     if db_logger is not None:
         db_logger.shutdown()
@@ -2410,22 +2430,6 @@ def run():
         with open(log_path.replace(".jsonl", "_scorecards.json"), "w") as fp:
             json.dump(final_scores, fp, indent=1, default=str)
         print(f"  scorecards -> {log_path.replace('.jsonl', '_scorecards.json')}")
-
-    # Phase 8.32: flush the authorized trajectory bank (diagnostic; a flush
-    # failure never invalidates the score evidence above).
-    if trajectory_bank is not None:
-        try:
-            bank_receipt = trajectory_bank.flush()
-            print(f"  trajectory bank flushed: {bank_receipt['records']} records "
-                  f"-> {bank_receipt['npz_path']}")
-            tele.emit({"event_type": "TRAJECTORY_BANK_FLUSH",
-                       "records": bank_receipt["records"],
-                       "dataset_digest": bank_receipt["dataset_digest"],
-                       "npz_sha256": bank_receipt["npz_sha256"]})
-        except Exception as _bank_exc:
-            print(f"  [trajectory-bank] flush failed: {_bank_exc}")
-            tele.emit({"event_type": "TRAJECTORY_BANK_FLUSH_ERROR",
-                       "error": str(_bank_exc)})
 
     # D40 (HENRI-SPEC-2026-08-PHASE8.27-PROMOTION-FINAL): emit the
     # compact verdict JSON consumed by the promotion queue / watchdog
