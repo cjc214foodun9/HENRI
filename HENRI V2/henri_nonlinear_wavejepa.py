@@ -118,7 +118,9 @@ class NonLinearWaveJEPA(nn.Module):
         return sims.argmax(dim=-1)
 
     def compress_wave(self, psi_full: torch.Tensor) -> torch.Tensor:
-        """(B, D) real or (B, D, 2) -> (B, L, 2) unit-modulus phasors."""
+        """(D,) real, (B, D) real or (B, D, 2) -> (B, L, 2) unit-modulus phasors."""
+        if psi_full.dim() == 1:
+            psi_full = psi_full.unsqueeze(0)  # [D] -> [1, D]
         if psi_full.dim() == 2:
             real = psi_full
             imag = torch.zeros_like(real)

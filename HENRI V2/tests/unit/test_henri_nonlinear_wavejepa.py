@@ -113,6 +113,17 @@ def test_forward_loss_metrics():
     assert out["jepa_loss"] >= 0.0
 
 
+def test_predict_full_wave_single_wave():
+    """1D per-record input (kill-runner held-out path) must work."""
+    model = make_model()
+    psi = torch.randn(D)  # [D], no batch dim
+    opt = torch.tensor([2])
+    wave = model.predict_full_wave(psi, opt, num_blocks=64, block_dim=8)
+    assert wave.shape == (1, 64, 8)
+    norms = torch.norm(wave, p=2, dim=-1)
+    assert torch.allclose(norms, torch.ones_like(norms), atol=1e-5)
+
+
 def test_sagnac_identical_waves_zero():
     model = make_model()
     psi = torch.randn(2, L, 2)
