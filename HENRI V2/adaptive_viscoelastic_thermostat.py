@@ -187,9 +187,18 @@ class AdaptiveViscoelasticThermostat(nn.Module):
         sagnac_delta: float,
         temperature: float = 1e-4,
         base_noise: Optional[torch.Tensor] = None,
+        null_space_basis: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, Dict[str, Any]]:
         """
         Executes adaptive Langevin SDE step with anisotropic damping and manifold projection.
+
+        Phase 8.35 Directive 3 (Kuramoto/Ephaptic PDF): when
+        null_space_basis V [d, r] (Stiefel) is provided, thermal noise is
+        projected onto the null space P_null = I - V V^dagger via the
+        FACTORED form noise - V(V^T noise) (never materializes [d, d] —
+        ~34 GiB at D=65,536). Thermal shocks then alter only
+        non-synchronized phase dimensions. Default (None) is byte-identical
+        to the legacy path.
         """
         friction = self.compute_anisotropic_friction(lambda_active, sagnac_delta)
         
@@ -212,7 +221,24 @@ class AdaptiveViscoelasticThermostat(nn.Module):
                 noise = base_noise * math.sqrt(2.0 * temperature * effective_lr)
             else:
                 noise = torch.randn_like(weight_matrix) * math.sqrt(2.0 * temperature * effective_lr)
-        
+
+        # Phase 8.35 Directive 3: P_null = I - V V^dagger thermostat coupling.
+        # Project thermal noise onto the null space of the synchronized
+        # subspace basis V [d, r] via the FACTORED form (no [d, d] alloc):
+        #   P_null n = n - V (V^T n)   ~ 2*d*r flops, 34 GiB saved at d=65,536.
+        # Thermal shocks then alter only non-synchronized phase dimensions.
+        if null_space_basis is not None:
+            V = null_space_basis.to(weight_matrix.device, weight_matrix.dtype)
+            if V.dim() != 2:
+                raise ValueError(
+                    f"null_space_basis must be [d, r], got shape {tuple(V.shape)}")
+            n_flat = noise.reshape(-1)
+            if n_flat.shape[0] != V.shape[0]:
+                raise ValueError(
+                    f"noise numel {n_flat.shape[0]} != basis rows {V.shape[0]}")
+            n_proj = n_flat - V @ (V.T @ n_flat)
+            noise = n_proj.reshape(noise.shape)
+
         # SDE update: dW = - (eta / gamma) * grad + noise
         updated_weight = weight_matrix - effective_lr * grad_loss + noise
         

@@ -124,7 +124,14 @@ class ContinuousHopfieldCleanup(nn.Module):
             )
         return clean, idx, weights.gather(-1, idx.unsqueeze(-1)).squeeze(-1)
 
-    def lexical_snap(self, wave: torch.Tensor, top_k: int = 1):
+    def lexical_snap(
+        self,
+        wave: torch.Tensor,
+        top_k: int = 1,
+        kuramoto_early_stop: bool = False,
+        kuramoto_threshold: float = 0.85,
+        max_relax_iters: int = 8,
+    ):
         """
         Phase 8.34 Evolution I: multi-vector zero-entropy Lexical Snap.
 
@@ -134,6 +141,13 @@ class ContinuousHopfieldCleanup(nn.Module):
         codebook-level egress primitive: continuous waves -> discrete
         symbolic indices, no BPTT.
 
+        Phase 8.35 Directive 1: kuramoto_early_stop=True runs iterative
+        Hopfield relaxation (retrieve -> recompute) and HALTS as soon as the
+        Kuramoto order parameter R >= kuramoto_threshold (default 0.85),
+        then snaps to the pure discrete token — exact early-stopping during
+        test-time relaxation. Default (False) is the legacy single-pass
+        path, byte-identical.
+
         Returns (indices, confidences): indices [..., top_k] (argmax order),
         confidences [..., top_k] (raw engram similarities, not softmax).
         """
@@ -142,7 +156,29 @@ class ContinuousHopfieldCleanup(nn.Module):
             self.engrams = self.engrams.to(wave.device)
         r = self._flatten(wave)
         r = F.normalize(r, p=2, dim=-1)
-        sim = r @ self.engrams.T  # [..., M]
+        if not kuramoto_early_stop:
+            sim = r @ self.engrams.T  # [..., M]
+            if top_k == 1:
+                idx = sim.argmax(dim=-1)
+                conf = sim.gather(-1, idx.unsqueeze(-1)).squeeze(-1)
+                return idx, conf
+            idx = sim.topk(top_k, dim=-1).indices
+            conf = sim.gather(-1, idx)
+            return idx, conf
+        # Iterative Hopfield relaxation with Kuramoto early stop.
+        r_cur = r
+        n_iters = 1
+        for _ in range(max_relax_iters):
+            rk = self.kuramoto_order_parameter(r_cur)
+            if float(torch.as_tensor(rk).abs().max().item()) >= kuramoto_threshold:
+                break
+            if n_iters >= max_relax_iters:
+                break
+            clean = self.retrieve(r_cur.view(wave.shape) if r_cur.numel() == wave.numel()
+                                  else r_cur)
+            r_cur = F.normalize(self._flatten(clean).reshape(r.shape), p=2, dim=-1)
+            n_iters += 1
+        sim = r_cur @ self.engrams.T
         if top_k == 1:
             idx = sim.argmax(dim=-1)
             conf = sim.gather(-1, idx.unsqueeze(-1)).squeeze(-1)
@@ -163,6 +199,38 @@ class ContinuousHopfieldCleanup(nn.Module):
         num = torch.real(torch.vdot(a.flatten(), b.flatten()))
         den = torch.norm(a) * torch.norm(b) + 1e-12
         return (num / den).item()
+
+    @staticmethod
+    def kuramoto_order_parameter(wave: torch.Tensor) -> torch.Tensor:
+        """R = (1/D) |sum_d exp(j theta_d)| — Kuramoto phase synchronization.
+
+        Phase 8.35 Directive 1 (Kuramoto/Ephaptic PDF): integrate the
+        Kuramoto order parameter as a dynamic termination threshold during
+        lexical_snap relaxation. For complex waves theta_d = angle(w_d);
+        for real waves theta_d is the instantaneous phase of the analytic
+        signal (Hilbert transform via FFT). R == 1.0 for fully phase-locked
+        waves; R ~ 0 for random phase. Returns per-sample R [B] or scalar.
+        """
+        w = wave
+        was_complex = w.is_complex()
+        flat = w.reshape(-1) if w.dim() == 1 else w.reshape(w.shape[0], -1)
+        if not was_complex:
+            flat = flat.to(torch.float32)
+            # Analytic signal: zero negative frequencies, double positive.
+            X = torch.fft.fft(flat, dim=-1)
+            n = X.shape[-1]
+            mask = torch.zeros(n, device=X.device, dtype=X.dtype)
+            mask[0] = 1.0
+            if n % 2 == 0:
+                mask[n // 2] = 1.0
+            mask[1:(n + 1) // 2] = 2.0
+            analytic = torch.fft.ifft(X * mask, dim=-1)
+            theta = torch.angle(analytic)
+        else:
+            theta = torch.angle(flat)
+        phasor = torch.exp(1j * theta)
+        r = torch.abs(phasor.mean(dim=-1))
+        return r.squeeze() if r.numel() == 1 else r
 
 
 class DualScaleAnalogLexicalSnap(nn.Module):
@@ -251,11 +319,25 @@ class DualScaleAnalogLexicalSnap(nn.Module):
             g = torch.view_as_complex(g.reshape(-1, 2).contiguous())
         return g.reshape(wave.shape)
 
-    def snap(self, wave: torch.Tensor, macro_wave: torch.Tensor, top_k: int = 1):
+    def snap(
+        self,
+        wave: torch.Tensor,
+        macro_wave: torch.Tensor,
+        top_k: int = 1,
+        kuramoto_early_stop: bool = False,
+        kuramoto_threshold: float = 0.85,
+        max_relax_iters: int = 8,
+    ):
         """Macro-gated lexical snap. Returns (indices, confidences) like
-        ContinuousHopfieldCleanup.lexical_snap."""
+        ContinuousHopfieldCleanup.lexical_snap. Phase 8.35 D1: passes the
+        Kuramoto early-stop through to the cleanup layer."""
         assert self.cleanup.engrams.numel() > 0, "No engrams stored; call store_engrams first."
-        return self.cleanup.lexical_snap(self.gated_wave(wave, macro_wave), top_k=top_k)
+        return self.cleanup.lexical_snap(
+            self.gated_wave(wave, macro_wave), top_k=top_k,
+            kuramoto_early_stop=kuramoto_early_stop,
+            kuramoto_threshold=kuramoto_threshold,
+            max_relax_iters=max_relax_iters,
+        )
 
 
 class HopfieldActionDecoder(nn.Module):

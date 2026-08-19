@@ -137,7 +137,7 @@ class CoupledRecursiveDualEDMD(nn.Module):
     def __init__(
         self,
         d_model: int = 65536,
-        r_rank: int = 128,
+        r_rank: int = 256,
         lambda_forget: float = 0.98,
         regularization: float = 1e-4,
         num_blocks: int = 8192,
@@ -327,7 +327,7 @@ class DirectionalTravelingWaveCoupler(CoupledRecursiveDualEDMD):
     def __init__(
         self,
         d_model: int = 65536,
-        r_rank: int = 128,
+        r_rank: int = 256,
         lambda_forget: float = 0.98,
         regularization: float = 1e-4,
         num_blocks: int = 8192,
