@@ -182,8 +182,8 @@ def run_experiment(bank_npz: str, manifest_path: str, device: str,
             num_blocks=NUM_BLOCKS, block_dim=BLOCK_DIM).view(n_held, D)
         arm_e = _eval_arm(head_d(pred_full), y_ho)
         arm_e["pred_cos_goal"] = float(
-            Fn.normalize(pred_full, p=2, dim=-1) *
-            Fn.normalize(nxt_ho, p=2, dim=-1)).sum(dim=-1).mean().item()
+            (Fn.normalize(pred_full, p=2, dim=-1) *
+             Fn.normalize(nxt_ho, p=2, dim=-1)).sum(dim=-1).mean().item())
 
     # ---- VLA Gate 1 verdict on Arm D (the egress gate) ----
     uniform_half = 0.5 * math.log(VOCAB)
