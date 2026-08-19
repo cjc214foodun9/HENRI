@@ -122,6 +122,33 @@ class ContinuousHopfieldCleanup(nn.Module):
             )
         return clean, idx, weights.gather(-1, idx.unsqueeze(-1)).squeeze(-1)
 
+    def lexical_snap(self, wave: torch.Tensor, top_k: int = 1):
+        """
+        Phase 8.34 Evolution I: multi-vector zero-entropy Lexical Snap.
+
+        Batched hard retrieval over the engram codebook: each input wave
+        [..., D] collapses to the nearest discrete engram index. Unlike
+        hard_retrieve (single wave, returns the cleaned wave), this is the
+        codebook-level egress primitive: continuous waves -> discrete
+        symbolic indices, no BPTT.
+
+        Returns (indices, confidences): indices [..., top_k] (argmax order),
+        confidences [..., top_k] (raw engram similarities, not softmax).
+        """
+        assert self.engrams.numel() > 0, "No engrams stored; call store_engrams first."
+        if self.engrams.device != wave.device:
+            self.engrams = self.engrams.to(wave.device)
+        r = self._flatten(wave)
+        r = F.normalize(r, p=2, dim=-1)
+        sim = r @ self.engrams.T  # [..., M]
+        if top_k == 1:
+            idx = sim.argmax(dim=-1)
+            conf = sim.gather(-1, idx.unsqueeze(-1)).squeeze(-1)
+            return idx, conf
+        idx = sim.topk(top_k, dim=-1).indices
+        conf = sim.gather(-1, idx)
+        return idx, conf
+
     def _flatten(self, wave: torch.Tensor) -> torch.Tensor:
         """Complex [.., D/2] -> real [.., D]; real passes through."""
         if wave.is_complex():
