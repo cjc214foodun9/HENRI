@@ -198,6 +198,31 @@ class TestDualScaleSnap:
         assert m_hot.numel() == D
         assert abs(m_hot.sum().item() - 1.0) < 1e-5
 
+    def test_topk_gate_is_sparse(self):
+        snap = DualScaleAnalogLexicalSnap(dim_micro=D, dim_macro=8, tau=1.0,
+                                          seed=835, top_k=8)
+        g = torch.Generator().manual_seed(835)
+        engrams = F.normalize(torch.randn(6, D, generator=g), p=2, dim=-1)
+        snap.store_engrams(engrams)
+        macro = _random_wave(8, seed=9)
+        mask = snap.gate_mask(macro)
+        nnz = int((mask > 1e-9).sum().item())
+        assert nnz <= 8, f"top-k gate must be sparse, got {nnz} nonzero"
+        assert abs(mask.sum().item() - 1.0) < 1e-5
+
+    def test_topk_gate_changes_retrieval(self):
+        snap = DualScaleAnalogLexicalSnap(dim_micro=D, dim_macro=8, tau=1.0,
+                                          seed=835, top_k=8)
+        g = torch.Generator().manual_seed(835)
+        engrams = F.normalize(torch.randn(6, D, generator=g), p=2, dim=-1)
+        snap.store_engrams(engrams)
+        wave = _random_wave(D, seed=6)
+        macro = _random_wave(8, seed=7)
+        idx_zero, _ = snap.snap(wave, torch.zeros(8))
+        idx_gated, _ = snap.snap(wave, macro)
+        gw = snap.gated_wave(wave, macro)
+        assert torch.max(torch.abs(gw - wave)) > 1e-6, "top-k gate must change the wave"
+
 
 # --------------------------------------------------------------------------
 # T3: directional Sagnac homodyne

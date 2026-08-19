@@ -17,6 +17,8 @@ References: Ramsauer et al. 2020; notebook source synthesis (nlm_hopfield.md).
 """
 
 import math
+from typing import Optional
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -193,11 +195,13 @@ class DualScaleAnalogLexicalSnap(nn.Module):
         tau: float = 1.0,
         beta: float = None,
         seed: int = 835,
+        top_k: Optional[int] = None,
     ):
         super().__init__()
         self.dim_micro = dim_micro
         self.dim_macro = dim_macro
         self.tau = float(tau)
+        self.top_k = top_k
         self.cleanup = ContinuousHopfieldCleanup(dim=dim_micro, beta=beta)
         g = torch.Generator().manual_seed(seed)
         w_init = torch.randn(dim_macro, dim_micro, generator=g) / math.sqrt(dim_macro)
@@ -208,13 +212,32 @@ class DualScaleAnalogLexicalSnap(nn.Module):
         return self.cleanup.store_engrams(waves)
 
     def gate_mask(self, macro_wave: torch.Tensor) -> torch.Tensor:
-        """Softmax(Re(macro^† W_gate) / tau) over micro dims. [micro]"""
+        """Softmax(Re(macro^† W_gate) / tau) over micro dims. [micro]
+
+        top_k=None: pure document formula (flat at D=65,536, tau=1).
+        top_k=k:    sparse ensemble gate — softmax over the top-k logits
+        only, zeros elsewhere, renormalized. This is the Miller et al.
+        "macro wave gates which local ensembles synchronize" mechanism;
+        a flat softmax over 65,536 dims cannot restrict any subspace.
+        macro_wave=0 (no top-down control) always returns the uniform mask
+        (byte-identical to plain lexical_snap).
+        """
         m = macro_wave.view(-1)
         if m.is_complex():
             m = torch.view_as_real(m).reshape(-1).to(torch.float32)
         m = m / (torch.norm(m) + 1e-12)
         logits = m @ self.W_gate  # [micro]
-        return torch.softmax(logits / self.tau, dim=-1)
+        if torch.norm(m) < 1e-9:
+            return torch.full_like(logits, 1.0 / self.dim_micro)
+        if self.top_k is None:
+            return torch.softmax(logits / self.tau, dim=-1)
+        k = min(int(self.top_k), self.dim_micro)
+        vals, _ = torch.topk(logits, k)
+        thresh = vals[-1]
+        keep = logits >= thresh
+        sel = torch.where(keep, logits, torch.full_like(logits, -1e30))
+        soft = torch.softmax(sel / self.tau, dim=-1)
+        return soft
 
     def gated_wave(self, wave: torch.Tensor, macro_wave: torch.Tensor) -> torch.Tensor:
         """Psi_micro ⊙ mask, renormalized (complex/real preserved family)."""
