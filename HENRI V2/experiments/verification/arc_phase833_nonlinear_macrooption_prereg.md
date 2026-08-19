@@ -80,3 +80,43 @@ task-relevant structure where a linear lift can read it.
 (target compressed too — isolates lift vs transition, ~1 min work);
 (2) representation/egress work (carrier dominance, K1 functor lessons);
 (3) leave sealed as evidence, planner seam untouched.
+
+## VLA Gate 1 egress verdict (OBSERVED, CUDA @ 309ae63, 2026-08-19)
+
+5-arm egress experiment `arc_phase833_egress_sgld_experiment.py`
+(A linear-obs / B SGLD-obs / C linear-goal / D SGLD-goal / E closed-loop
+JEPA→head), production D=65,536, 500 SGLD steps, same bank (90 records,
+72/18, seed 20260819). Clean-run log sha `4a23ae7999…` (crash run @
+4b68735 sha `24bdbf06…`, Arm E float() bug, rc=1, no verdict — fixed at
+309ae63, re-run rc=0).
+
+| arm | acc | top1_rank | I_norm | entropy (nats) |
+|---|---|---|---|---|
+| A linear obs (psi_t) | 0.111 | 3.78 | 0.301 | — |
+| B SGLD obs (psi_t) | 0.111 | 3.61 | 0.298 | 0.192 |
+| C linear goal (next_wave) | 0.167 | 3.06 | 0.167 | — |
+| **D SGLD goal (next_wave)** | **0.222** | **3.06** | **0.066** | **0.169** |
+| E closed-loop (JEPA pred) | 0.056 | 2.72 | 0.228 | pred_cos_goal 0.093 |
+
+**VLA Gate 1 verdict: FAIL** (Arm D: I_norm 0.066 < 0.85, acc 0.222 <
+0.80, entropy 0.169 < 0.896). Gate: PASS requires I_norm ≥ 0.85 AND
+acc ≥ 0.80 AND entropy < 0.5·ln(6).
+
+**Interpretation (OBSERVED, per pre-registered falsification):** SGLD
+egress adaptation does NOT restore I(Ψ_goal; Y) under goal-wave
+conditioning. Training converges (Arm D train_final_loss 0.0981, Sagnac
+0.0556, yield never fired) yet held-out discrimination is at chance —
+including Arm C (linear on goal wave, 0.167) and Arm E (predicted wave
+cos 0.093 to target). Goal-wave linearity is ABSENT in the current
+representation.
+
+**Governance outcome (per roadmap):** falsification is evidence-backed.
+Egress head machinery (Option 2 SGLD path) is not the bottleneck fix.
+Next iteration targets REPRESENTATION STRUCTURE (Evolution I & II:
+Hopfield Lexical Snap + Low-Rank r=128 Field Coupling), not head
+machinery. No VLA Gate 1 PASS, no benchmark scores, no planner wiring
+claimed.
+
+**Fixed defects (sealed):** Arm E `pred_cos_goal` parenthesization bug
+(multi-element tensor → ValueError on float(), verdict never emitted;
+committed as 309ae63).
