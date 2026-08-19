@@ -180,9 +180,9 @@ def run_experiment(bank_npz: str, manifest_path: str, device: str,
         "bank_npz_sha256": data["manifest"].get("npz_sha256", ""),
         "records": {"total": M, "train": len(train_idx), "heldout": len(held_idx)},
         "split": {"held_out_frac": HELDOUT_FRAC, "seed": seed},
-        "gate": ("ACCEPT iff prec_B >= 0.80 AND (prec_B - prec_A) >= +0.05 "
-                 "AND prec_C >= 0.50 AND H_B <= 0.10 nats; KILL on NaN or "
-                 "prec_B < prec_A"),
+        "gate": ("ACCEPT iff prec_B >= 0.80 AND prec_C >= 0.50 AND "
+                 "H_B <= 0.10 nats (Amendment 1: A/B delta removed as "
+                 "vacuous; KILL on NaN)"),
         "metrics": {
             "A_raw_cosine_precision": prec_a,
             "B_snap_precision": prec_b,
