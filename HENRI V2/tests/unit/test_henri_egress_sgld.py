@@ -65,7 +65,7 @@ def test_sgld_reduces_loss_on_separable_data():
         before = torch.nn.functional.cross_entropy(head(waves), targets).item()
 
     res = sgld_adapt_head(head, waves, targets, lr=5e-3, steps=200,
-                          yield_stress=1e-6, log_every=200, seed=3)
+                          log_every=200, seed=3)
     with torch.no_grad():
         after = torch.nn.functional.cross_entropy(head(waves), targets).item()
         acc = (head(waves).argmax(dim=-1) == targets).float().mean().item()
