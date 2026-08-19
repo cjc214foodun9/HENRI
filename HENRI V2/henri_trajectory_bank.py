@@ -214,31 +214,34 @@ class TrajectoryBank:
         if not os.path.isfile(npz_path):
             raise TrajectoryBankError(f"npz missing: {npz_path}")
         z = np.load(npz_path, allow_pickle=False)
-        psi = z["psi"].astype(np.float32)
-        onehot = z["actions_onehot"].astype(np.float32)
-        bank_vocab = [str(n) for n in z["action_names"].tolist()]
-        nxt = z["next_wave"]
-        if nxt.ndim != 2:
-            raise TrajectoryBankError("next_wave must be [M, D] or empty [0, D]")
-        if nxt.shape[0] == 0:
-            nxt = None
-        else:
-            nxt = nxt.astype(np.float32)
+        try:
+            psi = z["psi"].astype(np.float32)
+            onehot = z["actions_onehot"].astype(np.float32)
+            bank_vocab = [str(n) for n in z["action_names"].tolist()]
+            nxt = z["next_wave"]
+            if nxt.ndim != 2:
+                raise TrajectoryBankError("next_wave must be [M, D] or empty [0, D]")
+            if nxt.shape[0] == 0:
+                nxt = None
+            else:
+                nxt = nxt.astype(np.float32)
 
-        manifest: Dict[str, Any] = {}
-        if manifest_path and os.path.isfile(manifest_path):
-            with open(manifest_path, "r", encoding="utf-8") as f:
-                manifest = json.load(f)
-            if verify_digest and manifest.get("dataset_digest"):
-                digest_bytes = psi.astype(np.float16).tobytes() + onehot.astype(np.uint8).tobytes()
-                if nxt is not None:
-                    digest_bytes += nxt.astype(np.float16).tobytes()
-                if _sha256_bytes(digest_bytes) != manifest["dataset_digest"]:
-                    raise TrajectoryBankError("dataset digest mismatch")
-        return {
-            "psi": psi,            # [M, D] float32
-            "next_wave": nxt,      # [M, D] float32 | None
-            "actions_onehot": onehot,  # [M, A] float32
-            "action_vocab": bank_vocab,
-            "manifest": manifest,
-        }
+            manifest: Dict[str, Any] = {}
+            if manifest_path and os.path.isfile(manifest_path):
+                with open(manifest_path, "r", encoding="utf-8") as f:
+                    manifest = json.load(f)
+                if verify_digest and manifest.get("dataset_digest"):
+                    digest_bytes = psi.astype(np.float16).tobytes() + onehot.astype(np.uint8).tobytes()
+                    if nxt is not None:
+                        digest_bytes += nxt.astype(np.float16).tobytes()
+                    if _sha256_bytes(digest_bytes) != manifest["dataset_digest"]:
+                        raise TrajectoryBankError("dataset digest mismatch")
+            return {
+                "psi": psi,            # [M, D] float32
+                "next_wave": nxt,      # [M, D] float32 | None
+                "actions_onehot": onehot,  # [M, A] float32
+                "action_vocab": bank_vocab,
+                "manifest": manifest,
+            }
+        finally:
+            z.close()  # release the npz memmap on ALL paths (Windows file-lock)
