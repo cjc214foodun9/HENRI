@@ -51,9 +51,32 @@ evaluate on the SAME 18 held-out waves.
   18 held-out records (split mirrors the calibrator: frac 0.2, seed
   20260819). JEPA train metric = latent JEPA loss.
 
-## Scope
-1. `HENRI V2/henri_nonlinear_wavejepa.py` — module (this step).
-2. `wave_jepa.py` — `use_nonlinear` flag (default False), dispatch.
-3. `efe_planner.py` — bounded seam (transition_override=None default) after
-   call-site audit; NOT part of this prereg's gate.
-4. Tests + local suite + remote CUDA @ exact tip.
+## Verdict (OBSERVED, CUDA @ f3a9299, 2026-08-19)
+Log sha 316aaf9a, bank sha a5d8f1b3…, 90 records (72/18), 400 epochs, 6.4 s.
+
+| metric | value | gate |
+|---|---|---|
+| edmd_holdout_loss | 0.9926 | baseline (~random on S^D-1) |
+| jepa_holdout_loss | 0.9085 | — |
+| delta_holdout | **-0.0841** | <= -0.05 ✓ |
+| jepa_train_jepa_loss | 0.0158 | < 0.5 ✓ (converged) |
+| jepa_sagnac_holdout | **0.9915** | < 0.5 ✗ |
+
+**CONDITIONAL — not promoted, not killed.** The non-linear macro-option
+transition core is REAL: it converges (train 0.0158) and generalizes better
+than the linear R-EDMD baseline (Δ = -0.0841). The ambient held-out gate
+FAILS: predicted full waves are still ~orthogonal to targets (cos ≈ 0.09,
+sagnac 0.99). Per prereg, the module stays default-OFF and does NOT enter
+the planner seam.
+
+**Attribution (INFERRED):** the bottleneck is the latent→ambient LIFT, not
+the transition. Train-in-latent loss 0.0158 proves the transition learns;
+ambient orthogonality mirrors the 8.32 calibrated-head result (MSE 24.22):
+wave→meaningful-content projection fails at the egress boundary. Both
+failures point at the SAME gap: the wave representation does not place
+task-relevant structure where a linear lift can read it.
+
+**Next options:** (1) latent-space held-out evaluation on the same bank
+(target compressed too — isolates lift vs transition, ~1 min work);
+(2) representation/egress work (carrier dominance, K1 functor lessons);
+(3) leave sealed as evidence, planner seam untouched.
