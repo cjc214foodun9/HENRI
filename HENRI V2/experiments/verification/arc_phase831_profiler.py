@@ -29,7 +29,8 @@ def main() -> int:
     n = args.pairs
 
     cal = AlgebraicActionHeadCalibrator(d_model=args.d, r_rank=args.r, seed=0)
-    cal = cal.to(dev)
+    # Calibrator is a plain deterministic class (not nn.Module): no .to();
+    # all methods follow the input tensor device.
 
     def _engrams(count: int, seed: int) -> torch.Tensor:
         gg = torch.Generator(device="cpu").manual_seed(seed)
