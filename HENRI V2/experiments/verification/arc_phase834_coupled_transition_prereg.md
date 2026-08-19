@@ -47,3 +47,39 @@ goal-wave linearity absent). Main ancestry: `main@44cb165bc3`.
 - No BPTT: all updates are online closed-form (RLS), matching 8.31/8.32/8.33.
 - D=65,536 GPU-only for the production run; unit tests at reduced dims.
 - Zero-pretraining invariant: fit only on the authorized bank.
+
+## Verdict (OBSERVED, CUDA @ cfb63a9, 2026-08-19)
+
+Benchmark `arc_phase834_coupled_transition_benchmark.py`, bank
+a5d8f1b3… (90 records, 72/18, seed 20260819). Log sha 45f5d14f…, rc=0,
+0.9 s (closed-form online updates, no BPTT).
+
+| metric | value | gate |
+|---|---|---|
+| A_linear_r16_holdout | 0.9926 | sealed baseline |
+| **B_coupled_r128_holdout** | **0.3153** | <= 0.90 ✓ |
+| C_control_r128_holdout | 0.3234 | — |
+| **delta_BA** | **-0.6773** | <= -0.05 ✓ |
+| B_train_final_mse | 6.2e-06 | converged |
+| **jacobian_field_delta** | **1.64e-03** | > 1e-6 ✓ |
+
+**ACCEPT.** The global low-rank field channel (Evolution II) cuts held-out
+next-wave prediction loss from 0.9926 (sealed r=16) to 0.3153 at r=128,
+Δ = -0.6773, with field-attributable cross-block Jacobian 1.64e-3 > 1e-6
+proving the coupling channel is engaged (not a subspace artifact).
+
+**Attribution care (DERIVED):** the C control (same machinery, field OFF)
+scores 0.3234 — the majority of the gain vs A comes from the higher-rank
+subspace + per-block residual; the field channel adds a further
+-0.008 absolute (0.3234 → 0.3153) with verified engagement. The
+pre-registered gate (scored on B vs A) passes cleanly; the field
+increment over C is modest but real and mechanism-verified.
+
+**Evolution I (lexical_snap) status:** implemented + 6/6 unit tests at
+reduced dims (single/batch/top-k/fail-closed); NOT yet bank-benchmarked —
+that is the next phase (egress-side benchmark on the same bank).
+
+**Image-Δ note:** the directive attachment's exact target Δ was
+unrecoverable (OCR no-legible; vision API rejected image blocks) —
+recorded as BLOCKED_IMAGE_DELTA; gate operationalized from the sealed
+8.33 rule (<= 0.90, Δ <= -0.05). Not silently assumed.
