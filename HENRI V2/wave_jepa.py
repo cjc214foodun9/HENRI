@@ -16,6 +16,7 @@ from typing import Dict, Tuple, Optional
 
 from henri_vision_encoder import HENRIVisionEncoder
 from recursive_dual_edmd import RecursiveDualEDMD
+from henri_nonlinear_wavejepa import NonLinearWaveJEPA
 
 
 class WaveJEPA(nn.Module):
@@ -24,18 +25,30 @@ class WaveJEPA(nn.Module):
     Predicts future environment states strictly in d=65,536 latent phase wave space without pixel/token decoders.
     """
 
-    def __init__(self, d_model: int = 65536, num_blocks: int = 8192, r_rank: int = 16, device: Optional[str] = None):
+    def __init__(self, d_model: int = 65536, num_blocks: int = 8192, r_rank: int = 16,
+                 device: Optional[str] = None, use_nonlinear: bool = False):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
         self.r_rank = r_rank
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.use_nonlinear = use_nonlinear
 
         # 1. Context & Target Ingress Encoder (HENRIVisionEncoder)
         self.encoder = HENRIVisionEncoder(d_model=d_model, k_blocks=num_blocks, device=self.device)
 
         # 2. Action-Conditioned Latent Predictor (R-EDMD Koopman Operator p_psi)
         self.predictor = RecursiveDualEDMD(d_model=d_model, r_rank=r_rank, lambda_forget=0.98)
+
+        # 2b. Phase 8.33 non-linear macro-option predictor (default-OFF).
+        # Only constructed when explicitly enabled; the default path above is
+        # byte-identical to the pre-833 construction.
+        if use_nonlinear:
+            self.nonlinear_jepa = NonLinearWaveJEPA(
+                full_dim=d_model, compressed_dim=2048,
+                num_options=32, opt_dim=512, sagnac_lambda=0.15,
+                device=self.device,
+            )
 
     def encode_context(self, grid_state: torch.Tensor) -> torch.Tensor:
         """Context Encoder f_theta: maps input spatial observation x_t to Psi_t in S^{D-1}."""
