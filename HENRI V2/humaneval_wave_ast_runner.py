@@ -72,7 +72,8 @@ def parse_signature(prompt: str) -> tuple[str | None, list[str]]:
 
 def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                   device: str = "cuda", smoke_dim: int | None = None,
-                  output_dir: str | None = None) -> dict[str, Any]:
+                  output_dir: str | None = None,
+                  reward_rank: bool = False) -> dict[str, Any]:
     started = time.perf_counter()
     d_model = smoke_dim or 65536
     device = device if (device == "cuda" and torch.cuda.is_available()) else "cpu"
@@ -120,6 +121,13 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
     expressible = 0
     total_candidates = 0
     latencies: list[float] = []
+    # Test-time learned positive-exemplar prior (reward-shaped ranking):
+    # verified solutions seed (prompt_wave, transformation-relative solution
+    # wave) exemplars; subsequent candidate order is re-ranked by similarity
+    # to the nearest exemplar direction. Default-OFF; seeded only from
+    # favorable (sandbox-verified) outcomes.
+    exemplars: list[tuple[torch.Tensor, torch.Tensor]] = []
+    items_reordered = 0
     commit = None
     try:
         import subprocess
@@ -153,6 +161,31 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
             continue
         expressible += 1
 
+        # Reward-shaped re-ranking (8.39, default-OFF): reorder the grammar
+        # candidates by transformation-relative similarity to the nearest
+        # verified-exemplar direction. The candidate SET is unchanged; only
+        # attempt order moves. No pretraining, no dataset leakage: exemplars
+        # are seeded exclusively from sandbox-verified favorable outcomes in
+        # this same run.
+        prev_first = candidates[0][0]
+        if reward_rank and exemplars:
+            scored_ordered = []
+            for cand_idx, (src, meta) in enumerate(candidates):
+                v = decoder._wave(src)
+                v_rel = v - prompt_wave * torch.dot(v, prompt_wave).clamp(min=0.0)
+                v_rel = torch.nn.functional.normalize(v_rel, p=2, dim=0)
+                best = 0.0
+                for _, ex_dir in exemplars:
+                    d = float(torch.dot(v_rel, ex_dir).item())
+                    if d > best:
+                        best = d
+                scored_ordered.append((cand_idx, best, src, meta))
+            candidates = [
+                (src, meta) for _, _, src, meta in
+                sorted(scored_ordered, key=lambda t: (-t[1], t[0]))]
+            if candidates[0][0] != prev_first:
+                items_reordered += 1
+
         passed = False
         outcome = None
         for src, meta in candidates[:attempts]:
@@ -172,6 +205,12 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                 passed = True
                 outcome = {"attempted": True, "pass": True,
                            "body": body.strip()[:120]}
+                if reward_rank:
+                    # Seed the positive-exemplar prior (bounded; recent
+                    # favorable outcomes dominate).
+                    exemplars.append((prompt_wave.clone(), decoder._wave(src)))
+                    if len(exemplars) > 8:
+                        exemplars.pop(0)
                 break
             outcome = {"attempted": True, "pass": False,
                        "trace": res.stderr[:200]}
@@ -201,6 +240,8 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         "not_expressible": not_expressible,
         "infra_errors": infra_errors,
         "total_candidates_generated": total_candidates,
+        "reward_rank": reward_rank,
+        "items_reordered": items_reordered,
         "accuracy_attempted": solved / max(1, expressible),
         "wall_clock_sec": round(wall_sec, 3),
         "avg_latency_ms_item": round(avg_ms, 3),
@@ -227,7 +268,9 @@ if __name__ == "__main__":
     ap.add_argument("--smoke-dim", type=int, default=None,
                     help="reduced dimension for local CPU smoke only")
     ap.add_argument("--output-dir", default=None)
+    ap.add_argument("--reward-rank", action="store_true",
+                    help="test-time learned positive-exemplar re-ranking (default OFF)")
     args = ap.parse_args()
     run_benchmark(limit=args.limit, attempts=args.attempts,
                   device=args.device, smoke_dim=args.smoke_dim,
-                  output_dir=args.output_dir)
+                  output_dir=args.output_dir, reward_rank=args.reward_rank)
