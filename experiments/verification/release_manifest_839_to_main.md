@@ -2,7 +2,8 @@
 
 Date: 2026-08-20
 Old main SHA (rollback anchor): `da68f42c7644ee7f01e87fc82cfa32a73b289c8b`
-Candidate SHA: `f7181f552f726bd0513e43699386397a5143ad25`
+Verified CUDA candidate SHA: `f7181f552f726bd0513e43699386397a5143ad25` (remote suite 171 passed, checkpoint overlay `75572389083455a3`)
+Promoted SHA: `b1d887c` (adds ONLY experiments/verification artifacts on top of f7181f5; `git diff --quiet f7181f5 b1d887c -- "HENRI V2"` = identical, so the CUDA-verified code tree is byte-identical)
 Ancestry: `git merge-base --is-ancestor da68f42 f7181f5` = OK; `rev-list --count f7181f5..da68f42` = 0 (pure fast-forward; no divergent commits).
 
 ## Verification gate chain (pre-promotion)
