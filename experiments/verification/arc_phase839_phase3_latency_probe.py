@@ -38,6 +38,9 @@ from qfhrr_ast_discriminative_kernel import (  # noqa: E402
 from wave_ast_decoder import WaveASTDecoder  # noqa: E402
 from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec  # noqa: E402
 
+# Reuse the production signature parser (same chain as the runner).
+from humaneval_wave_ast_runner import parse_signature  # noqa: E402
+
 
 def sha_prefix(path, n=16):
     h = hashlib.sha256()
@@ -103,8 +106,7 @@ def main():
     rows = []
     for idx, item in enumerate(items[: args.items]):
         prompt, entry, tests = item["prompt"], item["entry_point"], item["test"]
-        args_list = re.findall(r"def \w+\((.*?)\):", prompt)
-        arg_names = [a.strip() for a in args_list[0].split(",")] if args_list else []
+        entry, arg_names = parse_signature(prompt)
         t0 = time.perf_counter()
         bodies = decoder._instantiate(entry, arg_names)
         t_gen = (time.perf_counter() - t0) * 1000.0
