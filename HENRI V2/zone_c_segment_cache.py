@@ -77,12 +77,13 @@ def bytes_to_wave(buf, num_blocks: int) -> torch.Tensor:
 _PROJ_CACHE = {}
 
 
-def _proj_matrix(dim: int, seed: int = 7) -> torch.Tensor:
+def _proj_matrix(dim: int, seed: int = 7, device: torch.device = torch.device("cpu")) -> torch.Tensor:
     """Cached deterministic Gaussian projection matrix for semantic indexing."""
-    key = (dim, seed)
+    key = (dim, seed, device)
     if key not in _PROJ_CACHE:
         g = torch.Generator(device="cpu").manual_seed(seed)
-        _PROJ_CACHE[key] = torch.randn(SEMANTIC_DIM, dim, generator=g) / math.sqrt(dim)
+        mat = torch.randn(SEMANTIC_DIM, dim, generator=g) / math.sqrt(dim)
+        _PROJ_CACHE[key] = mat.to(device)
     return _PROJ_CACHE[key]
 
 
@@ -90,10 +91,12 @@ def semantic_projection(wave: torch.Tensor, seed: int = 7) -> torch.Tensor:
     """
     Deterministic random projection of the wave down to the 2000-dim HNSW
     semantic index (Johnson-Lindenstrauss cosine preservation). The matrix is
-    cached across calls so repeated checkpoint/query cycles are cheap.
+    cached across calls so repeated checkpoint/query cycles are cheap. Values
+    are generated once on CPU with the fixed seed, then materialized on the
+    input tensor's device; index vectors are therefore device-independent.
     """
-    flat = wave.view(-1).to(torch.float32).cpu()
-    out = _proj_matrix(flat.numel(), seed) @ flat
+    flat = wave.view(-1).to(torch.float32)
+    out = _proj_matrix(flat.numel(), seed, flat.device) @ flat
     return F.normalize(out, p=2, dim=-1)
 
 
