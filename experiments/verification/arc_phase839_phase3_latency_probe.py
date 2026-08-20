@@ -104,7 +104,7 @@ def main():
         args_list = re.findall(r"def \w+\((.*?)\):", prompt)
         arg_names = [a.strip() for a in args_list[0].split(",")] if args_list else []
         t0 = time.perf_counter()
-        bodies = decoder._instantiate({"prompt": prompt, "entry_point": entry}, None)
+        bodies = decoder._instantiate(entry, arg_names)
         t_gen = (time.perf_counter() - t0) * 1000.0
         pool = []
         for body in bodies:
