@@ -77,7 +77,8 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                   decoder_rank: bool = False,
                   spec_rank: bool = False,
                   trained_rank: bool = False,
-                  trained_head_path: str | None = None) -> dict[str, Any]:
+                  trained_head_path: str | None = None,
+                  ast_idf_only: bool = False) -> dict[str, Any]:
     started = time.perf_counter()
     d_model = smoke_dim or 65536
     device = device if (device == "cuda" and torch.cuda.is_available()) else "cpu"
@@ -171,6 +172,45 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         print(f"[TRAINED-RANK] loaded head sha={trained_head_sha[:16]} "
               f"val_acc={head_raw.get('val_acc')} source={head_raw.get('provenance', {}).get('source')}")
 
+    # 2d. Gate A' IDF-only representation (8.39, default-OFF): rank grammar
+    # candidates by mean raw phase-cosine vs an IDF-weighted MBPP codebook
+    # attractor bank (carrier subtraction DISABLED per spec
+    # HENRI-SPEC-GATE-A-PRIME-IDF-2026). MBPP is a DIFFERENT benchmark;
+    # HumanEval stays unseen. Proxy Gate A' passed (ranks 3/5 at d=2048).
+    ast_idf_encoder = None
+    ast_idf_codebook: list[torch.Tensor] = []
+    ast_idf_codebook_sha = None
+    if ast_idf_only:
+        from qfhrr_ast_discriminative_kernel import (  # noqa: E402
+            ASTDiscriminativeEncoder, build_idf_frequencies)
+        mbpp_path = os.path.join(repo_path, "data", "mbpp.jsonl")
+        if not os.path.exists(mbpp_path):
+            return {"status": "BLOCKED", "reason": "AST_IDF_MBPP_MISSING",
+                    "dataset_sha256": dataset_sha}
+        mbpp_codes = []
+        with open(mbpp_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                item = json.loads(line)
+                code = item.get("code", item.get("solution", ""))
+                if isinstance(code, str) and code.strip():
+                    mbpp_codes.append(code)
+        freqs, corpus_size = build_idf_frequencies(mbpp_codes)
+        ast_idf_encoder = ASTDiscriminativeEncoder(
+            d_model=d_model, device=device, idf_weighting=True,
+            carrier_subtract=False, node_frequencies=freqs,
+            corpus_size=corpus_size)
+        cb_vecs = [ast_idf_encoder.encode_code_string(c)
+                   for c in mbpp_codes[:100]]
+        ast_idf_codebook = [v for v in cb_vecs if v is not None]
+        if not ast_idf_codebook:
+            return {"status": "BLOCKED", "reason": "AST_IDF_CODEBOOK_EMPTY",
+                    "dataset_sha256": dataset_sha}
+        ast_idf_codebook_sha = sha256_bytes(open(mbpp_path, "rb").read())
+        print(f"[AST-IDF] encoder ready d={d_model} "
+              f"codebook={len(ast_idf_codebook)} mbpp_sha={ast_idf_codebook_sha[:16]}")
+
     item_results: list[dict[str, Any]] = []
     solved = 0
     not_expressible = 0
@@ -188,6 +228,7 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
     decoder_items_reordered = 0
     docstring_used = 0
     trained_items_reordered = 0
+    ast_idf_items_reordered = 0
     commit = None
     try:
         import subprocess
@@ -230,6 +271,27 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         candidates = decoder.decode(prompt_wave, target_wave, entry, args)
         docstring_used += 1 if (spec_rank and doc_target) else 0
         total_candidates += len(candidates)
+
+        # Gate A' IDF-only ranking (8.39, default-OFF): reorder grammar
+        # candidates by mean raw phase-cosine vs the IDF-weighted MBPP
+        # codebook bank (same representation as the Gate A' proxy). The
+        # candidate SET is unchanged; only attempt order moves.
+        prev_first = candidates[0][0] if candidates else None
+        if ast_idf_only and ast_idf_encoder is not None:
+            scored = []
+            for ci, (src, meta) in enumerate(candidates):
+                v = ast_idf_encoder.encode_code_string(src)
+                if v is None:
+                    scored.append((-1e9, ci, src, meta))
+                    continue
+                s = 0.0
+                for cb in ast_idf_codebook:
+                    s += ast_idf_encoder.compute_cosine_similarity(v, cb)
+                scored.append((s / max(1, len(ast_idf_codebook)), ci, src, meta))
+            scored.sort(key=lambda t: (-t[0], t[1]))
+            candidates = [(src, meta) for _, _, src, meta in scored]
+            if candidates[0][0] != prev_first:
+                ast_idf_items_reordered += 1
 
         # Execution-grounded correctness head (8.39-V3, default-OFF): rank
         # candidates by <w_trained, v_rel(candidate)> — the linear probe
@@ -362,6 +424,9 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         "trained_rank": trained_rank,
         "trained_head_sha256": trained_head_sha,
         "trained_items_reordered": trained_items_reordered,
+        "ast_idf_only": ast_idf_only,
+        "ast_idf_items_reordered": ast_idf_items_reordered,
+        "ast_idf_codebook_sha256": ast_idf_codebook_sha,
         "accuracy_attempted": solved / max(1, expressible),
         "wall_clock_sec": round(wall_sec, 3),
         "avg_latency_ms_item": round(avg_ms, 3),
@@ -398,6 +463,8 @@ if __name__ == "__main__":
                     help="V3: execution-grounded correctness head ranking (default OFF)")
     ap.add_argument("--trained-head", default=None,
                     help="path to correctness-head checkpoint (HENRI_TRAINED_HEAD)")
+    ap.add_argument("--ast-idf-only", action="store_true",
+                    help="Gate A': IDF-weighted MBPP-codebook candidate ranking (default OFF)")
     args = ap.parse_args()
     run_benchmark(limit=args.limit, attempts=args.attempts,
                   device=args.device, smoke_dim=args.smoke_dim,
@@ -405,4 +472,5 @@ if __name__ == "__main__":
                   decoder_rank=args.decoder_rank,
                   spec_rank=args.spec_rank,
                   trained_rank=args.trained_rank,
-                  trained_head_path=args.trained_head)
+                  trained_head_path=args.trained_head,
+                  ast_idf_only=args.ast_idf_only)

@@ -1,0 +1,20 @@
+{
+  "spec_id": "HENRI-SPEC-GATE-A-PRIME-IDF-2026",
+  "arm": "idf-only",
+  "flag": "--ast-idf-only",
+  "d_model": 16384,
+  "codebook_n": 100,
+  "codebook_kept": 100,
+  "mbpp_sha": "ccf64ceae9c5403b",
+  "ranks": {
+    "HumanEval/23": 3,
+    "HumanEval/35": 5
+  },
+  "e_cos": 0.351501,
+  "deterministic": true,
+  "verdict": "PASS",
+  "commit": "5851150fc79a00fb90a08d79ff54f9d329854611",
+  "command": "experiments/verification/arc_phase839_gate_a_prime_harness.py --ast-idf-only --d-model 16384",
+  "wall_s": 1.9,
+  "gate_b_condition": true
+}
