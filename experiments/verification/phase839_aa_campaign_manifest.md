@@ -14,6 +14,7 @@ item outcomes + RunEvidence). Status 2026-08-20.
 | MMMU-Pro | HF `MMMU/MMMU_Pro` | BLOCKED — 401 | canonical source unresolved |
 | MMLU-Pro | simple-evals `mmlu_pro.csv` | BLOCKED — 404 | guess path; canonical path unresolved |
 | IFEval Official | google-research guess | BLOCKED — 404 | canonical path unresolved |
+| simple-evals mirror (other) | math_500/aime/medqa/gpqa_main/simpleqa/brag/… | BLOCKED — 404 (all probed 2026-08-20) | mirror hosts exactly 2 verified datasets: gpqa_diamond.csv + mmlu.csv |
 
 ## Verified source facts (OBSERVED)
 - `gpqa_diamond.csv`: HTTP 200, 1,373,492 B, 198 rows, SHA `41d1213cd7a4998605a26c2798500652572007161b3a92817ba46b35befcd305` (local = remote).
