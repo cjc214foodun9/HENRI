@@ -12,6 +12,10 @@ import torch.nn.functional as F
 from typing import List, Dict, Any, Tuple, Optional
 
 
+class GrammarMaskAllMaskedError(RuntimeError):
+    """Raised when grammar masking leaves no unmasked token (fail closed)."""
+
+
 class HENRIASTGrammarMask:
     """
     AST Grammar-Masking Transducer for Python code token generation.
@@ -24,6 +28,14 @@ class HENRIASTGrammarMask:
             5: "False\n", 6: "0\n", 7: "1\n", 8: "[]\n", 9: "{}\n"
         }
         self.reverse_vocab = {v: k for k, v in self.code_vocab_map.items()}
+
+    def _assert_unmasked(self, masked_logits: torch.Tensor) -> None:
+        """Fail closed when masking removed every logit (empty vocabulary)."""
+        if not bool((masked_logits > -1e8).any().item()):
+            raise GrammarMaskAllMaskedError(
+                "grammar mask removed every logit; refusing to emit from an "
+                "empty masked vocabulary"
+            )
 
     def mask_logits_for_step(
         self,
@@ -50,6 +62,7 @@ class HENRIASTGrammarMask:
             if 0 in self.code_vocab_map:
                 mask[0] = 0.0
             res = masked_logits + mask
+            self._assert_unmasked(res)
             return res.unsqueeze(0) if is_2d else res
 
         # Rule 2: Step 1 MUST be "solution():\n" or valid signature
@@ -58,6 +71,7 @@ class HENRIASTGrammarMask:
             if 1 in self.code_vocab_map:
                 mask[1] = 0.0
             res = masked_logits + mask
+            self._assert_unmasked(res)
             return res.unsqueeze(0) if is_2d else res
 
         # Rule 3: After "def solution():\n", MUST indent "    " at step 2
@@ -66,6 +80,7 @@ class HENRIASTGrammarMask:
             if 2 in self.code_vocab_map:
                 mask[2] = 0.0
             res = masked_logits + mask
+            self._assert_unmasked(res)
             return res.unsqueeze(0) if is_2d else res
 
         # Rule 4: Inside body, if ending with indent "    ", next must be return, variable, or statement (not raw solution():\n)
@@ -81,6 +96,7 @@ class HENRIASTGrammarMask:
                 if token_str in ["def ", "solution():\n", "    ", "return "]:
                     masked_logits[token_id] = -1e9
 
+        self._assert_unmasked(masked_logits)
         return masked_logits.unsqueeze(0) if is_2d else masked_logits
 
     def is_valid_ast(self, code_str: str) -> bool:
