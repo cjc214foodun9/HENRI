@@ -78,7 +78,8 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                   spec_rank: bool = False,
                   trained_rank: bool = False,
                   trained_head_path: str | None = None,
-                  ast_idf_only: bool = False) -> dict[str, Any]:
+                  ast_idf_only: bool = False,
+                  ast_idf_batched: bool = False) -> dict[str, Any]:
     started = time.perf_counter()
     d_model = smoke_dim or 65536
     device = device if (device == "cuda" and torch.cuda.is_available()) else "cpu"
@@ -182,7 +183,8 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
     ast_idf_codebook_sha = None
     if ast_idf_only:
         from qfhrr_ast_discriminative_kernel import (  # noqa: E402
-            ASTDiscriminativeEncoder, build_idf_frequencies)
+            ASTDiscriminativeEncoder, build_idf_frequencies,
+            batched_mean_phase_cosine)
         mbpp_path = os.path.join(repo_path, "data", "mbpp.jsonl")
         if not os.path.exists(mbpp_path):
             return {"status": "BLOCKED", "reason": "AST_IDF_MBPP_MISSING",
@@ -278,20 +280,45 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         # candidate SET is unchanged; only attempt order moves.
         prev_first = candidates[0][0] if candidates else None
         if ast_idf_only and ast_idf_encoder is not None:
-            scored = []
-            for ci, (src, meta) in enumerate(candidates):
-                v = ast_idf_encoder.encode_code_string(src)
-                if v is None:
-                    scored.append((-1e9, ci, src, meta))
-                    continue
-                s = 0.0
-                for cb in ast_idf_codebook:
-                    s += ast_idf_encoder.compute_cosine_similarity(v, cb)
-                scored.append((s / max(1, len(ast_idf_codebook)), ci, src, meta))
-            scored.sort(key=lambda t: (-t[0], t[1]))
-            candidates = [(src, meta) for _, _, src, meta in scored]
-            if candidates[0][0] != prev_first:
-                ast_idf_items_reordered += 1
+            if ast_idf_batched and candidates:
+                # Phase 3 batched path: one stacked matmul-style scoring
+                # pass instead of C x N per-candidate cosine calls.
+                valid_idx, valid_vecs = [], []
+                for ci, (src, meta) in enumerate(candidates):
+                    v = ast_idf_encoder.encode_code_string(src)
+                    if v is None:
+                        continue
+                    valid_idx.append(ci)
+                    valid_vecs.append(v)
+                if valid_vecs:
+                    cand_mat = torch.stack(valid_vecs)           # [C, D] uint8
+                    cb_mat = torch.stack(ast_idf_codebook)       # [N, D] uint8
+                    scores = batched_mean_phase_cosine(
+                        cand_mat, cb_mat).tolist()               # [C]
+                    scored = [(-1e9, ci, src, meta)
+                              for ci, (src, meta) in enumerate(candidates)]
+                    for ci, s in zip(valid_idx, scores):
+                        scored[ci] = (s, ci,
+                                      candidates[ci][0], candidates[ci][1])
+                    scored.sort(key=lambda t: (-t[0], t[1]))
+                    candidates = [(src, meta) for _, _, src, meta in scored]
+                    if candidates[0][0] != prev_first:
+                        ast_idf_items_reordered += 1
+            else:
+                scored = []
+                for ci, (src, meta) in enumerate(candidates):
+                    v = ast_idf_encoder.encode_code_string(src)
+                    if v is None:
+                        scored.append((-1e9, ci, src, meta))
+                        continue
+                    s = 0.0
+                    for cb in ast_idf_codebook:
+                        s += ast_idf_encoder.compute_cosine_similarity(v, cb)
+                    scored.append((s / max(1, len(ast_idf_codebook)), ci, src, meta))
+                scored.sort(key=lambda t: (-t[0], t[1]))
+                candidates = [(src, meta) for _, _, src, meta in scored]
+                if candidates[0][0] != prev_first:
+                    ast_idf_items_reordered += 1
 
         # Execution-grounded correctness head (8.39-V3, default-OFF): rank
         # candidates by <w_trained, v_rel(candidate)> — the linear probe
@@ -425,6 +452,7 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         "trained_head_sha256": trained_head_sha,
         "trained_items_reordered": trained_items_reordered,
         "ast_idf_only": ast_idf_only,
+        "ast_idf_batched": ast_idf_batched,
         "ast_idf_items_reordered": ast_idf_items_reordered,
         "ast_idf_codebook_sha256": ast_idf_codebook_sha,
         "accuracy_attempted": solved / max(1, expressible),
@@ -465,6 +493,9 @@ if __name__ == "__main__":
                     help="path to correctness-head checkpoint (HENRI_TRAINED_HEAD)")
     ap.add_argument("--ast-idf-only", action="store_true",
                     help="Gate A': IDF-weighted MBPP-codebook candidate ranking (default OFF)")
+    ap.add_argument("--ast-idf-batched", action="store_true",
+                    help="Phase 3: batched mean-phase-cosine ranking (default OFF; "
+                         "requires --ast-idf-only)")
     args = ap.parse_args()
     run_benchmark(limit=args.limit, attempts=args.attempts,
                   device=args.device, smoke_dim=args.smoke_dim,
@@ -473,4 +504,5 @@ if __name__ == "__main__":
                   spec_rank=args.spec_rank,
                   trained_rank=args.trained_rank,
                   trained_head_path=args.trained_head,
-                  ast_idf_only=args.ast_idf_only)
+                  ast_idf_only=args.ast_idf_only,
+                  ast_idf_batched=args.ast_idf_batched)

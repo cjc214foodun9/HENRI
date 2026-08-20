@@ -235,6 +235,38 @@ class ASTDiscriminativeEncoder:
         return float(sims[tri].mean().item())
 
 
+def batched_mean_phase_cosine(
+    candidates: torch.Tensor,
+    codebook: torch.Tensor,
+    codebook_chunk: int = 8,
+) -> torch.Tensor:
+    """Mean phase-cosine of each candidate vs the codebook, chunked.
+
+    Reference-equivalent to the per-candidate loop used by the runner:
+        score(c) = mean_n( mean_d( cos( (c - cb_n) * theta ) ) )
+    where c, cb_n are Z_256^D uint8 phase vectors and theta = 2*pi/256.
+
+    Memory bound: the largest intermediate is [C, chunk, D] float32
+    (C * chunk * D * 4 bytes); no [C, N, D] tensor is ever materialized.
+    Float accumulation order differs from the sequential reference loop
+    (chunked sums), so scores agree to float32 tolerance, not bitwise.
+    """
+    if candidates.dim() != 2 or codebook.dim() != 2:
+        raise ValueError("expected [C, D] and [N, D] tensors")
+    if candidates.shape[1] != codebook.shape[1]:
+        raise ValueError("candidate and codebook dimension mismatch")
+    theta = (2.0 * math.pi) / 256.0
+    c = candidates.to(torch.float32)
+    n = codebook.shape[0]
+    acc = torch.zeros(candidates.shape[0], dtype=torch.float32, device=candidates.device)
+    for start in range(0, n, codebook_chunk):
+        cb = codebook[start : start + codebook_chunk].to(torch.float32)
+        diff = c.unsqueeze(1) - cb.unsqueeze(0)       # [C, Nc, D]
+        sims = torch.cos(diff * theta).mean(dim=-1)   # [C, Nc]
+        acc += sims.sum(dim=-1)
+    return acc / float(n)
+
+
 def build_idf_frequencies(
     code_strings: List[str],
 ) -> Tuple[Dict[str, int], int]:
