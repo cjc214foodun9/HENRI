@@ -1,0 +1,41 @@
+{
+  "schema": "henri.phase-gate.v1",
+  "phase": "8.38",
+  "name": "zone-c-retrieval-bridge-consumer-wiring",
+  "status": "SEALED",
+  "verdict": "PASS",
+  "branch": "phase838/zone-c-bridge",
+  "commit": "0a371d49b8942f85bf564a682963e420e1ec7347",
+  "base_commit": "69b338d4a2d5a24f8230d9ccf84eab49bb0c7959",
+  "flag": "HENRI_ZONEC_BRIDGE=1 (default-OFF)",
+  "target_metric": {"p50_step_latency_ms": 12.0},
+  "observed_metrics": {
+    "p50_ms": 4.955,
+    "trials": 30,
+    "hits": 5,
+    "top1_sim_mean": 0.0436,
+    "cpu_gpu_projection_cos": 1.000000,
+    "local_focused_tests": "15/15 PASS",
+    "local_full_unit": "170 passed, 1 skipped",
+    "remote_cuda_focused": "15/15 PASS at exact SHA (1.25s)"
+  },
+  "latency_history_ms": [
+    {"commit": "ea6307a", "p50_ms": 51.4, "note": "pre-fix baseline; fresh-process 43.3"},
+    {"commit": "001a97d", "p50_ms": 49.2, "note": "HNSW-driven SQL, octet_length removed"},
+    {"commit": "364654a", "p50_ms": 18.97, "note": "device-aware semantic projection (GPU matmul)"},
+    {"commit": "0a371d4", "p50_ms": 4.955, "note": "persistent query connection + two-stage retrieval"}
+  ],
+  "root_causes_fixed": [
+    "non-sargable octet_length(engram_wave_bytes)=%s forced timestamp-btree scan (92ms, 94,595 buffers) -> HNSW-driven query with Python-side byte guard (001a97d)",
+    "semantic_projection ran 65536->2000 matmul on CPU (63.5ms/call) -> device-aware GPU matmul, CPU-seeded deterministic matrices, per-device cache (364654a)",
+    "per-call fresh psycopg connection (4.1ms) + 3.9MB bytea transfer of 15 oversampled rows -> persistent connection + two-stage query (ids first, bytea only for kept top-k) (0a371d4)"
+  ],
+  "evidence_class": "OBSERVED",
+  "hardware": "Vast RTX 5090 (instance 47411800), torch CUDA 13.0, PostgreSQL 16 + TimescaleDB, 10,703 engram rows, HNSW index phylogenetic_engrams_semantic_hnsw_idx",
+  "notes": [
+    "user instruction named zone_c_retrieval_bridge.py; the semantic_projection definition lives in zone_c_segment_cache.py and is imported by the bridge (bridge line 98) - patch applied at the definition site on the live path",
+    "sealed 8.37 G3 0.183ms measured a scratch 1-row self-query on a small table; live 10,703-row production path is the honest gate and now passes 4.955ms",
+    "zero-entropy contract preserved: retrieval is exact store lookup; bridge fail-closed, no surrogate fallback"
+  ],
+  "sealed_at": "2026-08-20"
+}
