@@ -17,6 +17,8 @@ Latency gate (CUDA only): average of 45 measured steps <= 2.0 ms after
 5 warmup steps, batch 16, 30x30 grids, actions drawn per step.
 """
 
+import time
+
 import torch
 import pytest
 
@@ -119,14 +121,19 @@ def test_phase836_cuda_harness_latency_and_correctness():
     measured_steps = 45
 
     total_ms = 0.0
+    wall_total_ms = 0.0
     for step in range(warmup_steps + measured_steps):
         action_batch = torch.randint(1, 6, (16,), device=device)
+        wall_t0 = time.perf_counter()
         out = harness.step_cuda(action_batch)
+        wall_total_ms += (time.perf_counter() - wall_t0) * 1000.0
         if step >= warmup_steps:
             total_ms += out["step_latency_ms"]
 
     avg_latency_ms = total_ms / measured_steps
+    avg_wall_ms = wall_total_ms / measured_steps
     print(f"\n[*] Measured Average Step Latency: {avg_latency_ms:.4f} ms")
+    print(f"[*] Measured Average Wall-Clock Step: {avg_wall_ms:.4f} ms")
 
     # Assertions
     # 1. Frame hashes changed after action steps
