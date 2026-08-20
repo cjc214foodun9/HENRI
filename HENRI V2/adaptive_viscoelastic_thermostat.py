@@ -236,7 +236,14 @@ class AdaptiveViscoelasticThermostat(nn.Module):
             if n_flat.shape[0] != V.shape[0]:
                 raise ValueError(
                     f"noise numel {n_flat.shape[0]} != basis rows {V.shape[0]}")
-            n_proj = n_flat - V @ (V.T @ n_flat)
+            # Moore-Penrose-faithful factored projection (PDF: P_null = I - V V†).
+            # V is column-normalized (not orthonormal) in production
+            # (CoupledRecursiveDualEDMD), so V V^T is NOT a projector; the
+            # true projector is n - V (V^T V)^{-1} V^T n. Gram is [r, r]
+            # (256 KB at r=256); no [d, d] alloc (~34 GiB saved at d=65,536).
+            gram = V.T @ V
+            coeff = torch.linalg.solve(gram, V.T @ n_flat)
+            n_proj = n_flat - V @ coeff
             noise = n_proj.reshape(noise.shape)
 
         # SDE update: dW = - (eta / gamma) * grad + noise

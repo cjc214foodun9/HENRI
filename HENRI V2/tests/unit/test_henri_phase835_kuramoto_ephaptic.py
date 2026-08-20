@@ -115,6 +115,30 @@ def test_null_space_projection_removes_synchronized_component():
     assert torch.allclose(n2, n3, atol=1e-6)
 
 
+def test_null_space_projection_production_shaped_non_orthonormal_V():
+    """Regression: production V is COLUMN-NORMALIZED (not orthonormal), so
+    I - V V^T is not a projector. The Moore-Penrose factored form
+    n - V solve(V^T V, V^T n) must annihilate the V-subspace component
+    exactly. This is the defect the D=65,536 CUDA smoke caught
+    (residual 4.309e-4 vs 1e-5 with the naive V V^T form)."""
+    th = AdaptiveViscoelasticThermostat(d_model=64)
+    g = torch.Generator().manual_seed(7)
+    # Mirrors CoupledRecursiveDualEDMD init exactly.
+    v_init = torch.randn(64, 4, generator=g) / math.sqrt(64)
+    V = F.normalize(v_init, p=2, dim=0)
+    assert torch.norm(V.T @ V - torch.eye(4)).item() > 1e-3  # NOT orthogonal
+    W = torch.randn(64, generator=g)
+    grad = torch.randn_like(W)
+    noise = torch.randn_like(W)
+    updated, tele = th.step_viscoelastic_creep(
+        W, grad, lambda_active=1.0, sagnac_delta=0.0, temperature=1e-3,
+        base_noise=noise, null_space_basis=V)
+    noise_eff = updated - (W - tele["effective_lr"] * grad)
+    # True residual on the V-subspace: V^T n_eff must be ~0.
+    res = torch.norm(V.T @ noise_eff).item()
+    assert res < 1e-5, f"P_null residual on production-shaped V: {res:.3e}"
+
+
 def test_null_space_basis_shape_validation():
     th = AdaptiveViscoelasticThermostat(d_model=64)
     W = torch.randn(64)
