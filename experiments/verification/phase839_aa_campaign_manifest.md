@@ -7,9 +7,13 @@ item outcomes + RunEvidence). Status 2026-08-20.
 
 | benchmark | source | status | digest / notes |
 |---|---|---|---|
-| HumanEval | openai/human-eval (official) | EVALUATED — 2/50 PASS | wave-AST egress; verdict `arc_phase839_humaneval_verdict.md`; event `8edb7753` |
+| HumanEval | openai/human-eval (official) | EVALUATED — **2/50 PASS** (baseline; control re-verified `0066e9a`) | wave-AST egress; verdict `arc_phase839_humaneval_verdict.md`; event `8edb7753` |
+| HumanEval grammar-extension rerun | same dataset | EVALUATED — **NO GAIN 2/50** (4661 candidates; ranking inert, not coverage) | verdict `arc_phase839_humaneval_grammar_rerun.md`; commit `171c21c` |
+| HumanEval reward-rank | same dataset | EVALUATED — **FALSIFIED 1/50** (control 2/50; reordered 25 items) | verdict `arc_phase839_reward_rank_verdict.md`; event `a7b93863`; commit `3654b60` |
+| HumanEval decoder-rank | same dataset | EVALUATED — **FALSIFIED 0/50** (control 2/50; oracle ranks 49/71 + 68/71) | verdict `arc_phase839_decoder_rank_verdict.md`; event `124a47b6`; commit `2b048d2` |
 | GPQA Diamond | `openaipublic.../simple-evals/gpqa_diamond.csv` | EVALUATED — FALSIFIED 0.298 (gate 0.30) | 198 items, SHA `41d1213c…`; verdict `arc_phase839_gpqa_verdict.md`; event `866bf08d` |
-| MMLU | `openaipublic.../simple-evals/mmlu.csv` | EVALUATED — pending verdict | 14,042 rows, SHA `15b6785d…`; wave-rank runner `mmlu_wave_rank_runner.py`; full CUDA run in flight |
+| MMLU | `openaipublic.../simple-evals/mmlu.csv` | EVALUATED — **FALSIFIED 0.2598** (gate 0.30; chance+0.98%) | 14,042 rows, SHA `15b6785d…`; verdict `arc_phase839_mmlu_verdict.md`; event `93298071`; commit `4e3f84b` |
+| Codec repair (5 position modes) | MMLU 200-slice @ D=65,536 | EVALUATED — **FALSIFIED** (no mode ≥ 0.31; best `full` 0.295) | verdict `arc_phase839_codec_repair_verdict.md`; commit `47dc9e5`; event `93298071` |
 | HLE | HF `cais/hle` | BLOCKED — 401 | canonical source unresolved |
 | MMMU-Pro | HF `MMMU/MMMU_Pro` | BLOCKED — 401 | canonical source unresolved |
 | MMLU-Pro | simple-evals `mmlu_pro.csv` | BLOCKED — 404 | guess path; canonical path unresolved |
