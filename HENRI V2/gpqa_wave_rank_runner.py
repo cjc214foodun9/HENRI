@@ -70,11 +70,13 @@ def load_rows(path: str) -> list[dict[str, str]]:
 
 def run_benchmark(device: str = "cuda", d_model: int = 65536,
                   limit: int | None = None, output_dir: str | None = None,
+                  position_mode: str = "full",
                   smoke: bool = False) -> dict[str, Any]:
     started = time.perf_counter()
     if device == "cuda" and not torch.cuda.is_available():
         device = "cpu"
-    codec = StructuredCharPositionCodec(d_model=d_model, device=device)
+    codec = StructuredCharPositionCodec(
+        d_model=d_model, device=device, position_mode=position_mode)
 
     raw = open(CANONICAL_PATH, "rb").read()
     dataset_sha = sha256_bytes(raw)
@@ -192,6 +194,8 @@ if __name__ == "__main__":
     ap.add_argument("--d-model", type=int, default=65536)
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--output-dir", default=None)
+    ap.add_argument("--position-mode", default="full")
     args = ap.parse_args()
     run_benchmark(device=args.device, d_model=args.d_model,
-                  limit=args.limit, output_dir=args.output_dir)
+                  limit=args.limit, output_dir=args.output_dir,
+                  position_mode=args.position_mode, smoke=False)

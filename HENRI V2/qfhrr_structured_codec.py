@@ -50,15 +50,16 @@ class StructuredCharPositionCodec(nn.Module):
         super().__init__()
         if k_bins != 256:
             raise ValueError("Run21 structured codec requires k_bins=256")
-        if position_mode not in ("full", "none", "shuffled"):
+        if position_mode not in ("full", "none", "shuffled", "independent"):
             raise ValueError(
-                f"position_mode must be full|none|shuffled, got {position_mode!r}")
+                f"position_mode must be full|none|shuffled|independent, got {position_mode!r}")
         self.d_model = int(d_model)
         self.k_bins = int(k_bins)
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.max_cache_entries = int(max_cache_entries)
         self.position_mode = position_mode
         self._shuffle_cache: dict[int, list[int]] = {}
+        self._position_cache: dict[tuple[int, int], torch.Tensor] = {}
         self._token_cpu: dict[str, torch.Tensor] = {}
         self._ring_cache: OrderedDict[str, torch.Tensor] = OrderedDict()
         # q_P is a fixed phase-frequency ring. Position powers are generated
@@ -105,6 +106,20 @@ class StructuredCharPositionCodec(nn.Module):
             # Match token-ring device (CPU): _bundle sums token and position
             # rings before the explicit device transfer.
             return torch.zeros(self.d_model, dtype=torch.uint8, device="cpu")
+        if self.position_mode == "independent":
+            # Compositional carrier fix (8.39, Evolution I remedy):
+            # an INDEPENDENT random position ring per absolute index, seeded
+            # by (position, length). Positions become approximately orthogonal
+            # instead of collinear on a single scaled rotor. Shared characters
+            # at different positions no longer superimpose coherently.
+            key = (int(position), int(length if length is not None else -1))
+            ring = self._position_cache.get(key)
+            if ring is None:
+                ring = self._random_ring_cpu(
+                    "position_independent", f"{position}|{length}"
+                )
+                self._position_cache[key] = ring
+            return ring
         if length is None:
             denominator = max(1, position)
         else:
