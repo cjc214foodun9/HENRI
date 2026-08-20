@@ -22,6 +22,7 @@ from __future__ import annotations
 from collections import OrderedDict
 import hashlib
 import math
+import re
 from typing import Optional
 
 import torch
@@ -50,9 +51,9 @@ class StructuredCharPositionCodec(nn.Module):
         super().__init__()
         if k_bins != 256:
             raise ValueError("Run21 structured codec requires k_bins=256")
-        if position_mode not in ("full", "none", "shuffled", "independent"):
+        if position_mode not in ("full", "none", "shuffled", "independent", "word_engram"):
             raise ValueError(
-                f"position_mode must be full|none|shuffled|independent, got {position_mode!r}")
+                f"position_mode must be full|none|shuffled|independent|word_engram, got {position_mode!r}")
         self.d_model = int(d_model)
         self.k_bins = int(k_bins)
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -143,6 +144,9 @@ class StructuredCharPositionCodec(nn.Module):
         if not text:
             return torch.zeros(self.d_model, dtype=torch.uint8, device=self.device)
 
+        if self.position_mode == "word_engram":
+            return self._bundle_word_engrams(text)
+
         # Keep source rings on CPU and transfer bounded chunks. This avoids a
         # [len(text), D] allocation for the full source string.
         real = torch.zeros(self.d_model, dtype=torch.float32, device=self.device)
@@ -164,6 +168,32 @@ class StructuredCharPositionCodec(nn.Module):
             real.add_(torch.cos(angles).sum(dim=0))
             imag.add_(torch.sin(angles).sum(dim=0))
 
+        phase = torch.remainder(torch.atan2(imag, real), 2.0 * math.pi)
+        q = torch.round(phase * (self.k_bins / (2.0 * math.pi))) % self.k_bins
+        return q.to(torch.uint8)
+
+    def _bundle_word_engrams(self, text: str) -> torch.Tensor:
+        """Word-level token engrams + collinear position binding (run-20 verdict).
+
+        Tokenize into lowercase word atoms, each mapped to an independent
+        deterministic ring seeded by the word itself (no external vocabulary,
+        no Zone C dependency), bound with the fractional position rotor, then
+        bundled in the complex plane as in the character path.
+        """
+        words = re.findall(r"[a-z0-9']+", text.lower())
+        if not words:
+            return torch.zeros(self.d_model, dtype=torch.uint8, device=self.device)
+        real = torch.zeros(self.d_model, dtype=torch.float32, device=self.device)
+        imag = torch.zeros_like(real)
+        n_words = len(words)
+        for i, w in enumerate(words):
+            token_ring = self._token_ring(w)
+            pos_ring = self._position_ring(i, n_words)
+            bound = (token_ring.to(torch.int32) + pos_ring.to(torch.int32)) % self.k_bins
+            angles = bound.to(self.device, dtype=torch.float32)
+            angles = angles * (2.0 * math.pi / self.k_bins)
+            real.add_(torch.cos(angles))
+            imag.add_(torch.sin(angles))
         phase = torch.remainder(torch.atan2(imag, real), 2.0 * math.pi)
         q = torch.round(phase * (self.k_bins / (2.0 * math.pi))) % self.k_bins
         return q.to(torch.uint8)
