@@ -73,7 +73,8 @@ def parse_signature(prompt: str) -> tuple[str | None, list[str]]:
 def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                   device: str = "cuda", smoke_dim: int | None = None,
                   output_dir: str | None = None,
-                  reward_rank: bool = False) -> dict[str, Any]:
+                  reward_rank: bool = False,
+                  decoder_rank: bool = False) -> dict[str, Any]:
     started = time.perf_counter()
     d_model = smoke_dim or 65536
     device = device if (device == "cuda" and torch.cuda.is_available()) else "cpu"
@@ -114,6 +115,37 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         return {"status": "BLOCKED", "reason": "SANDBOX_PREFLIGHT_FAILED",
                 "dataset_sha256": dataset_sha}
 
+    # 2b. Trained-decoder ranking head (8.39, default-OFF): the trained
+    # 65,536 -> 2048 -> 32,000 unbinder scores candidate waves by
+    # token-predictability (softmax entropy). This is a LEARNED prior over
+    # code-wave geometry, distinct from token-decode generation (falsified).
+    unbinder = None
+    decoder_checkpoint_sha = None
+    if decoder_rank:
+        if d_model != 65536:
+            return {"status": "BLOCKED", "reason": "DECODER_RANK_REQUIRES_D65536",
+                    "dataset_sha256": dataset_sha}
+        checkpoint_path = os.environ.get(
+            "HENRI_DECODER_CHECKPOINT") or os.path.join(
+            repo_path, "models", "henri_decoder_checkpoint.pt")
+        if not os.path.exists(checkpoint_path):
+            return {"status": "BLOCKED", "reason": "DECODER_CHECKPOINT_MISSING",
+                    "dataset_sha256": dataset_sha}
+        from henri_decoder import HENRINeuralEgressUnbinder
+        decoder_checkpoint_sha = sha256_bytes(
+            open(checkpoint_path, "rb").read())
+        unbinder = HENRINeuralEgressUnbinder(
+            d_model=65536, d_hidden=2048, vocab_size=32000, device=device)
+        raw = torch.load(checkpoint_path, map_location="cpu")
+        sd = raw["state_dict"] if isinstance(raw, dict) and "state_dict" in raw else raw
+        missing, unexpected = unbinder.load_state_dict(sd, strict=True)
+        if missing or unexpected:
+            return {"status": "BLOCKED", "reason": "DECODER_CHECKPOINT_MISMATCH",
+                    "missing": missing, "unexpected": unexpected,
+                    "dataset_sha256": dataset_sha}
+        unbinder.eval()
+        print(f"[DECODER-RANK] loaded checkpoint sha={decoder_checkpoint_sha[:16]}")
+
     item_results: list[dict[str, Any]] = []
     solved = 0
     not_expressible = 0
@@ -128,6 +160,7 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
     # favorable (sandbox-verified) outcomes.
     exemplars: list[tuple[torch.Tensor, torch.Tensor]] = []
     items_reordered = 0
+    decoder_items_reordered = 0
     commit = None
     try:
         import subprocess
@@ -161,14 +194,33 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
             continue
         expressible += 1
 
+        # Trained-decoder ranking head (8.39, default-OFF): reorder the
+        # grammar candidates by token-predictability under the TRAINED
+        # 65,536 -> 2048 -> 32,000 unbinder. Low softmax entropy = the
+        # candidate wave maps to a peaked, code-like token distribution
+        # under the learned prior. Batched single forward. No tokenizer,
+        # no token decode; ranking only.
+        prev_first = candidates[0][0]
+        if decoder_rank and unbinder is not None:
+            with torch.no_grad():
+                cand_waves = torch.stack(
+                    [decoder._wave(src).to(torch.float32) for src, _ in candidates],
+                    dim=0)  # [N, D]
+                logits = unbinder(cand_waves)  # [N, 32000]
+                probs = torch.softmax(logits, dim=-1)
+                ent = -(probs * torch.log(probs.clamp_min(1e-12))).sum(dim=-1)
+            order = sorted(range(len(candidates)), key=lambda i: (-ent[i].item(), i))
+            candidates = [candidates[i] for i in order]
+            if candidates[0][0] != prev_first:
+                decoder_items_reordered += 1
+
         # Reward-shaped re-ranking (8.39, default-OFF): reorder the grammar
         # candidates by transformation-relative similarity to the nearest
         # verified-exemplar direction. The candidate SET is unchanged; only
         # attempt order moves. No pretraining, no dataset leakage: exemplars
         # are seeded exclusively from sandbox-verified favorable outcomes in
         # this same run.
-        prev_first = candidates[0][0]
-        if reward_rank and exemplars:
+        if reward_rank and exemplars and not (decoder_rank and unbinder is not None):
             scored_ordered = []
             for cand_idx, (src, meta) in enumerate(candidates):
                 v = decoder._wave(src)
@@ -242,6 +294,9 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         "total_candidates_generated": total_candidates,
         "reward_rank": reward_rank,
         "items_reordered": items_reordered,
+        "decoder_rank": decoder_rank,
+        "decoder_items_reordered": decoder_items_reordered,
+        "decoder_checkpoint_sha256": decoder_checkpoint_sha,
         "accuracy_attempted": solved / max(1, expressible),
         "wall_clock_sec": round(wall_sec, 3),
         "avg_latency_ms_item": round(avg_ms, 3),
@@ -270,7 +325,10 @@ if __name__ == "__main__":
     ap.add_argument("--output-dir", default=None)
     ap.add_argument("--reward-rank", action="store_true",
                     help="test-time learned positive-exemplar re-ranking (default OFF)")
+    ap.add_argument("--decoder-rank", action="store_true",
+                    help="rank candidates by trained-decoder token-predictability (default OFF)")
     args = ap.parse_args()
     run_benchmark(limit=args.limit, attempts=args.attempts,
                   device=args.device, smoke_dim=args.smoke_dim,
-                  output_dir=args.output_dir, reward_rank=args.reward_rank)
+                  output_dir=args.output_dir, reward_rank=args.reward_rank,
+                  decoder_rank=args.decoder_rank)
