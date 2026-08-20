@@ -51,6 +51,7 @@ from sagnac_mcts_planner import SagnacMCTSPlanner
 from thermodynamic_telemetry_logger import ThermodynamicTelemetryLogger
 from universal_data_transducer import UniversalDataTransducer
 from zone_c_env import resolve_zone_c_dsn
+from zone_c_retrieval_bridge import ZoneCRetrievalBridge, bridge_enabled_from_env
 from adaptive_viscoelastic_thermostat import AdaptiveViscoelasticThermostat
 from henri_decoder import HENRIUnifiedEgressTransducer
 from arc_egress_contract import (
@@ -145,6 +146,12 @@ GRID_DIST_EPISTEMIC = os.environ.get("GRID_DIST_EPISTEMIC", "0") == "1"
 # load or integrity violation (no silent surrogate).
 USE_ZONE_C_AXIOMS = os.environ.get("USE_ZONE_C_AXIOMS", "0") == "1"
 ZONE_C_AXIOM_ENV_FILE = os.environ.get("ZONE_C_AXIOM_ENV_FILE", "")
+
+# Phase 8.38: authorized pgvector retrieval bridge (sealed 8.37 component C).
+# Default-OFF: HENRI_ZONEC_BRIDGE=1 opts the live ARC consumers (goal layer
+# + state-recall conditioning) into the zero-entropy retrieval bridge. When
+# OFF, the legacy SegmentCache path is byte-identical to previous runs.
+HENRI_ZONEC_BRIDGE = os.environ.get("HENRI_ZONEC_BRIDGE", "0") == "1"
 
 # Biophysical Invariants (Franović et al. 2026): chimera phase-lag swarm.
 # When enabled, a trailing fraction of experts receives a non-zero Kuramoto
@@ -656,6 +663,14 @@ def run():
         raise RuntimeError(
             f"BLOCKED: Zone C attach failed for the selected target {dsn!r}"
         ) from exc
+    # Phase 8.38: authorized retrieval bridge (default-OFF). When enabled,
+    # the live ARC consumers route through the sealed 8.37 zero-entropy
+    # bridge; when OFF, the legacy SegmentCache path is byte-identical.
+    zonec_bridge = None
+    if HENRI_ZONEC_BRIDGE:
+        zonec_bridge = ZoneCRetrievalBridge(
+            dsn=dsn, num_blocks=SCALE["num_blocks"])
+        print("[init] Zone C retrieval bridge ENABLED (HENRI_ZONEC_BRIDGE=1)")
     # Phase 6 egress transducer (fail-closed at init: policy=required raises on
     # missing/incompatible checkpoint; no silent fallback to bare enums).
     egress_transducer = None
@@ -1100,19 +1115,31 @@ def run():
                 goal_status = "GOAL_WAVE_SYNTHESIZED"
                 print(f"  [goal] Phase 8.18 transducer bridge — "
                       f"W_task @ U_test -> goal wave")
-            # Layer 1: try Zone C analogical retrieval
+            # Layer 1: try Zone C analogical retrieval (8.38: routed through
+            # the authorized bridge when HENRI_ZONEC_BRIDGE=1; legacy
+            # SegmentCache path otherwise, byte-identical)
             if goal_wave is None:
                 try:
-                    res = orch.segment_cache.retrieve(init_wave.cpu())
-                    if res["hits"] > 0 and res.get("top_similarity", 0) > 0.7:
-                        # Retrieved wave is a similar past state — use as goal
-                        goal_wave = res["conditioning_wave"]
-                        if goal_wave is not None:
-                            goal_wave = goal_wave.to(DEVICE)
-                            goal_status = "GOAL_ZONE_C_ANALOGICAL"
-                            print(f"  [goal] Zone C analogical — top_sim={res['top_similarity']:.3f}")
-                except Exception as e:
-                    pass  # Zone C may be offline; fall through
+                    if zonec_bridge is not None:
+                        _hits = zonec_bridge.retrieve(init_wave.cpu(), top_k=4)
+                        if _hits and _hits[0][1] > 0.7:
+                            goal_wave = _hits[0][0].to(DEVICE)
+                            goal_status = "GOAL_ZONE_C_BRIDGE"
+                            print(f"  [goal] Zone C bridge — top_sim={_hits[0][1]:.3f}")
+                    else:
+                        res = orch.segment_cache.retrieve(init_wave.cpu())
+                        if res["hits"] > 0 and res.get("top_similarity", 0) > 0.7:
+                            # Retrieved wave is a similar past state — use as goal
+                            goal_wave = res["conditioning_wave"]
+                            if goal_wave is not None:
+                                goal_wave = goal_wave.to(DEVICE)
+                                goal_status = "GOAL_ZONE_C_ANALOGICAL"
+                                print(f"  [goal] Zone C analogical — top_sim={res['top_similarity']:.3f}")
+                except Exception:
+                    if zonec_bridge is not None:
+                        raise  # bridge path is fail-closed: no silent surrogate
+                    pass  # legacy: Zone C may be offline; fall through
+
             # Layer 2: preference-blend goal (blend top-k preference engrams into a
             # "desired outcome basin" — more meaningful than identity goal)
             if goal_wave is None:
@@ -1347,14 +1374,24 @@ def run():
 
             # Zone C recall (conditioning) on schedule; blend the recalled
             # long-term engram into the active wave to bias relaxation.
+            # 8.38: routed through the authorized bridge when
+            # HENRI_ZONEC_BRIDGE=1; legacy SegmentCache path otherwise.
             recalled = None
             recall_info = {"hits": 0}
             if step % RECALL_EVERY == 0:
-                res = orch.segment_cache.retrieve(state_wave.cpu())
-                recalled = res["conditioning_wave"]
-                recall_info = {"hits": res["hits"],
-                               "top_sim": res.get("top_similarity", 0.0),
-                               "gates": [round(g, 4) for g in res.get("gates", [])]}
+                if zonec_bridge is not None:
+                    _hits = zonec_bridge.retrieve(state_wave.cpu(), top_k=4)
+                    recall_info = {"hits": len(_hits),
+                                   "top_sim": _hits[0][1] if _hits else 0.0,
+                                   "gates": []}
+                    if _hits:
+                        recalled = _hits[0][0].to(DEVICE)
+                else:
+                    res = orch.segment_cache.retrieve(state_wave.cpu())
+                    recalled = res["conditioning_wave"]
+                    recall_info = {"hits": res["hits"],
+                                   "top_sim": res.get("top_similarity", 0.0),
+                                   "gates": [round(g, 4) for g in res.get("gates", [])]}
                 if recalled is not None:
                     recalled = recalled.to(DEVICE)
                     # Memory-conditioned state: partial blend toward the recalled
