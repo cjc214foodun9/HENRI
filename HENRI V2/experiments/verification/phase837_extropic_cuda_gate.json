@@ -1,0 +1,33 @@
+{
+  "schema": "henri.verification-gate.v1",
+  "phase": "extropic-compiler (Evolution IV)",
+  "spec": "HENRI-SPEC-EXTROPIC-THERMALIZER-2026",
+  "status": "PASS",
+  "candidate_sha": "9bb7b55087209835d37be3c5d0563f76c76f4684",
+  "candidate_commit": "extropic: wire D1 Ising thermalizer, D2 context matching, D3 trajectory REINFORCE (all default-OFF) — 15/15 local PASS",
+  "branch": "extropic-compiler",
+  "base_main": "e1495ed6c980c75686f83b5eaae09d99ff850903",
+  "directives": {
+    "D1": "qfhrr_to_ising_hamiltonian / IsingHamiltonian / sample_ising_gibbs (Potts heat-bath) in qfhrr_kernels.py; factorized rank-1 coupling, no [D,D] tensor",
+    "D2": "WaveJEPA use_context_matching + context-matched predict_future_latent (2608.01615 §III.B); wired in henri_dual_speed_harness.py, default-OFF",
+    "D3": "trajectory_reinforce_post_train in efe_planner.py (2608.01615 §IV); wired in production_arc_run.py EDMD-L2 hook, default-OFF; ZERO_ADVANTAGE fail-closed"
+  },
+  "verification": {
+    "host": "107.206.71.138:45864 (instance 47411800)",
+    "worktree": "/root/henri-extropic-wt (detached HEAD, 0 status lines)",
+    "interpreter": "/venv/main/bin/python",
+    "torch_cuda": "13.0",
+    "suite": "HENRI V2/tests/unit/test_henri_extropic_thermalizer.py",
+    "result": "15 passed, 15 warnings in 2.78s, EXIT=0",
+    "checkpoint_overlay": "EXCLUDED (bucket-4 class; suite has no decoder-checkpoint dependency)",
+    "gpu_sole_ownership": "OBSERVED — idle before and after (2 MiB, 0%)"
+  },
+  "local_evidence": {
+    "extropic_suite": "15/15 PASS (CPU, isolated Python 3.14)",
+    "full_unit_regression": "155 passed / 1 skipped (phase837 worktree, no collateral damage)"
+  },
+  "default_off": true,
+  "production_path": "byte-identical default path preserved (D2/D3 flags OFF; D1 telemetry-only snapshot)",
+  "governance_event": "sealed via scripts/agentic_event_store.py, stream=verification",
+  "date_utc": "2026-08-20"
+}
