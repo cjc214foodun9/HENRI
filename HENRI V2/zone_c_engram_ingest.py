@@ -59,7 +59,7 @@ def parse_dsn_env(path: str) -> str:
             v = v.strip()
             if not v:
                 continue
-            if k in ("dsn", "database_url", "url"):
+            if k in ("dsn", "database_url", "url") or k.endswith("_dsn"):
                 if v.startswith("postgres"):
                     return v
                 continue
