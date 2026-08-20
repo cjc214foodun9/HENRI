@@ -1,0 +1,574 @@
+{
+  "benchmark": "HumanEval",
+  "status": "EVALUATED",
+  "commit": "0066e9af9852deb9447f4629a8f028cb32ac2986",
+  "checkpoint_used": false,
+  "egress_path": "WAVE_AST_GRAMMAR_SANDBOX",
+  "dataset_sha256": "b796127e635a67f93fb35c04f4cb03cf06f38c8072ee7cee8833d7bee06979ef",
+  "dataset_source": "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz",
+  "item_count": 50,
+  "solved": 1,
+  "expressible": 50,
+  "not_expressible": 0,
+  "infra_errors": 0,
+  "total_candidates_generated": 4661,
+  "reward_rank": true,
+  "items_reordered": 25,
+  "accuracy_attempted": 0.02,
+  "wall_clock_sec": 21.566,
+  "avg_latency_ms_item": 426.045,
+  "device": "cuda",
+  "item_results": [
+    {
+      "task_id": "HumanEval/0",
+      "status": "FAIL",
+      "candidates_generated": 172,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_fj7p5jh2/candidate.py\", line 32, in <module>\n    check(has_close_elements)\n  File \"/tmp/henri_mbpp_fj7p5jh2/candidate.py\", line 23, in check\n"
+      }
+    },
+    {
+      "task_id": "HumanEval/1",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_ps7t7mmx/candidate.py\", line 34, in <module>\n    check(separate_paren_groups)\n  File \"/tmp/henri_mbpp_ps7t7mmx/candidate.py\", line 23, in che"
+      }
+    },
+    {
+      "task_id": "HumanEval/2",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_d3sbpgmu/candidate.py\", line 27, in <module>\n    check(truncate_number)\n  File \"/tmp/henri_mbpp_d3sbpgmu/candidate.py\", line 23, in check\n   "
+      }
+    },
+    {
+      "task_id": "HumanEval/3",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_pyvt5w7y/candidate.py\", line 31, in <module>\n    check(below_zero)\n  File \"/tmp/henri_mbpp_pyvt5w7y/candidate.py\", line 24, in check\n    asse"
+      }
+    },
+    {
+      "task_id": "HumanEval/4",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_licqub3e/candidate.py\", line 29, in <module>\n    check(mean_absolute_deviation)\n  File \"/tmp/henri_mbpp_licqub3e/candidate.py\", line 24, in c"
+      }
+    },
+    {
+      "task_id": "HumanEval/5",
+      "status": "FAIL",
+      "candidates_generated": 172,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_tyu1hcf_/candidate.py\", line 26, in <module>\n    check(intersperse)\n  File \"/tmp/henri_mbpp_tyu1hcf_/candidate.py\", line 22, in check\n    ass"
+      }
+    },
+    {
+      "task_id": "HumanEval/6",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_tim8ub_y/candidate.py\", line 27, in <module>\n    check(parse_nested_parens)\n  File \"/tmp/henri_mbpp_tim8ub_y/candidate.py\", line 23, in check"
+      }
+    },
+    {
+      "task_id": "HumanEval/7",
+      "status": "FAIL",
+      "candidates_generated": 172,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_9atxt663/candidate.py\", line 27, in <module>\n    check(filter_by_substring)\n  File \"/tmp/henri_mbpp_9atxt663/candidate.py\", line 22, in check"
+      }
+    },
+    {
+      "task_id": "HumanEval/8",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_fjs4ax6c/candidate.py\", line 29, in <module>\n    check(sum_product)\n  File \"/tmp/henri_mbpp_fjs4ax6c/candidate.py\", line 23, in check\n    ass"
+      }
+    },
+    {
+      "task_id": "HumanEval/9",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_c8woscc_/candidate.py\", line 26, in <module>\n    check(rolling_max)\n  File \"/tmp/henri_mbpp_c8woscc_/candidate.py\", line 21, in check\n    ass"
+      }
+    },
+    {
+      "task_id": "HumanEval/10",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_nsqdisck/candidate.py\", line 37, in <module>\n    check(make_palindrome)\n  File \"/tmp/henri_mbpp_nsqdisck/candidate.py\", line 31, in check\n   "
+      }
+    },
+    {
+      "task_id": "HumanEval/11",
+      "status": "FAIL",
+      "candidates_generated": 172,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_f8zve1gp/candidate.py\", line 25, in <module>\n    check(string_xor)\n  File \"/tmp/henri_mbpp_f8zve1gp/candidate.py\", line 21, in check\n    asse"
+      }
+    },
+    {
+      "task_id": "HumanEval/12",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_x0odv318/candidate.py\", line 29, in <module>\n    check(longest)\n  File \"/tmp/henri_mbpp_x0odv318/candidate.py\", line 25, in check\n    assert "
+      }
+    },
+    {
+      "task_id": "HumanEval/13",
+      "status": "FAIL",
+      "candidates_generated": 172,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_mkdul5cg/candidate.py\", line 26, in <module>\n    check(greatest_common_divisor)\n  File \"/tmp/henri_mbpp_mkdul5cg/candidate.py\", line 21, in c"
+      }
+    },
+    {
+      "task_id": "HumanEval/14",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_jpivwyav/candidate.py\", line 24, in <module>\n    check(all_prefixes)\n  File \"/tmp/henri_mbpp_jpivwyav/candidate.py\", line 20, in check\n    as"
+      }
+    },
+    {
+      "task_id": "HumanEval/15",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp__p61n3xb/candidate.py\", line 25, in <module>\n    check(string_sequence)\n  File \"/tmp/henri_mbpp__p61n3xb/candidate.py\", line 21, in check\n   "
+      }
+    },
+    {
+      "task_id": "HumanEval/16",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_zy3euun_/candidate.py\", line 27, in <module>\n    check(count_distinct_characters)\n  File \"/tmp/henri_mbpp_zy3euun_/candidate.py\", line 21, in"
+      }
+    },
+    {
+      "task_id": "HumanEval/17",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_4jutwwvw/candidate.py\", line 34, in <module>\n    check(parse_music)\n  File \"/tmp/henri_mbpp_4jutwwvw/candidate.py\", line 28, in check\n    ass"
+      }
+    },
+    {
+      "task_id": "HumanEval/18",
+      "status": "FAIL",
+      "candidates_generated": 172,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_o9myfhbk/candidate.py\", line 28, in <module>\n    check(how_many_times)\n  File \"/tmp/henri_mbpp_o9myfhbk/candidate.py\", line 23, in check\n    "
+      }
+    },
+    {
+      "task_id": "HumanEval/19",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_snyf8qkd/candidate.py\", line 28, in <module>\n    check(sort_numbers)\n  File \"/tmp/henri_mbpp_snyf8qkd/candidate.py\", line 22, in check\n    as"
+      }
+    },
+    {
+      "task_id": "HumanEval/20",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_dd12aufn/candidate.py\", line 34, in <module>\n    check(find_closest_elements)\n  File \"/tmp/henri_mbpp_dd12aufn/candidate.py\", line 27, in che"
+      }
+    },
+    {
+      "task_id": "HumanEval/21",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_9006qshy/candidate.py\", line 27, in <module>\n    check(rescale_to_unit)\n  File \"/tmp/henri_mbpp_9006qshy/candidate.py\", line 21, in check\n   "
+      }
+    },
+    {
+      "task_id": "HumanEval/22",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_vn90fzkh/candidate.py\", line 26, in <module>\n    check(filter_integers)\n  File \"/tmp/henri_mbpp_vn90fzkh/candidate.py\", line 22, in check\n   "
+      }
+    },
+    {
+      "task_id": "HumanEval/23",
+      "status": "PASS",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": true,
+        "body": "return len(string)"
+      }
+    },
+    {
+      "task_id": "HumanEval/24",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_gps9xz7p/candidate.py\", line 25, in <module>\n    check(largest_divisor)\n  File \"/tmp/henri_mbpp_gps9xz7p/candidate.py\", line 19, in check\n   "
+      }
+    },
+    {
+      "task_id": "HumanEval/25",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_lfpv3lks/candidate.py\", line 35, in <module>\n    check(factorize)\n  File \"/tmp/henri_mbpp_lfpv3lks/candidate.py\", line 26, in check\n    asser"
+      }
+    },
+    {
+      "task_id": "HumanEval/26",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_23sa9ny8/candidate.py\", line 25, in <module>\n    check(remove_duplicates)\n  File \"/tmp/henri_mbpp_23sa9ny8/candidate.py\", line 21, in check\n "
+      }
+    },
+    {
+      "task_id": "HumanEval/27",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_lc2namj6/candidate.py\", line 25, in <module>\n    check(flip_case)\n  File \"/tmp/henri_mbpp_lc2namj6/candidate.py\", line 21, in check\n    asser"
+      }
+    },
+    {
+      "task_id": "HumanEval/28",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_dtkl7igd/candidate.py\", line 26, in <module>\n    check(concatenate)\n  File \"/tmp/henri_mbpp_dtkl7igd/candidate.py\", line 22, in check\n    ass"
+      }
+    },
+    {
+      "task_id": "HumanEval/29",
+      "status": "FAIL",
+      "candidates_generated": 172,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_mhzkgaqr/candidate.py\", line 27, in <module>\n    check(filter_by_prefix)\n  File \"/tmp/henri_mbpp_mhzkgaqr/candidate.py\", line 24, in check\n  "
+      }
+    },
+    {
+      "task_id": "HumanEval/30",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_utkub1jt/candidate.py\", line 24, in <module>\n    check(get_positive)\n  File \"/tmp/henri_mbpp_utkub1jt/candidate.py\", line 18, in check\n    as"
+      }
+    },
+    {
+      "task_id": "HumanEval/31",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_fo5u8_6i/candidate.py\", line 43, in <module>\n    check(is_prime)\n  File \"/tmp/henri_mbpp_fo5u8_6i/candidate.py\", line 28, in check\n    assert"
+      }
+    },
+    {
+      "task_id": "HumanEval/32",
+      "status": "FAIL",
+      "candidates_generated": 172,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_jz_28o04/candidate.py\", line 48, in <module>\n    check(find_zero)\n  File \"/tmp/henri_mbpp_jz_28o04/candidate.py\", line 44, in check\n    solut"
+      }
+    },
+    {
+      "task_id": "HumanEval/33",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_7t04u5j9/candidate.py\", line 29, in <module>\n    check(sort_third)\n  File \"/tmp/henri_mbpp_7t04u5j9/candidate.py\", line 20, in check\n    asse"
+      }
+    },
+    {
+      "task_id": "HumanEval/34",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_oxbkasv6/candidate.py\", line 19, in <module>\n    check(unique)\n  File \"/tmp/henri_mbpp_oxbkasv6/candidate.py\", line 16, in check\n    assert c"
+      }
+    },
+    {
+      "task_id": "HumanEval/35",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_il8lyior/candidate.py\", line 21, in <module>\n    check(max_element)\n  File \"/tmp/henri_mbpp_il8lyior/candidate.py\", line 18, in check\n    ass"
+      }
+    },
+    {
+      "task_id": "HumanEval/36",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_z_2yr9uf/candidate.py\", line 30, in <module>\n    check(fizz_buzz)\n  File \"/tmp/henri_mbpp_z_2yr9uf/candidate.py\", line 20, in check\n    asser"
+      }
+    },
+    {
+      "task_id": "HumanEval/37",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_ic3zz9rl/candidate.py\", line 25, in <module>\n    check(sort_even)\n  File \"/tmp/henri_mbpp_ic3zz9rl/candidate.py\", line 20, in check\n    asser"
+      }
+    },
+    {
+      "task_id": "HumanEval/38",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_043m12r4/candidate.py\", line 39, in <module>\n    check(decode_cyclic)\n  File \"/tmp/henri_mbpp_043m12r4/candidate.py\", line 36, in check\n    a"
+      }
+    },
+    {
+      "task_id": "HumanEval/39",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_hofgjjp2/candidate.py\", line 37, in <module>\n    check(prime_fib)\n  File \"/tmp/henri_mbpp_hofgjjp2/candidate.py\", line 25, in check\n    asser"
+      }
+    },
+    {
+      "task_id": "HumanEval/40",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_qabm6_x9/candidate.py\", line 39, in <module>\n    check(triples_sum_to_zero)\n  File \"/tmp/henri_mbpp_qabm6_x9/candidate.py\", line 28, in check"
+      }
+    },
+    {
+      "task_id": "HumanEval/41",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_aqb947z7/candidate.py\", line 30, in <module>\n    check(car_race_collision)\n  File \"/tmp/henri_mbpp_aqb947z7/candidate.py\", line 23, in check\n"
+      }
+    },
+    {
+      "task_id": "HumanEval/42",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_lo52904y/candidate.py\", line 23, in <module>\n    check(incr_list)\n  File \"/tmp/henri_mbpp_lo52904y/candidate.py\", line 19, in check\n    asser"
+      }
+    },
+    {
+      "task_id": "HumanEval/43",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_4dzozhc_/candidate.py\", line 39, in <module>\n    check(pairs_sum_to_zero)\n  File \"/tmp/henri_mbpp_4dzozhc_/candidate.py\", line 27, in check\n "
+      }
+    },
+    {
+      "task_id": "HumanEval/44",
+      "status": "FAIL",
+      "candidates_generated": 172,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_4zy0epq3/candidate.py\", line 34, in <module>\n    check(change_base)\n  File \"/tmp/henri_mbpp_4zy0epq3/candidate.py\", line 24, in check\n    ass"
+      }
+    },
+    {
+      "task_id": "HumanEval/45",
+      "status": "FAIL",
+      "candidates_generated": 172,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_rxn2fyrk/candidate.py\", line 24, in <module>\n    check(triangle_area)\n  File \"/tmp/henri_mbpp_rxn2fyrk/candidate.py\", line 19, in check\n    a"
+      }
+    },
+    {
+      "task_id": "HumanEval/46",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_9gnvutgr/candidate.py\", line 32, in <module>\n    check(fib4)\n  File \"/tmp/henri_mbpp_9gnvutgr/candidate.py\", line 26, in check\n    assert can"
+      }
+    },
+    {
+      "task_id": "HumanEval/47",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp__ezsd6hv/candidate.py\", line 25, in <module>\n    check(median)\n  File \"/tmp/henri_mbpp__ezsd6hv/candidate.py\", line 18, in check\n    assert c"
+      }
+    },
+    {
+      "task_id": "HumanEval/48",
+      "status": "FAIL",
+      "candidates_generated": 71,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_n70wn5n1/candidate.py\", line 32, in <module>\n    check(is_palindrome)\n  File \"/tmp/henri_mbpp_n70wn5n1/candidate.py\", line 23, in check\n    a"
+      }
+    },
+    {
+      "task_id": "HumanEval/49",
+      "status": "FAIL",
+      "candidates_generated": 172,
+      "candidates_attempted": 12,
+      "outcome": {
+        "attempted": true,
+        "pass": false,
+        "trace": "Traceback (most recent call last):\n  File \"/tmp/henri_mbpp_ar9kxle2/candidate.py\", line 33, in <module>\n    check(modp)\n  File \"/tmp/henri_mbpp_ar9kxle2/candidate.py\", line 24, in check\n    assert can"
+      }
+    }
+  ],
+  "timestamp_utc": "2026-08-20T16:09:46.836101+00:00"
+}
