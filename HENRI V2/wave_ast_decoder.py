@@ -39,6 +39,14 @@ EXPRS_UNARY = [
     "sorted({a}, key=sum)", "sorted({a}, key=len)",
     "sum(range({a}))", "list(range({a}))",
     "max({a}) - min({a})", "sum({a}) / len({a})", "sum({a}) // len({a})",
+    # 8.39 coverage extension: string ops + list indexing (bounded, generic).
+    "{a}.upper()", "{a}.lower()", "{a}.strip()", "{a}.capitalize()",
+    "{a}.title()", "{a}.swapcase()", "{a}.split()", "{a}.splitlines()",
+    '"".join({a})', '" ".join({a})', "{a}.replace(\" \", \"\")",
+    "{a}.isdigit()", "{a}.isalpha()", "{a}.count(\" \") + 1",
+    "len(set({a}))", "sorted(set({a}))",
+    "{a}[1:]", "{a}[:-1]", "{a}[1:-1]",
+    "max({a}, key=len)", "min({a}, key=len)",
 ]
 EXPRS_UNARY_COMP = [
     "[x for x in {a}]", "[x ** 2 for x in {a}]",
