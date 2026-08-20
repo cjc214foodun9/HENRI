@@ -155,6 +155,7 @@ class TimescaleZoneCStore(ZoneCStore):
         self.dsn = dsn
         self.num_blocks = num_blocks
         self._psycopg = psycopg
+        self._query_conn = None  # persistent connection for the retrieval hot path
         # Fail fast if unreachable.  SegmentCache.connect() translates the
         # driver exception to DatabaseConnectionError with the target intact.
         with self._connect() as conn:
@@ -194,32 +195,55 @@ class TimescaleZoneCStore(ZoneCStore):
             conn.commit()
         return engram_id
 
+    def _get_query_conn(self):
+        """Persistent connection for the retrieval hot path (lazy)."""
+        if self._query_conn is None or self._query_conn.closed:
+            self._query_conn = self._psycopg.connect(self.dsn, connect_timeout=8)
+        return self._query_conn
+
     def query_engrams(self, query_wave, top_k, max_age_hours):
         q = semantic_projection(query_wave)
         q_list = "[" + ",".join(f"{v:.6f}" for v in q.tolist()) + "]"
         expected_bytes = self.num_blocks * 8 * 4
-        # Drive the query from the HNSW index. The octet_length() guard is
-        # non-sargable (planner scans the timestamp btree instead: 92 ms @
-        # 9.4k rows observed); enforce the byte-size guard in Python and
-        # oversample 3x to preserve top-k semantics after filtering.
-        with self._connect() as conn:
+        # Stage 1: HNSW-driven candidate selection over the lightweight
+        # (id, similarity, age) tuple only — no bytea transfer yet. The
+        # timestamp window keeps the age-filter contract (unbounded in
+        # practice: max_age_hours = 8760).
+        conn = self._get_query_conn()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id,
+                       1 - (semantic_index <=> %s::vector) AS similarity,
+                       EXTRACT(EPOCH FROM (now() - timestamp)) / 3600.0 AS age_hours
+                FROM phylogenetic_engrams_65536
+                WHERE timestamp > now() - (%s || ' hours')::interval
+                ORDER BY semantic_index <=> %s::vector
+                LIMIT %s
+                """,
+                (q_list, float(max_age_hours), q_list, int(top_k) * 3),
+            )
+            candidates = cur.fetchall()
+        # Stage 2: fetch bytea payloads only for the filtered top-k, avoiding
+        # a 3.9 MB raw-wave transfer per query for discarded oversamples.
+        kept = []
+        if candidates:
+            keep_ids = [r[0] for r in candidates[:top_k]]
             with conn.cursor() as cur:
                 cur.execute(
-                    """
-                    SELECT engram_wave_bytes,
-                           1 - (semantic_index <=> %s::vector) AS similarity,
-                           EXTRACT(EPOCH FROM (now() - timestamp)) / 3600.0 AS age_hours
-                    FROM phylogenetic_engrams_65536
-                    WHERE timestamp > now() - (%s || ' hours')::interval
-                    ORDER BY semantic_index <=> %s::vector
-                    LIMIT %s
-                    """,
-                    (q_list, float(max_age_hours), q_list, int(top_k) * 3),
+                    "SELECT id, engram_wave_bytes FROM phylogenetic_engrams_65536 "
+                    "WHERE id = ANY(%s)",
+                    (keep_ids,),
                 )
-                rows = cur.fetchall()
+                payloads = dict(cur.fetchall())
+            kept = [
+                (r[0], payloads[r[0]], float(r[1]), float(r[2]))
+                for r in candidates
+                if r[0] in payloads
+            ]
         # Size guard in Python: keep only engrams with the expected width.
-        kept = [r for r in rows if len(r[0]) == expected_bytes][:top_k]
-        return [(bytes_to_wave(r[0], self.num_blocks), float(r[1]), float(r[2])) for r in kept]
+        kept = [r for r in kept if len(r[1]) == expected_bytes][:top_k]
+        return [(bytes_to_wave(r[1], self.num_blocks), r[2], r[3]) for r in kept]
 
     def count(self):
         with self._connect() as conn:
