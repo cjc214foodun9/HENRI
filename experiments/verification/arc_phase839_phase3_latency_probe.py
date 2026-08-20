@@ -35,6 +35,7 @@ from qfhrr_ast_discriminative_kernel import (  # noqa: E402
     build_idf_frequencies,
 )
 from wave_ast_decoder import WaveASTDecoder  # noqa: E402
+from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec  # noqa: E402
 
 
 def sha_prefix(path, n=16):
