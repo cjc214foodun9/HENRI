@@ -75,7 +75,8 @@ def main():
                 mbpp_codes.append(json.loads(line).get("code", ""))
     freqs, corpus_size = build_idf_frequencies(mbpp_codes)
     encoder = ASTDiscriminativeEncoder(d_model=args.d_model, device=device,
-                                       idf_frequencies=freqs,
+                                       idf_weighting=True,
+                                       node_frequencies=freqs,
                                        corpus_size=corpus_size)
     cb_vecs = [encoder.encode_code_string(c) for c in mbpp_codes[:100]]
     cb_vecs = [v for v in cb_vecs if v is not None]
