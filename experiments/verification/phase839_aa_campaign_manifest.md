@@ -9,7 +9,7 @@ item outcomes + RunEvidence). Status 2026-08-20.
 |---|---|---|---|
 | HumanEval | openai/human-eval (official) | EVALUATED — 2/50 PASS | wave-AST egress; verdict `arc_phase839_humaneval_verdict.md`; event `8edb7753` |
 | GPQA Diamond | `openaipublic.../simple-evals/gpqa_diamond.csv` | EVALUATED — FALSIFIED 0.298 (gate 0.30) | 198 items, SHA `41d1213c…`; verdict `arc_phase839_gpqa_verdict.md`; event `866bf08d` |
-| MMLU | `openaipublic.../simple-evals/mmlu.csv` | ADAPTER_READY (staged) | 14,042 rows, SHA `15b6785d…`; cols Question/A–D/Answer/Subject |
+| MMLU | `openaipublic.../simple-evals/mmlu.csv` | EVALUATED — pending verdict | 14,042 rows, SHA `15b6785d…`; wave-rank runner `mmlu_wave_rank_runner.py`; full CUDA run in flight |
 | HLE | HF `cais/hle` | BLOCKED — 401 | canonical source unresolved |
 | MMMU-Pro | HF `MMMU/MMMU_Pro` | BLOCKED — 401 | canonical source unresolved |
 | MMLU-Pro | simple-evals `mmlu_pro.csv` | BLOCKED — 404 | guess path; canonical path unresolved |
