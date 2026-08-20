@@ -75,7 +75,9 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                   output_dir: str | None = None,
                   reward_rank: bool = False,
                   decoder_rank: bool = False,
-                  spec_rank: bool = False) -> dict[str, Any]:
+                  spec_rank: bool = False,
+                  trained_rank: bool = False,
+                  trained_head_path: str | None = None) -> dict[str, Any]:
     started = time.perf_counter()
     d_model = smoke_dim or 65536
     device = device if (device == "cuda" and torch.cuda.is_available()) else "cpu"
@@ -147,6 +149,28 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         unbinder.eval()
         print(f"[DECODER-RANK] loaded checkpoint sha={decoder_checkpoint_sha[:16]}")
 
+    # 2c. Execution-grounded correctness head (8.39-V3, default-OFF):
+    # linear probe over the decoder's relative-direction feature, trained on
+    # MBPP (a DIFFERENT benchmark; HumanEval stays unseen). Checkpoint
+    # contract: {"w": [D] float32, "provenance": {...}}.
+    trained_w = None
+    trained_head_sha = None
+    if trained_rank:
+        hp = trained_head_path or os.environ.get("HENRI_TRAINED_HEAD")
+        if not hp or not os.path.exists(hp):
+            return {"status": "BLOCKED", "reason": "TRAINED_HEAD_MISSING",
+                    "dataset_sha256": dataset_sha}
+        head_raw = torch.load(hp, map_location="cpu")
+        w = head_raw["w"].to(torch.float32)
+        if w.numel() != d_model:
+            return {"status": "BLOCKED", "reason": "TRAINED_HEAD_DIM_MISMATCH",
+                    "expected": d_model, "got": w.numel(),
+                    "dataset_sha256": dataset_sha}
+        trained_w = F.normalize(w.view(-1), p=2, dim=0).to(device)
+        trained_head_sha = sha256_bytes(open(hp, "rb").read())
+        print(f"[TRAINED-RANK] loaded head sha={trained_head_sha[:16]} "
+              f"val_acc={head_raw.get('val_acc')} source={head_raw.get('provenance', {}).get('source')}")
+
     item_results: list[dict[str, Any]] = []
     solved = 0
     not_expressible = 0
@@ -163,6 +187,7 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
     items_reordered = 0
     decoder_items_reordered = 0
     docstring_used = 0
+    trained_items_reordered = 0
     commit = None
     try:
         import subprocess
@@ -205,6 +230,23 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         candidates = decoder.decode(prompt_wave, target_wave, entry, args)
         docstring_used += 1 if (spec_rank and doc_target) else 0
         total_candidates += len(candidates)
+
+        # Execution-grounded correctness head (8.39-V3, default-OFF): rank
+        # candidates by <w_trained, v_rel(candidate)> — the linear probe
+        # trained on execution labels from MBPP (unseen benchmark stays
+        # HumanEval). Same relative-direction feature as decode().
+        prev_first = candidates[0][0] if candidates else None
+        if trained_rank and trained_w is not None:
+            scored = []
+            for ci, (src, meta) in enumerate(candidates):
+                v = decoder._wave(src)
+                v_rel = v - prompt_wave * torch.dot(v, prompt_wave).clamp(min=0.0)
+                v_rel = torch.nn.functional.normalize(v_rel, p=2, dim=0)
+                scored.append((float(torch.dot(v_rel, trained_w).item()), ci, src, meta))
+            scored.sort(key=lambda t: (-t[0], t[1]))
+            candidates = [(src, meta) for _, _, src, meta in scored]
+            if candidates[0][0] != prev_first:
+                trained_items_reordered += 1
         if len(candidates) < MIN_CANDIDATES:
             item_results.append({"task_id": task_id, "status": "NOT_EXPRESSIBLE",
                                  "reason": f"GRAMMAR_UNDERFLOW:{len(candidates)}"})
@@ -317,6 +359,9 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         "decoder_checkpoint_sha256": decoder_checkpoint_sha,
         "spec_rank": spec_rank,
         "docstring_targets_used": docstring_used,
+        "trained_rank": trained_rank,
+        "trained_head_sha256": trained_head_sha,
+        "trained_items_reordered": trained_items_reordered,
         "accuracy_attempted": solved / max(1, expressible),
         "wall_clock_sec": round(wall_sec, 3),
         "avg_latency_ms_item": round(avg_ms, 3),
@@ -349,9 +394,15 @@ if __name__ == "__main__":
                     help="rank candidates by trained-decoder token-predictability (default OFF)")
     ap.add_argument("--spec-rank", action="store_true",
                     help="V1: non-zero target wave from docstring spec (default OFF)")
+    ap.add_argument("--trained-rank", action="store_true",
+                    help="V3: execution-grounded correctness head ranking (default OFF)")
+    ap.add_argument("--trained-head", default=None,
+                    help="path to correctness-head checkpoint (HENRI_TRAINED_HEAD)")
     args = ap.parse_args()
     run_benchmark(limit=args.limit, attempts=args.attempts,
                   device=args.device, smoke_dim=args.smoke_dim,
                   output_dir=args.output_dir, reward_rank=args.reward_rank,
                   decoder_rank=args.decoder_rank,
-                  spec_rank=args.spec_rank)
+                  spec_rank=args.spec_rank,
+                  trained_rank=args.trained_rank,
+                  trained_head_path=args.trained_head)
