@@ -194,6 +194,11 @@ class TimescaleZoneCStore(ZoneCStore):
     def query_engrams(self, query_wave, top_k, max_age_hours):
         q = semantic_projection(query_wave)
         q_list = "[" + ",".join(f"{v:.6f}" for v in q.tolist()) + "]"
+        expected_bytes = self.num_blocks * 8 * 4
+        # Drive the query from the HNSW index. The octet_length() guard is
+        # non-sargable (planner scans the timestamp btree instead: 92 ms @
+        # 9.4k rows observed); enforce the byte-size guard in Python and
+        # oversample 3x to preserve top-k semantics after filtering.
         with self._connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -203,14 +208,15 @@ class TimescaleZoneCStore(ZoneCStore):
                            EXTRACT(EPOCH FROM (now() - timestamp)) / 3600.0 AS age_hours
                     FROM phylogenetic_engrams_65536
                     WHERE timestamp > now() - (%s || ' hours')::interval
-                      AND octet_length(engram_wave_bytes) = %s
                     ORDER BY semantic_index <=> %s::vector
                     LIMIT %s
                     """,
-                    (q_list, float(max_age_hours), self.num_blocks * 8 * 4, q_list, int(top_k)),
+                    (q_list, float(max_age_hours), q_list, int(top_k) * 3),
                 )
                 rows = cur.fetchall()
-        return [(bytes_to_wave(r[0], self.num_blocks), float(r[1]), float(r[2])) for r in rows]
+        # Size guard in Python: keep only engrams with the expected width.
+        kept = [r for r in rows if len(r[0]) == expected_bytes][:top_k]
+        return [(bytes_to_wave(r[0], self.num_blocks), float(r[1]), float(r[2])) for r in kept]
 
     def count(self):
         with self._connect() as conn:
