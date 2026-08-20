@@ -1,0 +1,13 @@
+{
+  "benchmark": "GPQA Diamond",
+  "source_url": "https://openaipublic.blob.core.windows.net/simple-evals/gpqa_diamond.csv",
+  "dataset_sha256": "41d1213cd7a4998605a26c2798500652572007161b3a92817ba46b35befcd305",
+  "bytes": 1373492,
+  "rows": 198,
+  "staged_path": "HENRI V2/data/official_benchmarks/canonical/gpqa/gpqa_diamond.csv",
+  "staged_outside_git": true,
+  "split": "test (canonical simple-evals subset)",
+  "official_metric": "exact-match accuracy, chance = 0.25",
+  "adapter_status": "ADAPTER_READY",
+  "checker": "exact-match canonical Correct Answer string"
+}
