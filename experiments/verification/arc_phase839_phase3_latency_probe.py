@@ -92,7 +92,8 @@ def main():
                 items.append(json.loads(line))
     print(f"[P3] humaneval_total={len(items)} sha={sha_prefix(he_path)}", flush=True)
 
-    decoder = WaveASTDecoder(d_model=args.d_model, device=device)
+    decoder = WaveASTDecoder(qFHRREpistemicCodec(d_model=args.d_model, device=device),
+                             device=device)
 
     SHIM = ("import math\nimport re\nimport sys\nimport json\n"
             "from typing import *\n\n")
