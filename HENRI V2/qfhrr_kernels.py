@@ -606,6 +606,152 @@ def qfhrr_similarity(q_a: torch.Tensor, q_b: torch.Tensor, lut: torch.Tensor) ->
 
 
 # ---------------------------------------------------------------------------
+# Potts/Ising translation (Extropic Directive 1 — 2606.17327 §2)
+# ---------------------------------------------------------------------------
+
+def potts_onehot_spins(q: torch.Tensor, k: int = K_PHASE) -> torch.Tensor:
+    """Potts variable q in Z_K -> binary Ising spins sigma in {-1, +1}^K.
+
+    Standard Potts->Ising embedding (Jelincic & Walker, 2606.17327 §2): each
+    Z_K value is one-hot encoded, the active bin maps to +1 and all other bins
+    to -1. Exactly one +1 per row. Per-row constraint:
+        sum_a sigma_{i,a} = 2 - K
+    """
+    q = q.to(torch.long)
+    onehot = torch.eye(k, dtype=torch.float32, device=q.device)[q]
+    return 2.0 * onehot - 1.0
+
+
+def ising_spin_constraint(spins: torch.Tensor) -> torch.Tensor:
+    """Per-row spin sum of a valid one-hot Ising block (must equal 2 - K)."""
+    return spins.sum(dim=-1)
+
+
+class IsingHamiltonian:
+    """Factorized Ising spin-glass Hamiltonian for qFHRR unbinding.
+
+    Potts->Ising embedding (2606.17327 §2): each Z_K phase bin becomes a K-slot
+    spin block with exactly one +1 (the active bin) and K-1 entries of -1.
+
+    Coupling J = (1/D) * phi (x) phi is rank-1 and is stored FACTORIZED as the
+    phase vector only — a dense [D, D] J is 34 GiB at D=65,536 and is never
+    materialized. Energy:
+
+        E(sigma) = -(1/D) * (sum_{i,a} sigma_{i,a} * phi_i)^2 - h . sigma
+
+    Exact one-hot constraint note (2606.17327 §2): every valid configuration
+    has exactly one +1 and K-1 entries of -1 per row, so each row contributes
+    (2 - K) * phi_i to the coupling sum regardless of which slot is active.
+    The coupling term is therefore CONSTANT over all valid configurations;
+    the discriminating term is the external field h, which carries the qFHRR
+    phase-difference LUT:
+
+        h_{i,a} = h_scale * cos(theta_i - bin_center_a)
+
+    The ground state (argmax_a h_{i,a} per row) recovers the nearest-bin
+    argmax — the same unbinding result as the cosine-LUT kernel up to bin
+    rounding (floor binning vs nearest bin center). The value of the
+    Hamiltonian construction is the TSU digital-twin: a well-formed factor
+    graph whose sampling converges to the LUT ground state on hardware-like
+    thermal noise, verified by the sampler-convergence contract test.
+    """
+
+    def __init__(self, phase_vec: torch.Tensor, h_field: torch.Tensor,
+                 max_sagnac_delta: float = 0.35, spins: torch.Tensor = None):
+        self.phase_vec = phase_vec          # [P] flattened per-pair bin angles
+        self.h_field = h_field              # [P, K] phase-difference LUT
+        self.max_sagnac_delta = max_sagnac_delta
+        self.D = phase_vec.numel()
+        self.spins = spins                  # initial configuration [P, K]
+
+    @property
+    def dense_coupling_bytes(self) -> int:
+        """Audit guard: cost of a naive dense [D, D] J (fp32)."""
+        return 4 * self.D * self.D
+
+    def energy(self, spins: torch.Tensor) -> torch.Tensor:
+        """Factorized Ising energy (never forms [D, D])."""
+        spins = spins.to(torch.float32)
+        h_term = -(spins * self.h_field).sum()
+        sdot = (spins * self.phase_vec.unsqueeze(-1)).sum()
+        coupling = -(sdot * sdot) / self.D
+        return coupling + h_term
+
+    def decode(self, spins: torch.Tensor) -> torch.Tensor:
+        """Argmax slot per row -> Z_K codes [P] -> [P // 4, 4] uint8."""
+        codes = spins.argmax(dim=-1).to(torch.uint8)
+        return codes.reshape(-1, 4)
+
+
+def qfhrr_to_ising_hamiltonian(wave: torch.Tensor, h_scale: float = 1.0,
+                               max_sagnac_delta: float = 0.35) -> IsingHamiltonian:
+    """Extropic Directive 1 (2606.17327 §2): qFHRR wave -> Ising spin glass.
+
+    wave: [num_blocks, 8] real Clifford wave (query).
+    Returns an IsingHamiltonian whose h-field is the phase-difference LUT and
+    whose initial spin configuration is the wave's own quantized codes.
+    """
+    codes = wave_to_phase_codes(wave)                       # [nb, 4] uint8
+    re, im = wave[..., :4], wave[..., 4:]
+    theta = torch.atan2(im, re)                             # [nb, 4] in [-pi, pi)
+    theta_flat = theta.reshape(-1)
+    bin_centers = (torch.arange(K_PHASE, dtype=torch.float32, device=wave.device)
+                   + 0.5) * (2.0 * math.pi / K_PHASE) - math.pi
+    h_field = h_scale * torch.cos(theta_flat.unsqueeze(-1) - bin_centers.unsqueeze(0))
+    spins = potts_onehot_spins(codes.reshape(-1), k=K_PHASE)
+    return IsingHamiltonian(theta_flat, h_field,
+                            max_sagnac_delta=max_sagnac_delta, spins=spins)
+
+
+def sample_ising_gibbs(hamiltonian: IsingHamiltonian, n_samples: int = 1,
+                       temperature: float = 0.1, steps: int = 50,
+                       seed: int = 0) -> dict:
+    """Potts heat-bath (Glauber) sampling sweeps — TSU digital-twin kernel.
+
+    Each sweep re-samples every row's active slot from the row Gibbs
+    distribution (exact detailed balance, the standard Potts heat-bath):
+
+        P(a | row i) ∝ exp(2 * h[i, a] / T)
+
+    because the one-hot row constraint makes the coupling contribution
+    constant, leaving only the field term. At T -> 0 the sampler returns the
+    h-field ground state (argmax_a h[i, a]); at finite T it draws the exact
+    Boltzmann distribution. No proposal starvation (Metropolis's 1/255
+    proposal-hit-rate problem), fully vectorized (row-wise softmax over K).
+
+    Returns {"spins": [n, P, K], "codes": [n, nb, 4] uint8, "energies": [n]}.
+    """
+    g = torch.Generator(device=hamiltonian.h_field.device).manual_seed(seed)
+    P, K = hamiltonian.h_field.shape
+    nb = P // 4
+    h = hamiltonian.h_field
+    # Initial configuration: the constructor's spins argument is optional;
+    # when absent, start from the h-field ground state (a valid one-hot).
+    current = hamiltonian.spins
+    if current is None:
+        q0 = h.argmax(dim=-1).to(torch.uint8)
+        current = potts_onehot_spins(q0, k=K)
+    current = current.clone()
+    out_spins, out_codes, out_energies = [], [], []
+    for _ in range(n_samples):
+        for _ in range(steps):
+            logits = 2.0 * h / max(temperature, 1e-9)      # [P, K]
+            logits = logits - logits.max(dim=-1, keepdim=True).values
+            probs = torch.softmax(logits, dim=-1)           # [P, K]
+            new_active = torch.multinomial(probs, 1, generator=g).squeeze(-1)  # [P]
+            # Rebuild the one-hot spin rows: -1 everywhere, +1 at the new slot.
+            next_rows = torch.full_like(current, -1.0)
+            next_rows.scatter_(-1, new_active.unsqueeze(-1), 1.0)
+            current = next_rows
+        out_spins.append(current.clone())
+        out_codes.append(current.argmax(dim=-1).reshape(nb, 4).to(torch.uint8))
+        out_energies.append(float(hamiltonian.energy(current).item()))
+    return {"spins": torch.stack(out_spins),
+            "codes": torch.stack(out_codes),
+            "energies": torch.tensor(out_energies)}
+
+
+# ---------------------------------------------------------------------------
 # Smoke
 # ---------------------------------------------------------------------------
 

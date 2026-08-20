@@ -214,6 +214,12 @@ HENRI_ARC_COMPLEX_SIDECAR = os.environ.get("HENRI_ARC_COMPLEX_SIDECAR", "0") == 
 # production path stays byte-identical.
 HENRI_ARC_COMPLEX_TRANSITION = os.environ.get("HENRI_ARC_COMPLEX_TRANSITION", "0") == "1"
 
+# Phase 8.37 Extropic compiler directives (HENRI-SPEC-EXTROPIC-THERMALIZER-2026).
+# Default OFF: the production path stays byte-identical.
+# D1: Ising digital-twin snapshot of the live state wave (telemetry only).
+# D3: trajectory REINFORCE post-train over the EDMD window.
+HENRI_ARC_EXTROPIC = os.environ.get("HENRI_ARC_EXTROPIC", "0") == "1"
+
 # P2 ARC diagnostic baseline harness. All flags default OFF so the production
 # path stays byte-identical. Runs under these flags are DIAGNOSTIC only and
 # are NOT score-eligible (no runner-level LOADED-checkpoint gate yet).
@@ -1192,6 +1198,38 @@ def run():
             state_wave = tokenizer.encode_spatial_grid(grid).squeeze(0).to(DEVICE)
             raw_wave = state_wave  # pre-blend; recall blending mutates below
 
+            # Phase 8.37 D1 (Extropic): Ising digital-twin snapshot of the
+            # live state wave — telemetry only, NEVER mutates weights/policy.
+            # qfhrr_to_ising_hamiltonian maps the Z_256 phase codebook to a
+            # Potts->Ising spin glass (2606.17327 §2); the Gibbs sampler's
+            # decoded codes are emitted for TSU-fidelity monitoring.
+            ising_info = None
+            if HENRI_ARC_EXTROPIC:
+                try:
+                    from qfhrr_kernels import (qfhrr_to_ising_hamiltonian,
+                                               sample_ising_gibbs)
+                    _ham = qfhrr_to_ising_hamiltonian(state_wave.detach())
+                    _res = sample_ising_gibbs(_ham, n_samples=1, steps=40,
+                                              temperature=1e-4, seed=step)
+                    _codes = _res["codes"][0].view(-1)
+                    # Ground-state reference = h-field argmax (nearest bin).
+                    # NOT the initial floor-binned spins: rows near bin
+                    # boundaries legitimately differ by +/-1 between floor and
+                    # nearest bin (expected ~2% at K=256), which is the same
+                    # boundary ambiguity the legacy cosine-LUT kernel has.
+                    _src_codes = _ham.h_field.argmax(dim=-1).to(torch.uint8)
+                    _agree = float((_codes == _src_codes).float().mean().item())
+                    ising_info = {
+                        "status": "OK",
+                        "n_spins": int(_ham.D * 256),
+                        "gibbs_energy": round(float(_res["energies"][0]), 4),
+                        "ground_state_agreement": round(_agree, 6),
+                        "dense_coupling_gib": round(_ham.dense_coupling_bytes / 2**30, 1),
+                    }
+                except Exception as _ising_exc:
+                    ising_info = {"status": "ISING_SNAPSHOT_UNAVAILABLE",
+                                  "error": str(_ising_exc)[:120]}
+
             # Valence extraction from observable outcome signals (no
             # teleology: only deltas the environment actually reports).
             # Compare against the PRE-BLEND raw observation wave — recall
@@ -1265,10 +1303,35 @@ def run():
                     )
                     # ARC-AGI-3 Strategy & Blueprint: Retroactive Valence Credit Assignment
                     rpe_loss = retroactive_update(orch, window, valence_nu=valence, dampening_alpha=0.05)
+                    # Phase 8.37 D3 (Extropic, 2608.01615 §IV): trajectory-level
+                    # REINFORCE post-train over the EDMD window (default-OFF).
+                    # Reward = exteroceptive valence; positive-advantage
+                    # transitions consolidate, negative repulse.
+                    traj_rf_info = None
+                    if HENRI_ARC_EXTROPIC:
+                        try:
+                            _rew = torch.tensor(
+                                [valence] * len(window),
+                                dtype=torch.float32,
+                                device=state_wave.device,
+                            )
+                            traj_rf_info = orch.planner.trajectory_reinforce_post_train(
+                                torch.stack([t[0] for t in window]),
+                                torch.stack([t[1] for t in window]),
+                                torch.stack([t[2] for t in window]),
+                                rewards=_rew,
+                                lr=0.05,
+                            )
+                        except Exception as _rf_exc:
+                            traj_rf_info = {"engaged": False,
+                                            "status": "TRAJ_RF_UNAVAILABLE",
+                                            "error": str(_rf_exc)[:120]}
                     print(f"  [edmd-L2] step {step}: window {len(window)} "
                           f"batch loss {edmd_loss:.4f} | RPE update {rpe_loss:+.6f}")
                     tele.emit({"env": env_name, "step": step, "edmd_L2_loss":
-                               round(edmd_loss, 6), "rpe_loss": round(rpe_loss, 6), "edmd_L2_window": len(window)})
+                               round(edmd_loss, 6), "rpe_loss": round(rpe_loss, 6),
+                               "edmd_L2_window": len(window),
+                               "traj_reinforce": traj_rf_info if traj_rf_info else None})
             train_ctx = None
 
             # Boundary axiom = prediction error: observed state vs the dynamics
@@ -2151,6 +2214,7 @@ def run():
                 "phase823_opine_info": opine_info,
                 "phase823_goal_status": goal_status,
                 "phase826_snap_status": snap_status,
+                "extropic_ising": ising_info,
             })
             # Wave-level hypertable log (downsampled for DB volume)
             if db_logger is not None and step % 5 == 0:

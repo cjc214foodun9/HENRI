@@ -57,6 +57,7 @@ class HENRIDualSpeedHarness:
         device: Optional[str] = None,
         zone_c_dsn: Optional[str] = None,
         zone_c_required: bool = False,
+        use_context_matching: bool = False,
     ) -> None:
         from wave_jepa import WaveJEPA  # live module
         from henri_vision_encoder import HENRIVisionEncoder
@@ -86,7 +87,8 @@ class HENRIDualSpeedHarness:
         # instantiated in harness v1; deliberation (MCTS search) is a future
         # outer-loop call.
         self.wave_jepa = WaveJEPA(
-            d_model=d_model, num_blocks=num_blocks, r_rank=r_rank, device=self.device
+            d_model=d_model, num_blocks=num_blocks, r_rank=r_rank, device=self.device,
+            use_context_matching=use_context_matching,
         )
 
         # Outer loop: REPL tools + veto
@@ -144,7 +146,19 @@ class HENRIDualSpeedHarness:
           pred_wave, delta_axiom, delta_epistemic, vetoed, veto_status, latency_ms
         """
         t0 = time.perf_counter()
-        pred_wave = self.wave_jepa.predict_future_latent(state_wave, action_wave)
+        # Phase 8.37 D2 (Extropic, 2608.01615 §III.B): context-matched latent
+        # prediction. When enabled and Zone C returns a conditioning wave,
+        # the predictor is anchored on the retrieved engram context; otherwise
+        # the legacy predictor path runs unchanged (default-OFF).
+        if self.wave_jepa.use_context_matching:
+            cond = self.retrieve_conditioning(state_wave)
+            if cond is not None:
+                pred_wave = self.wave_jepa.predict_future_latent_context(
+                    state_wave, action_wave, cond.unsqueeze(0))
+            else:
+                pred_wave = self.wave_jepa.predict_future_latent(state_wave, action_wave)
+        else:
+            pred_wave = self.wave_jepa.predict_future_latent(state_wave, action_wave)
         if axiom_wave is None:
             axiom_wave = state_wave  # self-consistency boundary when no baseplate
         delta_axiom, delta_epistemic, hard_veto, veto_status = self.evaluate_sagnac_veto(

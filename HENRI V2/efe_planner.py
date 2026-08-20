@@ -1459,6 +1459,71 @@ class EFEPlanner(nn.Module):
         ).mean()
 
     @torch.no_grad()
+    def trajectory_reinforce_post_train(
+        self,
+        states: torch.Tensor,
+        actions: torch.Tensor,
+        observed_nexts: torch.Tensor,
+        rewards: torch.Tensor,
+        lr: float = 0.05,
+        baseline: float = None,
+        max_grad_norm: float = 10.0,
+    ) -> dict:
+        """Extropic Directive 3 (2608.01615 §IV): trajectory-level REINFORCE.
+
+        Post-trains the coupled transition on a macro-option trajectory
+        (H >= 4) by weighting the Sagnac dynamics gradient by the trajectory
+        advantage (reward - baseline):
+
+            grad = sum_i (R_i - b) * grad L_Sagnac(pred_i, obs_i)
+
+        Positive-advantage transitions pull the transition toward the
+        observed trajectory; negative-advantage transitions push away.
+        Baseline defaults to the batch mean reward (variance reduction).
+        Only the per-block residual is gradient-tuned (the field channel is
+        solved closed-form by train_transition_batch); parameters are
+        re-retracted after the step. Fail-closed on non-coupled transitions
+        and degenerate (zero-advantage) batches.
+        """
+        if not isinstance(self.transition, LowRankCoupledTransition):
+            return {"engaged": False, "status": "INCOMPATIBLE_TRANSITION"}
+        N = states.shape[0]
+        if N < 2:
+            return {"engaged": False, "status": "TRAJECTORY_TOO_SHORT"}
+        device = states.device
+        rewards = rewards.to(torch.float32).to(device)
+        if baseline is None:
+            baseline = float(rewards.mean())
+        adv = rewards - baseline
+        adv = adv / (adv.abs().max() + 1e-12)  # normalize to [-1, 1]
+        if bool((adv.abs() < 1e-12).all()):
+            return {"engaged": False, "status": "ZERO_ADVANTAGE",
+                    "baseline": baseline}
+        with torch.enable_grad():
+            loss = torch.stack([
+                self._batch_sagnac_loss(
+                    states[i:i + 1], actions[i:i + 1], observed_nexts[i:i + 1])
+                for i in range(N)
+            ])
+            weighted = (adv * loss).sum()
+            (gR,) = torch.autograd.grad(weighted, [self.transition.block_residual])
+        gnorm = float(gR.norm().item())
+        if gnorm > max_grad_norm and gnorm > 0.0:
+            gR = gR * (max_grad_norm / gnorm)
+        with torch.no_grad():
+            self.transition.block_residual -= lr * gR
+            self.transition._retract(residual_only=True)
+        return {
+            "engaged": True,
+            "status": "OK",
+            "advantage_mean": float(adv.mean()),
+            "baseline": baseline,
+            "weighted_loss": float(weighted.item()),
+            "grad_norm": gnorm,
+            "n_traj": N,
+        }
+
+    @torch.no_grad()
     def apply_creep(self, predicted_wave: torch.Tensor, observed_wave: torch.Tensor, lr: float = 0.01):
         """Deprecated stub retained for API compatibility; use train_transition_step."""
         return float(torch.mean((predicted_wave - observed_wave) ** 2))

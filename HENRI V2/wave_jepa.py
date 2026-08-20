@@ -24,12 +24,23 @@ class WaveJEPA(nn.Module):
     Predicts future environment states strictly in d=65,536 latent phase wave space without pixel/token decoders.
     """
 
-    def __init__(self, d_model: int = 65536, num_blocks: int = 8192, r_rank: int = 16, device: Optional[str] = None):
+    def __init__(self, d_model: int = 65536, num_blocks: int = 8192, r_rank: int = 16,
+                 device: Optional[str] = None, use_context_matching: bool = False,
+                 context_mix: float = 0.3, context_beta: float = 8.0):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
         self.r_rank = r_rank
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+
+        # Context Matching (Extropic Directive 2 — 2608.01615 §III.B).
+        # Default-OFF: when False, the forward path is byte-identical to the
+        # legacy predictor. When True, predictions are anchored on local
+        # context engrams (Zone C batches): pred = (1-lam)*T(Psi_t, a_t) +
+        # lam * sum_j w_j C_j with w = softmax(beta * sim(Psi_t, C_j)).
+        self.use_context_matching = use_context_matching
+        self.context_mix = context_mix
+        self.context_beta = context_beta
 
         # 1. Context & Target Ingress Encoder (HENRIVisionEncoder)
         self.encoder = HENRIVisionEncoder(d_model=d_model, k_blocks=num_blocks, device=self.device)
@@ -49,8 +60,42 @@ class WaveJEPA(nn.Module):
         return F.normalize(wave.view(-1), p=2, dim=0).view(self.num_blocks, 8)
 
     def predict_future_latent(self, state_wave: torch.Tensor, action_wave: torch.Tensor) -> torch.Tensor:
-        """Action-Conditioned Predictor p_psi: predicts future latent wave \hat{Psi}_{t+1} = T(Psi_t, a_t)."""
+        """Action-Conditioned Predictor p_psi: predicts future latent wave \\hat{Psi}_{t+1} = T(Psi_t, a_t)."""
         return self.predictor(state_wave, action_wave)
+
+    @torch.no_grad()
+    def _context_weights(self, state_wave: torch.Tensor,
+                         context_waves: torch.Tensor) -> torch.Tensor:
+        """Softmax attention over context engrams (2608.01615 §III.B).
+
+        w_j = softmax(beta * sim(Psi_t, C_j)) over the context batch.
+        Context waves [M, num_blocks, 8]; returns [M] weights on the
+        flattened unit-sphere similarity.
+        """
+        flat_state = F.normalize(state_wave.view(-1), p=2, dim=0)
+        flat_ctx = F.normalize(context_waves.view(context_waves.shape[0], -1), p=2, dim=-1)
+        sims = flat_state @ flat_ctx.T                     # [M]
+        return torch.softmax(self.context_beta * sims, dim=-1)
+
+    def predict_future_latent_context(self, state_wave: torch.Tensor,
+                                      action_wave: torch.Tensor,
+                                      context_waves: torch.Tensor) -> torch.Tensor:
+        """Context-matched predictor (2608.01615 §III.B).
+
+        pred = (1 - lam) * T(Psi_t, a_t) + lam * sum_j w_j C_j
+
+        The transition factor is conditioned on local context so multi-step
+        rollouts stay anchored to verified Zone C engrams instead of drifting
+        with accumulated predictor error. lam = context_mix; lam=0 recovers
+        the legacy predictor exactly.
+        """
+        base = self.predict_future_latent(state_wave, action_wave)
+        w = self._context_weights(state_wave, context_waves)          # [M]
+        anchor = torch.einsum('j,jnb->nb', w, context_waves)          # [nb, 8]
+        anchor = F.normalize(anchor.view(-1), p=2, dim=0).view(state_wave.shape)
+        lam = self.context_mix
+        pred = (1.0 - lam) * base + lam * anchor
+        return F.normalize(pred.view(-1), p=2, dim=0).view(state_wave.shape)
 
     def compute_sagnac_energy(self, pred_wave: torch.Tensor, target_wave: torch.Tensor) -> torch.Tensor:
         """
