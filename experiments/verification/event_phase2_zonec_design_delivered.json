@@ -1,0 +1,17 @@
+{
+  "schema": "henri.governance-event-receipt.v1",
+  "requested_name": "event_phase2_zonec_design_delivered.json",
+  "event_type": "PHASE2_ZONEC_DESIGN_DELIVERED",
+  "event_id": "c28b3b5f-07e9-446b-a760-be956787279c",
+  "audit_hash": "92448f1d4ef0ad5e38b1a914d903450522c1f33dcfdebdeee7f61f1ec948e644",
+  "causal_status": "observed",
+  "stream": "execution",
+  "actor": "henri-arbiter",
+  "artifact": "experiments/verification/arc_phase839_phase2_zonec_dual_subspace_migration.md",
+  "commit": "88ae57c",
+  "on_main": true,
+  "ddl_status": "REQUIRES_APPROVAL",
+  "ddl_executed": false,
+  "catalog_probe": {"engrams_rows": 10703, "axioms_rows": 11, "evidence_class": "OBSERVED"},
+  "canonical_store": "~/Documents/HENRI_Research_Vault/_agentic/events/execution.jsonl"
+}

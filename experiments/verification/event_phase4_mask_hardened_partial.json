@@ -1,0 +1,24 @@
+{
+  "schema": "henri.governance-event-receipt.v1",
+  "requested_name": "event_phase4_mask_hardened_partial.json",
+  "event_type": "PHASE4_MASK_HARDENED_PARTIAL",
+  "event_id": "9ed41463-abcb-4ffc-84fc-939c0cc1fef9",
+  "audit_hash": "10896855dae4334955d4ecc62e2992ba231d9e9657145001b510ba8786d22256",
+  "causal_status": "blocked",
+  "stream": "execution",
+  "actor": "henri-arbiter",
+  "mask_hardening": {
+    "status": "PASS",
+    "defect": "all-masked logits emitted garbage token id 0",
+    "fix": "GrammarMaskAllMaskedError at every mask return site",
+    "contract_tests": "3/3",
+    "local_suite": "173 passed / 1 skipped"
+  },
+  "repl_efe_feedback": {
+    "status": "NOT_IMPLEMENTED",
+    "note": "no EFE/planner consumer of REPL feedback on the HumanEval score path; --reward-rank is a prior-falsified heuristic (1/50 Gate B, sealed 3654b60), not an implemented REPL->EFE planner"
+  },
+  "mask_on_score_path": false,
+  "commit": "448926c",
+  "canonical_store": "~/Documents/HENRI_Research_Vault/_agentic/events/execution.jsonl"
+}
