@@ -119,15 +119,19 @@ def main():
         # encode + rank phase (IDF)
         t0 = time.perf_counter()
         sims = []
+        kept = 0
         for src, body in pool:
             v = encoder.encode_code_string(src)
             if v is None:
                 sims.append(-1e9)
                 continue
+            kept += 1
             s = 0.0
             for cb in cb_vecs:
                 s += encoder.compute_cosine_similarity(v, cb)
             sims.append(s / max(1, len(cb_vecs)))
+        if device.type == "cuda":
+            torch.cuda.synchronize()  # force GPU completion before timing capture
         ordered = [p for _, p in sorted(zip(sims, pool), key=lambda t: t[0], reverse=True)]
         t_rank = (time.perf_counter() - t0) * 1000.0
         # sandbox phase (first attempt only, bounded)
@@ -139,7 +143,7 @@ def main():
         t_sand = (time.perf_counter() - t0) * 1000.0
         total = t_gen + t_rank + t_sand
         row = {"item": idx, "task_id": item.get("task_id", entry),
-               "candidates": len(pool), "gen_ms": round(t_gen, 1),
+               "candidates": len(pool), "kept": kept, "gen_ms": round(t_gen, 1),
                "rank_ms": round(t_rank, 1), "sandbox_ms": round(t_sand, 1),
                "total_ms": round(total, 1),
                "rank_frac": round(t_rank / total, 3), "sandbox_frac": round(t_sand / total, 3),
