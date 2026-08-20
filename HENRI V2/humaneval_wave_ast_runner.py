@@ -74,7 +74,8 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                   device: str = "cuda", smoke_dim: int | None = None,
                   output_dir: str | None = None,
                   reward_rank: bool = False,
-                  decoder_rank: bool = False) -> dict[str, Any]:
+                  decoder_rank: bool = False,
+                  spec_rank: bool = False) -> dict[str, Any]:
     started = time.perf_counter()
     d_model = smoke_dim or 65536
     device = device if (device == "cuda" and torch.cuda.is_available()) else "cpu"
@@ -161,6 +162,7 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
     exemplars: list[tuple[torch.Tensor, torch.Tensor]] = []
     items_reordered = 0
     decoder_items_reordered = 0
+    docstring_used = 0
     commit = None
     try:
         import subprocess
@@ -185,7 +187,23 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
             continue
 
         prompt_wave = decoder._wave(prompt)
-        candidates = decoder.decode(prompt_wave, prompt_wave, entry, args)
+        # V1 remedy (HENRI-SYNTHESIS-PHASE0-AUDIT-2026, Stage 1): replace the
+        # degenerate decode(prompt, prompt) zero-target call with a non-zero
+        # target wave derived from the item's own docstring (legitimate input;
+        # NOT the test field — test-derived targets would be answer leakage).
+        doc_target = None
+        if spec_rank:
+            import re as _re
+            m = _re.search(r'"""(.*?)"""', prompt, _re.DOTALL)
+            doc_target = m.group(1).strip() if m else None
+            if doc_target:
+                target_wave = decoder._wave(doc_target)
+            else:
+                target_wave = prompt_wave
+        else:
+            target_wave = prompt_wave
+        candidates = decoder.decode(prompt_wave, target_wave, entry, args)
+        docstring_used += 1 if (spec_rank and doc_target) else 0
         total_candidates += len(candidates)
         if len(candidates) < MIN_CANDIDATES:
             item_results.append({"task_id": task_id, "status": "NOT_EXPRESSIBLE",
@@ -297,6 +315,8 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         "decoder_rank": decoder_rank,
         "decoder_items_reordered": decoder_items_reordered,
         "decoder_checkpoint_sha256": decoder_checkpoint_sha,
+        "spec_rank": spec_rank,
+        "docstring_targets_used": docstring_used,
         "accuracy_attempted": solved / max(1, expressible),
         "wall_clock_sec": round(wall_sec, 3),
         "avg_latency_ms_item": round(avg_ms, 3),
@@ -327,8 +347,11 @@ if __name__ == "__main__":
                     help="test-time learned positive-exemplar re-ranking (default OFF)")
     ap.add_argument("--decoder-rank", action="store_true",
                     help="rank candidates by trained-decoder token-predictability (default OFF)")
+    ap.add_argument("--spec-rank", action="store_true",
+                    help="V1: non-zero target wave from docstring spec (default OFF)")
     args = ap.parse_args()
     run_benchmark(limit=args.limit, attempts=args.attempts,
                   device=args.device, smoke_dim=args.smoke_dim,
                   output_dir=args.output_dir, reward_rank=args.reward_rank,
-                  decoder_rank=args.decoder_rank)
+                  decoder_rank=args.decoder_rank,
+                  spec_rank=args.spec_rank)
