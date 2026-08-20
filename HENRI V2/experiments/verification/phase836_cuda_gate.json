@@ -1,0 +1,37 @@
+{
+  "schema": "henri.phase-gate.v1",
+  "phase": "8.36",
+  "status": "PASS",
+  "candidate_sha": "619de4ec47d60687942d7d4bc5aec6e3ff10f094",
+  "remote": {
+    "host": "107.206.71.138",
+    "ssh_port": 45864,
+    "instance_id": "47411800",
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "vram_total_gib": 32.6,
+    "torch": "2.12.0+cu130",
+    "triton": "3.7.0",
+    "cuda": "13.0",
+    "worktree": "/workspace/henri-836-wt",
+    "worktree_status_lines": 0
+  },
+  "metrics": {
+    "avg_step_latency_ms": 0.3597,
+    "avg_wall_clock_step_ms": 2.0102,
+    "gate_limit_ms": 2.0,
+    "batch": 16,
+    "warmup_steps": 5,
+    "measured_steps": 45,
+    "grid_shape": "30x30"
+  },
+  "tests": {
+    "phase836_cuda": "3 passed",
+    "local_unit_regression": "140 passed / 1 skipped"
+  },
+  "caveats": [
+    "GPU-event kernel latency 0.3597 ms; wall-clock 2.0102 ms includes host-side action sampling (torch.randint) in the test loop, not the harness step itself",
+    "Full CUDA unit suite not run in this phase: checkpoint overlay absent from clean worktree (bucket-4 setup class, not candidate regression)"
+  ],
+  "evidence_class": "OBSERVED",
+  "verified_at_utc": "2026-08-20"
+}
