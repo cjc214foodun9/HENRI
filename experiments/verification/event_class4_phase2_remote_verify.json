@@ -1,0 +1,63 @@
+{
+  "schema": "henri.governance-event-receipt.v1",
+  "event_type": "CLASS4_PHASE2_REMOTE_VERIFY",
+  "event_id": "5b2bf88f-ac35-45fb-b695-ca7633772ce3",
+  "audit_hash": "69e94b5e7c2f02853fca29100da513a84a74d3b09d80216685bb4f7179afa6f0",
+  "status": "COMPONENT_PASS_M4_FALSIFIED",
+  "candidate_sha": "f29405cb83946c28f2342e2b164f3e641c170e06",
+  "origin_branch": "class4/universal-vla-master-plan",
+  "origin_branch_sha": "f29405cb83946c28f2342e2b164f3e641c170e06",
+  "main_sha": "849c65d0175699d1acc271c62b0d08974714f40c",
+  "remote_worktree": "/root/henri-class4-f29405c",
+  "remote_worktree_status_lines": 0,
+  "hardware": {
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "cuda": "13.0",
+    "torch": "2.12.0+cu130"
+  },
+  "implementation": "torch.ops.henri.sagnac_mcts",
+  "production_symbol": "qfhrr_ast_discriminative_kernel.batched_mean_phase_cosine",
+  "flag": "HENRI_SAGNAC_CUDA=1",
+  "component_gate": {
+    "candidate_shape": [172, 65536],
+    "codebook_shape": [100, 65536],
+    "max_abs_error": 0.000001385808,
+    "reference_p50_ms": 641.3,
+    "fused_p50_ms": 8.6,
+    "relative_speedup": 74.7,
+    "peak_intermediate_bytes": 360710144,
+    "dense_intermediate_bytes_rejected": 4508876800,
+    "e1": true,
+    "l1": true,
+    "m1": true,
+    "synchronized_timing": true
+  },
+  "absolute_m4": {
+    "fused_p50_ms": 8.627887582406402,
+    "target_ms": 2.0,
+    "failure_threshold_ms": 5.0,
+    "verdict": "FALSIFIED"
+  },
+  "external_task_outcome": "NOT_MEASURED",
+  "score_claim": false,
+  "setup_failure": {
+    "class": "BLOCKED_FIXTURE_SETUP",
+    "cause": "clean worktree initially lacked gitignored data/mbpp.jsonl",
+    "resolution": "external overlay copied with exact SHA/byte reconciliation",
+    "overlay_mbpp_sha256": "ccf64ceae9c5403bf50a044cb6d505bfd2a2963ee58338ba268fd65beab92a9f",
+    "overlay_mbpp_bytes": 563743,
+    "overlay_humaneval_sha256": "b796127e635a67f93fb35c04f4cb03cf06f38c8072ee7cee8833d7bee06979ef",
+    "overlay_humaneval_bytes": 44877
+  },
+  "artifacts": {
+    "component_json_sha256": "b484b2d45a55944b990eb518945b21104c2471a75018b334033a86d233d95c6b",
+    "component_log_sha256": "023e02cfea79ea3aff135811a5bc0fc6190c191030bed58b5644373d28ac2096",
+    "production_gate_log_sha256": "b78226ca318b08efc93c1eced3b93a6894b96f854f4b8478889a18115c56137d",
+    "setup_failure_log_sha256": "c60933163cd2041ade44e25df08ce5240d6e3b5c601039a1f1be8c4836958eab"
+  },
+  "limitations": [
+    "The measured consumer is the AST candidate scorer, not ARC action selection.",
+    "No benchmark score was run or promoted.",
+    "M4 absolute target remains unmet; further kernel optimization requires a new bounded design and approval."
+  ]
+}
