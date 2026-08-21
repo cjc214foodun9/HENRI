@@ -1,0 +1,483 @@
+{
+  "specs": {
+    "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md": {
+      "functional_requirements": 3,
+      "proposed_mechanisms": 12,
+      "benchmark_requirements": 0,
+      "equations_contracts": 24,
+      "capability_claims": 2,
+      "unsupported": 0
+    },
+    "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md::sample": {
+      "functional_requirements": [
+        {
+          "line": 6,
+          "text": "Security / Operational Class: MANDATORY ARCHITECTURAL SPECIFICATION"
+        },
+        {
+          "line": 8,
+          "text": "In conventional deep neural networks (e.g., 70B–405B parameter LLMs/VLMs), \"world knowledge\" is stored implicitly in static, dense weight tensors (\\mathbf{W}_{\\"
+        },
+        {
+          "line": 126,
+          "text": "To verify that Zone C engrams function as epistemic world knowledge without violating micro-architectural boundaries, the system must satisfy the following fals"
+        }
+      ],
+      "proposed_mechanisms": [
+        {
+          "line": 5,
+          "text": "Execution Context: Zone C TimescaleDB Content-Addressable Memory (pgvector), Wave-JEPA Continuous World Model, Triton q\\text{FHRR} Phase Kernels"
+        },
+        {
+          "line": 10,
+          "text": "During active inference, these engrams do not act as passive text database records. They act as Thermodynamic Boundary Operators that physically shape the conti"
+        },
+        {
+          "line": 19,
+          "text": "▼ (O-VSA Fractional Phase Binding)"
+        }
+      ],
+      "benchmark_requirements": [],
+      "equations_contracts": [
+        {
+          "line": 14,
+          "text": "An Epistemic Engram \\mathbf{E}_k is a stable, zero-entropy reference coordinate on \\mathbb{S}^{D-1} compiled from a verified domain invariant (such as a Peano a"
+        },
+        {
+          "line": 34,
+          "text": "* The third term represents the Sagnac Attractor Tilt (\\lambda_{\\text{axiom}}), which physically reshapes the phase space, turning verified world knowledge into"
+        },
+        {
+          "line": 45,
+          "text": "| HOST GPU VRAM (NVIDIA GeForce RTX 5090 - 32 GB GDDR7)                                           |"
+        }
+      ],
+      "capability_claims": [
+        {
+          "line": 108,
+          "text": "This guarantees that epistemic adaptation is strictly directional, increasing macroscopic Causal Emergence (\\Delta CE \\ge 0) over the execution lifecycle."
+        },
+        {
+          "line": 111,
+          "text": "By formalizing Zone C engrams as epistemic world knowledge operators, Project HENRI achieves a complete structural synthesis across physical wave mechanics, inf"
+        }
+      ],
+      "unsupported": []
+    },
+    "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md": {
+      "functional_requirements": 1,
+      "proposed_mechanisms": 29,
+      "benchmark_requirements": 5,
+      "equations_contracts": 33,
+      "capability_claims": 5,
+      "unsupported": 0
+    },
+    "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md::sample": {
+      "functional_requirements": [
+        {
+          "line": 27,
+          "text": "To guarantee non-zero mutual information I(\\mathbf{\\Psi}_{\\text{goal}}; Y) > 0, the continuous-to-discrete egress unbinder must operate as a Unitary Page Recove"
+        }
+      ],
+      "proposed_mechanisms": [
+        {
+          "line": 6,
+          "text": "Execution Context: Closed-Loop Neural Egress, Wave-JEPA World Modeling, and Stiefel-Langevin Active Inference"
+        },
+        {
+          "line": 9,
+          "text": "Conventional Vision-Language-Action (VLA) architectures rely on autoregressive token prediction over discrete vocabulary distributions, suffering from quadratic"
+        },
+        {
+          "line": 11,
+          "text": "Symbolic binding (\\circledast), unbinding (\\circledast^{-1}), and superposition (\\oplus) operate within a non-commutative Product Clifford Algebra (\\mathcal{C}\\"
+        }
+      ],
+      "benchmark_requirements": [
+        {
+          "line": 80,
+          "text": "|                                    HENRI V2 FULL BENCHMARK GAUNTLET SCORECARD                                         |"
+        },
+        {
+          "line": 95,
+          "text": "Step-by-Step Bounded Proofs for Benchmark Repeatability:"
+        },
+        {
+          "line": 128,
+          "text": "| Step 5: Benchmark Execution | HumanEval Full Benchmark | 100.0\\% Pass Rate | < 85.0\\% Pass Rate |"
+        }
+      ],
+      "equations_contracts": [
+        {
+          "line": 1,
+          "text": "Project HENRI: Holographic VLA Model Benchmark Verification & Architectural Realization Specification"
+        },
+        {
+          "line": 2,
+          "text": "Document Identifier: HENRI-SPEC-VLA-VERIFICATION-2026"
+        },
+        {
+          "line": 40,
+          "text": "| - Continuous Unitary Wave Embedding (UWE) over 2D/3D fields                      |"
+        }
+      ],
+      "capability_claims": [
+        {
+          "line": 12,
+          "text": "Categorical diagrammatic consistency is guaranteed via FunctorFlow compilation. The transformation between multimodal ingress categories \\mathcal{C}_{\\text{vis}"
+        },
+        {
+          "line": 24,
+          "text": "1.2 Information-Theoretic Mutual Information Guarantee Across the Egress Boundary"
+        },
+        {
+          "line": 34,
+          "text": "This ensures that macroscopic causal emergence is monotonically non-decreasing (\\Delta CE \\ge 0), guaranteeing structural integrity during test-time adaptation."
+        }
+      ],
+      "unsupported": []
+    }
+  },
+  "reconciliation": [
+    {
+      "spec_claim": "zone_c_ast_engrams/zone_c_action_engrams",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\scripts\\staging\\ingest_mbpp_codebook.py:12"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "zone_c_ast_engrams/zone_c_action_engrams",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\scripts\\staging\\ingest_mbpp_codebook.py:12"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "zone_c_engrams",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\migrations\\zone_c_schema.sql:63"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "zone_c_engrams",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\migrations\\zone_c_schema.sql:63"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "Delta_Sagnac>=0.10 veto",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\efe_planner.py:1595",
+        "HENRI V2\\henri_universal_repl.py:98",
+        "HENRI V2\\sagnac_mcts_planner.py:142"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "Delta_Sagnac>=0.10 veto",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\efe_planner.py:1595",
+        "HENRI V2\\henri_universal_repl.py:98",
+        "HENRI V2\\sagnac_mcts_planner.py:142"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "O-VSA fractional binding",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\production_arc_run.py:1566",
+        "HENRI V2\\production_arc_run.py:1573",
+        "HENRI V2\\tests\\contract\\test_import_purity_contract.py:20",
+        "HENRI V2\\tests\\contract\\test_import_purity_contract.py:21",
+        "HENRI V2\\tests\\contract\\test_phase821_action_space_reform.py:33"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "O-VSA fractional binding",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\production_arc_run.py:1566",
+        "HENRI V2\\production_arc_run.py:1573",
+        "HENRI V2\\tests\\contract\\test_import_purity_contract.py:20",
+        "HENRI V2\\tests\\contract\\test_import_purity_contract.py:21",
+        "HENRI V2\\tests\\contract\\test_phase821_action_space_reform.py:33"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "Dual EDMD / R-EDMD",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\adaptive_viscoelastic_thermostat.py:241",
+        "HENRI V2\\complex_phase_transition.py:45",
+        "HENRI V2\\efe_planner.py:70",
+        "HENRI V2\\efe_planner.py:181",
+        "HENRI V2\\efe_planner.py:184"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "Dual EDMD / R-EDMD",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\adaptive_viscoelastic_thermostat.py:241",
+        "HENRI V2\\complex_phase_transition.py:45",
+        "HENRI V2\\efe_planner.py:70",
+        "HENRI V2\\efe_planner.py:181",
+        "HENRI V2\\efe_planner.py:184"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "16-expert Kuramoto syncytium",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\darwinian_phase_swarm.py:293"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "16-expert Kuramoto syncytium",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\darwinian_phase_swarm.py:293"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "SGLD anisotropic Langevin",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\arc_egress_contract.py:23",
+        "HENRI V2\\arc_egress_contract.py:184",
+        "HENRI V2\\arc_egress_contract.py:196",
+        "HENRI V2\\arc_egress_contract.py:197",
+        "HENRI V2\\arc_egress_contract.py:216"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "SGLD anisotropic Langevin",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\arc_egress_contract.py:23",
+        "HENRI V2\\arc_egress_contract.py:184",
+        "HENRI V2\\arc_egress_contract.py:196",
+        "HENRI V2\\arc_egress_contract.py:197",
+        "HENRI V2\\arc_egress_contract.py:216"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "qFHRR Triton LUT kernel",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\qfhrr_kernels.py:830",
+        "HENRI V2\\qfhrr_kernels.py:896",
+        "HENRI V2\\experiments\\verification\\svd_rank_pcie5_verify.py:126",
+        "HENRI V2\\experiments\\verification\\svd_rank_pcie5_verify.py:127"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "qFHRR Triton LUT kernel",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\qfhrr_kernels.py:830",
+        "HENRI V2\\qfhrr_kernels.py:896",
+        "HENRI V2\\experiments\\verification\\svd_rank_pcie5_verify.py:126",
+        "HENRI V2\\experiments\\verification\\svd_rank_pcie5_verify.py:127"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "HumanEval 100% (164/164)",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\accuracy_profile.py:45",
+        "HENRI V2\\execute_authentic_coding_benchmark.py:5",
+        "HENRI V2\\execute_authentic_coding_benchmark.py:6",
+        "HENRI V2\\execute_authentic_coding_benchmark.py:33",
+        "HENRI V2\\execute_authentic_coding_benchmark.py:36"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "HumanEval 100% (164/164)",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\accuracy_profile.py:45",
+        "HENRI V2\\execute_authentic_coding_benchmark.py:5",
+        "HENRI V2\\execute_authentic_coding_benchmark.py:6",
+        "HENRI V2\\execute_authentic_coding_benchmark.py:33",
+        "HENRI V2\\execute_authentic_coding_benchmark.py:36"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "MBPP 100% (257/257)",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\accuracy_profile.py:54",
+        "HENRI V2\\humaneval_wave_ast_runner.py:4",
+        "HENRI V2\\humaneval_wave_ast_runner.py:41",
+        "HENRI V2\\humaneval_wave_ast_runner.py:195",
+        "HENRI V2\\humaneval_wave_ast_runner.py:216"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "MBPP 100% (257/257)",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\accuracy_profile.py:54",
+        "HENRI V2\\humaneval_wave_ast_runner.py:4",
+        "HENRI V2\\humaneval_wave_ast_runner.py:41",
+        "HENRI V2\\humaneval_wave_ast_runner.py:195",
+        "HENRI V2\\humaneval_wave_ast_runner.py:216"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "MMLU-Pro 81.6%",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\mmlu_wave_rank_runner.py:1",
+        "HENRI V2\\mmlu_wave_rank_runner.py:3",
+        "HENRI V2\\mmlu_wave_rank_runner.py:4",
+        "HENRI V2\\mmlu_wave_rank_runner.py:5",
+        "HENRI V2\\mmlu_wave_rank_runner.py:47"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "MMLU-Pro 81.6%",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\mmlu_wave_rank_runner.py:1",
+        "HENRI V2\\mmlu_wave_rank_runner.py:3",
+        "HENRI V2\\mmlu_wave_rank_runner.py:4",
+        "HENRI V2\\mmlu_wave_rank_runner.py:5",
+        "HENRI V2\\mmlu_wave_rank_runner.py:47"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "ARC-AGI-3 62.75%",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\arc_curriculum_replay.py:15",
+        "HENRI V2\\arc_curriculum_replay.py:963",
+        "HENRI V2\\arc_curriculum_replay.py:1004",
+        "HENRI V2\\arc_sans_play.py:6",
+        "HENRI V2\\cegis_self_play_sandbox.py:99"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "ARC-AGI-3 62.75%",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\arc_curriculum_replay.py:15",
+        "HENRI V2\\arc_curriculum_replay.py:963",
+        "HENRI V2\\arc_curriculum_replay.py:1004",
+        "HENRI V2\\arc_sans_play.py:6",
+        "HENRI V2\\cegis_self_play_sandbox.py:99"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "I(Psi;Y)>0.85 bits",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\scripts\\training\\train_sgld_500_runner.py:8",
+        "HENRI V2\\tests\\unit\\test_henri_core.py:328"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "I(Psi;Y)>0.85 bits",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\scripts\\training\\train_sgld_500_runner.py:8",
+        "HENRI V2\\tests\\unit\\test_henri_core.py:328"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "Retrieval <=2.0ms/12.5us",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\arc_egress_contract.py:3",
+        "HENRI V2\\efe_planner.py:1577",
+        "HENRI V2\\henri_api_bridge.py:2",
+        "HENRI V2\\henri_api_bridge.py:3",
+        "HENRI V2\\henri_api_bridge.py:30"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "Retrieval <=2.0ms/12.5us",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\arc_egress_contract.py:3",
+        "HENRI V2\\efe_planner.py:1577",
+        "HENRI V2\\henri_api_bridge.py:2",
+        "HENRI V2\\henri_api_bridge.py:3",
+        "HENRI V2\\henri_api_bridge.py:30"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "VRAM ceiling 12.5GB",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\qfhrr_kernels.py:279"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "VRAM ceiling 12.5GB",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\qfhrr_kernels.py:279"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "W_task cross-covariance assembly",
+      "in_spec": "HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "live_hits": [
+        "HENRI V2\\adaptive_viscoelastic_thermostat.py:281",
+        "HENRI V2\\algebraic_action_head.py:11",
+        "HENRI V2\\algebraic_action_head.py:75",
+        "HENRI V2\\algebraic_action_head.py:112",
+        "HENRI V2\\algebraic_action_head.py:124"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    },
+    {
+      "spec_claim": "W_task cross-covariance assembly",
+      "in_spec": "HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "live_hits": [
+        "HENRI V2\\adaptive_viscoelastic_thermostat.py:281",
+        "HENRI V2\\algebraic_action_head.py:11",
+        "HENRI V2\\algebraic_action_head.py:75",
+        "HENRI V2\\algebraic_action_head.py:112",
+        "HENRI V2\\algebraic_action_head.py:124"
+      ],
+      "status": "LIVE_SYMBOL_FOUND"
+    }
+  ]
+}
