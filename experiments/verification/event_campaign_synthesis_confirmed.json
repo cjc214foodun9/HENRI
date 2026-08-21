@@ -1,0 +1,41 @@
+{
+  "schema": "henri.governance-event-receipt.v1",
+  "event_type": "CAMPAIGN_SYNTHESIS_CONFIRMED",
+  "event_id": "425b7ca4-755d-4d67-9259-aa15e5cff89a",
+  "audit_hash": "83f43cbf95503fe45b65ece7f5f71ed3b64426bf4bb5271151caaa4b4afb16eb",
+  "causal_status": "observed",
+  "stream": "execution",
+  "actor": "aletheia",
+  "document": {
+    "id": "HENRI-SYNTHESIS-PROMOTION-RECONCILIATION-2026",
+    "title": "HENRI_Campaign_Promotion___Triple-SHA_Reconciliation_Synthesis.md",
+    "sha256": "6da73b507bc2e57d732a80bd9cd1f5cf831967c0b87c516746ed33068f154b60"
+  },
+  "reconciled_sha": "849c65d0175699d1acc271c62b0d08974714f40c",
+  "ff_range": "2bdef68 -> 849c65d",
+  "prior_events": {
+    "approval": {"id": "bbd5a687", "audit_hash_prefix": "4d084c38"},
+    "reconciliation": {"id": "1eec0933", "audit_hash_prefix": "800a9074"}
+  },
+  "deployment": {
+    "path": "/root/henri-main-849c65d",
+    "status": "clean",
+    "legacy_worktree": "/root/henri-839-wt @ 448926c (preserved)"
+  },
+  "triple_sha": {
+    "local_main": "849c65d0175699d1acc271c62b0d08974714f40c",
+    "origin_main": "849c65d0175699d1acc271c62b0d08974714f40c",
+    "vast_deployment": "849c65d0175699d1acc271c62b0d08974714f40c"
+  },
+  "boundaries": {
+    "humaneval": "2/50 authentic passes (4.0%)",
+    "gpqa_diamond": "0.2980 below 0.3000 kill gate",
+    "mmlu": "0.2598 near chance",
+    "m4_latency": "FALSIFIED 17.9 ms > 5.0 ms failure threshold (target <= 2.0 ms)",
+    "repl_efe_feedback": "NOT IMPLEMENTED",
+    "phase2_ddl": "REQUIRES_APPROVAL (production schema untouched)",
+    "active_service_freshness": "BLOCKED (no HENRI process observed; repo alignment is not runtime freshness)"
+  },
+  "yield": "clean auditable production baseline at 849c65d; epistemically honest closure of Phase 8.39",
+  "canonical_store": "G:/My Drive/HENRI_Research_Vault/HENRI_Research_Vault/_agentic/events/execution.jsonl"
+}
