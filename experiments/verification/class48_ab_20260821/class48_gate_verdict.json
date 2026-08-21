@@ -1,0 +1,22 @@
+{
+  "schema": "henri.class48-ab-gates.v1",
+  "score_a": 0,
+  "score_b": 2,
+  "delta_score": 2,
+  "gate_delta_pass": true,
+  "mean_sagnac_b": 0.9860492513661203,
+  "mean_sagnac_a": 0.9877305097244733,
+  "gate_s_pass": false,
+  "veto_a": 0,
+  "veto_b": 0,
+  "gate_veto_pass": true,
+  "rt_events_telemetry_b": 897,
+  "rt_log_re_rank_b": 897,
+  "gate_engagement_pass": true,
+  "score_eligible_a": 0,
+  "score_eligible_b": 0,
+  "trained_action_head_a": 0,
+  "trained_action_head_b": 0,
+  "verdict": "NOT_PASS",
+  "note": "Arm B completed sp80 + cn04 level 1; 0-level baseline arm A. Default-ON requires a second replication packet per CLASS48 \u00a75."
+}

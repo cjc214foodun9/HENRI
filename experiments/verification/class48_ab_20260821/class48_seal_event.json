@@ -1,0 +1,62 @@
+{
+  "schema_id": "henri.governance-event.v1",
+  "event_type": "A_B_VERDICT_SEALED",
+  "approval_id": "HENRI-CLASS48-RT-MCTS-AB-2026-08-21",
+  "date": "2026-08-21",
+  "frozen_sha": "bb184c9",
+  "verdict": "RT_MCTS_FALSIFIED_AB_ON_GATE_S",
+  "arms": {
+    "arm_a": {
+      "config": "EFE-only, HENRI_FREEZE_LEARNING=1, seed 20260821, 25 envs x 60 steps",
+      "levels_completed": 0,
+      "envs_scored_gt_zero": 0,
+      "mean_sagnac_delta": 0.9877,
+      "telemetry_events": 1332,
+      "verdict_sha256": "ade54ca92250af8d3605b9505b45e66f21c99e74bcd646c62d67385bb5c19f86",
+      "telemetry_sha256": "2da14316dafbaf85e76764680e0114724a7fc9f65a777885a4cca5a6b01bd017"
+    },
+    "arm_b": {
+      "config": "RT-MCTS=1, HENRI_FREEZE_LEARNING=1, seed 20260821, 25 envs x 60 steps",
+      "levels_completed": 2,
+      "envs_scored_gt_zero": 2,
+      "completed_envs": ["sp80-589a99af", "cn04-2fe56bfb"],
+      "mean_sagnac_delta": 0.986,
+      "rt_re_rank_events": 897,
+      "telemetry_events": 1196,
+      "verdict_sha256": "41ed45eba89513e6175dce225830b0c374ed42a6f6c13230396aaceb25b090a8",
+      "telemetry_sha256": "d30a31cba14ce428cc7d84511ca2e6ade71a4ca2d437ac87fdf1df642ab8bffa"
+    }
+  },
+  "gates": {
+    "delta_score": 2,
+    "gate_delta_pass": true,
+    "gate_s_mean_sagnac_b": 0.986,
+    "gate_s_threshold": 0.35,
+    "gate_s_pass": false,
+    "gate_veto_b": 0,
+    "gate_veto_a": 0,
+    "gate_veto_pass": true,
+    "gate_engagement_rt_events": 897,
+    "gate_engagement_pass": true
+  },
+  "kill_rule_applied": "CLASS48 §4: Arm B Delta_score > 0 but Gate S fails -> NOT_PASS (hypothesis falsified on the safety channel), mechanism stays default-OFF",
+  "common_mode_note": "mean per-step sagnac_delta ~0.99 in BOTH arms (frozen transition => static prediction vs observation); arm B did NOT worsen Sagnac (0.9860 vs 0.9877) but the pre-registered gate is absolute (<= 0.35) and FAILS. No gate reinterpretation.",
+  "score_eligibility": {
+    "arm_a": false,
+    "arm_b": false,
+    "reason": "trained_action_head_active=false in both arms (per config); diagnostic-level evidence only; no benchmark score promotion"
+  },
+  "artifacts": {
+    "local_dir": "experiments/verification/class48_ab_20260821/",
+    "remote_logs": ["/tmp/ab_arm_a_frozen.log", "/tmp/ab_arm_b_frozen.log"],
+    "contaminated_v1_evidence": ["/tmp/ab_arm_a_CONTAMINATED.log", "/tmp/ab_arm_a_CONTAMINATED/production_run_1787346732.jsonl"],
+    "zone_c_engram_count_pre": 10826,
+    "zone_c_engram_count_post": 10826,
+    "freeze_held": true
+  },
+  "next_actions": [
+    "RT-MCTS stays default-OFF (flag never defaulted ON).",
+    "Second replication packet required before any default-ON consideration (CLASS48 §5).",
+    "New packet from governed inbox specs (one smallest causal mechanism, default-OFF, clean Zone C isolation, external-outcome gate) pending user approval."
+  ]
+}
