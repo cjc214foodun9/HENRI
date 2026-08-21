@@ -375,10 +375,12 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         prev_first = candidates[0][0] if candidates else None
         if hops_vsa_rank and hops_vsa_scorer is not None:
             from hops_vsa_core import ring_to_real_wave
-            goal_cont = ring_to_real_wave(decoder._wave(prompt))
+            # decoder waves are CPU; the scorer lives on `device` (CUDA) — move
+            # the ring-to-real lift to `device` explicitly (no cross-device ops).
+            goal_cont = ring_to_real_wave(decoder._wave(prompt)).to(device)
             scored = []
             for ci, (src, meta) in enumerate(candidates):
-                cand_cont = ring_to_real_wave(decoder._wave(src))
+                cand_cont = ring_to_real_wave(decoder._wave(src)).to(device)
                 cos, veto = hops_vsa_scorer.score(goal_cont, cand_cont)
                 scored.append((-1e9 if veto else cos, ci, src, meta))
             scored.sort(key=lambda t: (-t[0], t[1]))
