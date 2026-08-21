@@ -1,0 +1,24 @@
+{
+  "schema_id": "henri.governance-event.v1",
+  "event_type": "PATCH_APPLIED",
+  "approval_id": "HENRI-TRANCHE1-RTAB-20260821",
+  "timestamp": "2026-08-21",
+  "commit": "5e2e5ac",
+  "branch": "accuracy/fidelity-remediation",
+  "directives": [
+    {"id": "D1", "action": "Tranche 1 archival", "status": "ARCHIVED_NON_LIVE",
+     "note": "11 files already tracked under HENRI V2/_archive/{broken_tests,orphans}/; zero external callers verified by grep; no mutation required"},
+    {"id": "D2", "action": "Remove dead top-level import production_arc_run.py:48",
+     "status": "APPLIED",
+     "note": "O_VSA_IngressTokenizer removed; gated local DynamicActionSpaceTransducer import (line ~1574) preserved; module file kept for audit; contract tests added"},
+    {"id": "D3", "action": "RT-MCTS A/B packet", "status": "PRE-REGISTERED",
+     "note": "HENRI-CLASS48-RT-MCTS-AB-2026-08-21; arm execution queued after remote suite; HENRI_ARC_RT_MCTS stays default-OFF until paired gate"},
+    {"id": "D4", "action": "Re-gate mixed-seal branch ccos-incommensurate-spatial-carriers", "status": "HELD",
+     "note": "not merged; 8.8-B extraction deferred to separate PR"}
+  ],
+  "evidence": {
+    "suite_local": "679 passed / 3 skipped / 2 warnings (55.88s)",
+    "purity_contract": "4/4 passed",
+    "remote_verification": "PENDING (detached worktree /root/henri-tranche1-5e2e5ac @ 5e2e5ac, 0 status lines; overlay sha256 75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060, 799034119 bytes)"
+  }
+}
