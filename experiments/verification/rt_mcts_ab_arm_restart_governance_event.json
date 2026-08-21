@@ -1,0 +1,32 @@
+{
+  "schema_id": "henri.governance-event.v1",
+  "event_type": "A_B_ARM_RESTARTED_FREEZE_AMENDMENT",
+  "approval_id": "HENRI-CLASS48-RT-MCTS-AB-2026-08-21",
+  "date": "2026-08-21",
+  "frozen_sha": "bb184c9",
+  "arm_a_v1": {
+    "status": "BLOCKED_INFRASTRUCTURE",
+    "cause": "zone_c_learning_writes_active",
+    "detail": "zone_c_engrams has no timestamp/run-attribution columns (axiom_id, domain_tag, phase_vector, sagnac_stress); count grew 10703 -> 10826 during v1 via checkpoint_wave (production_arc_run.py:2289, HENRI_FREEZE_LEARNING unset); arm B would read arm A writes -> pair contaminated",
+    "evidence_log": "/tmp/ab_arm_a_CONTAMINATED.log",
+    "evidence_telemetry": "/tmp/ab_arm_a_CONTAMINATED/production_run_1787346732.jsonl"
+  },
+  "amendment": {
+    "env_added": "HENRI_FREEZE_LEARNING=1",
+    "rationale": "enforce CLASS48 paired freeze list (transition/preference/novelty/swarm/outcome-store); both arms read an identical static Zone C store; treatment contrast remains only HENRI_ARC_RT_MCTS",
+    "zone_c_baseline_count": 10826
+  },
+  "arm_a_v2": "RELAUNCHED_SAME_FROZEN_SHA",
+  "specs_governed": [
+    {
+      "file": "experiments/verification/specs_inbox_20260821/HENRI_Epistemic_Engram___Wave-Mechanistic_Entropy_Engine_Specification.md",
+      "sha256": "316536b53ff9e2c48fc64842820374807be464d9ee0c71fa0a360951c6ee2d28",
+      "status": "NEXT_PHASE_AUTHORITY_ONLY"
+    },
+    {
+      "file": "experiments/verification/specs_inbox_20260821/HENRI_Model_Benchmark_Verification___Holographic_VLA_Architectural_Realization_Specification.md",
+      "sha256": "34f5e2bbd7851ceae634106fb1566acbaa8b149d8e56b5ec28aed53a810d96ce",
+      "status": "NEXT_PHASE_AUTHORITY_ONLY"
+    }
+  ]
+}
