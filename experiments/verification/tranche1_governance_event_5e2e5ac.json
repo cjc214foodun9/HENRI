@@ -19,6 +19,10 @@
   "evidence": {
     "suite_local": "679 passed / 3 skipped / 2 warnings (55.88s)",
     "purity_contract": "4/4 passed",
-    "remote_verification": "PENDING (detached worktree /root/henri-tranche1-5e2e5ac @ 5e2e5ac, 0 status lines; overlay sha256 75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060, 799034119 bytes)"
+    "remote_verification": "PASS",
+    "remote_suite_5e2e5ac": "3 failed (wave_jepa_swarm latent CUDA device-placement trap, byte-identical to merge source 0cf3e5a — pre-existing defect, not tranche regression)",
+    "device_fix": "54c5f47 + 9c09024: fallback/EDMD/sigma-blend derive device from input tensor; regression test test_input_device_derived_fallback added",
+    "remote_suite_9c09024": "679 passed / 4 skipped / 19 warnings (canonical CUDA suite, detached worktree /root/henri-tranche3-9c09024 @ 9c09024, 0 status lines, overlay sha256 75572389083455a3..., 799034119 B)",
+    "local_suite_9c09024": "680 passed / 3 skipped / 2 warnings"
   }
 }
