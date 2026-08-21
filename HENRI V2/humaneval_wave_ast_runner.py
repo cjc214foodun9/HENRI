@@ -80,7 +80,8 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                   trained_head_path: str | None = None,
                   ast_idf_only: bool = False,
                   ast_idf_batched: bool = False,
-                  hops_vsa_rank: bool = False) -> dict[str, Any]:
+                  hops_vsa_rank: bool = False,
+                  o_vsa_ingress: bool = False) -> dict[str, Any]:
     from accuracy_profile import (
         FIDELITY_MIGRATION_FLAG,
         FidelityGuardError,
@@ -136,7 +137,12 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
     print(f"[DATASET] items={len(items)} sha256={dataset_sha}")
 
     # 2. Sandbox: fail-closed subprocess executor with per-candidate timeout.
-    codec = qFHRREpistemicCodec(d_model=d_model, device=device)
+    if o_vsa_ingress:
+        from o_vsa_harmonic_encoder import OVSAHarmonicEncoder  # noqa: E402
+        codec = OVSAHarmonicEncoder(d_model=d_model, device=device)
+        print("[O-VSA] harmonic comb ingress codec active (Class 4.6, default OFF)")
+    else:
+        codec = qFHRREpistemicCodec(d_model=d_model, device=device)
     decoder = WaveASTDecoder(codec, device=device)
     sandbox = None
     for mode in ("namespace", "container-rlimit"):
@@ -573,6 +579,9 @@ if __name__ == "__main__":
     ap.add_argument("--hops-vsa-rank", action="store_true",
                     help="HOPS-VLA skeleton-free channel candidate ranking "
                          "(Class 4.5, default OFF)")
+    ap.add_argument("--o-vsa-harmonic-ingress", action="store_true",
+                    help="O-VSA harmonic comb encoder ingress "
+                         "(Class 4.6, default OFF)")
     args = ap.parse_args()
     run_benchmark(limit=args.limit, attempts=args.attempts,
                   device=args.device, smoke_dim=args.smoke_dim,
@@ -583,4 +592,5 @@ if __name__ == "__main__":
                   trained_head_path=args.trained_head,
                   ast_idf_only=args.ast_idf_only,
                   ast_idf_batched=args.ast_idf_batched,
-                  hops_vsa_rank=args.hops_vsa_rank)
+                  hops_vsa_rank=args.hops_vsa_rank,
+                  o_vsa_ingress=args.o_vsa_harmonic_ingress)
