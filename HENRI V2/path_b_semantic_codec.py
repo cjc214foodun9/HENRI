@@ -168,7 +168,7 @@ class PathBSemanticCodec(nn.Module):
         opt = torch.optim.AdamW(self.parameters(), lr=lr)
         g = torch.Generator()
         g.manual_seed(seed)
-        idx = torch.randperm(len(dataset), generator=g).tolist()
+        idx = torch.randperm(len(dataset), generator=g, device="cpu").tolist()
         n = len(dataset)
         loss_accum: list[float] = []
         self.train()
@@ -202,7 +202,7 @@ class PathBSemanticCodec(nn.Module):
     ) -> float:
         g = torch.Generator()
         g.manual_seed(seed)
-        idx = torch.randperm(len(dataset), generator=g).tolist()
+        idx = torch.randperm(len(dataset), generator=g, device="cpu").tolist()
         correct = total = 0
         self.eval()
         with torch.no_grad():
@@ -241,7 +241,7 @@ def _variant(code: str, i: int, seed: int) -> str:
     mapping = {}
     pool = RENAME_POOL
     for idx, nm in enumerate(names):
-        mapping[nm] = pool[(idx + int(torch.randint(0, len(pool), (1,), generator=g).item())) % len(pool)]
+        mapping[nm] = pool[(idx + int(torch.randint(0, len(pool), (1,), generator=g, device="cpu").item())) % len(pool)]
     out = code
     for old, new in mapping.items():
         out = re.sub(rf"\b{old}\b", new, out)
