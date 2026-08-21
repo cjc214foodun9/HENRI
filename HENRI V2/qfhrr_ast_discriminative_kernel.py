@@ -32,6 +32,7 @@ Z_256^D, per the plan's Quantize_256(arg(...)) prescription.
 import ast
 import hashlib
 import math
+import os
 from typing import Dict, List, Optional, Tuple
 
 import torch
@@ -251,6 +252,10 @@ def batched_mean_phase_cosine(
     Float accumulation order differs from the sequential reference loop
     (chunked sums), so scores agree to float32 tolerance, not bitwise.
     """
+    if os.environ.get("HENRI_SAGNAC_CUDA", "0") == "1":
+        from sagnac_mcts_cuda import batched_mean_phase_cosine_cuda
+
+        return batched_mean_phase_cosine_cuda(candidates, codebook)
     if candidates.dim() != 2 or codebook.dim() != 2:
         raise ValueError("expected [C, D] and [N, D] tensors")
     if candidates.shape[1] != codebook.shape[1]:
