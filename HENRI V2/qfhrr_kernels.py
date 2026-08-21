@@ -28,6 +28,8 @@ import math
 
 import torch
 
+from typing import Optional
+
 try:
     import triton
     import triton.language as tl
@@ -749,9 +751,175 @@ def sample_ising_gibbs(hamiltonian: IsingHamiltonian, n_samples: int = 1,
     return {"spins": torch.stack(out_spins),
             "codes": torch.stack(out_codes),
             "energies": torch.tensor(out_energies)}
+# Flat phase-ring codec (complex sidecar family, default-OFF)
+# ---------------------------------------------------------------------------
+# Phase 8.28 scaffold-compatible quantize/dequantize for FLAT complex wave
+# vectors [..., D]. This is the "third representation family" sidecar
+# (complex flat Z_256 rings). It is NOT wired into any action policy;
+# consumers must opt in explicitly (henri-architecture sidecar boundary).
+
+def quantize_phase_flat(wave: torch.Tensor, K: int = K_PHASE) -> torch.Tensor:
+    """Complex [..., D] wave -> uint8/int32 Z_K phase ring (scaffold form).
+
+    Complex input: theta = angle(wave). Real input is treated as raw phase
+    angles in [-pi, pi) (scaffold convention; do NOT feed real Clifford
+    [num_blocks, 8] waves here — use wave_to_phase_codes instead).
+    """
+    angles = torch.angle(wave) if wave.is_complex() else wave
+    q = torch.floor((angles + math.pi) * (K / (2.0 * math.pi))).to(torch.int64) % K
+    if wave.device.type == "cuda":
+        return q.to(torch.uint8)
+    return q.to(torch.int32)
+
+
+def dequantize_phase_flat(q_ring: torch.Tensor, K: int = K_PHASE,
+                          dtype: torch.dtype = torch.complex64) -> torch.Tensor:
+    """Z_K ring -> continuous complex unit-modulus wave (scaffold form)."""
+    angles = q_ring.to(torch.float32) * (2.0 * math.pi / K) - math.pi
+    return torch.complex(torch.cos(angles), torch.sin(angles)).to(dtype)
+
+
+# ---------------------------------------------------------------------------
+# Batch swarm unbinding: Q [B, D] x C [M, D] -> Sim [B, M]
+# ---------------------------------------------------------------------------
+# Phase 8.28: fused Triton kernel (one program per (b, m) pair, register
+# accumulation over D, no [B, M, D] intermediate) plus a memory-safe chunked
+# torch fallback. Same INT32 LUT_SCALE convention as qfhrr_similarity
+# (LUT int32 scaled by 127; host divides by LUT_SCALE * D). The mask
+# `& 255` is valid only for K_PHASE == 256.
+
+def _as_flat_codes(x: torch.Tensor) -> torch.Tensor:
+    """Accept flat [D] or block [num_blocks, 4] / [B, num_blocks, 4] uint8
+    codes; return contiguous [1, D] (dim-1) or [B, D] (dim>=2) rows.
+    The trailing dims are fully flattened, so both code families share the
+    same flat-D contract as the scalar similarity path."""
+    return x.contiguous().view(x.shape[0], -1) if x.dim() >= 2 else x.contiguous().view(1, -1)
+
+
+if _HAS_TRITON:
+
+    @triton.jit
+    def _qfhrr_batch_sim_kernel(
+        Q_ptr, C_ptr, LUT_ptr, Out_ptr,
+        stride_qb, stride_qd,
+        stride_cm, stride_cd,
+        stride_ob, stride_om,
+        D: tl.constexpr, BLOCK_D: tl.constexpr,
+    ):
+        """Batch unbinding: one program per (b, m); register-accumulate over D.
+
+        acc is INT32: max |acc| = LUT_SCALE * D = 127 * 131072 ~ 16.6M, well
+        inside int32. Host divides by LUT_SCALE * D. No atomics, no
+        [B, M, D] intermediate.
+        """
+        pid_b = tl.program_id(0)
+        pid_m = tl.program_id(1)
+        q_ptr = Q_ptr + pid_b * stride_qb
+        c_ptr = C_ptr + pid_m * stride_cm
+        acc = tl.zeros((), dtype=tl.int32)
+        for d_off in range(0, D, BLOCK_D):
+            cols = d_off + tl.arange(0, BLOCK_D)
+            mask = cols < D
+            q_val = tl.load(q_ptr + cols * stride_qd, mask=mask, other=0).to(tl.int16)
+            c_val = tl.load(c_ptr + cols * stride_cd, mask=mask, other=0).to(tl.int16)
+            diff = (q_val - c_val) & 255
+            cos_val = tl.load(LUT_ptr + diff, mask=mask, other=0)
+            acc += tl.sum(cos_val, axis=0)
+        tl.store(Out_ptr + pid_b * stride_ob + pid_m * stride_om, acc)
+
+    def qfhrr_batch_similarity_triton(Q: torch.Tensor, C: torch.Tensor,
+                                      lut: torch.Tensor,
+                                      max_programs: int = 4096) -> torch.Tensor:
+        """Fused Triton batch unbinding. Q: [B, D] uint8 cuda; C: [M, D]
+        uint8 cuda; lut: [256] int32 cuda. Returns [B, M] float32 in ~[-1, 1].
+        Grid is bounded by chunking M (one program per (b, m) pair)."""
+        B, D = Q.shape
+        M, Dc = C.shape
+        assert D == Dc, f"Dimension mismatch: Q={D}, C={Dc}"
+        Out = torch.empty((B, M), device=Q.device, dtype=torch.float32)
+        BLOCK_D = 2048 if D >= 2048 else 512
+        m_chunk = max(1, min(M, max_programs // max(1, B)))
+        for m0 in range(0, M, m_chunk):
+            m1 = min(m0 + m_chunk, M)
+            _qfhrr_batch_sim_kernel[(B, m1 - m0)](
+                Q, C[m0:m1], lut, Out[:, m0:m1],
+                Q.stride(0), Q.stride(1),
+                C.stride(0), C.stride(1),
+                Out.stride(0), Out.stride(1),
+                D=D, BLOCK_D=BLOCK_D,
+            )
+        return Out / (LUT_SCALE * D)
+
+
+def _pytorch_batch_similarity_fallback(Q: torch.Tensor, C: torch.Tensor,
+                                       lut: torch.Tensor) -> torch.Tensor:
+    """Chunked pure-torch batch unbinding. Memory-safe for large B*M*D:
+    intermediates bounded to ~64M elements (~256 MB int32)."""
+    B, D = Q.shape
+    M, _ = C.shape
+    out = torch.empty((B, M), device=Q.device, dtype=torch.float32)
+    max_elems = 64 * 1024 * 1024
+    chunk_b = max(1, max_elems // max(1, M * D))
+    q_int = Q.to(torch.int32)
+    c_int = C.to(torch.int32)
+    for b0 in range(0, B, chunk_b):
+        b1 = min(b0 + chunk_b, B)
+        diff = (q_int[b0:b1].unsqueeze(1) - c_int.unsqueeze(0)) & 255  # [bc, M, D]
+        cos_vals = lut[diff.long()].to(torch.int64).sum(dim=-1)          # [bc, M]
+        out[b0:b1] = cos_vals.to(torch.float32) / (LUT_SCALE * D)
+    return out
+
+
+def qfhrr_batch_similarity(
+    Q: torch.Tensor,
+    C: torch.Tensor,
+    lut: Optional[torch.Tensor] = None,
+    use_triton: bool = True,
+    max_programs: int = 4096,
+) -> torch.Tensor:
+    """Pairwise quantized phase-unbinding cosine similarity -> [B, M] ~ [-1, 1].
+
+    Q: [B, D] or [D] uint8 rings (flat, or [num_blocks, 4] block codes).
+    C: [M, D] or [D] uint8 rings (same families). D must match.
+    Returns [B, M]; squeezes singleton dims (scaffold-compatible).
+    """
+    q_batched = Q.dim() >= 3 or (Q.dim() == 2 and Q.shape[1] != 4)
+    c_batched = C.dim() >= 3 or (C.dim() == 2 and C.shape[1] != 4)
+    Qf = _as_flat_codes(Q)
+    Cf = _as_flat_codes(C)
+    if Qf.shape[1] != Cf.shape[1]:
+        raise ValueError(f"Dimension mismatch: Q={Qf.shape[1]}, C={Cf.shape[1]}")
+    if lut is None:
+        lut = build_cos_lut(Qf.device)
+    if use_triton and _HAS_TRITON and Qf.is_cuda and Cf.is_cuda:
+        try:
+            res = qfhrr_batch_similarity_triton(Qf, Cf, lut, max_programs=max_programs)
+        except Exception:
+            res = _pytorch_batch_similarity_fallback(Qf, Cf, lut)
+    else:
+        res = _pytorch_batch_similarity_fallback(Qf, Cf, lut)
+    if not q_batched and not c_batched:
+        return res.squeeze(0).squeeze(0)
+    if not q_batched:
+        return res.squeeze(0)
+    if not c_batched:
+        return res.squeeze(1)
+    return res
 
 
 # ---------------------------------------------------------------------------
 # Smoke
 # ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    torch.manual_seed(0)
+    w = torch.randn(64, 8) / torch.norm(torch.randn(64, 8), dim=-1, keepdim=True)
+    q = wave_to_phase_codes(w).contiguous().view(-1)
+    r = qfhrr_batch_similarity(q, q)
+    assert abs(float(r) - 1.0) < 1e-4, f"self-similarity {float(r)}"
+    Q = wave_to_phase_codes(torch.randn(2, 64, 8))
+    C = wave_to_phase_codes(torch.randn(3, 64, 8))
+    S = qfhrr_batch_similarity(Q, C)
+    assert S.shape == (2, 3)
+    print(f"qfhrr batch smoke OK: self={float(r):.6f}, batch={S.shape}")
 
