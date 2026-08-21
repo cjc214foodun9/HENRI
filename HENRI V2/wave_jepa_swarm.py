@@ -221,15 +221,21 @@ class WaveJEPASwarm(nn.Module):
             X_pred = self._gemm_step(X_t, action_idx)
         else:
             V, W_out = self.get_forward_weights()
+            # Durable rule: derive computation device from the INPUT tensor.
+            # Module params may live on cuda (auto-selected at init) while the
+            # caller supplies CPU tensors; .to(same_device) is a no-op, so the
+            # matched CUDA path is byte-identical.
+            V = V.to(X_t.device)
+            W_out = W_out.to(X_t.device)
             H_t = torch.matmul(X_t, V)  # [B, r]
             if action_idx is not None:
                 if isinstance(action_idx, int):
-                    H_t = H_t * torch.exp(1j * self.action_generators[action_idx].real)
+                    H_t = H_t * torch.exp(1j * self.action_generators[action_idx].to(H_t.device).real)
                 elif isinstance(action_idx, torch.Tensor):
                     if action_idx.dim() == 0:
-                        H_t = H_t * torch.exp(1j * self.action_generators[action_idx.item()].real)
+                        H_t = H_t * torch.exp(1j * self.action_generators[action_idx.item()].to(H_t.device).real)
                     else:
-                        H_t = H_t * torch.exp(1j * self.action_generators[action_idx].real)
+                        H_t = H_t * torch.exp(1j * self.action_generators[action_idx].to(H_t.device).real)
             X_pred = torch.matmul(H_t, W_out)  # [B, D]
 
         if noise_scale > 0.0:
@@ -285,8 +291,8 @@ class WaveJEPASwarm(nn.Module):
         X_pred = self.forward(X_in)
         error = torch.linalg.vector_norm(X_out - X_pred, dim=-1).mean().item()
 
-        proj_in = torch.matmul(X_in, self.V_r)   # [B, r]
-        proj_out = torch.matmul(X_out, self.U_r)  # [B, r]
+        proj_in = torch.matmul(X_in, self.V_r.to(X_in.device))   # [B, r]
+        proj_out = torch.matmul(X_out, self.U_r.to(X_out.device))  # [B, r]
         cross_cov = (proj_in.conj().transpose(0, 1) @ proj_out).real.diagonal() / B
 
         self.sigma_r.data = (

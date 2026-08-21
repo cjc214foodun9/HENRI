@@ -76,6 +76,23 @@ class TestWaveJEPASwarm:
         assert n_bytes == 2 * 2 * (131072 * 128) * 2  # 2 factors x r/i x fp16
         assert n_bytes <= 128 * 1024 * 1024  # GB202 L2 budget
 
+    def test_input_device_derived_fallback(self):
+        """Durable rule regression: module on any device accepts CPU tensors.
+
+        On a CUDA host the module auto-selects cuda while the caller passes a
+        CPU tensor; the fallback path must move factors to the INPUT device.
+        On a CPU host this is trivially satisfied. Fails pre-fix on CUDA.
+        """
+        dev = "cuda" if torch.cuda.is_available() else "cpu"
+        m = WaveJEPASwarm(dim=256, rank=8, num_actions=3, fp16_factors=False, device=dev)
+        x = torch.randn(2, 256, dtype=torch.complex64)
+        x = x / torch.linalg.vector_norm(x, dim=-1, keepdim=True)
+        y = m(x, action_idx=torch.tensor([0, 1]))
+        assert y.shape == (2, 256)
+        assert torch.isfinite(y).all()
+        err = m.update_edmd_factors(x, y, forget_factor=0.5)
+        assert math.isfinite(err)
+
 
 # ---------------------------------------------------------------------------
 # qFHRR batch unbinding
