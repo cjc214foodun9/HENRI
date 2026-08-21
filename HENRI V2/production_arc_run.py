@@ -49,6 +49,7 @@ from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
 from connected_component_segmenter import ConnectedComponentSegmenter
 from sagnac_mcts_planner import SagnacMCTSPlanner
 from thermodynamic_telemetry_logger import ThermodynamicTelemetryLogger
+from causal_emergence_telemetry import CausalEmergenceTelemetry
 from universal_data_transducer import UniversalDataTransducer
 from zone_c_env import resolve_zone_c_dsn
 from zone_c_retrieval_bridge import ZoneCRetrievalBridge, bridge_enabled_from_env
@@ -353,6 +354,11 @@ def run():
         "--dsn", type=str, default=None,
         help="Explicit Zone C DSN. CUDA runs still require ZONE_C_ENV=prod."
     )
+    ap.add_argument(
+        "--ce-telemetry", action="store_true",
+        help="Enable Causal Emergence telemetry (packet HENRI-CLASS47). "
+             "Default-OFF diagnostic sidecar; never mutates policy or scores."
+    )
     args = ap.parse_args()
     if args.mode == "phase820_live_gauntlet":
         os.environ["HENRI_ARC_ACTION_EFE"] = "1"
@@ -521,6 +527,11 @@ def run():
                 "BLOCKED: live Zone C telemetry sink unavailable; refusing JSONL-only production evidence"
             ) from exc
     tele = LatentTelemetry(log_path, db_logger)
+
+    # Causal Emergence telemetry (packet HENRI-CLASS47-CE-TELEMETRY-2026-08-21).
+    # Default-OFF diagnostic sidecar: measures CE on the live wave trajectory;
+    # NEVER mutates weights, policy, or score paths. Enabled via --ce-telemetry.
+    ce_tele = CausalEmergenceTelemetry() if args.ce_telemetry else None
 
     # Phase 8.32: authorized trajectory bank (default-OFF, diagnostic-only).
     # Captures live (o_t, a_t, o_t+1) tuples when HENRI_ARC_TRAJECTORY_BANK=1.
@@ -1413,6 +1424,17 @@ def run():
             coherence = orch.sagnac_coherence(state_wave, boundary).item()
             free_energy = orch.compute_free_energy(state_wave, boundary).item()
             order_param = kuramoto_order_parameter(orch.syncytium.expert_phases)
+            # Causal Emergence telemetry (packet HENRI-CLASS47-CE-TELEMETRY-2026-08-21).
+            # Measures the POST-RELAXATION planner wave (the integrated
+            # cognitive trajectory used for action selection) — raw observations
+            # would measure the environment, not the network. Default-OFF
+            # diagnostic; never mutates weights, policy, or score paths.
+            if ce_tele is not None:
+                ce_tele.push(state_wave.detach())
+                ce_report = ce_tele.report()
+                if ce_report is not None:
+                    tele.emit({"env": env_name, "step": step,
+                               "ce_telemetry": ce_report})
             plasticity = {
                 k: round(v, 6)
                 for k, v in orch.syncytium.creep_ctrl_A.plasticity_stats().items()
