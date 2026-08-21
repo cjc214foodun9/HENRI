@@ -1,0 +1,18 @@
+{
+  "schema": "henri.governance-event-receipt.v1",
+  "event_type": "CLASS4_LATENCY_STRATEGY_REVERSED",
+  "event_id": "0d374c03-8cb6-4dcf-a200-d1c572ce5fa4",
+  "audit_hash": "d70c38cd2bbd907f40f2361ef0a7338b74195984fc5bd7368ba81794c64c1503",
+  "directive": "abandon latency reduction in favor of benchmark accuracy and fidelity",
+  "frozen_latency_code_sha": "191459f91b233dd7816feb3a24f8b61dbd7fbd5c",
+  "latency_branch": "class4/universal-vla-master-plan",
+  "main_sha": "849c65d0175699d1acc271c62b0d08974714f40c",
+  "latency_status": "COMPONENT_PASS_M4_FALSIFIED",
+  "accuracy_status": "REQUIRES_RESEARCH_AND_AUDIT",
+  "promotion": "none",
+  "next_worktree_base": "origin/main@849c65d0175699d1acc271c62b0d08974714f40c",
+  "limitations": [
+    "This event stops latency work; it does not establish benchmark accuracy.",
+    "The next phase must trace representation, target availability, egress semantics, and external outcome before implementation."
+  ]
+}
