@@ -1,0 +1,67 @@
+{
+  "schema": "henri.governance-event-receipt.v1",
+  "event_type": "CLASS4_PHASE2_STREAM_REPAIR_VERIFY",
+  "status": "COMPONENT_PASS_M4_FALSIFIED",
+  "event_id": "58f41146-b1c6-45d7-bc65-e7c41ed7cd9e",
+  "audit_hash": "104c9865eb72b536c23ab334039cd2058c86a6147f8900ba3c4de351b1e39404",
+  "candidate_sha": "191459f91b233dd7816feb3a24f8b61dbd7fbd5c",
+  "parent_candidate_sha": "f29405cb83946c28f2342e2b164f3e641c170e06",
+  "origin_branch": "class4/universal-vla-master-plan",
+  "main_sha": "849c65d0175699d1acc271c62b0d08974714f40c",
+  "remote_worktree": "/root/henri-class4-stream-191459f",
+  "remote_worktree_status_lines": 0,
+  "hardware": {
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "cuda": "13.0",
+    "torch": "2.12.0+cu130"
+  },
+  "repair": {
+    "defect": "kernel used default CUDA stream",
+    "fix": "kernel uses at::cuda::getCurrentCUDAStream; same-device validation added",
+    "gate_contract": "non-default stream dependent reduction"
+  },
+  "component_gate": {
+    "candidate_shape": [172, 65536],
+    "codebook_shape": [100, 65536],
+    "max_abs_error": 0.000000031490344,
+    "non_default_stream_max_abs_error": 0.000000031490344,
+    "non_default_stream_dependency": 0.006284657865762711,
+    "reference_p50_ms": 17.85372756421566,
+    "fused_p50_ms": 8.626368595287204,
+    "relative_speedup": 2.0696689884048762,
+    "peak_memory_allocated_bytes": 17831424,
+    "dense_intermediate_bytes_rejected": 4508876800,
+    "synchronized_timing": true,
+    "status": "PASS"
+  },
+  "production_gate": {
+    "e1": true,
+    "l1": true,
+    "m1": true,
+    "max_diff": 0.000001385808,
+    "reference_ms": 665.2,
+    "fused_ms": 8.6,
+    "relative_speedup": 77.5,
+    "peak_intermediate_bytes": 360710144
+  },
+  "absolute_m4": {
+    "fused_p50_ms": 8.626368595287204,
+    "target_ms": 2.0,
+    "failure_threshold_ms": 5.0,
+    "verdict": "FALSIFIED"
+  },
+  "external_task_outcome": "NOT_MEASURED",
+  "score_claim": false,
+  "overlay_mbpp_sha256": "ccf64ceae9c5403bf50a044cb6d505bfd2a2963ee58338ba268fd65beab92a9f",
+  "overlay_humaneval_sha256": "b796127e635a67f93fb35c04f4cb03cf06f38c8072ee7cee8833d7bee06979ef",
+  "artifacts": {
+    "component_json_sha256": "a99dcd46e257f7458a9a5f2b168e00604fd4c8e2a563fe1bf2f12ea4a701f62f",
+    "component_log_sha256": "1cf99dcdb0185363ca6077a7bf5bf5306874344b528e3b933abeba70e906d3f2",
+    "production_gate_log_sha256": "21e83be3aa0e85d43cdc46a7e821368729a2ce90560471181d06ad17e44cb445"
+  },
+  "limitations": [
+    "The measured consumer is the AST candidate scorer, not ARC action selection.",
+    "No benchmark score was run or promoted.",
+    "The absolute M4 target remains unmet."
+  ]
+}
