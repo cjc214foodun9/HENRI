@@ -106,6 +106,21 @@ Root cause: the live legal-action mask admits only ACTION6 (admissible_count=1) 
 
 VERDICT: SEALED KILL (postmortem Scenario B: G1-G3 PASS & G4 = 0). Retain D28 (16-color projection) + D32 (complex basis preservation) as shared production fixes. Commits 78f028b + 8334cb4 are the component commits; seal commit follows. Phase 8.21 direction per postmortem: search horizon depth + legal-action-space diagnosis.
 
+## 2026-08-17 — Phase 8.22 SEALED ACCEPT (run2, commit 6ba8f76, scorecard 78d869ad)
+
+Run2 gauntlet (PID 88153, `phase822_live_gauntlet`, 20 envs, 100 steps) COMPLETED 20/20 envs.
+Evidence: `/root/p822_gauntlet_run2.log` sha `0ab2ed2b…`; scorecards
+`production_run_1786985968_scorecards.json` sha `0ade96eb…`; telemetry sha `fb9b9bae…`.
+
+**G4-8.22 = PASS (first non-zero external outcome in the 8.x chain):**
+sp80-589a99af completed LEVEL 1 (levels_completed=1, env score 4.7619, level score 115.0
+with 8 actions vs baseline 39; env actions 24, GAME_OVER). All other 19 envs: 0 levels
+(NOT_FINISHED / GAME_OVER, level_baseline_actions un-met).
+
+G1-8.22 unitarity 2.226e-07 (PASS < 1e-6); G2-8.22 S_RT 3.9052 (PASS); G4-8.22 progression
+MEASURED > 0 → **SEALED ACCEPT**. Run1 (env 11/20 crash, arcade.make→None) = BLOCKED_INFRASTRUCTURE,
+guard `5b9ff30` committed; run2 relaunched same SHA chain `6ba8f76`.
+
 ## 2026-08-17 — Phase 8.23 IN-FLIGHT (spec 75e66d14…, base 6ba8f76, branch feat/phase823-target-grounding-action-alignment)
 
 Implemented + pushed `0388486`: C1 `synthesize_demonstration_goal_wave` (block-SVD Procrustes W_task → field transport → goal wave) + G1/G2 verify (pragmatic gradient 0.5219 ≥ 0.0100 PASS; fit loss −87.0% > 50% PASS); C2 `verify_opine_mcts` (G3 engagement 0.90 ≥ 0.25, unitarity 5.9e-07 PASS) + live SagnacMCTSPlanner instantiation with dual-channel-veto causal consumer (D39: full search() blocked by design — no held-out target); C3 `HENRI_ARC_TARGET_GROUNDING` default-OFF + `phase823_live_gauntlet` + goal consumer activation (fixed real bug: per-env lambda_goal assignment zeroed the constructor activation). Local 23/23 contracts PASS. CUDA verify + G4 gauntlet QUEUED behind 8.22 gauntlet run2 (PID 88153 @ 6ba8f76, GPU exclusivity). SOTA blockers resolved by this phase: #2 (live planner), #3 (goal grounding), #4 (action generator learning), #1 (OPINE live telemetry); residual: #5 CEGIS stub, #6 Zone C recall, #7 transition model, #8 action-head calibration.
