@@ -52,8 +52,8 @@ def load_humaneval(path: str) -> list[dict]:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ckpt", default="HENRI V2/models/path_b_codec.pt")
-    ap.add_argument("--dataset", default="HENRI V2/data/HumanEval.jsonl.gz")
+    ap.add_argument("--ckpt", default="models/path_b_codec.pt")
+    ap.add_argument("--dataset", default="data/HumanEval.jsonl.gz")
     ap.add_argument("--device", default="cuda")
     args = ap.parse_args()
 
