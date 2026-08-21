@@ -79,7 +79,8 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                   trained_rank: bool = False,
                   trained_head_path: str | None = None,
                   ast_idf_only: bool = False,
-                  ast_idf_batched: bool = False) -> dict[str, Any]:
+                  ast_idf_batched: bool = False,
+                  path_b_semantic_codec: bool = False) -> dict[str, Any]:
     from accuracy_profile import (
         FIDELITY_MIGRATION_FLAG,
         FidelityGuardError,
@@ -245,6 +246,43 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         print(f"[AST-IDF] encoder ready d={d_model} "
               f"codebook={len(ast_idf_codebook)} mbpp_sha={ast_idf_codebook_sha[:16]}")
 
+    # 2e. Path B supervised semantic codec (Class 4.3, default-OFF): rank
+    # grammar candidates by codec cosine vs the encoded item GOAL (the
+    # prompt). Trained on MBPP (different benchmark; HumanEval unseen).
+    # Checkpoint contract: {"state_dict", "vocab", "d_model", "d_latent",
+    # "val_contrastive_acc", "dataset_sha256", "split", "commit"}.
+    path_b_codec = None
+    path_b_checkpoint_sha = None
+    path_b_val_acc = None
+    if path_b_semantic_codec:
+        from path_b_semantic_codec import PathBSemanticCodec
+        if d_model != 65536:
+            return {"status": "BLOCKED", "reason": "PATH_B_REQUIRES_D65536",
+                    "dataset_sha256": dataset_sha}
+        ckpt_path = os.environ.get("HENRI_PATH_B_CHECKPOINT") or os.path.join(
+            repo_path, "models", "path_b_codec.pt")
+        if not os.path.exists(ckpt_path):
+            return {"status": "BLOCKED", "reason": "PATH_B_CHECKPOINT_MISSING",
+                    "dataset_sha256": dataset_sha}
+        path_b_checkpoint_sha = sha256_bytes(open(ckpt_path, "rb").read())
+        ckpt = torch.load(ckpt_path, map_location="cpu")
+        if ckpt.get("d_model") != 65536:
+            return {"status": "BLOCKED", "reason": "PATH_B_CHECKPOINT_DIM_MISMATCH",
+                    "dataset_sha256": dataset_sha}
+        path_b_codec = PathBSemanticCodec(
+            d_model=65536, d_latent=ckpt.get("d_latent", 512),
+            vocab=ckpt.get("vocab"), device=device, seed=7)
+        missing, unexpected = path_b_codec.load_state_dict(
+            ckpt["state_dict"], strict=True)
+        if missing or unexpected:
+            return {"status": "BLOCKED", "reason": "PATH_B_CHECKPOINT_MISMATCH",
+                    "missing": missing, "unexpected": unexpected,
+                    "dataset_sha256": dataset_sha}
+        path_b_codec.eval()
+        path_b_val_acc = ckpt.get("val_contrastive_acc")
+        print(f"[PATH-B] codec ready sha={path_b_checkpoint_sha[:16]} "
+              f"val_acc={path_b_val_acc} mbpp_sha={str(ckpt.get('dataset_sha256'))[:16]}")
+
     item_results: list[dict[str, Any]] = []
     solved = 0
     not_expressible = 0
@@ -263,6 +301,7 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
     docstring_used = 0
     trained_items_reordered = 0
     ast_idf_items_reordered = 0
+    path_b_items_reordered = 0
     commit = None
     try:
         import subprocess
@@ -351,6 +390,27 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                 candidates = [(src, meta) for _, _, src, meta in scored]
                 if candidates[0][0] != prev_first:
                     ast_idf_items_reordered += 1
+
+        # Path B supervised semantic ranking (Class 4.3, default-OFF):
+        # reorder grammar candidates by PathBSemanticCodec cosine vs the
+        # encoded item GOAL (the prompt). Same encoder family for goal,
+        # candidates, and the MBPP-trained codebook. Candidate SET is
+        # unchanged; only attempt order moves. New semantic representation
+        # with pre-registered kill gates (class4_path_b_design.md).
+        prev_first = candidates[0][0] if candidates else None
+        if path_b_semantic_codec and path_b_codec is not None:
+            with torch.no_grad():
+                goal_wave = path_b_codec.encode_sequence(prompt)
+                scored = []
+                for ci, (src, meta) in enumerate(candidates):
+                    v = path_b_codec.encode_sequence(src)
+                    scored.append(
+                        (float(path_b_codec.cosine_similarity(goal_wave, v).item()),
+                         ci, src, meta))
+                scored.sort(key=lambda t: (-t[0], t[1]))
+            candidates = [(src, meta) for _, _, src, meta in scored]
+            if candidates[0][0] != prev_first:
+                path_b_items_reordered += 1
 
         # Execution-grounded correctness head (8.39-V3, default-OFF): rank
         # candidates by <w_trained, v_rel(candidate)> — the linear probe
@@ -490,6 +550,10 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         "ast_idf_batched": ast_idf_batched,
         "ast_idf_items_reordered": ast_idf_items_reordered,
         "ast_idf_codebook_sha256": ast_idf_codebook_sha,
+        "path_b_semantic_codec": path_b_semantic_codec,
+        "path_b_items_reordered": path_b_items_reordered,
+        "path_b_checkpoint_sha256": path_b_checkpoint_sha,
+        "path_b_val_contrastive_acc": path_b_val_acc,
         "accuracy_attempted": solved / max(1, expressible),
         "wall_clock_sec": round(wall_sec, 3),
         "avg_latency_ms_item": round(avg_ms, 3),
@@ -531,6 +595,10 @@ if __name__ == "__main__":
     ap.add_argument("--ast-idf-batched", action="store_true",
                     help="Phase 3: batched mean-phase-cosine ranking (default OFF; "
                          "requires --ast-idf-only)")
+    ap.add_argument("--path-b-semantic-codec", action="store_true",
+                    help="Path B: supervised semantic codec candidate ranking "
+                         "vs encoded goal (Class 4.3, default OFF; requires "
+                         "models/path_b_codec.pt overlay)")
     args = ap.parse_args()
     run_benchmark(limit=args.limit, attempts=args.attempts,
                   device=args.device, smoke_dim=args.smoke_dim,
@@ -540,4 +608,5 @@ if __name__ == "__main__":
                   trained_rank=args.trained_rank,
                   trained_head_path=args.trained_head,
                   ast_idf_only=args.ast_idf_only,
-                  ast_idf_batched=args.ast_idf_batched)
+                  ast_idf_batched=args.ast_idf_batched,
+                  path_b_semantic_codec=args.path_b_semantic_codec)
