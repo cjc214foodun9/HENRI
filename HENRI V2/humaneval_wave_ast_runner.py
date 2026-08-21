@@ -80,7 +80,8 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                   trained_head_path: str | None = None,
                   ast_idf_only: bool = False,
                   ast_idf_batched: bool = False,
-                  path_b2_codec: bool = False) -> dict[str, Any]:
+                  path_b2_codec: bool = False,
+                  hops_vsa_rank: bool = False) -> dict[str, Any]:
     from accuracy_profile import (
         FIDELITY_MIGRATION_FLAG,
         FidelityGuardError,
@@ -274,6 +275,19 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         print(f"[PATH-B2] codec ready d={d_model} ckpt_sha={path_b2_codec_sha[:16]} "
               f"val_acc={ckpt.get('val_contrastive_acc')}")
 
+    # HOPS-VLA reference core (Class 4.5, default-OFF): invariant-subspace
+    # decoupling (P_null = I - V V^dagger over the AST skeleton basis), diagonal
+    # Clifford rotor, dual-channel Sagnac veto. Python reference core; the
+    # fused CUDA kernel (hops_vla_cuda_core.cu) is a separate gated phase.
+    hops_vsa_scorer = None
+    if hops_vsa_rank:
+        from hops_vsa_core import (
+            HopsVSACandidateScorer, HopsVSASkeletonProjector, ring_to_real_wave)
+        hops_vsa_scorer = HopsVSACandidateScorer(
+            HopsVSASkeletonProjector(d_model=d_model, device=device))
+        print(f"[HOPS-VSA] scorer ready d={d_model} "
+              f"skel_gram={hops_vsa_scorer.projector.gram_error():.2e}")
+
     item_results: list[dict[str, Any]] = []
     solved = 0
     not_expressible = 0
@@ -293,6 +307,7 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
     trained_items_reordered = 0
     ast_idf_items_reordered = 0
     path_b2_items_reordered = 0
+    hops_vsa_items_reordered = 0
     commit = None
     try:
         import subprocess
@@ -400,6 +415,25 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
             candidates = [(src, meta) for _, _, src, meta in scored]
             if candidates[0][0] != prev_first:
                 path_b2_items_reordered += 1
+
+        # HOPS-VLA skeleton-free channel ranking (Class 4.5, default-OFF):
+        # reorder grammar candidates by P_null-projected cosine vs the prompt
+        # (goal) wave; Sagnac-vetoed candidates sink to the end. Candidate SET
+        # is unchanged; only attempt order moves. Ring waves cross the boundary
+        # via ring_to_real_wave (explicit, never silent).
+        prev_first = candidates[0][0] if candidates else None
+        if hops_vsa_rank and hops_vsa_scorer is not None:
+            from hops_vsa_core import ring_to_real_wave
+            goal_cont = ring_to_real_wave(decoder._wave(prompt))
+            scored = []
+            for ci, (src, meta) in enumerate(candidates):
+                cand_cont = ring_to_real_wave(decoder._wave(src))
+                cos, veto = hops_vsa_scorer.score(goal_cont, cand_cont)
+                scored.append((-1e9 if veto else cos, ci, src, meta))
+            scored.sort(key=lambda t: (-t[0], t[1]))
+            candidates = [(src, meta) for _, _, src, meta in scored]
+            if candidates[0][0] != prev_first:
+                hops_vsa_items_reordered += 1
 
         # Execution-grounded correctness head (8.39-V3, default-OFF): rank
         # candidates by <w_trained, v_rel(candidate)> — the linear probe
@@ -542,6 +576,8 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         "path_b2_codec": path_b2_codec,
         "path_b2_codec_sha256": path_b2_codec_sha,
         "path_b2_items_reordered": path_b2_items_reordered,
+        "hops_vsa_rank": hops_vsa_rank,
+        "hops_vsa_items_reordered": hops_vsa_items_reordered,
         "accuracy_attempted": solved / max(1, expressible),
         "wall_clock_sec": round(wall_sec, 3),
         "avg_latency_ms_item": round(avg_ms, 3),
@@ -586,6 +622,9 @@ if __name__ == "__main__":
     ap.add_argument("--path-b2-codec", action="store_true",
                     help="Path B2 hard-negative codec candidate ranking "
                          "(Class 4.4, default OFF)")
+    ap.add_argument("--hops-vsa-rank", action="store_true",
+                    help="HOPS-VLA skeleton-free channel candidate ranking "
+                         "(Class 4.5, default OFF)")
     args = ap.parse_args()
     run_benchmark(limit=args.limit, attempts=args.attempts,
                   device=args.device, smoke_dim=args.smoke_dim,
@@ -596,4 +635,5 @@ if __name__ == "__main__":
                   trained_head_path=args.trained_head,
                   ast_idf_only=args.ast_idf_only,
                   ast_idf_batched=args.ast_idf_batched,
-                  path_b2_codec=args.path_b2_codec)
+                  path_b2_codec=args.path_b2_codec,
+                  hops_vsa_rank=args.hops_vsa_rank)
