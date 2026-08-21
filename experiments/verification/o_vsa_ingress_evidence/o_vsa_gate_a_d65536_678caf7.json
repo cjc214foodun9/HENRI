@@ -1,0 +1,61 @@
+{
+  "status": "FALSIFIED",
+  "gate": "O_VSA_STAGE1_GATE_A",
+  "dataset_sha256": "b796127e635a67f9",
+  "d_model": 65536,
+  "device": "cuda",
+  "arms": {
+    "random_ring": {
+      "HumanEval/23": {
+        "oracle_rank": 18,
+        "pool_size": 71,
+        "true_cosine": 0.0019670294132083654,
+        "best_cross_family_cosine": 0.01057473011314869,
+        "best_same_family_cosine": 0.0067049115896224976,
+        "best_any_cosine": 0.01057473011314869,
+        "margin_cross_family": -0.008607700699940324,
+        "margin_same_family": -0.004737882176414132,
+        "rank_le_5": false,
+        "margin_cross_ge_0_25": false
+      },
+      "HumanEval/35": {
+        "oracle_rank": 8,
+        "pool_size": 71,
+        "true_cosine": 0.006733178161084652,
+        "best_cross_family_cosine": 0.01076438743621111,
+        "best_same_family_cosine": 0.0031551760621368885,
+        "best_any_cosine": 0.01076438743621111,
+        "margin_cross_family": -0.004031209275126457,
+        "margin_same_family": 0.0035780020989477634,
+        "rank_le_5": false,
+        "margin_cross_ge_0_25": false
+      }
+    },
+    "o_vsa": {
+      "HumanEval/23": {
+        "oracle_rank": 70,
+        "pool_size": 71,
+        "true_cosine": 0.06703442335128784,
+        "best_cross_family_cosine": 0.5569690465927124,
+        "best_same_family_cosine": 0.14433234930038452,
+        "best_any_cosine": 0.5569690465927124,
+        "margin_cross_family": -0.48993462324142456,
+        "margin_same_family": -0.07729792594909668,
+        "rank_le_5": false,
+        "margin_cross_ge_0_25": false
+      },
+      "HumanEval/35": {
+        "oracle_rank": 66,
+        "pool_size": 71,
+        "true_cosine": 0.12491001188755035,
+        "best_cross_family_cosine": 0.6060583591461182,
+        "best_same_family_cosine": 0.1639668047428131,
+        "best_any_cosine": 0.6060583591461182,
+        "margin_cross_family": -0.4811483472585678,
+        "margin_same_family": -0.039056792855262756,
+        "rank_le_5": false,
+        "margin_cross_ge_0_25": false
+      }
+    }
+  }
+}
