@@ -1,0 +1,99 @@
+[DATASET] Downloading https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz
+[DATASET] items=50 sha256=b796127e635a67f93fb35c04f4cb03cf06f38c8072ee7cee8833d7bee06979ef
+[SANDBOX] mode=namespace unavailable: namespace isolation probe failed rc=1: unshare: unshare failed: Operation not permitted
+[SANDBOX] mode=container-rlimit preflight PASS
+[001/50] HumanEval/0 -> FAIL (gen=172)
+[002/50] HumanEval/1 -> FAIL (gen=71)
+[003/50] HumanEval/2 -> FAIL (gen=71)
+[004/50] HumanEval/3 -> FAIL (gen=71)
+[005/50] HumanEval/4 -> FAIL (gen=71)
+[006/50] HumanEval/5 -> FAIL (gen=172)
+[007/50] HumanEval/6 -> FAIL (gen=71)
+[008/50] HumanEval/7 -> FAIL (gen=172)
+[009/50] HumanEval/8 -> FAIL (gen=71)
+[010/50] HumanEval/9 -> FAIL (gen=71)
+[011/50] HumanEval/10 -> FAIL (gen=71)
+[012/50] HumanEval/11 -> FAIL (gen=172)
+[013/50] HumanEval/12 -> FAIL (gen=71)
+[014/50] HumanEval/13 -> FAIL (gen=172)
+[015/50] HumanEval/14 -> FAIL (gen=71)
+[016/50] HumanEval/15 -> FAIL (gen=71)
+[017/50] HumanEval/16 -> FAIL (gen=71)
+[018/50] HumanEval/17 -> FAIL (gen=71)
+[019/50] HumanEval/18 -> FAIL (gen=172)
+[020/50] HumanEval/19 -> FAIL (gen=71)
+[021/50] HumanEval/20 -> FAIL (gen=71)
+[022/50] HumanEval/21 -> FAIL (gen=71)
+[023/50] HumanEval/22 -> FAIL (gen=71)
+[024/50] HumanEval/23 -> PASS (gen=71)
+[025/50] HumanEval/24 -> FAIL (gen=71)
+[026/50] HumanEval/25 -> FAIL (gen=71)
+[027/50] HumanEval/26 -> FAIL (gen=71)
+[028/50] HumanEval/27 -> FAIL (gen=71)
+[029/50] HumanEval/28 -> FAIL (gen=71)
+[030/50] HumanEval/29 -> FAIL (gen=172)
+[031/50] HumanEval/30 -> FAIL (gen=71)
+[032/50] HumanEval/31 -> FAIL (gen=71)
+[033/50] HumanEval/32 -> FAIL (gen=172)
+[034/50] HumanEval/33 -> FAIL (gen=71)
+[035/50] HumanEval/34 -> FAIL (gen=71)
+[036/50] HumanEval/35 -> PASS (gen=71)
+[037/50] HumanEval/36 -> FAIL (gen=71)
+[038/50] HumanEval/37 -> FAIL (gen=71)
+[039/50] HumanEval/38 -> FAIL (gen=71)
+[040/50] HumanEval/39 -> FAIL (gen=71)
+[041/50] HumanEval/40 -> FAIL (gen=71)
+[042/50] HumanEval/41 -> FAIL (gen=71)
+[043/50] HumanEval/42 -> FAIL (gen=71)
+[044/50] HumanEval/43 -> FAIL (gen=71)
+[045/50] HumanEval/44 -> FAIL (gen=172)
+[046/50] HumanEval/45 -> FAIL (gen=172)
+[047/50] HumanEval/46 -> FAIL (gen=71)
+[048/50] HumanEval/47 -> FAIL (gen=71)
+[049/50] HumanEval/48 -> FAIL (gen=71)
+[050/50] HumanEval/49 -> FAIL (gen=172)
+{
+  "benchmark": "HumanEval",
+  "status": "EVALUATED",
+  "commit": "dab6e105ad840ddfe4e7a229484337f0266abda6",
+  "checkpoint_used": false,
+  "egress_path": "WAVE_AST_GRAMMAR_SANDBOX",
+  "execution_profile": "FIDELITY_SCORE_BEARING",
+  "score_promotable": true,
+  "fidelity_migration_flag": "0",
+  "dataset_sha256": "b796127e635a67f93fb35c04f4cb03cf06f38c8072ee7cee8833d7bee06979ef",
+  "dataset_source": "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz",
+  "item_count": 50,
+  "solved": 2,
+  "expressible": 50,
+  "not_expressible": 0,
+  "infra_errors": 0,
+  "total_candidates_generated": 4661,
+  "reward_rank": false,
+  "items_reordered": 0,
+  "decoder_rank": false,
+  "decoder_items_reordered": 0,
+  "decoder_checkpoint_sha256": null,
+  "spec_rank": false,
+  "docstring_targets_used": 0,
+  "trained_rank": false,
+  "trained_head_sha256": null,
+  "trained_items_reordered": 0,
+  "ast_idf_only": false,
+  "ast_idf_batched": false,
+  "ast_idf_items_reordered": 0,
+  "ast_idf_codebook_sha256": null,
+  "path_a_demo_enabled": false,
+  "path_a_items_ranked": 0,
+  "path_a_items_no_demo": 0,
+  "path_a_items_underdetermined": 0,
+  "path_a_new_passes": 0,
+  "path_a_compile_failures": 0,
+  "path_a_solved_after_reorder": 0,
+  "accuracy_attempted": 0.04,
+  "wall_clock_sec": 20.07,
+  "avg_latency_ms_item": 393.894,
+  "device": "cuda",
+  "timestamp_utc": "2026-08-21T06:18:27.773020+00:00"
+}
+[SCORECARD] /tmp/pa_control/humaneval_wave_ast_1787293107.json
