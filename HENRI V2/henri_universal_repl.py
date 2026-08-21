@@ -131,7 +131,17 @@ class MoorePenroseToolCompiler:
     def compile_tool_functor(self, execution_pairs: List[Tuple[str, str]]) -> torch.Tensor:
         """
         Compiles list of (cmd_str, output_str) into W_repl operator over Z_256 phase ring.
+        Fidelity guard: the ring-mod-256 functor algebra is FALSIFIED (phase5 p3
+        KILL c0e3128). Under HENRI_ACCURACY_FIRST_CLASS4 this method fails
+        closed rather than compile a known-bad operator.
         """
+        from accuracy_profile import FalsifiedOperatorError, fidelity_migration_enabled
+        if fidelity_migration_enabled():
+            raise FalsifiedOperatorError(
+                "MoorePenroseToolCompiler.compile_tool_functor uses the FALSIFIED "
+                "ring-mod-256 HolographicTaskFunctorCompiler (phase5 p3 KILL "
+                "c0e3128). Replace with a validated task relation before enabling "
+                "HENRI_ACCURACY_FIRST_CLASS4.")
         encoded_pairs = []
         for cmd, out in execution_pairs:
             w_cmd = self.transducer.transduce_text(cmd)

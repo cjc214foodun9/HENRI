@@ -80,9 +80,41 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                   trained_head_path: str | None = None,
                   ast_idf_only: bool = False,
                   ast_idf_batched: bool = False) -> dict[str, Any]:
+    from accuracy_profile import (
+        FIDELITY_MIGRATION_FLAG,
+        FidelityGuardError,
+        enabled_sealed_levers,
+        fidelity_migration_enabled,
+        is_score_promotable,
+        runner_execution_profile,
+    )
     started = time.perf_counter()
     d_model = smoke_dim or 65536
     device = device if (device == "cuda" and torch.cuda.is_available()) else "cpu"
+
+    # Accuracy-first fidelity contract (Class 4 synthesis): the sealed
+    # ranking-lever class is CLOSED (2026-08-20 — Gate A' did not transfer;
+    # Gate B 2/50 baseline; bottleneck is grammar expressiveness, not
+    # candidate order). Under HENRI_ACCURACY_FIRST_CLASS4 any sealed lever
+    # fails closed before dataset load. Legacy default (flag OFF) preserves
+    # prior behavior byte-for-byte; the profile is recorded as telemetry.
+    sealed_active = enabled_sealed_levers({
+        "reward_rank": reward_rank,
+        "decoder_rank": decoder_rank,
+        "spec_rank": spec_rank,
+        "trained_rank": trained_rank,
+        "ast_idf_only": ast_idf_only,
+    })
+    if fidelity_migration_enabled() and sealed_active:
+        raise FidelityGuardError(
+            "Sealed ranking levers active under "
+            f"{FIDELITY_MIGRATION_FLAG}: "
+            + ", ".join(sealed_active)
+            + ". Reopen only with a new semantic representation and a new "
+              "pre-registered kill gate.")
+    execution_profile = runner_execution_profile(
+        sealed_lever_enabled=bool(sealed_active))
+    score_promotable = is_score_promotable(execution_profile)
 
     # 1. Load the OFFICIAL dataset (single source, pinned URL).
     cache_path = os.path.join(repo_path, "data", "HumanEval.jsonl.gz")
@@ -433,6 +465,9 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         "commit": commit,
         "checkpoint_used": False,
         "egress_path": "WAVE_AST_GRAMMAR_SANDBOX",
+        "execution_profile": execution_profile,
+        "score_promotable": score_promotable,
+        "fidelity_migration_flag": os.environ.get("HENRI_ACCURACY_FIRST_CLASS4", "0"),
         "dataset_sha256": dataset_sha,
         "dataset_source": HUMANEVAL_URL,
         "item_count": len(items),

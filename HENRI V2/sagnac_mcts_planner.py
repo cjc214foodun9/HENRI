@@ -15,6 +15,45 @@ from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec, HolographicTaskF
 from henri_universal_repl import HENRIUniversalREPL
 from henri_decoder import HENRIUnifiedEgressTransducer
 from efe_planner import INTACTIsomorphicConjugacyHead
+from accuracy_profile import (
+    FalsifiedOperatorError,
+    MockShortcutRejectedError,
+    fidelity_migration_enabled,
+)
+
+
+def _guard_falsified_ring_functor() -> None:
+    """Fail-closed under the fidelity migration flag.
+
+    The ring-mod-256 HolographicTaskFunctorCompiler algebra was FALSIFIED at
+    the phase5 p3 codec-geometry gate (KILL c0e3128: exact-demo memorization
+    d=0.136 > identity 0.019, rankF=2, spF=-0.56). A formal kill verdict may
+    coexist with production code still using the operator (gate-vs-code
+    drift); under fidelity mode the operator must not guide goal retrieval.
+    """
+    if fidelity_migration_enabled():
+        raise FalsifiedOperatorError(
+            "HolographicTaskFunctorCompiler.compile_functor (ring, mod-256) is "
+            "FALSIFIED (phase5 p3 KILL c0e3128). Use an authorized task "
+            "relation (Path A demo pairs with a validated operator) or a "
+            "supervised semantic code-wave model (Path B) before enabling "
+            "HENRI_ACCURACY_FIRST_CLASS4.")
+
+
+def _guard_mock_identity_shortcut() -> None:
+    """Fail-closed under the fidelity migration flag.
+
+    The zero-shot branch returns a hardcoded SpelkeDSLNode('Identity') even
+    when goal-wave retrieval 'succeeds' — the compiled goal wave is used only
+    as a gate, never as a program (wired-but-inert mock, representation-core
+    audit). A mock success must not masquerade as a synthesized program.
+    """
+    if fidelity_migration_enabled():
+        raise MockShortcutRejectedError(
+            "search() zero-shot branch returns hardcoded SpelkeDSLNode('Identity'); "
+            "no program is synthesized from the goal wave (mock shortcut). "
+            "Replace with real goal-wave program synthesis before enabling "
+            "HENRI_ACCURACY_FIRST_CLASS4.")
 
 
 class SpelkeDSLNode:
@@ -178,6 +217,10 @@ class SagnacMCTSPlanner:
 
         # In-Context SGLD Unbinder Adaptation & Zero-shot W_task Functor Compilation
         if demo_pairs:
+            # Fidelity guard: the ring-mod-256 functor algebra is FALSIFIED
+            # (phase5 p3 KILL c0e3128). Under HENRI_ACCURACY_FIRST_CLASS4 the
+            # demo branch fails closed rather than guide retrieval with it.
+            _guard_falsified_ring_functor()
             demo_waves = [self.vision_encoder.encode_grid(x) for x, y in demo_pairs]
             target_waves = [self.vision_encoder.encode_grid(y) for x, y in demo_pairs]
             
@@ -216,6 +259,10 @@ class SagnacMCTSPlanner:
 
             zero_shot_delta = 1.0 - self.vision_encoder.compute_sagnac_similarity(goal_wave_pred, target_wave)
             if zero_shot_delta <= self.tau_veto:
+                # Fidelity guard: this branch returns a hardcoded Identity
+                # node — the goal wave is used only as a gate, never as a
+                # synthesized program (wired-but-inert mock).
+                _guard_mock_identity_shortcut()
                 print(f"[Phase C Zero-Shot Success] Goal wave retrieved in O(1) single pass! Sagnac Delta: {zero_shot_delta:.6f}")
                 return SpelkeDSLNode(op_name="Identity"), float(zero_shot_delta)
 
@@ -326,6 +373,11 @@ class SagnacMCTSPlanner:
         
         # 1. Compile Task Transformation Operator W_task from in-context demo pairs if available
         if demo_pairs:
+            # Fidelity guard: ring-mod-256 functor algebra is FALSIFIED
+            # (phase5 p3 KILL c0e3128). Under HENRI_ACCURACY_FIRST_CLASS4 the
+            # demo branch fails closed instead of compiling a known-bad
+            # operator (gate-vs-code drift; representation-core audit).
+            _guard_falsified_ring_functor()
             encoded_demos = []
             for x_str, y_str in demo_pairs:
                 p_x = self.codec.encode_text(x_str)
