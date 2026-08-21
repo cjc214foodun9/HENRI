@@ -80,7 +80,6 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                   trained_head_path: str | None = None,
                   ast_idf_only: bool = False,
                   ast_idf_batched: bool = False,
-                  path_b2_codec: bool = False,
                   hops_vsa_rank: bool = False) -> dict[str, Any]:
     from accuracy_profile import (
         FIDELITY_MIGRATION_FLAG,
@@ -247,34 +246,6 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         print(f"[AST-IDF] encoder ready d={d_model} "
               f"codebook={len(ast_idf_codebook)} mbpp_sha={ast_idf_codebook_sha[:16]}")
 
-    # Path B2 hard-negative codec (Class 4.4, default-OFF): trained
-    # PathB2DiscriminativeCodec checkpoint must be an EXACT d_model match;
-    # missing/mismatched -> fail-closed BLOCKED (never silent fallback).
-    path_b2_codec_model = None
-    path_b2_codec_sha = None
-    if path_b2_codec:
-        from path_b2_semantic_codec import PathB2DiscriminativeCodec
-        ckpt_path = os.path.join(repo_path, "models", "path_b2_codec.pt")
-        if not os.path.exists(ckpt_path):
-            return {"status": "BLOCKED", "reason": "PATH_B2_CHECKPOINT_MISSING",
-                    "dataset_sha256": dataset_sha}
-        ckpt_raw = open(ckpt_path, "rb").read()
-        ckpt = torch.load(ckpt_path, map_location="cpu")
-        if ckpt.get("d_model") != d_model:
-            return {"status": "BLOCKED",
-                    "reason": f"PATH_B2_DMODEL_MISMATCH:{ckpt.get('d_model')}",
-                    "dataset_sha256": dataset_sha}
-        path_b2_codec_model = PathB2DiscriminativeCodec(
-            d_model=d_model, d_latent=ckpt.get("d_latent", 512),
-            vocab=ckpt.get("vocab"), df=ckpt.get("df"),
-            n_docs=ckpt.get("n_docs", 1000), device=device, seed=7)
-        path_b2_codec_model.load_state_dict(ckpt["state_dict"], strict=True)
-        path_b2_codec_model.eval()
-        path_b2_codec_model = path_b2_codec_model.to(device)
-        path_b2_codec_sha = sha256_bytes(ckpt_raw)
-        print(f"[PATH-B2] codec ready d={d_model} ckpt_sha={path_b2_codec_sha[:16]} "
-              f"val_acc={ckpt.get('val_contrastive_acc')}")
-
     # HOPS-VLA reference core (Class 4.5, default-OFF): invariant-subspace
     # decoupling (P_null = I - V V^dagger over the AST skeleton basis), diagonal
     # Clifford rotor, dual-channel Sagnac veto. Python reference core; the
@@ -306,7 +277,6 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
     docstring_used = 0
     trained_items_reordered = 0
     ast_idf_items_reordered = 0
-    path_b2_items_reordered = 0
     hops_vsa_items_reordered = 0
     commit = None
     try:
@@ -396,25 +366,6 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                 candidates = [(src, meta) for _, _, src, meta in scored]
                 if candidates[0][0] != prev_first:
                     ast_idf_items_reordered += 1
-
-        # Path B2 hard-negative codec ranking (Class 4.4, default-OFF): reorder
-        # grammar candidates by PathB2DiscriminativeCodec cosine vs the prompt
-        # (goal) wave. New semantic representation with pre-registered Gate A/B
-        # (experiments/verification/class4_path_b2_design.md). Candidate SET is
-        # unchanged; only attempt order moves.
-        prev_first = candidates[0][0] if candidates else None
-        if path_b2_codec and path_b2_codec_model is not None:
-            goal_wave = path_b2_codec_model.encode_sequence(prompt).to(device)
-            scored = []
-            for ci, (src, meta) in enumerate(candidates):
-                v = path_b2_codec_model.encode_sequence(src).to(device)
-                scored.append((float(
-                    path_b2_codec_model.cosine_similarity(goal_wave, v).item()),
-                    ci, src, meta))
-            scored.sort(key=lambda t: (-t[0], t[1]))
-            candidates = [(src, meta) for _, _, src, meta in scored]
-            if candidates[0][0] != prev_first:
-                path_b2_items_reordered += 1
 
         # HOPS-VLA skeleton-free channel ranking (Class 4.5, default-OFF):
         # reorder grammar candidates by P_null-projected cosine vs the prompt
@@ -573,9 +524,6 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         "ast_idf_batched": ast_idf_batched,
         "ast_idf_items_reordered": ast_idf_items_reordered,
         "ast_idf_codebook_sha256": ast_idf_codebook_sha,
-        "path_b2_codec": path_b2_codec,
-        "path_b2_codec_sha256": path_b2_codec_sha,
-        "path_b2_items_reordered": path_b2_items_reordered,
         "hops_vsa_rank": hops_vsa_rank,
         "hops_vsa_items_reordered": hops_vsa_items_reordered,
         "accuracy_attempted": solved / max(1, expressible),
@@ -619,9 +567,6 @@ if __name__ == "__main__":
     ap.add_argument("--ast-idf-batched", action="store_true",
                     help="Phase 3: batched mean-phase-cosine ranking (default OFF; "
                          "requires --ast-idf-only)")
-    ap.add_argument("--path-b2-codec", action="store_true",
-                    help="Path B2 hard-negative codec candidate ranking "
-                         "(Class 4.4, default OFF)")
     ap.add_argument("--hops-vsa-rank", action="store_true",
                     help="HOPS-VLA skeleton-free channel candidate ranking "
                          "(Class 4.5, default OFF)")
@@ -635,5 +580,4 @@ if __name__ == "__main__":
                   trained_head_path=args.trained_head,
                   ast_idf_only=args.ast_idf_only,
                   ast_idf_batched=args.ast_idf_batched,
-                  path_b2_codec=args.path_b2_codec,
                   hops_vsa_rank=args.hops_vsa_rank)
