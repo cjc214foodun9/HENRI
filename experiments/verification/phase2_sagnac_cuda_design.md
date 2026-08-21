@@ -58,6 +58,8 @@ M4 consumer is the AST candidate scorer.
 - No dense `[C,N,D]` intermediate.
 - Gate peak allocation: `<512 MiB` for the measured candidate/codebook sizes.
 - Timing requires `torch.cuda.synchronize()` before and after each measured call.
+- The kernel launches on PyTorch's current CUDA stream and validates that both
+  inputs use the same CUDA device.
 - One CUDA process owns the GPU during the remote gate.
 
 ### Expected benefit

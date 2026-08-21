@@ -95,13 +95,24 @@ def main() -> int:
         print(json.dumps(receipt, sort_keys=True))
         return 2
 
+    # Contract: the op must launch on the caller's current stream. Queue a
+    # dependent reduction on a non-default stream before synchronization. A
+    # default-stream launch is not ordered with this consumer on all builds.
+    non_default_stream = torch.cuda.Stream(device=device)
+    with torch.cuda.stream(non_default_stream):
+        streamed = batched_mean_phase_cosine(candidates, codebook)
+        streamed_dependency = streamed.sum()
+    non_default_stream.synchronize()
+    stream_max_abs_error = float((reference - streamed).abs().max().item())
+    stream_dependency = float(streamed_dependency.item())
+
     max_abs_error = float((reference - fused).abs().max().item())
     ref_p50 = statistics.median(ref_times)
     fused_p50 = statistics.median(fused_times)
     peak_bytes = int(torch.cuda.max_memory_allocated(device))
     result = {
         "schema": "henri.phase2-cuda-gate.v1",
-        "status": "PASS" if max_abs_error <= 1e-3 and fused_p50 < ref_p50 and peak_bytes < 512 * 2**20 else "FALSIFIED",
+        "status": "PASS" if max_abs_error <= 1e-3 and stream_max_abs_error <= 1e-3 and fused_p50 < ref_p50 and peak_bytes < 512 * 2**20 else "FALSIFIED",
         "implementation": "torch.ops.henri.sagnac_mcts",
         "production_symbol": "qfhrr_ast_discriminative_kernel.batched_mean_phase_cosine",
         "flag": "HENRI_SAGNAC_CUDA=1",
@@ -111,6 +122,8 @@ def main() -> int:
         "candidate_shape": list(candidates.shape),
         "codebook_shape": list(codebook.shape),
         "max_abs_error": max_abs_error,
+        "non_default_stream_max_abs_error": stream_max_abs_error,
+        "non_default_stream_dependency": stream_dependency,
         "reference_p50_ms": ref_p50,
         "fused_p50_ms": fused_p50,
         "speedup": ref_p50 / max(fused_p50, 1e-9),

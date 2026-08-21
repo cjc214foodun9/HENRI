@@ -67,6 +67,8 @@ torch::Tensor sagnac_mcts_cuda(
     torch::Tensor codebook) {
     TORCH_CHECK(candidates.is_cuda(), "candidates must be a CUDA tensor");
     TORCH_CHECK(codebook.is_cuda(), "codebook must be a CUDA tensor");
+    TORCH_CHECK(candidates.device() == codebook.device(),
+                "candidates and codebook must use the same CUDA device");
     TORCH_CHECK(candidates.scalar_type() == torch::kUInt8,
                 "candidates must have dtype torch.uint8");
     TORCH_CHECK(codebook.scalar_type() == torch::kUInt8,
@@ -87,7 +89,7 @@ torch::Tensor sagnac_mcts_cuda(
         {candidates.size(0)},
         candidates.options().dtype(torch::kFloat32));
     const cudaStream_t stream =
-        at::cuda::getDefaultCUDAStream(candidates.get_device()).stream();
+        at::cuda::getCurrentCUDAStream(candidates.get_device()).stream();
     sagnac_score_kernel<<<static_cast<unsigned int>(candidates.size(0)), 256, 0, stream>>>(
         candidates.data_ptr<uint8_t>(),
         codebook.data_ptr<uint8_t>(),
