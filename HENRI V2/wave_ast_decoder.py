@@ -62,6 +62,12 @@ EXPRS_BINARY = [
     "sorted({a} + {b})", "len({a}) + len({b})", "{a}.count({b})",
     "{a}.index({b})", "{a}[:{b}]", "{a}[{b}:]", "sorted({a})[:{b}]",
     "{a}[:len({b})]",
+    # Phase 4.1 accuracy tracer bullet: typed binary collection composition.
+    "[x + y for x, y in zip({a}, {b})]",
+    "[x - y for x, y in zip({a}, {b})]",
+    "[x * y for x, y in zip({a}, {b})]",
+    "dict(zip({a}, {b}))",
+    "set(zip({a}, {b}))",
     # run18 Phase A (max/min pair 30, int/ord conversion, zip 15):
     "max({a}, {b})", "min({a}, {b})",
     "int({a}) + int({b})", "ord({a}) + ord({b})",
