@@ -79,7 +79,8 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
                   trained_rank: bool = False,
                   trained_head_path: str | None = None,
                   ast_idf_only: bool = False,
-                  ast_idf_batched: bool = False) -> dict[str, Any]:
+                  ast_idf_batched: bool = False,
+                  path_a_demo: bool = False) -> dict[str, Any]:
     from accuracy_profile import (
         FIDELITY_MIGRATION_FLAG,
         FidelityGuardError,
@@ -252,6 +253,12 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
     expressible = 0
     total_candidates = 0
     latencies: list[float] = []
+    path_a_items_ranked = 0
+    path_a_items_no_demo = 0
+    path_a_items_underdetermined = 0
+    path_a_new_passes = 0
+    path_a_solved_after_reorder = 0
+    path_a_compile_failures = 0
     # Test-time learned positive-exemplar prior (reward-shaped ranking):
     # verified solutions seed (prompt_wave, transformation-relative solution
     # wave) exemplars; subsequent candidate order is re-ranked by similarity
@@ -419,41 +426,104 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
             if candidates[0][0] != prev_first:
                 items_reordered += 1
 
+        # Path A (Class 4, authorized 2026-08-20): in-context demo-pair
+        # operator compiled from the prompt's own docstring examples — part
+        # of the task specification, NEVER the test field. Reorders the
+        # EXISTING candidate set by alignment with Psi_goal = W_task x_query
+        # (factorized R-EDMD; no dense [D,D]); the sandbox decides PASS/FAIL.
+        # Kill gates pre-registered in
+        # experiments/verification/class4_path_a_operator_design.md.
+        grammar_index = {src: i for i, (src, _m) in enumerate(candidates)}
+        pa_engaged = False  # per-item: Path A reorder changed candidate order
+        outcome = None  # initialized BEFORE Path A so its compile-fail branch survives
+        if path_a_demo and candidates:
+            from henri_task_operator import (
+                compile_task_operator,
+                extract_docstring_examples,
+                rank_by_goal,
+            )
+            demos = extract_docstring_examples(prompt, entry)
+            if not demos:
+                path_a_items_no_demo += 1
+            else:
+                compile_failed = False
+                try:
+                    op = compile_task_operator(
+                        demos, d_model=d_model, r_rank=min(16, len(demos)),
+                        device=device)
+                except Exception as e:  # operator compile defect -> fail closed
+                    op = None
+                    compile_failed = True
+                    path_a_compile_failures += 1
+                    infra_errors += 1
+                if compile_failed:
+                    # compile defect this item: preserve grammar order, do not
+                    # attempt a broken operator (G6 fail-closed).
+                    outcome = {"attempted": False, "infra": "path_a_compile_error"}
+                elif op is None:
+                    path_a_items_underdetermined += 1
+                else:
+                    prev_first_pa = candidates[0][0]
+                    candidates = rank_by_goal(candidates, op, query_src=prompt)
+                    if candidates[0][0] != prev_first_pa:
+                        path_a_items_ranked += 1
+                        pa_engaged = True
+
         passed = False
-        outcome = None
-        for src, meta in candidates[:attempts]:
-            body = src.split("\n", 1)[1] if "\n" in src else src
-            full = SHIM + prompt.rstrip() + "\n" + body + "\n" + test_code + f"\ncheck({entry_point})"
-            try:
-                res = sandbox.execute(full)
-            except Exception as e:  # sandbox launcher-level failure
-                infra_errors += 1
-                outcome = {"attempted": True, "infra": str(e)[:200]}
-                break
-            if res.status == "EXECUTION_ERROR":
-                infra_errors += 1
-                outcome = {"attempted": True, "infra": res.stderr[:200]}
-                break
-            if res.status == "PASS":
-                passed = True
-                outcome = {"attempted": True, "pass": True,
-                           "body": body.strip()[:120]}
-                if reward_rank:
-                    # Seed the positive-exemplar prior (bounded; recent
-                    # favorable outcomes dominate).
-                    exemplars.append((prompt_wave.clone(), decoder._wave(src)))
-                    if len(exemplars) > 8:
-                        exemplars.pop(0)
-                break
-            outcome = {"attempted": True, "pass": False,
-                       "trace": res.stderr[:200]}
+        pass_src = None
+        pa_meta = None  # per-item Path A operator telemetry
+        if outcome is None:  # skip attempt loop only on Path A compile fail-closed
+            if pa_engaged and op is not None:
+                pa_meta = {"rank": op.rank,
+                           "orth_error": round(op.orth_error, 6),
+                           "a_orth_error": round(op.a_orth_error, 6),
+                           "demo_mse": round(op.demo_mse, 6),
+                           "singular_values": [round(float(s), 4)
+                                               for s in op.singular_values[:8]]}
+            for src, meta in candidates[:attempts]:
+                body = src.split("\n", 1)[1] if "\n" in src else src
+                full = SHIM + prompt.rstrip() + "\n" + body + "\n" + test_code + f"\ncheck({entry_point})"
+                try:
+                    res = sandbox.execute(full)
+                except Exception as e:  # sandbox launcher-level failure
+                    infra_errors += 1
+                    outcome = {"attempted": True, "infra": str(e)[:200]}
+                    break
+                if res.status == "EXECUTION_ERROR":
+                    infra_errors += 1
+                    outcome = {"attempted": True, "infra": res.stderr[:200]}
+                    break
+                if res.status == "PASS":
+                    passed = True
+                    pass_src = src
+                    outcome = {"attempted": True, "pass": True,
+                               "body": body.strip()[:120]}
+                    if reward_rank:
+                        # Seed the positive-exemplar prior (bounded; recent
+                        # favorable outcomes dominate).
+                        exemplars.append((prompt_wave.clone(), decoder._wave(src)))
+                        if len(exemplars) > 8:
+                            exemplars.pop(0)
+                    break
+                outcome = {"attempted": True, "pass": False,
+                           "trace": res.stderr[:200]}
         if passed:
             solved += 1
+            if pa_engaged:
+                path_a_solved_after_reorder += 1
+                # G4 attribution: a NEW pass is one whose passing candidate
+                # sat beyond the OFF (grammar) attempt budget — Path A moved
+                # it inside the budget. The sandbox decides PASS/FAIL; the
+                # paired item identity is the same dataset item.
+                if pass_src is not None and grammar_index.get(pass_src, -1) >= attempts:
+                    path_a_new_passes += 1
         latencies.append((time.perf_counter() - t0) * 1000.0)
         item_results.append({"task_id": task_id, "status": "PASS" if passed else "FAIL",
                              "candidates_generated": len(candidates),
                              "candidates_attempted": min(len(candidates), attempts),
-                             "outcome": outcome})
+                             "outcome": outcome,
+                             "path_a_engaged": pa_engaged,
+                             "path_a_meta": pa_meta})
         print(f"[{idx:03d}/{len(items)}] {task_id} -> {'PASS' if passed else 'FAIL'} "
               f"(gen={len(candidates)})")
 
@@ -490,6 +560,13 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         "ast_idf_batched": ast_idf_batched,
         "ast_idf_items_reordered": ast_idf_items_reordered,
         "ast_idf_codebook_sha256": ast_idf_codebook_sha,
+        "path_a_demo_enabled": path_a_demo,
+        "path_a_items_ranked": path_a_items_ranked,
+        "path_a_items_no_demo": path_a_items_no_demo,
+        "path_a_items_underdetermined": path_a_items_underdetermined,
+        "path_a_new_passes": path_a_new_passes,
+        "path_a_compile_failures": path_a_compile_failures,
+        "path_a_solved_after_reorder": path_a_solved_after_reorder,
         "accuracy_attempted": solved / max(1, expressible),
         "wall_clock_sec": round(wall_sec, 3),
         "avg_latency_ms_item": round(avg_ms, 3),
@@ -531,6 +608,10 @@ if __name__ == "__main__":
     ap.add_argument("--ast-idf-batched", action="store_true",
                     help="Phase 3: batched mean-phase-cosine ranking (default OFF; "
                          "requires --ast-idf-only)")
+    ap.add_argument("--path-a-demo", action="store_true",
+                    help="Path A: in-context docstring-demo operator re-ranking "
+                         "(default OFF; pre-registered gates in "
+                         "experiments/verification/class4_path_a_operator_design.md)")
     args = ap.parse_args()
     run_benchmark(limit=args.limit, attempts=args.attempts,
                   device=args.device, smoke_dim=args.smoke_dim,
@@ -540,4 +621,5 @@ if __name__ == "__main__":
                   trained_rank=args.trained_rank,
                   trained_head_path=args.trained_head,
                   ast_idf_only=args.ast_idf_only,
-                  ast_idf_batched=args.ast_idf_batched)
+                  ast_idf_batched=args.ast_idf_batched,
+                  path_a_demo=args.path_a_demo)

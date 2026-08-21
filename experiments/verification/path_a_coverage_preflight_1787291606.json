@@ -1,0 +1,370 @@
+{
+  "preflight": "path_a_demo_coverage",
+  "timestamp_utc": "2026-08-21T05:53:26Z",
+  "dataset": "HumanEval",
+  "dataset_sha256": "b796127e635a67f93fb35c04f4cb03cf06f38c8072ee7cee8833d7bee06979ef",
+  "slice": 50,
+  "items_total": 50,
+  "items_0_pairs": 3,
+  "items_1_pair": 15,
+  "items_ge2_pairs": 32,
+  "entry_mismatches": 0,
+  "unparsable_sides": 0,
+  "d_model": 65536,
+  "encoder": "ASTDiscriminativeEncoder",
+  "adequate": true,
+  "verdict": "CONTINUE",
+  "detail": [
+    {
+      "task_id": "HumanEval/0",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/1",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/2",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/3",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/4",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/5",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/6",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/7",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/8",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/9",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/10",
+      "pairs": 3,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/11",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/12",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/13",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/14",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/15",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/16",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/17",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/18",
+      "pairs": 3,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/19",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/20",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/21",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/22",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/23",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/24",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/25",
+      "pairs": 3,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/26",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/27",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/28",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/29",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/30",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/31",
+      "pairs": 7,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/32",
+      "pairs": 0,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/33",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/34",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/35",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/36",
+      "pairs": 3,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/37",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/38",
+      "pairs": 0,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/39",
+      "pairs": 5,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/40",
+      "pairs": 5,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/41",
+      "pairs": 0,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/42",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/43",
+      "pairs": 5,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/44",
+      "pairs": 3,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/45",
+      "pairs": 1,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/46",
+      "pairs": 3,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/47",
+      "pairs": 2,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/48",
+      "pairs": 4,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    },
+    {
+      "task_id": "HumanEval/49",
+      "pairs": 5,
+      "calls_reference_entry": true,
+      "parsable_in": true,
+      "parsable_out": true
+    }
+  ],
+  "receipt_sha256": "78b96b189717f747194cd7fce67b1a11c224a1b3aef150636a68abf81fa9dc1c"
+}
