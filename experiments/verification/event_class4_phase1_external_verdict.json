@@ -1,0 +1,38 @@
+{
+  "schema": "henri.governance-event-receipt.v1",
+  "event_type": "CLASS4_PHASE41_EXTERNAL_VERDICT",
+  "event_id": "673f6ffc-78d3-4706-b541-1414ef4a8570",
+  "audit_hash": "7fd7763f3db69722788d2472b24772f6f0cef7304f3a3f55b288bd058158f04b",
+  "status": "FALSIFIED_NO_EXTERNAL_GAIN",
+  "candidate_sha": "40d23787a98acfa853f4cc5cac3debd99c69a038",
+  "control_sha": "849c65d0175699d1acc271c62b0d08974714f40c",
+  "benchmark": "HumanEval",
+  "item_count": 50,
+  "dataset_sha256": "b796127e635a67f93fb35c04f4cb03cf06f38c8072ee7cee8833d7bee06979ef",
+  "control": {
+    "solved": 2,
+    "expressible": 50,
+    "infra_errors": 0,
+    "candidates_generated": 4661,
+    "scorecard_sha256": "7060624967d37fe138e977bd676380237250aa4c1fc7ae0e6a5d2f3c411a3324",
+    "log_sha256": "bcb8c25330f7c724a99777dbaa422353b10e40e866481a6ae644fd43145c2f26"
+  },
+  "treatment": {
+    "solved": 2,
+    "expressible": 50,
+    "infra_errors": 0,
+    "candidates_generated": 4716,
+    "scorecard_sha256": "c9444893b983a8b45b06875970bd16d17dd4fbb98a068111426c401d4c72543c",
+    "log_sha256": "78394bffc12dec42b69c330fd083351b2d911bd4d0f3f560352738096e102a7c"
+  },
+  "new_passes": 0,
+  "hypothesis": "typed binary collection expansion increases external semantic success",
+  "verdict": "FALSIFIED",
+  "action": "remove candidate-set-only production change; retain negative evidence",
+  "next_hypothesis": "semantic representation/ranking path is the causal bottleneck",
+  "limitations": [
+    "This is a 50-item paired slice, not a full HumanEval score.",
+    "No benchmark target beyond the observed paired delta is claimed.",
+    "No latency or ARC conclusion is drawn."
+  ]
+}
