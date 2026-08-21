@@ -36,7 +36,7 @@ for p in (HERE.parents[2],):  # HENRI V2 root
 
 from path_b_semantic_codec import PathBSemanticCodec, ast_node_types, lex_code  # noqa: E402
 
-MBPP_PATH = "data/mbpp.jsonl"
+MBPP_PATH = "HENRI V2/data/mbpp.jsonl"
 MAX_VOCAB = 4096
 
 
@@ -87,7 +87,9 @@ def main() -> None:
     ap.add_argument("--tau", type=float, default=0.07)
     ap.add_argument("--d-model", type=int, default=65536)
     ap.add_argument("--d-latent", type=int, default=512)
-    ap.add_argument("--out", default="models/path_b_codec.pt")
+    ap.add_argument("--out", default="HENRI V2/models/path_b_codec.pt",
+                    help="checkpoint path relative to repo root (runner reads "
+                         "HENRI V2/models/path_b_codec.pt)")
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--smoke", action="store_true", help="print receipts only")
     args = ap.parse_args()
