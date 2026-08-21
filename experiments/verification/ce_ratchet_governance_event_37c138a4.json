@@ -1,0 +1,22 @@
+{
+  "schema": "henri.governance-event.v1",
+  "event_id": "CE_RATCHET_NOT_OBSERVED_D65536_37c138a4",
+  "event_type": "VERDICT_SEAL",
+  "packet": "HENRI-CLASS47-CE-TELEMETRY-2026-08-21",
+  "verdict": "CE_RATCHET_NOT_OBSERVED@D65536",
+  "gates": {
+    "T3": "FAIL",
+    "T4": "FAIL",
+    "S": "PASS",
+    "ENGAGEMENT": "PASS"
+  },
+  "t3_delta": -0.054991,
+  "t4_delta_vs_untrained": -0.0547,
+  "evidence_sha256": "37c138a4209bb947eab5ac10dd3ad0d6f1697204e29cfae59dd7c6b095a66785",
+  "device": "cuda",
+  "d_model": 65536,
+  "checkpoint_sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+  "sealed_by": "henri-arbiter",
+  "sealed_utc": "2026-08-21T20:05:00Z",
+  "notes": "Learning engaged (loss 1.083->1.020; pred-cos 0.0271>0.0172); trained EI_macro drop is the CE loss channel; corpus-identified context-conflation masking hypothesis documented; ratchet claim closed on the monolithic-operator path pending context-refined TPM packet."
+}

@@ -1,0 +1,56 @@
+{
+  "ce_trained": {
+    "ce_after_erase": 0.193943,
+    "ce_bits": 0.193652,
+    "ce_null": 0.047132,
+    "ce_raw": 0.240784,
+    "ei_macro": 0.36481,
+    "ei_micro": 0.124026,
+    "erase_n": 16,
+    "macro_m": 4,
+    "n": 64,
+    "status": "ok",
+    "support": 14
+  },
+  "ce_untrained": {
+    "ce_after_erase": 0.159082,
+    "ce_bits": 0.248643,
+    "ce_null": 0.032784,
+    "ce_raw": 0.281427,
+    "ei_macro": 0.405157,
+    "ei_micro": 0.12373,
+    "erase_n": 16,
+    "macro_m": 4,
+    "n": 64,
+    "status": "ok",
+    "support": 14
+  },
+  "checkpoint_archive_match": "manifest.sha256 verified",
+  "checkpoint_sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+  "d_model": 65536,
+  "device": "cuda",
+  "engagement_trained": {
+    "loss_first": 1.08323,
+    "loss_last": 1.019688,
+    "loss_mean": 0.972716,
+    "pred_cos_first": -0.08323,
+    "pred_cos_last": -0.029747,
+    "pred_cos_mean": 0.027062
+  },
+  "engagement_untrained": {
+    "loss_first": null,
+    "loss_last": null,
+    "loss_mean": null,
+    "pred_cos_first": -0.083446,
+    "pred_cos_last": 0.029986,
+    "pred_cos_mean": 0.0172
+  },
+  "learning_engaged": true,
+  "num_blocks": 8192,
+  "packet": "HENRI-CLASS47-CE-TELEMETRY-2026-08-21",
+  "steps": 256,
+  "t3_delta": -0.054991,
+  "t4_ce_after_erase": 0.193943,
+  "t4_delta_vs_untrained": -0.0547,
+  "timestamp_utc": "2026-08-21T19:52:47Z"
+}
