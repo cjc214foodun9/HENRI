@@ -296,7 +296,8 @@ class WaveJEPASwarm(nn.Module):
         cross_cov = (proj_in.conj().transpose(0, 1) @ proj_out).real.diagonal() / B
 
         self.sigma_r.data = (
-            forget_factor * self.sigma_r.data + (1.0 - forget_factor) * cross_cov
+            forget_factor * self.sigma_r.data
+            + (1.0 - forget_factor) * cross_cov.to(self.sigma_r.device)
         ).clamp_min(0.01)
         return float(error)
 
