@@ -17,6 +17,8 @@ References: Ramsauer et al. 2020; notebook source synthesis (nlm_hopfield.md).
 """
 
 import math
+from typing import Optional
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -122,7 +124,14 @@ class ContinuousHopfieldCleanup(nn.Module):
             )
         return clean, idx, weights.gather(-1, idx.unsqueeze(-1)).squeeze(-1)
 
-    def lexical_snap(self, wave: torch.Tensor, top_k: int = 1):
+    def lexical_snap(
+        self,
+        wave: torch.Tensor,
+        top_k: int = 1,
+        kuramoto_early_stop: bool = False,
+        kuramoto_threshold: float = 0.85,
+        max_relax_iters: int = 8,
+    ):
         """
         Phase 8.34 Evolution I: multi-vector zero-entropy Lexical Snap.
 
@@ -132,6 +141,13 @@ class ContinuousHopfieldCleanup(nn.Module):
         codebook-level egress primitive: continuous waves -> discrete
         symbolic indices, no BPTT.
 
+        Phase 8.35 Directive 1: kuramoto_early_stop=True runs iterative
+        Hopfield relaxation (retrieve -> recompute) and HALTS as soon as the
+        Kuramoto order parameter R >= kuramoto_threshold (default 0.85),
+        then snaps to the pure discrete token — exact early-stopping during
+        test-time relaxation. Default (False) is the legacy single-pass
+        path, byte-identical.
+
         Returns (indices, confidences): indices [..., top_k] (argmax order),
         confidences [..., top_k] (raw engram similarities, not softmax).
         """
@@ -140,7 +156,29 @@ class ContinuousHopfieldCleanup(nn.Module):
             self.engrams = self.engrams.to(wave.device)
         r = self._flatten(wave)
         r = F.normalize(r, p=2, dim=-1)
-        sim = r @ self.engrams.T  # [..., M]
+        if not kuramoto_early_stop:
+            sim = r @ self.engrams.T  # [..., M]
+            if top_k == 1:
+                idx = sim.argmax(dim=-1)
+                conf = sim.gather(-1, idx.unsqueeze(-1)).squeeze(-1)
+                return idx, conf
+            idx = sim.topk(top_k, dim=-1).indices
+            conf = sim.gather(-1, idx)
+            return idx, conf
+        # Iterative Hopfield relaxation with Kuramoto early stop.
+        r_cur = r
+        n_iters = 1
+        for _ in range(max_relax_iters):
+            rk = self.kuramoto_order_parameter(r_cur)
+            if float(torch.as_tensor(rk).abs().max().item()) >= kuramoto_threshold:
+                break
+            if n_iters >= max_relax_iters:
+                break
+            clean = self.retrieve(r_cur.view(wave.shape) if r_cur.numel() == wave.numel()
+                                  else r_cur)
+            r_cur = F.normalize(self._flatten(clean).reshape(r.shape), p=2, dim=-1)
+            n_iters += 1
+        sim = r_cur @ self.engrams.T
         if top_k == 1:
             idx = sim.argmax(dim=-1)
             conf = sim.gather(-1, idx.unsqueeze(-1)).squeeze(-1)
@@ -161,6 +199,145 @@ class ContinuousHopfieldCleanup(nn.Module):
         num = torch.real(torch.vdot(a.flatten(), b.flatten()))
         den = torch.norm(a) * torch.norm(b) + 1e-12
         return (num / den).item()
+
+    @staticmethod
+    def kuramoto_order_parameter(wave: torch.Tensor) -> torch.Tensor:
+        """R = (1/D) |sum_d exp(j theta_d)| — Kuramoto phase synchronization.
+
+        Phase 8.35 Directive 1 (Kuramoto/Ephaptic PDF): integrate the
+        Kuramoto order parameter as a dynamic termination threshold during
+        lexical_snap relaxation. For complex waves theta_d = angle(w_d);
+        for real waves theta_d is the instantaneous phase of the analytic
+        signal (Hilbert transform via FFT). R == 1.0 for fully phase-locked
+        waves; R ~ 0 for random phase. Returns per-sample R [B] or scalar.
+        """
+        w = wave
+        was_complex = w.is_complex()
+        flat = w.reshape(-1) if w.dim() == 1 else w.reshape(w.shape[0], -1)
+        if not was_complex:
+            flat = flat.to(torch.float32)
+            # Analytic signal: zero negative frequencies, double positive.
+            X = torch.fft.fft(flat, dim=-1)
+            n = X.shape[-1]
+            mask = torch.zeros(n, device=X.device, dtype=X.dtype)
+            mask[0] = 1.0
+            if n % 2 == 0:
+                mask[n // 2] = 1.0
+            mask[1:(n + 1) // 2] = 2.0
+            analytic = torch.fft.ifft(X * mask, dim=-1)
+            theta = torch.angle(analytic)
+        else:
+            theta = torch.angle(flat)
+        phasor = torch.exp(1j * theta)
+        r = torch.abs(phasor.mean(dim=-1))
+        return r.squeeze() if r.numel() == 1 else r
+
+
+class DualScaleAnalogLexicalSnap(nn.Module):
+    """Phase 8.35 T2 (Miller et al. 2026): dual-scale analog lexical snap.
+
+    The document formula (HENRI-SYNTHESIS-MILLER-LEE-2026):
+
+        Psi_gated = Psi_micro ⊙ Softmax(Re(Psi_macro^† W_gate) / tau)
+
+    A top-down macro-option wave Psi_macro (low-D) gates which micro
+    dimensions of Psi_micro participate in Hopfield codebook snapping. The
+    mask is a softmax over micro dimensions (temperature tau); the gated
+    wave is renormalized, then lexical_snap runs inside the active
+    macro-option subspace. This prevents unbinding logit scrambling across
+    non-relevant vocabulary dimensions (the egress bottleneck).
+
+    Controls:
+      - macro_wave = 0  -> uniform mask -> gated == raw wave -> byte-identical
+        to plain lexical_snap (true control arm).
+      - tau -> 0        -> one-hot mask (deterministic subspace restriction).
+
+    Default-OFF: no production consumer; tests and the 8.35 benchmark
+    activate it.
+    """
+
+    def __init__(
+        self,
+        dim_micro: int = 65536,
+        dim_macro: int = 2048,
+        tau: float = 1.0,
+        beta: float = None,
+        seed: int = 835,
+        top_k: Optional[int] = None,
+    ):
+        super().__init__()
+        self.dim_micro = dim_micro
+        self.dim_macro = dim_macro
+        self.tau = float(tau)
+        self.top_k = top_k
+        self.cleanup = ContinuousHopfieldCleanup(dim=dim_micro, beta=beta)
+        g = torch.Generator().manual_seed(seed)
+        w_init = torch.randn(dim_macro, dim_micro, generator=g) / math.sqrt(dim_macro)
+        self.register_buffer("W_gate", F.normalize(w_init, p=2, dim=-1))
+
+    @torch.no_grad()
+    def store_engrams(self, waves: torch.Tensor) -> int:
+        return self.cleanup.store_engrams(waves)
+
+    def gate_mask(self, macro_wave: torch.Tensor) -> torch.Tensor:
+        """Softmax(Re(macro^† W_gate) / tau) over micro dims. [micro]
+
+        top_k=None: pure document formula (flat at D=65,536, tau=1).
+        top_k=k:    sparse ensemble gate — softmax over the top-k logits
+        only, zeros elsewhere, renormalized. This is the Miller et al.
+        "macro wave gates which local ensembles synchronize" mechanism;
+        a flat softmax over 65,536 dims cannot restrict any subspace.
+        macro_wave=0 (no top-down control) always returns the uniform mask
+        (byte-identical to plain lexical_snap).
+        """
+        m = macro_wave.view(-1)
+        if m.is_complex():
+            m = torch.view_as_real(m).reshape(-1).to(torch.float32)
+        m = m / (torch.norm(m) + 1e-12)
+        logits = m @ self.W_gate  # [micro]
+        if torch.norm(m) < 1e-9:
+            return torch.full_like(logits, 1.0 / self.dim_micro)
+        if self.top_k is None:
+            return torch.softmax(logits / self.tau, dim=-1)
+        k = min(int(self.top_k), self.dim_micro)
+        vals, _ = torch.topk(logits, k)
+        thresh = vals[-1]
+        keep = logits >= thresh
+        sel = torch.where(keep, logits, torch.full_like(logits, -1e30))
+        soft = torch.softmax(sel / self.tau, dim=-1)
+        return soft
+
+    def gated_wave(self, wave: torch.Tensor, macro_wave: torch.Tensor) -> torch.Tensor:
+        """Psi_micro ⊙ mask, renormalized (complex/real preserved family)."""
+        mask = self.gate_mask(macro_wave).to(wave.device)
+        was_complex = wave.is_complex()
+        r = wave.view(-1)
+        if was_complex:
+            r = torch.view_as_real(r).reshape(-1).to(torch.float32)
+        g = F.normalize(r * mask, p=2, dim=-1)
+        if was_complex:
+            g = torch.view_as_complex(g.reshape(-1, 2).contiguous())
+        return g.reshape(wave.shape)
+
+    def snap(
+        self,
+        wave: torch.Tensor,
+        macro_wave: torch.Tensor,
+        top_k: int = 1,
+        kuramoto_early_stop: bool = False,
+        kuramoto_threshold: float = 0.85,
+        max_relax_iters: int = 8,
+    ):
+        """Macro-gated lexical snap. Returns (indices, confidences) like
+        ContinuousHopfieldCleanup.lexical_snap. Phase 8.35 D1: passes the
+        Kuramoto early-stop through to the cleanup layer."""
+        assert self.cleanup.engrams.numel() > 0, "No engrams stored; call store_engrams first."
+        return self.cleanup.lexical_snap(
+            self.gated_wave(wave, macro_wave), top_k=top_k,
+            kuramoto_early_stop=kuramoto_early_stop,
+            kuramoto_threshold=kuramoto_threshold,
+            max_relax_iters=max_relax_iters,
+        )
 
 
 class HopfieldActionDecoder(nn.Module):
