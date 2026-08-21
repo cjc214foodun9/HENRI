@@ -253,7 +253,7 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
     hops_vsa_scorer = None
     if hops_vsa_rank:
         from hops_vsa_core import (
-            HopsVSACandidateScorer, HopsVSASkeletonProjector, ring_to_real_wave)
+            HopsVSACandidateScorer, HopsVSASkeletonProjector)
         hops_vsa_scorer = HopsVSACandidateScorer(
             HopsVSASkeletonProjector(d_model=d_model, device=device))
         print(f"[HOPS-VSA] scorer ready d={d_model} "
@@ -374,13 +374,14 @@ def run_benchmark(limit: int = 50, attempts: int = CANDIDATE_ATTEMPTS,
         # via ring_to_real_wave (explicit, never silent).
         prev_first = candidates[0][0] if candidates else None
         if hops_vsa_rank and hops_vsa_scorer is not None:
-            from hops_vsa_core import ring_to_real_wave
-            # decoder waves are CPU; the scorer lives on `device` (CUDA) — move
-            # the ring-to-real lift to `device` explicitly (no cross-device ops).
-            goal_cont = ring_to_real_wave(decoder._wave(prompt)).to(device)
+            # decoder._wave already crosses the ring boundary (encode_text
+            # uint8 ring -> (c/(k_bins-1))*2-1 -> F.normalize) and returns a
+            # float32 [D] unit wave; move it to the scorer device explicitly
+            # (no cross-device ops).
+            goal_cont = decoder._wave(prompt).to(device)
             scored = []
             for ci, (src, meta) in enumerate(candidates):
-                cand_cont = ring_to_real_wave(decoder._wave(src)).to(device)
+                cand_cont = decoder._wave(src).to(device)
                 cos, veto = hops_vsa_scorer.score(goal_cont, cand_cont)
                 scored.append((-1e9 if veto else cos, ci, src, meta))
             scored.sort(key=lambda t: (-t[0], t[1]))
