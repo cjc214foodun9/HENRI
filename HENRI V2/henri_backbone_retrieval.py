@@ -31,7 +31,30 @@ _CONTAMINATION_IDENT4: set[str] = set()  # identifier 4-grams (len >= 3)
 # NOT contamination signals (vacuous 5-gram evidence: '1 2 3 4 5', 'a b c d e',
 # '[2, 2, 2]' fired on clean CPython docs; verbatim-line total was 1 and that
 # hit was a doctest OUTPUT literal coinciding with a task data literal).
+# English prose words are ALSO not contamination signals: the v2 detector
+# fired on IDENT4 'the end the string' (HumanEval/10 vs re.rst prose) — all
+# four tokens are common English, not code. A signal only counts when it
+# contains code-like structure: an underscore token, a Python keyword, or
+# code syntax characters.
 _IDENT_RE = re.compile(r"[a-z_][a-z0-9_]{2,}")
+_PY_KEYWORDS = {
+    "and", "as", "assert", "break", "class", "continue", "def", "del",
+    "elif", "else", "except", "finally", "for", "from", "global", "if",
+    "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass",
+    "raise", "return", "try", "while", "with", "yield", "True", "False",
+    "None", "print", "range", "len", "sorted", "zip", "map", "filter",
+}
+_CODE_SYNTAX = ("(", "=", ">>>", "[", "]", ":", ".", ",")
+
+
+def _is_code_like(tokens: list[str], line: str | None = None) -> bool:
+    """True if the token list / line carries code structure (not prose)."""
+    for t in tokens:
+        if "_" in t or t in _PY_KEYWORDS:
+            return True
+    if line is not None:
+        return any(ch in line for ch in _CODE_SYNTAX)
+    return False
 
 
 class RetrievalBlockedError(RuntimeError):
@@ -43,27 +66,32 @@ def _tokenize(text: str) -> list[str]:
 
 
 def _contamination_lines(text: str) -> set[str]:
-    """Normalized lines that carry code semantics (>=1 real identifier)."""
+    """Normalized lines that carry code semantics (>=1 real identifier AND
+    code-like structure: underscore token, keyword, or syntax char)."""
     out = set()
     for line in text.splitlines():
         line = line.strip()
         if len(line) < 8 or line.startswith("#"):
             continue
-        if not _IDENT_RE.search(line):
+        toks = _IDENT_RE.findall(line.lower())
+        if not toks:
+            continue
+        if not _is_code_like(toks, line):
             continue
         out.add(re.sub(r"\s+", " ", line))
     return out
 
 
 def _ident_shingles(text: str, n: int = 4) -> set[str]:
-    """Shingles over identifiers of length >= 3 (single letters excluded)."""
+    """Shingles over identifiers of length >= 3; only code-like shingles
+    (>=1 underscore token or Python keyword) count."""
     toks = _IDENT_RE.findall(text.lower())
-    return {" ".join(toks[i:i + n]) for i in range(max(0, len(toks) - n + 1))}
-
-
-def _shingles(text: str, n: int = 5) -> set[str]:
-    toks = _tokenize(text)
-    return {" ".join(toks[i:i + n]) for i in range(max(0, len(toks) - n + 1))}
+    out = set()
+    for i in range(max(0, len(toks) - n + 1)):
+        window = toks[i:i + n]
+        if _is_code_like(window):
+            out.add(" ".join(window))
+    return out
 
 
 def add_contamination_shingles(text: str) -> int:

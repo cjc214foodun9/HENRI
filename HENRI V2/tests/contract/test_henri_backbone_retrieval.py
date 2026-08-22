@@ -106,6 +106,18 @@ def test_bare_literals_do_not_fire_gate(retrieval):
     assert snippets
 
 
+def test_prose_words_do_not_fire_gate(retrieval):
+    """v2/v3 regression: English prose 4-grams must not fire the gate
+    (classification evidence: 'the end the string' — HumanEval/10 vs
+    re.rst prose — fired the v2 IDENT4 detector; all four tokens are
+    common English, not code)."""
+    add_contamination_shingles("the end of the string")
+    add_contamination_shingles("the end the string")
+    assert retrieval.scan_contamination() == []
+    snippets = retrieval.retrieve("extract all digits")
+    assert snippets
+
+
 def test_fail_closed_missing_manifest(tmp_path):
     with pytest.raises(RetrievalBlockedError):
         BackboneRetrieval(tmp_path, enabled=True)
