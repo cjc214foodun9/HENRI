@@ -17,9 +17,7 @@ import subprocess
 import sys
 import time
 
-from transformers import AutoModelForCausalLM, AutoProcessor
-
-from henri_backbone_adapter import BackboneAdapter, freeze_for_baseline
+from henri_backbone_adapter import QwenBackboneAdapter
 from henri_backbone_retrieval import (
     BackboneRetrieval,
     RetrievalBlockedError,
@@ -121,14 +119,16 @@ def main():
     # --- model ---
     print("[pilot] loading model ...")
     t0 = time.time()
-    adapter = BackboneAdapter(
+    adapter = QwenBackboneAdapter(
         model_dir=args.model_dir,
         manifest_path=args.manifest,
         revision="0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
-        verify_sha256=True,
-    )
+        verify_shards=True,
+        max_new_tokens=args.max_new_tokens,
+    ).load()
     load_s = time.time() - t0
-    print(f"[pilot] model loaded in {load_s:.1f}s; frozen={adapter.is_frozen()}")
+    frozen = adapter.telemetry.trainable_params == 0
+    print(f"[pilot] model loaded in {load_s:.1f}s; frozen={frozen}")
 
     def run_arm(arm: str, prompts: list[str]) -> dict:
         results = []
@@ -138,7 +138,7 @@ def main():
         for idx, (it, prompt) in enumerate(zip(items, prompts)):
             t0 = time.time()
             try:
-                response, _ = adapter.generate_text(prompt, max_new_tokens=args.max_new_tokens)
+                response, _ = adapter.generate_text(prompt)
             except Exception as exc:  # fail closed
                 results.append({"task_id": it["task_id"], "is_pass": False,
                                 "error": f"GENERATION_ERROR: {exc}"})
@@ -175,7 +175,7 @@ def main():
                 "model_id": "Qwen/Qwen3-VL-8B-Instruct",
                 "revision": "0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
                 "device": "cuda:0",
-                "frozen": adapter.is_frozen(),
+                "frozen": adapter.telemetry.trainable_params == 0,
             },
         }
 
