@@ -1,0 +1,68 @@
+{
+  "schema_id": "henri.packet-audit.v1",
+  "packet": "CLASS49_Pre-Registered_Packet.md",
+  "packet_id": "HENRI-PACKET-CLASS49-ATTRIBUTION-SAGNAC-2026",
+  "packet_sha256_raw": "8fa75fd2d70378b41c29c8261ad877fb7812c26cca3d9d309127965f937b57c0",
+  "packet_sha256_lf": "8fa75fd2d70378b41c29c8261ad877fb7812c26cca3d9d309127965f937b57c0",
+  "packet_bytes": 7843,
+  "digest_normalization": "lf_line_endings (raw == lf; source file already LF)",
+  "source_path": "G:\\My Drive\\HENRI_Inbox\\CLASS49_Pre-Registered_Packet.md",
+  "governed_copy": "experiments/verification/class49_packet_20260821/CLASS49_Pre-Registered_Packet.md",
+  "baseline_declared": "13941d9",
+  "baseline_verified": "13941d9 (HEAD; untracked pre-existing: data/HumanEval.jsonl.gz, henri_audit_chain.json)",
+  "gates_pre_registered_before_mutation": true,
+  "verdict": "REFACTOR_REQUIRED",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "blocking",
+      "title": "Attribution migration targets the rollup table, not the recall table",
+      "detail": "Live recall path zone_c_segment_cache.py:204 query_engrams reads phylogenetic_engrams_65536 (columns id, timestamp, environmental_context_hash, semantic_index, engram_wave_bytes; NO domain_tag, NO run_id/arm_id/commit_sha). Packet Intervention 1 ALTERs only zone_c_engrams (stress rollup). Gate 1 (0 unattributed writes) and Gate 4 (0 cross-domain queries) are unenforceable on the table that actually feeds recall.",
+      "evidence_class": "OBSERVED",
+      "evidence": "zone_c_segment_cache.py:173-196 (dual INSERT to phylogenetic_engrams_65536 AND zone_c_engrams), 204-247 (recall on phylogenetic_engrams_65536)",
+      "remediation": "Add run_id/arm_id/commit_sha/domain_tag to BOTH tables; enforce at write_engram; add domain filter to the recall WHERE clause."
+    },
+    {
+      "id": "F2",
+      "severity": "blocking",
+      "title": "View predicates match zero live domain tags (Gate 4 vacuous)",
+      "detail": "Live domain_tag vocabulary: 'arc3/{env}', '{env}:ACTION{n}', 'arc3/{env}/field_channel_consolidated'. Packet views filter IN ('ast','code','text','math') / IN ('action','grid','ode','control') -> empty result sets; Gate 4 passes vacuously and the views are dead plumbing.",
+      "evidence_class": "OBSERVED",
+      "evidence": "prod SELECT DISTINCT domain_tag FROM zone_c_engrams (arc3/ar25-0c556536, ar25-0c556536:ACTION1, ...)",
+      "remediation": "Canonicalize runner domain tags OR define view predicates over the live vocabulary; add a non-empty-view contract test."
+    },
+    {
+      "id": "F3",
+      "severity": "blocking",
+      "title": "Intervention 2 cites the wrong enforcement site",
+      "detail": "thermodynamic_telemetry_logger.py writes zone_c_resonant_hypersphere (no run_id/arm_id columns; log_trajectory signature has none). The real un-attributed writes are zone_c_segment_cache.py:write_engram (both INSERTs). As written, the guard either raises on every FREEZE=0 caller or is dead code.",
+      "evidence_class": "OBSERVED",
+      "evidence": "thermodynamic_telemetry_logger.py:37-58 (schema), 67-90 (log_trajectory signature); production_arc_run.py:523 (caller)",
+      "remediation": "Move/duplicate the fail-closed guard into TimescaleZoneCStore.write_engram and checkpoint_wave; keep the logger guard as secondary."
+    },
+    {
+      "id": "F4",
+      "severity": "advisory",
+      "title": "Gate 3 conflicts with the wave-mechanics corpus (INFERRED)",
+      "detail": "Corpus (ca4bb787, auth refreshed 2026-08-21): relative differential over a saturated ~1.0 channel is dominated by uncorrelated crosstalk (E[ΔP] ≈ 2κ·e^(-σφ^2/2)·<x,y> → 0) and masks phase-stability collapse; labeled remediation = online EDMD with Stiefel retractions. CLASS48 dry-run of the new gate: δ = -0.0017 -> PASS (DERIVED from CLASS48 telemetry; not a scientific verdict). CLASS49 §1.1 justification ('absolute gate conflated drift with safety') is HYPOTHESIS, not established.",
+      "evidence_class": "INFERRED + DERIVED",
+      "evidence": "corpus query 3179135d-9cca-42a0-a626-3b192ea55cc2 (citations fae3966c, 56cfbe73, fe2e7026, b6f856bc, e0e7d020); class48 mean A 0.9877 (n=1234), B 0.9860 (n=1098)",
+      "remediation": "Pre-register a discrimination sanity floor: if mean Sagnac of BOTH arms >= 0.95, declare Gate 3 INCONCLUSIVE rather than PASS; record the corpus conflict in the seal event."
+    },
+    {
+      "id": "F5",
+      "severity": "ok",
+      "title": "Arm config freeze is sound",
+      "detail": "25 matched envs x 60 steps; HENRI_FREEZE_LEARNING=1 both arms; single treatment difference (HENRI_ARC_RT_MCTS); matched seed; baseline = frozen CLASS48 SHA + attribution patch; default-OFF preserved.",
+      "evidence_class": "OBSERVED",
+      "evidence": "packet lines 39-48"
+    }
+  ],
+  "corpus_support": {
+    "view_isolation": "INFERRED SUPPORT: SQL views + domain-tag filtering over one hypertable preserve unbinding isolation at D=65,536 (quasi-orthogonality sigma ~ 0.0039; crosstalk only under superposition M/D). Citations fae3966c, fe2e7026, 82577c97.",
+    "relative_gate": "INFERRED CONFLICT: relative differential gate is not statistically valid under phase-locking collapse; masks total phase-stability degradation. Citations 56cfbe73, fe2e7026, b6f856bc, e0e7d020."
+  },
+  "class48_preserved": "RT-MCTS default-OFF; Δscore=+2; engagement 897 re-ranks; absolute Gate S 0.986>0.35 FAIL sealed 13941d9 — NOT reinterpreted by this audit",
+  "approval_required": true,
+  "next_action": "Await explicit user approval for bounded refactor (dev Docker first, then prod, default-OFF) or alternate disposition."
+}
