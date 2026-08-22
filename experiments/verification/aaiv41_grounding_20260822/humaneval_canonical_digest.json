@@ -1,0 +1,13 @@
+{
+  "schema_id": "henri.dataset-digest.v1",
+  "dataset": "HumanEval (openai/human-eval)",
+  "canonical_url": "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz",
+  "retrieved_utc": "2026-08-22",
+  "gz_sha256": "b796127e635a67f93fb35c04f4cb03cf06f38c8072ee7cee8833d7bee06979ef",
+  "decompressed_sha256": "1d49078ba3e2b196b9344535bef34a43021f038fad9561d6ee7c53450609a6a2",
+  "items": 164,
+  "local_copy_match": true,
+  "local_copy_path": "data/HumanEval.jsonl.gz",
+  "held_out_status": "CONDITIONAL",
+  "usage": "CLASS51 P2 diagnostic baseline only; NOT an official AAII v4.1 score"
+}
