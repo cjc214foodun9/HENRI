@@ -1,0 +1,34 @@
+{
+  "schema_id": "henri.class51-p3-pilot.v1",
+  "status": "PILOT_COMPLETE",
+  "gates": {
+    "engagement": {
+      "pass": true,
+      "value": 1.0
+    },
+    "contamination": {
+      "pass": true,
+      "value": "CLEAN"
+    },
+    "execution_errors": {
+      "pass": true,
+      "value": [
+        0,
+        0
+      ]
+    },
+    "catastrophic_regression": {
+      "pass": true,
+      "value": -0.1
+    },
+    "retrieval_latency": {
+      "pass": true,
+      "value": "per-item gen_s includes retrieval; see receipts"
+    }
+  },
+  "summary": {
+    "arm_a_accuracy": 0.5,
+    "arm_b_accuracy": 0.6
+  },
+  "efficacy_verdict": "NOT_EVALUATED_PILOT_PLUMBING_ONLY"
+}

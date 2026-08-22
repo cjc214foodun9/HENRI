@@ -53,8 +53,9 @@
 - MBPP canonical confirmed: `google-research/google-research/mbpp/sanitized-mbpp.json` (blob sha `a999d25d…`, 427 items, keys code/prompt/source_file/task_id/test_imports/test_list); local bytes sha256 `ca95deaa9a01ef0a6f439f88bcf0dd3db3563d22f22aad6cae04ebb9a8d8c8e9` (not committed; digest recorded).
 - HumanEval full: 164 items, canonical gz sha256 `b796127e…` / decompressed `1d49078b…` (MATCH_LOCAL).
 
-## Amendment A1 (PROPOSED 2026-08-22) — contamination detector calibration
-- Status: PROPOSED — ratification required before the definitive pilot rerun. Corpus composition UNCHANGED (same 13 files, same aggregate sha256 `b20b5144…`).
+## Amendment A1 (RATIFIED 2026-08-22) — contamination detector calibration
+- Status: RATIFIED (user via Photon; bounded claim: "no code-dominant syntactic shingle overlap detected between the 13 corpus files (sha256 aggregate b20b5144…) and the first 30 HumanEval tasks under heuristic v3.1"; does NOT assert absolute text isolation). Corpus composition UNCHANGED (same 13 files, same aggregate sha256 `b20b5144…`).
+- Ratification receipt: `class51_p3_a1_ratification_receipt.json` (sealed, committed `8ebd222`).
 - Original pre-registered gate (text above, unmodified): 5-gram shingle overlap of benchmark task prompts/solutions/tests vs corpus.
 - Observed blocks and classification (evidence scripts `classify_contamination.py`, `classify_contamination_v2.py`, `show_contamination_overlap.py`):
   - v1 (plain 5-grams): blocked 7/13 files — all vacuous (`[2, 2, 2]`, `1 2 3 4 5`, `a b c d e`, prose). Single verbatim-line overlap = doctest OUTPUT literal `[2, 2, 2]` in itertools.rst, benign.
@@ -65,6 +66,12 @@
   Prose-common keywords (in/for/as/or/if/not/print/range/len/…) and generic punctuation are NOT signals.
 - Receipts: every run writes a timestamped `contamination_receipt_<run_id>.json` carrying detector version + source commit; historical blocked receipts are preserved (never overwritten).
 - Preflight: contamination-only remote check (no model load) records `hits` + PASS/BLOCKED before any GPU run.
+
+## Pilot outcome (RATIFIED A1, 30-item plumbing, 2026-08-22)
+- Run 1 (commit `cba20be`): 0/30 both arms — INVALID, harness bug: canonical HumanEval `test` is a STRING; loader `"\n".join(obj["test"])` char-split it → uniform `SyntaxError: unterminated string literal`. Kill evidence: `kill_test_loader_join.py` (HE/0 + HE/2 PASS on fixed path; HE/1 genuine NameError). Receipts archived `_INVALID_0of30_*`.
+- Fix: `0052864` — loader + preflight only (arms/prompts/gates/model unchanged).
+- Run 2 (commit `0052864`, run_id `20260822T093948Z`): Arm A **15/30 (0.5)**, Arm B **18/30 (0.6)**; all plumbing gates PASS (engagement 30/30, contamination CLEAN, execution errors 0/0, catastrophic regression 0.0, latency within budget); frozen backbone confirmed.
+- Verdict: PLUMBING-ONLY PASS. Efficacy NOT evaluated (kill criterion `accuracy_B − accuracy_A < 0.010` requires the full 264-item matrix).
 
 ## Open ratification items (user decision)
 1. Approve this P3(a) operationalization (recommended), OR switch to P3(b) verifier loop, OR run both sequentially.

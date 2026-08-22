@@ -1,0 +1,31 @@
+{
+  "schema_id": "henri.contamination-receipt.v1",
+  "status": "PASS",
+  "reconciled": true,
+  "reconciled_at": "2026-08-22",
+  "corpus_aggregate": "b20b5144adeea0dc23fb02e258a735af6849e414f52275e53832bc1a34717aac",
+  "hits": [],
+  "detector": {
+    "version": "v3.1-code-dominant",
+    "amendment": "A1-RATIFIED"
+  },
+  "executed_commit": "0052864938d4186e673f55e240743e6144a0764e",
+  "protocol_pinned_commit": "cba20be2a8abde493df46d067bd8d517bc3b3b7f",
+  "deviation": "Protocol pinned cba20be; that commit's HumanEval loader char-splits the canonical string 'test' field (kill evidence: uniform SyntaxError 'unterminated string literal' on 30/30, see kill_test_loader_join.py). Fix at 0052864 changes only the loader + preflight; arms, prompts, gates, model unchanged. Deviation disclosed in reconciliation.",
+  "run_id": "20260822T093948Z",
+  "source_receipt": {
+    "path": "/root/class51_p3/pilot_out/contamination_receipt_20260822T093948Z.json",
+    "sha256": "9e31e4febe45623cae63b28b032a72075cb5aa2fd9272df049ab947b8b6b084e"
+  },
+  "pilot_summary": {
+    "arm_a_passed": "15/30",
+    "arm_b_passed": "18/30",
+    "arm_a_accuracy": 0.5,
+    "arm_b_accuracy": 0.6,
+    "execution_errors": [0, 0],
+    "retrieval_engaged": "30/30",
+    "frozen": true
+  },
+  "plumbing_only": true,
+  "efficacy_verdict": "NOT_EVALUATED_PILOT_PLUMBING_ONLY"
+}

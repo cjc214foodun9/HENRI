@@ -1,0 +1,202 @@
+{
+  "arm": "A",
+  "schema_id": "henri.run-evidence.v1",
+  "kind": "diagnostic-pilot",
+  "not_official_aaii": true,
+  "held_out_status": "CONDITIONAL",
+  "metrics": {
+    "passed": 15,
+    "attempted": 30,
+    "execution_errors": 0,
+    "accuracy": 0.5,
+    "median_gen_s": 0.84
+  },
+  "items": [
+    {
+      "task_id": "HumanEval/0",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 1.36
+    },
+    {
+      "task_id": "HumanEval/1",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 2.26
+    },
+    {
+      "task_id": "HumanEval/2",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 0.33
+    },
+    {
+      "task_id": "HumanEval/3",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 0.72
+    },
+    {
+      "task_id": "HumanEval/4",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 0.84
+    },
+    {
+      "task_id": "HumanEval/5",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 1.07
+    },
+    {
+      "task_id": "HumanEval/6",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 1.59
+    },
+    {
+      "task_id": "HumanEval/7",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 0.52
+    },
+    {
+      "task_id": "HumanEval/8",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 0.98
+    },
+    {
+      "task_id": "HumanEval/9",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 0.96
+    },
+    {
+      "task_id": "HumanEval/10",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 1.93
+    },
+    {
+      "task_id": "HumanEval/11",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 0.79
+    },
+    {
+      "task_id": "HumanEval/12",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 0.49
+    },
+    {
+      "task_id": "HumanEval/13",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 0.58
+    },
+    {
+      "task_id": "HumanEval/14",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 0.55
+    },
+    {
+      "task_id": "HumanEval/15",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 0.47
+    },
+    {
+      "task_id": "HumanEval/16",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 0.35
+    },
+    {
+      "task_id": "HumanEval/17",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 1.09
+    },
+    {
+      "task_id": "HumanEval/18",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 1.22
+    },
+    {
+      "task_id": "HumanEval/19",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 1.56
+    },
+    {
+      "task_id": "HumanEval/20",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 1.63
+    },
+    {
+      "task_id": "HumanEval/21",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 0.8
+    },
+    {
+      "task_id": "HumanEval/22",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 0.47
+    },
+    {
+      "task_id": "HumanEval/23",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 0.28
+    },
+    {
+      "task_id": "HumanEval/24",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 0.73
+    },
+    {
+      "task_id": "HumanEval/25",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 1.11
+    },
+    {
+      "task_id": "HumanEval/26",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 0.84
+    },
+    {
+      "task_id": "HumanEval/27",
+      "is_pass": true,
+      "error": null,
+      "gen_s": 0.91
+    },
+    {
+      "task_id": "HumanEval/28",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 0.31
+    },
+    {
+      "task_id": "HumanEval/29",
+      "is_pass": false,
+      "error": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nNameError: name 'List' is not defined. Did you mean: 'list'?\n",
+      "gen_s": 0.51
+    }
+  ],
+  "telemetry": {
+    "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+    "revision": "0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
+    "device": "cuda:0",
+    "frozen": true
+  }
+}
