@@ -71,7 +71,7 @@ def load_humaneval(gz_path: pathlib.Path) -> list[dict]:
             "prompt": obj["prompt"],
             "entry_point": obj["entry_point"],
             "test": "\n".join(obj["test"]),
-            "imports": obj["imports"],
+            "imports": obj.get("imports", []),
         })
     return items
 
