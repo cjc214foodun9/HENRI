@@ -33,28 +33,46 @@ _CONTAMINATION_IDENT4: set[str] = set()  # identifier 4-grams (len >= 3)
 # hit was a doctest OUTPUT literal coinciding with a task data literal).
 # English prose words are ALSO not contamination signals: the v2 detector
 # fired on IDENT4 'the end the string' (HumanEval/10 vs re.rst prose).
-# v3.1 rule (Amendment A1, PROPOSED): a signal counts only when it contains
-# code-dominant structure: an underscore token, a code-dominant keyword, or
-# the code markers '>>>' or '='. Common prose keywords (in/for/as/or/if/...)
-# and generic punctuation do NOT fire. Corpus composition is unchanged.
+# v3.2 rule (Amendment A2, RATIFIED 2026-08-22): same structure as v3.1 plus
+# two calibrations against vacuous hits on the full 264-item surface:
+#   (a) bare 'import x' / 'from y' lines WITHOUT underscore or compound
+#       structure do NOT fire (random.rst 'import random', statistics.rst
+#       'import math' were verbatim-line hits);
+#   (b) shingles/lines whose ONLY code signal is a single prose-common
+#       keyword ('from'/'return'/'del') do NOT fire (collections.rst
+#       'from the right side', re.rst 'return tuple containing all').
+# Compound code structure (def/class/=/>>>/underscore identifiers, import
+# inside a compound line) still fires. Corpus: itertools.rst Recipes section
+# excised (sole genuine overlap: is_prime vs HE/31); new aggregate
+# 2ced6f6f1afefb4d54129b9fff74d4edf08a91efe38c4b639ef8301144786f04.
 _IDENT_RE = re.compile(r"[a-z_][a-z0-9_]{2,}")
-# Code-dominant tokens: appear in English prose only rarely. Builtins
-# (print/range/len/...) and prose-common keywords (in/for/as/or/if/not/...) are
-# intentionally EXCLUDED (v2 false positive 'the end the string'; prose like
-# "if you want, as in the example" must not fire).
-_CODE_KEYWORDS = {
-    "def", "class", "import", "from", "return", "lambda", "yield", "assert",
+# Compound code-dominant keywords: appear in English prose only rarely.
+_COMPOUND_KEYWORDS = {
+    "def", "class", "import", "lambda", "yield", "assert",
     "raise", "except", "finally", "while", "elif", "global", "nonlocal",
-    "pass", "break", "continue", "del",
+    "pass", "break", "continue",
 }
+# Prose-common keywords: a lone occurrence does NOT make a line/shingle
+# code-like (v3.2 calibration b).
+_PROSE_KEYWORDS = {"from", "return", "del"}
 _CODE_MARKERS = (">>>", "=")
+_IMPORT_LEAD = {"import", "from"}
 
 
 def _is_code_like(tokens: list[str], line: str | None = None) -> bool:
-    """True if the token list / line carries code-dominant structure."""
-    for t in tokens:
-        if "_" in t or t in _CODE_KEYWORDS:
-            return True
+    """True if the token list / line carries compound code-dominant structure.
+
+    v3.2: underscore identifier, compound keyword, or code marker fires.
+    A bare import/from lead with no compound structure does not (a).
+    A signal set made solely of prose-common keywords does not (b).
+    """
+    if line is not None and tokens and tokens[0] in _IMPORT_LEAD:
+        rest = tokens[1:]
+        if not any("_" in t or t in _COMPOUND_KEYWORDS for t in rest):
+            return False  # bare import line (v3.2 a)
+    code_sig = [t for t in tokens if "_" in t or t in _COMPOUND_KEYWORDS]
+    if code_sig:
+        return not all(t in _PROSE_KEYWORDS for t in code_sig)
     if line is not None:
         return any(m in line for m in _CODE_MARKERS)
     return False

@@ -35,8 +35,8 @@
     {
       "module": "itertools",
       "file": "itertools.rst",
-      "sha256": "d441f8ae235a73a46e769c1116812e60e669b32cd3baa9f30efed68253e3b0d0",
-      "bytes_lf": 71194,
+      "sha256": "356075238c97bc4bae78e8f94ddbd6ec9416de38d396b5182433ac48a30e846e",
+      "bytes_lf": 31716,
       "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/itertools.rst"
     },
     {
@@ -96,5 +96,6 @@
       "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/string.rst"
     }
   ],
-  "aggregate_sha256": "b20b5144adeea0dc23fb02e258a735af6849e414f52275e53832bc1a34717aac"
+  "aggregate_sha256": "2ced6f6f1afefb4d54129b9fff74d4edf08a91efe38c4b639ef8301144786f04",
+  "amendment": "A2-RATIFIED: itertools.rst Recipes section (.. _itertools-recipes: .. EOF) excised 2026-08-22; historical b20b5144 receipt preserved"
 }

@@ -11,9 +11,17 @@ Repairs over backbone_p3_pilot.py (commit 83724b5, pilot RATIFIED A1):
   3. Arm pairing fixed: single canonical base prompt; Arm B = Arm A with
      the retrieval block inserted at a fixed sentinel; a byte-identity
      verifier proves B minus block == A for all 264 items.
-  4. Full 264-item prompt/test surface registered in the v3.1
+  4. Full 264-item prompt/test surface registered in the v3.2
      contamination scan (fresh receipt, not carried from the pilot).
   5. Pre-registered evaluator self-test runs BEFORE any model load.
+
+R2 (RATIFIED 2026-08-22): graders use the official prompt + completion +
+tests form (canonical prompt prepended; MBPP signature from the dataset
+`code` field; re-emitted def signatures stripped deterministically).
+Self-test extended to 10 canonical cases (5 HE + 5 MBPP).
+A2 (RATIFIED 2026-08-22): itertools.rst Recipes section excised (HE/31
+is_prime overlap); detector v3.2 (bare-import + prose-keyword exclusions);
+new corpus aggregate 2ced6f6f1afefb4d54129b9fff74d4edf08a91efe38c4b639ef8301144786f04.
 
 Pre-registered kill: accuracy_B - accuracy_A < 0.010 (fired => no promotion).
 Any infrastructure failure -> BLOCKED_INFRASTRUCTURE, no efficacy verdict.
@@ -89,12 +97,32 @@ def _classify(proc: subprocess.CompletedProcess) -> tuple[str, str]:
     return "EXECUTION_ERROR", err[-300:]
 
 
+def _mbpp_signature(code: str) -> str:
+    """Canonical open def signature from the dataset reference code."""
+    for ln in code.splitlines():
+        s = ln.strip()
+        if s.startswith("def "):
+            return s
+    return ""
+
+
+def _strip_def_head(code: str) -> str:
+    """Drop a re-emitted 'def ...' head so the canonical signature owns it."""
+    lines = code.splitlines()
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    if lines and lines[0].lstrip().startswith("def "):
+        lines.pop(0)
+    return "\n".join(lines).strip("\n") + ("\n" if any(l.strip() for l in lines) else "")
+
+
 def grade_humaneval(code: str, entry_point: str, tests: str,
-                    imports: list[str], timeout: int = 15) -> tuple[str, str]:
+                    imports: list[str], prompt: str, timeout: int = 15) -> tuple[str, str]:
     if not _IDENT_RE.fullmatch(entry_point):
         return "EXECUTION_ERROR", f"invalid entry_point identifier: {entry_point!r}"
     imp = "\n".join(imports) if imports else ""
-    body = f"{imp}\n\n{code}\n\n{tests}\n\ncheck({entry_point})\n"
+    # R2: official prompt + completion + tests form (canonical prompt prepended)
+    body = f"{imp}\n\n{prompt}\n\n{code}\n\n{tests}\n\ncheck({entry_point})\n"
     try:
         proc = subprocess.run([sys.executable, "-c", body],
                               capture_output=True, text=True, timeout=timeout)
@@ -104,10 +132,14 @@ def grade_humaneval(code: str, entry_point: str, tests: str,
 
 
 def grade_mbpp(code: str, test_imports: list[str], test_list: list[str],
-               timeout: int = 15) -> tuple[str, str]:
+               prompt: str, signature: str, timeout: int = 15) -> tuple[str, str]:
     imp = "\n".join(test_imports) if test_imports else ""
     tests = "\n".join(test_list) if test_list else ""
-    body = f"{imp}\n\n{code}\n\n{tests}\n"
+    # R2: canonical executable = imports + dataset signature + completion.
+    # MBPP prompt is natural-language prose (NOT Python) and must NOT be
+    # concatenated into the graded source (SyntaxError, OBSERVED preflight).
+    pre = f"{signature}\n" if signature else ""
+    body = f"{imp}\n\n{pre}{_strip_def_head(code)}\n\n{tests}\n"
     try:
         proc = subprocess.run([sys.executable, "-c", body],
                               capture_output=True, text=True, timeout=timeout)
@@ -153,6 +185,7 @@ def load_mbpp(json_path: pathlib.Path) -> list[dict]:
             "task_id": f"mbpp-{obj['task_id']}",
             "prompt": obj["prompt"],
             "code": obj["code"],
+            "signature": _mbpp_signature(obj["code"]),
             "test_imports": obj.get("test_imports", []),
             "test_list": obj.get("test_list", []),
             "source_file": obj.get("source_file", ""),
@@ -198,37 +231,44 @@ def run_self_test(he_gz: pathlib.Path, mbpp_json: pathlib.Path) -> dict:
     mbpp = load_mbpp(mbpp_json)
     cases = []
 
-    # --- HumanEval: HE/2 truncate_number ---
+    # --- HumanEval: HE/2 truncate_number (R2: canonical prompt passed) ---
     it2 = he[2]
     good_he = "def truncate_number(number):\n    return number - int(number)\n"
     wrong_he = "def truncate_number(number):\n    return number + int(number)\n"
     cases.append(("HE known-good", "PASSED",
-                  grade_humaneval(good_he, "truncate_number", it2["test"], it2["imports"])))
+                  grade_humaneval(good_he, "truncate_number", it2["test"], it2["imports"], it2["prompt"])))
     cases.append(("HE deliberate-wrong", "FAILED",
-                  grade_humaneval(wrong_he, "truncate_number", it2["test"], it2["imports"])))
+                  grade_humaneval(wrong_he, "truncate_number", it2["test"], it2["imports"], it2["prompt"])))
     cases.append(("HE wrong-entry", "EXECUTION_ERROR",
-                  grade_humaneval(good_he, "truncate_nmbr", it2["test"], it2["imports"])))
+                  grade_humaneval(good_he, "truncate_nmbr", it2["test"], it2["imports"], it2["prompt"])))
     cases.append(("HE timeout", "EXECUTION_ERROR",
                   grade_humaneval(
                       "def truncate_number(number):\n    while True:\n        pass\n",
-                      "truncate_number", it2["test"], it2["imports"], timeout=2)))
+                      "truncate_number", it2["test"], it2["imports"], it2["prompt"], timeout=2)))
+    cases.append(("HE body-only-with-prefix", "PASSED",
+                  grade_humaneval("    return number - int(number)\n", "truncate_number",
+                                  it2["test"], it2["imports"], it2["prompt"])))
 
-    # --- MBPP: item 0 similar_elements ---
+    # --- MBPP: item 0 similar_elements (R2: prompt + canonical signature) ---
     m0 = mbpp[0]
+    sig0 = _mbpp_signature(m0["code"])
     good_mb = ("def similar_elements(test_tup1, test_tup2):\n"
                "    return tuple(set(test_tup1) & set(test_tup2))\n")
     wrong_mb = ("def similar_elements(test_tup1, test_tup2):\n"
                 "    return tuple(set(test_tup1) | set(test_tup2))\n")
     cases.append(("MBPP known-good", "PASSED",
-                  grade_mbpp(good_mb, m0["test_imports"], m0["test_list"])))
+                  grade_mbpp(good_mb, m0["test_imports"], m0["test_list"], m0["prompt"], sig0)))
     cases.append(("MBPP deliberate-wrong", "FAILED",
-                  grade_mbpp(wrong_mb, m0["test_imports"], m0["test_list"])))
-    cases.append(("MBPP wrong-entry", "EXECUTION_ERROR",
-                  grade_mbpp("def similar_elementzz(a, b):\n    return ()\n",
-                             m0["test_imports"], m0["test_list"])))
+                  grade_mbpp(wrong_mb, m0["test_imports"], m0["test_list"], m0["prompt"], sig0)))
+    cases.append(("MBPP syntax-error-body", "EXECUTION_ERROR",
+                  grade_mbpp("def similar_elements(a, b):\n    if True print(1)\n",
+                             m0["test_imports"], m0["test_list"], m0["prompt"], sig0)))
     cases.append(("MBPP timeout", "EXECUTION_ERROR",
                   grade_mbpp("def similar_elements(a, b):\n    while True:\n        pass\n",
-                             m0["test_imports"], m0["test_list"], timeout=2)))
+                             m0["test_imports"], m0["test_list"], m0["prompt"], sig0, timeout=2)))
+    cases.append(("MBPP body-only-with-prefix", "PASSED",
+                  grade_mbpp("    return tuple(set(test_tup1) & set(test_tup2))\n",
+                             m0["test_imports"], m0["test_list"], m0["prompt"], sig0)))
 
     results = []
     ok = True
@@ -259,18 +299,19 @@ def contamination_scan(items: list[dict], corpus_dir: pathlib.Path,
     retr = BackboneRetrieval(corpus_dir, enabled=True)
     hits = retr.scan_contamination()
     detector = {
-        "version": "v3.1-code-dominant",
+        "version": "v3.2-code-dominant",
         "rule": ("code-bearing line (underscore | code-dominant keyword | '>>>' | '=') "
-                 "or ident4 shingle containing an underscore token or code-dominant keyword"),
+                 "or ident4 shingle containing an underscore token or code-dominant keyword; "
+                 "v3.2 excludes bare import lines and prose-common single-keyword signals"),
         "commit": detector_commit,
-        "amendment": "A1-RATIFIED",
+        "amendment": "A2-RATIFIED",
         "surface_items": len(items),
     }
     (out / f"contamination_receipt_{run_id}.json").write_text(json.dumps({
         "schema_id": "henri.contamination-receipt.v1",
         "status": "CLEAN" if not hits else "CONTAMINATION_BLOCKED",
         "hits": hits,
-        "corpus_aggregate": "b20b5144adeea0dc23fb02e258a735af6849e414f52275e53832bc1a34717aac",
+        "corpus_aggregate": "2ced6f6f1afefb4d54129b9fff74d4edf08a91efe38c4b639ef8301144786f04",
         "detector": detector,
         "run_id": run_id,
     }, indent=2))
@@ -362,8 +403,8 @@ def main() -> int:
             "schema_id": "henri.contamination-receipt.v1",
             "status": "NOT_APPLICABLE_ARM_A_ONLY",
             "hits": [],
-            "corpus_aggregate": "b20b5144adeea0dc23fb02e258a735af6849e414f52275e53832bc1a34717aac",
-            "detector": {"version": "v3.1-code-dominant", "amendment": "A1-RATIFIED",
+            "corpus_aggregate": "2ced6f6f1afefb4d54129b9fff74d4edf08a91efe38c4b639ef8301144786f04",
+            "detector": {"version": "v3.2-code-dominant", "amendment": "A2-RATIFIED",
                          "note": "retrieval corpus unused in arm A-only mode",
                          "surface_items": len(items)},
             "run_id": run_id}, indent=2))
@@ -467,10 +508,12 @@ def main() -> int:
             gen_times.append(gen_s)
             if it["dataset"] == "humaneval":
                 cls, detail = grade_humaneval(normalize_answer(response),
-                                              it["entry_point"], it["test"], it["imports"])
+                                              it["entry_point"], it["test"], it["imports"],
+                                              it["prompt"])
             else:
                 cls, detail = grade_mbpp(normalize_answer(response),
-                                         it["test_imports"], it["test_list"])
+                                         it["test_imports"], it["test_list"],
+                                         it["prompt"], it.get("signature", ""))
             rows.append({"task_id": it["task_id"], "dataset": it["dataset"],
                          "class": cls, "error": detail if cls != "PASSED" else None,
                          "gen_s": round(gen_s, 2),
