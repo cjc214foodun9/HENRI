@@ -1,0 +1,84 @@
+{
+  "schema_id": "henri.governance-event.v1",
+  "event_type": "A_B_VERDICT_SEALED",
+  "packet_id": "HENRI-PACKET-CLASS49-ATTRIBUTION-SAGNAC-2026",
+  "approval_id": "HENRI-CLASS49-ATTRIBUTION-SAGNAC-2026-08-22",
+  "date": "2026-08-22",
+  "frozen_sha": "ef0ef49",
+  "baseline_commit": "13941d9",
+  "seed": 20260822,
+  "learning_mode": "HENRI_FREEZE_LEARNING=1 (both arms)",
+  "env_pool": "25 matched ARC-AGI envs x 60 max steps",
+  "verdict": "ATTRIBUTION_REFACTOR_NEUTRAL_GATE3_INCONCLUSIVE",
+  "overall_gate_status": "INCONCLUSIVE",
+  "arms": {
+    "arm_a": {
+      "config": "Baseline EFE planner, HENRI_ARC_RT_MCTS=0, freeze=1, seed 20260822",
+      "levels_completed": 0,
+      "envs_scored_gt_zero": 0,
+      "envs_attempted": 25,
+      "mean_sagnac_delta": 0.9877,
+      "sagnac_n": 1234,
+      "telemetry_events": 1332,
+      "verdict_sha256": "43974ccbfc942274a4366cb5cbc79bdcf102ad8a45ae808770548258e173fdd9",
+      "telemetry_sha256": "289300036c8d71e11f8074d527a9ca2eca68aaba5f17a418c4676ee96b695a41"
+    },
+    "arm_b": {
+      "config": "RT-MCTS planner, HENRI_ARC_RT_MCTS=1, freeze=1, seed 20260822",
+      "levels_completed": 2,
+      "envs_scored_gt_zero": 2,
+      "completed_envs": ["cn04-2fe56bfb", "sp80-589a99af"],
+      "rt_re_rank_events": 897,
+      "mean_sagnac_delta": 0.986,
+      "sagnac_n": 1098,
+      "telemetry_events": 1196,
+      "verdict_sha256": "8e0d17d82626ee1d82146369cd354f44733e760b4bb28908dfb90be99896c5d8",
+      "telemetry_sha256": "a01c32a055aa4bdb4db8efa54dcd62c560d723290528ecc40d9b56c0ef630fdd"
+    },
+    "arm_a_r1": {
+      "status": "BLOCKED_INFRASTRUCTURE",
+      "reason": "s5i5 download read-timeout against three.arcprize.org; 24/25 envs; 0 completions; match-pool invalid",
+      "preserved_as": "verdict_r1_INFRASTRUCTURE.json",
+      "verdict_sha256": "ed84d161951d8037c71e5e335dce6cd741191241b43809e0f7aa9b705b9ec752",
+      "excluded_from_all_gates": true
+    }
+  },
+  "gates": {
+    "gate1_infrastructure_attribution": {
+      "status": "PASS",
+      "requirement": "exactly 0 un-attributed writes; 100% of new writes carry valid run_id, arm_id, commit_sha",
+      "evidence": "0 writes during frozen prod arms (engrams static 10,826 pre/post both arms, OBSERVED); fail-closed attribution guard verified in dev smoke (OBSERVED)"
+    },
+    "gate2_task_performance_delta": {
+      "status": "PASS",
+      "requirement": "delta_score = Score_B - Score_A > 0",
+      "delta_score": 2,
+      "score_a": 0,
+      "score_b": 2
+    },
+    "gate3_relative_sagnac_differential": {
+      "status": "INCONCLUSIVE",
+      "requirement": "delta_sagnac <= +0.005 AND mean_B <= 0.995; F4 floor: if both means >= 0.95 -> INCONCLUSIVE",
+      "delta_sagnac": -0.0017,
+      "relative_pass": true,
+      "mean_a": 0.9877,
+      "mean_b": 0.986,
+      "cap_b_pass": true,
+      "f4_floor_fired": true,
+      "reason": "Both arms on saturated Sagnac error channel (>= 0.95); relative differential cannot adjudicate prediction drift under frozen learning"
+    },
+    "gate4_subspace_retrieval_isolation": {
+      "status": "PASS",
+      "requirement": "0 queries from action tasks hitting zone_c_ast_engrams or AST tasks hitting zone_c_action_engrams",
+      "evidence": "0 cross-domain leakage events (family-filtered recall call sites, OBSERVED); 0 ast-family rows in prod store",
+      "vacuity_caveat": "action-only prod store; dev fixture mutual-exclusion test recommended before promotion"
+    }
+  },
+  "action": "HENRI_ARC_RT_MCTS remains default-OFF. Branch accuracy/fidelity-remediation unpromoted. main untouched.",
+  "behavior_neutrality": "Arm scores (0/25, 2/25), completed envs (cn04, sp80), RT re-rank count (897), and mean Sagnac deltas (0.9877/0.9860) exactly match CLASS48 sealed arms (13941d9), proving the attribution refactor is behavior-neutral on the frozen store.",
+  "limitations": [
+    "Gate 3 INCONCLUSIVE under F4 floor: relative differential over saturated ~1.0 error channel is not adjudicable; unfrozen-learning follow-up (CLASS50 draft) is the designed discriminator.",
+    "Gate 4 near-vacuous: production store has 0 ast-family rows; cross-namespace isolation not stress-tested with mixed families.",
+    "Gate 1 guard exercised in dev; prod arms produced 0 writes, so the guard's prod write path was not re-exercised."
+  ]
+}

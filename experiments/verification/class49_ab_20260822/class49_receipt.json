@@ -1,0 +1,76 @@
+{
+  "schema_id": "henri.class49-receipt.v1",
+  "packet_id": "HENRI-PACKET-CLASS49-ATTRIBUTION-SAGNAC-2026",
+  "commit": "ef0ef49",
+  "baseline_commit": "13941d9",
+  "seed": 20260822,
+  "date": "2026-08-22",
+  "inputs": {
+    "arm_a_verdict.json": "43974ccbfc942274a4366cb5cbc79bdcf102ad8a45ae808770548258e173fdd9",
+    "arm_b_verdict.json": "8e0d17d82626ee1d82146369cd354f44733e760b4bb28908dfb90be99896c5d8",
+    "verdict_r1_INFRASTRUCTURE.json": "ed84d161951d8037c71e5e335dce6cd741191241b43809e0f7aa9b705b9ec752",
+    "arm_a_telemetry.jsonl": "289300036c8d71e11f8074d527a9ca2eca68aaba5f17a418c4676ee96b695a41",
+    "arm_b_telemetry.jsonl": "a01c32a055aa4bdb4db8efa54dcd62c560d723290528ecc40d9b56c0ef630fdd"
+  },
+  "exclusions": {
+    "arm_a_r1": "BLOCKED_INFRASTRUCTURE (s5i5 download read-timeout; 24/25 envs; 0 completions). Artifacts preserved under verdict_r1_INFRASTRUCTURE.json; excluded from all gates."
+  },
+  "measurement": {
+    "sagnac_field": "sagnac_delta",
+    "field_rationale": "Packet §1.1 defines the frozen-transition Sagnac error floor near 1.0 (0.986-0.991), which corresponds to per-step sagnac_delta (complement of sagnac_coherence; delta + coherence = 1.0 in telemetry schema).",
+    "finite_exclusion": "non-finite values excluded per sample",
+    "arm_a": {"samples": 1234, "mean": 0.9877, "events": 1332},
+    "arm_b": {"samples": 1098, "mean": 0.986, "events": 1196}
+  },
+  "gates": {
+    "gate1_infrastructure_attribution_isolation": {
+      "status": "PASS",
+      "predicate": "0 un-attributed writes during run",
+      "evidence": "freeze held both arms (engrams static 10,826 pre/post, OBSERVED); 0 writes; fail-closed guard verified in dev smoke (OBSERVED)"
+    },
+    "gate2_task_performance_delta": {
+      "status": "PASS",
+      "predicate": "delta_score > 0",
+      "inputs": {"score_a": 0, "score_b": 2},
+      "value": 2
+    },
+    "gate3_relative_sagnac_differential": {
+      "status": "INCONCLUSIVE",
+      "predicate": "delta_sagnac <= +0.005 AND mean_B <= 0.995; F4: both >= 0.95 -> INCONCLUSIVE",
+      "inputs": {"mean_a": 0.9877, "mean_b": 0.986},
+      "delta_sagnac": -0.0017,
+      "relative_pass": true,
+      "cap_b_pass": true,
+      "f4_floor_fired": true,
+      "limitation": "Saturated error channel (both means >= 0.95): relative differential cannot adjudicate prediction drift; CLASS50 unfrozen-learning discriminator designed as follow-up."
+    },
+    "gate4_subspace_retrieval_isolation": {
+      "status": "PASS",
+      "predicate": "0 cross-domain query leakage events",
+      "evidence": "family-filtered recall call sites (OBSERVED); 0 ast-family rows in prod",
+      "limitation": "near-vacuous on action-only prod store; dev fixture mutual-exclusion test recommended before promotion"
+    }
+  },
+  "overall": "INCONCLUSIVE",
+  "verdict": "ATTRIBUTION_REFACTOR_NEUTRAL_GATE3_INCONCLUSIVE",
+  "behavior_neutrality_evidence": {
+    "arm_a_score": [0, 0],
+    "arm_b_score": [2, 2],
+    "completed_envs": ["cn04-2fe56bfb, sp80-589a99af", "cn04-2fe56bfb, sp80-589a99af"],
+    "rt_re_rank_events": [897, 897],
+    "mean_sagnac_delta": [[0.9877, 0.9877], [0.986, 0.986]],
+    "comparison": "CLASS49 arms vs CLASS48 sealed arms (13941d9): identical scores, envs, re-ranks, Sagnac means -> attribution refactor behavior-neutral on frozen store."
+  },
+  "state_delta": {
+    "branch": "accuracy/fidelity-remediation",
+    "head": "ef0ef49",
+    "promoted_to_main": false,
+    "rt_mcts_flag": "default-OFF",
+    "watchdog": "class49-ab-watchdog (f1360089b09b) removed",
+    "telemetry": "arm_a_telemetry.jsonl / arm_b_telemetry.jsonl (gitignored, preserved locally + remote /tmp)"
+  },
+  "next_actions": [
+    "Draft CLASS50 pre-registered packet: prediction-drift under unfrozen learning (approved-gated, not executed)",
+    "Optional pre-promotion: dev fixture mutual-exclusion test for Gate 4 non-vacuity"
+  ]
+}

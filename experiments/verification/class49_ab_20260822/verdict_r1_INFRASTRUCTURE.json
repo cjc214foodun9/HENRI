@@ -1,0 +1,82 @@
+{
+ "schema": "henri.gauntlet-verdict.v1",
+ "mode": null,
+ "completed": true,
+ "envs_attempted": 24,
+ "envs_scored_gt_zero": 0,
+ "levels_completed_total": 0,
+ "per_env": {
+  "dc22-fdcac232": {
+   "levels_completed": 0
+  },
+  "ft09-0d8bbf25": {
+   "levels_completed": 0
+  },
+  "sc25-635fd71a": {
+   "levels_completed": 0
+  },
+  "wa30-ee6fef47": {
+   "levels_completed": 0
+  },
+  "cn04-2fe56bfb": {
+   "levels_completed": 0
+  },
+  "sk48-d8078629": {
+   "levels_completed": 0
+  },
+  "vc33-5430563c": {
+   "levels_completed": 0
+  },
+  "tr87-cd924810": {
+   "levels_completed": 0
+  },
+  "ls20-9607627b": {
+   "levels_completed": 0
+  },
+  "tu93-0768757b": {
+   "levels_completed": 0
+  },
+  "lp85-305b61c3": {
+   "levels_completed": 0
+  },
+  "bp35-0a0ad940": {
+   "levels_completed": 0
+  },
+  "m0r0-492f87ba": {
+   "levels_completed": 0
+  },
+  "su15-1944f8ab": {
+   "levels_completed": 0
+  },
+  "cd82-fb555c5d": {
+   "levels_completed": 0
+  },
+  "re86-8af5384d": {
+   "levels_completed": 0
+  },
+  "lf52-271a04aa": {
+   "levels_completed": 0
+  },
+  "tn36-ef4dde99": {
+   "levels_completed": 0
+  },
+  "ka59-38d34dbb": {
+   "levels_completed": 0
+  },
+  "sp80-589a99af": {
+   "levels_completed": 0
+  },
+  "sb26-7fbdac44": {
+   "levels_completed": 0
+  },
+  "g50t-5849a774": {
+   "levels_completed": 0
+  },
+  "ar25-0c556536": {
+   "levels_completed": 0
+  },
+  "r11l-495a7899": {
+   "levels_completed": 0
+  }
+ }
+}

@@ -1,0 +1,57 @@
+{
+  "schema_id": "henri.class49-gate-computation.v1",
+  "packet_id": "HENRI-PACKET-CLASS49-ATTRIBUTION-SAGNAC-2026",
+  "commit": "ef0ef49",
+  "baseline_commit": "13941d9",
+  "seed": 20260822,
+  "artifacts": {
+    "arm_a_verdict.json": "43974ccbfc942274a4366cb5cbc79bdcf102ad8a45ae808770548258e173fdd9",
+    "arm_b_verdict.json": "8e0d17d82626ee1d82146369cd354f44733e760b4bb28908dfb90be99896c5d8",
+    "verdict_r1_INFRASTRUCTURE.json": "ed84d161951d8037c71e5e335dce6cd741191241b43809e0f7aa9b705b9ec752",
+    "arm_a_telemetry.jsonl": "289300036c8d71e11f8074d527a9ca2eca68aaba5f17a418c4676ee96b695a41",
+    "arm_b_telemetry.jsonl": "a01c32a055aa4bdb4db8efa54dcd62c560d723290528ecc40d9b56c0ef630fdd"
+  },
+  "arm_a": {
+    "score": 0,
+    "envs_scored_gt_zero": 0,
+    "envs_attempted": 25,
+    "mean_sagnac_delta": 0.9877305097244733,
+    "sagnac_n": 1234
+  },
+  "arm_b": {
+    "score": 2,
+    "envs_scored_gt_zero": 2,
+    "envs_attempted": 25,
+    "mean_sagnac_delta": 0.9860492513661202,
+    "sagnac_n": 1098
+  },
+  "gate1": {
+    "status": "PASS",
+    "note": "0 writes during frozen prod arms (engrams static 10,826 pre/post both arms, OBSERVED); fail-closed attribution guard verified in dev smoke (OBSERVED)"
+  },
+  "gate2": {
+    "status": "PASS",
+    "metric": "delta_score",
+    "value": 2,
+    "requirement": "> 0"
+  },
+  "gate3": {
+    "status": "INCONCLUSIVE",
+    "metric": "delta_sagnac",
+    "relative": -0.0016812583583530882,
+    "relative_pass": true,
+    "cap_b": 0.9860492513661202,
+    "cap_pass": true,
+    "f4_floor_fired": true,
+    "requirement": "rel <= +0.005 AND mean_B <= 0.995; INCONCLUSIVE if both means >= 0.95"
+  },
+  "gate4": {
+    "status": "PASS",
+    "note": "0 cross-domain leakage events (OBSERVED: family-filtered recall call sites; 0 ast-family rows in prod). VACUITY CAVEAT: action-only prod store; dev fixture mutual-exclusion test recommended before promotion"
+  },
+  "overall": "INCONCLUSIVE",
+  "freeze_held": true,
+  "engram_count_pre": 10826,
+  "engram_count_post": 10826,
+  "note": "Arm A r1 excluded (BLOCKED_INFRASTRUCTURE: s5i5 download timeout, 24/25 envs); r1 preserved as verdict_r1_INFRASTRUCTURE.json"
+}
