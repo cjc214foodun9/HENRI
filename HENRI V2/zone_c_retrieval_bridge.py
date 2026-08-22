@@ -62,9 +62,12 @@ class ZoneCRetrievalBridge:
         self,
         query_wave: torch.Tensor,
         top_k: Optional[int] = None,
+        domain_family: Optional[str] = None,
     ) -> List[Tuple[torch.Tensor, float, float]]:
         """Top-k (engram_wave, similarity, age_hours) for the query wave.
 
+        CLASS49 Gate 4: domain_family restricts the candidate pool so action
+        tasks never retrieve AST-family engrams (and vice versa).
         Returns [] when the bridge is disabled (default-OFF, no connect).
         Raises DatabaseConnectionError when enabled but the store is down.
         """
@@ -73,7 +76,8 @@ class ZoneCRetrievalBridge:
         if self.store is None:
             raise RuntimeError("bridge enabled but store not constructed")
         k = top_k or self.top_k
-        return self.store.query_engrams(query_wave, k, self.max_age_hours)
+        return self.store.query_engrams(query_wave, k, self.max_age_hours,
+                                        domain_family)
 
 
 def retrieve_for_planning(

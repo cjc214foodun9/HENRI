@@ -64,5 +64,44 @@
   },
   "class48_preserved": "RT-MCTS default-OFF; Δscore=+2; engagement 897 re-ranks; absolute Gate S 0.986>0.35 FAIL sealed 13941d9 — NOT reinterpreted by this audit",
   "approval_required": true,
-  "next_action": "Await explicit user approval for bounded refactor (dev Docker first, then prod, default-OFF) or alternate disposition."
+  "approval_granted": "Option 1 (explicit OOB 2026-08-21): dev Docker refactor first, then prod migration, CLASS49 A/B, gates; RT-MCTS default-OFF",
+  "implementation_status": {
+    "phase1_dev": "COMPLETE — migration applied to henri-zonec-dev (ALTER x3, INDEX x3, VIEW x2); dev_smoke PASS (attributed write, fail-closed guard, frozen path, family-filtered retrieval); local suite 683 passed / 3 skipped",
+    "phase2_prod": "PENDING",
+    "phase3_arms": "PENDING",
+    "phase4_gates": "PENDING"
+  },
+  "packet_deviations_logged": [
+    {
+      "id": "D1",
+      "packet_site": "Intervention 1 ALTER list",
+      "actual": "Attribution columns added to ALL THREE physical tables including phylogenetic_engrams_65536 (recall table, CLASS49 F1).",
+      "class": "correction"
+    },
+    {
+      "id": "D2",
+      "packet_site": "Intervention 1 domain_tag only",
+      "actual": "Added canonical domain_family column + deterministic backfill so dual views are non-vacuous over the live vocabulary (CLASS49 F2).",
+      "class": "correction"
+    },
+    {
+      "id": "D3",
+      "packet_site": "Intervention 2 logger guard",
+      "actual": "Fail-closed ATTRIBUTION_VIOLATION enforced in TimescaleZoneCStore.write_engram (the real write site) when HENRI_FREEZE_LEARNING != 1; logger attribution added as secondary (CLASS49 F3).",
+      "class": "correction"
+    },
+    {
+      "id": "D4",
+      "packet_site": "Gate 3",
+      "actual": "Gate 3 dual-bounded per amended packet: delta <= +0.005 AND mean_sagnac_B <= 0.995 (sanity cap). CLASS48 dry-run delta -0.0017 but absolute floor 0.986 -> still FAILs the cap; no reinterpretation of CLASS48.",
+      "class": "amendment"
+    },
+    {
+      "id": "F6",
+      "packet_site": "Step 1 arm_id VARCHAR(16)",
+      "actual": "arm_id widened to VARCHAR(32): 'legacy_unattributed' is 19 chars and the packet SQL errors at runtime (observed in dev, fixed).",
+      "class": "packet_bug_fixed"
+    }
+  ],
+  "next_action": "Phase 2 prod migration (Vast 47411800) with N=10,826 preservation proof; then Phase 3 paired arms; then Phase 4 gates."
 }

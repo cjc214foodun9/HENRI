@@ -47,6 +47,46 @@ except ImportError:  # pragma: no cover - supports direct module loading
 SEMANTIC_DIM = 2000          # pgvector HNSW index width (server limit)
 ENGRAM_DIM = 65536           # full wave width (num_blocks * 8)
 
+# ---------------------------------------------------------------------------
+# CLASS49 attribution helpers (HENRI-PACKET-CLASS49-ATTRIBUTION-SAGNAC-2026)
+# ---------------------------------------------------------------------------
+
+def canonical_domain_family(domain: str) -> str:
+    """Map a raw domain tag to the canonical CLASS49 namespace family.
+
+    Live vocabulary observed in prod: 'arc3/{env}', '{env}:ACTION{n}',
+    'arc3/{env}/field_channel_*'. The packet's dual views filter on
+    domain_family; this function makes the views non-vacuous (F2 fix).
+    """
+    d = (domain or "").lower()
+    if d.startswith("arc3") or ":action" in d or "/field_channel" in d:
+        return "action"
+    if d in ("ast", "code", "text", "math", "language", "symbolic"):
+        return "ast"
+    if d in ("action", "grid", "ode", "control", "spatial", "exteroceptive"):
+        return "action"
+    if d in ("general", ""):
+        return "general"
+    return "general"
+
+
+def assert_attribution(run_id: str, arm_id: str, commit_sha: str) -> None:
+    """Fail-closed attribution invariant (CLASS49 Gate 1).
+
+    Raises ATTRIBUTION_VIOLATION when any attribution field is missing or
+    still holds the placeholder value. Enforced at the live engram write
+    site (TimescaleZoneCStore.write_engram) when learning is unfrozen.
+    """
+    if not run_id or run_id == "legacy_unattributed":
+        raise ValueError(
+            "ATTRIBUTION_VIOLATION: run_id must be explicitly specified.")
+    if not arm_id or arm_id == "legacy_unattributed":
+        raise ValueError(
+            "ATTRIBUTION_VIOLATION: arm_id must be explicitly specified.")
+    if not commit_sha or commit_sha == "untracked":
+        raise ValueError(
+            "ATTRIBUTION_VIOLATION: commit_sha must be explicitly specified.")
+
 
 class DatabaseConnectionError(RuntimeError):
     """Raised when the live Zone C database cannot be reached or verified."""
@@ -107,10 +147,13 @@ def semantic_projection(wave: torch.Tensor, seed: int = 7) -> torch.Tensor:
 class ZoneCStore:
     """Abstract engram store."""
 
-    def write_engram(self, wave: torch.Tensor, domain: str, sagnac_stress: float) -> str:
+    def write_engram(self, wave: torch.Tensor, domain: str, sagnac_stress: float,
+                     run_id: str = None, arm_id: str = None, commit_sha: str = None,
+                     domain_family: str = None) -> str:
         raise NotImplementedError
 
-    def query_engrams(self, query_wave: torch.Tensor, top_k: int, max_age_hours: float):
+    def query_engrams(self, query_wave: torch.Tensor, top_k: int, max_age_hours: float,
+                      domain_family: str = None):
         """Returns list of (engram_wave, similarity, age_hours)."""
         raise NotImplementedError
 
@@ -125,18 +168,23 @@ class InProcessZoneCStore(ZoneCStore):
         self.num_blocks = num_blocks
         self.rows = []  # (wave, semantic, domain, stress, timestamp)
 
-    def write_engram(self, wave, domain, sagnac_stress):
+    def write_engram(self, wave, domain, sagnac_stress,
+                     run_id=None, arm_id=None, commit_sha=None, domain_family=None):
         sem = semantic_projection(wave)
-        self.rows.append((wave.detach().cpu(), sem, domain, float(sagnac_stress), time.time()))
+        family = canonical_domain_family(domain_family or domain)
+        self.rows.append((wave.detach().cpu(), sem, domain, family,
+                          float(sagnac_stress), time.time()))
         return str(uuid.uuid4())
 
-    def query_engrams(self, query_wave, top_k, max_age_hours):
+    def query_engrams(self, query_wave, top_k, max_age_hours, domain_family=None):
         q = semantic_projection(query_wave)
         now = time.time()
         scored = []
-        for wave, sem, domain, stress, ts in self.rows:
+        for wave, sem, domain, family, stress, ts in self.rows:
             age_h = (now - ts) / 3600.0
             if age_h > max_age_hours:
+                continue
+            if domain_family is not None and family != canonical_domain_family(domain_family):
                 continue
             sim = float(torch.dot(q, sem))
             scored.append((wave, sim, age_h))
@@ -170,7 +218,22 @@ class TimescaleZoneCStore(ZoneCStore):
     def _connect(self):
         return self._psycopg.connect(self.dsn, connect_timeout=8)
 
-    def write_engram(self, wave, domain, sagnac_stress):
+    def write_engram(self, wave, domain, sagnac_stress,
+                     run_id=None, arm_id=None, commit_sha=None, domain_family=None):
+        """Persist an engram with mandatory CLASS49 attribution.
+
+        Fail-closed (Gate 1): when learning is NOT frozen
+        (HENRI_FREEZE_LEARNING != 1), missing or placeholder attribution
+        raises ATTRIBUTION_VIOLATION before any INSERT. Frozen runs never
+        reach this writer from the production runner, so legacy rows remain
+        untouched and existing records are preserved.
+        """
+        run_id = run_id or os.environ.get("HENRI_RUN_ID")
+        arm_id = arm_id or os.environ.get("HENRI_ARM_ID")
+        commit_sha = commit_sha or os.environ.get("HENRI_COMMIT_SHA")
+        if os.environ.get("HENRI_FREEZE_LEARNING", "0") != "1":
+            assert_attribution(run_id, arm_id, commit_sha)
+        family = canonical_domain_family(domain_family or domain)
         sem = semantic_projection(wave)
         sem_list = "[" + ",".join(f"{v:.6f}" for v in sem.tolist()) + "]"
         engram_id = str(uuid.uuid4())
@@ -179,18 +242,23 @@ class TimescaleZoneCStore(ZoneCStore):
                 cur.execute(
                     """
                     INSERT INTO phylogenetic_engrams_65536
-                        (id, timestamp, environmental_context_hash, semantic_index, engram_wave_bytes)
-                    VALUES (%s, now(), %s, %s::vector, %s)
+                        (id, timestamp, environmental_context_hash, semantic_index,
+                         engram_wave_bytes, run_id, arm_id, commit_sha, domain_family)
+                    VALUES (%s, now(), %s, %s::vector, %s, %s, %s, %s, %s)
                     """,
-                    (engram_id, domain, sem_list, self._psycopg.Binary(wave_to_bytes(wave))),
+                    (engram_id, domain, sem_list, self._psycopg.Binary(wave_to_bytes(wave)),
+                     run_id, arm_id, commit_sha, family),
                 )
                 # Also log stress into the entropy rollup hypertable
                 cur.execute(
                     """
-                    INSERT INTO zone_c_engrams (time, axiom_id, domain_tag, phase_vector, sagnac_stress)
-                    VALUES (now(), %s, %s, %s::vector, %s)
+                    INSERT INTO zone_c_engrams
+                        (time, axiom_id, domain_tag, phase_vector, sagnac_stress,
+                         run_id, arm_id, commit_sha, domain_family)
+                    VALUES (now(), %s, %s, %s::vector, %s, %s, %s, %s, %s)
                     """,
-                    (engram_id, domain, sem_list, float(sagnac_stress)),
+                    (engram_id, domain, sem_list, float(sagnac_stress),
+                     run_id, arm_id, commit_sha, family),
                 )
             conn.commit()
         return engram_id
@@ -201,14 +269,17 @@ class TimescaleZoneCStore(ZoneCStore):
             self._query_conn = self._psycopg.connect(self.dsn, connect_timeout=8)
         return self._query_conn
 
-    def query_engrams(self, query_wave, top_k, max_age_hours):
+    def query_engrams(self, query_wave, top_k, max_age_hours, domain_family=None):
         q = semantic_projection(query_wave)
         q_list = "[" + ",".join(f"{v:.6f}" for v in q.tolist()) + "]"
         expected_bytes = self.num_blocks * 8 * 4
         # Stage 1: HNSW-driven candidate selection over the lightweight
         # (id, similarity, age) tuple only — no bytea transfer yet. The
         # timestamp window keeps the age-filter contract (unbounded in
-        # practice: max_age_hours = 8760).
+        # practice: max_age_hours = 8760). CLASS49 Gate 4: when a domain
+        # family is requested, the candidate pool is restricted to that
+        # family so action tasks never retrieve AST-family engrams (and
+        # vice versa).
         conn = self._get_query_conn()
         with conn.cursor() as cur:
             cur.execute(
@@ -218,10 +289,13 @@ class TimescaleZoneCStore(ZoneCStore):
                        EXTRACT(EPOCH FROM (now() - timestamp)) / 3600.0 AS age_hours
                 FROM phylogenetic_engrams_65536
                 WHERE timestamp > now() - (%s || ' hours')::interval
+                  AND (%s::text IS NULL OR domain_family = %s)
                 ORDER BY semantic_index <=> %s::vector
                 LIMIT %s
                 """,
-                (q_list, float(max_age_hours), q_list, int(top_k) * 3),
+                (q_list, float(max_age_hours),
+                 domain_family, domain_family,
+                 q_list, int(top_k) * 3),
             )
             candidates = cur.fetchall()
         # Stage 2: fetch bytea payloads only for the filtered top-k, avoiding
@@ -390,9 +464,12 @@ class SegmentCache:
                 ) from e
         return cls(store=store, num_blocks=num_blocks, **kw)
 
-    def checkpoint(self, wave: torch.Tensor, domain: str, sagnac_stress: float) -> str:
+    def checkpoint(self, wave: torch.Tensor, domain: str, sagnac_stress: float,
+                   run_id: str = None, arm_id: str = None, commit_sha: str = None,
+                   domain_family: str = None) -> str:
         """Store a wave checkpoint into Zone C."""
-        return self.store.write_engram(wave, domain, sagnac_stress)
+        return self.store.write_engram(wave, domain, sagnac_stress,
+                                       run_id, arm_id, commit_sha, domain_family)
 
     def consolidate(self, cosine_threshold: float = 0.95, dry_run: bool = False) -> dict:
         """T5 attractor consolidation (TimescaleDB store only)."""
@@ -400,12 +477,15 @@ class SegmentCache:
             return self.store.consolidate_attractors(cosine_threshold, dry_run)
         return {"clusters": 0, "merged": 0, "kept": self.store.count()}
 
-    def retrieve(self, query_wave: torch.Tensor) -> dict:
+    def retrieve(self, query_wave: torch.Tensor, domain_family: str = None) -> dict:
         """
         GRM retrieval: gated superposition of relevant past engrams.
         Returns dict with the fused conditioning wave, gate weights, and hits.
+        CLASS49 Gate 4: when domain_family is set, only engrams in that
+        namespace family are retrieved.
         """
-        hits = self.store.query_engrams(query_wave, self.top_k, self.max_age_hours)
+        hits = self.store.query_engrams(query_wave, self.top_k, self.max_age_hours,
+                                        domain_family)
         if not hits:
             return {"conditioning_wave": None, "gates": [], "hits": 0}
 
