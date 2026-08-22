@@ -1,0 +1,124 @@
+{
+  "schema_id": "henri.run-evidence.v1",
+  "kind": "diagnostic-baseline",
+  "not_official_aaii": true,
+  "held_out_status": "CONDITIONAL",
+  "status": "COMPLETE",
+  "sources": {
+    "humaneval": {
+      "url": "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz",
+      "sha256": "1d49078ba3e2b196b9344535bef34a43021f038fad9561d6ee7c53450609a6a2",
+      "bytes": 214438
+    }
+  },
+  "metrics": {
+    "passed": 19,
+    "attempted": 20,
+    "execution_errors": 0,
+    "accuracy": 0.95,
+    "subset": "humaneval_first_20"
+  },
+  "items": [
+    {
+      "task_id": "HumanEval/0",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/1",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/2",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/3",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/4",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/5",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/6",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/7",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/8",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/9",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/10",
+      "is_pass": false
+    },
+    {
+      "task_id": "HumanEval/11",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/12",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/13",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/14",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/15",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/16",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/17",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/18",
+      "is_pass": true
+    },
+    {
+      "task_id": "HumanEval/19",
+      "is_pass": true
+    }
+  ],
+  "telemetry": {
+    "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+    "revision": "0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
+    "manifest_sha256": "e171408625853d52e038bc97af6df4375153f09531505b716c8fc77d9d5a6916",
+    "dtype": "torch.bfloat16",
+    "device": "cuda:0",
+    "checkpoint_load_status": "LOADED",
+    "trainable_params": 0,
+    "total_params": 8767123696,
+    "generation": {
+      "max_new_tokens": 384,
+      "do_sample": false,
+      "temperature": null
+    }
+  },
+  "memory": {
+    "device": "cuda",
+    "allocated_mib": 16754.0,
+    "reserved_mib": 16848.0
+  },
+  "elapsed_seconds": 24.67
+}

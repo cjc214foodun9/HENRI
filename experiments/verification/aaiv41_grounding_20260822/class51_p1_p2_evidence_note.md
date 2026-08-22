@@ -19,7 +19,8 @@
 ## P2 evidence
 - Canonical HumanEval (openai/human-eval): gz sha256 `b796127e...`, decompressed `1d49078b...`, 164 items, MATCH_LOCAL
 - Runner: `backbone_humaneval_diagnostic.py` (greedy, deterministic unit-test grading, 15 s timeout sandbox)
-- Receipt: `/tmp/class51_p2_humaneval_receipt.json` (`henri.run-evidence.v1`, kind=diagnostic-baseline, not_official_aaii=true, held_out_status=CONDITIONAL)
+- **Result (OBSERVED, CUDA): 19/20 passed, 0 execution errors, accuracy 0.95, elapsed 24.67 s**; receipt `class51_p2_humaneval_receipt.json` sha256 `d95c0d8a...`; item reconciliation passed+failed==attempted (20/20); frozen (trainable 0); 16,754 MiB allocated
+- Receipt schema: `henri.run-evidence.v1`, kind=diagnostic-baseline, not_official_aaii=true, held_out_status=CONDITIONAL
 - Blocked official components: GPQA Diamond (`Idavidrein/gpqa`), MMLU-Pro (`Idavidrein/mmlu_pro`), SimpleQA (`openai/simpleqa`) — all HTTP 401 access-restricted
 
 ## Corpus consult (INFERRED)
