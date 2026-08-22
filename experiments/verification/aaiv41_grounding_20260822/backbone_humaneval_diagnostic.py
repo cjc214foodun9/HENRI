@@ -30,7 +30,7 @@ from henri_backbone_adapter import (  # noqa: E402
     backbone_enabled,
 )
 
-CANONICAL_URL = "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl"
+CANONICAL_URL = "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz"
 FENCE_RE = re.compile(r"```(?:python)?\s*([\s\S]*?)```")
 
 
@@ -39,9 +39,13 @@ def sha256_bytes(data: bytes) -> str:
 
 
 def fetch_bytes(url: str, timeout: int = 90) -> bytes:
+    import gzip
     request = urllib.request.Request(url, headers={"User-Agent": "henri-class51-diagnostic/0.1"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
-        return response.read()
+        raw = response.read()
+    if url.endswith(".gz"):
+        return gzip.decompress(raw)
+    return raw
 
 
 def extract_code(response: str) -> str:

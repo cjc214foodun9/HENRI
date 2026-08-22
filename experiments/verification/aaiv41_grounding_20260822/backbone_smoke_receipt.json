@@ -1,0 +1,33 @@
+{
+  "schema_id": "henri.class51-smoke.v1",
+  "status": "PASS",
+  "elapsed_seconds": 14.19,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "revision": "0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
+  "text_prompt": "What is 84 * 3 / 2? Answer with the number only.",
+  "text_output": "126",
+  "image_prompt": "Describe a red square with a green inner square in one sentence.",
+  "image_output": "A red square contains a smaller green square centered within it, creating a bold, minimalist geometric contrast.",
+  "telemetry": {
+    "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+    "revision": "0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
+    "manifest_sha256": "e171408625853d52e038bc97af6df4375153f09531505b716c8fc77d9d5a6916",
+    "dtype": "torch.bfloat16",
+    "device": "cuda:0",
+    "checkpoint_load_status": "LOADED",
+    "trainable_params": 0,
+    "total_params": 8767123696,
+    "generation": {
+      "max_new_tokens": 64,
+      "do_sample": false,
+      "temperature": null
+    }
+  },
+  "memory": {
+    "device": "cuda",
+    "allocated_mib": 16754.0,
+    "reserved_mib": 16798.0
+  },
+  "trainable_params": 0,
+  "frozen": true
+}
