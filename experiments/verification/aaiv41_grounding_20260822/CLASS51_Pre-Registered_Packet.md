@@ -1,7 +1,9 @@
-# CLASS51 Pre-Registered Packet — BACKBONE INTEGRATION (DRAFT, APPROVAL-GATED)
+# CLASS51 Pre-Registered Packet — BACKBONE INTEGRATION (APPROVED — P1+P2)
 
 - **packet_id:** `HENRI-PACKET-CLASS51-BACKBONE-INTEGRATION-2026`
-- **Status:** DRAFT — NOT approved, NOT executed
+- **Status:** APPROVED — 2026-08-22; P1+P2 authorized by user decision
+- **Approval record:** (1) Rule amendment APPROVED — pretrained backbone allowed with strict ablation controls (benchmark-family training/tuning/ingestion/leakage remain prohibited; frozen backbone-only baseline mandatory; every HENRI augmentation requires matched ablation and must not reduce aggregate score). (2) Model: Qwen3-VL-8B-Instruct, immutable HF revision `0c351dd01ed87e9c1b53cbc748cba10e6187ff3b`. (3) P1+P2 execution authorized incl. cloud-GPU dependency provisioning and baseline benchmark scores. Sealed in `henri.class51-approval.v1` receipt (see `experiments/verification/aaiv41_grounding_20260822/`). Scope: P1+P2 only. Excluded: main promotion, P3–P5, official-composite score claims without canonical evaluators. Prior sealed verdicts (CLASS48/49/50) untouched.
+- **Grounding commit:** `d8d2c86` (AAII v4.1 official-suite registry + gap matrix)
 - **Baseline commit:** `bae02f9` (branch `accuracy/fidelity-remediation`)
 - **Date:** 2026-08-22
 - **Authorizing context:** user clearance for implementations/decisions toward AAII v4.1 SOTA; skill `henri-agent-integration`; skill `henri-research`; evidence: `aaiv41_official_suite_registry.md`, `aaiv41_capability_gap_matrix.md`
