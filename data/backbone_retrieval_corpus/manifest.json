@@ -1,0 +1,100 @@
+{
+  "schema_id": "henri.corpus-manifest.v1",
+  "source": "CPython Doc/library (PSF-2.0)",
+  "pinned_commit": "f74cdf80a120649e4c353430da8cbd1305c00993",
+  "fetched_utc": "2026-08-22",
+  "files": [
+    {
+      "module": "bisect",
+      "file": "bisect.rst",
+      "sha256": "c60228ff571a107173012e1fc5189f3b58beda46834b56adf7d7550808d18310",
+      "bytes_lf": 9683,
+      "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/bisect.rst"
+    },
+    {
+      "module": "collections",
+      "file": "collections.rst",
+      "sha256": "83b07a1345bff29b4a6c4909d60f2feaa98331bf47f345bf77388ad4def40846",
+      "bytes_lf": 55633,
+      "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/collections.rst"
+    },
+    {
+      "module": "functools",
+      "file": "functools.rst",
+      "sha256": "e3ca88bc6c99b3dbaf3e19e0c76383d5e441aad3e9ca399695e392da82fa6e0c",
+      "bytes_lf": 31998,
+      "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/functools.rst"
+    },
+    {
+      "module": "heapq",
+      "file": "heapq.rst",
+      "sha256": "e9d4b0a9b61acef212300b251487ab9ba5d92fe5dfa71ee009a466d5451e4624",
+      "bytes_lf": 17018,
+      "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/heapq.rst"
+    },
+    {
+      "module": "itertools",
+      "file": "itertools.rst",
+      "sha256": "d441f8ae235a73a46e769c1116812e60e669b32cd3baa9f30efed68253e3b0d0",
+      "bytes_lf": 71194,
+      "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/itertools.rst"
+    },
+    {
+      "module": "json",
+      "file": "json.rst",
+      "sha256": "17ee3861f5fe78f6991571b0e4e17183417c48f682f553e316e9dd43f208cf0f",
+      "bytes_lf": 31817,
+      "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/json.rst"
+    },
+    {
+      "module": "math",
+      "file": "math.rst",
+      "sha256": "d9761227db303b3ed97ee2dcc98367b43b4785786a066e77c55bf41da8a2e3cc",
+      "bytes_lf": 33283,
+      "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/math.rst"
+    },
+    {
+      "module": "os.path",
+      "file": "os_path.rst",
+      "sha256": "5addfae855677825136800e5ca92fd8599bb9fe7a34fdafe17d279a15f6c477e",
+      "bytes_lf": 24138,
+      "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/os.path.rst"
+    },
+    {
+      "module": "pathlib",
+      "file": "pathlib.rst",
+      "sha256": "2ce805990a2f9f7a9e8194c518cc1a8ff8fc46d538080160ee33a3d981476900",
+      "bytes_lf": 68675,
+      "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/pathlib.rst"
+    },
+    {
+      "module": "random",
+      "file": "random.rst",
+      "sha256": "24051a0ed7bf5fdc8e3bc5f16a481f522235e7b40fc169e6231e227335835e53",
+      "bytes_lf": 30804,
+      "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/random.rst"
+    },
+    {
+      "module": "re",
+      "file": "re.rst",
+      "sha256": "a8131b7e189a58593ee08e06824ff8d93326fed8644320256df9268a89a69d0c",
+      "bytes_lf": 84319,
+      "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/re.rst"
+    },
+    {
+      "module": "statistics",
+      "file": "statistics.rst",
+      "sha256": "c323de2baa460af510bac3afc184e3cb981d687a4f5115347b00a9b90702f69c",
+      "bytes_lf": 43567,
+      "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/statistics.rst"
+    },
+    {
+      "module": "string",
+      "file": "string.rst",
+      "sha256": "9df973328e122c8f16f8f7efdd8d4baedcfa61858f542e5933829cbeacc400b3",
+      "bytes_lf": 45722,
+      "source_url": "https://raw.githubusercontent.com/python/cpython/f74cdf80a120649e4c353430da8cbd1305c00993/Doc/library/string.rst"
+    }
+  ],
+  "aggregate_sha256": "b20b5144adeea0dc23fb02e258a735af6849e414f52275e53832bc1a34717aac"
+}

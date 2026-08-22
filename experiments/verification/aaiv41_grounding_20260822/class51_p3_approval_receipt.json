@@ -1,0 +1,19 @@
+{
+  "schema_id": "henri.class51-p3-approval.v1",
+  "event_type": "CLASS51_P3_APPROVAL_SEAL",
+  "date_utc": "2026-08-22",
+  "approved_by": "user via Photon",
+  "authoritative_packet": "HENRI-PACKET-CLASS51-BACKBONE-INTEGRATION-2026 (CLASS51_Pre-Registered_Packet.md, sealed 2af4f37)",
+  "approved_scope_quote": "P3: HENRI augmentation, independently ablated: (a) Zone C retrieval pre-prompt; (b) verifier loops (sandbox/REPL for code); (c) planner/tool loop (agent harness for GDPval-class); (d) SGLD online adaptation. KILL per component: no improvement over backbone-only on the same subset; latency/context violation.",
+  "operationalization": "PROPOSED, pending user ratification — CLASS51_P3_Pre-Registered_Packet.md (status: PROPOSED). Selects P3(a) with a documented mechanism mapping; wave-codec retrieval excluded on FALSIFIED evidence (run20) and coherent-solipsism warning (corpus INFERRED).",
+  "p1_p2_baseline_commit": "f952db059f3504f7cc64babe1d43a1b7cf407fe6",
+  "branch": "accuracy/aaiv41-backbone",
+  "constraints": {
+    "backbone": "frozen Qwen3-VL-8B-Instruct @ 0c351dd0",
+    "benchmark_data_training": "PROHIBITED",
+    "zone_c_writes": "PROHIBITED during P3 runs",
+    "rt_mcts": "default-OFF",
+    "sagnac_gating": "not enabled",
+    "main_promotion": "NOT authorized by this approval"
+  }
+}

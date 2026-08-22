@@ -9,6 +9,7 @@ __pycache__/
 *.sqlite3
 *.pickle
 *.jsonl
+/data/mbpp_sanitized.json
 *.nsys-rep
 *.pt
 *.pth
