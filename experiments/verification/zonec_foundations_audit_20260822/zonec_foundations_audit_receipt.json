@@ -1,0 +1,149 @@
+{
+  "schema_id": "henri.zonec-foundations-audit.v1",
+  "date": "2026-08-22",
+  "scope": "Read-only audit of the supplied 'Zone C Academic Foundations' spec against live prod SQL (vast-5090) and local code at accuracy/fidelity-remediation HEAD bae02f9",
+  "method": "psql information_schema / timescaledb_information / pg_class probes (prod DSN), grep symbol traces in HENRI V2 (excl. _archive)",
+  "evidence_basis": {
+    "prod": "vast-5090 Zone C: timescaledb 2.29.1, pgvector 0.6.0",
+    "hypertables": ["zone_c_engrams", "zone_c_resonant_hypersphere", "external_outcomes"],
+    "continuous_aggregate": "zone_c_engrams_hourly (time_bucket 1h; AVG/MIN/MAX sagnac_stress, COUNT)",
+    "scheduled_jobs": ["Job History Log Retention Policy [3] 6h", "Telemetry Reporter [1] 24h", "Refresh Continuous Aggregate Policy [1000] 1h"],
+    "hnsw_indexes": ["phylogenetic_engrams_semantic_hnsw_idx", "boundary_axioms_semantic_hnsw_idx"],
+    "vector_columns": "semantic_index vector(2000) on phylogenetic_engrams_65536 + boundary_axioms; phase_vector vector(2000) on zone_c_engrams/action/ast views",
+    "row_counts": {"phylogenetic_engrams_65536": 10826, "zone_c_engrams": 10826, "zone_c_resonant_hypersphere": 3558, "external_outcomes": 0, "boundary_axioms": 11},
+    "axiom_payload": "dimension=65536 num_blocks=8192 rank=16 wave_payload=262144 bytes (=8192*8*4)"
+  },
+  "claims": [
+    {
+      "id": "ZC-01",
+      "claim": "Zone A/B operates at a 50 microsecond vector proposal budget",
+      "status": "TARGET_GOAL",
+      "evidence": "henri_dual_speed_harness.py:19 pre-registered kill gate K1 (<= 50 us mean); experiments/performance/phase818_transducer_cuda_check.py:6 measured su3 log kernel <= 50 us",
+      "limitation": "50 us is a harness kill-gate target; one component kernel measured; full-proposal-budget latency not measured in this audit"
+    },
+    {
+      "id": "ZC-02",
+      "claim": "20,000 phase proposals/sec in Zone A/B",
+      "status": "TARGET_GOAL",
+      "evidence": "svd_rank_pcie5_verify.py:137-138 bandwidth math at '20 kHz'",
+      "limitation": "Bandwidth arithmetic, not measured proposal throughput"
+    },
+    {
+      "id": "ZC-03",
+      "claim": "D=65,536 unit-hypersphere waves S^{D-1} are the Zone C memory substrate",
+      "status": "OBSERVED",
+      "evidence": "boundary_axioms dimension=65536 num_blocks=8192 wave_payload=262144 B; phylogenetic_engrams_65536 bytea engram_wave_bytes",
+      "limitation": "Vector SEARCH columns are 2000-dim JL projections; the 65536-dim wave lives in bytea payloads, not in pgvector columns"
+    },
+    {
+      "id": "ZC-04",
+      "claim": "Hypertables: telemetry_logs, wave_checkpoints, sagnac_veto_ledger",
+      "status": "FALSIFIED",
+      "evidence": "All three names ABSENT from prod pg_class; actual hypertables are zone_c_engrams, zone_c_resonant_hypersphere, external_outcomes",
+      "limitation": "telemetry_logs exists only as a local gitignored log directory, not a DB hypertable"
+    },
+    {
+      "id": "ZC-05",
+      "claim": "Chunked B-Tree bounds O(log N_chunk) and sub-millisecond insert at 20 kHz",
+      "status": "PARTIAL",
+      "evidence": "create_hypertable present: zone_c_engrams 7-day chunks, zone_c_resonant_hypersphere 1-hour chunks (zone_c_schema.sql:72,95)",
+      "limitation": "Chunking OBSERVED; the O(log N) and 20 kHz throughput guarantees are unmeasured claims (chunking alone does not establish them)"
+    },
+    {
+      "id": "ZC-06",
+      "claim": "add_retention_policy: transient fluctuations drop after 7 days",
+      "status": "FALSIFIED",
+      "evidence": "No drop_chunks/retention policy in prod jobs; only Job History Log Retention, Telemetry Reporter, Refresh CAGG. _archive/v1_runner/zone_c_agentic_database_initialization.py:110 had add_retention_policy(zone_c_engrams, 30 days) - archived, not live, and 30 days not 7",
+      "limitation": "No live apoptosis policy exists"
+    },
+    {
+      "id": "ZC-07",
+      "claim": "Hierarchical CAGGs cascade 100 Hz -> 1 Hz -> 0.01 Hz with percentile_agg/approx_percentile",
+      "status": "PARTIAL",
+      "evidence": "One cagg exists: zone_c_engrams_hourly (1h bucket; AVG/MIN/MAX sagnac_stress, COUNT). No percentile_agg/approx_percentile in code",
+      "limitation": "Single-tier aggregate only; multi-tier cascade and streaming percentiles not implemented"
+    },
+    {
+      "id": "ZC-08",
+      "claim": "time_bucket_gapfill fills sensor dropout slots; locf maintains set-point stability",
+      "status": "FALSIFIED",
+      "evidence": "No time_bucket_gapfill/locf calls in live code; cagg definition contains neither",
+      "limitation": "Database imputation is not implemented; it would not by itself guarantee Lie-group phase continuity anyway"
+    },
+    {
+      "id": "ZC-09",
+      "claim": "first()/last() extract boundary conditions for path-integral energy deltas",
+      "status": "FALSIFIED",
+      "evidence": "No first()/last() calls in live code",
+      "limitation": "Not implemented"
+    },
+    {
+      "id": "ZC-10",
+      "claim": "pgvector l2/cosine/hamming distance over Z_256^D phase rings and continuous complex hypervectors",
+      "status": "PARTIAL",
+      "evidence": "pgvector 0.6.0; cosine retrieval via `1 - (semantic_index <=> q)` on 2000-dim vector(2000) HNSW (zone_c_segment_cache.py:288); no l2_distance/hamming_distance calls in live code",
+      "limitation": "Search operates on 2000-dim semantic projections, NOT 65536-dim waves; l2/hamming paths absent"
+    },
+    {
+      "id": "ZC-11",
+      "claim": "add_job('zone_c_attractor_pruner','5 minutes') prunes by EDMD eigenvalues: |lambda|<1-eps dissipate; |lambda|~1 crystallize into axioms",
+      "status": "FALSIFIED",
+      "evidence": "ZoneCAttractorPruner class exists (zone_c_attractor_pruner.py) but calls consolidate_attractors(cosine_threshold=0.95) - greedy cosine clustering over semantic indices; no eigenvalue/EDMD logic; no add_job in prod jobs; only an in-memory unit test (test_architectural_milestones.py:95)",
+      "limitation": "Pruner-as-described (EDMD eigenvalue governor) does not exist; cosine consolidation is a different mechanism. Persistent dynamical modes |lambda|~1 are not automatically verified axioms"
+    },
+    {
+      "id": "ZC-12",
+      "claim": "Sagnac veto: Delta_Sagnac >= 0.35 triggers Langevin heat injection + Zone C rejection",
+      "status": "PARTIAL",
+      "evidence": "0.35 threshold OBSERVED in code: arc_sagnac_veto.py:38 DEFAULT_EPSILON_HARD=0.35, efe_planner.py:902/1595-1611 tau_veto=0.35, henri_agentic_graph_engine.py:160, henri_dual_speed_harness.py:35, henri_universal_repl.py:98, hops_vsa_core.py:34, production_arc_run.py:630. BUT HENRI_ARC_SAGNAC_VETO defaults '0' (production_arc_run.py:200) and CLASS48/49 arms ran at mean sagnac_delta ~0.986-0.988 without veto shutdown",
+      "limitation": "Calibration conflict: the production telemetry channel sits at ~0.986, far above 0.35, yet arms complete. The 0.35-veto and the telemetry sagnac_delta are either different calibrations/metrics or the veto is not enforced in the ARC path (flag default-OFF). MUST NOT be conflated"
+    },
+    {
+      "id": "ZC-13",
+      "claim": "F = D_KL(q||p) + E_q[log p(o|psi)] (displayed sign)",
+      "status": "FALSIFIED (as displayed)",
+      "evidence": "efe_planner.py:9-14: EFE(a) = pragmatic_value(a) - epistemic_value(a); pragmatic_value = Sagnac delta of predicted wave vs boundary axioms; epistemic = entropy/information gain",
+      "limitation": "Canonical variational FE uses MINUS on the expected log-likelihood: F = D_KL(q||p) - E_q[log p(o|psi)]. The live code expresses pragmatic as a Sagnac error-like term (consistent with pragmatic = -E[log p] if defined as negative log-likelihood), so the displayed formula's PLUS sign is incorrect as written"
+    },
+    {
+      "id": "ZC-14",
+      "claim": "Elimination of the von Neumann bottleneck via CAGGs + O(log K) vector search",
+      "status": "INFERRED",
+      "evidence": "CAGG + HNSW exist",
+      "limitation": "CAGGs + vector search do not eliminate the von Neumann bottleneck; no latency measurement supports the O(log K)/deterministic-latency claim"
+    },
+    {
+      "id": "ZC-15",
+      "claim": "Sub-microsecond context inject (conditioning weights/biases)",
+      "status": "TARGET_GOAL",
+      "evidence": "Only an archived comment: _archive/v1_runner/phylogenetic_memory.py:35 'sub-microsecond Sagnac homodyne coherence checks'",
+      "limitation": "No live mechanism or measurement found"
+    },
+    {
+      "id": "ZC-16",
+      "claim": "Boundary axioms: 11 canonical axioms",
+      "status": "OBSERVED",
+      "evidence": "boundary_axioms count=11; dim 65536, blocks 8192, rank 16, payload 262144 B",
+      "limitation": "None"
+    },
+    {
+      "id": "ZC-17",
+      "claim": "Zone C stores 10,826 engrams (post-CLASS49)",
+      "status": "OBSERVED",
+      "evidence": "phylogenetic_engrams_65536 = 10,826; zone_c_engrams = 10,826; zone_c_action_engrams view = 10,825; zone_c_resonant_hypersphere = 3,558; external_outcomes = 0",
+      "limitation": "external_outcomes (the claimed external outcome store) is empty"
+    }
+  ],
+  "representation_boundary": {
+    "arc_wave": "continuous [num_blocks, 8] S^{D-1} UWE (D=65,536) - consumed by ARC production loop",
+    "zone_c_search": "2000-dim semantic_index JL projection (pgvector vector(2000), HNSW cosine) - the ONLY pgvector-native searchable form",
+    "phase_ring": "flat Z_256^65536 uint8 ring - used in coding/REST paths, NOT stored as pgvector vectors",
+    "rule": "Do not claim pgvector natively searches 65536-dim qFHRR waves; it searches 2000-dim projections"
+  },
+  "action_items": [
+    "Correct the FE sign in any documentation; define pragmatic as negative log-likelihood or use the code's Sagnac-delta definition explicitly",
+    "Resolve the 0.35-veto vs ~0.986 production channel calibration conflict before any new Sagnac-gated packet",
+    "Gate-4 non-vacuity: dev fixture mutual-exclusion test before promotion",
+    "CLASS50 unchanged: RT-MCTS default-OFF, main untouched, packet not amended without a versioned amendment + explicit approval"
+  ]
+}
