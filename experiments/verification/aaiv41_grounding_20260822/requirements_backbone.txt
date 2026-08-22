@@ -1,0 +1,9 @@
+# CLASS51 P1 pinned runtime dependencies (Vast /venv/main, verified 2026-08-22)
+# Install: /venv/main/bin/pip install -r requirements_backbone.txt
+transformers==5.15.1
+accelerate==1.14.0
+safetensors==0.8.0
+tokenizers==0.22.2
+huggingface_hub==1.18.0
+einops==0.8.2
+pillow>=10.0
