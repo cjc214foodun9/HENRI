@@ -310,6 +310,9 @@ def bootstrap_ci(deltas: list[int], n_iter: int = 10000,
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["preflight", "run"], default="preflight")
+    ap.add_argument("--arm", choices=["AB", "A"], default="AB",
+                    help="AB: paired matrix (default). A: backbone-baseline only "
+                         "(retrieval corpus unused -> contamination gate N/A).")
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--humaneval-gz", required=True)
     ap.add_argument("--mbpp-json", required=True)
@@ -328,25 +331,43 @@ def main() -> int:
     items = he + mbpp
     assert len(items) == 264, f"items {len(items)} != 264"
 
-    # pairing verifier (B minus block == A, all 264)
-    retr = BackboneRetrieval(pathlib.Path(args.corpus_dir), enabled=True)
-    pairing_ok = True
-    for it in items:
-        a = build_arm_a_prompt(it["prompt"])
-        snips = retr.retrieve(it["prompt"])
-        if not snips:
-            pairing_ok = False
-            continue
-        b, block = build_arm_b_prompt(it["prompt"], snips)
-        stripped = strip_block(b)
-        if stripped != a:
-            pairing_ok = False
-    print(f"[matrix] pairing_verifier={pairing_ok} items={len(items)}")
+    # pairing verifier (B minus block == A, all 264); N/A in A-only mode
+    retr = None
+    pairing_ok = None
+    if args.arm == "AB":
+        retr = BackboneRetrieval(pathlib.Path(args.corpus_dir), enabled=True)
+        pairing_ok = True
+        for it in items:
+            a = build_arm_a_prompt(it["prompt"])
+            snips = retr.retrieve(it["prompt"])
+            if not snips:
+                pairing_ok = False
+                continue
+            b, block = build_arm_b_prompt(it["prompt"], snips)
+            stripped = strip_block(b)
+            if stripped != a:
+                pairing_ok = False
+        print(f"[matrix] pairing_verifier={pairing_ok} items={len(items)}")
+    else:
+        print("[matrix] arm=A-only: retrieval corpus unused; pairing N/A")
 
-    # contamination (full surface, fresh)
-    hits = contamination_scan(items, pathlib.Path(args.corpus_dir), out, run_id,
-                              args.commit)
-    print(f"[matrix] contamination hits={hits}")
+    # contamination (full surface, fresh); N/A for A-only (corpus unused)
+    hits = []
+    if args.arm == "AB":
+        hits = contamination_scan(items, pathlib.Path(args.corpus_dir), out, run_id,
+                                  args.commit)
+        print(f"[matrix] contamination hits={hits}")
+    else:
+        (out / f"contamination_receipt_{run_id}.json").write_text(json.dumps({
+            "schema_id": "henri.contamination-receipt.v1",
+            "status": "NOT_APPLICABLE_ARM_A_ONLY",
+            "hits": [],
+            "corpus_aggregate": "b20b5144adeea0dc23fb02e258a735af6849e414f52275e53832bc1a34717aac",
+            "detector": {"version": "v3.1-code-dominant", "amendment": "A1-RATIFIED",
+                         "note": "retrieval corpus unused in arm A-only mode",
+                         "surface_items": len(items)},
+            "run_id": run_id}, indent=2))
+        print("[matrix] arm=A-only: contamination gate NOT_APPLICABLE (corpus unused)")
 
     # self-test
     st = run_self_test(pathlib.Path(args.humaneval_gz),
@@ -372,9 +393,11 @@ def main() -> int:
                      "task_ids": [it["task_id"] for it in mbpp],
                      "ordered_digest": mbpp[0]["_ordered_digest"]},
         },
+        "arm_mode": args.arm,
         "pairing": {"ok": pairing_ok, "template_sha256": st["template_sha256"]},
         "self_test": st["pass"],
-        "contamination": "CLEAN" if not hits else "CONTAMINATION_BLOCKED",
+        "contamination": (("CLEAN" if not hits else "CONTAMINATION_BLOCKED")
+                          if args.arm == "AB" else "NOT_APPLICABLE_ARM_A_ONLY"),
         "model": {"id": MODEL_ID, "revision": REVISION,
                   "max_new_tokens": MAX_NEW_TOKENS, "do_sample": False},
     }
@@ -392,7 +415,7 @@ def main() -> int:
     if hits:
         print("[matrix] CONTAMINATION_BLOCKED, abort")
         return 1
-    if not pairing_ok:
+    if args.arm == "AB" and not pairing_ok:
         print("[matrix] PAIRING_FAILED, abort")
         return 1
     if args.model_dir is None or args.manifest is None:
@@ -411,21 +434,21 @@ def main() -> int:
     assert adapter.telemetry.trainable_params == 0, "backbone not frozen"
 
     # pre-build arm prompts once (same order, same items)
-    arm_a_prompts: list[str] = []
+    arm_a_prompts: list[str] = [build_arm_a_prompt(it["prompt"]) for it in items]
     arm_b_prompts: list[str] = []
     b_tel: list[dict] = []
-    for it in items:
-        arm_a_prompts.append(build_arm_a_prompt(it["prompt"]))
-        snips = retr.retrieve(it["prompt"])
-        if not snips:
-            print(f"[matrix] RETRIEVAL_BLOCKED at {it['task_id']}")
-            return 1
-        b, block = build_arm_b_prompt(it["prompt"], snips)
-        arm_b_prompts.append(b)
-        b_tel.append({"retrieval_engaged": True,
-                      "snippets": [s["source_file"] for s in snips],
-                      "prompt_sha256": sha256_bytes(b.encode()),
-                      "retrieval_block_bytes": len(block)})
+    if args.arm == "AB":
+        for it in items:
+            snips = retr.retrieve(it["prompt"])
+            if not snips:
+                print(f"[matrix] RETRIEVAL_BLOCKED at {it['task_id']}")
+                return 1
+            b, block = build_arm_b_prompt(it["prompt"], snips)
+            arm_b_prompts.append(b)
+            b_tel.append({"retrieval_engaged": True,
+                          "snippets": [s["source_file"] for s in snips],
+                          "prompt_sha256": sha256_bytes(b.encode()),
+                          "retrieval_block_bytes": len(block)})
 
     def run_arm(arm: str, prompts: list[str]) -> dict:
         rows = []
@@ -484,6 +507,40 @@ def main() -> int:
     (out / f"matrix_arm_a_receipt_{run_id}.json").write_text(json.dumps(rec_a, indent=2))
     print(f"[matrix] Arm A: {rec_a['metrics']['passed']}/{rec_a['metrics']['attempted']} "
           f"failed={rec_a['metrics']['failed']} exec={rec_a['metrics']['execution_errors']}")
+
+    # ---- Arm A-only baseline (corpus unused; B gated on A2 ratification) ----
+    if args.arm == "A":
+        m = rec_a["metrics"]
+        arith_ok = (
+            m["item_count"] == 264
+            and m["passed"] + m["failed"] == m["attempted"]
+            and m["attempted"] + m["execution_errors"] + m["vetoes"] == 264
+        )
+        print(f"[matrix] arithmetic_reconcile={arith_ok}")
+        baseline = {
+            "schema_id": "henri.class51-p3-backbone-baseline.v1",
+            "run_id": run_id, "commit": args.commit, "arm": "A",
+            "status": ("BACKBONE_BASELINE_COMPLETE"
+                       if (arith_ok and m["execution_errors"] == 0 and st["pass"])
+                       else "BLOCKED_INFRASTRUCTURE"),
+            "metrics": m,
+            "self_test": st["pass"],
+            "datasets": manifest["datasets"],
+            "arm_b": "BLOCKED pending A2 ratification (full-surface contamination gate)",
+        }
+        (out / "baseline_arm_a_verdict.json").write_text(json.dumps(baseline, indent=2))
+        scorecard_a = {
+            "schema_id": "henri.scorecard-arm-a-264.v1",
+            "run_id": run_id, "commit": args.commit,
+            "verdict": baseline, "items": rec_a["items"],
+        }
+        (out / "scorecard_arm_a_264.json").write_text(json.dumps(scorecard_a, indent=2))
+        if baseline["status"] == "BACKBONE_BASELINE_COMPLETE":
+            (out / "ARM_A_COMPLETE").write_text(json.dumps(baseline, indent=2))
+            print("[matrix] ARM_A_COMPLETE written")
+            return 0
+        print("[matrix] BLOCKED_INFRASTRUCTURE (no ARM_A_COMPLETE)")
+        return 1
 
     print("[matrix] running Arm B (frozen backbone + retrieval) ...")
     rec_b = run_arm("B", arm_b_prompts)
