@@ -31,7 +31,8 @@ def retrieval():
 @pytest.fixture(autouse=True)
 def clean_contamination():
     yield
-    hbr._CONTAMINATION_SET.clear()
+    hbr._CONTAMINATION_LINES.clear()
+    hbr._CONTAMINATION_IDENT4.clear()
 
 
 def test_corpus_manifest_exists_and_valid():
@@ -79,15 +80,30 @@ def hashlib_sha256(b):
 def test_contamination_gate_fires(retrieval):
     # negative control: clean corpus must not fire
     assert retrieval.scan_contamination() == []
-    # positive control: register a real 5-gram from the corpus text
+    # positive control: register a real code-bearing line from the corpus
     corpus_text = (CORPUS / "itertools.rst").read_text(encoding="utf-8")
-    toks = hbr._tokenize(corpus_text)
-    assert len(toks) >= 5
-    shingle = " ".join(toks[:5])
-    add_contamination_shingles(shingle)
+    doctest_line = next(
+        line.strip() for line in corpus_text.splitlines()
+        if "list(factor(8))" in line
+    )
+    add_contamination_shingles(doctest_line)
     assert retrieval.scan_contamination(), "gate must detect corpus overlap"
     with pytest.raises(RetrievalBlockedError):
         retrieval.build_prompt("use itertools")
+
+
+def test_bare_literals_do_not_fire_gate(retrieval):
+    """Vacuous-detector regression: bare numeric/string literals are not
+    contamination (classification evidence: '[2, 2, 2]' was a doctest OUTPUT
+    in itertools.rst coinciding with a task data literal; verbatim-line total
+    was 1 and benign)."""
+    add_contamination_shingles("[2, 2, 2]")
+    add_contamination_shingles("1 2 3 4 5")
+    add_contamination_shingles("a b c d e")
+    assert retrieval.scan_contamination() == []
+    # retrieval still works
+    snippets = retrieval.retrieve("sort items with bisect")
+    assert snippets
 
 
 def test_fail_closed_missing_manifest(tmp_path):

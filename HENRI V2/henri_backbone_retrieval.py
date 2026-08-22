@@ -24,7 +24,14 @@ import pathlib
 import re
 
 HENRI_BACKBONE_RETRIEVAL = "HENRI_BACKBONE_RETRIEVAL"
-_CONTAMINATION_SET = set()  # populated by add_contamination_shingles
+_CONTAMINATION_LINES: set[str] = set()   # code-bearing normalized lines
+_CONTAMINATION_IDENT4: set[str] = set()  # identifier 4-grams (len >= 3)
+
+# Identifiers with >= 3 chars: single letters and bare numeric literals are
+# NOT contamination signals (vacuous 5-gram evidence: '1 2 3 4 5', 'a b c d e',
+# '[2, 2, 2]' fired on clean CPython docs; verbatim-line total was 1 and that
+# hit was a doctest OUTPUT literal coinciding with a task data literal).
+_IDENT_RE = re.compile(r"[a-z_][a-z0-9_]{2,}")
 
 
 class RetrievalBlockedError(RuntimeError):
@@ -35,6 +42,25 @@ def _tokenize(text: str) -> list[str]:
     return re.findall(r"[a-z0-9_]+", text.lower())
 
 
+def _contamination_lines(text: str) -> set[str]:
+    """Normalized lines that carry code semantics (>=1 real identifier)."""
+    out = set()
+    for line in text.splitlines():
+        line = line.strip()
+        if len(line) < 8 or line.startswith("#"):
+            continue
+        if not _IDENT_RE.search(line):
+            continue
+        out.add(re.sub(r"\s+", " ", line))
+    return out
+
+
+def _ident_shingles(text: str, n: int = 4) -> set[str]:
+    """Shingles over identifiers of length >= 3 (single letters excluded)."""
+    toks = _IDENT_RE.findall(text.lower())
+    return {" ".join(toks[i:i + n]) for i in range(max(0, len(toks) - n + 1))}
+
+
 def _shingles(text: str, n: int = 5) -> set[str]:
     toks = _tokenize(text)
     return {" ".join(toks[i:i + n]) for i in range(max(0, len(toks) - n + 1))}
@@ -42,9 +68,10 @@ def _shingles(text: str, n: int = 5) -> set[str]:
 
 def add_contamination_shingles(text: str) -> int:
     """Register benchmark task text (prompt/solution/test) for the gate."""
-    before = len(_CONTAMINATION_SET)
-    _CONTAMINATION_SET.update(_shingles(text))
-    return len(_CONTAMINATION_SET) - before
+    before = len(_CONTAMINATION_LINES) + len(_CONTAMINATION_IDENT4)
+    _CONTAMINATION_LINES.update(_contamination_lines(text))
+    _CONTAMINATION_IDENT4.update(_ident_shingles(text))
+    return len(_CONTAMINATION_LINES) + len(_CONTAMINATION_IDENT4) - before
 
 
 class BackboneRetrieval:
@@ -95,13 +122,21 @@ class BackboneRetrieval:
 
     # -- contamination gate -------------------------------------------------
     def scan_contamination(self) -> list[str]:
-        """Return list of contaminated snippet ids (empty = clean)."""
+        """Return list of contaminated snippet ids (empty = clean).
+
+        Signal: verbatim-line overlap containing >=1 real identifier, OR
+        identifier-4-gram overlap (tokens len >= 3). Bare literals and
+        single-letter variable sequences are not leakage signals (vacuous
+        detector evidence documented in module docstring).
+        """
         hits = []
         for doc in self._documents:
-            for shingle in _shingles(doc["text"]):
-                if shingle in _CONTAMINATION_SET:
-                    hits.append(doc["entry"]["file"])
-                    break
+            text = doc["text"]
+            if _contamination_lines(text) & _CONTAMINATION_LINES:
+                hits.append(doc["entry"]["file"])
+                continue
+            if _ident_shingles(text) & _CONTAMINATION_IDENT4:
+                hits.append(doc["entry"]["file"])
         return hits
 
     # -- retrieval ----------------------------------------------------------
