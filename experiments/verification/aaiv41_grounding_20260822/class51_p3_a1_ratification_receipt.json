@@ -1,0 +1,22 @@
+{
+  "schema_id": "henri.class51-a1-ratification.v1",
+  "event": "CLASS51_P3_AMENDMENT_A1_RATIFICATION_SEAL",
+  "date": "2026-08-22",
+  "approved_by": "user via Photon",
+  "branch": "accuracy/aaiv41-backbone",
+  "ratified": "Amendment A1 (v3.1-code-dominant contamination detector)",
+  "bounded_claim": "Ratification asserts that no code-dominant syntactic shingle overlap is detected between the 13 corpus files (sha256 aggregate b20b5144adeea0dc23fb02e258a735af6849e414f52275e53832bc1a34717aac) and the first 30 HumanEval tasks under heuristic v3.1. It does not assert absolute, unconditioned text isolation.",
+  "protocol": {
+    "branch": "accuracy/aaiv41-backbone",
+    "source_commit": "cba20be2a8abde493df46d067bd8d517bc3b3b7f",
+    "gpu": "exclusive RTX 5090 (vast-5090)",
+    "sequence": ["Arm A baseline", "Arm B active"],
+    "items": 30,
+    "matched_item_order": true,
+    "receipt": "pilot_out/contamination_receipt.json with commit hash, corpus SHA256 digest, detector version v3.1"
+  },
+  "notes": [
+    "Ratification text referenced branch 'accuracy/aaii_v41-backbone'; recorded as a naming typo, no branch change (actual: accuracy/aaiv41-backbone).",
+    "Pilot remains plumbing-only: no efficacy verdict, no AAII claims, no weight changes, no silent fallback."
+  ]
+}
