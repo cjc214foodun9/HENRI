@@ -1,0 +1,67 @@
+{
+  "model": "Qwen/Qwen3-VL-8B-Instruct",
+  "revision": "0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
+  "retrieved_utc": "2026-08-22",
+  "files": {
+    ".gitattributes": {
+      "size": 1519
+    },
+    "README.md": {
+      "size": 7133
+    },
+    "chat_template.json": {
+      "size": 5499
+    },
+    "config.json": {
+      "size": 1474
+    },
+    "generation_config.json": {
+      "size": 269
+    },
+    "merges.txt": {
+      "size": 1671839
+    },
+    "model-00001-of-00004.safetensors": {
+      "size": 4902275944,
+      "lfs_sha256": "d5d0aef0eb170fc7453a296c43c0849a56f510555d3588e4fd662bb35490aefa",
+      "lfs_bytes": 4902275944,
+      "xet_hash": "f43fe9499002ea3e53be00514099a55c71fe5ee7bd0a5a4675a00e58093a31fd"
+    },
+    "model-00002-of-00004.safetensors": {
+      "size": 4915962496,
+      "lfs_sha256": "8be88fb5501e4d5719a6d4cc212e6a13480330e74f3e8c77daa1a68f199106b5",
+      "lfs_bytes": 4915962496,
+      "xet_hash": "2f0baa7e043ad74fe914338ec39145dca2c3c4497a6c239de5a148f8f8b1fbc0"
+    },
+    "model-00003-of-00004.safetensors": {
+      "size": 4999831048,
+      "lfs_sha256": "83de00eafe6e0d57ccd009dbcf71c9974d74df2f016c27afb7e95aafd16b2192",
+      "lfs_bytes": 4999831048,
+      "xet_hash": "d9de8e6c9115c9e90a41c1ce5429868ec3ca0792890a7279de04d1935a463d79"
+    },
+    "model-00004-of-00004.safetensors": {
+      "size": 2716270024,
+      "lfs_sha256": "0a88b98e9f96270973f567e6a2c103ede6ccdf915ca3075e21c755604d0377a5",
+      "lfs_bytes": 2716270024,
+      "xet_hash": "8599198904e418c5e31a51dc2f3ead0a4cf9f4cedd3b0d0dc686a85ab6a71bfc"
+    },
+    "model.safetensors.index.json": {
+      "size": 67759
+    },
+    "preprocessor_config.json": {
+      "size": 390
+    },
+    "tokenizer.json": {
+      "size": 7032403
+    },
+    "tokenizer_config.json": {
+      "size": 10868
+    },
+    "video_preprocessor_config.json": {
+      "size": 385
+    },
+    "vocab.json": {
+      "size": 2776833
+    }
+  }
+}
