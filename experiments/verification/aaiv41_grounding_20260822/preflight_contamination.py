@@ -27,7 +27,12 @@ assert hashlib.sha256(raw).hexdigest().startswith(DECOMPRESSED_SHA), "decompress
 items = [json.loads(line) for line in raw.decode("utf-8").splitlines()][:N]
 for it in items:
     h.add_contamination_shingles(it["prompt"])
-    h.add_contamination_shingles("\n".join(it["test"]))  # match pilot loader join semantics
+    test_field = it["test"]
+    # Canonical HumanEval 'test' is a string; join only if a list (matches
+    # the pilot loader's fixed semantics; char-splitting a str would register
+    # garbage shingles).
+    test = test_field if isinstance(test_field, str) else "\n".join(test_field)
+    h.add_contamination_shingles(test)
 retr = h.BackboneRetrieval(CORPUS, enabled=True)
 hits = retr.scan_contamination()
 print(f"items={len(items)} detector=v3.1 hits={hits}")

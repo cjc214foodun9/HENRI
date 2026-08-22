@@ -67,11 +67,17 @@ def load_humaneval(gz_path: pathlib.Path) -> list[dict]:
     items = []
     for line in raw.decode("utf-8").splitlines():
         obj = json.loads(line)
+        test_field = obj["test"]
+        # Canonical HumanEval 'test' is a STRING (not a list). Joining a str
+        # char-splits it and corrupts the test body (killed: uniform
+        # SyntaxError 'unterminated string literal' on 30/30, see
+        # kill_test_loader_join.py). Support both shapes defensively.
+        test = test_field if isinstance(test_field, str) else "\n".join(test_field)
         items.append({
             "task_id": obj["task_id"],
             "prompt": obj["prompt"],
             "entry_point": obj["entry_point"],
-            "test": "\n".join(obj["test"]),
+            "test": test,
             "imports": obj.get("imports", []),
         })
     return items
