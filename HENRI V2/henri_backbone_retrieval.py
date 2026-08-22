@@ -32,28 +32,31 @@ _CONTAMINATION_IDENT4: set[str] = set()  # identifier 4-grams (len >= 3)
 # '[2, 2, 2]' fired on clean CPython docs; verbatim-line total was 1 and that
 # hit was a doctest OUTPUT literal coinciding with a task data literal).
 # English prose words are ALSO not contamination signals: the v2 detector
-# fired on IDENT4 'the end the string' (HumanEval/10 vs re.rst prose) — all
-# four tokens are common English, not code. A signal only counts when it
-# contains code-like structure: an underscore token, a Python keyword, or
-# code syntax characters.
+# fired on IDENT4 'the end the string' (HumanEval/10 vs re.rst prose).
+# v3.1 rule (Amendment A1, PROPOSED): a signal counts only when it contains
+# code-dominant structure: an underscore token, a code-dominant keyword, or
+# the code markers '>>>' or '='. Common prose keywords (in/for/as/or/if/...)
+# and generic punctuation do NOT fire. Corpus composition is unchanged.
 _IDENT_RE = re.compile(r"[a-z_][a-z0-9_]{2,}")
-_PY_KEYWORDS = {
-    "and", "as", "assert", "break", "class", "continue", "def", "del",
-    "elif", "else", "except", "finally", "for", "from", "global", "if",
-    "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass",
-    "raise", "return", "try", "while", "with", "yield", "True", "False",
-    "None", "print", "range", "len", "sorted", "zip", "map", "filter",
+# Code-dominant tokens: appear in English prose only rarely. Builtins
+# (print/range/len/...) and prose-common keywords (in/for/as/or/if/not/...) are
+# intentionally EXCLUDED (v2 false positive 'the end the string'; prose like
+# "if you want, as in the example" must not fire).
+_CODE_KEYWORDS = {
+    "def", "class", "import", "from", "return", "lambda", "yield", "assert",
+    "raise", "except", "finally", "while", "elif", "global", "nonlocal",
+    "pass", "break", "continue", "del",
 }
-_CODE_SYNTAX = ("(", "=", ">>>", "[", "]", ":", ".", ",")
+_CODE_MARKERS = (">>>", "=")
 
 
 def _is_code_like(tokens: list[str], line: str | None = None) -> bool:
-    """True if the token list / line carries code structure (not prose)."""
+    """True if the token list / line carries code-dominant structure."""
     for t in tokens:
-        if "_" in t or t in _PY_KEYWORDS:
+        if "_" in t or t in _CODE_KEYWORDS:
             return True
     if line is not None:
-        return any(ch in line for ch in _CODE_SYNTAX)
+        return any(m in line for m in _CODE_MARKERS)
     return False
 
 

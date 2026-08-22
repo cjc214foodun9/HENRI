@@ -109,13 +109,43 @@ def test_bare_literals_do_not_fire_gate(retrieval):
 def test_prose_words_do_not_fire_gate(retrieval):
     """v2/v3 regression: English prose 4-grams must not fire the gate
     (classification evidence: 'the end the string' — HumanEval/10 vs
-    re.rst prose — fired the v2 IDENT4 detector; all four tokens are
-    common English, not code)."""
+    re.rst prose — fired the v2 IDENT4 detector)."""
     add_contamination_shingles("the end of the string")
     add_contamination_shingles("the end the string")
     assert retrieval.scan_contamination() == []
     snippets = retrieval.retrieve("extract all digits")
     assert snippets
+
+
+def test_prose_with_common_keywords_does_not_fire(retrieval):
+    """v3.1 regression (Amendment A1): prose containing common keywords or
+    generic punctuation must not fire (in/for/as/or are excluded from the
+    code-dominant set; '=' and '>>>' are the only syntax markers)."""
+    add_contamination_shingles(
+        "if you want, as in the example above, keep the value in mind"
+    )
+    add_contamination_shingles(
+        "for a in range of the world: the result, as before, is shown"
+    )
+    assert retrieval.scan_contamination() == []
+    snippets = retrieval.retrieve("find repeated elements")
+    assert snippets
+
+
+def test_real_corpus_code_line_fires_gate(retrieval):
+    """Positive control: a genuine code line from the corpus, registered as
+    benchmark contamination, must fire the gate (v3.1 line signal via '='
+    marker; regression against the failed synthetic test whose distinctive
+    identifier was absent from the corpus)."""
+    re_text = (CORPUS / "re.rst").read_text(encoding="utf-8")
+    line = next(
+        l.strip() for l in re_text.splitlines()
+        if "flags=" in l and l.strip()
+    )
+    add_contamination_shingles(line)
+    assert "re.rst" in retrieval.scan_contamination()
+    with pytest.raises(RetrievalBlockedError):
+        retrieval.build_prompt("use re")
 
 
 def test_fail_closed_missing_manifest(tmp_path):

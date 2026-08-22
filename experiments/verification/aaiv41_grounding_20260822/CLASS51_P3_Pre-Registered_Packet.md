@@ -53,6 +53,20 @@
 - MBPP canonical confirmed: `google-research/google-research/mbpp/sanitized-mbpp.json` (blob sha `a999d25d…`, 427 items, keys code/prompt/source_file/task_id/test_imports/test_list); local bytes sha256 `ca95deaa9a01ef0a6f439f88bcf0dd3db3563d22f22aad6cae04ebb9a8d8c8e9` (not committed; digest recorded).
 - HumanEval full: 164 items, canonical gz sha256 `b796127e…` / decompressed `1d49078b…` (MATCH_LOCAL).
 
+## Amendment A1 (PROPOSED 2026-08-22) — contamination detector calibration
+- Status: PROPOSED — ratification required before the definitive pilot rerun. Corpus composition UNCHANGED (same 13 files, same aggregate sha256 `b20b5144…`).
+- Original pre-registered gate (text above, unmodified): 5-gram shingle overlap of benchmark task prompts/solutions/tests vs corpus.
+- Observed blocks and classification (evidence scripts `classify_contamination.py`, `classify_contamination_v2.py`, `show_contamination_overlap.py`):
+  - v1 (plain 5-grams): blocked 7/13 files — all vacuous (`[2, 2, 2]`, `1 2 3 4 5`, `a b c d e`, prose). Single verbatim-line overlap = doctest OUTPUT literal `[2, 2, 2]` in itertools.rst, benign.
+  - v2 (identifier 4-grams, len>=3): blocked `re.rst` — prose shingle `the end the string` (HumanEval/10 vs re.rst prose), not code.
+- Amended rule (v3.1, defined BEFORE any rerun result): contamination fires only on
+  (a) a normalized corpus line containing >=1 identifier (len>=3) AND (underscore token | code-dominant keyword `def/class/import/from/return/lambda/yield/assert/raise/except/finally/while/elif/global/nonlocal/pass/break/continue/del` | `>>>` | `=`), OR
+  (b) an identifier-4-gram shingle (len>=3) containing an underscore token or code-dominant keyword.
+  Prose-common keywords (in/for/as/or/if/not/print/range/len/…) and generic punctuation are NOT signals.
+- Receipts: every run writes a timestamped `contamination_receipt_<run_id>.json` carrying detector version + source commit; historical blocked receipts are preserved (never overwritten).
+- Preflight: contamination-only remote check (no model load) records `hits` + PASS/BLOCKED before any GPU run.
+
 ## Open ratification items (user decision)
 1. Approve this P3(a) operationalization (recommended), OR switch to P3(b) verifier loop, OR run both sequentially.
 2. Optional Arm C (literal Zone C wave retrieval control) — NOT recommended (evidence above); include only on request.
+3. **Ratify Amendment A1** (v3.1 detector) to unblock the plumbing pilot rerun. Rejecting it keeps the original 5-gram gate → pilot remains CONTAMINATION_BLOCKED by construction (vacuous hits).

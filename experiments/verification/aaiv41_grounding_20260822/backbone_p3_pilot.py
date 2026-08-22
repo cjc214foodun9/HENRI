@@ -12,6 +12,7 @@ import argparse
 import gzip
 import hashlib
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -98,21 +99,32 @@ def main():
     print(f"[pilot] registered contamination shingles for {len(items)} items")
 
     # --- retrieval layer (fail closed) ---
+    run_id = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    detector = {
+        "version": "v3.1-code-dominant",
+        "rule": "code-bearing line (underscore | code-dominant keyword | '>>>' | '=') or ident4 shingle containing an underscore token or code-dominant keyword",
+        "commit": os.environ.get("PILOT_COMMIT", "unknown"),
+        "amendment": "A1-PROPOSED",
+    }
     retrieval = BackboneRetrieval(args.corpus_dir, enabled=True)
     contaminated = retrieval.scan_contamination()
     if contaminated:
-        (out / "contamination_receipt.json").write_text(json.dumps({
+        (out / f"contamination_receipt_{run_id}.json").write_text(json.dumps({
             "schema_id": "henri.contamination-receipt.v1",
             "status": "CONTAMINATION_BLOCKED",
             "hits": contaminated,
+            "detector": detector,
+            "run_id": run_id,
         }, indent=2))
         print(f"[pilot] CONTAMINATION_BLOCKED: {contaminated}")
         return 1
-    (out / "contamination_receipt.json").write_text(json.dumps({
+    (out / f"contamination_receipt_{run_id}.json").write_text(json.dumps({
         "schema_id": "henri.contamination-receipt.v1",
         "status": "CLEAN",
         "hits": [],
         "corpus_aggregate": "b20b5144adeea0dc23fb02e258a735af6849e414f52275e53832bc1a34717aac",
+        "detector": detector,
+        "run_id": run_id,
     }, indent=2))
     print("[pilot] contamination gate CLEAN")
 
