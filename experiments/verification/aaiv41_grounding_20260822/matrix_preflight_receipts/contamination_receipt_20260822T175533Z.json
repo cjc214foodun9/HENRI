@@ -1,0 +1,20 @@
+{
+  "schema_id": "henri.contamination-receipt.v1",
+  "status": "CONTAMINATION_BLOCKED",
+  "hits": [
+    "collections.rst",
+    "itertools.rst",
+    "random.rst",
+    "re.rst",
+    "statistics.rst"
+  ],
+  "corpus_aggregate": "b20b5144adeea0dc23fb02e258a735af6849e414f52275e53832bc1a34717aac",
+  "detector": {
+    "version": "v3.1-code-dominant",
+    "rule": "code-bearing line (underscore | code-dominant keyword | '>>>' | '=') or ident4 shingle containing an underscore token or code-dominant keyword",
+    "commit": "PENDING_SEAL",
+    "amendment": "A1-RATIFIED",
+    "surface_items": 264
+  },
+  "run_id": "20260822T175533Z"
+}

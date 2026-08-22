@@ -1,0 +1,63 @@
+{
+  "pass": true,
+  "cases": [
+    {
+      "case": "HE known-good",
+      "expected": "PASSED",
+      "actual": "PASSED",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "case": "HE deliberate-wrong",
+      "expected": "FAILED",
+      "actual": "FAILED",
+      "pass": true,
+      "detail": "Traceback (most recent call last):\n  File \"<string>\", line 21, in <module>\n  File \"<string>\", line 16, in check\nAssertio"
+    },
+    {
+      "case": "HE wrong-entry",
+      "expected": "EXECUTION_ERROR",
+      "actual": "EXECUTION_ERROR",
+      "pass": true,
+      "detail": "Traceback (most recent call last):\n  File \"<string>\", line 21, in <module>\nNameError: name 'truncate_nmbr' is not define"
+    },
+    {
+      "case": "HE timeout",
+      "expected": "EXECUTION_ERROR",
+      "actual": "EXECUTION_ERROR",
+      "pass": true,
+      "detail": "TIMEOUT"
+    },
+    {
+      "case": "MBPP known-good",
+      "expected": "PASSED",
+      "actual": "PASSED",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "case": "MBPP deliberate-wrong",
+      "expected": "FAILED",
+      "actual": "FAILED",
+      "pass": true,
+      "detail": "Traceback (most recent call last):\n  File \"<string>\", line 7, in <module>\nAssertionError\n"
+    },
+    {
+      "case": "MBPP wrong-entry",
+      "expected": "EXECUTION_ERROR",
+      "actual": "EXECUTION_ERROR",
+      "pass": true,
+      "detail": "Traceback (most recent call last):\n  File \"<string>\", line 7, in <module>\nNameError: name 'similar_elements' is not defi"
+    },
+    {
+      "case": "MBPP timeout",
+      "expected": "EXECUTION_ERROR",
+      "actual": "EXECUTION_ERROR",
+      "pass": true,
+      "detail": "TIMEOUT"
+    }
+  ],
+  "evaluator_source_sha256": "7b81fac4afe52f526f0e727cd086031df4073d6c44a06545b42ca81592f5b195",
+  "template_sha256": "73bb8a2c72c8bbc51fc2027a36093baa9d3527350107a3b6ebd12ffff6600514"
+}
