@@ -5,6 +5,7 @@ Verifies that the shipped retrieval module + corpus + benchmark slice pass
 the amended v3.1 gate on the remote host. Prints hits and PASS/BLOCKED.
 """
 import gzip
+import hashlib
 import json
 import pathlib
 import sys
@@ -15,15 +16,18 @@ import henri_backbone_retrieval as h  # noqa: E402
 
 GZ = "/root/class51_p3/HumanEval.jsonl.gz"
 CORPUS = "/root/class51_p3/backbone_retrieval_corpus"
+CANONICAL_GZ_SHA = "b796127e"
+DECOMPRESSED_SHA = "1d49078b"
 N = 30
 
-items = [
-    json.loads(line)
-    for line in gzip.open(GZ, "rt", encoding="utf-8").read().splitlines()
-][:N]
+raw_gz = pathlib.Path(GZ).read_bytes()
+assert hashlib.sha256(raw_gz).hexdigest().startswith(CANONICAL_GZ_SHA), "gz digest mismatch"
+raw = gzip.decompress(raw_gz)
+assert hashlib.sha256(raw).hexdigest().startswith(DECOMPRESSED_SHA), "decompressed digest mismatch"
+items = [json.loads(line) for line in raw.decode("utf-8").splitlines()][:N]
 for it in items:
     h.add_contamination_shingles(it["prompt"])
-    h.add_contamination_shingles(it["test"])
+    h.add_contamination_shingles("\n".join(it["test"]))  # match pilot loader join semantics
 retr = h.BackboneRetrieval(CORPUS, enabled=True)
 hits = retr.scan_contamination()
 print(f"items={len(items)} detector=v3.1 hits={hits}")
