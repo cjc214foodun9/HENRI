@@ -1,0 +1,78 @@
+{
+  "inputs": {
+    "methodology.html": {
+      "bytes": 386942,
+      "sha256_prefix": "577a1de761092d92"
+    },
+    "index.html": {
+      "bytes": 1778846,
+      "sha256_prefix": "2e18dd8eb1775c15"
+    },
+    "blog_intelligence.html": {
+      "bytes": 17067,
+      "sha256_prefix": "6c29aa0e8477256f"
+    }
+  },
+  "benchmarks": {
+    "methodology.html": {
+      "Reasoning": 12,
+      "Language": 7,
+      "index": 6,
+      "agent": 4,
+      "Arena": 3,
+      "Intelligence Index": 3,
+      "Coding": 3,
+      "MMLU": 1,
+      "AIME 2025": 1,
+      "MATH": 1,
+      "LiveCodeBench": 1,
+      "vision": 1
+    },
+    "index.html": {
+      "index": 94,
+      "Intelligence Index": 67,
+      "Reasoning": 33,
+      "agent": 33,
+      "Omniscience": 19,
+      "Language": 14,
+      "Arena": 11,
+      "Terminal-Bench": 10,
+      "GPQA": 9,
+      "GPQA Diamond": 9,
+      "Coding": 9,
+      "multimodal": 2,
+      "MMMU-Pro": 1,
+      "MMMU": 1,
+      "IFBench": 1
+    },
+    "blog_intelligence.html": {}
+  },
+  "index_formula": {
+    "methodology_context": "/Output): The price charged by a provider per input token sent to the model and per output token received from the model. Prices shown are the current prices listed by providers. Price (Blended): To enable easier comparison, we calculate a blended price assuming a 7:2:1 ratio of cache hit, input, and output tokens. Cost per Task: The weighted-average cost (USD) to complete one Artificial Analysis Intelligence Index task. This is calculated by multiplying input, cached, and output token prices by tokens consumed across the workload, weighted by the same per-benchmark weights the Intelligence Index uses , then dividing by task count. Price is either the provider's first-party API rate or the median across all providers. Caching costs differ by provider. Because cost reflects actual token usage, models that produce longer answers or more reasoning tokens will have a higher cost per task, even at identical per-token prices. where i = each benchmark in the Artificial Analysis Intelligence Index and w = that benchmark's weight in the Index Time to First Token: The time in seconds between sending a request to the service or system and receiving the first token of the response. For reasoning models which return reasoning tokens, this will be the first reasoning token. Time to First Answer Token: The time "
+  },
+  "notable_excerpts": [
+    {
+      "kw": "weighted",
+      "excerpts": [
+        "s. Price (Blended): To enable easier comparison, we calculate a blended price assuming a 7:2:1 ratio of cache hit, input, and output tokens. Cost per Task: The weighted-average cost (USD) to complete one Artificial Analysis Intelligence Index task. This is calculated by multiplying input, cached, and output token prices by tokens consumed across the workload, weighted by the sa",
+        "e Artificial Analysis Intelligence Index task. This is calculated by multiplying input, cached, and output token prices by tokens consumed across the workload, weighted by the same per-benchmark weights the Intelligence Index uses , then dividing by task count. Price is either the provider's first-party API rate or the median across all providers. Caching costs differ by provid"
+      ]
+    },
+    {
+      "kw": "average",
+      "excerpts": [
+        "(Blended): To enable easier comparison, we calculate a blended price assuming a 7:2:1 ratio of cache hit, input, and output tokens. Cost per Task: The weighted-average cost (USD) to complete one Artificial Analysis Intelligence Index task. This is calculated by multiplying input, cached, and output token prices by tokens consumed across the workload, weighted by the same per-be",
+        "eceiving the first answer token of the response. For reasoning models, this is measured after any 'thinking' time. Output Speed (output tokens per second): The average number of tokens received per second, after the first token is received. Total Response Time for 100 Output Tokens: The number of seconds to generate 100 output tokens, calculated synthetically based on TTFT and ",
+        "ty. End-to-End Response Time: The total time to receive a complete response, including input processing time, model reasoning time, and answer generation time. Average Reasoning Tokens: Time reasoning models spend outputting 'reasoning' tokens before providing an answer. This is calculated based on the average number of 'reasoning' tokens across a diverse set of 60 prompts. Whe"
+      ]
+    },
+    {
+      "kw": "log",
+      "excerpts": [
+        " Language Model Benchmarking Methodology | Artificial Analysis Artificial Analysis K Artificial Analysis Models Coding Agents Speech, Image, Video Inference Leaderboards About AI Trends Arenas K On this page Scope Language Model Intelligence Speech, Image,",
+        "Trends Arenas K On this page Scope Language Model Intelligence Speech, Image, Video & Music Inference Misc. Definitions Artificial Analysis Benchmarking Methodology Scope Artificial Analysis performs intelligence, quality, performance and price benchmarking on AI models, inference API endpoints and systems. This section of our website describes our benchmarking methodology, inc",
+        "e, quality, performance and price benchmarking on AI models, inference API endpoints and systems. This section of our website describes our benchmarking methodology, including both our quality benchmarking and performance benchmarking. For our language model benchmarking, we note that we consider endpoints to be serverless when customers only pay for their usage, not a fixed ra"
+      ]
+    }
+  ]
+}
