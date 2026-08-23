@@ -19,6 +19,16 @@ R2 (RATIFIED 2026-08-22): graders use the official prompt + completion +
 tests form (canonical prompt prepended; MBPP signature from the dataset
 `code` field; re-emitted def signatures stripped deterministically).
 Self-test extended to 10 canonical cases (5 HE + 5 MBPP).
+R3 (RATIFIED 2026-08-22): MBPP graded as completion-as-generated. The MBPP
+prompt is prose and carries no signature; the model invents its own argument
+names, so substituting the dataset signature renames arguments the body
+already binds -> NameError (OBSERVED under R2: lst, tuples_list, list1, arr,
+s, n, a, tup). Leading import/from lines are hoisted to module scope
+(OBSERVED IndentationError when a completion opened with 'import math').
+Body-only completions fall back to the canonical dataset signature. Self-test
+extended to 12 canonical cases (5 HE + 7 MBPP). Raw completions are stored in
+run receipts (deterministic regrading / replay gate). Final scorecard is also
+delivered to <repo>/telemetry/scorecard_final_264.json.
 A2 (RATIFIED 2026-08-22): itertools.rst Recipes section excised (HE/31
 is_prime overlap); detector v3.2 (bare-import + prose-keyword exclusions);
 new corpus aggregate 2ced6f6f1afefb4d54129b9fff74d4edf08a91efe38c4b639ef8301144786f04.
@@ -82,6 +92,16 @@ def git_blob_sha1(data: bytes) -> str:
     return hashlib.sha1(b"blob %d\x00" % len(data) + data).hexdigest()
 
 
+def _repo_root() -> pathlib.Path:
+    """Worktree root found by upward .git search (worktrees carry a .git FILE)."""
+    p = SCRIPT_DIR
+    for _ in range(8):
+        if (p / ".git").exists():
+            return p
+        p = p.parent
+    return SCRIPT_DIR
+
+
 # --------------------------------------------------------------------------
 # Graders: result class in {PASSED, FAILED, EXECUTION_ERROR}
 # --------------------------------------------------------------------------
@@ -106,14 +126,40 @@ def _mbpp_signature(code: str) -> str:
     return ""
 
 
-def _strip_def_head(code: str) -> str:
-    """Drop a re-emitted 'def ...' head so the canonical signature owns it."""
+def _hoist_leading_imports(code: str) -> str:
+    """Move leading import/from lines (and comments) to module scope.
+
+    R3: a completion that opens with 'import math' and then a def would put
+    the import inside the function after signature concatenation; hoisting
+    prevents the OBSERVED IndentationError. Only LEADING lines are hoisted;
+    imports inside the function body are left untouched.
+    """
     lines = code.splitlines()
-    while lines and not lines[0].strip():
-        lines.pop(0)
-    if lines and lines[0].lstrip().startswith("def "):
-        lines.pop(0)
-    return "\n".join(lines).strip("\n") + ("\n" if any(l.strip() for l in lines) else "")
+    head: list[str] = []
+    i = 0
+    while i < len(lines):
+        s = lines[i].strip()
+        if not s:
+            i += 1
+            continue
+        if s.startswith(("#", "import ", "from ")):
+            head.append(s)
+            i += 1
+            continue
+        break
+    if not head or i >= len(lines):
+        return code
+    return "\n".join(head) + "\n\n" + "\n".join(lines[i:]).strip("\n") + "\n"
+
+
+def _has_def_head(code: str) -> bool:
+    """True if the first non-blank, non-import, non-comment line is 'def '."""
+    for ln in code.splitlines():
+        s = ln.strip()
+        if not s or s.startswith(("#", "import ", "from ")):
+            continue
+        return s.startswith("def ")
+    return False
 
 
 def grade_humaneval(code: str, entry_point: str, tests: str,
@@ -135,11 +181,16 @@ def grade_mbpp(code: str, test_imports: list[str], test_list: list[str],
                prompt: str, signature: str, timeout: int = 15) -> tuple[str, str]:
     imp = "\n".join(test_imports) if test_imports else ""
     tests = "\n".join(test_list) if test_list else ""
-    # R2: canonical executable = imports + dataset signature + completion.
     # MBPP prompt is natural-language prose (NOT Python) and must NOT be
     # concatenated into the graded source (SyntaxError, OBSERVED preflight).
-    pre = f"{signature}\n" if signature else ""
-    body = f"{imp}\n\n{pre}{_strip_def_head(code)}\n\n{tests}\n"
+    # R3: grade the completion AS GENERATED (its own def head binds the
+    # model's argument names). Leading imports hoisted to module scope.
+    # Body-only completions (no def head) fall back to the canonical
+    # dataset signature.
+    completion = _hoist_leading_imports(code)
+    if not _has_def_head(completion) and signature:
+        completion = f"{signature}\n{completion}"
+    body = f"{imp}\n\n{completion}\n\n{tests}\n"
     try:
         proc = subprocess.run([sys.executable, "-c", body],
                               capture_output=True, text=True, timeout=timeout)
@@ -268,6 +319,14 @@ def run_self_test(he_gz: pathlib.Path, mbpp_json: pathlib.Path) -> dict:
                              m0["test_imports"], m0["test_list"], m0["prompt"], sig0, timeout=2)))
     cases.append(("MBPP body-only-with-prefix", "PASSED",
                   grade_mbpp("    return tuple(set(test_tup1) & set(test_tup2))\n",
+                             m0["test_imports"], m0["test_list"], m0["prompt"], sig0)))
+    cases.append(("MBPP leading-import completion", "PASSED",
+                  grade_mbpp("import math\n\ndef similar_elements(test_tup1, test_tup2):\n"
+                             "    return tuple(set(test_tup1) & set(test_tup2))\n",
+                             m0["test_imports"], m0["test_list"], m0["prompt"], sig0)))
+    cases.append(("MBPP descriptive-args own-def", "PASSED",
+                  grade_mbpp("def similar_elements(lst1, lst2):\n"
+                             "    return tuple(set(lst1) & set(lst2))\n",
                              m0["test_imports"], m0["test_list"], m0["prompt"], sig0)))
 
     results = []
@@ -517,6 +576,7 @@ def main() -> int:
             rows.append({"task_id": it["task_id"], "dataset": it["dataset"],
                          "class": cls, "error": detail if cls != "PASSED" else None,
                          "gen_s": round(gen_s, 2),
+                         "completion": response,
                          "prompt_sha256": sha256_bytes(prompt.encode())})
             if cls == "PASSED":
                 passed += 1
@@ -662,6 +722,13 @@ def main() -> int:
         "items": rows,
     }
     (out / "scorecard_final_264.json").write_text(json.dumps(scorecard, indent=2))
+    try:
+        tel = _repo_root() / "telemetry"
+        tel.mkdir(exist_ok=True)
+        (tel / "scorecard_final_264.json").write_text(json.dumps(scorecard, indent=2))
+        print(f"[matrix] scorecard delivered to {tel / 'scorecard_final_264.json'}")
+    except Exception as exc:  # delivery must never mask the verdict
+        print(f"[matrix] WARNING scorecard telemetry delivery failed: {exc}")
     print(json.dumps({k: verdict[k] for k in ("status", "arm_a", "arm_b", "paired",
                                               "kill_criterion", "gates")}, indent=2))
 
