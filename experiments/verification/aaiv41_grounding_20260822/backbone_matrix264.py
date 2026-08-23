@@ -26,12 +26,17 @@ already binds -> NameError (OBSERVED under R2: lst, tuples_list, list1, arr,
 s, n, a, tup). Leading import/from lines are hoisted to module scope
 (OBSERVED IndentationError when a completion opened with 'import math').
 Body-only completions fall back to the canonical dataset signature. Self-test
-extended to 12 canonical cases (5 HE + 7 MBPP). Raw completions are stored in
+extended to 16 canonical cases (5 HE + 11 MBPP, incl. renamed-function alias
+binding). Raw completions are stored in
 run receipts (deterministic regrading / replay gate). Final scorecard is also
 delivered to <repo>/telemetry/scorecard_final_264.json.
 A2 (RATIFIED 2026-08-22): itertools.rst Recipes section excised (HE/31
 is_prime overlap); detector v3.2 (bare-import + prose-keyword exclusions);
 new corpus aggregate 2ced6f6f1afefb4d54129b9fff74d4edf08a91efe38c4b639ef8301144786f04.
+R4 (RATIFIED 2026-08-23): deterministic Markdown-fence extraction; MBPP
+canonical-name alias binding when the model renames the entry point (exactly
+one top-level def; fail closed on zero/multiple); self-test 16 cases. Kill
+rule unchanged (delta < +0.010).
 
 Pre-registered kill: accuracy_B - accuracy_A < 0.010 (fired => no promotion).
 Any infrastructure failure -> BLOCKED_INFRASTRUCTURE, no efficacy verdict.
@@ -40,6 +45,7 @@ Sagnac veto: not_applicable (no Sagnac veto machinery in this causal path).
 from __future__ import annotations
 
 import argparse
+import ast
 import gzip
 import hashlib
 import json
@@ -162,13 +168,81 @@ def _has_def_head(code: str) -> bool:
     return False
 
 
+def _extract_fenced_code(code: str) -> str:
+    """Deterministic Markdown-fence extraction (R4).
+
+    If the text contains fenced code blocks, return the content of the LAST
+    complete block (```lang ... ```). Unterminated fences are closed at EOF.
+    No fences -> return the input unchanged.
+    """
+    lines = code.splitlines()
+    fences: list[tuple[int, int]] = []
+    i = 0
+    while i < len(lines):
+        if lines[i].strip().startswith("```"):
+            start = i
+            j = i + 1
+            while j < len(lines) and lines[j].strip() != "```":
+                j += 1
+            fences.append((start, j))  # j == len(lines) means unterminated
+            i = j + 1
+        else:
+            i += 1
+    if not fences:
+        return code
+    start, close = fences[-1]
+    return "\n".join(lines[start + 1:close]).strip()
+
+
+def _canonical_mbpp_name(test_list: list[str], signature: str = "") -> str | None:
+    """Canonical entry point: signature def name FIRST (dataset truth).
+
+    Falls back to the test surface ONLY when no signature is available.
+    The assert-based fallback must NOT run when a signature exists: the
+    first identifier after 'assert ' is frequently a BUILTIN (e.g.
+    'assert set(similar_elements(...))' -> 'set'), which would poison the
+    test namespace when used as an alias target (OBSERVED R4 preflight).
+    """
+    if signature:
+        m = re.match(r"\s*def\s+([A-Za-z_]\w*)", signature)
+        if m:
+            return m.group(1)
+    tl = "\n".join(test_list or [])
+    m = re.search(r"\bassert\s+([A-Za-z_]\w*)\s*\(", tl)
+    if m:
+        return m.group(1)
+    m = re.search(r"\bcheck\(\s*([A-Za-z_]\w*)\s*\)", tl)
+    return m.group(1) if m else None
+
+
+def _alias_binding_source(src: str, canon: str) -> str:
+    """Alias `canon` to the UNIQUE top-level generated def; fail closed otherwise.
+
+    Uses ast.parse: exactly one top-level FunctionDef/AsyncFunctionDef in the
+    module body. Zero, multiple, or parse errors -> no alias (the tests will
+    then fail if the canonical name is genuinely absent).
+    """
+    if not canon:
+        return ""
+    try:
+        tree = ast.parse(src)
+    except SyntaxError:
+        return ""
+    defs = [n for n in tree.body
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+    if len(defs) == 1 and defs[0].name != canon:
+        return f"{canon} = {defs[0].name}\n"
+    return ""
+
+
 def grade_humaneval(code: str, entry_point: str, tests: str,
                     imports: list[str], prompt: str, timeout: int = 15) -> tuple[str, str]:
     if not _IDENT_RE.fullmatch(entry_point):
         return "EXECUTION_ERROR", f"invalid entry_point identifier: {entry_point!r}"
     imp = "\n".join(imports) if imports else ""
     # R2: official prompt + completion + tests form (canonical prompt prepended)
-    body = f"{imp}\n\n{prompt}\n\n{code}\n\n{tests}\n\ncheck({entry_point})\n"
+    # R4: deterministic fence extraction before grading.
+    body = f"{imp}\n\n{prompt}\n\n{_extract_fenced_code(code)}\n\n{tests}\n\ncheck({entry_point})\n"
     try:
         proc = subprocess.run([sys.executable, "-c", body],
                               capture_output=True, text=True, timeout=timeout)
@@ -187,10 +261,13 @@ def grade_mbpp(code: str, test_imports: list[str], test_list: list[str],
     # model's argument names). Leading imports hoisted to module scope.
     # Body-only completions (no def head) fall back to the canonical
     # dataset signature.
-    completion = _hoist_leading_imports(code)
+    # R4: fence extraction -> import hoist -> own-def binding -> canonical alias.
+    completion = _hoist_leading_imports(_extract_fenced_code(code))
     if not _has_def_head(completion) and signature:
         completion = f"{signature}\n{completion}"
-    body = f"{imp}\n\n{completion}\n\n{tests}\n"
+    canon = _canonical_mbpp_name(test_list, signature)
+    alias = _alias_binding_source(completion, canon)
+    body = f"{imp}\n\n{completion}\n\n{alias}\n\n{tests}\n"
     try:
         proc = subprocess.run([sys.executable, "-c", body],
                               capture_output=True, text=True, timeout=timeout)
@@ -327,6 +404,22 @@ def run_self_test(he_gz: pathlib.Path, mbpp_json: pathlib.Path) -> dict:
     cases.append(("MBPP descriptive-args own-def", "PASSED",
                   grade_mbpp("def similar_elements(lst1, lst2):\n"
                              "    return tuple(set(lst1) & set(lst2))\n",
+                             m0["test_imports"], m0["test_list"], m0["prompt"], sig0)))
+    cases.append(("MBPP renamed-function alias", "PASSED",
+                  grade_mbpp("def find_shared_elements(lst1, lst2):\n"
+                             "    return tuple(set(lst1) & set(lst2))\n",
+                             m0["test_imports"], m0["test_list"], m0["prompt"], sig0)))
+    cases.append(("MBPP renamed-function wrong-body", "FAILED",
+                  grade_mbpp("def find_shared_elements(lst1, lst2):\n"
+                             "    return tuple(set(lst1) | set(lst2))\n",
+                             m0["test_imports"], m0["test_list"], m0["prompt"], sig0)))
+    cases.append(("MBPP fenced completion", "PASSED",
+                  grade_mbpp("```python\ndef similar_elements(test_tup1, test_tup2):\n"
+                             "    return tuple(set(test_tup1) & set(test_tup2))\n```",
+                             m0["test_imports"], m0["test_list"], m0["prompt"], sig0)))
+    cases.append(("MBPP fenced leading-import", "PASSED",
+                  grade_mbpp("```python\nimport math\n\ndef similar_elements(test_tup1, test_tup2):\n"
+                             "    return tuple(set(test_tup1) & set(test_tup2))\n```",
                              m0["test_imports"], m0["test_list"], m0["prompt"], sig0)))
 
     results = []
@@ -741,12 +834,7 @@ def main() -> int:
 
 
 def normalize_answer(code: str) -> str:
-    code = code.strip()
-    for fence in ("```python", "```"):
-        if fence in code:
-            code = code.split(fence, 1)[-1]
-            code = code.rsplit("```", 1)[0] if "```" in code else code
-    return code.strip()
+    return _extract_fenced_code((code or "").strip())
 
 
 def os_environ(k: str, dflt: str = "") -> str:
