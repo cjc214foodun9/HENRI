@@ -1,0 +1,72 @@
+{
+  "run": "system1_v04_prod",
+  "steps": 3000,
+  "batch": 24,
+  "seed": 42,
+  "warmup_step": 1000,
+  "c1": 1000,
+  "c2": 2000,
+  "swarm_b": 128,
+  "free_frac": 0.5,
+  "reward_weights": {
+    "lex": 0.1,
+    "bal": 0.1,
+    "gr": 0.15,
+    "parse": 0.2,
+    "sig": 0.15,
+    "exec": 0.3
+  },
+  "pg_weight_max": 0.5,
+  "ss_schedule": "0.25->0.65 over c2",
+  "spec_sha256": {
+    "kernel_engine_upload": "d582406c43016466009a144deb5e493fc6b693a88333b184f9d5ad10207460f3",
+    "token_fsa_spec_upload": "b42815d356d6b2177309db0723b4726f82d946ab2da29264b01cb1f8fb99cd9e"
+  },
+  "split_digests": {
+    "valid20_v04": "05484073a736b5cbaf15b8180f845801a04c5e5d9a8b9aa293049821e101a650",
+    "heldout40_v04": "23b36795891e287e257f13df64a9441f06bf388f31080bd9d55de6af08575271"
+  },
+  "best_val_rate": 0.6,
+  "best_val_step": 500,
+  "final_telemetry": {
+    "reward_mean_last100": 0.6184,
+    "free_ast_window_last200": 2295,
+    "pg_norm_window": 1.4267
+  },
+  "aborted": null,
+  "eval": {
+    "n": 40,
+    "swarm_pass": 20,
+    "single_pass": 20,
+    "beam_pass": 20,
+    "swarm_pass_rate": 0.5,
+    "single_pass_rate": 0.5,
+    "beam_pass_rate": 0.5,
+    "swarm_wilson_ci95": [
+      0.352,
+      0.648
+    ],
+    "single_wilson_ci95": [
+      0.352,
+      0.648
+    ],
+    "beam_wilson_ci95": [
+      0.352,
+      0.648
+    ],
+    "transitions": {
+      "both_pass": 20,
+      "swarm_only": 0,
+      "single_only": 0,
+      "both_fail": 20
+    },
+    "ast_valid_rate": 1.0,
+    "swarm_superiority_pass": false,
+    "kill_fired": true,
+    "diagnostic_only": true
+  },
+  "source_sha256": {
+    "kernel": "5e3d18a534108b89dd604abf624caca9aaa23cb842b0f585ce7105e1ebb10a52",
+    "trainer": "f6ca9fa5079e803fb6727a2932c2d8114e8bd56ed93e74d697b0960b8c572af2"
+  }
+}

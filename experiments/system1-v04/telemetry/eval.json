@@ -1,0 +1,31 @@
+{
+  "n": 40,
+  "swarm_pass": 20,
+  "single_pass": 20,
+  "beam_pass": 20,
+  "swarm_pass_rate": 0.5,
+  "single_pass_rate": 0.5,
+  "beam_pass_rate": 0.5,
+  "swarm_wilson_ci95": [
+    0.352,
+    0.648
+  ],
+  "single_wilson_ci95": [
+    0.352,
+    0.648
+  ],
+  "beam_wilson_ci95": [
+    0.352,
+    0.648
+  ],
+  "transitions": {
+    "both_pass": 20,
+    "swarm_only": 0,
+    "single_only": 0,
+    "both_fail": 20
+  },
+  "ast_valid_rate": 1.0,
+  "swarm_superiority_pass": false,
+  "kill_fired": true,
+  "diagnostic_only": true
+}
