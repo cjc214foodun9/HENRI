@@ -290,7 +290,13 @@ def main() -> None:
         return ok / n
 
     def ast_rate(arm: str) -> float:
-        return sum(ast_valid[arm]) / n
+        """AST validity over ADMITTED programs only. Non-admitted tasks are
+        excluded (no program was produced); they must NOT count as invalid."""
+        vals = [r[arm]["ast_valid"] for r in per_task
+                if r[arm]["admit"] >= 0]
+        if not vals:
+            return 0.0
+        return sum(vals) / len(vals)
 
     def paired(arm_x: str, arm_y: str) -> dict:
         both = x_only = y_only = neither = 0

@@ -1,0 +1,100 @@
+{
+  "run": "system1_v052_heldout_ab",
+  "ckpt": "/root/henri-system1/ckpt_v041/checkpoint.pt",
+  "heldout_split": {
+    "tag": "heldout51_v052",
+    "n": 40,
+    "seed": 271828,
+    "sha256": "5e5f4a0045258f05505ce9df2a4e083a300ae68f2d9602947816d97d7b66c48c"
+  },
+  "budget": 64,
+  "beam_width": 64,
+  "runtime_s": 152.89324760437012,
+  "arms": {
+    "A": {
+      "outcome_pass_rate": 0.375,
+      "ci90": [
+        0.25,
+        0.5
+      ],
+      "calls": {
+        "mean": 1.0,
+        "median": 1,
+        "p90": 1,
+        "max": 1
+      },
+      "ast_valid_rate": 0.375,
+      "budget_success": {
+        "1": 0.375,
+        "2": 0.375,
+        "4": 0.375,
+        "8": 0.375
+      }
+    },
+    "B": {
+      "outcome_pass_rate": 1.0,
+      "ci90": [
+        1.0,
+        1.0
+      ],
+      "calls": {
+        "mean": 2.025,
+        "median": 2,
+        "p90": 3,
+        "max": 4
+      },
+      "ast_valid_rate": 1.0,
+      "budget_success": {
+        "1": 0.375,
+        "2": 0.7,
+        "4": 1.0,
+        "8": 1.0
+      }
+    }
+  },
+  "oracle_outcome_support": 1.0,
+  "paired": {
+    "B_vs_A": {
+      "both": 15,
+      "B_only": 25,
+      "A_only": 0,
+      "neither": 0,
+      "mcnemar_p": 5.960464477539063e-08
+    }
+  },
+  "delta_B_minus_A": {
+    "mean": 0.625,
+    "ci90": [
+      0.5,
+      0.75
+    ]
+  },
+  "gates": {
+    "promotion": true,
+    "validity_preserved": false,
+    "min_ast_valid": 0.375
+  },
+  "verdict": "CONDITIONAL_VERIFIER_ASSISTED_IMPROVEMENT",
+  "heldout_guard": {
+    "consumed_digests": [
+      "887d0d6c",
+      "23b36795",
+      "82c97532",
+      "db027f9c",
+      "9d4c29ad",
+      "1f81e4d0",
+      "181cc59b",
+      "092cb0c1",
+      "2eb8d29b",
+      "78b4cfb4",
+      "7a8c1e7b",
+      "306ab62d",
+      "6b5bb1b4",
+      "0ec0528d",
+      "0535a2dc",
+      "35d15aae"
+    ],
+    "single_use": true,
+    "quarantine": true
+  }
+}

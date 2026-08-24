@@ -1,0 +1,37 @@
+{
+  "run": "system1_v052_heldout_ab",
+  "phase": "heldout",
+  "correction": "ast_rate recomputed over ADMITTED programs only; bug: non-admitted tasks counted as invalid (original min_ast_valid 0.375 = arm A admit rate). Fixed evaluator; verdict recomputed from saved per-task telemetry (no re-eval).",
+  "arms": {
+    "A": {
+      "outcome_pass_rate": 0.375,
+      "ast_valid_admitted": [
+        1.0,
+        15
+      ]
+    },
+    "B": {
+      "outcome_pass_rate": 1.0,
+      "ast_valid_admitted": [
+        1.0,
+        40
+      ]
+    }
+  },
+  "paired_B_vs_A": {
+    "both": 15,
+    "B_only": 25,
+    "A_only": 0,
+    "neither": 0,
+    "mcnemar_p": 5.960464477539063e-08
+  },
+  "delta_B_minus_A": 0.625,
+  "gates": {
+    "promotion": true,
+    "validity_preserved": true,
+    "min_ast_admitted": 1.0
+  },
+  "verdict": "CEGIS_VERIFIER_ASSISTED_CAPABILITY_PROMOTED",
+  "heldout_split_sha": "5e5f4a00",
+  "single_use": true
+}
