@@ -1,0 +1,147 @@
+LOADED /root/henri-system1/ckpt_v041/checkpoint.pt step=1000
+DEV_SPLIT dev50_v05 n=40 seed=55123 sha=9d4c29ada76e8d28
+[5/40] t=18s
+[10/40] t=37s
+[15/40] t=56s
+[20/40] t=75s
+[25/40] t=93s
+[30/40] t=110s
+[35/40] t=128s
+[40/40] t=151s
+EVAL: {
+  "run": "system1_v05_structural_support",
+  "ckpt": "/root/henri-system1/ckpt_v041/checkpoint.pt",
+  "ckpt_sha": "11d56121e4b091e2162078eb4cae71ce213dacc01397d8f8209bc9e2152a8f4d",
+  "dev_split": {
+    "tag": "dev50_v05",
+    "n": 40,
+    "seed": 55123,
+    "sha256": "9d4c29ada76e8d288529f07008092ad63788e737b77203b2772e0604c61411f6"
+  },
+  "budget": 64,
+  "beta_A": 0.0,
+  "n_tasks": 40,
+  "runtime_s": 150.8,
+  "compute": {
+    "gen_calls": {
+      "A": 0,
+      "B": 40,
+      "C": 40
+    },
+    "sandbox_executions": 334
+  },
+  "A": {
+    "pass1": 0.55,
+    "pass1_ci90": [
+      0.425,
+      0.675
+    ],
+    "any_pass": {
+      "1": 0.55,
+      "2": 0.55,
+      "4": 0.55,
+      "8": 0.55,
+      "16": 0.55,
+      "32": 0.55,
+      "64": 0.55
+    },
+    "any_pass64_ci90": [
+      0.425,
+      0.675
+    ],
+    "S": 0.0,
+    "cegis_admit": 0.55,
+    "mean_distinct_finals": 1.0,
+    "mean_distinct_rules": 0.0
+  },
+  "B": {
+    "pass1": 0.325,
+    "pass1_ci90": [
+      0.2,
+      0.45
+    ],
+    "any_pass": {
+      "1": 0.325,
+      "2": 0.6,
+      "4": 1.0,
+      "8": 1.0,
+      "16": 1.0,
+      "32": 1.0,
+      "64": 1.0
+    },
+    "any_pass64_ci90": [
+      1.0,
+      1.0
+    ],
+    "S": 0.675,
+    "cegis_admit": 1.0,
+    "mean_distinct_finals": 3.67,
+    "mean_distinct_rules": 3.67
+  },
+  "C": {
+    "pass1": 0.325,
+    "pass1_ci90": [
+      0.2,
+      0.45
+    ],
+    "any_pass": {
+      "1": 0.325,
+      "2": 0.675,
+      "4": 1.0,
+      "8": 1.0,
+      "16": 1.0,
+      "32": 1.0,
+      "64": 1.0
+    },
+    "any_pass64_ci90": [
+      1.0,
+      1.0
+    ],
+    "S": 0.675,
+    "cegis_admit": 1.0,
+    "mean_distinct_finals": 3.67,
+    "mean_distinct_rules": 3.67
+  },
+  "transitions": {
+    "A_vs_B": {
+      "both": 7,
+      "A_only": 15,
+      "B_only": 6,
+      "neither": 12,
+      "mcnemar_p": 0.0784
+    },
+    "A_vs_C": {
+      "both": 7,
+      "A_only": 15,
+      "C_only": 6,
+      "neither": 12,
+      "mcnemar_p": 0.0784
+    },
+    "B_vs_C": {
+      "both": 13,
+      "B_only": 0,
+      "C_only": 0,
+      "neither": 27,
+      "mcnemar_p": 1.0
+    }
+  },
+  "energy_assoc_v05": {
+    "n_pairs": 147,
+    "spearman_raw": 0.0128,
+    "note": "exact v0.5 candidate states (arm C); task-pooled, clustered -> anti-conservative; CONDITIONAL, not inherited from v0.4.1"
+  },
+  "decision": {
+    "rule": "S_B = any_pass@64_B - pass1_B; >=0.15 with CI>0 -> SUPPORT_RESTORED; <=0.05 -> NOT_RESTORED",
+    "S_B": 0.675,
+    "ci90_delta_lb": 0.55,
+    "support": "SUPPORT_RESTORED",
+    "capability": false,
+    "energy_filter_ok": true,
+    "verdict": "SUPPORT_RESTORED_NOT_PROMOTED"
+  },
+  "heldout_guard": {
+    "consumed_heldout_digest": "887d0d6c",
+    "quarantine": true
+  }
+}
+RECEIPT /root/henri-system1/ckpt_v050/eval_v05_support.json
