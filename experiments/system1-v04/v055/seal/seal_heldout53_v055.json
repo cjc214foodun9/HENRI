@@ -1,0 +1,29 @@
+{
+  "tag": "heldout53_v055",
+  "n": 52,
+  "seed": 60013,
+  "sha256": "873902867001b7f19abf3e2641b10913f2c57c4fb2e23d609078a471edc9c9ed",
+  "utc": "2026-08-24T17:54:45.951587+00:00",
+  "phase": "heldout",
+  "single_use": true,
+  "stratified_families": {
+    "2": 4,
+    "9": 4,
+    "12": 4,
+    "11": 4,
+    "5": 4,
+    "4": 4,
+    "6": 4,
+    "8": 4,
+    "7": 4,
+    "1": 4,
+    "3": 4,
+    "0": 4,
+    "10": 4
+  },
+  "verifier_per_task": 4,
+  "outcome_per_task": 4,
+  "generator": "eval_v055_heldout.build_split_stratified (13 families x 4 = 52, seeded family shuffle)",
+  "carrier": "system1_kernel_v055_ast_skeleton.py d9a976adff4146a1 (rule-10 len fix, one line)",
+  "evaluator_sha256": "10bcd8a8bfe1ba73776393ca025e57b21cacfb41e47c6d72f1ad896a1da76f58"
+}
