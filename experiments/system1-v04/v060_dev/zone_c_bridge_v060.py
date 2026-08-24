@@ -224,12 +224,22 @@ class FastWeightRuleMemory:
         """Per-rule accumulated failure mass (column norms of U)."""
         return self._U.norm(dim=0)
 
-    def adjusted_probs(self, probs: torch.Tensor) -> torch.Tensor:
+    def adjusted_probs(self, probs: torch.Tensor,
+                       rule_ids=None) -> torch.Tensor:
+        """probs over a candidate subset; rule_ids aligns probs[i] with the
+        full-dimensional failure mass (required when the pool is
+        arity-filtered and shorter than num_rules)."""
         p = probs.clone()
         if self._step == 0:
             return p  # identity: no updates -> base distribution exactly
         mass = self.rule_mass()
-        p = p * torch.exp(-mass)
+        if rule_ids is not None:
+            m = torch.tensor([float(mass[r]) for r in rule_ids])
+        else:
+            m = mass
+            if m.shape != p.shape:
+                m = m[:p.shape[0]]  # fallback: leading-dims alignment
+        p = p * torch.exp(-m)
         if p.sum() <= 0:
             return probs.clone()
         return p / p.sum()
@@ -252,7 +262,9 @@ class PartitionOrder:
 
     ARG_SETS = {
         1: [["xs"], ["m"], ["v"], ["n"], ["a"], ["b"], ["res"]],
-        2: [["xs", "ys"], ["m", "v"], ["a", "b"], ["n", "res"]],
+        # NOTE: all names must be exact live-vocab keys (probed 2026-08-24:
+        # 'ys' is UNK -> would FSA-invalidate every 2-arity rotated candidate).
+        2: [["xs", "t1"], ["m", "v"], ["a", "b"], ["n", "res"]],
     }
 
     def __init__(self, num_rules: int = 13, p: int = 3):

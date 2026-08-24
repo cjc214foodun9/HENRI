@@ -53,9 +53,11 @@ def test_null_identity():
     d = kernel.backbone.cfg.d_slot
     z0 = torch.randn(1, 16, d)   # live eval shape: 16 slots (pad 16)
     sp = torch.randn(1, 16, d)
-    task = {"name": "f_closure", "nargs": 1}
+    # REAL task name from the live generator (in-vocab; 'f_closure' is UNK)
+    task = {"name": "sum_list", "nargs": 1}
     base = kernel.generate_skeleton_candidates(z0, sp, task, top_k=64,
                                                use_energy=False)
+    check("C1", len(base) > 0, f"baseline pool non-empty ({len(base)})")
     cache = ZoneCHotCache(num_engrams=8, d_live=d, device="cpu", seed=1)
     cache.populate_from_names(
         ["spelke_object_persistence", "spelke_topological_containment",
@@ -154,6 +156,43 @@ def test_partition():
                   f"arg_rotation({rid},{nargs})={names}")
 
 
+# ---------------------------------------------------------------------------
+# C10: arg-rotation tokenizer closure (v0.6.2) — every rule x every arg-set,
+# using REAL per-family function names from the live generator (OBSERVED
+# 2026-08-24: gen_task names; 'f_closure' is UNK -> vacuous failure).
+# ---------------------------------------------------------------------------
+REAL_FUNC_NAMES = {
+    0: "sum_list", 1: "max_list", 2: "count_positive",
+    3: "intersect_tuples", 4: "union_tuples", 5: "pair_sums",
+    6: "factorial", 7: "m", 8: "v", 9: "n", 10: "a", 11: "b", 12: "res",
+}
+
+
+def test_arg_rotation_closure():
+    from system1_kernel_v05_ast_skeleton import (  # noqa: E402
+        SkeletonGrammar, tokenize_code, TOK2ID)
+    import ast as _ast
+    po = PartitionOrder(num_rules=13, p=3)
+    g = SkeletonGrammar(n_rules=13)
+    ok = True
+    for rid, (_sig, _body, nargs) in g.RULES.items():
+        fname = REAL_FUNC_NAMES[rid]
+        for sweep in range(po.p):
+            names = po.arg_rotation(rid, nargs, sweep)
+            code = g.instantiate(rid, fname, names)
+            try:
+                _ast.parse(code)
+            except Exception:  # noqa: BLE001
+                ok = False
+                check("C10", False, f"rid={rid} sweep={sweep} AST fail: {code}")
+                continue
+            ids = tokenize_code(code)
+            if TOK2ID["UNK"] in ids:
+                ok = False
+                check("C10", False, f"rid={rid} sweep={sweep} UNK: {code!r}")
+    check("C10", ok, "all rules x arg-sets AST-valid + FSA-closed")
+
+
 if __name__ == "__main__":
     test_null_identity()
     test_cache_determinism()
@@ -162,6 +201,7 @@ if __name__ == "__main__":
     test_persistence()
     test_fastweight()
     test_partition()
+    test_arg_rotation_closure()
     print("=" * 50)
     print("CONTRACT_V060:", "ALL PASS" if not FAILS else f"FAILS: {FAILS}")
     sys.exit(1 if FAILS else 0)
