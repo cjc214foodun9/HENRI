@@ -1,0 +1,28 @@
+{
+  "tag": "heldout52_v054",
+  "n": 52,
+  "seed": 99991,
+  "sha256": "a09bf275ef7f09a72a88f78dd36b78e1ab752a1cb79d4960004646da90440a54",
+  "utc": "2026-08-24T06:54:26.277285+00:00",
+  "phase": "heldout",
+  "single_use": true,
+  "stratified_families": {
+    "1": 4,
+    "8": 4,
+    "6": 4,
+    "7": 4,
+    "0": 4,
+    "12": 4,
+    "9": 4,
+    "4": 4,
+    "5": 4,
+    "11": 4,
+    "2": 4,
+    "10": 4,
+    "3": 4
+  },
+  "verifier_per_task": 4,
+  "outcome_per_task": 4,
+  "generator": "eval_v054_heldout.build_split_stratified (13 families x 4 = 52, seeded family shuffle)",
+  "evaluator_sha256": "59a2ce1c5a643174ef19d4d58aeb394ca585cec6c31a69a5cc4d016fc5f65696"
+}

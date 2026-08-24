@@ -1,0 +1,199 @@
+LOADED /root/henri-system1/ckpt_v041/checkpoint.pt step=1000
+HELDOUT heldout52_v054 n=52 seed=99991 sha=a09bf275ef7f09a7
+[5/52] t=19s
+[10/52] t=38s
+[15/52] t=59s
+[20/52] t=79s
+[25/52] t=99s
+[30/52] t=120s
+[35/52] t=139s
+[40/52] t=162s
+[45/52] t=181s
+[50/52] t=200s
+{
+  "run": "system1_v054_heldout_ab13",
+  "ckpt": "/root/henri-system1/ckpt_v041/checkpoint.pt",
+  "heldout_split": {
+    "tag": "heldout52_v054",
+    "n": 52,
+    "seed": 99991,
+    "sha256": "a09bf275ef7f09a72a88f78dd36b78e1ab752a1cb79d4960004646da90440a54"
+  },
+  "budget": 64,
+  "beam_width": 64,
+  "runtime_s": 207.64356207847595,
+  "arms": {
+    "A": {
+      "outcome_pass_rate": 0.23076923076923078,
+      "ci90": [
+        0.1346153846153846,
+        0.3269230769230769
+      ],
+      "calls": {
+        "mean": 1.0,
+        "median": 1,
+        "p90": 1,
+        "max": 1
+      },
+      "ast_valid_rate": 1.0,
+      "family_rates": {
+        "0": 1.0,
+        "1": 1.0,
+        "2": 1.0,
+        "3": 0.0,
+        "4": 0.0,
+        "5": 0.0,
+        "6": 0.0,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0,
+        "10": 0.0,
+        "11": 0.0,
+        "12": 0.0
+      },
+      "budget_success": {
+        "1": 0.23076923076923078,
+        "2": 0.23076923076923078,
+        "4": 0.23076923076923078,
+        "8": 0.23076923076923078
+      }
+    },
+    "B13": {
+      "outcome_pass_rate": 0.9230769230769231,
+      "ci90": [
+        0.8653846153846154,
+        0.9807692307692307
+      ],
+      "calls": {
+        "mean": 4.384615384615385,
+        "median": 4,
+        "p90": 9,
+        "max": 9
+      },
+      "ast_valid_rate": 1.0,
+      "family_rates": {
+        "0": 1.0,
+        "1": 1.0,
+        "2": 1.0,
+        "3": 1.0,
+        "4": 1.0,
+        "5": 1.0,
+        "6": 1.0,
+        "7": 1.0,
+        "8": 1.0,
+        "9": 1.0,
+        "10": 0.0,
+        "11": 1.0,
+        "12": 1.0
+      },
+      "budget_success": {
+        "1": 0.15384615384615385,
+        "2": 0.3076923076923077,
+        "4": 0.6153846153846154,
+        "8": 0.8461538461538461
+      }
+    },
+    "B7": {
+      "outcome_pass_rate": 0.5384615384615384,
+      "ci90": [
+        0.4230769230769231,
+        0.6538461538461539
+      ],
+      "calls": {
+        "mean": 3.0,
+        "median": 3,
+        "p90": 4,
+        "max": 4
+      },
+      "ast_valid_rate": 1.0,
+      "family_rates": {
+        "0": 1.0,
+        "1": 1.0,
+        "2": 1.0,
+        "3": 1.0,
+        "4": 1.0,
+        "5": 1.0,
+        "6": 1.0,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0,
+        "10": 0.0,
+        "11": 0.0,
+        "12": 0.0
+      },
+      "budget_success": {
+        "1": 0.15384615384615385,
+        "2": 0.3076923076923077,
+        "4": 0.5384615384615384,
+        "8": 0.5384615384615384
+      }
+    }
+  },
+  "oracle_outcome_support": 0.9230769230769231,
+  "paired": {
+    "B13_vs_A": {
+      "both": 12,
+      "B13_only": 36,
+      "A_only": 0,
+      "neither": 4,
+      "mcnemar_p": 2.9103830456733704e-11
+    },
+    "B7_vs_A": {
+      "both": 12,
+      "B7_only": 16,
+      "A_only": 0,
+      "neither": 24,
+      "mcnemar_p": 3.0517578125e-05
+    },
+    "B13_vs_B7_diagnostic_only": {
+      "both": 28,
+      "B13_only": 20,
+      "B7_only": 0,
+      "neither": 4,
+      "mcnemar_p": 1.9073486328125e-06
+    }
+  },
+  "delta_B13_minus_A": {
+    "mean": 0.6923076923076923,
+    "ci90": [
+      0.5769230769230769,
+      0.7884615384615384
+    ]
+  },
+  "gates": {
+    "promotion": true,
+    "validity_preserved": true,
+    "min_ast_valid": 1.0
+  },
+  "verdict": "HELDOUT_13_RULE_CARRIER_PROMOTED",
+  "attribution_boundary": "A vs B13 promotes the 13-rule carrier; B7 is diagnostic only; B13-vs-B7 incremental attribution NOT claimed from this run",
+  "heldout_guard": {
+    "consumed_digests": [
+      "887d0d6c",
+      "23b36795",
+      "82c97532",
+      "db027f9c",
+      "9d4c29ad",
+      "1f81e4d0",
+      "181cc59b",
+      "092cb0c1",
+      "2eb8d29b",
+      "78b4cfb4",
+      "7a8c1e7b",
+      "306ab62d",
+      "6b5bb1b4",
+      "0ec0528d",
+      "0535a2dc",
+      "35d15aae",
+      "5e5f4a00",
+      "ce2a76fb",
+      "9a17af61",
+      "635c2aaa",
+      "888809df",
+      "8ea34261"
+    ],
+    "single_use": true,
+    "quarantine": true
+  }
+}
+RECEIPT /root/henri-system1/ckpt_v054/eval_v054_heldout.json
