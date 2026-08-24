@@ -1,0 +1,58 @@
+LOADED /root/henri-system1/ckpt_v041/checkpoint.pt step=1000
+DEV_SPLIT dev42_v04 n=40 seed=90055 sha=82c975328377a17b
+[10/40] t=20s
+[20/40] t=38s
+[30/40] t=57s
+[40/40] t=75s
+EVAL: {
+  "run": "system1_v042_cegis_beam",
+  "ckpt": "/root/henri-system1/ckpt_v041/checkpoint.pt",
+  "ckpt_sha": "11d56121e4b091e2162078eb4cae71ce213dacc01397d8f8209bc9e2152a8f4d",
+  "dev_split": {
+    "tag": "dev42_v04",
+    "n": 40,
+    "seed": 90055,
+    "sha256": "82c975328377a17b305a101d6031ee845844adfba1e63354a40315e1701a5d48"
+  },
+  "beta": 0.4,
+  "width": 16,
+  "n_tasks": 40,
+  "pass": {
+    "beta0": 21,
+    "beta1": 21,
+    "delta": 0.0
+  },
+  "transitions": {
+    "both": 21,
+    "beta0_only": 0,
+    "beta1_only": 0,
+    "neither": 19
+  },
+  "mcnemar_p": 1.0,
+  "engagement": {
+    "traj_changed_frac": 1.0,
+    "mean_first_divergence": 15.8
+  },
+  "ast_valid_rate": {
+    "beta0": 1.0,
+    "beta1": 1.0
+  },
+  "energy_assoc": {
+    "n_pairs": 320,
+    "spearman_raw": 0.4153
+  },
+  "runtime_s": 75.5,
+  "gates": {
+    "engagement_gate_pass": true,
+    "validity_gate_pass": true,
+    "efficacy_gate_pass": false,
+    "promotion_gate_pass": false,
+    "classification": "ENGAGED_DIAGNOSTIC_NOT_PROMOTED",
+    "power_note": "n=40: underpowered; McNemar can only reach p<0.05 with >=5 discordant pairs."
+  },
+  "heldout_guard": {
+    "consumed_heldout_digest": "887d0d6c",
+    "quarantine": true
+  }
+}
+RECEIPT /root/henri-system1/ckpt_v042/eval_cegis.json
