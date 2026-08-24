@@ -27,7 +27,7 @@ v0.5.5:         rule 10 body: "return sum(range(len({a})))"
 | train_v051_discriminator.py | dd596e93327fb994b83407d0b7156cc491ccf65a233a643f1cec4925c0e6d651 |
 | v041_energy_checkpoint.pt | 11d56121e4b091e2162078eb4cae71ce213dacc01397d8f8209bc9e2152a8f4d |
 | eval_v055_heldout.py | 10bcd8a8bfe1ba73776393ca025e57b21cacfb41e47c6d72f1ad896a1da76f58 |
-| contract_v055_closure.py | 1c746de7275434bb8bb4ada7ed9161cab16dc557892a7dd6a7aa22335ae96db0 |
+| contract_v055_closure.py | 45f2d6baf05c33680258c6e7 (patched before seal: added `_build_tests` building disjoint verifier/outcome fixtures exactly like `build_split` — `gen_task` output lacks `verifier_tests`; hashed post-patch) |
 
 ## 3. Semantic closure contract (must PASS before seal)
 
