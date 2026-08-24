@@ -43,6 +43,11 @@ disposable dev split only.
 
 ## 4. Gates + verdict chain (pre-registered)
 
+- Split: dev9_v0601, seed 90909, **n=65 (13 families × 5 tasks — n must be
+  divisible by 13 for exact stratification; n=60 crashed the stratifier at
+  startup before any task ran; out dir empty → zero exposure, no quarantine)**.
+  Disposable dev split; sealed `87390286…`/`a09bf275…` in consumed guard.
+
 - G1 integrity: fresh disposable dev split; guard passed (sealed
   `87390286…` and `a09bf275…` in consumed digest list); R0 == B13.
 - G2 outcome preservation: rate(R1) >= rate(B13) AND per-family support
