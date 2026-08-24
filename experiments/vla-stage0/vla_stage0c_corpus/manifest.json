@@ -1,0 +1,101 @@
+{
+  "generator": "vla_stage0c_corpus_builder.py",
+  "version": 2,
+  "wrapper": "Stage0GymWrapper (provenance eb1a061c)",
+  "episode_seeds": [
+    101,
+    202,
+    303,
+    404,
+    505,
+    606,
+    707,
+    808,
+    909,
+    1010,
+    1111,
+    1212,
+    1313,
+    1414,
+    1515
+  ],
+  "max_steps_per_episode": 100,
+  "created_utc": "2026-08-24",
+  "files": {
+    "seed_101.jsonl": {
+      "episode_seed": 101,
+      "records": 16,
+      "sha256": "85e90023f9623acec165fe27a80abac51d2e888502b87d10c74a89ab04de176f"
+    },
+    "seed_202.jsonl": {
+      "episode_seed": 202,
+      "records": 22,
+      "sha256": "b3d558c9346e3799c489bf9cbef9a04860526b6dd0f4bfd2a03a5f21c8977e60"
+    },
+    "seed_303.jsonl": {
+      "episode_seed": 303,
+      "records": 13,
+      "sha256": "eeda78879b330af5f29a71eeb36d3622b569e93b9a32b80f61e8e3ffe0da7e1d"
+    },
+    "seed_404.jsonl": {
+      "episode_seed": 404,
+      "records": 17,
+      "sha256": "63a46b87d3bf30545ddae187489545cd35a6cd6e25d82a8fdcc6ee054cbc9d5c"
+    },
+    "seed_505.jsonl": {
+      "episode_seed": 505,
+      "records": 10,
+      "sha256": "e35f64835a224bdefc5fb39c33d39c310d344291a989ae03fe828f3154b63527"
+    },
+    "seed_606.jsonl": {
+      "episode_seed": 606,
+      "records": 20,
+      "sha256": "d4b966125dc7a88cf36fbf8c14569718b0cc234a40485101089ae19339bc104f"
+    },
+    "seed_707.jsonl": {
+      "episode_seed": 707,
+      "records": 29,
+      "sha256": "80c7f71056155681cfc182e69f7ae48a1db153ba5828584eb67c59a051949e49"
+    },
+    "seed_808.jsonl": {
+      "episode_seed": 808,
+      "records": 28,
+      "sha256": "3c5a1cd1d121ba5a94787fc1f8eb314e1f3b0d4dec532cdb2ca754823f03fbf6"
+    },
+    "seed_909.jsonl": {
+      "episode_seed": 909,
+      "records": 46,
+      "sha256": "953ddc6c313fba123b1816cd744f789399576c6830b4a251a244444da5057773"
+    },
+    "seed_1010.jsonl": {
+      "episode_seed": 1010,
+      "records": 12,
+      "sha256": "e68a35fc388202d7814aa2ae917ed51b123d92c642e80ee9b6e07a27f585ce70"
+    },
+    "seed_1111.jsonl": {
+      "episode_seed": 1111,
+      "records": 13,
+      "sha256": "eff424544fa484009fd33ad0b7d7f2579657a7263bfa30847edcfaeb280a8218"
+    },
+    "seed_1212.jsonl": {
+      "episode_seed": 1212,
+      "records": 21,
+      "sha256": "0868514c2cd760800212071c09bd548affdca42254e33583027b0c2749cd2e63"
+    },
+    "seed_1313.jsonl": {
+      "episode_seed": 1313,
+      "records": 18,
+      "sha256": "8393d3914f2b11f5dcd18f93742a8825b819443d3db61f83d4a646b0aa2c3145"
+    },
+    "seed_1414.jsonl": {
+      "episode_seed": 1414,
+      "records": 17,
+      "sha256": "9eb447958c5c7e6fa04ee77f61a0c7e1b59db4871d0438260a09dd94a20df4ab"
+    },
+    "seed_1515.jsonl": {
+      "episode_seed": 1515,
+      "records": 22,
+      "sha256": "8810506f010d8ddca50042262762e71de84a1731866421bf46226a96f60be1fa"
+    }
+  }
+}
