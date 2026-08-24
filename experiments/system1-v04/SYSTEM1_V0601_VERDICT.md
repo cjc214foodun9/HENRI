@@ -85,3 +85,22 @@ Bank `ca4bb787…`, 2026-08-24, after telemetry existed; 16 sources cited.
   zero accuracy loss in the cited forecasters study [9,18].
 - **Offered JAX/Triton schema work DECLINED** (mock-loop pattern; recorded,
   not accepted).
+
+## Mechanism-correction addendum (2026-08-24, post-hoc re-analysis)
+
+- **Prior attribution (Scenario B saturation) CORRECTED.** Re-analysis of
+  `eval_v0601_per_task.json` (same bytes, no re-run) shows first-pass ranks
+  uniform across 1–9: dist {1:10, 2:10, 3:10, 4:10, 5:5, 6:5, 7:5, 8:5, 9:5},
+  mean 4.231, rank-1 rate 0.154. The correct candidate was NOT predominantly
+  at rank 1. The search space was not saturated.
+- **Corrected mechanism:** the β=0.15 cosine ranker reordered 60/65 pools but
+  never promoted the correct candidate (R1 first-pass-rank distribution
+  identical to B13, calls identical). The similarity signal is uncorrelated
+  with candidate correctness at this scale. Verdict `NO_EFFECT` stands;
+  mechanism attribution changes from "bypassed tail" to
+  "engagement without correctness correlation".
+- **Consequence for the entropy-gate proposal:** a gate that accepts rank-1
+  unverified would achieve outcome pass ≈ 0.154, not 1.00. Any safe gate can
+  only stop after a verified pass (already the behavior) → zero call savings
+  within a task. A cost-margin claim requires a validated surrogate that
+  predicts first-pass rank, which is NOT demonstrated by this telemetry.
