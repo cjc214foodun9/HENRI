@@ -1,0 +1,255 @@
+{
+  "run": "system1_v055_heldout_ab13",
+  "ckpt": "/root/henri-system1/ckpt_v041/checkpoint.pt",
+  "heldout_split": {
+    "tag": "heldout53_v055",
+    "n": 52,
+    "seed": 60013,
+    "sha256": "873902867001b7f19abf3e2641b10913f2c57c4fb2e23d609078a471edc9c9ed"
+  },
+  "budget": 64,
+  "beam_width": 64,
+  "runtime_s": 201.09671759605408,
+  "arms": {
+    "A": {
+      "outcome_pass_rate": 0.23076923076923078,
+      "ci90": [
+        0.1346153846153846,
+        0.3269230769230769
+      ],
+      "calls": {
+        "mean": 1.0,
+        "median": 1,
+        "p90": 1,
+        "max": 1
+      },
+      "ast_valid_rate": 1.0,
+      "family_rates": {
+        "0": 1.0,
+        "1": 1.0,
+        "2": 1.0,
+        "3": 0.0,
+        "4": 0.0,
+        "5": 0.0,
+        "6": 0.0,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0,
+        "10": 0.0,
+        "11": 0.0,
+        "12": 0.0
+      },
+      "family_support_counts": {
+        "0": [
+          4,
+          4
+        ],
+        "1": [
+          4,
+          4
+        ],
+        "2": [
+          4,
+          4
+        ],
+        "3": [
+          0,
+          4
+        ],
+        "4": [
+          0,
+          4
+        ],
+        "5": [
+          0,
+          4
+        ],
+        "6": [
+          0,
+          4
+        ],
+        "7": [
+          0,
+          4
+        ],
+        "8": [
+          0,
+          4
+        ],
+        "9": [
+          0,
+          4
+        ],
+        "10": [
+          0,
+          4
+        ],
+        "11": [
+          0,
+          4
+        ],
+        "12": [
+          0,
+          4
+        ]
+      },
+      "budget_success": {
+        "1": 0.23076923076923078,
+        "2": 0.23076923076923078,
+        "4": 0.23076923076923078,
+        "8": 0.23076923076923078
+      }
+    },
+    "B13": {
+      "outcome_pass_rate": 1.0,
+      "ci90": [
+        1.0,
+        1.0
+      ],
+      "calls": {
+        "mean": 4.230769230769231,
+        "median": 4,
+        "p90": 8,
+        "max": 9
+      },
+      "ast_valid_rate": 1.0,
+      "family_rates": {
+        "0": 1.0,
+        "1": 1.0,
+        "2": 1.0,
+        "3": 1.0,
+        "4": 1.0,
+        "5": 1.0,
+        "6": 1.0,
+        "7": 1.0,
+        "8": 1.0,
+        "9": 1.0,
+        "10": 1.0,
+        "11": 1.0,
+        "12": 1.0
+      },
+      "family_support_counts": {
+        "0": [
+          4,
+          4
+        ],
+        "1": [
+          4,
+          4
+        ],
+        "2": [
+          4,
+          4
+        ],
+        "3": [
+          4,
+          4
+        ],
+        "4": [
+          4,
+          4
+        ],
+        "5": [
+          4,
+          4
+        ],
+        "6": [
+          4,
+          4
+        ],
+        "7": [
+          4,
+          4
+        ],
+        "8": [
+          4,
+          4
+        ],
+        "9": [
+          4,
+          4
+        ],
+        "10": [
+          4,
+          4
+        ],
+        "11": [
+          4,
+          4
+        ],
+        "12": [
+          4,
+          4
+        ]
+      },
+      "budget_success": {
+        "1": 0.15384615384615385,
+        "2": 0.3076923076923077,
+        "4": 0.6153846153846154,
+        "8": 0.9230769230769231
+      }
+    }
+  },
+  "oracle_outcome_support": 1.0,
+  "paired": {
+    "B13_vs_A": {
+      "both": 12,
+      "B13_only": 40,
+      "A_only": 0,
+      "neither": 0,
+      "mcnemar_p": 1.8189894035458565e-12
+    }
+  },
+  "delta_B13_minus_A": {
+    "mean": 0.7692307692307692,
+    "ci90": [
+      0.6730769230769231,
+      0.8653846153846154
+    ]
+  },
+  "gates": {
+    "efficacy": true,
+    "validity_admitted_1.0": true,
+    "min_family_outcome_support_1.0": true,
+    "integrity": true,
+    "min_ast_valid": 1.0
+  },
+  "verdict": "HELDOUT_13_RULE_CARRIER_CLEAN_PROMOTED",
+  "attribution_boundary": "A vs B13 promotes the CORRECTED 13-rule carrier; v0.6.0.1/v0.6.1/v0.6.2 are separate carriers, nothing attributed",
+  "heldout_guard": {
+    "consumed_digests": [
+      "887d0d6c",
+      "23b36795",
+      "82c97532",
+      "db027f9c",
+      "9d4c29ad",
+      "1f81e4d0",
+      "181cc59b",
+      "092cb0c1",
+      "2eb8d29b",
+      "78b4cfb4",
+      "7a8c1e7b",
+      "306ab62d",
+      "6b5bb1b4",
+      "0ec0528d",
+      "0535a2dc",
+      "35d15aae",
+      "5e5f4a00",
+      "ce2a76fb",
+      "9a17af61",
+      "635c2aaa",
+      "888809df",
+      "8ea34261",
+      "a09bf275ef7f09a72a88f78dd36b78e1ab752a1cb79d4960004646da90440a54",
+      "d6b79d510620efdc5b9ea80e629a736b7cbad763adb13b934eb627f038f7f804",
+      "392ce03e3b35ab4a8df4dc834d96e69dffed50d2e38716a02344a2f14526460f",
+      "338cbda609321213ee907b1f71c66a927fc2628ed251910101768d38ca0477ca",
+      "44657c7f96da7fdc70e8ec5a0cfcb90c0ef049439d88a9cd9de9a7e49e4c9a7c",
+      "bed7368d227bbb55e8c448e6676b18e628e97a95972cfb0992ee638bae1d9ccc",
+      "928e40af50001d4101d421a853f0bbdb2e39cef83b4c2d6ce7d62a6787890e40",
+      "4b7d854d1d7ad026f95a9a5a42877a02fb47a4aa7ce0fbc5d8518ee7f2a84102"
+    ],
+    "single_use": true,
+    "quarantine": true
+  }
+}
