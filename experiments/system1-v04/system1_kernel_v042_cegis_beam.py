@@ -87,6 +87,7 @@ class CEGISBeamPriorityDecoder:
         beam_width: int = 16,
         max_len: int = 48,
         beta_priority: float = 0.0,
+        return_all_finals: bool = False,
     ) -> tuple[list[int], dict]:
         """Return (best_seq_ids, record). record holds engagement data and the
         final top-4 candidates (ids, energy) for sandbox-level association."""
@@ -146,8 +147,12 @@ class CEGISBeamPriorityDecoder:
         order = sorted(range(beam_width),
                        key=lambda i: (scores[i].item(), -i), reverse=True)
         best = seqs[order[0]]
-        finals = [(seqs[i], ener[i][-1] if ener[i] else None)
-                  for i in order[:4]]
+        if return_all_finals:
+            finals = [(seqs[i], float(scores[i].item()),
+                       ener[i][-1] if ener[i] else None) for i in order]
+        else:
+            finals = [(seqs[i], ener[i][-1] if ener[i] else None)
+                      for i in order[:4]]
         return best, {
             "final_candidates": finals,
             "best_score": float(scores[order[0]].item()),

@@ -126,7 +126,32 @@ def main() -> int:
           f"non-degenerate={'PASS' if c5b else 'FAIL'} "
           f"core!=raw={'PASS' if c5c else 'FAIL'}")
 
-    ok = c1_ok and changed >= 1 and c3_ok and c4_ok and c5a and c5b and c5c
+    # ---- C6: return_all_finals shape + identity with default path ----
+    c6_ok = True
+    for i in range(len(tasks)):
+        best, rec_all = dec.decode_cegis_beam(
+            z0[i:i + 1], sp[i:i + 1], beam_width=16, beta_priority=0.0,
+            return_all_finals=True)
+        finals = rec_all["final_candidates"]
+        if len(finals) != 16:
+            c6_ok = False
+            print(f"  C6 count task {i}: {len(finals)} != 16")
+        for item in finals:
+            if len(item) != 3:
+                c6_ok = False
+                print(f"  C6 tuple shape task {i}: {item}")
+        if finals[0][0] != best:
+            c6_ok = False
+            print(f"  C6 best != top final task {i}")
+        # dedupe sanity: distinct finals may share seqs only via EOS
+        seqs = [tuple(f[0]) for f in finals]
+        if len(seqs) != len(set(seqs)):
+            print(f"  C6 note task {i}: {len(seqs) - len(set(seqs))} dup finals")
+    print(f"C6 return_all_finals (count/shape/best): "
+          f"{'PASS' if c6_ok else 'FAIL'}")
+
+    ok = c1_ok and changed >= 1 and c3_ok and c4_ok and c5a and c5b and c5c \
+        and c6_ok
     print(f"CONTRACT {'PASS' if ok else 'FAIL'}")
     return 0 if ok else 1
 
