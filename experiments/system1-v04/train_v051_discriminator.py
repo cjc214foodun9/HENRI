@@ -73,7 +73,7 @@ N_TESTS = N_VERIFIER + N_OUTCOME
 # ---------------------------------------------------------------------------
 
 def _expected(fid: int, args_list: list) -> object:
-    """Reference implementation for the 7-family DSL (mirrors gen_task)."""
+    """Reference implementation for the 13-family DSL (mirrors gen_task)."""
     a = args_list[0]
     if fid == 0:
         return sum(a)
@@ -87,13 +87,33 @@ def _expected(fid: int, args_list: list) -> object:
         return tuple(sorted(set(args_list[0]) | set(args_list[1])))
     if fid == 5:
         return [x + y for x, y in zip(args_list[0], args_list[1])]
-    return math.factorial(a)
+    if fid == 6:
+        return math.factorial(a)
+    if fid == 7:
+        return min(a)
+    if fid == 8:
+        return [abs(x) for x in a]
+    if fid == 9:
+        return sorted(a)
+    if fid == 10:
+        return sum(range(len(a)))
+    if fid == 11:
+        return [x - y for x, y in zip(args_list[0], args_list[1])]
+    prod = 1
+    for x in a:
+        prod *= x
+    return prod
 
 
-def build_split(out_dir: str, n_tasks: int, seed: int, tag: str) -> list[dict]:
+def build_split(out_dir: str, n_tasks: int, seed: int, tag: str,
+                n_families: int = 7) -> list[dict]:
     """Deterministic multi-test split. Creates tasks with 8 tests each
     (4 verifier + 4 outcome), a random-ish input set, and stores the
-    canonical code + fp + tests + partition."""
+    canonical code + fp + tests + partition.
+
+    n_families: how many DSL families to sample from (7 = v0.5.1/0.5.2
+    compatibility; 13 = grammar-expansion cycle). Default 7 preserves
+    prior split reproducibility exactly."""
     out = pathlib.Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     p = out / f"{tag}.json"
@@ -103,7 +123,7 @@ def build_split(out_dir: str, n_tasks: int, seed: int, tag: str) -> list[dict]:
     rng = random.Random(seed)
     tasks = []
     for i in range(n_tasks):
-        t = gen_task(rng)
+        t = gen_task(rng, fid=rng.randrange(n_families))
         name, fid, nargs = t["name"], t["fid"], t["nargs"]
         # generate 8 fresh inputs per task (4 verifier + 4 outcome),
         # guaranteeing cross-boundary input uniqueness so verifier/outcome
@@ -159,7 +179,21 @@ def _rand_args(rng: random.Random, fid: int) -> list:
         n = rng.randint(2, 6)
         return [[rng.randint(-10, 10) for _ in range(n)],
                 [rng.randint(-10, 10) for _ in range(n)]]
-    return [rng.randint(0, 8)]
+    if fid == 6:
+        return [rng.randint(0, 8)]
+    if fid == 7:
+        return [[rng.randint(-10, 10) for _ in range(rng.randint(2, 8))]]
+    if fid == 8:
+        return [[rng.randint(-10, 10) for _ in range(rng.randint(2, 8))]]
+    if fid == 9:
+        return [[rng.randint(-10, 10) for _ in range(rng.randint(2, 8))]]
+    if fid == 10:
+        return [[rng.randint(-10, 10) for _ in range(rng.randint(2, 8))]]
+    if fid == 11:
+        n = rng.randint(2, 6)
+        return [[rng.randint(-10, 10) for _ in range(n)],
+                [rng.randint(-10, 10) for _ in range(n)]]
+    return [[rng.randint(1, 6) for _ in range(rng.randint(2, 7))]]
 
 
 def _args_key(args_list: list) -> tuple:

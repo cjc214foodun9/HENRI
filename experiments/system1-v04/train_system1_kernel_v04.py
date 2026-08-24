@@ -62,7 +62,7 @@ STAGE_FIDS = {"A": [0, 1, 2], "B": [0, 1, 2, 3, 4], "C": list(range(7))}
 
 def gen_task(rng: random.Random, fid: int | None = None) -> dict:
     if fid is None:
-        fid = rng.randrange(7)
+        fid = rng.randrange(7)   # default stays 7 (v0.4 trainer unchanged)
     if fid == 0:
         name, sig, body = "sum_list", "def sum_list(xs):", "    return sum(xs)"
         n = rng.randint(2, 8); xs = [rng.randint(-10, 10) for _ in range(n)]
@@ -109,13 +109,57 @@ def gen_task(rng: random.Random, fid: int | None = None) -> dict:
         tests = [f"assert {name}({a}, {b}) == {[x + y for x, y in zip(a, b)]}"]
         prompt = "Write a function that returns the elementwise sum of two equal-length lists."
         nargs = 2
-    else:
+    elif fid == 6:
         name = "factorial"; nargs = 1
         sig = "def factorial(n):"
         body = "    res = 1\n    for i in range(1, n + 1):\n        res = res * i\n    return res"
         k = rng.randint(0, 8)
         tests = [f"assert {name}({k}) == {math.factorial(k)}"]
         prompt = "Write a function that returns the factorial of a non-negative integer."
+    elif fid == 7:
+        name, sig, body = "m", "def m(xs):", "    return min(xs)"
+        n = rng.randint(2, 8); xs = [rng.randint(-10, 10) for _ in range(n)]
+        tests = [f"assert {name}({xs}) == {min(xs)}"]
+        prompt = "Write a function that returns the smallest element of a list of integers."
+        nargs = 1
+    elif fid == 8:
+        name, sig, body = "v", "def v(xs):", "    return [abs(x) for x in xs]"
+        n = rng.randint(2, 8); xs = [rng.randint(-10, 10) for _ in range(n)]
+        tests = [f"assert {name}({xs}) == {[abs(x) for x in xs]}"]
+        prompt = "Write a function that returns the absolute values of each element of a list."
+        nargs = 1
+    elif fid == 9:
+        name, sig, body = "n", "def n(xs):", "    return sorted(xs)"
+        n = rng.randint(2, 8); xs = [rng.randint(-10, 10) for _ in range(n)]
+        tests = [f"assert {name}({xs}) == {sorted(xs)}"]
+        prompt = "Write a function that returns a sorted copy of a list of integers."
+        nargs = 1
+    elif fid == 10:
+        name, sig, body = "a", "def a(xs):", "    return sum(range(len(xs)))"
+        n = rng.randint(2, 8); xs = [rng.randint(-10, 10) for _ in range(n)]
+        tests = [f"assert {name}({xs}) == {sum(range(len(xs)))}"]
+        prompt = "Write a function that returns the sum of indices 0..len(xs)-1 of a list."
+        nargs = 1
+    elif fid == 11:
+        name, sig, body = "b", "def b(t1, t2):", \
+            "    return [x - y for x, y in zip(t1, t2)]"
+        n = rng.randint(2, 6)
+        t1 = [rng.randint(-10, 10) for _ in range(n)]
+        t2 = [rng.randint(-10, 10) for _ in range(n)]
+        tests = [f"assert {name}({t1}, {t2}) == {[x - y for x, y in zip(t1, t2)]}"]
+        prompt = "Write a function that returns the elementwise difference of two equal-length lists."
+        nargs = 2
+    else:
+        name, sig, body = "res", "def res(xs):", \
+            "    acc = 1\n    for x in xs:\n        acc = acc * x\n    return acc"
+        n = rng.randint(2, 7)
+        xs = [rng.randint(1, 6) for _ in range(n)]
+        prod = 1
+        for x in xs:
+            prod *= x
+        tests = [f"assert {name}({xs}) == {prod}"]
+        prompt = "Write a function that returns the product of all elements of a list."
+        nargs = 1
     return {"name": name, "code": sig + "\n" + body, "tests": tests,
             "prompt": prompt, "fid": fid, "nargs": nargs}
 

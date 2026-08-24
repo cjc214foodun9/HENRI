@@ -70,14 +70,19 @@ ENERGY_EPS = 1e-5
 
 
 # ---------------------------------------------------------------------------
-# 1. Production-rule skeleton grammar over the LIVE task DSL (7 families)
+# 1. Production-rule skeleton grammar over the LIVE task DSL
 # ---------------------------------------------------------------------------
 
 class SkeletonGrammar:
-    """Skeleton templates with FSA-valid live-vocab instantiation."""
+    """Skeleton templates with FSA-valid live-vocab instantiation.
 
-    # rule_id -> (name_template, body_template, nargs)
-    RULES: dict[int, tuple[str, str, int]] = {
+    n_rules controls how many rules are ACTIVE (default 7 = v0.5.1
+    compatibility; expansion cycle uses 13). All names/bodies are closed on
+    the live ~90-token vocab (contract-tested).
+    """
+
+    # rule_id -> (name_template, body_template, nargs)  (ALL rules)
+    RULES_ALL: dict[int, tuple[str, str, int]] = {
         0: ("def {f}({a}):", "    return sum({a})", 1),                      # sum_list
         1: ("def {f}({a}):", "    return max({a})", 1),                      # max_list
         2: ("def {f}({a}):", "    return sum(1 for x in {a} if x > 0)", 1),  # count_positive
@@ -90,8 +95,24 @@ class SkeletonGrammar:
         6: ("def {f}({a}):",
             "    res = 1\n    for i in range(1, {a} + 1):\n        res = res * i\n"
             "    return res", 1),                                            # factorial
+        7: ("def {f}({a}):", "    return min({a})", 1),                      # min_list
+        8: ("def {f}({a}):", "    return [abs(x) for x in {a}]", 1),         # abs_values
+        9: ("def {f}({a}):", "    return sorted({a})", 1),                   # sorted_list
+        10: ("def {f}({a}):", "    return sum(range({a}))", 1),              # range_sum
+        11: ("def {f}({a0}, {a1}):",
+             "    return [x - y for x, y in zip({a0}, {a1})]", 2),           # pair_diffs
+        12: ("def {f}({a}):",
+             "    acc = 1\n    for x in {a}:\n        acc = acc * x\n"
+             "    return acc", 1),                                           # list_product
     }
-    N_RULES = len(RULES)
+    N_RULES_ALL = len(RULES_ALL)
+
+    def __init__(self, n_rules: int = 7):
+        self.n_rules = int(n_rules)
+        if self.n_rules > self.N_RULES_ALL:
+            raise ValueError(f"n_rules {self.n_rules} > {self.N_RULES_ALL}")
+        self.RULES = {i: self.RULES_ALL[i] for i in range(self.n_rules)}
+        self.N_RULES = len(self.RULES)
 
     def instantiate(self, rule_id: int, func_name: str,
                     arg_names: list[str]) -> str | None:
@@ -148,7 +169,7 @@ class System1KernelV05(nn.Module):
         super().__init__()
         self.backbone = backbone
         self.core_steps = CORE_STEPS
-        self.grammar = SkeletonGrammar()
+        self.grammar = SkeletonGrammar(n_rules=num_rules)
         if d_slot is None:
             d_slot = backbone.cfg.d_slot          # live config (384)
         self.skeleton_head = SkeletonHead(d_slot=d_slot,
