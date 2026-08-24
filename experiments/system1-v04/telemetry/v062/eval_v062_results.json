@@ -1,0 +1,129 @@
+{
+  "run": "system1_v062_partition_dev",
+  "ckpt": "/root/henri-system1/ckpt_v041/checkpoint.pt",
+  "dev_split": {
+    "tag": "dev8_v062",
+    "n": 60,
+    "seed": 81828,
+    "sha256": "44657c7f96da7fdc70e8ec5a0cfcb90c0ef049439d88a9cd9de9a7e49e4c9a7c"
+  },
+  "budget": 64,
+  "beam_width": 64,
+  "sweeps": 3,
+  "runtime_s": 233.1871998310089,
+  "arms": {
+    "A": {
+      "outcome_pass_rate": 0.2833333333333333,
+      "ci90": [
+        0.2,
+        0.38333333333333336
+      ],
+      "calls": {
+        "mean": 1.0,
+        "median": 1,
+        "p90": 1,
+        "max": 1
+      }
+    },
+    "B13": {
+      "outcome_pass_rate": 0.9666666666666667,
+      "ci90": [
+        0.9166666666666666,
+        1.0
+      ],
+      "calls": {
+        "mean": 3.8666666666666667,
+        "median": 3,
+        "p90": 9,
+        "max": 9
+      }
+    },
+    "E": {
+      "outcome_pass_rate": 0.9666666666666667,
+      "ci90": [
+        0.9166666666666666,
+        1.0
+      ],
+      "calls": {
+        "mean": 5.216666666666667,
+        "median": 3,
+        "p90": 11,
+        "max": 27
+      }
+    }
+  },
+  "distinct_mean": {
+    "B13": 7.083333333333333,
+    "E": 21.25
+  },
+  "family_support": {
+    "0": {
+      "B13": 1.0,
+      "E": 1.0
+    },
+    "1": {
+      "B13": 1.0,
+      "E": 1.0
+    },
+    "2": {
+      "B13": 1.0,
+      "E": 1.0
+    },
+    "3": {
+      "B13": 1.0,
+      "E": 1.0
+    },
+    "4": {
+      "B13": 1.0,
+      "E": 1.0
+    },
+    "5": {
+      "B13": 1.0,
+      "E": 1.0
+    },
+    "6": {
+      "B13": 1.0,
+      "E": 1.0
+    },
+    "7": {
+      "B13": 1.0,
+      "E": 1.0
+    },
+    "8": {
+      "B13": 1.0,
+      "E": 1.0
+    },
+    "9": {
+      "B13": 1.0,
+      "E": 1.0
+    },
+    "10": {
+      "B13": 0.0,
+      "E": 0.0
+    },
+    "11": {
+      "B13": 1.0,
+      "E": 1.0
+    },
+    "12": {
+      "B13": 1.0,
+      "E": 1.0
+    }
+  },
+  "gates": {
+    "G0_identity": true,
+    "G1_pass": true,
+    "G2_no_regression": true,
+    "G3_cost": true,
+    "G4_diversity_2x": true
+  },
+  "paired_E_vs_B13": {
+    "both": 58,
+    "E_only": 0,
+    "B13_only": 0,
+    "neither": 2,
+    "mcnemar_p": 1.0
+  },
+  "verdict": "PARTITION_DIVERSITY_ONLY",
+  "note": "DEV ONLY. Family 10 structurally unsupported (frozen grammar rule-10 TypeError); reported for diagnosis only. Rotation changes code strings with identical semantics (positional calls) -> diversity metric, not semantics."
+}

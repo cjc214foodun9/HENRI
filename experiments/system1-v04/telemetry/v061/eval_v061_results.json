@@ -1,0 +1,134 @@
+{
+  "run": "system1_v061_fastweight_dev",
+  "ckpt": "/root/henri-system1/ckpt_v041/checkpoint.pt",
+  "dev_split": {
+    "tag": "dev7b_v061",
+    "n": 60,
+    "seed": 71728,
+    "sha256": "338cbda609321213ee907b1f71c66a927fc2628ed251910101768d38ca0477ca"
+  },
+  "budget": 64,
+  "beam_width": 64,
+  "fw": {
+    "rank": 8,
+    "eta": 0.5,
+    "lam": 0.95,
+    "reset_each_task": true
+  },
+  "runtime_s": 235.11079025268555,
+  "arms": {
+    "A": {
+      "outcome_pass_rate": 0.21666666666666667,
+      "ci90": [
+        0.13333333333333333,
+        0.31666666666666665
+      ],
+      "calls": {
+        "mean": 1.0,
+        "median": 1,
+        "p90": 1,
+        "max": 1
+      }
+    },
+    "B13": {
+      "outcome_pass_rate": 0.9166666666666666,
+      "ci90": [
+        0.85,
+        0.9666666666666667
+      ],
+      "calls": {
+        "mean": 5.033333333333333,
+        "median": 5,
+        "p90": 9,
+        "max": 9
+      }
+    },
+    "D": {
+      "outcome_pass_rate": 0.9166666666666666,
+      "ci90": [
+        0.85,
+        0.9666666666666667
+      ],
+      "calls": {
+        "mean": 5.033333333333333,
+        "median": 5,
+        "p90": 9,
+        "max": 9
+      }
+    }
+  },
+  "distinct_mean": {
+    "B13": 7.416666666666667,
+    "D": 7.416666666666667
+  },
+  "family_support": {
+    "0": {
+      "B13": 1.0,
+      "D": 1.0
+    },
+    "1": {
+      "B13": 1.0,
+      "D": 1.0
+    },
+    "2": {
+      "B13": 1.0,
+      "D": 1.0
+    },
+    "3": {
+      "B13": 1.0,
+      "D": 1.0
+    },
+    "4": {
+      "B13": 1.0,
+      "D": 1.0
+    },
+    "5": {
+      "B13": 1.0,
+      "D": 1.0
+    },
+    "6": {
+      "B13": 1.0,
+      "D": 1.0
+    },
+    "7": {
+      "B13": 1.0,
+      "D": 1.0
+    },
+    "8": {
+      "B13": 1.0,
+      "D": 1.0
+    },
+    "9": {
+      "B13": 1.0,
+      "D": 1.0
+    },
+    "10": {
+      "B13": 0.0,
+      "D": 0.0
+    },
+    "11": {
+      "B13": 1.0,
+      "D": 1.0
+    },
+    "12": {
+      "B13": 1.0,
+      "D": 1.0
+    }
+  },
+  "gates": {
+    "G0_identity": true,
+    "G1_pass": true,
+    "G2_no_regression": true,
+    "G3_cost": true,
+    "G4_diversity": true
+  },
+  "paired_D_vs_B13": {
+    "both": 55,
+    "D_only": 0,
+    "B13_only": 0,
+    "neither": 5,
+    "mcnemar_p": 1.0
+  },
+  "verdict": "FASTWEIGHT_NO_EFFECT",
+  "note": "DEV ONLY. Family 10 structurally unsupported (frozen grammar rule-10 TypeError); reported for diagnosis only."
+}
