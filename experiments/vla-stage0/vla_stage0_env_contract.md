@@ -28,7 +28,7 @@ premise-audit conclusion (transition pairs vs scalar labels). No new claims.
 
 | # | Contract |
 |---|---|
-| C1 | Real tuple provenance: (s_t, a_t, r_t, s_{t+1}, terminated, truncated, episode_id, step_id) appended per step; raw obs sha256 per step |
+| C1 | Real tuple provenance: (s_t, a_t, r_t, s_{t+1}, terminated, truncated, episode_id, step_id) appended per step; **BOTH `obs_t` and `obs_next` persisted with hashes**; chain continuity `record[t].obs_next == record[t+1].obs_t` asserted |
 | C2 | Same pinned seed + same action prefix → byte-identical traces |
 | C3 | Different seeds → non-vacuous difference |
 | C4 | Action validated against Discrete(2) before env.step |
@@ -36,6 +36,17 @@ premise-audit conclusion (transition pairs vs scalar labels). No new claims.
 | C6 | No state leakage across episodes; reset via `env.reset(seed=...)` ONLY; never mutate `env.unwrapped.state` as the reset mechanism |
 | C7 | Raw observations hashed per transition |
 | C8 | No synthetic states (`torch.randn` absent); no private-state mutation |
+
+## C1 provenance correction (2026-08-24, governance `stage0a-provenance-correction-20260824-001`)
+
+The ORIGINAL Stage-0a serialized records contained ONLY `obs_next` + `obs_next_hash`;
+`obs_t` was never persisted, so C1 (tuple provenance) was NOT demonstrated
+despite C2–C8 passing. Per the skill pitfall (a prose contract naming fields
+absent from emitted telemetry is FALSIFIED), the wrapper was patched to persist
+`obs_t` + `obs_t_hash` and assert chain continuity. Re-run: C1–C8 ALL PASS.
+- Corrected provenance: `vla_stage0_provenance.json` sha `eb1a061c…`
+  (8 transitions, seed 4242; obs_t present, chain continuity holds).
+- Original preserved: `vla_stage0_provenance_legacy.json` sha `9555c13d…`.
 
 Deterministic branch reconstruction (Reference 3): branch state =
 `reset(seed)` + `replay(action prefix)`; verify byte-identical trace.

@@ -44,6 +44,7 @@ class Stage0GymWrapper:
         self._episode_id = 0
         self._step_id = 0
         self._needs_reset = True
+        self._last_obs = None
         self._env.reset(seed=self._seed)
         self._needs_reset = False
 
@@ -67,9 +68,10 @@ class Stage0GymWrapper:
         self._step_id = 0
         obs, info = self._env.reset(seed=self._seed)
         self._needs_reset = False
-        return {"observation": np.asarray(obs, dtype=np.float32).copy(),
+        self._last_obs = np.asarray(obs, dtype=np.float32).copy()
+        return {"observation": self._last_obs.copy(),
                 "info": dict(info), "episode_id": self._episode_id,
-                "step_id": 0, "obs_hash": self._obs_hash(obs)}
+                "step_id": 0, "obs_hash": self._obs_hash(self._last_obs)}
 
     def step(self, action: int) -> dict:
         """Execute one real environment transition; append provenance."""
@@ -84,6 +86,7 @@ class Stage0GymWrapper:
         # observation is recorded (see verify() for the strict replay check).
         obs_next, reward, terminated, truncated, info = self._env.step(action)
         self._step_id += 1
+        obs_next = np.asarray(obs_next, dtype=np.float32)
         record = {
             "episode_id": self._episode_id,
             "step_id": self._step_id,
@@ -91,11 +94,14 @@ class Stage0GymWrapper:
             "reward": float(reward),
             "terminated": bool(terminated),
             "truncated": bool(truncated),
-            "obs_next": np.asarray(obs_next, dtype=np.float32).tolist(),
+            "obs_t": self._last_obs.tolist(),
+            "obs_t_hash": self._obs_hash(self._last_obs),
+            "obs_next": obs_next.tolist(),
             "obs_next_hash": self._obs_hash(obs_next),
             "info": {k: (v.item() if hasattr(v, "item") else v)
                      for k, v in info.items()},
         }
+        self._last_obs = obs_next.copy()
         self._transitions.append(record)
         if terminated or truncated:
             self._needs_reset = True
@@ -124,6 +130,32 @@ def verify() -> int:
     """Run the Stage-0a contract checks. Returns 0 on all-pass, 1 on failure."""
     import gymnasium as gym  # noqa: F401  (proves importability)
     failures: List[str] = []
+
+    # ---- C1: transition provenance with pre/post states + chain continuity ----
+    seed = 4242
+    actions = [0, 1, 0, 1, 0, 0, 1, 1]
+    w = Stage0GymWrapper(seed=seed)
+    w.reset()
+    for a in actions:
+        try:
+            w.step(a)
+        except RuntimeError:
+            break
+    bad = [t for t in w.transitions
+           if "obs_t" not in t or "obs_next" not in t
+           or "obs_t_hash" not in t or "obs_next_hash" not in t]
+    if bad:
+        failures.append("C1 FAIL: missing obs_t/obs_next/hashes in records")
+    else:
+        chain_ok = all(
+            w.transitions[i]["obs_next"] == w.transitions[i + 1]["obs_t"]
+            for i in range(len(w.transitions) - 1))
+        if chain_ok:
+            print("C1 PASS: pre/post states persisted; chain continuity holds "
+                  "(%d transitions)" % len(w.transitions))
+        else:
+            failures.append("C1 FAIL: chain continuity broken "
+                            "(obs_next != next obs_t)")
 
     # ---- C2: same seed + same action prefix -> byte-identical ----
     seed = 4242
