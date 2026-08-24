@@ -300,10 +300,12 @@ def main() -> None:
 
     if g1_pass and g2 and g3 and g4 and mc["mcnemar_p"] < 0.05:
         verdict = "RETRIEVAL_EFFICACY_PROMOTED"
-    elif not g1_pass:
-        verdict = "RETRIEVAL_NO_IMPROVEMENT"
+    elif not (g2 and g3):
+        verdict = "RETRIEVAL_REGRESSION"   # old-family displacement or cost blowup
+    elif g1_pass and mc["C_only"] == 0 and mc["B13_only"] == 0:
+        verdict = "RETRIEVAL_NO_EFFECT"    # identical outcomes; no harm, no gain
     else:
-        verdict = "RETRIEVAL_REGRESSION"
+        verdict = "RETRIEVAL_NO_IMPROVEMENT"
 
     family_support = {}
     for fid in sorted(set(fids)):
