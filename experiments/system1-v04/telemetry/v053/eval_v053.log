@@ -1,0 +1,130 @@
+SPLIT dev3_v053 n=60 sha=9a17af613a08 old_families=[0, 1, 2, 3, 4, 5, 6] new_families=[7, 8, 9, 10, 11, 12]
+[5/60] t=19s
+[10/60] t=37s
+[15/60] t=59s
+[20/60] t=78s
+[25/60] t=97s
+[30/60] t=117s
+[35/60] t=136s
+[40/60] t=155s
+[45/60] t=174s
+[50/60] t=192s
+[55/60] t=213s
+[60/60] t=232s
+{
+  "run": "system1_v053_grammar_expansion",
+  "ckpt": "/root/henri-system1/ckpt_v041/checkpoint.pt",
+  "dev_split": {
+    "tag": "dev3_v053",
+    "n": 60,
+    "seed": 37123,
+    "sha256": "9a17af613a088bbc1cdcab53536aae515341b6a0259ec5781478400ed6064524"
+  },
+  "budget": 64,
+  "beam_width": 64,
+  "runtime_s": 231.77554178237915,
+  "family_counts": {
+    "old": 40,
+    "new": 20
+  },
+  "arms": {
+    "A": {
+      "outcome_pass_rate": 0.3,
+      "ci90": [
+        0.2,
+        0.4
+      ],
+      "calls": {
+        "mean": 1.0,
+        "median": 1,
+        "p90": 1,
+        "max": 1
+      },
+      "mean_distinct": null
+    },
+    "B7": {
+      "outcome_pass_rate": 0.6666666666666666,
+      "ci90": [
+        0.5666666666666667,
+        0.7666666666666667
+      ],
+      "calls": {
+        "mean": 2.783333333333333,
+        "median": 3,
+        "p90": 4,
+        "max": 4
+      },
+      "mean_distinct": 3.6333333333333333
+    },
+    "B13": {
+      "outcome_pass_rate": 0.9833333333333333,
+      "ci90": [
+        0.95,
+        1.0
+      ],
+      "calls": {
+        "mean": 3.966666666666667,
+        "median": 3,
+        "p90": 9,
+        "max": 9
+      },
+      "mean_distinct": 7.166666666666667
+    }
+  },
+  "family_rates": {
+    "B7_old": 1.0,
+    "B13_old": 1.0,
+    "B13_new": 0.95,
+    "B13_new_ci90": [
+      0.85,
+      1.0
+    ]
+  },
+  "paired": {
+    "B13_vs_B7": {
+      "both": 40,
+      "B13_only": 19,
+      "B7_only": 0,
+      "neither": 1,
+      "mcnemar_p": 3.814697265625e-06
+    },
+    "B13_vs_A": {
+      "both": 18,
+      "B13_only": 41,
+      "A_only": 0,
+      "neither": 1,
+      "mcnemar_p": 9.094947017729282e-13
+    }
+  },
+  "gates": {
+    "support_new_families": true,
+    "no_dilution_old_families": true,
+    "overall_B13_ge_B7": true,
+    "cost_not_explosive": true
+  },
+  "kill": null,
+  "heldout_guard": {
+    "consumed_digests": [
+      "887d0d6c",
+      "23b36795",
+      "82c97532",
+      "db027f9c",
+      "9d4c29ad",
+      "1f81e4d0",
+      "181cc59b",
+      "092cb0c1",
+      "2eb8d29b",
+      "78b4cfb4",
+      "7a8c1e7b",
+      "306ab62d",
+      "6b5bb1b4",
+      "0ec0528d",
+      "0535a2dc",
+      "35d15aae",
+      "5e5f4a00",
+      "ce2a76fb"
+    ],
+    "quarantine": true
+  }
+}
+RECEIPT /root/henri-system1/ckpt_v053/eval_v053_expansion.json
