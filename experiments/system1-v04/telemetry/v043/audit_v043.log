@@ -1,0 +1,94 @@
+LOADED /root/henri-system1/ckpt_v041/checkpoint.pt step=1000
+DEV_SPLIT dev43_v04 n=40 seed=77031 sha=db027f9c50b38bbe
+[5/40] t=39s
+[10/40] t=73s
+[15/40] t=111s
+[20/40] t=146s
+[25/40] t=181s
+[30/40] t=216s
+[35/40] t=254s
+[40/40] t=292s
+AUDIT: {
+  "run": "system1_v043_oracle_support_audit",
+  "ckpt": "/root/henri-system1/ckpt_v041/checkpoint.pt",
+  "ckpt_sha": "11d56121e4b091e2162078eb4cae71ce213dacc01397d8f8209bc9e2152a8f4d",
+  "dev_split": {
+    "tag": "dev43_v04",
+    "n": 40,
+    "seed": 77031,
+    "sha256": "db027f9c50b38bbe72c616069365bc01d045be80485bda2e73ab57ae1dd46bf8"
+  },
+  "width": 64,
+  "beta_B": 0.4,
+  "n_tasks": 40,
+  "runtime_s": 292.0,
+  "A": {
+    "pass1": 0.425,
+    "pass1_ci90": [
+      0.3,
+      0.55
+    ],
+    "any_pass": {
+      "1": 0.425,
+      "2": 0.425,
+      "4": 0.425,
+      "8": 0.425,
+      "16": 0.425,
+      "32": 0.425,
+      "64": 0.425
+    },
+    "any_pass64_ci90": [
+      0.3,
+      0.55
+    ],
+    "mean_distinct_finals": 1.0,
+    "mean_unique_valid": 1.0,
+    "passer_energy_ranks": {
+      "n_tasks_with_passer": 17,
+      "mean_min_rank": 1.0
+    }
+  },
+  "B": {
+    "pass1": 0.425,
+    "pass1_ci90": [
+      0.3,
+      0.55
+    ],
+    "any_pass": {
+      "1": 0.425,
+      "2": 0.425,
+      "4": 0.425,
+      "8": 0.425,
+      "16": 0.425,
+      "32": 0.425,
+      "64": 0.425
+    },
+    "any_pass64_ci90": [
+      0.3,
+      0.55
+    ],
+    "mean_distinct_finals": 1.0,
+    "mean_unique_valid": 1.0,
+    "passer_energy_ranks": {
+      "n_tasks_with_passer": 17,
+      "mean_min_rank": 1.0
+    }
+  },
+  "energy_assoc": {
+    "n_pairs": 80,
+    "spearman_raw_pooled": 0.6092,
+    "note": "task-pooled, clustered (anti-conservative); diagnostic only"
+  },
+  "decision": {
+    "rule": "S = any_pass@64 - pass1; S>=0.15 with CI>0 -> SELECTION; S<=0.05 -> SUPPORT",
+    "S": 0.0,
+    "ci90_delta_lb": -0.25,
+    "verdict": "SUPPORT_FAILURE",
+    "next": "structural AST egress is the grounded next mechanism; unfreeze alone poorly grounded"
+  },
+  "heldout_guard": {
+    "consumed_heldout_digest": "887d0d6c",
+    "quarantine": true
+  }
+}
+RECEIPT /root/henri-system1/ckpt_v043/audit_support.json
