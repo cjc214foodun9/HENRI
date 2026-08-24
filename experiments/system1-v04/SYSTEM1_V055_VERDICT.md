@@ -63,3 +63,26 @@ heldout. No replay of `a09bf275…` (heldout52_v054) or any consumed digest.
 - v0.6.0 (retrieval), v0.6.1 (fast weights), v0.6.2 (partition) remain
   separate carriers with their own NO_EFFECT / DIVERSITY_ONLY verdicts;
   nothing from them is attributed to this promotion.
+
+## Post-measurement corpus interpretation (INFERRED, not OBSERVED)
+
+Consult #16, bank `ca4bb787…` (43 cited sources), 2026-08-24, after
+telemetry existed. Synthesis:
+
+- **Bounded-DSL promotion is required, not merely allowed:** under Bennett's
+  Razor and a finite vocabulary `v`, `L_v` is finite; "promoting the 52/52
+  pass rate strictly as a bounded-DSL capability is theoretically mandatory;
+  claiming open-ended, unconstrained generalisation onto arbitrary tasks
+  outside the expressive vocabulary violates the mathematical boundaries of
+  the active manifold." No corpus statement conflicts with this attribution.
+- **No conflict with Levin-style free lunch (TAME):** the free-lunch metric
+  is the gap between extracted capability and expended computational effort;
+  axiomatic pre-seeding is compatible. The 13-family result does not
+  contradict the free-lunch position.
+- **Integrity reading:** the fresh single-use split decouples the model from
+  its own predicted priors, resolving the coherent-solipsism tautology in
+  this measurement; the falsifiable verdict is exteroceptive.
+- **OFFERED WORK DECLINED (as every cycle):** the corpus offered a JAX
+  database migration + Triton unbinding kernels — mock-loop proposals,
+  out of scope for this measurement; the real substrate was measured
+  instead. Recorded, not accepted.
