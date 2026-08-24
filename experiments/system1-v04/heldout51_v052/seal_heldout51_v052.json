@@ -1,0 +1,12 @@
+{
+  "tag": "heldout51_v052",
+  "n": 40,
+  "seed": 271828,
+  "sha256": "5e5f4a0045258f05505ce9df2a4e083a300ae68f2d9602947816d97d7b66c48c",
+  "utc": "2026-08-24T05:53:38.498604+00:00",
+  "phase": "heldout",
+  "single_use": true,
+  "verifier_per_task": 4,
+  "outcome_per_task": 4,
+  "generator": "train_v051_discriminator.build_split"
+}
