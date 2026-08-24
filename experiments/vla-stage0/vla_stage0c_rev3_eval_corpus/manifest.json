@@ -1,0 +1,70 @@
+{
+  "generator": "vla_stage0c_rev3_eval_corpus_builder.py",
+  "wrapper": "Stage0GymWrapper (provenance eb1a061c)",
+  "episode_seeds": [
+    2101,
+    2202,
+    2303,
+    2404,
+    2505,
+    2606,
+    2707,
+    2808,
+    2909,
+    3010
+  ],
+  "max_steps_per_episode": 100,
+  "created_utc": "2026-08-24",
+  "files": {
+    "seed_2101.jsonl": {
+      "episode_seed": 2101,
+      "records": 33,
+      "sha256": "0b40fda5545e64f27f7e0c288efe3cebd988db3e727587922ab8d977f4062fee"
+    },
+    "seed_2202.jsonl": {
+      "episode_seed": 2202,
+      "records": 21,
+      "sha256": "494a68f511cf147bad85c27f11f2e506e15d77b1e86b5212367929c0e0786fd2"
+    },
+    "seed_2303.jsonl": {
+      "episode_seed": 2303,
+      "records": 12,
+      "sha256": "aa597018a5d78af7a9de236b70122696f638dc7e1e6882514c0e9c3fc8963ec5"
+    },
+    "seed_2404.jsonl": {
+      "episode_seed": 2404,
+      "records": 22,
+      "sha256": "587c43ece47e53cb967bcd06c75ad4a5e1d55ba11a8e5b1bc3064f5783293fdd"
+    },
+    "seed_2505.jsonl": {
+      "episode_seed": 2505,
+      "records": 16,
+      "sha256": "0f18d0375036b33012c7935f0084b86712b7e622f5d9ad5fab61ca2cf56a7986"
+    },
+    "seed_2606.jsonl": {
+      "episode_seed": 2606,
+      "records": 14,
+      "sha256": "47d9720dc31c29742b8fd819cbfa53a16b2d0f9a7a501881ee3cfd80bb38ec31"
+    },
+    "seed_2707.jsonl": {
+      "episode_seed": 2707,
+      "records": 17,
+      "sha256": "6d5e3c97770c416ea9787c4eb21765dcba0c74802f259a674dd0006083018ea8"
+    },
+    "seed_2808.jsonl": {
+      "episode_seed": 2808,
+      "records": 30,
+      "sha256": "47ab320f1fb79a3fbae151d03e855d072955d021140f43213683bc3a1faac30e"
+    },
+    "seed_2909.jsonl": {
+      "episode_seed": 2909,
+      "records": 34,
+      "sha256": "ba559f39544cd96ba83f381efc909a6a890e265cd6de5e2feb7c55b729771a01"
+    },
+    "seed_3010.jsonl": {
+      "episode_seed": 3010,
+      "records": 21,
+      "sha256": "de7faefc2418d1163f69298cadca436b464548a4f1ce9bc0f4421b6c86009d61"
+    }
+  }
+}

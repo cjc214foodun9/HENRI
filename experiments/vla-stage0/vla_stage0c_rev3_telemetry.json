@@ -1,0 +1,131 @@
+{
+ "c1_bypass": true,
+ "c2_zero_trainable": {
+  "pass": true,
+  "hits": []
+ },
+ "c3_artifact": {
+  "npz_sha_ok": true,
+  "expected": "766e607ad0bc739ea0a139172dd34e16d01a268cca80e990af5aab01006cfcd7"
+ },
+ "c4_sphere_max_err": 3.0,
+ "c5_sensitivity": {
+  "distinct_n": 181,
+  "frac_gt_1e3": 1.0,
+  "min_l2": 0.27974838479356523,
+  "collisions": 0
+ },
+ "c6_rank_support": {
+  "a0": {
+   "rank_1e6": 102,
+   "n": 102,
+   "pr": 7.0261
+  },
+  "a1": {
+   "rank_1e6": 69,
+   "n": 69,
+   "pr": 6.6867
+  }
+ },
+ "c7_conditioning": {
+  "pass": true,
+  "k16": {
+   "0": 5.4948,
+   "1": 5.9771
+  },
+  "top16": {
+   "0": 0.9341,
+   "1": 0.9414
+  }
+ },
+ "floors_diag": {
+  "0": {
+   "y_target": 0.334667,
+   "x_same": 0.256681
+  },
+  "1": {
+   "y_target": 0.367017,
+   "x_same": 0.24215
+  }
+ },
+ "c8_calib_recon": {
+  "pass": false,
+  "eps_proj": {
+   "a0": 0.125974,
+   "a1": 0.128559
+  }
+ },
+ "c9_eval_pred": {
+  "pass": true,
+  "eps_eval_proj": {
+   "0": 0.187236,
+   "1": 0.174922
+  },
+  "persistence": {
+   "0": 0.481013,
+   "1": 0.502077
+  },
+  "ssr": {
+   "0": 0.389253,
+   "1": 0.348397
+  },
+  "ssr_agg": 0.368825
+ },
+ "c10_stability": {
+  "pass": false,
+  "spectral_radius": {
+   "0": 1.009531,
+   "1": 0.955466
+  },
+  "rollout_proj_err": {
+   "0": 0.571916,
+   "1": 0.54116
+  },
+  "rollout_full_err_diag": {
+   "0": 0.616588,
+   "1": 0.678148
+  },
+  "rollout_proj_agg": 0.555091
+ },
+ "baselines": {
+  "persistence_eval": {
+   "0": 0.481013,
+   "1": 0.502077
+  },
+  "calib_mean_eval": {
+   "0": 0.824098,
+   "1": 0.840504
+  }
+ },
+ "verdict": "CONTRACT_FAILED",
+ "first_failing_gate": "c8",
+ "split": {
+  "calib_ids": [
+   "seed_101.jsonl",
+   "seed_1010.jsonl",
+   "seed_1111.jsonl",
+   "seed_1212.jsonl",
+   "seed_1313.jsonl",
+   "seed_1414.jsonl",
+   "seed_1515.jsonl",
+   "seed_202.jsonl",
+   "seed_303.jsonl",
+   "seed_404.jsonl"
+  ],
+  "eval_ids": [
+   "seed_2101.jsonl",
+   "seed_2202.jsonl",
+   "seed_2303.jsonl",
+   "seed_2404.jsonl",
+   "seed_2505.jsonl",
+   "seed_2606.jsonl",
+   "seed_2707.jsonl",
+   "seed_2808.jsonl",
+   "seed_2909.jsonl",
+   "seed_3010.jsonl"
+  ],
+  "calib_records": 171,
+  "eval_records": 220,
+  "eval_manifest_sha": "f0c9a7624f26bf70"
+ }
+}
