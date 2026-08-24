@@ -1,0 +1,155 @@
+LOADED /root/henri-system1/ckpt_v041/checkpoint.pt step=1000
+DEV_SPLIT dev2_v051 n=40 seed=90837 sha=1f81e4d0bbe4efd4
+DISC trainable=49409
+[5/40] t=20s
+[10/40] t=39s
+[15/40] t=60s
+[20/40] t=82s
+[25/40] t=105s
+[30/40] t=124s
+[35/40] t=146s
+[40/40] t=167s
+{
+  "run": "system1_v051_cegis_first",
+  "ckpt": "/root/henri-system1/ckpt_v041/checkpoint.pt",
+  "disc": "/root/henri-system1/ckpt_v051/disc_v051.pt",
+  "dev_split": {
+    "tag": "dev2_v051",
+    "n": 40,
+    "seed": 90837,
+    "sha256": "1f81e4d0bbe4efd46f619b67b0da854561ef01c3a88b9efaa6d6d625ef6b0f2c"
+  },
+  "budget": 64,
+  "beam_width": 64,
+  "runtime_s": 166.82682967185974,
+  "arms": {
+    "A": {
+      "outcome_pass_rate": 0.5,
+      "ci90": [
+        0.375,
+        0.625
+      ],
+      "calls": {
+        "mean": 1.0,
+        "median": 1,
+        "p90": 1,
+        "max": 1
+      },
+      "budget_success": {
+        "1": 0.5,
+        "2": 0.5,
+        "4": 0.5,
+        "8": 0.5
+      }
+    },
+    "B": {
+      "outcome_pass_rate": 1.0,
+      "ci90": [
+        1.0,
+        1.0
+      ],
+      "calls": {
+        "mean": 2.325,
+        "median": 2,
+        "p90": 4,
+        "max": 4
+      },
+      "budget_success": {
+        "1": 0.375,
+        "2": 0.575,
+        "4": 1.0,
+        "8": 1.0
+      }
+    },
+    "C": {
+      "outcome_pass_rate": 1.0,
+      "ci90": [
+        1.0,
+        1.0
+      ],
+      "calls": {
+        "mean": 2.075,
+        "median": 2,
+        "p90": 3,
+        "max": 4
+      },
+      "budget_success": {
+        "1": 0.35,
+        "2": 0.65,
+        "4": 1.0,
+        "8": 1.0
+      }
+    },
+    "D": {
+      "outcome_pass_rate": 1.0,
+      "ci90": [
+        1.0,
+        1.0
+      ],
+      "calls": {
+        "mean": 2.575,
+        "median": 2,
+        "p90": 4,
+        "max": 4
+      },
+      "budget_success": {
+        "1": 0.15,
+        "2": 0.575,
+        "4": 1.0,
+        "8": 1.0
+      }
+    }
+  },
+  "oracle_outcome_support": 1.0,
+  "paired": {
+    "B_vs_C": {
+      "both": 40,
+      "B_only": 0,
+      "C_only": 0,
+      "neither": 0,
+      "mcnemar_p": 1.0
+    },
+    "C_vs_A": {
+      "both": 20,
+      "C_only": 20,
+      "A_only": 0,
+      "neither": 0,
+      "mcnemar_p": 1.9073486328125e-06
+    }
+  },
+  "call_delta_C_minus_B": {
+    "mean": -0.25,
+    "ci90": [
+      -0.475,
+      -0.025
+    ]
+  },
+  "calibration": {
+    "n_pairs": 149,
+    "pos": 40,
+    "neg": 109,
+    "auroc": 0.5806192660550459,
+    "brier": 0.19449292800964715,
+    "baseline_p1p0": 0.1963875501103554,
+    "spearman": 0.12397689381548901,
+    "prob_var": 0.0010307389731377332,
+    "note": "task-pooled, candidates clustered per task -> anti-conservative; diagnostic only"
+  },
+  "frozen_audit": {
+    "backbone_trainable": 0,
+    "disc_trainable": 49409
+  },
+  "gates": {
+    "calibration": true,
+    "cegis_operational": false,
+    "promotion": true,
+    "cost_reduction_20pct": false,
+    "outcome_not_worse": true
+  },
+  "verdict": "CEGIS_VERIFIER_ASSISTED_NOT_CAPABILITY_PROMOTED",
+  "heldout_guard": {
+    "consumed_heldout_digest": "887d0d6c",
+    "quarantine": true
+  }
+}
+RECEIPT /root/henri-system1/ckpt_v051/eval_v051_cegis.json

@@ -1,0 +1,11 @@
+LOADED /root/henri-system1/ckpt_v041/checkpoint.pt step=1000
+TRAIN_SPLIT train_v051 n=40 seed=12391 sha=181cc59bb7003051
+EGRESS DATA 146 candidates, pos=40 neg=106
+DISCRIMINATOR trainable params: 49409
+epoch 10 brier=0.1985 t=0s
+epoch 20 brier=0.1983 t=0s
+epoch 30 brier=0.1980 t=0s
+epoch 40 brier=0.1978 t=0s
+epoch 50 brier=0.1975 t=0s
+epoch 60 brier=0.1974 t=0s
+SAVED disc_v051.pt trainable=49409
