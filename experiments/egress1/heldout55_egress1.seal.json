@@ -1,0 +1,30 @@
+{
+ "split": "heldout55_egress1",
+ "n_tasks": 520,
+ "n_families": 13,
+ "per_family": 40,
+ "seed": 82126,
+ "tag": "heldout55_egress1",
+ "sha256": "ec2e1cfd311185a4d334c08f79ac10ac50707e6ef6ce19bc37fdd0a92c6df686",
+ "bytes": 994673,
+ "single_use": true,
+ "generator": "eval_v055_heldout.build_split_stratified (train_v051_discriminator semantics)",
+ "family_counts": {
+  "12": 40,
+  "10": 40,
+  "5": 40,
+  "4": 40,
+  "3": 40,
+  "7": 40,
+  "11": 40,
+  "0": 40,
+  "6": 40,
+  "8": 40,
+  "9": 40,
+  "1": 40,
+  "2": 40
+ },
+ "utc": "2026-08-24",
+ "replaces": "heldout54_egress1 (529e5ddc... QUARANTINED: launch-defect aggregation crash after arms executed all 520 tasks; evidence lost)",
+ "consumed_match": []
+}
