@@ -361,6 +361,30 @@ class QwenBackboneAdapter:
         except Exception as exc:
             raise BackboneGenerationError(f"generation failed: {exc}") from exc
 
+    def embed_text(self, prompt: str) -> tuple[torch.Tensor, BackboneTelemetry]:
+        """Frozen last-token embedding (Egress-1 conditioning). No generation.
+
+        Bounded method added under approval 2b30c69f / contract 7fcc9361.
+        Returns L2-normalized float32 last-token hidden state of the final
+        layer, computed under torch.inference_mode(). No gradients, no
+        state change, no sampling. Dead unless HENRI_BACKBONE=1.
+        """
+        if self._model is None:
+            raise BackboneError("adapter not loaded; call load() first")
+        messages = [{"role": "user", "content": prompt}]
+        inputs = self._prepare_inputs(messages)
+        try:
+            with torch.inference_mode():
+                out = self._model(**inputs, output_hidden_states=True)
+            hs = out.hidden_states[-1]  # [1, L, D]
+            e = hs[:, -1, :].to(torch.float32)  # last token, float32
+            e = e / e.norm(dim=-1, keepdim=True).clamp_min(1e-12)
+            return e.squeeze(0), self.telemetry
+        except torch.cuda.OutOfMemoryError as exc:
+            raise BackboneGenerationError(f"CUDA OOM during embed: {exc}") from exc
+        except Exception as exc:
+            raise BackboneGenerationError(f"embed failed: {exc}") from exc
+
     def memory_report(self) -> dict[str, Any]:
         """Current GPU memory snapshot (MiB). Returns empty on CPU."""
         if self.device != "cuda" or not torch.cuda.is_available():
