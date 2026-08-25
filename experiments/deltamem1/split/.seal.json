@@ -1,0 +1,31 @@
+{
+  "bytes": 642714,
+  "collision_check": {
+    "collisions": [],
+    "consumed_total": 41,
+    "duplicates": []
+  },
+  "families": 13,
+  "generator": "build_split_stratified (production 4+4 fixtures)",
+  "per_family": {
+    "0": 40,
+    "1": 40,
+    "2": 40,
+    "3": 40,
+    "4": 40,
+    "5": 40,
+    "6": 40,
+    "7": 40,
+    "8": 40,
+    "9": 40,
+    "10": 40,
+    "11": 40,
+    "12": 40
+  },
+  "seed": 94126,
+  "sha256": "5ac57d15c920210a334b67c24de0ec01783713f1f39e017624b604616d3512b3",
+  "single_use": true,
+  "split": "heldout55_deltamem1",
+  "tasks": 520,
+  "time_utc": "2026-08-25T06:36:37Z"
+}

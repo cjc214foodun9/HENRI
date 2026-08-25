@@ -1,0 +1,150 @@
+{
+ "interp": "/venv/main/bin/python",
+ "torch": "2.12.0+cu130",
+ "triton": "3.7.0",
+ "cuda": "13.0",
+ "gpu": "NVIDIA GeForce RTX 5090",
+ "time_utc": "2026-08-25T07:24:29Z",
+ "equiv": {
+  "cases": [
+   {
+    "seq": 1,
+    "r": 2,
+    "D": 64,
+    "batch": 1,
+    "inst0": {
+     "fp32_U_maxerr": 2.9802322387695312e-08,
+     "fp32_e_maxerr": 0.0,
+     "fp32_pass": true,
+     "bf16_U_maxerr": 0.0006212890148162842,
+     "bf16_e_maxerr": 0.0,
+     "bf16_pass": true,
+     "veto_equal": true
+    }
+   },
+   {
+    "seq": 8,
+    "r": 2,
+    "D": 64,
+    "batch": 1,
+    "inst0": {
+     "fp32_U_maxerr": 5.960464477539063e-08,
+     "fp32_e_maxerr": 0.0,
+     "fp32_pass": true,
+     "bf16_U_maxerr": 0.002492576837539673,
+     "bf16_e_maxerr": 0.0,
+     "bf16_pass": true,
+     "veto_equal": true
+    }
+   },
+   {
+    "seq": 8,
+    "r": 8,
+    "D": 64,
+    "batch": 4,
+    "inst0": {
+     "fp32_U_maxerr": 8.940696716308594e-08,
+     "fp32_e_maxerr": 0.0,
+     "fp32_pass": true,
+     "bf16_U_maxerr": 0.00394865870475769,
+     "bf16_e_maxerr": 0.0,
+     "bf16_pass": true,
+     "veto_equal": true
+    },
+    "inst1": {
+     "fp32_U_maxerr": 4.470348358154297e-08,
+     "fp32_e_maxerr": 0.0,
+     "fp32_pass": true,
+     "bf16_U_maxerr": 0.004968404769897461,
+     "bf16_e_maxerr": 0.0,
+     "bf16_pass": true,
+     "veto_equal": true
+    },
+    "inst2": {
+     "fp32_U_maxerr": 1.1920928955078125e-07,
+     "fp32_e_maxerr": 0.0,
+     "fp32_pass": true,
+     "bf16_U_maxerr": 0.009573042392730713,
+     "bf16_e_maxerr": 0.0,
+     "bf16_pass": false,
+     "veto_equal": true
+    },
+    "inst3": {
+     "fp32_U_maxerr": 1.1920928955078125e-07,
+     "fp32_e_maxerr": 0.0,
+     "fp32_pass": true,
+     "bf16_U_maxerr": 0.004098713397979736,
+     "bf16_e_maxerr": 0.0,
+     "bf16_pass": true,
+     "veto_equal": true
+    }
+   },
+   {
+    "seq": 64,
+    "r": 8,
+    "D": 4096,
+    "batch": 1,
+    "inst0": {
+     "fp32_U_maxerr": 5.066394805908203e-07,
+     "fp32_e_maxerr": 7.62939453125e-06,
+     "fp32_pass": true,
+     "bf16_U_maxerr": 0.006377577781677246,
+     "bf16_e_maxerr": 7.62939453125e-06,
+     "bf16_pass": false,
+     "veto_equal": true
+    }
+   },
+   {
+    "seq": 1000,
+    "r": 8,
+    "D": 4096,
+    "batch": 1,
+    "inst0": {
+     "fp32_U_maxerr": 6.536993168992922e-13,
+     "fp32_e_maxerr": 3.814697265625e-06,
+     "fp32_pass": true,
+     "bf16_U_maxerr": 8.468965972951992e-08,
+     "bf16_e_maxerr": 3.814697265625e-06,
+     "bf16_pass": true,
+     "veto_equal": true
+    }
+   }
+  ],
+  "noncontiguous_rejected": true
+ },
+ "c6": {
+  "cuda_events_mean_us": 20.317417907714844,
+  "cuda_events_p95_us": 27.456000447273254,
+  "host_visible_mean_us": 20.34467940684408,
+  "iters": 10000,
+  "n_p95": 2000
+ },
+ "c7": {
+  "bf16_bytes": 131072,
+  "bf16_gate_bytes": 131072,
+  "bf16_pass": true,
+  "fp32_bytes_diag": 262144,
+  "state_dtype": "torch.bfloat16"
+ },
+ "c10": {
+  "null_readout": {
+   "veto": 0,
+   "learned": true,
+   "e_norm": 7.703613758087158
+  },
+  "conflict": {
+   "veto": 1,
+   "fired": true,
+   "e_zeroed": true,
+   "write_suppressed": true,
+   "u_rel_gamma": 0.001386831686186388
+  }
+ },
+ "c11": {
+  "equal": true,
+  "hash1": "f1c1a570db420f00",
+  "hash2": "f1c1a570db420f00",
+  "telemetry_equal": true,
+  "n_steps": 500
+ }
+}
