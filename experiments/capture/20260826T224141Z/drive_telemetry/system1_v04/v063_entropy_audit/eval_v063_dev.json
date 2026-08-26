@@ -1,0 +1,53 @@
+{
+  "tag": "smoke063_disposable",
+  "n": 13,
+  "seed": 76126,
+  "budget": 13,
+  "device": "cpu",
+  "split_sha": "66c45518e598a730d0b3ed20357c6afe23500aca331f70e330ad754c8a79359c",
+  "outcome_pass": 1.0,
+  "min_family_support": 1,
+  "mean_calls": 4.231,
+  "call_dist": {
+    "1": 2,
+    "2": 2,
+    "3": 2,
+    "4": 2,
+    "5": 1,
+    "6": 1,
+    "7": 1,
+    "8": 1,
+    "9": 1
+  },
+  "first_pass_rank_dist": {
+    "1": 2,
+    "2": 2,
+    "3": 2,
+    "4": 2,
+    "5": 1,
+    "6": 1,
+    "7": 1,
+    "8": 1,
+    "9": 1
+  },
+  "spearman_H_vs_rank": 0.381,
+  "spearman_ci95": [
+    -0.206,
+    0.912
+  ],
+  "spearman_H_vs_rank1": -0.114,
+  "spearman_ci95_rank1": [
+    -0.634,
+    0.392
+  ],
+  "entropy_H_range": [
+    1.3861,
+    2.1971
+  ],
+  "entropy_Hnorm_range": [
+    0.9999,
+    1.0
+  ],
+  "verdict": "NO_EFFECT",
+  "consumed_guard_count": 34
+}
