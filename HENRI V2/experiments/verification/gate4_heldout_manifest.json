@@ -1,6 +1,19 @@
 {
   "schema": "henri.gate4-heldout-manifest.v1",
-  "status": "GENERATED",
+  "status": "VOID_CONTAMINATED",
+  "consumed": true,
+  "voided_at": "2026-08-26",
+  "void_reason": "BLOCKED_CONTAMINATION — every selected env id carries prior model-side history in this lineage (preregistered kill fired). Split is burned and can never be used.",
+  "void_evidence": [
+    "class48_ab_20260821/arm_a_verdict.json + arm_b_verdict.json (2026-08-21): sc25-635fd71a, vc33-5430563c, wa30-ee6fef47, sp80-589a99af, cd82-fb555c5d all present with levels_completed records — live A/B runs",
+    "arc_demo_preflight.py:23 HELD_OUT=[s5i5,r11l,cd82,lf52]; 2026-08-14 log OBSERVED 'Successfully loaded game class Cn04...' + scorecard creation (env instantiation)",
+    "arc_curriculum_replay.py:15-18 p79f split (s5i5/r11l held-out replay gate), :116 universe list",
+    "production_arc_run.py:2609 mentions sp80+cn04; arc_one_step_preflight.py --env default sp80",
+    "arc_training_graph.py:329 defaults [tu93,re86,ls20,ka59]",
+    "_archive/v1_runner/phylogenetic_memory.py:141 'ARC_wa30-ee6fef47_STEP_0_TARGET' simulated task strings",
+    "Remote scan: hits in gate1-run worktree for r11l/s5i5/tu93/sp80/wa30; npz bank scan 0 hits (clean)"
+  ],
+  "universe_note": "All 25 catalog envs carry lineage history via class48 A/B verdicts, demo preflight instantiation, replay gates, one-step preflight, training-graph defaults, or archived simulated tasks — no valid single-use heldout can be constructed from the current universe.",
   "seed": 20260826,
   "generated_utc": "2026-08-26T21:56:14.854410+00:00",
   "catalog_sha256": "fe55d0b4f068067a9a7de2c4e9b038bd3f301f944a7929b136b6d6b2d1b9d3c3",

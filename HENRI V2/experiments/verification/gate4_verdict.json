@@ -1,0 +1,50 @@
+{
+  "schema": "henri.gate4-verdict.v1",
+  "verdict": "BLOCKED_CONTAMINATION",
+  "secondary_block": "BLOCKED_ACTION_HEAD_NOT_CALIBRATED",
+  "date": "2026-08-26",
+  "candidate_commit": "804a793c9957806628ab3da23527b285a528787b",
+  "amendments": {
+    "prereg": "821aeb8c-c7f6-4604-93d7-47476158dfa0",
+    "split_amendment_commit": "bc5f1e1b94ff4bd3f7d4a42b4aa7db0af437b014"
+  },
+  "catalog": {
+    "source": "arc_agi.Arcade.get_environments() metadata only (no instantiation)",
+    "count": 25,
+    "catalog_sha256": "fe55d0b4f068067a9a7de2c4e9b038bd3f301f944a7929b136b6d6b2d1b9d3c3",
+    "versions": {"arcengine": "0.9.3", "arc_agi": "0.9.9"}
+  },
+  "heldout_split": {
+    "generated": "gate4_heldout_manifest.json (seed 20260826, deterministic shuffle, take 8)",
+    "selected": ["r11l-495a7899","s5i5-18d95033","tu93-0768757b","sk48-d8078629","sp80-589a99af","wa30-ee6fef47","vc33-5430563c","sc25-635fd71a"],
+    "status": "VOID_CONTAMINATED",
+    "consumed": true,
+    "manifest_sha256_original": "0448f30ea2836afc475ee94ba6470ec6451fb9bd0062242625637721a6367e53"
+  },
+  "contamination_evidence": {
+    "class48_ab_20260821": ["sc25-635fd71a","vc33-5430563c","wa30-ee6fef47","sp80-589a99af","cd82-fb555c5d","ar25-0c556536","lp85-305b61c3","g50t-5849a774","ls20-9607627b","sb26-7fbdac44","cn04-2fe56bfb","m0r0-492f87ba"],
+    "arc_demo_preflight": {"held_out_list": ["s5i5","r11l","cd82","lf52"], "instantiation_observed": "2026-08-14 log: 'Successfully loaded game class Cn04 from environment_files/cn04/2fe56bfb/cn04.py' + scorecard created"},
+    "arc_curriculum_replay": {"p79f_split": "s5i5/r11l/cd82/lf52 held-out (replay gate 2026-08-13)", "universe": "ar25 bp35 cd82 cn04 dc22 ft09 g50t ka59 lf52 lp85 ls20 m0r0 r11l re86 s5i5 sb26"},
+    "production_arc_run.py": "sp80+cn04 mentioned (levels_completed audit line 2609)",
+    "arc_one_step_preflight.py": "default --env sp80",
+    "arc_training_graph.py": "defaults [tu93,re86,ls20,ka59]",
+    "phylogenetic_memory.py": "ARC_wa30-ee6fef47_STEP_0_TARGET simulated task strings (archived v1 runner)"
+  },
+  "score_eligibility": {
+    "score_eligible": false,
+    "reason": "ACTION_HEAD_NOT_CALIBRATED — no provenance-validated semantic action head; generic decoder checkpoint not on action path; no authorized (o_t,a_t,o_t+1) trajectory bank with provenance"
+  },
+  "main_first": {
+    "github_main": "849c65d0175699d1acc271c62b0d08974714f40c",
+    "feature_tip": "bc5f1e1b94ff4bd3f7d4a42b4aa7db0af437b014",
+    "main_is_ancestor_of_feature": true,
+    "feature_ahead_of_main": 167,
+    "promotion": "NOT_APPROVED — separate approval required; not executed"
+  },
+  "kill_criteria_fired": ["BLOCKED_CONTAMINATION (split void)"],
+  "next_actions": [
+    "No live ARC-AGI gauntlet can run on the current 25-env universe: every env has lineage history (contamination).",
+    "Unblock paths: (a) new unseen env universe from a future ARC-AGI-3 season; (b) quarantine + provenance proof that a fresh env set has zero model-side exposure; (c) calibrated semantic action head (requires authorized trajectory bank + held-out semantic metrics) for the eligibility side.",
+    "Gate 4 stays BLOCKED. No game.step executed on any selected env."
+  ]
+}
