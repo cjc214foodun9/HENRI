@@ -71,13 +71,16 @@ def test_c4_default_off_raises(monkeypatch):
 
 
 def test_c5_reset_clears_window(flag_on):
-    """C5: explicit episode boundary resets the window (T0 pattern)."""
+    """C5: explicit episode boundary clears the sliding window, but resolved
+    window telemetry history is preserved for the payload-time audit."""
     w = FailureTraceWindow(k=DEFAULT_K)
     for i in range(5):
         w.observe(i, f"a{i}", 0.0)
     assert w.summary()["windows_resolved"] == 1
+    assert len(w.resolved_windows) == 1
     w.reset("ep2")
     assert w.summary()["window_len"] == 0
+    assert len(w.resolved_windows) == 1  # history preserved
     out = w.observe(0, "b0", 1.0)
     assert out["status"] == "PENDING"
 
@@ -103,3 +106,21 @@ def test_c6_zero_trainable_static_audit():
     used |= {a.attr for a in _ast.walk(tree) if isinstance(a, _ast.Attribute)}
     for forbidden in ("Parameter", "optimizer", "backward", "torch"):
         assert forbidden not in used, f"forbidden identifier {forbidden} in carrier"
+
+
+def test_c7_reset_preserves_multi_episode_attribution_history(flag_on):
+    """C7: payload-time attribution sees resolved windows from >= 2 episodes;
+    cumulative counters stay consistent with the preserved history."""
+    w = FailureTraceWindow(k=DEFAULT_K)
+    w.reset("epA")
+    for i in range(5):
+        w.observe(i, f"a{i}", 0.0)
+    assert w.summary()["windows_resolved"] == 1
+    w.reset("epB")
+    assert w.summary()["window_len"] == 0
+    for i in range(5):
+        w.observe(i, f"b{i}", 0.0)
+    assert w.summary()["windows_resolved"] == 2
+    assert w.summary()["stall_windows"] == 2
+    assert len(w.resolved_windows) == 2
+    assert {r["episode_id"] for r in w.resolved_windows} == {"epA", "epB"}

@@ -59,10 +59,14 @@ class FailureTraceWindow:
         self.resolved_windows: List[Dict[str, Any]] = []
 
     def reset(self, episode_id: str) -> None:
-        """Explicit episode boundary: clears the window (T0 reset pattern)."""
+        """Explicit episode boundary: clears the sliding window (T0 pattern).
+
+        The resolved-window telemetry history is PRESERVED across resets so
+        the P2 attribution audit at payload time sees stall windows from ALL
+        branches, not just the last episode. Only the active buffer clears.
+        """
         self._episode_id = episode_id
         self._buf.clear()
-        self.resolved_windows.clear()
 
     def observe(self, step: int, action: str, score_delta: float) -> Dict[str, Any]:
         """Append one (step, action, score_delta); resolve at k records.
