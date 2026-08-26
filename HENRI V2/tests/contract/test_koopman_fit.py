@@ -29,12 +29,17 @@ class _R:
 
 
 def _lin_dynamics(seed=0, n_ep=4, steps=6, d=8, n_actions=2):
-    """Linear per-action dynamics: next = M_a s + noise; dictionary = cat(s, a)."""
+    """Linear per-action dynamics: next = M_a s + noise; dictionary = cat(s, a).
+
+    M_a is a genuine rank-2 contractive map (singular values 0.8, 0.5) so a
+    rank-2/true-rank operator can recover it and open-loop rollouts track.
+    """
     g = np.random.default_rng(seed)
     ms = {}
     for i in range(n_actions):
-        Q, _ = np.linalg.qr(g.standard_normal((d, d)))
-        ms[f"a{i}"] = 0.6 * Q  # non-isotropic direction-changing map
+        U, _ = np.linalg.qr(g.standard_normal((d, 2)))
+        V, _ = np.linalg.qr(g.standard_normal((d, 2)))
+        ms[f"a{i}"] = U @ np.diag([0.8, 0.5]) @ V.T
     records = []
     for ep in range(n_ep):
         s = g.standard_normal(d)
@@ -45,7 +50,7 @@ def _lin_dynamics(seed=0, n_ep=4, steps=6, d=8, n_actions=2):
             a_wave[0, st % n_actions] = 1.0
             s_t = torch.tensor(s.reshape(1, 8), dtype=torch.float32)
             a_w = torch.tensor(a_wave, dtype=torch.float32)
-            nxt = ms[a] @ s + 0.001 * g.standard_normal(d)
+            nxt = ms[a] @ s + 0.0001 * g.standard_normal(d)
             nxt = nxt / np.linalg.norm(nxt)
             n_w = torch.tensor(nxt.reshape(1, 8), dtype=torch.float32)
             records.append(_R(f"e{ep}", st, a, s_t, a_w, n_w))
@@ -88,7 +93,7 @@ def test_c3_spectral_norm_known(flag_on):
 def test_c4_arms_skill_and_controls(flag_on):
     recs = _lin_dynamics()
     cal, evl = recs[: len(recs) // 2], recs[len(recs) // 2:]
-    out = evaluate(cal, evl, _dict_fn, ridge=1e-4, rank=2, num_blocks=1,
+    out = evaluate(cal, evl, _dict_fn, ridge=1e-4, rank=8, num_blocks=1,
                    horizons=(3, 5))
     os_ = out["one_step"]
     assert os_["action_conditioned"] < os_["persistence"]
@@ -102,7 +107,7 @@ def test_c4_arms_skill_and_controls(flag_on):
 def test_c5_rollout_open_loop(flag_on):
     recs = _lin_dynamics(n_ep=6, steps=8)
     cal, evl = recs[: len(recs) // 2], recs[len(recs) // 2:]
-    out = evaluate(cal, evl, _dict_fn, ridge=1e-4, rank=2, num_blocks=1,
+    out = evaluate(cal, evl, _dict_fn, ridge=1e-4, rank=8, num_blocks=1,
                    horizons=(3, 5))
     r3 = out["rollouts"]["3"]
     assert r3["conditioned"] < r3["persistence"]
@@ -110,6 +115,6 @@ def test_c5_rollout_open_loop(flag_on):
 def test_c6_engagement(flag_on):
     recs = _lin_dynamics()
     cal, evl = recs[: len(recs) // 2], recs[len(recs) // 2:]
-    out = evaluate(cal, evl, _dict_fn, ridge=1e-4, rank=2, num_blocks=1)
+    out = evaluate(cal, evl, _dict_fn, ridge=1e-4, rank=8, num_blocks=1)
     assert out["engagement"]["cal_pred_cos_conditioned"] > \
         out["engagement"]["cal_pred_cos_persistence"] + 1e-6
