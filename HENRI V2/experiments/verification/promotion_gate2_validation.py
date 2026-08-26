@@ -64,14 +64,14 @@ def main() -> int:
 
         # C1: known-transform positive (fit on all demos, reconstruct held-out)
         w1 = op.compile_from_demos(x_all, y_known)
-        rec1 = torch.einsum("kab,kb->ka", w1, x_all[M_CAL:])
+        rec1 = torch.einsum("mkb,kab->mka", x_all[M_CAL:], w1)
         c1_cos = float(torch.cosine_similarity(
             rec1.reshape(M_HELD, -1), y_known[M_CAL:].reshape(M_HELD, -1), dim=1).mean())
         orth_err = op.orthogonality_error(w1)
 
         # C2: held-out reconstruction (calibration-only fit)
         w2 = op.compile_from_demos(x_all[:M_CAL], y_known[:M_CAL])
-        rec2 = torch.einsum("kab,kb->ka", w2, x_all[M_CAL:])
+        rec2 = torch.einsum("mkb,kab->mka", x_all[M_CAL:], w2)
         c2_cos = float(torch.cosine_similarity(
             rec2.reshape(M_HELD, -1), y_known[M_CAL:].reshape(M_HELD, -1), dim=1).mean())
 
@@ -79,7 +79,7 @@ def main() -> int:
         pi = [(i + 1) % M_CAL for i in range(M_CAL)]  # rotation by 1, no fixed points
         x_shuf = x_all[:M_CAL][pi]
         w3 = op.compile_from_demos(x_shuf, y_known[:M_CAL])
-        rec3 = torch.einsum("kab,kb->ka", w3, x_all[M_CAL:])
+        rec3 = torch.einsum("mkb,kab->mka", x_all[M_CAL:], w3)
         c3_cos = float(torch.cosine_similarity(
             rec3.reshape(M_HELD, -1), y_known[M_CAL:].reshape(M_HELD, -1), dim=1).mean())
 
