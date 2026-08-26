@@ -1,0 +1,188 @@
+{
+ "schema": "henri.capture-receipt.v1",
+ "run_utc": "20260826T231346Z",
+ "sources": {
+  "drive_inbox": {
+   "status": "OK",
+   "inventory_count": 195,
+   "copied": 10
+  },
+  "drive_research": {
+   "status": "OK",
+   "inventory_count": 300,
+   "copied": 4
+  },
+  "drive_telemetry": {
+   "status": "OK",
+   "inventory_count": 211,
+   "copied": 5
+  },
+  "vast": {
+   "status": "OK",
+   "copied": 8,
+   "archive_files": 8,
+   "remote_jsonl_index": [
+    "/workspace/egress1-run/results55/per_task.jsonl",
+    "/workspace/egress1-run/dev11_g3/per_task.jsonl",
+    "/workspace/egress1-run/heldout56_g3/per_task.jsonl",
+    "/workspace/egress1-run/dev12_g3/per_task.jsonl",
+    "/workspace/egress1-run/heldout57_g3/per_task.jsonl",
+    "/workspace/deltamem1-run/deltamem_smoke2.jsonl",
+    "/workspace/deltamem1-run/deltamem_smoke3.jsonl",
+    "/workspace/deltamem1-run/deltamem_smoke4.jsonl",
+    "/workspace/deltamem1-run/deltamem_sealed_run.jsonl",
+    "/workspace/neo_l2t_k1/smoke_out2.jsonl",
+    "/workspace/neo_l2t_k1/sealed_out.jsonl",
+    "/workspace/neo_l2t_k1/smoke_k1b_out2.jsonl",
+    "/workspace/neo_l2t_k1/diag10_out.jsonl",
+    "/workspace/neo_l2t_k1/sealed_k1b_out.jsonl",
+    "/workspace/neo_l2t_k1/smoke_k1c_out3.jsonl",
+    "/workspace/egress2/smoke_out/per_task.jsonl",
+    "/workspace/egress2/c2_smoke_out/per_task.jsonl",
+    "/workspace/gate1-run/out/temporal_ledger.jsonl"
+   ],
+   "inventory_count": 18
+  }
+ },
+ "copied": [
+  {
+   "path": "HENRI_Gate_1_Carrier_Evaluation_and_Gate_4_Unblock_Strategy.md",
+   "bytes": 18151,
+   "sha256": "d2f2bda5e11a202a911890f17ce6eaf25e0bf42be1accd57c3ff10f3a6ea008c"
+  },
+  {
+   "path": "Information Theory, Learning Dynamics, and General Covariance.pdf",
+   "bytes": 196647,
+   "sha256": "39b8aa1f69f7a85d2ec1b4188983341bdb9a4c25a68070d1a5f22c7b645105ae"
+  },
+  {
+   "path": "HENRI_SOTA_Benchmark_Wiring_Evaluation.md",
+   "bytes": 14288,
+   "sha256": "85abb47a171993337a39e7e19590f498cbb465b8af5e0ccb12bbced5fb15bc51"
+  },
+  {
+   "path": "Sutton_Options___Koopman_Macro-Operator_Synthesis.md",
+   "bytes": 19279,
+   "sha256": "86bf2901e74a90aaaaf51070f5c1cffd7ef2bc78eafda6d9c4e35777e7f04837"
+  },
+  {
+   "path": "HENRI_SOTA_Gap_Analysis___Roadmap.md",
+   "bytes": 15232,
+   "sha256": "ef7559567f8ce7c9ca8308e4166fb74340f00f80b830bc45d7f644b6558d2199"
+  },
+  {
+   "path": "Grounded_Temporal_Navigation_Architecture (1).md",
+   "bytes": 21481,
+   "sha256": "95bf413966da7f816ebd98398fa55823f64aa855047bd8e3e357d63fe115f659"
+  },
+  {
+   "path": "Grounded_Temporal_Navigation_Architecture.md",
+   "bytes": 21481,
+   "sha256": "95bf413966da7f816ebd98398fa55823f64aa855047bd8e3e357d63fe115f659"
+  },
+  {
+   "path": "HENRI_System-Wide_Wiring_and_Circuit_Audit.md",
+   "bytes": 14646,
+   "sha256": "fe70b4b346bf227de9ac60cb67b7fe481cc1fc52dc7ef1e42f1e1e676e78a288"
+  },
+  {
+   "path": "HENRI_vs_Accelerated_Understanding_Architectural_Synthesis.md",
+   "bytes": 11584,
+   "sha256": "d39b931ff12711b41278377180551bfcdab70904693b5e3f4ef3cd33c46bf358"
+  },
+  {
+   "path": "K1b_PostMortem_and_K1c_Covariance_PreRegistration.md",
+   "bytes": 4554,
+   "sha256": "4ea31add641168ddb8b493093af095ed3d6ad2bc86bff878e7be90c895549007"
+  },
+  {
+   "path": "HENRI_Research_Vault\\_agentic\\events\\6e93a2d8-5580-4721-87b4-d477c55b70b3.json",
+   "bytes": 2392,
+   "sha256": "2b322ef9f749ec9ed1739bfbb7a9c21eab3cf5b6092dfc014838748509ca5cdf"
+  },
+  {
+   "path": "HENRI_Research_Vault\\_agentic\\events\\35a3cc36-54e1-4dc2-b513-48b7e4a75a84.json",
+   "bytes": 1538,
+   "sha256": "b85b2815103acbfc3233c7a52a9b72df3e6159ae2ecbae3126b6f53069bda82f"
+  },
+  {
+   "path": "HENRI_Research_Vault\\_agentic\\events\\f53fcbae-4801-4218-81ee-803581bf451e.json",
+   "bytes": 811,
+   "sha256": "6d9ba5642597cbe9ab4e91900a89907718762936e63527745afdba7287c9e785"
+  },
+  {
+   "path": "HENRI_Research_Vault\\HENRI_Research_Vault\\ArXiv_Corpus\\Inbox\\HENRI_Gate_1_Carrier_Evaluation_and_Gate_4_Unblock_Strategy.md",
+   "bytes": 18863,
+   "sha256": "0c70281f2e7547d6107d4bd83e38dcdf12b6a18367e0ebbd9c28c43177dee159"
+  },
+  {
+   "path": "system1_v04\\v063_entropy_audit\\eval_v063_per_task.json",
+   "bytes": 11410,
+   "sha256": "056966e6357523c57500df0e1a47d3a132f750e770c54f170209f5a4d36d4a38"
+  },
+  {
+   "path": "system1_v04\\v063_entropy_audit\\eval_v063_dev.json",
+   "bytes": 899,
+   "sha256": "312c6ebcef1a106103649d8b306272bf71dab1eee0ddb14af9dfe3ee1b919181"
+  },
+  {
+   "path": "system1_v04\\v0601_candidate_retrieval\\eval_v0601_per_task.json",
+   "bytes": 46731,
+   "sha256": "ba1cc963cb7823e575033bab8d19942952c91f646c40e5f58a37a25a30a475c2"
+  },
+  {
+   "path": "system1_v04\\v0601_candidate_retrieval\\eval_v0601_dev.json",
+   "bytes": 5292,
+   "sha256": "a303ebd42c9dbd66fc9b39cfc274b9a30ca9047b3bf763893fe2b85fb55400ab"
+  },
+  {
+   "path": "system1_v04\\v0601_candidate_retrieval\\dev9_v0601.json",
+   "bytes": 116433,
+   "sha256": "a8a2d7a7d5722282c98030c884b53d1bbcc0cd0ab76ecdfcc0240fa8a3ffdf28"
+  },
+  {
+   "path": "henri-archive/manifest.sha256",
+   "bytes": 7180,
+   "sha256": "45fc091704c928bd0b5c5aadb2bff7aed2a087a84e0f1ee33371952ba1e8ac93"
+  },
+  {
+   "path": "henri-archive/p820-wt.untracked2.tgz",
+   "bytes": 6921,
+   "sha256": "f3d78ea4a744b98841fa88f95ad8c7babef573500dfe24618e6853acb6ac75cb"
+  },
+  {
+   "path": "henri-archive/p820-wt.untracked.list",
+   "bytes": 86,
+   "sha256": "9eeea9b9a8f33fd7cfa707107f749bd948590d29e36c20bde92703f54e85e6ba"
+  },
+  {
+   "path": "henri-archive/p820-wt.full.patch",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "path": "henri-archive/p819-wt.untracked2.tgz",
+   "bytes": 13134,
+   "sha256": "fbf176856bbd4f209dcd3b120df73090ad457ef9266e63a6107989ecf2f9696c"
+  },
+  {
+   "path": "henri-archive/p819-wt.untracked.list",
+   "bytes": 86,
+   "sha256": "3e3c5b0093eb9eaec8b03c3aadcc8724b38823be719884c6c2facade487410cf"
+  },
+  {
+   "path": "henri-archive/p819-wt.full.patch",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "path": "henri-archive/p818-wt.untracked2.tgz",
+   "bytes": 36148,
+   "sha256": "f987081165f29d525587762eb19933ad51007ee493df0d45b03717ee6f2d12d1"
+  }
+ ],
+ "skipped": [
+  "HENRI_Research_Vault\\_agentic\\events\\research.jsonl (>300000B)"
+ ],
+ "bytes_total": 605267
+}
