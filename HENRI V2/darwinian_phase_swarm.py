@@ -398,6 +398,21 @@ class HenriSwarmOrchestrator(nn.Module):
                 w_grid = w_real.view(self.num_blocks, 8)
                 w_grid = w_grid / (torch.norm(w_grid, p=2, dim=-1, keepdim=True) + 1e-9)
             waves.append((action, w_grid))
+            # Default-OFF manifest exporter: capture the exact candidate
+            # wave at the live selection boundary with artifact+run
+            # provenance. Flag-guarded lazy import: when
+            # HENRI_ACTION_WAVE_EXPORT != 1 the module is never imported
+            # and the default path is byte-identical.
+            if os.environ.get("HENRI_ACTION_WAVE_EXPORT", "0") == "1":
+                from action_wave_exporter import ActionWaveExporter
+                _exporter = ActionWaveExporter.get()
+                if _exporter is not None:
+                    _exporter.record(
+                        getattr(action, "name", str(action)), w_grid,
+                        encoder=("learnable_action_wave"
+                                 if self._learnable_actions
+                                 else "decoder_get_action_wave"),
+                        source="darwinian_phase_swarm.candidate_action_waves")
         return waves
 
     def plan_action(self, active_wave: torch.Tensor, boundary_axioms: torch.Tensor, top_k: int = 4,
