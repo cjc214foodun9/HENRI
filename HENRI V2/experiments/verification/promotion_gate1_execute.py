@@ -19,14 +19,16 @@ Implements the frozen contract promotion_gate1_contract.json (v1):
            FEW_SHOT_SCALING
 
 Online update (identical across R/S/A, frozen before measurement):
-  factored operator O_a = V W^T, V in Stiefel(r) via Cholesky retraction,
-  W [2d, r]. One pass over the first n calibration transitions of the
-  action (ledger order). Per transition:
-    phi = fused_intent(s, wave_a)                # [2d]
+  factored operator O = V W^T, V in Stiefel(r) via Cholesky retraction,
+  W [d, r] (d = dictionary dim = num_blocks*8 = 65536; matches the
+  production koopman_fit factored solve, never [2d, r]). One pass over
+  the first n calibration transitions of the action (ledger order). Per
+  transition:
+    phi = fused_intent(s, wave_a)                # [d]
     z = W^T phi;  lin = V z -> [blocks, 8]       # per-block L2 normalize
     loss = 1 - cos(pred, next)
     surprise gate: skip update if loss < THETA
-    grad_W = 2 phi (z - V^T y)^T                 # [2d, r]
+    grad_W = 2 phi (z - V^T y)^T                 # [d, r]
     grad_V = 2 (lin - y) z^T                     # [d, r]
     V <- chol_retract(V - lr*grad_V)
     W <- W - lr*grad_W + noise, noise ~ N(0, sqrt(2*T*dt))
@@ -207,7 +209,10 @@ class FactoredOperator:
         g = torch.Generator(device="cpu").manual_seed(rank_seed)
         q, _ = torch.linalg.qr(torch.randn(d, r, generator=g, device="cpu"))
         self.V = q.to(torch.float32)
-        self.W = torch.zeros(2 * d, r, dtype=torch.float32)
+        # W maps dictionary space [d] -> latent [r]; d = num_blocks*8
+        # (65536) matching the production factored solve (koopman_fit:
+        # W = phi^T U S, phi dim = d). NOT [2d, r].
+        self.W = torch.zeros(d, r, dtype=torch.float32)
         self.updates = 0
 
     @staticmethod
@@ -230,6 +235,10 @@ class FactoredOperator:
     def update(self, phi, y, num_blocks: int, rng) -> bool:
         """One SGLD step on (phi, y). Returns True if applied (surprise gate)."""
         torch = self.torch
+        if phi.shape[0] != self.W.shape[0]:
+            raise RuntimeError(
+                f"operator input dim {phi.shape[0]} != W rows {self.W.shape[0]} "
+                f"(dictionary dim mismatch; W must be [d, r])")
         lin, z = self.predict(phi)
         pred = lin.view(num_blocks, -1)
         nrm = pred.norm(dim=-1, keepdim=True).clamp(min=1e-12)
