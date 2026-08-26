@@ -37,17 +37,29 @@ class ContinuityViolationError(RuntimeError):
 
 
 def wave_digest(wave: Any) -> str:
-    """SHA-256 of canonical float32 bytes of a wave tensor."""
-    import torch
-    t = wave.detach().cpu().contiguous().to(torch.float32).numpy().tobytes()
-    return hashlib.sha256(t).hexdigest()
+    """SHA-256 of canonical bytes of a tensor OR a grid/list/dict state."""
+    if hasattr(wave, "detach"):
+        import torch
+        t = wave.detach().cpu().contiguous().to(torch.float32).numpy().tobytes()
+        return hashlib.sha256(t).hexdigest()
+    # Grid/list/dict fallback: canonical JSON bytes (the ARC loop passes
+    # nested list frames, not tensors).
+    return hashlib.sha256(
+        json.dumps(wave, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
 
 
 def action_digest(action: Any) -> str:
-    """SHA-256 of a tensor action or a canonical string action."""
+    """SHA-256 of a tensor action, a GameAction-like object, or a string."""
     import torch
     if isinstance(action, torch.Tensor):
         return wave_digest(action)
+    if hasattr(action, "name"):
+        base = f"{type(action).__name__}:{action.name}"
+        data = getattr(action, "data", None)
+        if data is not None:
+            base += f":{json.dumps(data, sort_keys=True, default=str)}"
+        return hashlib.sha256(base.encode("utf-8")).hexdigest()
     return hashlib.sha256(str(action).encode("utf-8")).hexdigest()
 
 

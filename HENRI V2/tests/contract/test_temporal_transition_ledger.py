@@ -18,6 +18,7 @@ from temporal_transition_ledger import (
     StaleStateError,
     TemporalLedgerDisabledError,
     TemporalTransitionLedger,
+    action_digest,
     get_ledger,
     wave_digest,
 )
@@ -108,6 +109,31 @@ def test_c7_incremental_jsonl_reload(flag_on):
     reloaded = TemporalTransitionLedger.load(p)
     assert reloaded.continuity_check()["ok"] is True
     assert len(reloaded) == 2
+
+
+class _GameActionLike:
+    """Mirror of the ARC GameAction surface: .name + .data."""
+
+    def __init__(self, name, data=None):
+        self.name = name
+        self.data = data
+
+
+def test_c8_grid_and_gameaction_digests():
+    """C8: nested grid/list states and GameAction-like actions digest
+    deterministically (the ARC harness data types, not just tensors)."""
+    g1 = [[0, 1, 2], [3, 4, 5]]
+    g2 = [[0, 1, 2], [3, 4, 5]]
+    g3 = [[0, 1, 2], [3, 4, 6]]
+    assert wave_digest(g1) == wave_digest(g2)
+    assert wave_digest(g1) != wave_digest(g3)
+    a1 = _GameActionLike("Move", {"x": 1, "y": 2})
+    a2 = _GameActionLike("Move", {"x": 1, "y": 2})
+    a3 = _GameActionLike("Move", {"x": 1, "y": 3})
+    assert action_digest(a1) == action_digest(a2)
+    assert action_digest(a1) != action_digest(a3)
+    # String fallback still works.
+    assert action_digest("Move") == action_digest("Move")
 
 
 if __name__ == "__main__":

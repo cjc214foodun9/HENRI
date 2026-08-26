@@ -99,6 +99,11 @@ import numpy as np  # noqa: F401  (kept for telemetry reducers)
 import torch
 import torch.nn.functional as F
 
+# T0 temporal substrate (default-OFF): HENRI_TEMPORAL_LEDGER=1.
+# The ledger is committed with the harness; import is unconditional so a
+# missing file fails loudly at construction, never silently degrades.
+from temporal_transition_ledger import TemporalTransitionLedger
+
 SCHEMA_ID = "henri.curriculum-replay.v1"
 SPLIT_SALT = "p79f-split-v1"
 DEFAULT_SEED = 20260813
@@ -322,7 +327,8 @@ class EFEPlayPolicy:
                  device: str, payloads: bool, camera: Any, seed: int,
                  use_zone_c_axioms: bool = False,
                  axiom_waves: Optional[torch.Tensor] = None,
-                 allowed_actions: Optional[Sequence[Any]] = None):
+                 allowed_actions: Optional[Sequence[Any]] = None,
+                 ledger: Optional[TemporalTransitionLedger] = None):
         self.orch = orch
         self.tokenizer = tokenizer
         self.egress = egress
@@ -336,6 +342,19 @@ class EFEPlayPolicy:
         self.prev_wave: Optional[torch.Tensor] = None
         self.d_model = getattr(egress, "d_model", None)
         self.hidden_dim = getattr(egress, "hidden_dim", None)
+        # T0 temporal substrate (default-OFF): attached by main() when
+        # HENRI_TEMPORAL_LEDGER=1. Records (grid, action, post_grid) per
+        # successful step with chain continuity.
+        self.ledger = ledger
+        self._episode_id: Optional[str] = None
+        self._step: int = 0
+
+    def begin_episode(self, episode_id: str) -> None:
+        """Start a fresh chain for one round's continuation (per env round)."""
+        self._episode_id = episode_id
+        self._step = 0
+        if self.ledger is not None:
+            self.ledger.reset(episode_id)
 
     def hidden_feature(self, grid: Sequence[Sequence[int]]) -> Tuple[Optional[torch.Tensor], str]:
         """Production hidden feature at a state (exact run_sans_play path).
@@ -428,6 +447,20 @@ class EFEPlayPolicy:
             if getattr(obs_next, "frame", None):
                 post = obs_next.frame[0].tolist()
                 info["delta_nu"] = frame_delta_nu(grid, post)
+            # T0 temporal substrate: record (grid, action, post_grid) with
+            # chain continuity. Fail-closed: a ledger defect blocks the step
+            # and is counted, never silently passed.
+            if (self.ledger is not None and self._episode_id is not None
+                    and post is not None):
+                try:
+                    self.ledger.record(
+                        grid, act, post,
+                        episode_id=self._episode_id, step=self._step)
+                    self._step += 1
+                    info["ledger_recorded"] = True
+                except Exception as exc:
+                    info["error"] = f"LEDGER_FAIL_CLOSED:{type(exc).__name__}"
+                    return None, info
             info["ok"] = True
             return obs_next, info
         except Exception as exc:
@@ -629,6 +662,8 @@ def run_env_replay(
             cont_grid = f_grid
             cont_obs = f_obs
             progress_seen = False
+            # T0 temporal substrate: one fresh chain per branch continuation.
+            policy.begin_episode(f"{env_name}:r{r}:b{ai}")
 
             def _commit_progress(lvl: Optional[int], step_idx: int, dnu: int,
                                  pre_hidden: Optional[torch.Tensor],
@@ -831,6 +866,15 @@ def run_env_replay(
             "compressibility": c.compressibility,
             "initial_frame_hash": c.initial_frame_hash,
         },
+        "temporal_ledger": (
+            {
+                "enabled": True,
+                "records": len(policy.ledger),
+                "episodes": policy.ledger.episodes(),
+                "continuity": policy.ledger.continuity_check(),
+            }
+            if policy.ledger is not None else {"enabled": False}
+        ),
         "sans_rows": rows,
         "blocked_rows": blocked_rows,
     }
@@ -940,6 +984,18 @@ def main() -> int:
     out_dir = Path(args.out) if args.out else Path("/tmp/p79f_replay")
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # T0 temporal substrate (default-OFF): HENRI_TEMPORAL_LEDGER=1.
+    # The ledger is constructed once per run and attached to every policy;
+    # chain continuity is enforced per episode (per env round/branch).
+    ledger = None
+    if os.environ.get("HENRI_TEMPORAL_LEDGER", "0") == "1":
+        try:
+            ledger = TemporalTransitionLedger(
+                out_dir / "temporal_ledger.jsonl", strict=True)
+        except Exception as exc:
+            print(f"[p79f] temporal ledger disabled: {exc}")
+            ledger = None
+
     discovery, heldout = deterministic_split(UNIVERSE, SPLIT_SALT, 12)
     if args.envs:
         envs = list(args.envs)
@@ -1041,7 +1097,7 @@ def main() -> int:
         policy = EFEPlayPolicy(
             orch, tokenizer, egress, device, payloads, camera, args.seed,
             use_zone_c_axioms=False, axiom_waves=None,
-            allowed_actions=allowed)
+            allowed_actions=allowed, ledger=ledger)
         counters, payload = run_env_replay(
             game, arcade, env_name, args.rounds, args.seed, policy,
             out_dir=out_dir, env_id=full_id,
