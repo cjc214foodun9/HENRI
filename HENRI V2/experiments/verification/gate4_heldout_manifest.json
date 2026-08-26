@@ -1,0 +1,52 @@
+{
+  "schema": "henri.gate4-heldout-manifest.v1",
+  "status": "GENERATED",
+  "seed": 20260826,
+  "generated_utc": "2026-08-26T21:56:14.854410+00:00",
+  "catalog_sha256": "fe55d0b4f068067a9a7de2c4e9b038bd3f301f944a7929b136b6d6b2d1b9d3c3",
+  "catalog_count": 25,
+  "exclusion_sha256": "886e6a98cecd7150c714ae23e552edfcf901859bf7d19ad09649ea52dde04821",
+  "exclusion_ids": [
+    "ar25",
+    "bp35",
+    "cn04",
+    "dc22",
+    "ft09",
+    "g50t",
+    "ka59",
+    "lp85",
+    "ls20",
+    "m0r0",
+    "re86",
+    "sb26"
+  ],
+  "unseen_ids": [
+    "cd82-fb555c5d",
+    "lf52-271a04aa",
+    "r11l-495a7899",
+    "s5i5-18d95033",
+    "sc25-635fd71a",
+    "sk48-d8078629",
+    "sp80-589a99af",
+    "su15-1944f8ab",
+    "tn36-ef4dde99",
+    "tr87-cd924810",
+    "tu93-0768757b",
+    "vc33-5430563c",
+    "wa30-ee6fef47"
+  ],
+  "selected_ids": [
+    "r11l-495a7899",
+    "s5i5-18d95033",
+    "tu93-0768757b",
+    "sk48-d8078629",
+    "sp80-589a99af",
+    "wa30-ee6fef47",
+    "vc33-5430563c",
+    "sc25-635fd71a"
+  ],
+  "selection_code_sha256": "bb1f47403ddead9faaa9052fd64287a877a1f0f8174b7a951d92596b8e993702",
+  "selection_algorithm": "random.Random(seed).shuffle(sorted(unseen)); take first 8",
+  "consumed": false,
+  "single_use_rule": "No instantiation/probe/step on selected envs while score_eligible=false; any step burns the split."
+}
