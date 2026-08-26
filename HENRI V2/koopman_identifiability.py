@@ -38,6 +38,13 @@ class IdentifiabilityDisabledError(RuntimeError):
     pass
 
 
+class ContinuityConflictError(RuntimeError):
+    """Two rows share (episode_id, step_idx) but differ in content.
+
+    Raised instead of silently choosing one row (fail-closed)."""
+
+
+
 @dataclass
 class TransitionRecord:
     episode: str
@@ -59,14 +66,24 @@ def load_corpus(ledger_path, payload_store, lift: Callable,
     lift(grid) -> [blocks, 8] wave (production HENRIVisionEncoder path).
     action_wave_map: {action_name: [blocks, 8] wave} (orchestrator waves).
     Rows with missing payloads or unmapped actions are dropped and counted.
+
+    Chain continuity (prev.obs_next_digest == rec.obs_t_digest) is NOT
+    duplicate evidence: valid transitions are never dropped for it. Only an
+    EXACT duplicate transition identity is deduplicated, and rows sharing
+    (episode_id, step_idx) with different content raise
+    ContinuityConflictError instead of silently choosing one. Broken
+    continuity is surfaced in stats, never repaired silently.
     """
     if os.environ.get(flag, "0") != "1":
         raise IdentifiabilityDisabledError(
             f"{flag} is not set; identifiability is default-OFF")
     records: List[TransitionRecord] = []
     stats = {"rows": 0, "missing_payload": 0, "lift_failed": 0,
-             "action_unmapped": 0, "duplicate_continuity_dropped": 0}
+             "action_unmapped": 0, "duplicate_transition_dropped": 0,
+             "continuity_breaks": 0}
     prev: Optional[TransitionRecord] = None
+    seen = set()
+    positions: Dict[Tuple[str, int], Tuple[str, int, str, str, str]] = {}
     with open(ledger_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -99,12 +116,21 @@ def load_corpus(ledger_path, payload_store, lift: Callable,
                 state_wave=s_wave, action_wave=action_wave_map[act_name],
                 next_wave=n_wave, obs_t_digest=row["obs_t_digest"],
                 obs_next_digest=row["obs_next_digest"])
-            if (dedupe_continuity and prev is not None
-                    and prev.episode == rec.episode
-                    and prev.obs_next_digest == rec.obs_t_digest):
-                stats["duplicate_continuity_dropped"] += 1
-                prev = None
+            key = (rec.episode, int(rec.step), rec.obs_t_digest,
+                   str(row.get("action_ref", "")), rec.obs_next_digest)
+            pos_key = (rec.episode, int(rec.step))
+            if pos_key in positions and positions[pos_key] != key:
+                raise ContinuityConflictError(
+                    f"conflicting rows for {pos_key}: "
+                    f"{positions[pos_key]} vs {key}")
+            positions[pos_key] = key
+            if dedupe_continuity and key in seen:
+                stats["duplicate_transition_dropped"] += 1
                 continue
+            seen.add(key)
+            if (prev is not None and prev.episode == rec.episode
+                    and prev.obs_next_digest != rec.obs_t_digest):
+                stats["continuity_breaks"] += 1
             records.append(rec)
             prev = rec
     return records, stats

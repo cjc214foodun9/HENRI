@@ -1,4 +1,5 @@
 """Contract tests: K1 Koopman identifiability audit (default-OFF)."""
+import json
 import os
 import sys
 
@@ -10,9 +11,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
 
 from koopman_identifiability import (  # noqa: E402
     FLAG,
+    ContinuityConflictError,
     IdentifiabilityDisabledError,
     TransitionRecord,
     audit,
+    load_corpus,
     split_episodes,
 )
 
@@ -92,3 +95,110 @@ def test_c6_eval_overlap_reported(flag_on):
     cal, evl, _, _ = split_episodes(recs, seed=3, eval_frac=0.25)
     out = audit(cal, evl, [1])
     assert 0.0 <= out["eval_overlap"] <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# Continuity contracts: chain continuity is NOT duplicate evidence
+# ---------------------------------------------------------------------------
+
+
+def _payload_ledger(tmp_path, rows, action_wave_map):
+    """Write a T0+K0-style ledger + payload store; returns (path, store)."""
+    from ledger_payload_store import LedgerPayloadStore
+    store = LedgerPayloadStore(tmp_path / "payloads",
+                               flag="HENRI_LEDGER_PAYLOADS")
+    lines = []
+    for ep, step, obs_t, act_name, obs_next in rows:
+        pd_t = store.put(obs_t)
+        pd_a = store.put({"name": act_name})
+        pd_n = store.put(obs_next)
+        lines.append(json.dumps({
+            "episode_id": ep, "step": step,
+            "obs_t_ref": pd_t["digest"], "action_ref": pd_a["digest"],
+            "obs_next_ref": pd_n["digest"],
+            "obs_t_digest": pd_t["digest"],
+            "obs_next_digest": pd_n["digest"]}))
+    path = tmp_path / "ledger.jsonl"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path, store
+
+
+def _grids(ep, step, tag):
+    base = [[0.1 + tag, 0.2], [0.3, 0.4]]
+    return [[[v for _ in range(8)] for v in row] for row in base]
+
+
+def _lift(grid):
+    return np.asarray(grid, dtype=np.float32)
+
+
+def _awaves():
+    return {"a0": np.zeros((2, 8), dtype=np.float32),
+            "a1": np.zeros((2, 8), dtype=np.float32)}
+
+
+def test_c7_chain_continuity_is_not_duplicate_evidence(flag_on, tmp_path,
+                                                       monkeypatch):
+    """A->B then B->C: both transitions retained; continuity never drops."""
+    monkeypatch.setenv("HENRI_LEDGER_PAYLOADS", "1")
+    g0, g1, g2 = _grids("e0", 0, 0.0), _grids("e0", 1, 1.0), _grids("e0", 2, 2.0)
+    path, store = _payload_ledger(tmp_path, [
+        ("e0", 0, g0, "a0", g1), ("e0", 1, g1, "a1", g2)], _awaves())
+    records, stats = load_corpus(str(path), store, _lift, _awaves())
+    assert len(records) == 2
+    assert stats["duplicate_transition_dropped"] == 0
+    assert stats["continuity_breaks"] == 0
+    assert records[1].obs_t_digest == records[0].obs_next_digest
+
+
+def test_c8_same_state_different_action_retained(flag_on, tmp_path,
+                                                 monkeypatch):
+    monkeypatch.setenv("HENRI_LEDGER_PAYLOADS", "1")
+    g0, g1 = _grids("e0", 0, 0.0), _grids("e0", 1, 1.0)
+    path, store = _payload_ledger(tmp_path, [
+        ("e0", 0, g0, "a0", g1), ("e0", 1, g0, "a1", g1)], _awaves())
+    records, stats = load_corpus(str(path), store, _lift, _awaves())
+    assert len(records) == 2
+    assert [r.action_id for r in records] == ["a0", "a1"]
+
+
+def test_c9_exact_duplicate_dropped_once(flag_on, tmp_path, monkeypatch):
+    monkeypatch.setenv("HENRI_LEDGER_PAYLOADS", "1")
+    g0, g1 = _grids("e0", 0, 0.0), _grids("e0", 1, 1.0)
+    path, store = _payload_ledger(tmp_path, [
+        ("e0", 0, g0, "a0", g1), ("e0", 0, g0, "a0", g1)], _awaves())
+    records, stats = load_corpus(str(path), store, _lift, _awaves())
+    assert len(records) == 1
+    assert stats["duplicate_transition_dropped"] == 1
+
+
+def test_c10_same_transition_different_episodes_retained(flag_on, tmp_path,
+                                                         monkeypatch):
+    monkeypatch.setenv("HENRI_LEDGER_PAYLOADS", "1")
+    g0, g1 = _grids("e0", 0, 0.0), _grids("e0", 1, 1.0)
+    path, store = _payload_ledger(tmp_path, [
+        ("e0", 0, g0, "a0", g1), ("e1", 0, g0, "a0", g1)], _awaves())
+    records, stats = load_corpus(str(path), store, _lift, _awaves())
+    assert len(records) == 2
+    assert {r.episode for r in records} == {"e0", "e1"}
+
+
+def test_c11_broken_continuity_surfaced_not_repaired(flag_on, tmp_path,
+                                                     monkeypatch):
+    monkeypatch.setenv("HENRI_LEDGER_PAYLOADS", "1")
+    g0, g1, g2, g3 = (_grids("e0", i, float(i)) for i in range(4))
+    path, store = _payload_ledger(tmp_path, [
+        ("e0", 0, g0, "a0", g1), ("e0", 1, g2, "a1", g3)], _awaves())
+    records, stats = load_corpus(str(path), store, _lift, _awaves())
+    assert len(records) == 2          # never dropped for a break
+    assert stats["continuity_breaks"] == 1
+
+
+def test_c12_conflicting_duplicate_keys_fail_closed(flag_on, tmp_path,
+                                                    monkeypatch):
+    monkeypatch.setenv("HENRI_LEDGER_PAYLOADS", "1")
+    g0, g1, g2 = _grids("e0", 0, 0.0), _grids("e0", 1, 1.0), _grids("e0", 2, 2.0)
+    path, store = _payload_ledger(tmp_path, [
+        ("e0", 0, g0, "a0", g1), ("e0", 0, g0, "a1", g2)], _awaves())
+    with pytest.raises(ContinuityConflictError):
+        load_corpus(str(path), store, _lift, _awaves())
