@@ -56,11 +56,13 @@ class FailureTraceWindow:
         self._windows_resolved = 0
         self._stall_windows = 0
         self._progress_windows = 0
+        self.resolved_windows: List[Dict[str, Any]] = []
 
     def reset(self, episode_id: str) -> None:
         """Explicit episode boundary: clears the window (T0 reset pattern)."""
         self._episode_id = episode_id
         self._buf.clear()
+        self.resolved_windows.clear()
 
     def observe(self, step: int, action: str, score_delta: float) -> Dict[str, Any]:
         """Append one (step, action, score_delta); resolve at k records.
@@ -80,6 +82,14 @@ class FailureTraceWindow:
             self._stall_windows += 1
         else:
             self._progress_windows += 1
+        self.resolved_windows.append({
+            "episode_id": self._episode_id,
+            "window_delta": window_delta,
+            "nu": nu,
+            "steps": [r["step"] for r in window],
+            "actions": [r["action"] for r in window],
+            "score_deltas": [r["score_delta"] for r in window],
+        })
         self._buf = self._buf[-(self.k - 1):]
         return {
             "status": "RESOLVED",
