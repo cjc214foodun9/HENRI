@@ -28,13 +28,15 @@ class _R:
         self.next_wave = n
 
 
-def _lin_dynamics(seed=0, n_ep=8, steps=6, d=8, n_actions=2):
+def _lin_dynamics(seed=0, n_ep=16, steps=8, d=8, n_actions=2):
     """Linear per-action dynamics: next = M_a s + noise; dictionary = cat(s, a).
 
     M_a is a genuine rank-2 contractive map (singular values 0.9, 0.4) so a
-    low-rank operator can recover it and open-loop rollouts track. n_ep=8
-    gives 24 calibration records (12 per action) — enough to identify the
-    low-rank structure under ridge without being degenerate.
+    low-rank operator can recover it and open-loop rollouts track. n_ep=16,
+    steps=8 (episode-split 50/50) gives 64 calibration records = 32 per
+    action — exactly the N_a >= 4r per-action support gate at r=8, the
+    regime where the h=3 open-loop rollout gate passes (measured sweep:
+    n_ep=8 fails c5 across ALL map geometries; n_ep=16 passes all gates).
     """
     g = np.random.default_rng(seed)
     ms = {}
@@ -107,7 +109,7 @@ def test_c4_arms_skill_and_controls(flag_on):
 
 
 def test_c5_rollout_open_loop(flag_on):
-    recs = _lin_dynamics(n_ep=10, steps=8)
+    recs = _lin_dynamics()
     cal, evl = recs[: len(recs) // 2], recs[len(recs) // 2:]
     out = evaluate(cal, evl, _dict_fn, ridge=1e-6, rank=8, num_blocks=1,
                    horizons=(3, 5))
