@@ -76,8 +76,11 @@ def test_accept_criteria_consistent():
 
 def test_kill_experiments_present():
     c = _load()
-    assert len(c["kill_experiments"]) == 3
-    assert any("shuffled beats real" in k for k in c["kill_experiments"])
+    kills = c["kill_experiments"]
+    assert len(kills) == 3
+    # Contract text (not paraphrase): third kill names the shuffled-beats-real mode.
+    assert any("DeltaI(32) < 0" in k for k in kills)
+    assert any("action-binding leakage" in k for k in kills)
 
 
 def test_split_rule_lexicographic():
@@ -91,5 +94,6 @@ def test_support_and_default_off():
     c = _load()
     assert c["support"]["primary_budget_min_per_action"] == 2
     assert c["support"]["low_shot_diagnostic_only"] == [1, 2, 5]
-    assert c["flags"]["HENRI_FREEZE_LEARNING"] == "1"
+    # Flag values carry descriptive suffixes; the default prefix is the machine contract.
+    assert c["flags"]["HENRI_FREEZE_LEARNING"].startswith("1")
     assert c["flags"]["HENRI_GATE1_ONLINE_ADAPTATION"].startswith("0")
