@@ -104,6 +104,8 @@ import torch.nn.functional as F
 # missing file fails loudly at construction, never silently degrades.
 from temporal_transition_ledger import TemporalTransitionLedger
 from failure_trace import FailureTraceWindow
+from attribution_audit import AttributionAudit
+from ledger_payload_store import LedgerPayloadStore
 
 SCHEMA_ID = "henri.curriculum-replay.v1"
 SPLIT_SALT = "p79f-split-v1"
@@ -330,7 +332,8 @@ class EFEPlayPolicy:
                  axiom_waves: Optional[torch.Tensor] = None,
                  allowed_actions: Optional[Sequence[Any]] = None,
                  ledger: Optional[TemporalTransitionLedger] = None,
-                 trace: Optional[FailureTraceWindow] = None):
+                 trace: Optional[FailureTraceWindow] = None,
+                 audit: Optional[AttributionAudit] = None):
         self.orch = orch
         self.tokenizer = tokenizer
         self.egress = egress
@@ -349,6 +352,7 @@ class EFEPlayPolicy:
         # successful step with chain continuity.
         self.ledger = ledger
         self.trace = trace
+        self.audit = audit
         self._episode_id: Optional[str] = None
         self._step: int = 0
 
@@ -360,6 +364,8 @@ class EFEPlayPolicy:
             self.ledger.reset(episode_id)
         if self.trace is not None:
             self.trace.reset(episode_id)
+        if self.audit is not None:
+            pass  # audit consumes the trace telemetry at payload time (read-only)
 
     def hidden_feature(self, grid: Sequence[Sequence[int]]) -> Tuple[Optional[torch.Tensor], str]:
         """Production hidden feature at a state (exact run_sans_play path).
@@ -904,6 +910,20 @@ def run_env_replay(
             }
             if policy.trace is not None else {"enabled": False}
         ),
+        "attribution_audit": (
+            _attribution_summary(policy)
+            if policy.audit is not None else {"enabled": False}
+        ),
+        "payload_store": (
+            {
+                "enabled": True,
+                "payloads": policy.ledger.payload_store.count(),
+                "root": str(policy.ledger.payload_store.root),
+            }
+            if (policy.ledger is not None
+                and policy.ledger.payload_store is not None)
+            else {"enabled": False}
+        ),
         "sans_rows": rows,
         "blocked_rows": blocked_rows,
     }
@@ -966,6 +986,62 @@ def sans_buffer_status(payloads: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
+def _attribution_summary(policy: "EFEPlayPolicy") -> Dict[str, Any]:
+    """P2 read-only attribution summary from P1 stall windows + K0 payloads.
+
+    Sensitivity source (v1): per-coordinate magnitude of observable state
+    deltas between consecutive persisted grids (payload store). Gradient/
+    Fisher attribution is a follow-up carrier (P2b) once the Koopman path
+    exists. NEVER mutates parameters; heat is gated P3.
+    """
+    if policy.trace is None:
+        return {"enabled": True, "verdict": "BLOCKED_NO_STALL_ENGAGEMENT",
+                "reason": "failure trace not constructed"}
+    stalls = [w for w in policy.trace.resolved_windows if w.get("nu", 0) < 0]
+    if not stalls:
+        return {"enabled": True, "verdict": "BLOCKED_NO_STALL_ENGAGEMENT",
+                "reason": "no resolved stall windows in telemetry",
+                "stall_windows": 0}
+    score_deltas = [d for w in stalls for d in w.get("score_deltas", [])]
+    sensitivity = None
+    store = None
+    if policy.ledger is not None:
+        store = getattr(policy.ledger, "payload_store", None)
+    if store is not None:
+        try:
+            deltas = []
+            seen = set()
+            for row in policy.ledger._episodes.values():
+                for rec in row:
+                    if "obs_t_ref" not in rec or rec["obs_t_ref"] in seen:
+                        continue
+                    seen.add(rec["obs_t_ref"])
+                    _, obj = store.get_decoded(rec["obs_t_ref"])
+                    flat = np.asarray(obj, dtype=np.float32).reshape(-1)
+                    deltas.append(flat)
+            if deltas:
+                X = np.stack(deltas)
+                # Observable-coordinate sensitivity = column std of states.
+                sensitivity = X.std(axis=0)
+        except Exception as exc:
+            return {"enabled": True,
+                    "verdict": "BLOCKED_PAYLOAD_UNAVAILABLE",
+                    "reason": f"payload sensitivity failed: {type(exc).__name__}"}
+    if sensitivity is None:
+        return {"enabled": True, "verdict": "BLOCKED_MISSING_EXTERNAL_SCORE",
+                "reason": "no payload-based sensitivity (K0 payloads disabled)",
+                "stall_windows": len(stalls)}
+    try:
+        out = policy.audit.run(
+            stall_windows=stalls, score_deltas=score_deltas,
+            sensitivity=sensitivity, score_kind="frame", n_seeds=4)
+        return {"enabled": True, **out}
+    except Exception as exc:
+        return {"enabled": True,
+                "verdict": "ERROR_FAIL_CLOSED",
+                "reason": f"attribution audit raised: {type(exc).__name__}"}
+
+
 # ---------------------------------------------------------------------------
 # Aggregate reducer (fixes the 7.9d/7.9e last-env overwrite trap)
 # ---------------------------------------------------------------------------
@@ -1019,8 +1095,12 @@ def main() -> int:
     ledger = None
     if os.environ.get("HENRI_TEMPORAL_LEDGER", "0") == "1":
         try:
+            payload_store = None
+            if os.environ.get("HENRI_LEDGER_PAYLOADS", "0") == "1":
+                payload_store = LedgerPayloadStore(out_dir / "payloads")
             ledger = TemporalTransitionLedger(
-                out_dir / "temporal_ledger.jsonl", strict=True)
+                out_dir / "temporal_ledger.jsonl", strict=True,
+                payload_store=payload_store)
         except Exception as exc:
             print(f"[p79f] temporal ledger disabled: {exc}")
             ledger = None
@@ -1035,6 +1115,17 @@ def main() -> int:
         except Exception as exc:
             print(f"[p79f] failure trace disabled: {exc}")
             trace = None
+
+    # P2 attribution audit (default-OFF): HENRI_ATTRIBUTION_AUDIT=1.
+    # Read-only: consumes P1 stall windows + live transition magnitudes;
+    # NEVER mutates parameters (heat is gated P3).
+    attribution = None
+    if os.environ.get("HENRI_ATTRIBUTION_AUDIT", "0") == "1":
+        try:
+            attribution = AttributionAudit(top_k=64)
+        except Exception as exc:
+            print(f"[p79f] attribution audit disabled: {exc}")
+            attribution = None
 
     discovery, heldout = deterministic_split(UNIVERSE, SPLIT_SALT, 12)
     if args.envs:
@@ -1137,7 +1228,8 @@ def main() -> int:
         policy = EFEPlayPolicy(
             orch, tokenizer, egress, device, payloads, camera, args.seed,
             use_zone_c_axioms=False, axiom_waves=None,
-            allowed_actions=allowed, ledger=ledger, trace=trace)
+            allowed_actions=allowed, ledger=ledger, trace=trace,
+            audit=attribution)
         counters, payload = run_env_replay(
             game, arcade, env_name, args.rounds, args.seed, policy,
             out_dir=out_dir, env_id=full_id,
