@@ -71,13 +71,15 @@ class TemporalTransitionLedger:
     the chain deliberately; a within-episode mismatch raises in strict mode.
     """
 
-    def __init__(self, out_path: str | Path, strict: bool = True):
+    def __init__(self, out_path: str | Path, strict: bool = True,
+                 payload_store: Any = None):
         if os.environ.get(FLAG, "0") != "1":
             raise TemporalLedgerDisabledError(
                 f"{FLAG} is not set; the temporal ledger is default-OFF")
         self.out_path = Path(out_path)
         self.out_path.parent.mkdir(parents=True, exist_ok=True)
         self.strict = strict
+        self.payload_store = payload_store
         self._episodes: Dict[str, List[Dict[str, Any]]] = {}
         self._last: Optional[tuple] = None  # (episode_id, step, obs_next_digest)
 
@@ -117,6 +119,19 @@ class TemporalTransitionLedger:
             "meta": meta or {},
             "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
+        # K0 payload persistence (default-OFF via LedgerPayloadStore): rows
+        # gain content-addressed refs; refs equal the recorded digests.
+        if self.payload_store is not None:
+            p_t = self.payload_store.put(obs_t)
+            p_a = self.payload_store.put(action)
+            p_n = self.payload_store.put(obs_next)
+            rec["obs_t_ref"] = p_t["digest"]
+            rec["obs_t_kind"] = p_t["kind"]
+            rec["action_ref"] = p_a["digest"]
+            rec["action_kind"] = p_a["kind"]
+            rec["obs_next_ref"] = p_n["digest"]
+            rec["obs_next_kind"] = p_n["kind"]
+            rec["payload_schema"] = "payload.v1"
         # Incremental append BEFORE returning: an aggregation crash must never
         # destroy the only evidence (G3 lesson).
         with open(self.out_path, "a", encoding="utf-8") as f:
