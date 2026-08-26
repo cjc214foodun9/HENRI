@@ -204,14 +204,15 @@ def evaluate(cal: Sequence[Any], evl: Sequence[Any], dictionary_fn: Callable,
                 s_pred = predict_wave(ops[rs[i - 1].action_id], phi, num_blocks)
                 c_acc.append(_sagnac(s_pred, rs[i].next_wave))
             c_errs.append(mean(c_acc))
-        rollouts[h] = {"persistence": mean(p_errs), "conditioned": mean(c_errs)}
+        rollouts[str(h)] = {"persistence": mean(p_errs),
+                            "conditioned": mean(c_errs)}
     sn = {a: spectral_norm(ops[a]) for a in ops}
     max_sn = max(sn.values()) if sn else float("nan")
     # verdicts
     if mean(cond_cos) <= mean(cal_persist_cos) + 1e-9 and mean(cond_cos) < 0.05:
         verdict = "FALSIFIED_NO_ENGAGEMENT"
-    elif skill_ratio > 1.0 and rollouts.get(5, {}).get("conditioned", float("nan")) \
-            < rollouts.get(5, {}).get("persistence", float("inf")):
+    elif skill_ratio > 1.0 and rollouts.get("5", {}).get("conditioned", float("nan")) \
+            < rollouts.get("5", {}).get("persistence", float("inf")):
         verdict = "KOOPMAN_FIT_SUPPORTED"
     else:
         verdict = "FALSIFIED_NO_EXTERNAL_GAIN"

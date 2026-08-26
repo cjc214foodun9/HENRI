@@ -107,7 +107,6 @@ def test_c5_rollout_open_loop(flag_on):
     r3 = out["rollouts"]["3"]
     assert r3["conditioned"] < r3["persistence"]
 
-
 def test_c6_engagement(flag_on):
     recs = _lin_dynamics()
     cal, evl = recs[: len(recs) // 2], recs[len(recs) // 2:]
