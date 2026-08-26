@@ -203,7 +203,8 @@ def main() -> int:
         "generator": "gate4_zero_lineage_generate.py",
         "generator_version": GENERATOR_VERSION,
         "generator_code_sha256": code_sha,
-        "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        # NOTE: no generated_utc field — the manifest is byte-deterministic
+        # across reruns; timestamps are recorded in the research.jsonl event.
         "task_count": TASK_COUNT,
         "grid_dim": GRID_DIM,
         "colors": COLORS,
@@ -220,11 +221,10 @@ def main() -> int:
         "tasks_sha256": sha256_bytes(tasks_blob),
         "tasks_file": tasks_path.name,
     }
-    # Deterministic content hash: excludes the mutable timestamp so the
-    # manifest fingerprint is reproducible across reruns (lineage-pinned).
+    # Deterministic content hash: the manifest is byte-stable across reruns
+    # (no timestamps anywhere); only manifest_sha256 self-excludes.
     manifest_raw = lf(json.dumps(
-        {k: v for k, v in manifest.items()
-         if k not in ("manifest_sha256", "generated_utc")},
+        {k: v for k, v in manifest.items() if k != "manifest_sha256"},
         indent=1, ensure_ascii=False).encode("utf-8"))
     manifest["manifest_sha256"] = sha256_bytes(manifest_raw)
     manifest_path = here.parent / "gate4_zero_lineage_manifest.json"

@@ -2,8 +2,7 @@
  "schema": "henri.gate4-zero-lineage-suite.v1",
  "generator": "gate4_zero_lineage_generate.py",
  "generator_version": "1.0.0",
- "generator_code_sha256": "2fbab6970f4f0737a7c53a4cd7d77ea6ddbf818234f55f0e35621f638477dfc8",
- "generated_utc": "2026-08-26T22:47:17+00:00",
+ "generator_code_sha256": "3e8dd4fc477042f9c13e6741c62d15bfd4d8ebba18ff2c74b15950c9c4fc4811",
  "task_count": 30,
  "grid_dim": 10,
  "colors": 10,
@@ -93,5 +92,5 @@
  },
  "tasks_sha256": "dcfc9242d46d465d5e48d5126b2d0c4aa018dcb8ad4eb69d7dd7c2e48c9cec00",
  "tasks_file": "gate4_zero_lineage_tasks.json",
- "manifest_sha256": "c9de83b7b14ff8e74d40a5d2ccba524706c6646f1c68df069d474ce71a3f6813"
+ "manifest_sha256": "39f0af9ead577ccdebd3477f88537ebd269a6730cb2fa5d04a7d374893828c4c"
 }
