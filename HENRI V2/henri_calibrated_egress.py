@@ -460,6 +460,7 @@ def export_head_cli(argv: Optional[List[str]] = None) -> int:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest="command", required=True)
     sub.add_parser("calibrate")

@@ -317,3 +317,23 @@ def test_export_head_refuses_synthetic_artifact(tmp_path):
     with pytest.raises(CalibratedEgressError, match="synthetic"):
         export_head_cli(["--artifact", str(p), "--bank", "x.npz",
                          "--checkpoint-out", str(tmp_path / "h.pt")])
+
+
+# --------------------------------------------------------------------------
+# 7. CLI entry regression (main() with no argv must not crash)
+# --------------------------------------------------------------------------
+
+def test_main_entry_no_argv_does_not_typeerror():
+    from henri_calibrated_egress import main
+    with pytest.raises(SystemExit) as ei:
+        main()
+    assert ei.value.code == 2  # argparse usage/help path
+
+
+def test_main_dispatch_dry_run_subcommand(capsys):
+    from henri_calibrated_egress import main
+    rc = main(["dry-run", "--wave-dim", "65536"])
+    out = json.loads(capsys.readouterr().out)
+    assert rc == 2
+    assert out["verdict"] == "BLOCKED"
+    assert out["score_block_reason"] == "ACTION_HEAD_NOT_CALIBRATED"
