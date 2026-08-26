@@ -1,0 +1,66 @@
+{
+  "contract_id": "promotion_gate2_procrustes_validation_v1",
+  "schema_version": 1,
+  "source_doc": "experiments/verification/promotion_gate2_prereg.md",
+  "legacy_gate_rejected": {
+    "proposed": "falsify if |<Psi_goal, Psi_Y>| < 0.20 vs demonstration outputs",
+    "reasons": [
+      "Psi_goal built from the same demonstration outputs it is compared against (self-referential, no held-out test)",
+      "raw inner product is scale-dependent and uncalibrated"
+    ]
+  },
+  "hypothesis": "per-block orthogonal Procrustes recovers an underlying orthogonal mapping from demonstration pairs with held-out generalization",
+  "fixture": {
+    "seed": 20260826,
+    "num_blocks": 8192,
+    "block_dim": 8,
+    "m_total": 14,
+    "m_calibration": 10,
+    "m_heldout": 4,
+    "split": "episode/task-disjoint by demo index (calibration first 10, held-out last 4)",
+    "known_transform": "per-block orthogonal O_k from QR of Gaussian; Y_known = X @ O_k, per-block unit rows",
+    "shuffle": "derangement pi(i) = (i+1) mod 10 (no fixed points) on calibration X side"
+  },
+  "margins": {
+    "recon_cos_min": 0.95,
+    "known_cos_min": 0.95,
+    "shuffled_cos_max": 0.60,
+    "orthogonality_err_max": 1e-4
+  },
+  "controls": {
+    "C1": "known-transform positive: fit on (X, Y_known), reconstruct held-out",
+    "C2": "held-out reconstruction: fit on calibration only, reconstruct held-out",
+    "C3": "shuffled-pair negative: fit on deranged pairs, reconstruct held-out"
+  },
+  "diagnostics": [
+    "per-block SVD condition number of M_k (median, p95)",
+    "min singular value p5",
+    "orthogonality error max",
+    "shape checks"
+  ],
+  "verdict_precedence": [
+    "BLOCKED_INFRA",
+    "FAIL_SHAPE",
+    "FAIL_ORTHOGONALITY",
+    "FAIL_KNOWN_TRANSFORM",
+    "FAIL_SHUFFLE_CONTROL",
+    "FAIL_RECONSTRUCTION",
+    "GATE2_VALIDATION_PASS"
+  ],
+  "accept_criteria": {
+    "verdict": "GATE2_VALIDATION_PASS",
+    "requires": [
+      "C2 held-out recon_cos >= 0.95",
+      "C1 known transform recon_cos >= 0.95",
+      "C3 shuffled recon_cos <= 0.60",
+      "orthogonality_err <= 1e-4",
+      "no NaN"
+    ]
+  },
+  "kill_experiments": [
+    "C2 cosine < 0.95 -> FAIL_RECONSTRUCTION (Gate 2 falsified)",
+    "C3 cosine > 0.60 -> FAIL_SHUFFLE_CONTROL (compiler non-discriminative)",
+    "C1 cosine < 0.95 -> FAIL_KNOWN_TRANSFORM (implementation defect)"
+  ],
+  "scope": "validation of the EXISTING henri_goal_adapter.py path only; no reimplementation, no production enablement, no benchmark score"
+}
