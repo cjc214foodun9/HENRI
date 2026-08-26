@@ -48,8 +48,9 @@ def encode_payload(obj: Any) -> Dict[str, Any]:
                 "digest": wave_digest(obj)}
     if hasattr(obj, "name"):
         data = getattr(obj, "data", None)
-        base = (f"{type(obj).__name__}:{obj.name}:"
-                + json.dumps(data, sort_keys=True, default=str))
+        base = f"{type(obj).__name__}:{obj.name}"
+        if data is not None:
+            base += f":{json.dumps(data, sort_keys=True, default=str)}"
         return {"kind": "action", "raw": base.encode("utf-8"),
                 "meta": {"schema": "gameaction-string", "name": obj.name},
                 "digest": action_digest(obj)}
