@@ -296,3 +296,24 @@ def test_dry_run_positive_only_with_task_validation_flag(tmp_path, capsys):
     out2 = json.loads(capsys.readouterr().out)
     assert rc2 == 2
     assert out2["score_block_reason"] == "ACTION_HEAD_NOT_TASK_VALIDATED"
+
+
+# --------------------------------------------------------------------------
+# 6. export-head refusal (unqualified / synthetic never export a trained head)
+# --------------------------------------------------------------------------
+
+def test_export_head_refuses_unqualified_artifact(tmp_path):
+    from henri_calibrated_egress import CalibratedEgressError, export_head_cli
+    p = _qualified_artifact(tmp_path, is_qualified=False, status="OFF",
+                            calibration_mse_heldout=24.2)
+    with pytest.raises(CalibratedEgressError, match="unqualified"):
+        export_head_cli(["--artifact", str(p), "--bank", "x.npz",
+                         "--checkpoint-out", str(tmp_path / "h.pt")])
+
+
+def test_export_head_refuses_synthetic_artifact(tmp_path):
+    from henri_calibrated_egress import CalibratedEgressError, export_head_cli
+    p = _qualified_artifact(tmp_path, data_source="synthetic_fixture")
+    with pytest.raises(CalibratedEgressError, match="synthetic"):
+        export_head_cli(["--artifact", str(p), "--bank", "x.npz",
+                         "--checkpoint-out", str(tmp_path / "h.pt")])

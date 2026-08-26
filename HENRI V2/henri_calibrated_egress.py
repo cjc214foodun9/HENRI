@@ -350,12 +350,122 @@ def verify_bank_cli(argv: Optional[List[str]] = None) -> int:
     return 0
 
 
+def export_head_cli(argv: Optional[List[str]] = None) -> int:
+    """Export a trained-action-head checkpoint from a QUALIFIED AUTHORIZED
+    artifact by deterministic re-derivation of the calibrated weights.
+
+    The artifact stores only hashes (no 536 MB w_down). This command
+    re-derives the weights from the SAME authorized bank with the SAME seed
+    and proves byte-identical weight_sha256 before writing the .pt. Synthetic
+    fixtures and unqualified artifacts are refused.
+    """
+    p = argparse.ArgumentParser(description="Export calibrated head checkpoint")
+    p.add_argument("--artifact", required=True)
+    p.add_argument("--bank", required=True)
+    p.add_argument("--manifest", default="")
+    p.add_argument("--checkpoint-out", required=True)
+    p.add_argument("--wave-dim", type=int, default=DEFAULT_WAVE_DIM)
+    p.add_argument("--latent-dim", type=int, default=DEFAULT_LATENT_DIM)
+    p.add_argument("--action-dim", type=int, default=DEFAULT_ACTION_DIM)
+    p.add_argument("--max-records", type=int, default=None)
+    p.add_argument("--seed", type=int, default=20260826)
+    args = p.parse_args(argv)
+
+    art = load_calibrated_artifact(args.artifact)
+    if not art.get("is_qualified"):
+        raise CalibratedEgressError(
+            "cannot export an unqualified artifact as a trained head")
+    if art.get("data_source") != "authorized":
+        raise CalibratedEgressError(
+            "synthetic artifacts can never export a trained head")
+
+    # Deterministic re-derivation of the calibrated weights (same bank/seed).
+    from henri_calibrated_action_head import ActionHeadCalibrator, StiefelActionProactor
+    from henri_calibrator_ingest import ingest_bank_to_artifact
+    art2 = ingest_bank_to_artifact(
+        args.bank,
+        args.manifest or None,
+        os.devnull,
+        wave_dim=args.wave_dim,
+        latent_dim=args.latent_dim,
+        action_dim=args.action_dim,
+        max_records=args.max_records,
+        seed=args.seed,
+    )
+    if art2.get("weight_sha256") != art.get("weight_sha256"):
+        raise CalibratedEgressError(
+            "re-derived weight_sha256 mismatch (bank/seed/device drift); "
+            "re-calibrate on the same device and retry")
+    if not art2.get("is_qualified"):
+        raise CalibratedEgressError(
+            "re-derived calibration is not qualified; artifact is stale")
+
+    # Export format expected by arc_action_head.load_action_head:
+    #   state_dict {head.weight [n_actions, hidden], head.bias [n_actions]}
+    #   + calibration_dataset_digest (required for trained_action_head_active).
+    data = art2
+    proactor = None  # ingest wrote to os.devnull; rebuild weights via calibrator
+    from henri_trajectory_bank import TrajectoryBank, filter_onehot_to_vocab
+    bank_data = TrajectoryBank.load(args.bank, args.manifest or None,
+                                    verify_digest=True)
+    psi = bank_data["psi"]
+    onehot = bank_data["actions_onehot"]
+    bank_vocab = bank_data["action_vocab"]
+    onehot_sub, kept = filter_onehot_to_vocab(
+        onehot, bank_vocab, [f"ACTION{i}" for i in range(1, args.action_dim + 1)])
+    psi_sub = psi[kept]
+    if args.max_records is not None and psi_sub.shape[0] > args.max_records:
+        psi_sub = psi_sub[:args.max_records]
+        onehot_sub = onehot_sub[:args.max_records]
+    dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    proactor = StiefelActionProactor(
+        wave_dim=args.wave_dim, latent_dim=args.latent_dim,
+        action_dim=args.action_dim).to(dev)
+    calibrator = ActionHeadCalibrator(
+        proactor, held_out_frac=0.2, seed=args.seed)
+    art3 = calibrator.calibrate_from_trajectories(
+        torch.from_numpy(psi_sub).to(dev),
+        torch.from_numpy(onehot_sub).to(dev),
+        data_source="authorized",
+        split_identity=str(bank_data.get("manifest", {}).get("run_id", "unknown")),
+    )
+    if art3.get("weight_sha256") != art.get("weight_sha256"):
+        raise CalibratedEgressError("re-derived weight_sha256 mismatch (final check)")
+
+    sd = {
+        "head.weight": proactor.w_act.weight.detach().cpu().clone(),
+        "head.bias": torch.zeros(args.action_dim, dtype=torch.float32),
+    }
+    ckpt = {
+        "state_dict": sd,
+        "calibration_dataset_digest": str(art.get("dataset_digest", "")),
+        "d_model": args.wave_dim,
+        "artifact_sha256": art.get("artifact_sha256", ""),
+        "source_commit": "",
+    }
+    out = args.checkpoint_out
+    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    torch.save(ckpt, out)
+    raw = Path(out).read_bytes()
+    print(json.dumps({
+        "checkpoint": out,
+        "checkpoint_sha256": _sha256_bytes(raw),
+        "head_weight_sha256": _tensor_sha256(sd["head.weight"]),
+        "calibration_dataset_digest": ckpt["calibration_dataset_digest"],
+        "artifact_sha256": art.get("artifact_sha256"),
+        "qualified": art3.get("is_qualified"),
+        "data_source": "authorized",
+    }, indent=1, default=str))
+    return 0
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest="command", required=True)
     sub.add_parser("calibrate")
     sub.add_parser("dry-run")
     sub.add_parser("verify-bank")
+    sub.add_parser("export-head")
     args = p.parse_args(argv[:1])
     if args.command == "calibrate":
         return calibrate_cli(argv[1:])
@@ -363,6 +473,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return dry_run_cli(argv[1:])
     if args.command == "verify-bank":
         return verify_bank_cli(argv[1:])
+    if args.command == "export-head":
+        return export_head_cli(argv[1:])
     p.print_help()
     return 2
 
