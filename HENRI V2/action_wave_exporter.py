@@ -134,10 +134,50 @@ class ActionWaveExporter:
             "normalization": normalization, "encoder": encoder,
             "basis": basis, "digest": digest, "origin": ORIGIN,
         }
+        # Crash-safe sidecar: persists the full entry so a later process
+        # (the corpus launcher) can rebuild the manifest from disk.
+        (self.out_dir / f"{action_name}.json").write_text(
+            json.dumps(self._entries[action_name], indent=2, sort_keys=True),
+            encoding="utf-8")
 
     def write_manifest(self, path: Optional[str] = None) -> str:
         target = Path(path) if path else self.out_dir / "action_waves.json"
         target.write_text(
             json.dumps(self._entries, indent=2, sort_keys=True),
             encoding="utf-8")
+        return str(target)
+
+    @classmethod
+    def finalize_manifest(cls, out_dir: str,
+                          path: Optional[str] = None) -> str:
+        """Rebuild action_waves.json from on-disk per-action sidecars.
+
+        The exporter records in one process (the replay); the corpus
+        launcher runs in another process, so the in-memory manifest does
+        not survive. finalize_manifest reads the {action}.json sidecars
+        written by record(), verifies each .npy still matches its digest,
+        and writes the merged manifest. Raises on missing wave files or
+        digest mismatches (fail-loud).
+        """
+        d = Path(out_dir)
+        entries: Dict[str, Dict[str, Any]] = {}
+        for sidecar in sorted(d.glob("*.json")):
+            if sidecar.name == "action_waves.json":
+                continue
+            name = sidecar.stem
+            entry = json.loads(sidecar.read_text(encoding="utf-8"))
+            wave_path = Path(entry["path"])
+            if not wave_path.exists():
+                raise FileNotFoundError(
+                    f"{name}: wave file missing: {wave_path}")
+            if hashlib.sha256(wave_path.read_bytes()).hexdigest() != \
+                    entry["digest"]:
+                raise RuntimeError(
+                    f"{name}: digest mismatch on disk for {wave_path}")
+            entries[name] = entry
+        if not entries:
+            raise RuntimeError(f"no action sidecars found in {d}")
+        target = Path(path) if path else d / "action_waves.json"
+        target.write_text(
+            json.dumps(entries, indent=2, sort_keys=True), encoding="utf-8")
         return str(target)

@@ -142,3 +142,21 @@ def test_c6_round_trip_only_live_origin(tmp_path, monkeypatch):
     aw_map, err = validate_action_wave_manifest(
         exporter.write_manifest(), num_blocks=4)
     assert err is None and "a0" in aw_map
+
+
+def test_c7_finalize_manifest_rebuilds_from_disk(tmp_path, monkeypatch):
+    monkeypatch.setenv(FLAG, "1")
+    monkeypatch.setenv(DIR_ENV, str(tmp_path))
+    exporter = ActionWaveExporter.get()
+    exporter.record("a0", _wave(1), encoder="e", source="s")
+    exporter.record("a1", _wave(2), encoder="e", source="s")
+    # Simulate a fresh process (the corpus launcher): no in-memory state.
+    ActionWaveExporter.reset()
+    manifest_path = ActionWaveExporter.finalize_manifest(str(tmp_path))
+    aw_map, err = validate_action_wave_manifest(manifest_path, num_blocks=4)
+    assert err is None, err
+    assert set(aw_map) == {"a0", "a1"}
+    # Digest-mismatch fail-loud: corrupt one .npy, finalize must raise.
+    np.save(tmp_path / "a0.npy", np.zeros((4, 8), dtype=np.float32))
+    with pytest.raises(RuntimeError):
+        ActionWaveExporter.finalize_manifest(str(tmp_path))
