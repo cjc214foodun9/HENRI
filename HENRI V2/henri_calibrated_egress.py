@@ -110,6 +110,13 @@ def validate_action_schema(artifact: Dict[str, Any]) -> None:
         )
 
 
+# Post-seal fields appended by henri_calibrator_ingest.ingest_bank_to_artifact
+# AFTER artifact_sha256 was computed over the sealed payload. The self-hash
+# covers the sealed core only; these provenance fields are cross-checked
+# against the bank manifest elsewhere (verify-bank), never part of the seal.
+POST_SEAL_FIELDS = ("bank_npz_sha256", "bank_dataset_digest")
+
+
 def load_calibrated_artifact(path: str) -> Dict[str, Any]:
     """Strict artifact loader: schema, self-hash, ordering, thresholds."""
     try:
@@ -121,8 +128,10 @@ def load_calibrated_artifact(path: str) -> Dict[str, Any]:
         raise CalibratedEgressError(
             f"schema {raw.get('schema_id')} != {SCHEMA_ID} (or calibrated-action-head.v1)"
         )
-    blob = json.dumps({k: v for k, v in raw.items() if k != "artifact_sha256"},
-                      sort_keys=True).encode("utf-8")
+    blob = json.dumps(
+        {k: v for k, v in raw.items()
+         if k not in ("artifact_sha256", *POST_SEAL_FIELDS)},
+        sort_keys=True).encode("utf-8")
     if raw.get("artifact_sha256") and _sha256_bytes(blob) != raw.get("artifact_sha256"):
         raise CalibratedEgressError("artifact self-hash mismatch")
     validate_action_schema(raw)

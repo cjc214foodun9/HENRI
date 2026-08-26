@@ -169,6 +169,43 @@ def test_artifact_tamper_rejected(tmp_path):
         load_calibrated_artifact(str(p))
 
 
+def test_artifact_live_ingest_post_seal_fields_accepted(tmp_path):
+    # The live calibrator appends bank_* fields AFTER sealing artifact_sha256.
+    # The loader must hash the sealed payload only; tampering with sealed
+    # fields still fails.
+    art = {
+        "schema_id": "henri.calibrated-action-head.v1",
+        "version": "1",
+        "status": "OFF",
+        "is_qualified": False,
+        "data_source": "authorized",
+        "calibration_mse_heldout": 25.1,
+        "sagnac_stress_proxy_action_l2": 12.3,
+        "wave_dim": 65536,
+        "latent_dim": 2048,
+        "action_dim": 6,
+        "action_ordering": list(CANONICAL_ARC_ACTIONS),
+        "artifact_sha256": "",
+    }
+    import hashlib
+    blob = json.dumps({k: v for k, v in art.items() if k != "artifact_sha256"},
+                      sort_keys=True).encode("utf-8")
+    art["artifact_sha256"] = hashlib.sha256(blob).hexdigest()
+    # Post-seal fields appended by ingest_bank_to_artifact.
+    art["bank_npz_sha256"] = "b" * 64
+    art["bank_dataset_digest"] = "d" * 64
+    p = tmp_path / "live_artifact.json"
+    p.write_text(json.dumps(art, indent=1), encoding="utf-8")
+    loaded = load_calibrated_artifact(str(p))
+    assert loaded["is_qualified"] is False
+    assert loaded["bank_npz_sha256"] == "b" * 64
+    # Tampering with a SEALED field still fails despite the bank fields.
+    art["is_qualified"] = True
+    p.write_text(json.dumps(art, indent=1), encoding="utf-8")
+    with pytest.raises(CalibratedEgressError, match="self-hash mismatch"):
+        load_calibrated_artifact(str(p))
+
+
 def test_artifact_action_ordering_validation(tmp_path):
     p = _qualified_artifact(tmp_path, action_ordering=[
         "ACTION2", "ACTION1", "ACTION3", "ACTION4", "ACTION5", "ACTION6"])
