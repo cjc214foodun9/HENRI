@@ -79,7 +79,11 @@ class TemporalTransitionLedger:
             raise MissingActionError("action is required for a temporal transition")
         d_t = wave_digest(obs_t)
         d_next = wave_digest(obs_next)
-        if self._last is not None and self._last[0] == episode_id:
+        # A reset boundary (or an episode change) breaks the chain
+        # deliberately: _last[2] is None after reset(), so no continuity
+        # requirement applies to the first record of the fresh chain.
+        if (self._last is not None and self._last[0] == episode_id
+                and self._last[2] is not None):
             prev_step, prev_digest = self._last[1], self._last[2]
             if step <= prev_step:
                 raise StaleStateError(
