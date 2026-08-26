@@ -1,0 +1,66 @@
+{
+  "contract_id": "promotion_gate3_egress_legal_bounds_v1",
+  "schema_version": 1,
+  "source_doc": "experiments/verification/promotion_gate3_prereg.md",
+  "wiring_defect_corrected": {
+    "proposed_target": "sagnac_mcts_planner.py",
+    "live_target": "arc_curriculum_replay.py step() -> arc_egress_contract.decode_action_egress (EFE planner consumer)",
+    "syntax_error_gate": "demoted to DIAGNOSTIC; grid-token legality is structural, not capability",
+    "lexical_snap": "remains default-OFF (HENRI_LEXICAL_SNAP); not wired, not promoted"
+  },
+  "hypothesis": "the live EFE-planner egress path is structurally legal (dimensional and palette bounds enforced deterministically) and fails closed on unloaded transducer, illegal wave shape, or invalid vocabulary",
+  "live_anchors": {
+    "tokenizer_construction": "production_arc_run.py:721-725 HENRIVisionEncoder(d_model=65536, k_blocks=8192, spatial_basis_kind=default, bg_mask=False)",
+    "encoder": "henri_vision_encoder.py encode_spatial_grid -> [1, num_blocks, 8]; asserts dims <= max_grid_dim=128; clamps colors to [0, 15]",
+    "egress_consumer": "arc_curriculum_replay.py step lines 408-434; any exception -> EGRESS_FAIL_CLOSED, step returns None",
+    "egress_contract": "arc_egress_contract.py flatten_uwe requires exact [num_blocks, 8]; decode_action_egress requires LOADED when require_loaded=True; vocabulary rejects missing .name and duplicates"
+  },
+  "fixture": {
+    "seed": 20260826,
+    "num_blocks": 8192,
+    "block_dim": 8,
+    "d_model": 65536,
+    "max_grid_dim": 128,
+    "legal_grid": "8x8, colors 0..9",
+    "oob_color_grid": "8x8 containing color 99",
+    "oversized_grid": "200x200 (dimension > max_grid_dim)"
+  },
+  "checks": {
+    "G1": "dimensional bounds: oversized grid must raise",
+    "G2": "palette legality: OOB color grid encodes deterministically, clamped to [0, 15], finite",
+    "G3": "legal grid decode: shape [1, 8192, 8], finite, non-zero",
+    "G4": "egress fail-closed: unloaded transducer raises EgressFailClosedError",
+    "G5": "egress fail-closed: illegal wave shape raises EgressFailClosedError",
+    "G6": "egress fail-closed: invalid vocabulary raises EgressFailClosedError"
+  },
+  "diagnostics": [
+    "OOB color frequency at decode boundary (expect 0 after clamping)",
+    "malformed-grid token rate (expect 0.0 over fixture set)",
+    "encoded wave row norms (finite)",
+    "encoded wave dimensions"
+  ],
+  "verdict_precedence": [
+    "BLOCKED_INFRA",
+    "FAIL_DIMENSIONAL_BOUNDS",
+    "FAIL_PALETTE_LEGALITY",
+    "FAIL_EGRESS_FAIL_CLOSED",
+    "GATE3_VALIDATION_PASS"
+  ],
+  "accept_criteria": {
+    "verdict": "GATE3_VALIDATION_PASS",
+    "requires": [
+      "G1 oversized grid raises",
+      "G2 OOB color encoded deterministically, clamped, finite",
+      "G3 legal grid shape [1, 8192, 8], finite, non-zero",
+      "G4 unloaded transducer raises EgressFailClosedError",
+      "G5 illegal wave shape raises EgressFailClosedError",
+      "G6 invalid vocabulary raises EgressFailClosedError"
+    ]
+  },
+  "kill_experiments": [
+    "G1 accepts oversized grid -> FAIL_DIMENSIONAL_BOUNDS",
+    "G2 non-finite or non-deterministic wave -> FAIL_PALETTE_LEGALITY",
+    "G4/G5/G6 silent fallback -> FAIL_EGRESS_FAIL_CLOSED"
+  ],
+  "scope": "structural legality of the EXISTING live egress path only; no production change, no capability claim, no benchmark score, no snap promotion"
+}
