@@ -49,14 +49,18 @@ def test_c2_sliding_window_resolves_at_k(flag_on):
 
 
 def test_c3_stall_fires_on_nonpositive_sum(flag_on):
-    """C3: a window summing <= 0 resolves nu=-1 (stall detection)."""
+    """C3: a window summing <= 0 resolves nu=-1 (stall detection).
+
+    Window 1 resolves at observe index 4 (sum -0.4 -> stall), then slides;
+    window 2 resolves at observe index 5 (sum -0.5 -> stall). Both stall.
+    """
     w = FailureTraceWindow(k=DEFAULT_K)
     for i, d in enumerate([0.1, 0.1, -0.3, -0.1, -0.2]):
         w.observe(i, f"a{i}", d)
     out = w.observe(5, "a5", 0.0)  # window [0.1,-0.3,-0.1,-0.2,0.0] sum -0.5
     assert out["status"] == "RESOLVED"
     assert out["nu"] == -1.0
-    assert w.summary()["stall_windows"] == 1
+    assert w.summary()["stall_windows"] == 2
 
 
 def test_c4_default_off_raises(monkeypatch):
@@ -79,9 +83,23 @@ def test_c5_reset_clears_window(flag_on):
 
 
 def test_c6_zero_trainable_static_audit():
-    """C6: no torch, Parameter, optimizer, or backward in the carrier."""
-    src = textwrap.dedent(inspect.getsource(FailureTraceWindow))
-    for forbidden in ("Parameter(", "optimizer", ".backward("):
-        assert forbidden not in src, f"forbidden token {forbidden} in carrier"
-    assert "import torch" not in textwrap.dedent(inspect.getsource(
-        __import__("failure_trace")))
+    """C6: no torch/Parameter/optimizer/backward identifiers in executable code.
+
+    Scans the executable AST with docstrings removed (prose self-triggers
+    token scans — henri-research lesson 2026-08-24).
+    """
+    import ast as _ast
+
+    src = inspect.getsource(__import__("failure_trace"))
+    tree = _ast.parse(src)
+    for node in _ast.walk(tree):
+        if isinstance(node, (_ast.Module, _ast.ClassDef,
+                             _ast.FunctionDef, _ast.AsyncFunctionDef)):
+            if node.body and isinstance(node.body[0], _ast.Expr) and \
+                    isinstance(getattr(node.body[0], "value", None), _ast.Constant) \
+                    and isinstance(node.body[0].value.value, str):
+                node.body = node.body[1:]
+    used = {n.id for n in _ast.walk(tree) if isinstance(n, _ast.Name)}
+    used |= {a.attr for a in _ast.walk(tree) if isinstance(a, _ast.Attribute)}
+    for forbidden in ("Parameter", "optimizer", "backward", "torch"):
+        assert forbidden not in used, f"forbidden identifier {forbidden} in carrier"
