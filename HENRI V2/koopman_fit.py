@@ -128,6 +128,18 @@ def evaluate(cal: Sequence[Any], evl: Sequence[Any], dictionary_fn: Callable,
         phi = torch.stack([dictionary_fn(r.state_wave, r.action_wave) for r in rs])
         y = stack(rs, "next_wave")
         ops[a] = fit_operator(phi, y, ridge=ridge, r=rank)
+    # Eval coverage: only records whose action has a fitted operator can be
+    # scored on the conditioned/shuffled arms. Exclusions are counted and
+    # reported; persistence baseline still covers every eval record.
+    fitted = set(ops)
+    evl_fitted = [r for r in evl if r.action_id in fitted]
+    n_eval_excluded = len(evl) - len(evl_fitted)
+    if not evl_fitted:
+        return {"verdict": "BLOCKED_NO_EVAL_COVERAGE",
+                "n_cal": int(len(cal)), "n_eval": int(len(evl)),
+                "n_eval_excluded": n_eval_excluded,
+                "trainable_parameters": 0, "optimizer": None}
+    evl = evl_fitted
     # action-agnostic op
     phi_all = torch.stack([dictionary_fn(r.state_wave, r.action_wave) for r in cal])
     y_all = stack(cal, "next_wave")
