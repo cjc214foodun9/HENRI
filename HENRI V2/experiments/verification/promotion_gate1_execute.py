@@ -146,11 +146,17 @@ def spearman_rho(xs: Sequence[float], ys: Sequence[float]) -> float:
     n = len(xs)
     if n < 2 or len(set(xs)) < 2 or len(set(ys)) < 2:
         return 0.0
-    d2 = sum((a - b) ** 2 for a, b in zip(rx, ry))
-    denom = (n ** 3 - n) / 6.0
-    if denom == 0:
+    # Exact Spearman: Pearson correlation of the average-rank vectors.
+    # (The shortcut 1 - 6*sum(d^2)/(n^3 - n) is only valid tie-free and
+    # was FALSIFIED by the contract test on the reversed case.)
+    mx = sum(rx) / n
+    my = sum(ry) / n
+    num = sum((a - mx) * (b - my) for a, b in zip(rx, ry))
+    denx = math.sqrt(sum((a - mx) ** 2 for a in rx))
+    deny = math.sqrt(sum((b - my) ** 2 for b in ry))
+    if denx == 0.0 or deny == 0.0:
         return 0.0
-    return 1.0 - 6.0 * d2 / denom
+    return float(num / (denx * deny))
 
 
 def bootstrap_percentile(paired: List[Tuple[float, float]], b: int = 10000,
