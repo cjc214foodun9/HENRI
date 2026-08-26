@@ -103,6 +103,7 @@ import torch.nn.functional as F
 # The ledger is committed with the harness; import is unconditional so a
 # missing file fails loudly at construction, never silently degrades.
 from temporal_transition_ledger import TemporalTransitionLedger
+from failure_trace import FailureTraceWindow
 
 SCHEMA_ID = "henri.curriculum-replay.v1"
 SPLIT_SALT = "p79f-split-v1"
@@ -328,7 +329,8 @@ class EFEPlayPolicy:
                  use_zone_c_axioms: bool = False,
                  axiom_waves: Optional[torch.Tensor] = None,
                  allowed_actions: Optional[Sequence[Any]] = None,
-                 ledger: Optional[TemporalTransitionLedger] = None):
+                 ledger: Optional[TemporalTransitionLedger] = None,
+                 trace: Optional[FailureTraceWindow] = None):
         self.orch = orch
         self.tokenizer = tokenizer
         self.egress = egress
@@ -346,6 +348,7 @@ class EFEPlayPolicy:
         # HENRI_TEMPORAL_LEDGER=1. Records (grid, action, post_grid) per
         # successful step with chain continuity.
         self.ledger = ledger
+        self.trace = trace
         self._episode_id: Optional[str] = None
         self._step: int = 0
 
@@ -355,6 +358,8 @@ class EFEPlayPolicy:
         self._step = 0
         if self.ledger is not None:
             self.ledger.reset(episode_id)
+        if self.trace is not None:
+            self.trace.reset(episode_id)
 
     def hidden_feature(self, grid: Sequence[Sequence[int]]) -> Tuple[Optional[torch.Tensor], str]:
         """Production hidden feature at a state (exact run_sans_play path).
@@ -450,16 +455,33 @@ class EFEPlayPolicy:
             # T0 temporal substrate: record (grid, action, post_grid) with
             # chain continuity. Fail-closed: a ledger defect blocks the step
             # and is counted, never silently passed.
+            step_idx = self._step
             if (self.ledger is not None and self._episode_id is not None
                     and post is not None):
                 try:
                     self.ledger.record(
                         grid, act, post,
-                        episode_id=self._episode_id, step=self._step)
-                    self._step += 1
+                        episode_id=self._episode_id, step=step_idx)
+                    self._step = step_idx + 1
                     info["ledger_recorded"] = True
                 except Exception as exc:
                     info["error"] = f"LEDGER_FAIL_CLOSED:{type(exc).__name__}"
+                    return None, info
+            # P1 failure trace (default-OFF, telemetry only): sliding k-step
+            # window over exteroceptive score deltas; resolves nu but NEVER
+            # mutates parameters. Attribution/heating are gated P2/P3.
+            if (self.trace is not None and self._episode_id is not None
+                    and post is not None and info.get("action_name") is not None):
+                try:
+                    t_out = self.trace.observe(
+                        step_idx, str(info["action_name"]),
+                        float(info.get("delta_nu", 0.0)))
+                    info["trace_status"] = t_out["status"]
+                    info["trace_nu"] = t_out["nu"]
+                    if t_out["status"] == "RESOLVED":
+                        info["trace_window_delta"] = t_out["window_delta"]
+                except Exception as exc:
+                    info["error"] = f"TRACE_FAIL_CLOSED:{type(exc).__name__}"
                     return None, info
             info["ok"] = True
             return obs_next, info
@@ -875,6 +897,13 @@ def run_env_replay(
             }
             if policy.ledger is not None else {"enabled": False}
         ),
+        "failure_trace": (
+            {
+                "enabled": True,
+                **policy.trace.summary(),
+            }
+            if policy.trace is not None else {"enabled": False}
+        ),
         "sans_rows": rows,
         "blocked_rows": blocked_rows,
     }
@@ -996,6 +1025,17 @@ def main() -> int:
             print(f"[p79f] temporal ledger disabled: {exc}")
             ledger = None
 
+    # P1 failure trace (default-OFF): HENRI_FAILURE_TRACE=1. Instrumentation
+    # only — resolves retroactive valence over a sliding 5-step window; does
+    # not mutate parameters. Attribution/heating are gated P2/P3 carriers.
+    trace = None
+    if os.environ.get("HENRI_FAILURE_TRACE", "0") == "1":
+        try:
+            trace = FailureTraceWindow(k=5)
+        except Exception as exc:
+            print(f"[p79f] failure trace disabled: {exc}")
+            trace = None
+
     discovery, heldout = deterministic_split(UNIVERSE, SPLIT_SALT, 12)
     if args.envs:
         envs = list(args.envs)
@@ -1097,7 +1137,7 @@ def main() -> int:
         policy = EFEPlayPolicy(
             orch, tokenizer, egress, device, payloads, camera, args.seed,
             use_zone_c_axioms=False, axiom_waves=None,
-            allowed_actions=allowed, ledger=ledger)
+            allowed_actions=allowed, ledger=ledger, trace=trace)
         counters, payload = run_env_replay(
             game, arcade, env_name, args.rounds, args.seed, policy,
             out_dir=out_dir, env_id=full_id,
