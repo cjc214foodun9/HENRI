@@ -1,7 +1,7 @@
 {
  "schema": "henri.capture-manifest.v1",
- "generated_utc": "20260826T231346Z",
- "latest_snapshot": "capture/20260826T231346Z",
+ "generated_utc": "20260826T234412Z",
+ "latest_snapshot": "capture/20260826T234412Z",
  "sources": {
   "drive_inbox": "OK",
   "drive_research": "OK",
