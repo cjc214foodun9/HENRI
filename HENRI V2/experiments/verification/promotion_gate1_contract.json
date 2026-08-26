@@ -1,0 +1,67 @@
+{
+  "contract_id": "promotion_gate1_few_shot_scaling_v1",
+  "schema_version": 1,
+  "source_doc": "experiments/verification/promotion_gate1_prereg.md",
+  "hypothesis": "bounded online adaptation on the T0 ledger stream yields positive action-conditioned information gain growing with transition budget",
+  "budgets": [1, 2, 5, 10, 32],
+  "primary_budget": 32,
+  "arms": {
+    "R": "real action-conditioned update",
+    "S": "shuffled-action update (fixed derangement, no fixed points)",
+    "A": "action-agnostic update (single shared operator)",
+    "N": "no-update frozen baseline",
+    "P": "persistence (psi_hat_next = psi_t, no parameters)"
+  },
+  "metrics": {
+    "loss": "L_a(n) = mean over evaluation records of (1 - cos(psi_hat_next, psi_next)); aggregation unit = episode-level means",
+    "improvement": "I_a(n) = L_N(n) - L_a(n)",
+    "delta_I": "DeltaI(n) = I_R(n) - I_S(n) = L_S(n) - L_R(n)",
+    "ci_method": "episode-level paired bootstrap, 10000 resamples, percentile interval, paired across arms on same evaluation episodes"
+  },
+  "scaling_trend_gate": {
+    "spearman_rho_min": 0.60,
+    "rho_on": "I_R(n) vs log(n) over the five budgets",
+    "improvement_min": 0.02,
+    "improvement_on": "I_R(32) - I_R(1)"
+  },
+  "split": {
+    "episode_ordering": "lexicographic by episode_id string",
+    "calibration": "first K_cal episodes",
+    "evaluation": "last K_eval episodes, K_eval >= 2",
+    "manifest": "exact ordered episode IDs + record counts emitted at execution time, hash-pinned"
+  },
+  "support": {
+    "primary_budget_min_per_action": 2,
+    "low_shot_diagnostic_only": [1, 2, 5],
+    "blocked_verdict": "BLOCKED_NO_EVAL_COVERAGE"
+  },
+  "verdict_precedence": [
+    "BLOCKED_INFRA",
+    "BLOCKED_NO_EVAL_COVERAGE",
+    "FALSIFIED_NO_ENGAGEMENT",
+    "ENGAGED",
+    "ACTION_INFORMATION_GAIN",
+    "FEW_SHOT_SCALING"
+  ],
+  "accept_criteria": {
+    "verdict": "FEW_SHOT_SCALING",
+    "requires": [
+      "DeltaI(32) > 0 with bootstrap lb > 0",
+      "scaling trend gate passes"
+    ]
+  },
+  "kill_experiments": [
+    "DeltaI(32) <= 0 with CI including 0 -> Gate 1 FAIL",
+    "I_R(32) <= 0 with lb > 0 -> FAIL (regression)",
+    "DeltaI(32) < 0 with lb > 0 -> FAIL + investigate action-binding leakage"
+  ],
+  "flags": {
+    "HENRI_GATE1_ONLINE_ADAPTATION": "0 (default), 1 only inside the bounded experiment",
+    "HENRI_FREEZE_LEARNING": "1 (production default, restored on exit)"
+  },
+  "evidence_labels": {
+    "metrics": "OBSERVED",
+    "delta_I": "DERIVED",
+    "verdict": "per precedence"
+  }
+}
