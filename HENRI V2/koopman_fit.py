@@ -66,9 +66,13 @@ def predict_wave(op: Dict[str, Any], phi: Any, num_blocks: int = 8) -> Any:
 
 
 def spectral_norm(op: Dict[str, Any], iters: int = 40) -> float:
-    """Power iteration on K^T K with K = V W^T (factored, no [d, 2d] form)."""
+    """Power iteration on K^T K with K = V W^T (factored, no [d, 2d] form).
+
+    K maps input space [2d] -> output [d]; K^T K maps [2d] -> [2d], so the
+    iteration vector lives in the INPUT space (W.shape[0]).
+    """
     import torch
-    x = torch.randn(op["V"].shape[0], device=op["V"].device, dtype=op["V"].dtype)
+    x = torch.randn(op["W"].shape[0], device=op["V"].device, dtype=op["V"].dtype)
     x = x / (x.norm() + 1e-12)
     n = 0.0
     for _ in range(iters):
@@ -128,9 +132,16 @@ def evaluate(cal: Sequence[Any], evl: Sequence[Any], dictionary_fn: Callable,
     phi_all = torch.stack([dictionary_fn(r.state_wave, r.action_wave) for r in cal])
     y_all = stack(cal, "next_wave")
     ops["__agnostic__"] = fit_operator(phi_all, y_all, ridge=ridge, r=rank)
-    # shuffled action control: permuted per-action assignment
+    # shuffled action control: permuted per-action assignment (action-name
+    # keys; derangement so every action is paired with a DIFFERENT action's
+    # operator, and the arm is not the identity permutation).
     rng = np.random.default_rng(0)
-    perm = {a: action_ids[i] for i, a in enumerate(rng.permutation(len(action_ids)))}
+    shuffled = list(action_ids)
+    rng.shuffle(shuffled)
+    while len(action_ids) > 1 and any(
+            a == b for a, b in zip(action_ids, shuffled)):
+        rng.shuffle(shuffled)
+    perm = dict(zip(action_ids, shuffled))
 
     def arm_errors(records, op_fn):
         errs = []
