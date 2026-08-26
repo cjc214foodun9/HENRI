@@ -1,0 +1,87 @@
+{
+  "schema": "henri.gate4-prereq-manifest.v1",
+  "title": "Gate 4 Live ARC-AGI Gauntlet — Immutable Prerequisite Manifest",
+  "status": "BLOCKED_PREREQUISITES",
+  "pinned_at": "2026-08-26",
+  "source_pdf": {
+    "path": "G:/My Drive/HENRI_Inbox/Information Theory, Learning Dynamics, and General Covariance.pdf",
+    "sha256": "39b8aa1f69f7a85d2ec1b4188983341bdb9a4c25a68070d1a5f22c7b645105ae",
+    "bytes": 196647,
+    "disposition": "PROPOSAL_theory_packet — Price-to-Lambda, Natural Induction, Stiefel SGLD, epiplexity. Not an executable gauntlet spec; no load-bearing math authorized without separate approval."
+  },
+  "corpus_consult": {
+    "status": "INFERRED",
+    "bank": "ca4bb787-de9d-4ee0-89c9-bf71259cc86d (HENRI philosophy, 229 sources)",
+    "session": "3179135d-9cca-42a0-a626-3b192ea55cc2 (3 turns)",
+    "summary": "Corpus supports Price-to-Lambda covariant gradient ascent (g^ij=C_ij), Natural Induction viscoelastic creep, second-order covariance pooling (bypasses G2 lexical-snap blindspot), and epiplexity S_T as MDL dual — as HENRI mechanisms. Labels falsified: Newton-Schulz divergence under Langevin, isotropic Langevin thermalization, target-input context leakage, Kuramoto r>=0.95 termination tautology. Blocks: live ARC eval 0.0/BLOCKED_NO_DEMONSTRATIONS under HENRI_FREEZE_LEARNING=1; fast-forward merge of feat/phase827-production-promotion blocked pending CUDA 4667f08 + approval.",
+    "label_note": "Corpus-grounded synthesis, not OBSERVED telemetry; live code + CUDA telemetry override on conflict."
+  },
+  "companion": {
+    "path": "G:/My Drive/HENRI_Inbox/K1b_PostMortem_and_K1c_Covariance_PreRegistration.md",
+    "disposition": "PROPOSAL — K1c covariance pooling prereg (proposal, not authorization); consistent with PDF covariance theme; requires separate pre-registered carrier before execution"
+  },
+  "prerequisites": {
+    "environment_list": {
+      "status": "PINNED",
+      "env_ids": ["ar25","bp35","cn04","dc22","ft09","g50t","ka59","lp85","ls20","m0r0","re86","sb26"],
+      "source": "/workspace/gate1-run/HENRI V2/environment_files",
+      "count": 12
+    },
+    "evaluator": {
+      "status": "PINNED",
+      "arcengine": "0.9.3",
+      "arc_agi": "0.9.9",
+      "source_manifest_sha256": "9e2f99a0141094b124382360dcda1793082330a4102984d53f4197a30bec042f",
+      "source_manifest_path": "/venv/main/lib/python3.12/site-packages/eval_src.sha (17 *.py files, arcengine + arc_agi)",
+      "raw_manifest_sha256": "6a5c2b2d9356a79e1c1c5a1ebcd631913bf5bd65ee441a45bf24cd707f794e00",
+      "note": "SHA over sorted file list under site-packages/arcengine + arc_agi"
+    },
+    "candidate_commit": {
+      "status": "PINNED",
+      "commit": "804a793c9957806628ab3da23527b285a528787b",
+      "branch": "feat/temporal-navigation-t0",
+      "remote_reconciled": true
+    },
+    "checkpoint": {
+      "status": "PINNED",
+      "overlay_path": "/workspace/HENRI/HENRI V2/models/henri_decoder_checkpoint.pt",
+      "overlay_sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+      "state_dict_sha256": "e6ede41e0834807fa84ce55bda89a49d9b036a2f2e4a4a40bbbf5670c1943470",
+      "tensor_shapes": {"down_proj.weight": "[2048, 65536]", "layer_norm.weight": "[2048]", "layer_norm.bias": "[2048]", "lm_head.weight": "[32000, 2048]"},
+      "compat_metadata": "matches §3A decoder contract shapes; trained_decoder_active=true only after policy=required load validation at egress site"
+    },
+    "seed": {
+      "status": "PINNED",
+      "seed": 20260826,
+      "note": "Deterministic gate-4 seed; gauntlet RNG derived from this seed"
+    },
+    "timeout": {
+      "status": "PINNED",
+      "per_step_seconds": 60,
+      "total_seconds": 3600
+    },
+    "exposure_history": {
+      "status": "RECORDED",
+      "corpus_ledger": "/workspace/gate1-run/out/temporal_ledger.jsonl",
+      "corpus_rows": 1472,
+      "note": "Corpus envs are EXPOSED (replay). Live gauntlet must use unseen task splits; exposure of these env ids must be recorded in the scorecard",
+      "heldout_split": "BLOCKED_NOT_GENERATED"
+    },
+    "action_path_preflight": {
+      "status": "PASS",
+      "script": "henri-agent-integration/scripts/arc_action_probe.py (scp'd to /tmp/arc_action_probe.py)",
+      "probe_envs": ["ft09","ka59","m0r0"],
+      "details": {
+        "ft09": "any_change=true; bare ACTION1-5/7 change 2 cells each; ACTION6+payload OK source=env_actioninput complete=true screen coords",
+        "ka59": "any_change=true; ACTION1-4 change 19 cells; ACTION6 bare 1 cell; ACTION6+payload OK source=env_actioninput complete=true",
+        "m0r0": "any_change=true; ACTION6+payload OK source=env_actioninput complete=true (0 cells on this frame); ACTION7 0 cells"
+      },
+      "payload_note": "ACTION6 data is screen-space (camera params); wave_unbind_status=WAVE_UNBIND_UNAVAILABLE for all probes",
+      "evidence": "non-score-bearing; production (GameAction, data) call changes meaningful frame state on all 3 probed envs"
+    },
+    "score_eligibility": {
+      "status": "BLOCKED",
+      "reason": "ACTION_HEAD_NOT_CALIBRATED — no provenance-validated semantic action head; score_eligible=false; any external score claim remains blocked"
+    }
+  }
+}
