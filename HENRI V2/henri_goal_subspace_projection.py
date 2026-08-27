@@ -76,12 +76,18 @@ def project_goal(
         g_flat = g.reshape(-1)
         field_term = field_V @ (field_V.T @ g_flat)  # [d] real
         # Per-block residual adjoint: conj(R).transpose(-1,-2) @ g_rows.
-        # R is complex in the live operator (efe_planner.py:117); the planner
-        # boundary is REAL [num_blocks, 8], so the real part is taken before
-        # normalization (mirrors the transition's own `local.real + field`).
-        adjoint = block_residual.conj().transpose(-1, -2)  # [B, D, D]
-        residual_term = torch.einsum("bij,bj->bi", adjoint, g.reshape(B, D)).reshape(-1)
-        tilde = (field_term + residual_term).real
+        # R is COMPLEX in the live operator (efe_planner.py:117, complex64)
+        # while the goal wave is float32; einsum does NOT auto-promote
+        # (OBSERVED RuntimeError: expected scalar type ComplexFloat but
+        # found Float on CUDA probe, 2026-08-27). Cast the goal rows to the
+        # adjoint's complex dtype, apply, then take the real part (the
+        # planner boundary is REAL [num_blocks, 8]; mirrors the transition's
+        # own `local.real + field`).
+        adjoint = block_residual.conj().transpose(-1, -2)  # [B, D, D] complex
+        g_c = g.reshape(B, D).to(adjoint.dtype)            # [B, D] complex
+        residual_term = torch.einsum(
+            "bij,bj->bi", adjoint, g_c).real.reshape(-1)
+        tilde = field_term + residual_term
         tilde_norm = float(torch.norm(tilde, p=2).item())
         if not torch.isfinite(tilde).all() or tilde_norm <= 1e-12:
             return {"goal_wave": goal_wave, "projected": False,

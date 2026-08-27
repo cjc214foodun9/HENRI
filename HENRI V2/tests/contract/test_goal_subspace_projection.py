@@ -123,3 +123,25 @@ def test_c6_deterministic():
     b = project_goal(g, Q, Qb)
     assert torch.equal(a["goal_wave"], b["goal_wave"])
     assert a["projected_norm"] == b["projected_norm"]
+
+
+def test_c7_complex_residual_supported():
+    """Regression gate for the arm-E CUDA RuntimeError (2026-08-27):
+    the LIVE block_residual is complex64 while the goal wave is float32;
+    einsum does not auto-promote -> 'expected scalar type ComplexFloat but
+    found Float'. The projector must cast the goal rows to the adjoint's
+    complex dtype and return a REAL projected wave."""
+    torch.manual_seed(11)
+    V = torch.randn(B * D, R)
+    Q, _ = torch.linalg.qr(V, mode="reduced")
+    # complex residual exactly like the live operator (efe_planner.py:117)
+    real = torch.eye(D).repeat(B, 1, 1) + 0.01 * torch.randn(B, D, D)
+    imag = 0.01 * torch.randn(B, D, D)
+    res = torch.complex(real, imag)
+    g = torch.randn(B, D)  # float32 goal wave
+    out = project_goal(g, Q, res)
+    assert out["projected"] is True, out
+    assert not torch.is_complex(out["goal_wave"]), "projected goal must be real"
+    assert out["goal_wave"].dtype == torch.float32
+    norm = torch.norm(out["goal_wave"].reshape(-1), p=2).item()
+    assert abs(norm - 1.0) < 1e-6, norm
