@@ -53,9 +53,13 @@ def main() -> int:
     assert tuple(wave.shape) == (8192, 8), "unexpected wave shape"
     assert torch.isfinite(wave).all().item()
 
-    text, tele = vla.egress_decode(wave, "test prompt")
-    print("egress_status:", tele.get("egress_status"),
-          "checkpoint:", tele.get("checkpoint_load_status"))
+    # Checkpoint status via telemetry (never raises); generic marker egress
+    # is exercised under the fail-closed assertion below.
+    tele = egress.checkpoint_telemetry()
+    print("egress checkpoint:", tele.get("checkpoint_load_status"),
+          "policy:", tele.get("checkpoint_policy"),
+          "trained_decoder_active:", tele.get("trained_decoder_active"))
+    assert tele.get("checkpoint_load_status") == "LOADED"
 
     # Fail-closed proof: generic-prompt marker egress MUST raise
     # DecoderEgressFailClosedError (live contract). Diagnostic path = direct
@@ -68,6 +72,14 @@ def main() -> int:
         return 1
     except DecoderEgressFailClosedError:
         print("egress fail-closed guard: OK (generic marker refused)")
+
+    # Legitimate code-path egress (python/function/def branches are real,
+    # non-marker paths through decode_autoregressive_sequence).
+    code_text, code_tele = vla.egress_decode(wave, "python function def")
+    print("code-path egress: text", repr(code_text)[:60],
+          "telemetry_keys", sorted(code_tele.keys())[:6])
+    assert code_text is not None, "code-path egress returned None"
+    assert code_tele.get("egress_status") == "EGRESS_DECODED"
 
     flat_wave = wave.reshape(1, -1)
     with torch.no_grad():
