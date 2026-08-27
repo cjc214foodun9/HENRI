@@ -37,9 +37,13 @@ def main() -> int:
         device=dev, checkpoint_policy="required",
     )
 
+    # Production plan_action requires a real boundary batch [N, 8192, 8].
+    boundary_axioms = torch.nn.functional.normalize(
+        torch.randn(1, 8192, 8, device=dev), p=2, dim=-1)
+
     vla = get_unified_vla(
         tokenizer=tokenizer, orchestrator=orch, action_gate=gate,
-        egress_transducer=egress, device=dev,
+        egress_transducer=egress, boundary_axioms=boundary_axioms, device=dev,
     )
     assert isinstance(vla, HENRIUnifiedVLAModel), "factory returned wrong type"
 
