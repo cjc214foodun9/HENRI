@@ -503,6 +503,11 @@ def run():
     # live path, and emits OPINE macro-option engagement telemetry (C2).
     HENRI_ARC_TARGET_GROUNDING = os.environ.get(
         "HENRI_ARC_TARGET_GROUNDING", "0") == "1"
+    # Goal Adapter v1 (default OFF). HENRI-native per-block orthogonal
+    # Procrustes goal compiled from public demo pairs (Channel G) fused with
+    # the deterministic text codec (Channel T). Zero trainable parameters.
+    # Requires LAMBDA_GOAL > 0 to enter the goal block (dead-flag trap).
+    HENRI_GOAL_ADAPTER = os.environ.get("HENRI_GOAL_ADAPTER", "0") == "1"
     # Phase 7.1: public corpus ingress channel (default OFF). Requires an
     # explicit provenance manifest mapping environment ID -> public ARC task
     # ID with corpus path + sha256. Exact match only; no fuzzy fallback.
@@ -1110,6 +1115,7 @@ def run():
                 print(f"  [sans] failed: {_sans_exc}")
         goal_wave = None
         goal_status = "GOAL_UNAVAILABLE"
+        adapter_info = {}  # Goal Adapter v1 telemetry (default OFF)
         # Phase 8.26: CEGIS codebook snap (default OFF). Fail-closed:
         # without a grid source the snap emits SNAP_NO_GRID_SOURCE and
         # never fabricates a grid path.
@@ -1164,6 +1170,50 @@ def run():
                     if zonec_bridge is not None:
                         raise  # bridge path is fail-closed: no silent surrogate
                     pass  # legacy: Zone C may be offline; fall through
+
+            # Layer 1b: Goal Adapter v1 (default OFF). Per-block orthogonal
+            # Procrustes operator compiled from PUBLIC demo pairs, fused with
+            # the deterministic text codec (run21 protocol). Zero trainable.
+            # Fail-closed: no demo pairs -> GOAL_ADAPTER_NO_DEMOS, never
+            # fabricates a goal. Contract: HENRI-SPEC-2026-08-GOAL-ADAPTER-V1.
+            if goal_wave is None and HENRI_GOAL_ADAPTER:
+                try:
+                    from henri_goal_adapter import HenriGoalAdapter
+                    if not demo_pairs:
+                        goal_status = "GOAL_ADAPTER_NO_DEMOS"
+                        adapter_info = {"status": "NO_DEMOS_FAIL_CLOSED",
+                                        "demo_pair_count": 0}
+                        print("  [goal] adapter v1 NO_DEMOS fail-closed")
+                    else:
+                        _adapter = HenriGoalAdapter(device=DEVICE)
+                        _xs = []
+                        _ys = []
+                        for _px, _py in demo_pairs:
+                            _xi = _px.tolist() if hasattr(_px, "tolist") else _px
+                            _yi = _py.tolist() if hasattr(_py, "tolist") else _py
+                            _xs.append(tokenizer.encode_spatial_grid(
+                                _xi).squeeze(0).to(DEVICE))
+                            _ys.append(tokenizer.encode_spatial_grid(
+                                _yi).squeeze(0).to(DEVICE))
+                        _res = _adapter.build_goal(
+                            torch.stack(_xs), torch.stack(_ys), init_wave)
+                        goal_wave = _res["goal_wave"].to(DEVICE)
+                        goal_status = "GOAL_HENRI_ADAPTER"
+                        adapter_info = {
+                            "demo_recon_cos": round(_res["demo_recon_cos"], 6),
+                            "orthogonality_err": round(
+                                _res["orthogonality_err"], 8),
+                            "prompt_used": _res["prompt_used"],
+                            "demo_pair_count": len(demo_pairs),
+                        }
+                        print(f"  [goal] adapter v1 — demo_cos="
+                              f"{_res['demo_recon_cos']:.4f} "
+                              f"orth_err={_res['orthogonality_err']:.2e}")
+                except Exception as _adapter_exc:
+                    goal_status = "GOAL_ADAPTER_FAIL_CLOSED"
+                    adapter_info = {"status": "FAIL_CLOSED",
+                                    "reason": type(_adapter_exc).__name__}
+                    print(f"  [goal] adapter fail-closed: {_adapter_exc}")
 
             # Layer 2: preference-blend goal (blend top-k preference engrams into a
             # "desired outcome basin" — more meaningful than identity goal)
@@ -2300,6 +2350,7 @@ def run():
                 "phase823_opine_info": opine_info,
                 "phase823_goal_status": goal_status,
                 "phase826_snap_status": snap_status,
+                "adapter_info": adapter_info,
                 "extropic_ising": ising_info,
             })
             # Wave-level hypertable log (downsampled for DB volume)
