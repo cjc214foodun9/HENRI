@@ -87,3 +87,35 @@ new vocabulary, new math, or score claims without real env evidence.
 - Disposition table: `DERIVED` (from live source)
 - SOTA readiness: `BLOCKED` (no real-env evaluation exists; companion doc says NOT READY)
 - Carrier U1 efficacy: `HYPOTHESIS` until CUDA smoke
+
+## 7. Addendum — Finalized End-to-End VLA Blueprint (2026-08-27)
+
+`HENRI_Inbox/Project_HENRI__Finalized_End-to-End_VLA_Architectural_Blueprint.md`
+sha256 `9703b4fc69b0163791c3348affa650437e3aacf934a9428d246b6118f72cf64c`,
+28,640 B. Disposition: **consolidated spec of the live architecture** — the
+document itself declares production-staged at `origin/main` @ `2ac16ce`
+(CONFIRMED: deploy worktree on Vast 47411800 == 2ac16ce, 0 status lines).
+
+All subsystems are already live and consumed: Zone A (CC-OS segmenter +
+UWE/PhaseCodec), Zone B (ProductCliffordAlgebra3D + LowRankCoupledTransition +
+Sagnac veto + thermostat), Zone C (boundary_axioms wired via
+`USE_ZONE_C_AXIOMS` → `zone_c_boundary_axiom_loader.load_boundary_axioms` →
+consumed at production_arc_run.py:1626/1633 plan_action + 1761/1801 veto;
+commits 4efc049/6f4a1fd ON main), Egress (Hopfield + beta=0 default-OFF deep
+egress + TypedActionGate), Ledger (temporal_transition_ledger c1).
+
+Blueprint spec-contract invariants match live dimensional constants
+(D=65536, M=8192, K=8, Z_256, latent 2048, vocab 32000, beta=0, veto 0.35).
+Live contracts override blueprint variants: Sagnac delta canonical metric is
+[0,1] (`1 - 0.5(1+cos)`) for real UWE — the blueprint's `1 - <a,b>` ([0,2])
+is the FALSIFIED variant documented in `arc_sagnac_veto.py` (2026-08-12);
+live transition rank defaults r=64 with effective-rank validation; live action
+vocabulary is arcengine `GameAction` + ACTION6 screen-space payloads, not the
+7-name list. Carrier U1 `henri_unified_vla.py` remains the assembly carrier.
+
+Zone C → inference wiring is therefore VERIFIED at both code and production
+data layers (11 axioms, marker prod, HNSW). What remains for AAII v4.1.1
+readiness is benchmark execution, not architecture: see the gap doc's
+NOT_READY verdict (ARC-AGI-3 Gate 4 BLOCKED MSE 25.10, MMLU 0/102, GPQA
+random floor) — those are the measured baselines to improve, not claims to
+replay.
