@@ -517,6 +517,16 @@ def run():
         "HENRI_LATENT_EXPLORE_HORIZON", "2") or 2)
     if HENRI_LATENT_EXPLORE_HORIZON < 1 or HENRI_LATENT_EXPLORE_HORIZON > 4:
         raise ValueError("HENRI_LATENT_EXPLORE_HORIZON must be in [1, 4]")
+    # Arm E (2026-08-27): goal subspace projection (default OFF). Projects
+    # the compiled goal wave into the transition operator's reachable
+    # subspace before EFE scoring: Psi_tilde = V V^dag Psi_goal + R^dag
+    # Psi_goal, normalized (pre-registration Section 3.1). Requires
+    # HENRI_GOAL_ADAPTER=1 (Layer 0b goal source). Zero trainable; the
+    # transition factors are read-only (detached) inside the projector.
+    HENRI_GOAL_SUBSPACE_PROJ = os.environ.get(
+        "HENRI_GOAL_SUBSPACE_PROJ", "0") == "1"
+    if HENRI_GOAL_SUBSPACE_PROJ and not HENRI_GOAL_ADAPTER:
+        raise ValueError("HENRI_GOAL_SUBSPACE_PROJ requires HENRI_GOAL_ADAPTER=1")
     # Phase 7.1: public corpus ingress channel (default OFF). Requires an
     # explicit provenance manifest mapping environment ID -> public ARC task
     # ID with corpus path + sha256. Exact match only; no fuzzy fallback.
@@ -1359,6 +1369,48 @@ def run():
                     adapter_info = {"status": "LATENT_FAIL_CLOSED",
                                     "reason": type(_lg_exc).__name__}
                     print(f"  [goal] latent compile fail-closed: {_lg_exc}")
+
+            # Arm E (2026-08-27): goal subspace projection (default OFF).
+            # Project the compiled goal wave into the transition operator's
+            # reachable subspace BEFORE EFE scoring: Psi_tilde = V V^dag
+            # Psi_goal + R^dag Psi_goal, normalized (pre-registration
+            # Section 3.1). Fail-closed: on any failure the ORIGINAL goal is
+            # kept and GOAL_SUBSPACE_FAIL_CLOSED is recorded; the projector
+            # never fabricates a goal.
+            if (HENRI_GOAL_SUBSPACE_PROJ and goal_wave is not None
+                    and goal_status not in ("GOAL_SUBSPACE_PROJECTED",
+                                            "GOAL_SUBSPACE_FAIL_CLOSED")):
+                try:
+                    from henri_goal_subspace_projection import project_goal
+                    _tr = orch.planner.transition
+                    _res = project_goal(
+                        goal_wave.detach(),
+                        _tr.field_V.detach(),
+                        _tr.block_residual.detach(),
+                    )
+                    if _res["projected"]:
+                        goal_wave = _res["goal_wave"].to(DEVICE)
+                        goal_status = "GOAL_SUBSPACE_PROJECTED"
+                        adapter_info = {
+                            "subspace_projected": True,
+                            "projected_norm": _res["projected_norm"],
+                            "goal_status_base": goal_status,
+                        }
+                        print(f"  [goal] SUBSPACE projection engaged "
+                              f"(norm={_res['projected_norm']})")
+                    else:
+                        goal_status = "GOAL_SUBSPACE_FAIL_CLOSED"
+                        adapter_info = {"subspace_projected": False,
+                                        "reason": _res["reason"],
+                                        "goal_status_base": goal_status}
+                        print(f"  [goal] SUBSPACE projection fail-closed: "
+                              f"{_res['reason']}")
+                except Exception as _sp_exc:
+                    goal_status = "GOAL_SUBSPACE_FAIL_CLOSED"
+                    adapter_info = {"subspace_projected": False,
+                                    "reason": type(_sp_exc).__name__,
+                                    "goal_status_base": goal_status}
+                    print(f"  [goal] SUBSPACE projection fail-closed: {_sp_exc}")
 
             # Phase 8.37 D1 (Extropic): Ising digital-twin snapshot of the
             # live state wave — telemetry only, NEVER mutates weights/policy.
@@ -2400,6 +2452,12 @@ def run():
                 "thermo_shadow": thermo_shadow_info,
                 "complex_sidecar": complex_sidecar_info,
                 "goal_distance": round(float(chosen.get("goal_distance", 0.0)), 6),
+                "goal_dist_var": round(
+                    (lambda _ds: (sum((_d - sum(_ds) / len(_ds)) ** 2 for _d in _ds) / len(_ds))
+                     if len(_ds) >= 2 else None)(
+                        [float(r["goal_distance"]) for r in efe_table
+                         if r.get("goal_distance") is not None]),
+                    6) if efe_table else None,
                 "residual_type": str(chosen.get("residual_type", "N/A")),
                 "lambda_goal": LAMBDA_GOAL,
                 "grid_dist": round(grid_dist, 6),
@@ -2418,6 +2476,11 @@ def run():
                 "phase823_goal_status": goal_status,
                 "phase826_snap_status": snap_status,
                 "adapter_info": adapter_info,
+                "subspace_projection": {
+                    "flag": HENRI_GOAL_SUBSPACE_PROJ,
+                    "goal_status": goal_status,
+                    "info": adapter_info,
+                },
                 "extropic_ising": ising_info,
             })
             # Wave-level hypertable log (downsampled for DB volume)
