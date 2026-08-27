@@ -1146,36 +1146,13 @@ def run():
                 goal_status = "GOAL_WAVE_SYNTHESIZED"
                 print(f"  [goal] Phase 8.18 transducer bridge — "
                       f"W_task @ U_test -> goal wave")
-            # Layer 1: try Zone C analogical retrieval (8.38: routed through
-            # the authorized bridge when HENRI_ZONEC_BRIDGE=1; legacy
-            # SegmentCache path otherwise, byte-identical)
-            if goal_wave is None:
-                try:
-                    if zonec_bridge is not None:
-                        _hits = zonec_bridge.retrieve(init_wave.cpu(), top_k=4)
-                        if _hits and _hits[0][1] > 0.7:
-                            goal_wave = _hits[0][0].to(DEVICE)
-                            goal_status = "GOAL_ZONE_C_BRIDGE"
-                            print(f"  [goal] Zone C bridge — top_sim={_hits[0][1]:.3f}")
-                    else:
-                        res = orch.segment_cache.retrieve(init_wave.cpu())
-                        if res["hits"] > 0 and res.get("top_similarity", 0) > 0.7:
-                            # Retrieved wave is a similar past state — use as goal
-                            goal_wave = res["conditioning_wave"]
-                            if goal_wave is not None:
-                                goal_wave = goal_wave.to(DEVICE)
-                                goal_status = "GOAL_ZONE_C_ANALOGICAL"
-                                print(f"  [goal] Zone C analogical — top_sim={res['top_similarity']:.3f}")
-                except Exception:
-                    if zonec_bridge is not None:
-                        raise  # bridge path is fail-closed: no silent surrogate
-                    pass  # legacy: Zone C may be offline; fall through
-
-            # Layer 1b: Goal Adapter v1 (default OFF). Per-block orthogonal
+            # Layer 0b: Goal Adapter v1 (default OFF). Per-block orthogonal
             # Procrustes operator compiled from PUBLIC demo pairs, fused with
             # the deterministic text codec (run21 protocol). Zero trainable.
             # Fail-closed: no demo pairs -> GOAL_ADAPTER_NO_DEMOS, never
             # fabricates a goal. Contract: HENRI-SPEC-2026-08-GOAL-ADAPTER-V1.
+            # Placement BEFORE Zone C retrieval (sealed contract Layer 0b);
+            # arm C proved Zone C preempts the goal 30/30 otherwise.
             if goal_wave is None and HENRI_GOAL_ADAPTER:
                 try:
                     from henri_goal_adapter import HenriGoalAdapter
@@ -1214,6 +1191,31 @@ def run():
                     adapter_info = {"status": "FAIL_CLOSED",
                                     "reason": type(_adapter_exc).__name__}
                     print(f"  [goal] adapter fail-closed: {_adapter_exc}")
+
+            # Layer 1: try Zone C analogical retrieval (8.38: routed through
+            # the authorized bridge when HENRI_ZONEC_BRIDGE=1; legacy
+            # SegmentCache path otherwise, byte-identical)
+            if goal_wave is None:
+                try:
+                    if zonec_bridge is not None:
+                        _hits = zonec_bridge.retrieve(init_wave.cpu(), top_k=4)
+                        if _hits and _hits[0][1] > 0.7:
+                            goal_wave = _hits[0][0].to(DEVICE)
+                            goal_status = "GOAL_ZONE_C_BRIDGE"
+                            print(f"  [goal] Zone C bridge — top_sim={_hits[0][1]:.3f}")
+                    else:
+                        res = orch.segment_cache.retrieve(init_wave.cpu())
+                        if res["hits"] > 0 and res.get("top_similarity", 0) > 0.7:
+                            # Retrieved wave is a similar past state — use as goal
+                            goal_wave = res["conditioning_wave"]
+                            if goal_wave is not None:
+                                goal_wave = goal_wave.to(DEVICE)
+                                goal_status = "GOAL_ZONE_C_ANALOGICAL"
+                                print(f"  [goal] Zone C analogical — top_sim={res['top_similarity']:.3f}")
+                except Exception:
+                    if zonec_bridge is not None:
+                        raise  # bridge path is fail-closed: no silent surrogate
+                    pass  # legacy: Zone C may be offline; fall through
 
             # Layer 2: preference-blend goal (blend top-k preference engrams into a
             # "desired outcome basin" — more meaningful than identity goal)
