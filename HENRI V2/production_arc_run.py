@@ -527,6 +527,23 @@ def run():
         "HENRI_GOAL_SUBSPACE_PROJ", "0") == "1"
     if HENRI_GOAL_SUBSPACE_PROJ and not HENRI_GOAL_ADAPTER:
         raise ValueError("HENRI_GOAL_SUBSPACE_PROJ requires HENRI_GOAL_ADAPTER=1")
+    # Arm F (2026-08-27): successor-feature action scoring (default OFF).
+    # Per-action successor features psi_a(s) = sum_k gamma^k K_a^k phi(s)
+    # read from the LIVE transition operator; candidate-specific goal
+    # scores; blended EFE re-rank (argmin preserved). Zero trainable.
+    # Pre-registration: docs/arm_f_sfas_pre_registration.md. Requires a
+    # goal wave; with goal_wave=None the block is a no-op (order
+    # byte-identical). Fail-closed: scores=None keeps the EFE order.
+    HENRI_SFAS = os.environ.get("HENRI_SFAS", "0") == "1"
+    HENRI_SFAS_HORIZON = int(os.environ.get("HENRI_SFAS_HORIZON", "2") or 2)
+    if HENRI_SFAS_HORIZON < 1 or HENRI_SFAS_HORIZON > 4:
+        raise ValueError("HENRI_SFAS_HORIZON must be in [1, 4]")
+    HENRI_SFAS_GAMMA = float(os.environ.get("HENRI_SFAS_GAMMA", "0.9") or 0.9)
+    if not 0.0 <= HENRI_SFAS_GAMMA < 1.0:
+        raise ValueError("HENRI_SFAS_GAMMA must be in [0, 1)")
+    HENRI_SFAS_LAMBDA = float(os.environ.get("HENRI_SFAS_LAMBDA", "1.0") or 1.0)
+    if HENRI_SFAS_LAMBDA < 0.0:
+        raise ValueError("HENRI_SFAS_LAMBDA must be >= 0.0")
     # Phase 7.1: public corpus ingress channel (default OFF). Requires an
     # explicit provenance manifest mapping environment ID -> public ARC task
     # ID with corpus path + sha256. Exact match only; no fuzzy fallback.
@@ -1865,6 +1882,62 @@ def run():
                     rt_info = {"rt_error": f"{type(_rt_exc).__name__}: {_rt_exc}"}
                     print(f"  [rt] re-rank unavailable (fail-closed): {_rt_exc}")
 
+            # Arm F (2026-08-27): successor-feature action scoring (default
+            # OFF, HENRI_SFAS=1). Per-action successor features
+            # psi_a(s) = sum_k gamma^k K_a^k phi(s) rolled through the LIVE
+            # transition operator (matrix-free, H in [1,4]); candidate-
+            # specific goal scores cos(psi_a(s), phi(g)); blended
+            # efe' = efe + lambda_sfas*(1-score); stable ascending re-rank
+            # (argmin preserved). Zero trainable. Fail-closed: scores=None
+            # keeps the EFE order byte-identical; no goal -> no-op.
+            # Pre-registration: docs/arm_f_sfas_pre_registration.md.
+            sfas_info = None
+            if HENRI_SFAS and goal_wave is not None and efe_table:
+                try:
+                    from henri_successor_feature_scorer import (
+                        compute_sfas_scores, rerank_efe_table)
+                    _tr = orch.planner.transition
+                    _action_waves = {}
+                    for _cand in efe_table:
+                        _aid = _cand.get("action")
+                        if _aid is None:
+                            continue
+                        _k = int(_aid.value if hasattr(_aid, "value") else _aid)
+                        # Reuse the orchestrator's deterministic action-wave
+                        # source (same path as candidate_action_waves, but
+                        # keyed by the raw action id).
+                        try:
+                            _w = orch.candidate_action_waves(
+                                top_k=None, allowed_actions=[_aid])[0][1]
+                        except Exception:
+                            _w = None
+                        if _w is not None:
+                            _action_waves[_k] = _w.to(DEVICE)
+                    if _action_waves:
+                        _scores = compute_sfas_scores(
+                            state_wave.detach(), goal_wave.detach(),
+                            _action_waves, _tr,
+                            horizon=HENRI_SFAS_HORIZON,
+                            gamma=HENRI_SFAS_GAMMA)
+                        _new_table, _info = rerank_efe_table(
+                            efe_table, _scores, lambda_sfas=HENRI_SFAS_LAMBDA)
+                        _info["horizon"] = HENRI_SFAS_HORIZON
+                        _info["gamma"] = HENRI_SFAS_GAMMA
+                        if _info["reordered"]:
+                            efe_table = _new_table
+                            chosen = dict(_new_table[0])
+                            action = _new_table[0]["action"]
+                            predicted_wave = _new_table[0]["predicted_wave"]
+                            explored = bool(chosen.get("explored", False))
+                            hop_conf = chosen["efe"]
+                            print(f"  [sfas] re-rank engaged (discordance="
+                                  f"{_info['discordance']}, H="
+                                  f"{HENRI_SFAS_HORIZON})")
+                        sfas_info = _info
+                except Exception as _sfas_exc:
+                    sfas_info = {"sfas_error": f"{type(_sfas_exc).__name__}"}
+                    print(f"  [sfas] fail-closed (EFE order kept): {_sfas_exc}")
+
             # Phase 8.23 C2: OPINE macro-option live engagement telemetry
             # (default OFF via HENRI_ARC_TARGET_GROUNDING). Constructs the
             # 4-step macro-option from the trained action generators, applies
@@ -2476,6 +2549,11 @@ def run():
                 "phase823_goal_status": goal_status,
                 "phase826_snap_status": snap_status,
                 "adapter_info": adapter_info,
+                "sfas": sfas_info,
+                "sfas_flag": HENRI_SFAS,
+                "superposition_load": round(
+                    float(orch.planner.cleanup.num_engrams()) / SCALE["d_model"],
+                    8) if SCALE["d_model"] else None,
                 "subspace_projection": {
                     "flag": HENRI_GOAL_SUBSPACE_PROJ,
                     "goal_status": goal_status,
