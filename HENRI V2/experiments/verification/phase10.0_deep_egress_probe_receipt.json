@@ -1,0 +1,45 @@
+{
+  "activation_budget_ok": true,
+  "all_deep_params_grad_nonzero": true,
+  "beta0_byte_identical": true,
+  "beta0_max_abs_diff": 0.0,
+  "beta_half_blend_ok": true,
+  "block_dim": 8,
+  "checkpoint_load_status": "LOADED",
+  "checkpoint_sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+  "checkpoint_state_dict_sha256": "72cf3ab5a18b2f9ece83107e080b1af640098b44a1325902edb4ed64f463b85f",
+  "d_hidden": 2048,
+  "d_model": 65536,
+  "dense_d_d_params": [],
+  "device": "cpu",
+  "elapsed_s": 3.72,
+  "gradient_reachability": {
+    "block_proj.weight": {
+      "abs_sum": 10038.353515625,
+      "grad_present": true
+    },
+    "deep_down.weight": {
+      "abs_sum": 48576576.0,
+      "grad_present": true
+    },
+    "layer_norm.bias": {
+      "abs_sum": 12031.1513671875,
+      "grad_present": true
+    },
+    "layer_norm.weight": {
+      "abs_sum": 4190.47265625,
+      "grad_present": true
+    }
+  },
+  "num_blocks": 8192,
+  "params_millions": {
+    "block_proj": 0.0,
+    "deep_down": 33.554,
+    "deep_total": 99.095
+  },
+  "peak_activation_bytes_est": 267264,
+  "probe": "phase10.0_deep_egress_identity",
+  "proj_dim": 2,
+  "verdict": "PASS",
+  "vocab_size": 32000
+}
