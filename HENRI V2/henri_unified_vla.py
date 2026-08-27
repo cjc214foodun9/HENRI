@@ -198,7 +198,11 @@ class HENRIUnifiedVLAModel:
         tele = self.egress.checkpoint_telemetry()
         if tele.get("checkpoint_load_status") != "LOADED":
             return None, {"egress_status": "EGRESS_BLOCKED_CHECKPOINT", **tele}
-        text, meta = self.egress.decode_wave_to_response(wave, prompt_text, w_task=w_task)
+        # Live HENRINeuralEgressUnbinder consumes a flat [batch, d_model]
+        # wave (d_model = num_blocks * block_dim); the runtime wave is
+        # [num_blocks, 8]. Flatten at the egress boundary.
+        flat_wave = wave.reshape(1, -1)
+        text, meta = self.egress.decode_wave_to_response(flat_wave, prompt_text, w_task=w_task)
         return text, {"egress_status": "EGRESS_DECODED", **meta}
 
     # -- Temporal ledger (real transitions, external outcome meta) ----------

@@ -12,6 +12,8 @@ import os
 import unittest
 from unittest.mock import MagicMock
 
+import torch
+
 from henri_unified_vla import (
     FLAG,
     HENRIUnifiedVLAModel,
@@ -96,6 +98,26 @@ class TestComposition(unittest.TestCase):
         text, tele = model.egress_decode(MagicMock(), "prompt")
         self.assertIsNone(text)
         self.assertEqual(tele["egress_status"], "EGRESS_BLOCKED_CHECKPOINT")
+
+    def test_egress_flattens_block_wave_at_boundary(self):
+        # Live unbinder consumes [batch, d_model]; assembly must flatten [K,8].
+        captured = {}
+        fake_egress = MagicMock()
+        fake_egress.checkpoint_telemetry.return_value = {
+            "checkpoint_load_status": "LOADED"
+        }
+        fake_egress.decode_wave_to_response.side_effect = (
+            lambda w, p, w_task=None: captured.update(shape=tuple(w.shape))
+            or ("ok", {})
+        )
+        model = HENRIUnifiedVLAModel(
+            tokenizer=self.tokenizer, orchestrator=self.orch, action_gate=self.gate,
+            egress_transducer=fake_egress,
+        )
+        wave = torch.zeros(8192, 8)
+        text, tele = model.egress_decode(wave, "prompt")
+        self.assertEqual(text, "ok")
+        self.assertEqual(captured["shape"], (1, 65536))
 
 
 if __name__ == "__main__":
