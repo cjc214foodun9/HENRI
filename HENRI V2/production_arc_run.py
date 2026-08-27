@@ -508,6 +508,15 @@ def run():
     # the deterministic text codec (Channel T). Zero trainable parameters.
     # Requires LAMBDA_GOAL > 0 to enter the goal block (dead-flag trap).
     HENRI_GOAL_ADAPTER = os.environ.get("HENRI_GOAL_ADAPTER", "0") == "1"
+    # Arm D (2026-08-27): latent-exploration demo source for the Goal Adapter
+    # (default OFF, requires HENRI_GOAL_ADAPTER=1). Demos = HENRI's own REAL
+    # observed transitions from the current episode; internal latent rolls
+    # only, never submitted to the environment (RHAE score-free).
+    HENRI_LATENT_EXPLORE = os.environ.get("HENRI_LATENT_EXPLORE", "0") == "1"
+    HENRI_LATENT_EXPLORE_HORIZON = int(os.environ.get(
+        "HENRI_LATENT_EXPLORE_HORIZON", "2") or 2)
+    if HENRI_LATENT_EXPLORE_HORIZON < 1 or HENRI_LATENT_EXPLORE_HORIZON > 4:
+        raise ValueError("HENRI_LATENT_EXPLORE_HORIZON must be in [1, 4]")
     # Phase 7.1: public corpus ingress channel (default OFF). Requires an
     # explicit provenance manifest mapping environment ID -> public ARC task
     # ID with corpus path + sha256. Exact match only; no fuzzy fallback.
@@ -1116,6 +1125,13 @@ def run():
         goal_wave = None
         goal_status = "GOAL_UNAVAILABLE"
         adapter_info = {}  # Goal Adapter v1 telemetry (default OFF)
+        # Arm D (2026-08-27): latent-exploration demo buffer. REAL observed
+        # (state, action_wave, observed_next) triples from the CURRENT
+        # episode, appended at the T1 deferred-update boundary (steps < t
+        # only; reset transitions excluded). Consumed by the per-step
+        # compile; causally strict by construction.
+        latent_transitions = []
+        latent_goal_ready = False
         # Phase 8.26: CEGIS codebook snap (default OFF). Fail-closed:
         # without a grid source the snap emits SNAP_NO_GRID_SOURCE and
         # never fabricates a grid path.
@@ -1157,10 +1173,22 @@ def run():
                 try:
                     from henri_goal_adapter import HenriGoalAdapter
                     if not demo_pairs:
-                        goal_status = "GOAL_ADAPTER_NO_DEMOS"
-                        adapter_info = {"status": "NO_DEMOS_FAIL_CLOSED",
-                                        "demo_pair_count": 0}
-                        print("  [goal] adapter v1 NO_DEMOS fail-closed")
+                        if HENRI_LATENT_EXPLORE:
+                            # Latent demo source: compiled per-step from the
+                            # episode's REAL observed transitions once >=
+                            # MIN_DEMO_PAIRS exist (see step loop). The goal
+                            # block skips lower layers while waiting so Zone C
+                            # cannot preempt the adapter (Layer 0b precedence).
+                            goal_status = "GOAL_ADAPTER_WAITING_LATENT"
+                            adapter_info = {"status": "WAITING_LATENT",
+                                            "demo_pair_count": 0}
+                            print("  [goal] adapter v1 waiting for latent "
+                                  "exploration demos")
+                        else:
+                            goal_status = "GOAL_ADAPTER_NO_DEMOS"
+                            adapter_info = {"status": "NO_DEMOS_FAIL_CLOSED",
+                                            "demo_pair_count": 0}
+                            print("  [goal] adapter v1 NO_DEMOS fail-closed")
                     else:
                         _adapter = HenriGoalAdapter(device=DEVICE)
                         _xs = []
@@ -1194,8 +1222,11 @@ def run():
 
             # Layer 1: try Zone C analogical retrieval (8.38: routed through
             # the authorized bridge when HENRI_ZONEC_BRIDGE=1; legacy
-            # SegmentCache path otherwise, byte-identical)
-            if goal_wave is None:
+            # SegmentCache path otherwise, byte-identical). Arm D: while
+            # waiting for latent demos, lower layers must NOT preempt the
+            # adapter (Layer 0b precedence; arm C proved Zone C preempts
+            # the goal 30/30 otherwise).
+            if goal_wave is None and not HENRI_LATENT_EXPLORE:
                 try:
                     if zonec_bridge is not None:
                         _hits = zonec_bridge.retrieve(init_wave.cpu(), top_k=4)
@@ -1219,14 +1250,14 @@ def run():
 
             # Layer 2: preference-blend goal (blend top-k preference engrams into a
             # "desired outcome basin" — more meaningful than identity goal)
-            if goal_wave is None:
+            if goal_wave is None and not HENRI_LATENT_EXPLORE:
                 goal_wave = orch.planner.infer_goal_from_preferences(init_wave)
                 if goal_wave is not None:
                     goal_status = "GOAL_PREFERENCE_BLEND"
                     print(f"  [goal] preference-blend (top-k from "
                           f"{orch.planner.preference_store.num_engrams()} engrams)")
             # Layer 3: identity fallback (only if preference store is empty)
-            if goal_wave is None:
+            if goal_wave is None and not HENRI_LATENT_EXPLORE:
                 goal_wave = tokenizer.encode_spatial_grid(
                     obs.frame[0].tolist()
                 ).squeeze(0).to(DEVICE)
@@ -1301,6 +1332,33 @@ def run():
 
             state_wave = tokenizer.encode_spatial_grid(grid).squeeze(0).to(DEVICE)
             raw_wave = state_wave  # pre-blend; recall blending mutates below
+
+            # Arm D per-step latent-goal compile (default OFF). One-shot:
+            # once >= MIN_DEMO_PAIRS real non-degenerate transitions exist,
+            # compile the sealed Goal Adapter v1 from them (last <= 4) against
+            # the CURRENT observation wave, roll internally through the LIVE
+            # transition operator (horizon 1..4), and lock the goal. Never
+            # submitted to the environment (internal reasoning is RHAE-free).
+            if (HENRI_LATENT_EXPLORE and not latent_goal_ready
+                    and len(latent_transitions) >= 2):
+                try:
+                    from henri_latent_explorer import compile_latent_goal
+                    _lg = compile_latent_goal(
+                        latent_transitions, state_wave,
+                        orch.planner.transition,
+                        horizon=HENRI_LATENT_EXPLORE_HORIZON, device=DEVICE)
+                    if _lg is not None:
+                        goal_wave = _lg["goal_wave"].to(DEVICE)
+                        goal_status = "GOAL_HENRI_ADAPTER_LATENT"
+                        adapter_info = _lg["info"]
+                        latent_goal_ready = True
+                        print(f"  [goal] adapter v1 LATENT demos engaged "
+                              f"(n={_lg['info']['demo_pair_count']}, "
+                              f"horizon={_lg['info']['horizon']})")
+                except Exception as _lg_exc:
+                    adapter_info = {"status": "LATENT_FAIL_CLOSED",
+                                    "reason": type(_lg_exc).__name__}
+                    print(f"  [goal] latent compile fail-closed: {_lg_exc}")
 
             # Phase 8.37 D1 (Extropic): Ising digital-twin snapshot of the
             # live state wave — telemetry only, NEVER mutates weights/policy.
@@ -1396,6 +1454,13 @@ def run():
                 # Accumulate the triple for the slower consolidation levels.
                 edmd_buffer.append((train_ctx["state"], train_ctx["action_wave"],
                                     state_wave))
+                # Arm D: same REAL transition feeds the latent demo buffer
+                # (causal: appended AFTER the deferred T1 boundary, so the
+                # next step's compile can only see completed transitions).
+                if HENRI_LATENT_EXPLORE:
+                    latent_transitions.append(
+                        (train_ctx["state"], train_ctx["action_wave"],
+                         state_wave))
                 # NL Level 2 (mid-frequency): EDMD fit over the rolling window
                 # at strict chunk boundaries (i ≡ 0 mod K, HOPE CMS style).
                 if len(edmd_buffer) % EDMD_EVERY == 0:
