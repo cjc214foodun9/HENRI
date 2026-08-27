@@ -119,3 +119,29 @@ readiness is benchmark execution, not architecture: see the gap doc's
 NOT_READY verdict (ARC-AGI-3 Gate 4 BLOCKED MSE 25.10, MMLU 0/102, GPQA
 random floor) — those are the measured baselines to improve, not claims to
 replay.
+
+## 8. Addendum — Carrier U1 CUDA verification receipt (2026-08-27)
+
+- Commit: `91bed5426e88174ff554350fd7fe98df1b780d4d` (branch `carrier/unified-vla`)
+- Host: Vast 47411800, `107.206.71.138:45864`, NVIDIA RTX 5090 (32,607 MiB)
+- Worktree: `/root/henri-carrier-u1` detached @ `91bed54`, 0 status lines,
+  overlay `henri_decoder_checkpoint.pt` sha `75572389083455a3` (archive
+  manifest match)
+- Contract tests: 6/6 PASS (default-off factory, gate rejection fail-closed,
+  typed action, egress checkpoint fail-closed, block-wave flatten)
+- CUDA smoke: `UNIFIED_VLA_CUDA_SMOKE_PASS`
+  - perceive → `[8192, 8]`, digest `279b4609d5ff`
+  - checkpoint LOADED, policy required, trained_decoder_active True
+  - generic marker egress refused (fail-closed guard OK)
+  - code-path egress typed guard OK (out-of-vocab 10332 — correct live
+    behavior, never bypassed)
+  - diagnostic unbinder forward → logits `(1, 32000)`, top_token_id 9237
+  - act() through live TypedActionGate → ACTION1, efe −1.0819, explored True
+- Verdict: `COMPOSITION_VERIFIED_NO_SCORE` (governance `#40f0a114`). No
+  benchmark score claimed; this is composition + consumption evidence only.
+- Iteration notes (defects found by remote verification, all fixed):
+  (1) launcher PYTHONPATH relative-to-cwd defect (bucket-1 invocation);
+  (2) real assembly defect — egress boundary needed [8192,8]→[1,65536]
+      flatten (contract test added);
+  (3) smoke expectation errors — fail-closed guards are correct live
+      behavior, asserted rather than assumed to decode.
