@@ -57,6 +57,26 @@ def main() -> int:
     print("egress_status:", tele.get("egress_status"),
           "checkpoint:", tele.get("checkpoint_load_status"))
 
+    # Fail-closed proof: generic-prompt marker egress MUST raise
+    # DecoderEgressFailClosedError (live contract). Diagnostic path = direct
+    # unbinder forward + greedy argmax (documented K2/U2 measurement method).
+    from henri_decoder import DecoderEgressFailClosedError
+
+    try:
+        vla.egress_decode(wave, "generic marker prompt")
+        print("FAIL: expected DecoderEgressFailClosedError")
+        return 1
+    except DecoderEgressFailClosedError:
+        print("egress fail-closed guard: OK (generic marker refused)")
+
+    flat_wave = wave.reshape(1, -1)
+    with torch.no_grad():
+        logits = egress.unbinder(flat_wave)
+        top_id = int(torch.argmax(logits, dim=-1).item())
+    print("diagnostic unbinder forward: logits", tuple(logits.shape),
+          "top_token_id", top_id)
+    assert tuple(logits.shape) == (1, 32000), "unexpected logits shape"
+
     # Compose one act() call through the live gate (allowed actions = legal set).
     allowed = list(GameAction)
     result = vla.act(wave, grid, allowed, step=0)
