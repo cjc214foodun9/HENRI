@@ -540,6 +540,26 @@ def run():
             print(f"[init] trajectory bank init failed: {_bank_exc}")
             trajectory_bank = None
 
+    # Carrier 1 (Four-Phase report substrate): temporal transition ledger,
+    # default-OFF. Lazy import inside the enabled branch so flag-absent runs
+    # never import the ledger modules (differential contract). The ledger
+    # persists REAL (pre-state, action, post-state) triples with outcome meta;
+    # any defect raises LEDGER_FAIL_CLOSED and blocks the run (fail-closed).
+    temporal_ledger = None
+    if os.environ.get("HENRI_TEMPORAL_LEDGER", "0") == "1":
+        from temporal_ledger_bridge import ledger_summary, record_temporal_transition
+        from ledger_payload_store import LedgerPayloadStore
+        from temporal_transition_ledger import TemporalTransitionLedger
+        ledger_payload_store = None
+        if os.environ.get("HENRI_LEDGER_PAYLOADS", "0") == "1":
+            ledger_payload_store = LedgerPayloadStore(
+                os.path.join(telemetry_dir, "ledger_payloads"))
+        temporal_ledger = TemporalTransitionLedger(
+            os.path.join(telemetry_dir, "temporal_ledger.jsonl"),
+            strict=True, payload_store=ledger_payload_store)
+        print("[init] temporal transition ledger ENABLED "
+              f"(payloads={'on' if ledger_payload_store is not None else 'off'})")
+
     print(f"[init] orchestrator @ {SCALE}")
     orch = HenriSwarmOrchestrator(
         action_enum_class=GameAction,
@@ -774,6 +794,11 @@ def run():
             print("  [skip] null initial frame")
             continue
         initial_grid = obs.frame[0].tolist()
+
+        # Carrier 1: start a fresh ledger chain per environment (reset
+        # boundary exempt from continuity, T0 contract).
+        if temporal_ledger is not None:
+            temporal_ledger.reset(env_name)
         if EXTERNAL_OUTCOME_EFE:
             orch.planner.reset_external_outcomes()
         # P0 external evidence: per-step counters for the Beta-Bernoulli
@@ -2009,6 +2034,30 @@ def run():
                 except Exception as _bank_exc:
                     print(f"  [trajectory-bank] record failed: {_bank_exc}")
 
+            # Carrier 1: persist the REAL (s_t, a_t, s_{t+1}) transition with
+            # external-outcome meta. Fail-closed: any ledger defect raises
+            # LEDGER_FAIL_CLOSED and blocks the run (never a silent pass).
+            if temporal_ledger is not None:
+                if last_action_was_reset:
+                    temporal_ledger.reset(env_name)
+                try:
+                    record_temporal_transition(
+                        temporal_ledger,
+                        grid,
+                        macro_actions[0],
+                        obs_next,
+                        episode_id=env_name,
+                        step=step,
+                        extra_meta={
+                            "macro_actions": [a.name for a in macro_actions],
+                            "action_was_reset": last_action_was_reset,
+                        },
+                    )
+                except RuntimeError as exc:
+                    if "LEDGER_FAIL_CLOSED" in str(exc):
+                        raise SystemExit(f"BLOCKED: {exc}") from exc
+                    raise
+
             # P0: observe the executed action's external outcome AFTER the
             # environment returns the next frame.  The Beta-Bernoulli
             # posterior uses only whether the returned frame changed; the
@@ -2472,6 +2521,16 @@ def run():
         total = sum(action_counts.values())
         distinct = len(action_counts)
         print(f"  [env summary] actions: {action_counts} | distinct: {distinct}")
+        # Carrier 1: per-env temporal ledger summary (fail-closed).
+        if temporal_ledger is not None:
+            try:
+                tl_summary = ledger_summary(temporal_ledger)
+            except RuntimeError as exc:
+                raise SystemExit(f"BLOCKED: {exc}") from exc
+            tele.emit({"env": env_name, "temporal_ledger": tl_summary})
+            print(f"  [ledger] records={tl_summary['records']} "
+                  f"episodes={tl_summary['episodes']} "
+                  f"continuity_ok={tl_summary['continuity_ok']}")
         # Capture the scorecard id for this env's game session
         try:
             scid = getattr(game, "scorecard_id", None)
