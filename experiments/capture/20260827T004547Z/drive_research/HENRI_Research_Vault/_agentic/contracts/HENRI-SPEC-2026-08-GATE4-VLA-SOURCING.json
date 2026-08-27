@@ -1,0 +1,87 @@
+{
+  "schema_id": "henri.spec-contract.v1",
+  "spec_id": "HENRI-SPEC-2026-08-GATE4-VLA-SOURCING",
+  "emitter": "henri-research",
+  "receiver": "henri-architecture",
+  "status": "PROPOSED_AWAITING_DECISION",
+  "parent_events": ["35a3cc36-54e1-4dc2-b513-48b7e4a75a84", "6e93a2d8-5580-4721-87b4-d477c55b70b3"],
+  "blueprint": {
+    "path": "G:/My Drive/HENRI_Inbox/Gate_4_Dry-Run_Execution_Audit___Remediation_Blueprint.md",
+    "sha256": "1329d099a3457f880d87d6aae698d8329fdcf946fd9f47fb2ecfdf80a9a88a40",
+    "bytes": 12307,
+    "doc_id": "HENRI-AUDIT-2026-GATE4-DRYRUN-VERDICT",
+    "verdict": "GATE4_BLOCKED (ACTION_HEAD_NOT_CALIBRATED)",
+    "remediation": "Option 1: authorized trajectory data expansion across full ARC catalog; Option 2: nonlinear head re-fit (requires separate spec)"
+  },
+  "bank_diagnosis": {
+    "path": "/root/henri-837-bank/trajectories_harvest_837_20260819.npz",
+    "tuples": 10301,
+    "envs": ["dc22-fdcac232", "m0r0-492f87ba"],
+    "wave_dim": 65536,
+    "action_counts": [1738, 1741, 1741, 1715, 1667, 1699],
+    "action_entropy_bits": 2.5848,
+    "action_entropy_max_bits": 2.5850,
+    "unique_psi_rows": 3404,
+    "duplicate_rows": 6897,
+    "duplicate_rate": 0.6695,
+    "next_wave_delta_mean": 0.0355,
+    "next_wave_delta_max": 1.0150,
+    "episode_ids_present": false,
+    "episode_disjoint_split_possible": false,
+    "schema": "henri.arc-trajectory-bank.v1",
+    "data_source": "authorized",
+    "dataset_digest": "31b13c81e3e6c54846771defc2b2404288e5faa718c1fad8dbcfbf7e4cb02d4d"
+  },
+  "blueprint_claim_reconciliation": {
+    "claim": "loss collapse from non-uniform action distribution",
+    "verdict": "FALSIFIED",
+    "evidence": "action entropy 2.5848/2.5850 bits; counts 1667-1741 per action (uniform)"
+  },
+  "actual_root_causes": [
+    "duplicate observations (66.95% duplicate psi rows; only 3404 unique)",
+    "two-environment manifold: rank(sum h_i h_i^T) << 2048",
+    "no episode/seed columns in bank -> episode-disjoint splits impossible",
+    "near-identity next-wave deltas (mean 0.0355) -> low transition signal"
+  ],
+  "objective": {
+    "track1": "Gate-4 unblock via authorized ARC-AGI-3 trajectory harvest across the full 25-env catalog; dedup by observation digest; persist episode IDs; balanced action classes; re-run UNCHANGED calibrator; qualify on MSE <= 0.05, I_norm >= 0.85, Sagnac <= 0.10",
+    "track2": "Universal VLA knowledge sourcing: provenance-pinned multimodal corpora (text, code, vision, video, robotics/control, audio) ingested through typed modality adapters as frozen Zone C reference waves and domain operators; default-OFF; never benchmark-family training data; never enters score-bearing stores"
+  },
+  "mechanism": {
+    "track1": "passive (obs_t, GameAction, data, obs_next) capture via production runner step_with_payload; schema henri.arc-trajectory-bank.v1; observation-digest dedup; per-episode IDs; episode-disjoint calibration/holdout; per-action support N_a >= 4r",
+    "track2": "typed modality adapters -> canonical real [8192,8] waves; qFHRR crystalline instillation; W_domain = normalize(mean(Psi ⊙ Psi)); 1-by-1 streaming staging with SHA-256 manifests (user preference); provenance-pinned immutable revisions"
+  },
+  "invariants": [
+    "zero-pretraining invariant: no benchmark-family training; task compilation 100% online at test-time",
+    "all newly sourced data stays OUTSIDE the repository and OUTSIDE score-bearing evaluation stores until provenance + contamination review passes",
+    "Gate-4 held-out remains the zero-lineage 30-task procedural suite (seeds 21-30)",
+    "duplicate rate measured and reported per bank; dedup before calibration",
+    "episode-disjoint splits only; per-action support N_a >= 4r",
+    "one active run per GPU; preregistered envs/steps/seed/timeout/output-dir",
+    "synthetic fixtures can never activate production (production_activation_eligible)"
+  ],
+  "falsification": [
+    "if MSE > 0.05 persists after full-catalog dedup'd harvest -> Option 2 (nonlinear head) becomes the required protocol",
+    "if coverage + dedup gates pass but I_norm < 0.85 -> linear unbinder capacity limit -> Option 2",
+    "if duplicate_rate after harvest > 0.30 -> capture policy defect, not calibration result"
+  ],
+  "candidate_corpora_track2": [
+    {"modality": "text", "sources": ["FineWeb-Edu", "OpenWebMath", "Wikipedia EN (CC BY-SA)", "arXiv abstracts (per-paper)"], "license_status": "UNVERIFIED_UNTIL_PINNED"},
+    {"modality": "code", "sources": ["The Stack v2 (per-file licenses)", "CodeContests (Apache-2.0)"], "license_status": "UNVERIFIED_UNTIL_PINNED", "note": "HumanEval/MBPP/SWE-bench are EVAL-ONLY, never training"},
+    {"modality": "vision", "sources": ["DataComp/CC12M", "Conceptual Captions 12M (CC-BY)", "COCO 2017 (CC-BY 4.0)"], "license_status": "UNVERIFIED_UNTIL_PINNED"},
+    {"modality": "video", "sources": ["Something-Something V2", "Kinetics-700 (CC-BY 4.0)", "BDD100K (research)"], "license_status": "UNVERIFIED_UNTIL_PINNED"},
+    {"modality": "robotics/control", "sources": ["Open X-Embodiment (Apache-2.0; RT-1/RT-2/BridgeData/DROID)", "LIBERO (MIT)", "Meta-World (MIT)", "RoboMimic (MIT)", "D4RL (Apache-2.0)"], "license_status": "UNVERIFIED_UNTIL_PINNED"},
+    {"modality": "audio", "sources": ["LibriSpeech (CC-BY 4.0)", "Common Voice (CC0)", "AudioSet (CC-BY 4.0)"], "license_status": "UNVERIFIED_UNTIL_PINNED"}
+  ],
+  "resources": {
+    "gpu": "Vast RTX 5090 (instance 47411800)",
+    "one_run_per_gpu": true,
+    "bounds": "preregistered per harvest run: env list, steps, seed, timeout, output dir",
+    "staging": "1-by-1 streaming, SHA-256 manifest, item-by-item host/device memory safety"
+  },
+  "approval_gates": [
+    "APPROVE_DESIGN (this spec)",
+    "APPROVE_REMOTE_RUN (ARC harvest + GPU calibration)",
+    "ACCEPT_RESULT (qualification + ledger receipt)"
+  ]
+}

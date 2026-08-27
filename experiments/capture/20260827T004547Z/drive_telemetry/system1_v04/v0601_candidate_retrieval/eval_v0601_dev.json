@@ -1,0 +1,282 @@
+{
+  "run": "system1_v0601_dev_candidate_retrieval",
+  "ckpt": "/root/henri-system1/ckpt_v041/checkpoint.pt",
+  "split": {
+    "tag": "dev9_v0601",
+    "n": 65,
+    "seed": 90909,
+    "sha256": "a8a2d7a7d5722282c98030c884b53d1bbcc0cd0ab76ecdfcc0240fa8a3ffdf28",
+    "disposable": true
+  },
+  "budget": 64,
+  "beta": 0.15,
+  "runtime_s": 27.494675397872925,
+  "arms": {
+    "B13": {
+      "outcome_pass_rate": 1.0,
+      "calls": {
+        "mean": 4.230769230769231,
+        "median": 4,
+        "p90": 8,
+        "max": 9
+      },
+      "ast_valid_rate": 1.0,
+      "family_support_counts": {
+        "0": [
+          5,
+          5
+        ],
+        "1": [
+          5,
+          5
+        ],
+        "2": [
+          5,
+          5
+        ],
+        "3": [
+          5,
+          5
+        ],
+        "4": [
+          5,
+          5
+        ],
+        "5": [
+          5,
+          5
+        ],
+        "6": [
+          5,
+          5
+        ],
+        "7": [
+          5,
+          5
+        ],
+        "8": [
+          5,
+          5
+        ],
+        "9": [
+          5,
+          5
+        ],
+        "10": [
+          5,
+          5
+        ],
+        "11": [
+          5,
+          5
+        ],
+        "12": [
+          5,
+          5
+        ]
+      }
+    },
+    "R0": {
+      "outcome_pass_rate": 1.0,
+      "calls": {
+        "mean": 4.230769230769231,
+        "median": 4,
+        "p90": 8,
+        "max": 9
+      },
+      "ast_valid_rate": 1.0,
+      "family_support_counts": {
+        "0": [
+          5,
+          5
+        ],
+        "1": [
+          5,
+          5
+        ],
+        "2": [
+          5,
+          5
+        ],
+        "3": [
+          5,
+          5
+        ],
+        "4": [
+          5,
+          5
+        ],
+        "5": [
+          5,
+          5
+        ],
+        "6": [
+          5,
+          5
+        ],
+        "7": [
+          5,
+          5
+        ],
+        "8": [
+          5,
+          5
+        ],
+        "9": [
+          5,
+          5
+        ],
+        "10": [
+          5,
+          5
+        ],
+        "11": [
+          5,
+          5
+        ],
+        "12": [
+          5,
+          5
+        ]
+      }
+    },
+    "R1": {
+      "outcome_pass_rate": 1.0,
+      "calls": {
+        "mean": 4.230769230769231,
+        "median": 4,
+        "p90": 8,
+        "max": 9
+      },
+      "ast_valid_rate": 1.0,
+      "family_support_counts": {
+        "0": [
+          5,
+          5
+        ],
+        "1": [
+          5,
+          5
+        ],
+        "2": [
+          5,
+          5
+        ],
+        "3": [
+          5,
+          5
+        ],
+        "4": [
+          5,
+          5
+        ],
+        "5": [
+          5,
+          5
+        ],
+        "6": [
+          5,
+          5
+        ],
+        "7": [
+          5,
+          5
+        ],
+        "8": [
+          5,
+          5
+        ],
+        "9": [
+          5,
+          5
+        ],
+        "10": [
+          5,
+          5
+        ],
+        "11": [
+          5,
+          5
+        ],
+        "12": [
+          5,
+          5
+        ]
+      }
+    }
+  },
+  "ranker_stats": {
+    "tasks_ranked": 65,
+    "candidates_scored": 485,
+    "var_min": 0.00015330365567933768,
+    "var_max": 0.0003390753117855638
+  },
+  "paired": {
+    "R1_vs_B13": {
+      "both": 65,
+      "R1_only": 0,
+      "B13_only": 0,
+      "neither": 0,
+      "mcnemar_p": 1.0
+    },
+    "R0_vs_B13": {
+      "both": 65,
+      "R0_only": 0,
+      "B13_only": 0,
+      "neither": 0,
+      "mcnemar_p": 1.0
+    }
+  },
+  "call_delta_B13_minus_R1": {
+    "mean": 0.0,
+    "ci95": [
+      -1.0769230769230769,
+      1.1076923076923078
+    ]
+  },
+  "gates": {
+    "G1_integrity_r0_identity": true,
+    "G2_outcome_family_preserved": true,
+    "G3_cost_reduction_ci_excludes_0": false,
+    "G5_variance_positive": true,
+    "r0_byte_identical": true
+  },
+  "verdict": "CANDIDATE_RETRIEVAL_NO_EFFECT",
+  "attribution_boundary": "Endpoint = verifier-call reduction under EXACT capability preservation (B13 already 52/52). No heldout created or consumed; disposable dev split only. EFFICACY_PROMOTED reserved for a harder disposable condition (future).",
+  "guard": {
+    "consumed_digests": [
+      "887d0d6c",
+      "23b36795",
+      "82c97532",
+      "db027f9c",
+      "9d4c29ad",
+      "1f81e4d0",
+      "181cc59b",
+      "092cb0c1",
+      "2eb8d29b",
+      "78b4cfb4",
+      "7a8c1e7b",
+      "306ab62d",
+      "6b5bb1b4",
+      "0ec0528d",
+      "0535a2dc",
+      "35d15aae",
+      "5e5f4a00",
+      "ce2a76fb",
+      "9a17af61",
+      "635c2aaa",
+      "888809df",
+      "8ea34261",
+      "a09bf275ef7f09a72a88f78dd36b78e1ab752a1cb79d4960004646da90440a54",
+      "873902867001b7f19abf3e2641b10913f2c57c4fb2e23d609078a471edc9c9ed",
+      "d6b79d510620efdc5b9ea80e629a736b7cbad763adb13b934eb627f038f7f804",
+      "392ce03e3b35ab4a8df4dc834d96e69dffed50d2e38716a02344a2f14526460f",
+      "338cbda609321213ee907b1f71c66a927fc2628ed251910101768d38ca0477ca",
+      "44657c7f96da7fdc70e8ec5a0cfcb90c0ef049439d88a9cd9de9a7e49e4c9a7c",
+      "bed7368d227bbb55e8c448e6676b18e628e97a95972cfb0992ee638bae1d9ccc",
+      "928e40af50001d4101d421a853f0bbdb2e39cef83b4c2d6ce7d62a6787890e40",
+      "4b7d854d1d7ad026f95a9a5a42877a02fb47a4aa7ce0fbc5d8518ee7f2a84102"
+    ],
+    "sealed_heldout_never_loaded": true
+  }
+}

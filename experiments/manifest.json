@@ -1,7 +1,7 @@
 {
  "schema": "henri.capture-manifest.v1",
- "generated_utc": "20260827T001513Z",
- "latest_snapshot": "capture/20260827T001513Z",
+ "generated_utc": "20260827T004547Z",
+ "latest_snapshot": "capture/20260827T004547Z",
  "sources": {
   "drive_inbox": "OK",
   "drive_research": "OK",
@@ -14,6 +14,6 @@
   "drive_telemetry": 5,
   "vast": 8
  },
- "bytes_total": 607021,
+ "bytes_total": 611312,
  "retention_snapshots": 12
 }
