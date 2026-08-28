@@ -77,6 +77,7 @@ from arc_public_ingress import (
     resolve_demos,
 )
 from arc_task_functor import compile_task_functor
+from arc_goal_dist import compute_goal_dist_var
 from arc_phase_map import verify_phase_map_invertibility
 from henri_benchmark_registry import ARCEpisodeTrace
 
@@ -2602,12 +2603,7 @@ def run():
                 "thermo_shadow": thermo_shadow_info,
                 "complex_sidecar": complex_sidecar_info,
                 "goal_distance": round(float(chosen.get("goal_distance", 0.0)), 6),
-                "goal_dist_var": round(
-                    (lambda _ds: (sum((_d - sum(_ds) / len(_ds)) ** 2 for _d in _ds) / len(_ds))
-                     if len(_ds) >= 2 else None)(
-                        [float(r["goal_distance"]) for r in efe_table
-                         if r.get("goal_distance") is not None]),
-                    6) if efe_table else None,
+                "goal_dist_var": compute_goal_dist_var(efe_table),
                 "residual_type": str(chosen.get("residual_type", "N/A")),
                 "lambda_goal": LAMBDA_GOAL,
                 "grid_dist": round(grid_dist, 6),
