@@ -550,6 +550,9 @@ def run():
     HENRI_SFAS_LAMBDA = float(os.environ.get("HENRI_SFAS_LAMBDA", "1.0") or 1.0)
     if HENRI_SFAS_LAMBDA < 0.0:
         raise ValueError("HENRI_SFAS_LAMBDA must be >= 0.0")
+    # M2 horizon-8 open-loop coherence diagnostic (default OFF; telemetry-only,
+    # no action-policy influence). SPEC-2026-08-28-M2SUCC (sealed #bb0be1c9).
+    HENRI_M2_COHERENCE = os.environ.get("HENRI_M2_COHERENCE", "0") == "1"
     # Phase 7.1: public corpus ingress channel (default OFF). Requires an
     # explicit provenance manifest mapping environment ID -> public ARC task
     # ID with corpus path + sha256. Exact match only; no fuzzy fallback.
@@ -1330,6 +1333,19 @@ def run():
         pre_state_stratum = None
         _delta_levels = None
         _last_levels = None
+        # M2 horizon-8 open-loop coherence (default OFF). Pending buffer maps
+        # target step -> (pred_k, k); flushed when the empirical wave arrives.
+        m2_imported = None
+        m2_pending = {}
+        m2_deltas = {}
+        m2_emitted = False
+        if HENRI_M2_COHERENCE:
+            try:
+                from henri_m2_coherence import M2_HORIZON, open_loop_rollout, sagnac_delta
+                m2_deltas = {k: [] for k in range(1, M2_HORIZON + 1)}
+                m2_imported = (open_loop_rollout, sagnac_delta)
+            except Exception as _m2e:
+                print(f"  [m2] import fail-closed: {type(_m2e).__name__}")
         # Progress-valence EMA state (Task 2.3): per-episode fast/slow
         # baselines of within-invariant motion; None until the first m.
         pv_fast = None
@@ -1381,6 +1397,20 @@ def run():
                 num_objects_segmented = len(obj_records)
 
             state_wave = tokenizer.encode_spatial_grid(grid).squeeze(0).to(DEVICE)
+            # M2: flush pending rollouts whose target step has arrived. The
+            # empirical wave is the RAW encoded observation (before recall
+            # blending) — the correct comparison target for the open-loop
+            # predictions.
+            if HENRI_M2_COHERENCE and m2_imported is not None and m2_pending:
+                _open_loop_rollout, _sagnac_delta = m2_imported
+                for _t in [t for t in m2_pending if t == step]:
+                    _pred, _k = m2_pending.pop(_t)
+                    try:
+                        _d = _sagnac_delta(_pred, state_wave.detach())
+                        m2_deltas[_k].append(_d)
+                        m2_emitted = True
+                    except Exception:
+                        pass
             raw_wave = state_wave  # pre-blend; recall blending mutates below
 
             # Arm D per-step latent-goal compile (default OFF). One-shot:
@@ -2314,6 +2344,33 @@ def run():
             step_ms = (time.perf_counter() - t0) * 1000
             last_action_was_reset = (macro_actions[0].name == "RESET")
 
+            # M2: launch the open-loop horizon-8 roll from the executed action
+            # (deterministic action-wave source, same as the SFAS block). A
+            # RESET invalidates cross-episode comparisons: clear pending and
+            # do not launch from a pre-reset state.
+            if HENRI_M2_COHERENCE and m2_imported is not None and macro_actions:
+                try:
+                    _open_loop_rollout, _sagnac_delta = m2_imported
+                    _a0 = macro_actions[0]
+                    if _a0.name == "RESET":
+                        m2_pending.clear()
+                    else:
+                        _aw = None
+                        try:
+                            _aw = orch.candidate_action_waves(
+                                top_k=None, allowed_actions=[_a0])[0][1].to(DEVICE)
+                        except Exception:
+                            _aw = None
+                        if _aw is not None:
+                            _preds = _open_loop_rollout(
+                                orch.planner.transition, state_wave.detach(),
+                                _aw, horizon=8)
+                            if _preds is not None:
+                                for _k, _p in enumerate(_preds, start=1):
+                                    m2_pending[step + _k] = (_p.detach(), _k)
+                except Exception as _m2e:
+                    print(f"  [m2] roll fail-closed: {type(_m2e).__name__}")
+
             # Phase 8.32: record authorized (o_t, a_t, o_t+1) tuple when the
             # bank is enabled. Passive recorder: failures are logged, never
             # fatal to the run. The next-wave is encoded with the SAME
@@ -2713,6 +2770,15 @@ def run():
                 "sfas": sfas_info,
                 "sfas_flag": HENRI_SFAS,
                 "pre_state_stratum": pre_state_stratum,
+                "m2_sagnac_by_horizon": (
+                    [round(m2_deltas[k][-1], 6) if m2_deltas.get(k) else None
+                     for k in range(1, 9)]
+                    if HENRI_M2_COHERENCE else None),
+                "m2_max_sagnac_8": (
+                    round(max(m2_deltas[k][-1] for k in range(1, 9)
+                              if m2_deltas.get(k)), 6)
+                    if HENRI_M2_COHERENCE and m2_emitted else None),
+                "m2_engaged": (m2_emitted if HENRI_M2_COHERENCE else None),
                 "outcome_probe": outcome_probe,
                 "superposition_load": round(
                     float(orch.planner.cleanup.num_engrams()) / SCALE["d_model"],
