@@ -68,6 +68,17 @@ def per_horizon_means(deltas):
     return {k: float(np.mean(v)) for k, v in deltas.items() if len(v) > 0}
 
 
+def due_targets(pending, step):
+    """Return the sorted pending keys whose target step has arrived (<= step).
+
+    Pending keys are launch_step + k for k in 1..8. The flush predicate MUST
+    be `t <= step`: `t == step` can never match a future target and silently
+    drops horizons 2..8 (harness defect found 2026-08-28 on M2 v1, where only
+    horizon-1 values ever emitted).
+    """
+    return sorted(t for t in pending if t <= step)
+
+
 def m2_engaged(deltas):
     """True iff at least one horizon accumulated at least one delta."""
     return any(len(v) > 0 for v in deltas.values())

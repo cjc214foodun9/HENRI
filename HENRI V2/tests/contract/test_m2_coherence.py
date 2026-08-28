@@ -122,6 +122,18 @@ def test_per_horizon_means_detects_drift():
     assert all(m > 0.15 for m in means.values())
 
 
+def test_due_targets_semantics():
+    from henri_m2_coherence import due_targets
+    # Launch at step 3 creates targets 4..11; at step 5, only 4 and 5 are due.
+    pending = {4: ("p", 1), 5: ("p", 2), 6: ("p", 3), 11: ("p", 8)}
+    assert due_targets(pending, 5) == [4, 5]
+    assert due_targets(pending, 3) == []
+    assert due_targets(pending, 11) == [4, 5, 6, 11]
+    assert due_targets({}, 10) == []
+    # REGRESSION GUARD: t == step would return [] for every future target.
+    assert due_targets({7: ("p", 4)}, 6) == []
+
+
 def test_engagement_semantics():
     # m2_engaged is True iff at least one finite delta exists.
     from henri_m2_coherence import m2_engaged

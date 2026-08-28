@@ -1341,9 +1341,10 @@ def run():
         m2_emitted = False
         if HENRI_M2_COHERENCE:
             try:
-                from henri_m2_coherence import M2_HORIZON, open_loop_rollout, sagnac_delta
+                from henri_m2_coherence import (
+                    M2_HORIZON, open_loop_rollout, sagnac_delta, due_targets)
                 m2_deltas = {k: [] for k in range(1, M2_HORIZON + 1)}
-                m2_imported = (open_loop_rollout, sagnac_delta)
+                m2_imported = (open_loop_rollout, sagnac_delta, due_targets)
             except Exception as _m2e:
                 print(f"  [m2] import fail-closed: {type(_m2e).__name__}")
         # Progress-valence EMA state (Task 2.3): per-episode fast/slow
@@ -1397,13 +1398,17 @@ def run():
                 num_objects_segmented = len(obj_records)
 
             state_wave = tokenizer.encode_spatial_grid(grid).squeeze(0).to(DEVICE)
-            # M2: flush pending rollouts whose target step has arrived. The
-            # empirical wave is the RAW encoded observation (before recall
+            # M2: flush pending rollouts whose target step has arrived.
+            # Targets are step+1..step+8 at launch; the flush predicate must
+            # be `t <= step` (a target whose step has arrived), NOT `t == step`
+            # — the old predicate could never match (defect found 2026-08-28:
+            # only horizon-1 values ever emitted; horizons 2-8 stayed None).
+            # The empirical wave is the RAW encoded observation (before recall
             # blending) — the correct comparison target for the open-loop
             # predictions.
             if HENRI_M2_COHERENCE and m2_imported is not None and m2_pending:
-                _open_loop_rollout, _sagnac_delta = m2_imported
-                for _t in [t for t in m2_pending if t == step]:
+                _open_loop_rollout, _sagnac_delta, _due_targets = m2_imported
+                for _t in _due_targets(m2_pending, step):
                     _pred, _k = m2_pending.pop(_t)
                     try:
                         _d = _sagnac_delta(_pred, state_wave.detach())
