@@ -34,6 +34,7 @@ def load_cells(root):
             seed = os.path.basename(os.path.dirname(path))
             per_k = {k: [] for k in range(1, M2_HORIZON + 1)}
             rows = 0
+            main_rows = 0
             engaged = 0
             with open(path, "r", encoding="utf-8") as fh:
                 for line in fh:
@@ -44,15 +45,18 @@ def load_cells(root):
                     if rec.get("step") is None:
                         continue
                     rows += 1
-                    if rec.get("m2_engaged") is True:
-                        engaged += 1
+                    if "m2_engaged" in rec:
+                        main_rows += 1
+                        if rec.get("m2_engaged") is True:
+                            engaged += 1
                     m2 = rec.get("m2_sagnac_by_horizon")
                     if m2:
                         for k in range(1, M2_HORIZON + 1):
                             v = m2[k - 1]
                             if v is not None:
                                 per_k[k].append(float(v))
-            cells[env][seed] = {"rows": rows, "engaged": engaged, "per_k": per_k}
+            cells[env][seed] = {"rows": rows, "main_rows": main_rows,
+                                "engaged": engaged, "per_k": per_k}
     return cells
 
 
@@ -60,10 +64,15 @@ def main():
     root = sys.argv[1] if len(sys.argv) > 1 else r"C:/Users/chan/AppData/Local/henri_r2_next/m2_gauntlet_v3"
     cells = load_cells(root)
 
-    # STEP 2: engagement
+    # STEP 2: engagement — denominator = rows that CARRY m2_engaged (main
+    # telemetry rows). ARC_ACTION_PAYLOAD event rows never carry m2_engaged
+    # and must not dilute the gate (reducer defect corrected 2026-08-28:
+    # v1 denominator counted all step rows -> 0.4741 false-fail vs honest
+    # 0.9811 on main rows).
     total_rows = sum(c["rows"] for e in cells.values() for c in e.values())
     total_engaged = sum(c["engaged"] for e in cells.values() for c in e.values())
-    engagement_rate = (total_engaged / total_rows) if total_rows else 0.0
+    main_rows = sum(c["main_rows"] for e in cells.values() for c in e.values())
+    engagement_rate = (total_engaged / main_rows) if main_rows else 0.0
 
     # Cohort-wide per-horizon means
     cohort = {k: [] for k in range(1, M2_HORIZON + 1)}
@@ -88,7 +97,8 @@ def main():
                             "n_deltas": {k: len(c["per_k"][k]) for k in c["per_k"]}}
                         for s, c in seeds.items()} for env, seeds in cells.items()},
         "step2_engagement": {
-            "total_rows": total_rows,
+            "total_step_rows": total_rows,
+            "main_telemetry_rows": main_rows,
             "engaged_rows": total_engaged,
             "rate": round(engagement_rate, 4),
             "gate": ENGAGEMENT_GATE,
