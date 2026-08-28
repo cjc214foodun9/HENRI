@@ -1409,13 +1409,19 @@ def run():
             if HENRI_M2_COHERENCE and m2_imported is not None and m2_pending:
                 _open_loop_rollout, _sagnac_delta, _due_targets = m2_imported
                 for _t in _due_targets(m2_pending, step):
-                    _pred, _k = m2_pending.pop(_t)
-                    try:
-                        _d = _sagnac_delta(_pred, state_wave.detach())
-                        m2_deltas[_k].append(_d)
-                        m2_emitted = True
-                    except Exception:
-                        pass
+                    # LIST-per-target: pop ALL predictions for the due target
+                    # (one per covering launch) and record each under its own
+                    # horizon k (defect v2: dict-value overwrite kept only the
+                    # latest launch's k=1, so horizons 2..8 were never
+                    # measured).
+                    _items = m2_pending.pop(_t)
+                    for _pred, _k in _items:
+                        try:
+                            _d = _sagnac_delta(_pred, state_wave.detach())
+                            m2_deltas[_k].append(_d)
+                            m2_emitted = True
+                        except Exception:
+                            pass
             raw_wave = state_wave  # pre-blend; recall blending mutates below
 
             # Arm D per-step latent-goal compile (default OFF). One-shot:
@@ -2355,7 +2361,7 @@ def run():
             # do not launch from a pre-reset state.
             if HENRI_M2_COHERENCE and m2_imported is not None and macro_actions:
                 try:
-                    _open_loop_rollout, _sagnac_delta = m2_imported
+                    _open_loop_rollout, _sagnac_delta, _due_targets = m2_imported
                     _a0 = macro_actions[0]
                     if _a0.name == "RESET":
                         m2_pending.clear()
@@ -2367,12 +2373,24 @@ def run():
                         except Exception:
                             _aw = None
                         if _aw is not None:
+                            # pred_0 = the RAW pre-blend wave of the current
+                            # (pre-action) observation — the SAME basis the
+                            # flush compares against (raw encode). Using the
+                            # possibly recall-blended state_wave here compares
+                            # different representations (defect v2 basis).
                             _preds = _open_loop_rollout(
-                                orch.planner.transition, state_wave.detach(),
+                                orch.planner.transition, raw_wave.detach(),
                                 _aw, horizon=8)
                             if _preds is not None:
                                 for _k, _p in enumerate(_preds, start=1):
-                                    m2_pending[step + _k] = (_p.detach(), _k)
+                                    # LIST-per-target: target step+k receives a
+                                    # k-prediction from EVERY launch whose
+                                    # horizon covers it; append, never
+                                    # overwrite (defect v2: dict-value
+                                    # overwrite collapsed horizons 2..8 into
+                                    # the latest launch's k=1).
+                                    m2_pending.setdefault(step + _k, []).append(
+                                        (_p.detach(), _k))
                 except Exception as _m2e:
                     print(f"  [m2] roll fail-closed: {type(_m2e).__name__}")
 
