@@ -96,14 +96,24 @@ def compute_emergence_gates(telemetry):
         out["gate_6_valence_thermodynamic_coupling"] = _nm(r6)
     else:
         dnu, T = telemetry["delta_nu"], telemetry["langevin_temp"]
-        ok = (dnu > 0 and T <= 0.02) and (dnu <= 0 and T >= 0.50)
-        out["gate_6_valence_thermodynamic_coupling"] = {
-            "status": "PASS" if ok else "FAIL",
-            "delta_nu": dnu,
-            "langevin_temp": T,
-            "reason": "doc formula is mutually exclusive (dnu>0 and T<=0.02) AND (dnu<=0 and T>=0.50); "
-                      "literal execution is unsatisfiable by construction",
-            "doc": _DOC,
-        }
+        if dnu == 0:
+            out["gate_6_valence_thermodynamic_coupling"] = {
+                "status": "NOT_APPLICABLE",
+                "delta_nu": dnu,
+                "langevin_temp": T,
+                "reason": "no outcome change (delta_nu==0); veto not engaged — "
+                          "conditional bound not applicable, never PASS",
+                "doc": _DOC,
+            }
+        else:
+            ok = (dnu > 0 and T <= 0.02) or (dnu <= 0 and T >= 0.50)
+            out["gate_6_valence_thermodynamic_coupling"] = {
+                "status": "PASS" if ok else "FAIL",
+                "delta_nu": dnu,
+                "langevin_temp": T,
+                "reason": "conditional veto bound (OR-form coupling): success cools "
+                          "toward T_base, failure heats (Dark Room shaker)",
+                "doc": _DOC,
+            }
 
     return out
