@@ -88,6 +88,20 @@ def test_support_gate_missing_action_in_stratum_blocks():
     assert verdict == IDENTIFIABILITY_BLOCKED, verdict
 
 
+def test_support_gate_single_action_stratum_blocks():
+    # A stratum containing 10 rows of ONE action passes the count gates but
+    # carries zero conditional MI by construction -> must BLOCK.
+    rows = []
+    for ep in range(5):
+        for i in range(8):
+            s = i % 3
+            a = 0 if s == 1 else int(np.random.default_rng(ep * 10 + i).integers(0, 2))
+            cc = int(np.random.default_rng(ep * 10 + i + 1).integers(0, 5))
+            rows.append((f"ep{ep}", s, a, cc, 0.1, 0))
+    verdict = identify_env_support(rows, min_n=20, min_stratum=4, min_action=4)
+    assert verdict == IDENTIFIABILITY_BLOCKED, verdict
+
+
 def test_plugin_mi_is_biased_high_and_mm_corrects_down():
     rng = np.random.default_rng(13)
     rows = _rows(600, rng, episodes=20)

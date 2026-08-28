@@ -1329,6 +1329,7 @@ def run():
         last_action_was_reset = False
         pre_state_stratum = None
         _delta_levels = None
+        _last_levels = None
         # Progress-valence EMA state (Task 2.3): per-episode fast/slow
         # baselines of within-invariant motion; None until the first m.
         pv_fast = None
@@ -2593,11 +2594,17 @@ def run():
                     "levels_completed": _lv_now,
                     "reset": bool(last_action_was_reset),
                 }
-                # R2-successor outcome delta (SPEC-2026-08-28-R2SUCC): external
-                # level delta, shared with the emergence-gates block below.
+                # R2-successor outcome delta (SPEC-2026-08-28-R2SUCC): TRUE
+                # per-step level delta via a runner-local tracker. The
+                # scorecard_levels_prev path only updates under
+                # HENRI_ARC_SCORECARD_DELTA (OFF here), so subtracting it
+                # would yield cumulative-from-zero, never per-step (Sol
+                # repair 2026-08-28).
                 if _lv_now is not None:
                     try:
-                        _delta_levels = int(_lv_now) - int(scorecard_levels_prev or 0)
+                        _base = _last_levels if _last_levels is not None else 0
+                        _delta_levels = int(_lv_now) - int(_base)
+                        _last_levels = int(_lv_now)
                     except Exception:
                         _delta_levels = None
                 if _delta_levels is not None:
@@ -2641,6 +2648,16 @@ def run():
                 }
                 _gate_telem = {k: v for k, v in _gate_telem.items() if v is not None}
                 emergence_gates = compute_emergence_gates(_gate_telem)
+            # R2-successor complete action identity (SPEC-2026-08-28-R2SUCC):
+            # (GameAction, data). Bare str(game_action) conflates ACTION6
+            # coordinate payloads (Sol repair 2026-08-28).
+            _action_identity = str(game_action)
+            if payload_infos:
+                _pi = payload_infos[-1]
+                if _pi.get("payload_present"):
+                    _action_identity = (
+                        f"{str(game_action)}|x={_pi.get('payload_x')}|"
+                        f"y={_pi.get('payload_y')}|src={_pi.get('payload_source')}")
             action_counts[game_action.name] = action_counts.get(game_action.name, 0) + 1
             tele.emit({
                 "env": env_name, "step": step,
@@ -2661,6 +2678,7 @@ def run():
                 "motion": round(motion, 6) if motion is not None else None,
                 "preference_store_size": orch.planner.preference_store.num_engrams(),
                 "action": str(game_action),
+                "action_identity": _action_identity,
                 "recall": recall_info,
                 "n_axiom_rows": n_axiom_rows,
                 "constraint_penalty": round(float(chosen.get("constraint_penalty", 0.0)), 6),

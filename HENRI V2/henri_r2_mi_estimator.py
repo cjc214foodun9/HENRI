@@ -131,7 +131,11 @@ def conditional_mutual_information(rows, bias_correction=True):
 
 
 def identify_env_support(rows, min_n=20, min_stratum=4, min_action=4):
-    """Support gates BEFORE MI. Returns True or IDENTIFIABILITY_BLOCKED."""
+    """Support gates BEFORE MI. Returns True or IDENTIFIABILITY_BLOCKED.
+
+    Requires >= 2 DISTINCT actions per stratum: a one-action stratum carries
+    zero conditional MI by construction and must not pass (Sol repair,
+    2026-08-28)."""
     if len(rows) < min_n:
         return IDENTIFIABILITY_BLOCKED
     by_s = defaultdict(Counter)
@@ -141,6 +145,8 @@ def identify_env_support(rows, min_n=20, min_stratum=4, min_action=4):
         return IDENTIFIABILITY_BLOCKED
     for s, ac in by_s.items():
         if sum(ac.values()) < min_stratum:
+            return IDENTIFIABILITY_BLOCKED
+        if len(ac) < 2:
             return IDENTIFIABILITY_BLOCKED
         if any(c < min_action for c in ac.values()):
             return IDENTIFIABILITY_BLOCKED
