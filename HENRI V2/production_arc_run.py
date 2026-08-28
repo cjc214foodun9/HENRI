@@ -78,6 +78,7 @@ from arc_public_ingress import (
 )
 from arc_task_functor import compile_task_functor
 from arc_goal_dist import compute_goal_dist_var
+from arc_emergence_gates import compute_emergence_gates
 from arc_phase_map import verify_phase_map_invertibility
 from henri_benchmark_registry import ARCEpisodeTrace
 
@@ -542,6 +543,9 @@ def run():
     HENRI_SFAS_GAMMA = float(os.environ.get("HENRI_SFAS_GAMMA", "0.9") or 0.9)
     if not 0.0 <= HENRI_SFAS_GAMMA < 1.0:
         raise ValueError("HENRI_SFAS_GAMMA must be in [0, 1)")
+    # Universal VLA Pathway doc §4 emergence checklist (default OFF).
+    # Additive gate telemetry + deterministic verifier; NO policy effect.
+    HENRI_EMERGENCE_GATES = os.environ.get("HENRI_EMERGENCE_GATES", "0") == "1"
     HENRI_SFAS_LAMBDA = float(os.environ.get("HENRI_SFAS_LAMBDA", "1.0") or 1.0)
     if HENRI_SFAS_LAMBDA < 0.0:
         raise ValueError("HENRI_SFAS_LAMBDA must be >= 0.0")
@@ -2571,6 +2575,19 @@ def run():
                 outcome_probe = {"probe_error": f"{type(_op_exc).__name__}"}
 
             # Telemetry emit (dense latent record)
+            emergence_gates = None
+            if HENRI_EMERGENCE_GATES:
+                _gate_telem = {
+                    "goal_wave_norm": round(float(torch.norm(goal_wave).item()), 6)
+                        if goal_wave is not None else None,
+                    "sagnac_stress": sagnac_delta,
+                    "horizon": (HENRI_LATENT_EXPLORE_HORIZON if HENRI_LATENT_EXPLORE
+                                else (HENRI_SFAS_HORIZON if HENRI_SFAS else None)),
+                    "delta_nu": float(outcome_probe.get("levels_completed", 0) or 0)
+                        - float(scorecard_levels_prev or 0),
+                }
+                _gate_telem = {k: v for k, v in _gate_telem.items() if v is not None}
+                emergence_gates = compute_emergence_gates(_gate_telem)
             action_counts[game_action.name] = action_counts.get(game_action.name, 0) + 1
             tele.emit({
                 "env": env_name, "step": step,
@@ -2634,6 +2651,7 @@ def run():
                     "info": adapter_info,
                 },
                 "extropic_ising": ising_info,
+                "emergence_gates": emergence_gates,
             })
             # Wave-level hypertable log (downsampled for DB volume)
             if db_logger is not None and step % 5 == 0:
