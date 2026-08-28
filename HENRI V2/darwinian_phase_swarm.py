@@ -613,4 +613,11 @@ class HenriSwarmOrchestrator(nn.Module):
             
         # 4. Thermodynamic Decay & Coherence Monitoring
         # Return sorted_indices for logging instead of a dynamic slice
-        return sagnac_delta.item(), sorted_indices, {"sagnac_delta": sagnac_delta.item()}
+        return sagnac_delta.item(), sorted_indices, {
+            "sagnac_delta": sagnac_delta.item(),
+            # Live producer for the emergence-gate langevin_temp signal:
+            # the ACTUAL active temperature used in this step's SGLD noise
+            # (T_base + shock term + valence channel). Not a constant, not a
+            # proxy — the same tensor that scaled noise_scale above.
+            "active_temperature": float(active_temperature.detach().mean().item()),
+        }

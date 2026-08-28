@@ -1616,14 +1616,19 @@ def run():
                     state_wave = state_wave / (torch.norm(state_wave, p=2, dim=-1, keepdim=True) + 1e-9)
 
             # Swarm relaxation with SGLD creep (valence drives the thermal
-            # schedule: failure heats, success cools)
+            # schedule: failure heats, success cools). Capture the live
+            # active_temperature from the LAST relaxation step's info dict —
+            # the genuine Langevin temperature signal for the emergence gates.
             sagnac_delta = None
+            _last_swarm_temp = None
             for _ in range(RELAX_STEPS):
-                sagnac_delta, _, _ = orch.process_active_reasoning_step(
+                sagnac_delta, _, _swarm_info = orch.process_active_reasoning_step(
                     state_wave, boundary,
                     t_shock_max=torch.tensor(0.5, device=DEVICE),
                     valence=valence,
                 )
+                if _swarm_info and _swarm_info.get("active_temperature") is not None:
+                    _last_swarm_temp = float(_swarm_info["active_temperature"])
 
             # Latent metrics
             coherence = orch.sagnac_coherence(state_wave, boundary).item()
@@ -2577,14 +2582,36 @@ def run():
             # Telemetry emit (dense latent record)
             emergence_gates = None
             if HENRI_EMERGENCE_GATES:
+                # GATE-1 goal wave norm: DIMENSION-NORMALIZED (||Psi||/sqrt(K))
+                # per the [K,8] block contract — the raw tensor norm is
+                # sqrt(8192) ~ 90.5 and can never equal the 1.0 gate.
+                _goal_norm = None
+                if goal_wave is not None:
+                    _goal_norm = float(torch.norm(goal_wave).item()) / math.sqrt(
+                        float(goal_wave.numel() // 8))
+                # GATE-1 task functor error: derived from the LIVE functor
+                # held-out recovery cosine (1 - cos), present ONLY when the
+                # functor compiled (FUNCTOR_OK). Never a constant.
+                _functor_err = None
+                if functor_result is not None and getattr(
+                        functor_result, "status", "") == "FUNCTOR_OK" \
+                        and functor_result.held_out_cos is not None:
+                    _functor_err = 1.0 - float(functor_result.held_out_cos)
+                # GATE-4 invalid-branch rejection rate: live window ratio of
+                # constraint-rejected candidates over candidates seen.
+                _rej_rate = None
+                if trace_acc.get("candidate_count", 0) > 0:
+                    _rej_rate = trace_acc.get("veto_count", 0) / trace_acc["candidate_count"]
                 _gate_telem = {
-                    "goal_wave_norm": round(float(torch.norm(goal_wave).item()), 6)
-                        if goal_wave is not None else None,
+                    "goal_wave_norm": _goal_norm,
+                    "task_functor_error": _functor_err,
                     "sagnac_stress": sagnac_delta,
                     "horizon": (HENRI_LATENT_EXPLORE_HORIZON if HENRI_LATENT_EXPLORE
                                 else (HENRI_SFAS_HORIZON if HENRI_SFAS else None)),
                     "delta_nu": float(outcome_probe.get("levels_completed", 0) or 0)
                         - float(scorecard_levels_prev or 0),
+                    "langevin_temp": _last_swarm_temp,
+                    "invalid_branch_rejection_rate": _rej_rate,
                 }
                 _gate_telem = {k: v for k, v in _gate_telem.items() if v is not None}
                 emergence_gates = compute_emergence_gates(_gate_telem)
