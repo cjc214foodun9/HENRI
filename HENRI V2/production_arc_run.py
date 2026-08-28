@@ -1919,6 +1919,18 @@ def run():
                             _action_waves, _tr,
                             horizon=HENRI_SFAS_HORIZON,
                             gamma=HENRI_SFAS_GAMMA)
+                        # R2 (2026-08-27): capture the pre-rerank EFE table
+                        # (action id + raw EFE) for the score/action/outcome
+                        # telemetry join. Additive; selection logic unchanged.
+                        _pre_rows = []
+                        for _r in efe_table:
+                            _aid = _r.get("action")
+                            _k = int(_aid.value if hasattr(_aid, "value") else _aid) \
+                                if _aid is not None else None
+                            _pre_rows.append({
+                                "a": _k,
+                                "efe": round(float(_r.get("efe", 0.0)), 6),
+                            })
                         _new_table, _info = rerank_efe_table(
                             efe_table, _scores, lambda_sfas=HENRI_SFAS_LAMBDA)
                         _info["horizon"] = HENRI_SFAS_HORIZON
@@ -1933,6 +1945,24 @@ def run():
                             print(f"  [sfas] re-rank engaged (discordance="
                                   f"{_info['discordance']}, H="
                                   f"{HENRI_SFAS_HORIZON})")
+                        # R2: post-rerank snapshot with selection ranks and
+                        # per-action SFAS scores (the action/score/selection
+                        # join the reduction needs).
+                        _post_rows = []
+                        for _i, _r in enumerate(efe_table):
+                            _aid = _r.get("action")
+                            _k = int(_aid.value if hasattr(_aid, "value") else _aid) \
+                                if _aid is not None else None
+                            _sc = _scores.get(_k) if _k is not None else None
+                            _post_rows.append({
+                                "a": _k,
+                                "rank": _i,
+                                "efe": round(float(_r.get("efe", 0.0)), 6),
+                                "sc": round(float(_sc), 6) if _sc is not None else None,
+                                "selected": bool(_i == 0),
+                            })
+                        _info["pre_table"] = _pre_rows
+                        _info["table_snapshot"] = _post_rows
                         sfas_info = _info
                 except Exception as _sfas_exc:
                     sfas_info = {"sfas_error": f"{type(_sfas_exc).__name__}"}
@@ -2492,6 +2522,33 @@ def run():
                 except Exception as _cpx_exc:
                     complex_sidecar_info = {"status": "CPX_SIDECAR_UNAVAILABLE"}
 
+            # R2 (2026-08-27): read-only per-step external-outcome telemetry
+            # (frame change + level count + reset boundary). The Beta-Bernoulli
+            # posterior and task store stay gated by EXTERNAL_OUTCOME_EFE;
+            # this probe only records what the environment returned.
+            outcome_probe = None
+            try:
+                _frame_changed = None
+                if obs_next is not None and getattr(obs_next, "frame", None):
+                    _post_arr = np.array(obs_next.frame[0].tolist())
+                    _prev_arr = np.array(grid)
+                    _frame_changed = bool(
+                        _post_arr.shape != _prev_arr.shape
+                        or np.any(_post_arr != _prev_arr))
+                _lv_now = None
+                if obs_next is not None and hasattr(obs_next, "levels_completed"):
+                    try:
+                        _lv_now = int(obs_next.levels_completed)
+                    except Exception:
+                        _lv_now = None
+                outcome_probe = {
+                    "frame_changed": _frame_changed,
+                    "levels_completed": _lv_now,
+                    "reset": bool(last_action_was_reset),
+                }
+            except Exception as _op_exc:
+                outcome_probe = {"probe_error": f"{type(_op_exc).__name__}"}
+
             # Telemetry emit (dense latent record)
             action_counts[game_action.name] = action_counts.get(game_action.name, 0) + 1
             tele.emit({
@@ -2551,6 +2608,7 @@ def run():
                 "adapter_info": adapter_info,
                 "sfas": sfas_info,
                 "sfas_flag": HENRI_SFAS,
+                "outcome_probe": outcome_probe,
                 "superposition_load": round(
                     float(orch.planner.cleanup.num_engrams()) / SCALE["d_model"],
                     8) if SCALE["d_model"] else None,
