@@ -66,6 +66,9 @@ Verdict taxonomy (M2-compatible): `F1_CARRIER_VERIFIED` |
 `f1_engaged`, `f1_theta_norm` (per-block ‖θ‖ mean/max), `f1_orth_err`,
 `f1_impl` (`TRITON`|`TORCH_REF`), `f1_lambda`, plus the existing
 `m2_sagnac_by_horizon`, `m2_engaged`, `sagnac_mean`, `active_temperature`.
+`f1_drift_slope` (least-squares slope of cohort Δ̄(k) over k ∈ {1..8};
+DIAGNOSTIC ONLY, no gate — the direct observable for the directive's
+"eliminate the phase drift" clause).
 
 ## 6. Reduction rules
 

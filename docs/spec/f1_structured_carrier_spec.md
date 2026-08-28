@@ -195,6 +195,11 @@ NOTE: F1.3's 0.35 / k∈{1..4} gate is a RELAXATION of M2's 0.15 / k∈{1..8}
 pre-registered gate. This is the directive's stated F1.3 gate and is adopted
 verbatim; the change is disclosed here, not silent.
 
+DIAGNOSTIC (amendment 2026-08-28, additive, no gate change): telemetry adds
+`f1_drift_slope` = least-squares slope of cohort Δ̄(k) over k ∈ {1..8}.
+A non-positive slope is the "phase drift eliminated" reading; a positive slope
+is residual drift. It interprets the verdict only; it never passes G3.
+
 Verdicts: `F1_CARRIER_VERIFIED` | `F1_CARRIER_FALSIFIED` | `BLOCKED_INFRA` |
 `FALSIFIED_NO_TRANSFER` | `FALSIFIED_NO_ENGAGEMENT` (M2 taxonomy).
 

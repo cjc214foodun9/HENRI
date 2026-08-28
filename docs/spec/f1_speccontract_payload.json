@@ -1,0 +1,73 @@
+{
+  "spec_id": "SPEC-2026-08-28-F1-CARRIER",
+  "algorithm_name": "F1LieDisplacementCarrier-adjoint-su3",
+  "mathematical_invariants": [
+    "normalized_sagnac_delta in [0,2]",
+    "R_m^T R_m - I_8 Frobenius <= 1e-4 per block per step",
+    "per-block row norm preserved: |norm(Psi_m) - norm(Psi_m)| <= 1e-4 over 8-step unroll",
+    "generator family Ad(SU(3)): (M_a)_cb = -f_abc, R = exp(+theta^a M_a); sign anchored numerically",
+    "theta = 0 implies R = I implies byte-identical baseline (default-OFF differential)",
+    "lambda = 0 implies carrier output byte-identical to baseline transition output",
+    "zero trainable parameters in F1.1-F1.3; theta compiled closed-form only",
+    "no dense [D,D] or [8*num_blocks, 8*num_blocks] operators; per-block 8x8 only"
+  ],
+  "tensor_contracts": {
+    "state_wave": {
+      "shape": "[num_blocks, 8]",
+      "dtype": "float32",
+      "dynamic_axes": [
+        "num_blocks"
+      ]
+    },
+    "theta": {
+      "shape": "[num_blocks, 8]",
+      "dtype": "float32",
+      "dynamic_axes": [
+        "num_blocks"
+      ]
+    },
+    "R_block": {
+      "shape": "[num_blocks, 8, 8]",
+      "dtype": "float32",
+      "dynamic_axes": [
+        "num_blocks"
+      ]
+    },
+    "w_task_adj": {
+      "shape": "[num_blocks, 8]",
+      "dtype": "float32",
+      "dynamic_axes": [
+        "num_blocks"
+      ]
+    },
+    "action_wave": {
+      "shape": "[num_blocks, 8]",
+      "dtype": "float32",
+      "dynamic_axes": [
+        "num_blocks"
+      ]
+    }
+  },
+  "loss_formulations": [
+    "no loss function: zero-trainable representation carrier; telemetry-only signals (per-step Sagnac by horizon, theta norm, orth error, implementation marker)",
+    "fp32 accumulation throughout; bf16 requires a new pre-registration"
+  ],
+  "baseline_references": [
+    {
+      "vault_note_path": "henri-architecture/references/f1-lie-displacement-carrier-validation.md",
+      "core_insight": "adjoint su(3) displacement verified: sign +M anchored (err 6.2e-15 vs 3.68); Hadamard coupling FALSIFIED (skew*skew=symmetric, exp diverges 9.1e10); additive Lie-coordinate coupling replaces it"
+    },
+    {
+      "vault_note_path": "ledger idx 959 seal #b80bbd8f M2SUCC_V3_VERDICT",
+      "core_insight": "unconditioned rank-128 EDMD disperses: cohort delta_bar 0.983-1.006 vs gate 0.15; measure-concentration floor sqrt(pi/4D) ~ 0.00346"
+    },
+    {
+      "vault_note_path": "henri-architecture/references/yang-mills-qfhrr-bridge.md",
+      "core_insight": "Sagnac delta = compact U(1) Wilson action; SU(3) NOT representable in Cl(3,0)/Cl(1,3); F1 uses 8-dim adjoint rep (so(8) rotations)"
+    },
+    {
+      "vault_note_path": "henri-research/references/gauge-invariant-relational-egress.md",
+      "core_insight": "O(8) gauge FALSIFIED 2026-08-25; Ad(SU(3)) is a proper 8-parameter subgroup of SO(8), not full rotation coverage"
+    }
+  ]
+}
