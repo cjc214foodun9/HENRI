@@ -2541,8 +2541,28 @@ def run():
                         _lv_now = int(obs_next.levels_completed)
                     except Exception:
                         _lv_now = None
+                # Outcome-channel diagnostic (2026-08-27, R2-next): additive
+                # frame-diff MAGNITUDE, because the saturated binary
+                # frame_changed is non-discriminative (1.0 every step). The
+                # magnitude channel may identify natural outcome variance
+                # across environments. Selection logic is untouched.
+                _frame_diff_mean = None
+                _changed_cells = None
+                try:
+                    if _post_arr is not None and _prev_arr is not None:
+                        if _post_arr.shape == _prev_arr.shape:
+                            _diff = np.abs(
+                                _post_arr.astype(np.float64)
+                                - _prev_arr.astype(np.float64))
+                            _changed_cells = int(np.count_nonzero(_diff))
+                            _frame_diff_mean = float(_diff.mean())
+                except Exception:
+                    _frame_diff_mean = None
+                    _changed_cells = None
                 outcome_probe = {
                     "frame_changed": _frame_changed,
+                    "frame_diff_mean": _frame_diff_mean,
+                    "changed_cells": _changed_cells,
                     "levels_completed": _lv_now,
                     "reset": bool(last_action_was_reset),
                 }
