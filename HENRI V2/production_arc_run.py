@@ -45,6 +45,7 @@ from henri_trajectory_bank import TrajectoryBank, bank_enabled_from_env
 from darwinian_phase_swarm import HenriSwarmOrchestrator
 from exteroceptive_sandbox import ExteroceptiveSandboxTransducer
 from henri_vision_encoder import HENRIVisionEncoder
+from henri_r2_mi_estimator import stratum_id
 from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
 from connected_component_segmenter import ConnectedComponentSegmenter
 from sagnac_mcts_planner import SagnacMCTSPlanner
@@ -1326,6 +1327,8 @@ def run():
         valence = 0.0
         grid_dist = 0.0
         last_action_was_reset = False
+        pre_state_stratum = None
+        _delta_levels = None
         # Progress-valence EMA state (Task 2.3): per-episode fast/slow
         # baselines of within-invariant motion; None until the first m.
         pv_fast = None
@@ -1345,6 +1348,20 @@ def run():
             t0 = time.perf_counter()
             grid = obs.frame[0].tolist()
             curr_arr = np.array(grid)
+            # R2-successor pre-action state stratum (SPEC-2026-08-28-R2SUCC):
+            # computed from the PRE-action frame ONLY — no future information
+            # enters the stratum. Bins are frozen in henri_r2_mi_estimator.
+            try:
+                _pre_nz = int(np.count_nonzero(curr_arr))
+                _pre_nc = int(len(np.unique(curr_arr)))
+                _pre_shape = list(curr_arr.shape)
+                pre_state_stratum = stratum_id({
+                    "n_nonzero_cells": _pre_nz,
+                    "n_distinct_colors": _pre_nc,
+                    "grid_shape": _pre_shape,
+                })
+            except Exception:
+                pre_state_stratum = None
             if prev_raw_grid is not None:
                 prev_arr = np.array(prev_raw_grid)
                 if curr_arr.shape == prev_arr.shape:
@@ -2576,6 +2593,15 @@ def run():
                     "levels_completed": _lv_now,
                     "reset": bool(last_action_was_reset),
                 }
+                # R2-successor outcome delta (SPEC-2026-08-28-R2SUCC): external
+                # level delta, shared with the emergence-gates block below.
+                if _lv_now is not None:
+                    try:
+                        _delta_levels = int(_lv_now) - int(scorecard_levels_prev or 0)
+                    except Exception:
+                        _delta_levels = None
+                if _delta_levels is not None:
+                    outcome_probe["delta_levels"] = _delta_levels
             except Exception as _op_exc:
                 outcome_probe = {"probe_error": f"{type(_op_exc).__name__}"}
 
@@ -2668,6 +2694,7 @@ def run():
                 "adapter_info": adapter_info,
                 "sfas": sfas_info,
                 "sfas_flag": HENRI_SFAS,
+                "pre_state_stratum": pre_state_stratum,
                 "outcome_probe": outcome_probe,
                 "superposition_load": round(
                     float(orch.planner.cleanup.num_engrams()) / SCALE["d_model"],
