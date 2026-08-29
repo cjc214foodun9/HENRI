@@ -844,9 +844,17 @@ if _HAS_TRITON:
 
     @triton.jit
     def _f1_mm8(A, B):
-        """[8, 8] x [8, 8] -> [8, 8] register-only matmul (broadcast sum)."""
-        prod = tl.expand_dims(A, 1) * tl.expand_dims(B, 0)   # [8, 1, 8] * [1, 8, 8]
-        return tl.sum(prod, axis=1)                          # [8, 8]
+        """[8, 8] x [8, 8] -> [8, 8] register-only matmul.
+
+        C[i, j] = sum_k A[i, k] * B[k, j]. The earlier broadcast
+        expand_dims(A, 1) * expand_dims(B, 0) contracted over B's ROW axis
+        (giving A[i,k] * colsum_k(B), NOT a matmul) — caught by the remote
+        CUDA suite (kernel vs fp64 ref err 6.35; torch sim of the same
+        algorithm matched to 1e-6). PROBE1 passed only because the identity
+        is symmetric and blind to transposition.
+        """
+        prod = tl.expand_dims(A, 2) * tl.expand_dims(B, 0)   # [8,8,1] * [1,8,8] = [i,k,j]
+        return tl.sum(prod, axis=1)                          # [i, j]
 
     @triton.jit
     def _f1_expm_kernel(theta_ptr, M_ptr, R_ptr, nb):
