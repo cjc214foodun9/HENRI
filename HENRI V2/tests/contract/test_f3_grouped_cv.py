@@ -12,6 +12,7 @@ Runs on numpy + source inspection only (no torch, no GPU).
 from __future__ import annotations
 
 import importlib.util
+import json
 import math
 import sys
 from pathlib import Path
@@ -126,3 +127,105 @@ def test_gates_harness_frozen_hyperparams():
 def test_gates_harness_pins_frozen_n_folds():
     src = (VERIF / "f3_egress_gates.py").read_text(encoding="utf-8")
     assert "FROZEN_N_FOLDS = 4" in src
+
+
+# --- F3 merge tool (bounded re-capture budget enforcement) -------------------
+# RED-first: these fail until f3_merge_banks.py exists (TDD order).
+
+def _load_merge():
+    return _load("f3_merge_banks")
+
+
+def test_merge_realigns_union_vocab():
+    """6-col and 7-col one-hot banks merge into the canonical 7-col union."""
+    m = _load_merge()
+    a = np.zeros((4, 6), dtype=np.uint8); a[:, 0] = 1
+    b = np.zeros((3, 7), dtype=np.uint8); b[:, 6] = 1
+    names_a = [f"ACTION{i}" for i in range(1, 7)]
+    names_b = [f"ACTION{i}" for i in range(1, 8)]
+    psi = [np.ones((4, 8), np.float16), np.ones((3, 8), np.float16)]
+    onehot = [a, b]
+    names = [names_a, names_b]
+    meta = [{"env": "a", "action_name": "ACTION1"}] * 4 + \
+           [{"env": "b", "action_name": "ACTION7"}] * 3
+    merged = m.realign_and_concat(psi, onehot, names, meta, env_cap=150)
+    assert merged["onehot"].shape == (7, 7)
+    assert merged["names"] == [f"ACTION{i}" for i in range(1, 8)]
+    assert merged["onehot"][:4, 0].sum() == 4   # ACTION1 rows preserved
+    assert merged["onehot"][4:, 6].sum() == 3   # ACTION7 rows preserved
+    assert merged["onehot"][:, 1:6].sum() == 0  # untouched cols stay zero
+
+
+def test_merge_trims_env_cap():
+    """Per-env cap: first env_cap rows per env, capture order preserved."""
+    m = _load_merge()
+    n = 200
+    meta = [{"env": "x", "action_name": "ACTION1"}] * n
+    psi = [np.ones((n, 8), np.float16)]
+    onehot = [np.zeros((n, 7), dtype=np.uint8)]
+    onehot[0][:, 0] = 1
+    names = [[f"ACTION{i}" for i in range(1, 8)]]
+    merged = m.realign_and_concat(psi, onehot, names, meta, env_cap=150)
+    assert merged["psi"].shape[0] == 150
+    assert merged["meta"][-1] == {"env": "x", "action_name": "ACTION1"}
+    assert len(merged["meta"]) == 150
+
+
+def test_merge_rejects_unauthorized_source():
+    """data_source != 'authorized' fails loud (zero-pretraining invariant)."""
+    m = _load_merge()
+    with pytest.raises(AssertionError):
+        m.verify_source({"data_source": "synthetic"}, b"", b"")
+
+
+def test_merge_digest_roundtrip(tmp_path):
+    """Merged manifest hashes match the merged bytes (fail-loud chain)."""
+    m = _load_merge()
+    # Build two tiny source banks on disk
+    attempts = tmp_path / "attempts"
+    for tag, env, cols in (("e1_1", "e1", 6), ("e2_1", "e2", 7)):
+        d = attempts / tag
+        d.mkdir(parents=True)
+        onehot = np.zeros((2, cols), dtype=np.uint8)
+        onehot[:, 0] = 1
+        names = np.array([f"ACTION{i}" for i in range(1, cols + 1)])
+        np.savez(d / "trajectories_t.npz", psi=np.ones((2, 8), np.float16),
+                 next_wave=np.ones((2, 8), np.float16),
+                 actions_onehot=onehot, action_names=names)
+        meta = [{"env": env, "action_name": "ACTION1", "t": 1.0},
+                {"env": env, "action_name": "ACTION1", "t": 2.0}]
+        with open(d / "trajectories_t.jsonl", "w", encoding="utf-8") as f:
+            for r in meta:
+                f.write(json.dumps(r) + "\n")
+        with open(d / "trajectories_t_manifest.json", "w", encoding="utf-8") as f:
+            json.dump({"schema_id": "henri.arc-trajectory-bank.v1",
+                       "data_source": "authorized",
+                       "run_id": "run_" + tag,
+                       "npz_sha256": m._sha256(str(d / "trajectories_t.npz")),
+                       "jsonl_sha256": m._sha256(str(d / "trajectories_t.jsonl"))},
+                      f)
+        with open(d / "production_run_t.jsonl", "w", encoding="utf-8") as f:
+            f.write(json.dumps({"env": env, "grid_dist": 0.25}) + "\n")
+    out = tmp_path / "out"
+    receipt = m.merge_banks(str(attempts), str(out), "f3_merged_test",
+                            env_cap=150, expect_envs=["e1", "e2"])
+    assert receipt["record_count"] == 4
+    assert receipt["envs"] == ["e1", "e2"]
+    npz = out / "trajectories_f3_merged_test.npz"
+    jl = out / "trajectories_f3_merged_test.jsonl"
+    mf = out / "trajectories_f3_merged_test_manifest.json"
+    manifest = json.loads(mf.read_text(encoding="utf-8"))
+    assert manifest["data_source"] == "authorized"
+    assert manifest["npz_sha256"] == m._sha256(str(npz))
+    assert manifest["jsonl_sha256"] == m._sha256(str(jl))
+    assert manifest["merged"] is True
+    assert (out / "production_run_f3_merged_test.jsonl").exists()
+    assert manifest["record_count"] == 4
+
+
+def test_merge_fails_loud_on_missing_env():
+    """A capture env absent from every attempt aborts the merge."""
+    m = _load_merge()
+    with pytest.raises(AssertionError):
+        m.merge_banks("/nonexistent", "/tmp/out", "r", env_cap=150,
+                      expect_envs=["e1", "e2"])
