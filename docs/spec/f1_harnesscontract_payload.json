@@ -1,6 +1,6 @@
 {
   "spec_id": "SPEC-2026-08-28-F1-CARRIER",
-  "commit_hash": "dbb6f4b6c22ef1bd12ddcc6e203d8a7cc29f47d5",
+  "commit_hash": "0e490531e64a0b9f148e712aae5fff3dd62fbe0d",
   "entrypoint": "python -m pytest tests/contract/test_f1_carrier_kernel.py -q --tb=short",
   "vast_hardware_spec": {
     "gpu_type": "RTX 5090",
