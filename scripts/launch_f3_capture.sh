@@ -2,7 +2,9 @@
 # F3 broad-bank capture launcher (vast-5090). LF-normalize before use.
 set -euo pipefail
 cd "/root/f3-run"
+set -a
 source /workspace/zonec_prod.env
+set +a
 export ZONE_C_ENV=prod
 export HENRI_ARC_TRAJECTORY_BANK=1
 export HENRI_SEED=20260830
