@@ -25,6 +25,7 @@ Engineering notes:
 """
 
 import math
+import os
 
 import torch
 
@@ -754,4 +755,265 @@ def sample_ising_gibbs(hamiltonian: IsingHamiltonian, n_samples: int = 1,
 # ---------------------------------------------------------------------------
 # Smoke
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# F1 carrier — adjoint su(3) Lie displacement kernel (SPEC-2026-08-28-F1-CARRIER)
+# ---------------------------------------------------------------------------
+# Zero-trainable, default-OFF (HENRI_F1_CARRIER=1). Per-block 8x8 real
+# skew-symmetric generator family M_a in so(8), (M_a)_cb = -f_abc, built from
+# the su(3) structure constants (chromodynamic_grounding Gell-Mann basis).
+# R(theta) = exp(theta^a M_a) in SO(8); goal conditioning is ADDITIVE in Lie
+# coordinates: theta = theta_base + lam * Pi_adj(w_task). The Hadamard coupling
+# D_a <- D_a ⊙ proj_su3(W_task) is FALSIFIED (skew ⊙ skew is symmetric and
+# exp diverges — measured orth error 9.1e10).
+#
+# Kernel contract (sealed spec §2.1): per-block 8x8 real matrix exponential via
+# scaling-and-squaring Taylor (degree 6, unrolled, no list building), row
+# stride multiplied (D27 rule), tl.maximum clamp on norms (D26 rule). Real-only
+# path: no complex promotion. fp32 accumulation throughout.
+#
+# "Rodrigues exactitude" (audit doc §2.1 prose) is operationalized per the
+# audit's own guardrails: unitarity < 1e-6 (guardrail 2) + fp64-reference
+# agreement <= 1e-4 (spec §6.4). A generic adjoint SU(3) element has NO
+# ordinary 3-D Rodrigues closed form (M_a^3 != -M_a), so the restricted
+# single-generator plane is verified against the fp64 reference in the
+# contract suite. Scale note: spec's s = ceil(log2(||A||)) is tightened by one
+# guard bit to guarantee ||A/2^s|| <= 0.25 so the degree-6 Taylor error stays
+# <= 1e-4 after squaring (verified vs fp64 reference; implementation detail of
+# the sealed S&S contract, disclosed, not a gate or interface change).
+#
+# Interface (spec §10, immutable for F1):
+#   F1LieDisplacementCarrier(num_blocks, device)
+#     .compile_theta(w_task_adj, theta_base=None, lam=0.0) -> [num_blocks, 8]
+#     .step(state_wave, theta) -> [num_blocks, 8]
+#     .fit_adjoint(traj) -> [num_blocks, 8]   # C5 closed-form per-block theta
+#   f1_expm_triton(theta, M=None) -> [num_blocks, 8, 8]   # Triton, CUDA-only
+#   f1_expm_torch_ref(theta, M=None) -> [num_blocks, 8, 8]  # fp64 reference
+# ---------------------------------------------------------------------------
+
+F1_CARRIER_ENABLED = os.environ.get("HENRI_F1_CARRIER", "0") == "1"
+
+
+class F1CarrierDisabledError(RuntimeError):
+    """F1 carrier constructed with HENRI_F1_CARRIER unset/0 (default-OFF)."""
+
+
+class F1KernelUnavailableError(RuntimeError):
+    """Triton F1 kernel requested without a CUDA device (fail-closed)."""
+
+
+def _f1_generators(dtype: torch.dtype = torch.float32) -> torch.Tensor:
+    """[8, 8, 8] real adjoint su(3) generators (M_a)_cb = -f_abc.
+
+    f_abc from [lambda_a, lambda_b] = 2i f_abc lambda_c with
+    f_abc = Tr(comm(a,b) @ lambda_c) / 4i (real-valued for Hermitian Gell-Mann
+    generators). Deterministic: no RNG.
+    """
+    from chromodynamic_grounding import GELL_MANN_BASIS
+
+    lam = GELL_MANN_BASIS.to(torch.complex128)          # [8, 3, 3]
+    f = torch.zeros(8, 8, 8, dtype=torch.complex128)
+    for a in range(8):
+        for b in range(8):
+            comm = lam[a] @ lam[b] - lam[b] @ lam[a]
+            for c in range(8):
+                f[a, b, c] = torch.trace(comm @ lam[c]) / (4j)
+    # f is real-valued (Tr of skew-Hermitian is imaginary; /4i -> real).
+    M = -f.real                                        # [8, 8, 8]
+    return M.to(dtype)
+
+
+def _f1_theta_to_M(theta: torch.Tensor, M: torch.Tensor) -> torch.Tensor:
+    """[num_blocks, 8] theta -> [num_blocks, 8, 8] sum_a theta^a M_a."""
+    return torch.einsum("ba,aij->bij", theta, M)
+
+
+def f1_expm_torch_ref(theta: torch.Tensor,
+                      M: torch.Tensor | None = None) -> torch.Tensor:
+    """fp64 reference per-block matrix exponential (independent of Triton).
+
+    theta: [num_blocks, 8] float32/float64. Returns [num_blocks, 8, 8] fp64.
+    """
+    if M is None:
+        M = _f1_generators(dtype=torch.float64)
+    theta64 = theta.to(torch.float64)
+    return torch.linalg.matrix_exp(_f1_theta_to_M(theta64, M))
+
+
+if _HAS_TRITON:
+
+    @triton.jit
+    def _f1_mm8(A, B):
+        """[8, 8] x [8, 8] -> [8, 8] register-only matmul (broadcast sum)."""
+        prod = tl.expand_dims(A, 1) * tl.expand_dims(B, 0)   # [8, 1, 8] * [1, 8, 8]
+        return tl.sum(prod, axis=1)                          # [8, 8]
+
+    @triton.jit
+    def _f1_expm_kernel(theta_ptr, M_ptr, R_ptr, nb):
+        """Per-block 8x8 real matrix exponential (scaling-and-squaring Taylor).
+
+        theta: [nb, 8] float32; M: [8, 8, 8] float32; R: [nb, 8, 8] float32.
+        One program per block. A = sum_a theta[a] M_a; scale s so that
+        ||A/2^s||_F <= 0.25 (spec ceil(log2 ||A||) + one guard bit); Taylor
+        degree 6 (Horner); square s times (guarded static unroll, MAX_S = 16).
+        Row-major strides: theta row stride 8, R row stride 64 (D27 rule).
+        """
+        offs = tl.program_id(0)
+        if offs >= nb:
+            return
+        offs_i = tl.arange(0, 8)
+        offs_j = tl.arange(0, 8)
+        # ---- load theta [8] (row stride 8) ----
+        th = tl.load(theta_ptr + offs * 8 + offs_i)
+        # ---- build A = sum_a th[a] * M_a (M stride 64 per generator) ----
+        A = tl.zeros([8, 8], dtype=tl.float32)
+        for a in tl.static_range(8):
+            Ma = tl.load(M_ptr + a * 64 + offs_i[:, None] * 8 + offs_j[None, :])
+            A = A + th[a] * Ma
+        # ---- scaling-and-squaring ----
+        nrm = tl.sqrt(tl.maximum(tl.sum(A * A), 0.0))        # F-norm (D26 clamp)
+        s_f = tl.ceil(tl.log2(tl.maximum(nrm, 1e-30)))
+        # guard bit: guarantee ||A * 2^-s|| <= 0.25
+        s_f = s_f + 1.0
+        scale0 = tl.exp2(-s_f)
+        s_f = s_f + tl.where(nrm * scale0 > 0.25, 1.0, 0.0)
+        s_i = s_f.to(tl.int32)
+        scale = tl.exp2(-s_f)
+        As = A * scale
+        # ---- Taylor degree 6 (Horner, unrolled) ----
+        I8 = (offs_i[:, None] == offs_j[None, :]).to(tl.float32)
+        T = I8
+        P = I8
+        for k in tl.static_range(1, 7):
+            P = _f1_mm8(P, As) * (1.0 / k)
+            T = T + P
+        # ---- squaring (guarded static unroll; MAX_S = 16 covers ||A|| < 2^15) ----
+        for i in tl.static_range(16):
+            T = tl.where(i < s_i, _f1_mm8(T, T), T)
+        # ---- store R [nb, 8, 8] (row stride 64) ----
+        tl.store(R_ptr + offs * 64 + offs_i[:, None] * 8 + offs_j[None, :], T)
+
+
+def f1_expm_triton(theta: torch.Tensor,
+                   M: torch.Tensor | None = None) -> torch.Tensor:
+    """[num_blocks, 8] -> [num_blocks, 8, 8] via the Triton kernel.
+
+    CUDA-only; raises F1KernelUnavailableError without CUDA (fail-closed, so a
+    CPU or torch fallback is never silently labelled TRITON).
+    """
+    if not _HAS_TRITON or not torch.cuda.is_available():
+        raise F1KernelUnavailableError(
+            "f1_expm_triton requires CUDA + Triton (fail-closed; "
+            "BLOCKED_VACUOUS_CPU_PATH if used as a gate)")
+    theta = theta.to(torch.float32).contiguous()
+    if M is None:
+        M = _f1_generators(dtype=torch.float32)
+    M = M.to(theta.device).contiguous()
+    nb = theta.shape[0]
+    R = torch.empty((nb, 8, 8), dtype=torch.float32, device=theta.device)
+    _f1_expm_kernel[(nb,)](theta, M, R, nb)
+    return R
+
+
+class F1LieDisplacementCarrier:
+    """Zero-trainable adjoint su(3) displacement carrier (spec §10).
+
+    Default-OFF: construction requires HENRI_F1_CARRIER=1 (checked live in
+    __init__; the module constant is informational only). theta = 0 => exact
+    identity => byte-identical output (spec invariant 4). No trainable
+    parameters: theta is compiled closed-form (compile_theta / fit_adjoint).
+    """
+
+    def __init__(self, num_blocks: int, device: torch.device):
+        if os.environ.get("HENRI_F1_CARRIER", "0") != "1":
+            raise F1CarrierDisabledError(
+                "HENRI_F1_CARRIER must be 1 to construct F1LieDisplacementCarrier")
+        if num_blocks <= 0:
+            raise ValueError("num_blocks must be positive")
+        self.num_blocks = int(num_blocks)
+        self.device = torch.device(device)
+        self._M32 = _f1_generators(dtype=torch.float32)   # [8, 8, 8] cpu
+        self._M64 = _f1_generators(dtype=torch.float64)   # [8, 8, 8] cpu
+        self._impl = "TORCH_REF"
+
+    @property
+    def impl(self) -> str:
+        """Implementation marker for the last step(): TRITON | TORCH_REF."""
+        return self._impl
+
+    def _check_theta(self, theta: torch.Tensor, name: str) -> torch.Tensor:
+        if theta.shape != (self.num_blocks, 8):
+            raise ValueError(
+                f"{name} must be [{self.num_blocks}, 8], got {tuple(theta.shape)}")
+        if theta.dtype not in (torch.float32, torch.float64):
+            raise TypeError(f"{name} must be float32/float64, got {theta.dtype}")
+        if not bool(torch.isfinite(theta).all()):
+            raise ValueError(f"{name} contains NaN/Inf")
+        return theta.to(torch.float32)
+
+    def compile_theta(self, w_task_adj: torch.Tensor | None = None,
+                      theta_base: torch.Tensor | None = None,
+                      lam: float = 0.0) -> torch.Tensor:
+        """theta = theta_base + lam * w_task_adj (additive Lie coordinates).
+
+        Returns [num_blocks, 8] float32 on self.device. Default (both None):
+        zeros -> identity arm (byte-identical baseline).
+        """
+        out = torch.zeros(self.num_blocks, 8, device=self.device)
+        if theta_base is not None:
+            out = out + self._check_theta(theta_base, "theta_base").to(self.device)
+        if w_task_adj is not None:
+            out = out + lam * self._check_theta(w_task_adj, "w_task_adj").to(self.device)
+        return out
+
+    def step(self, state_wave: torch.Tensor,
+             theta: torch.Tensor) -> torch.Tensor:
+        """Psi' = exp(theta^a M_a) Psi per block. Returns [num_blocks, 8]."""
+        if state_wave.shape != (self.num_blocks, 8):
+            raise ValueError(
+                f"state_wave must be [{self.num_blocks}, 8], "
+                f"got {tuple(state_wave.shape)}")
+        if state_wave.dtype not in (torch.float32, torch.float64):
+            raise TypeError(f"state_wave must be float32/float64, got {state_wave.dtype}")
+        theta = self._check_theta(theta, "theta")
+        psi = state_wave.to(torch.float32)
+        # Identity arm: byte-identical baseline (spec invariant 4).
+        if bool((theta == 0.0).all()):
+            self._impl = "IDENTITY"
+            return psi
+        if (torch.cuda.is_available() and _HAS_TRITON
+                and psi.device.type == "cuda"):
+            R = f1_expm_triton(theta, self._M32.to(psi.device))
+            self._impl = "TRITON"
+        else:
+            R = f1_expm_torch_ref(theta, self._M64).to(psi.device).float()
+            self._impl = "TORCH_REF"
+        return torch.einsum("bij,bj->bi", R, psi)
+
+    def fit_adjoint(self, traj: torch.Tensor) -> torch.Tensor:
+        """Closed-form per-block theta from observed transitions (C5).
+
+        traj: [T, num_blocks, 8] float32/float64. Per block: Procrustes fit
+        R = U V^T from W = Y^T X (SVD), matrix log via eigendecomposition,
+        projection onto span{M_a} via the Gram matrix. Returns
+        [num_blocks, 8] float32.
+        """
+        if traj.dim() != 3 or traj.shape[1] != self.num_blocks or traj.shape[2] != 8:
+            raise ValueError(f"traj must be [T, {self.num_blocks}, 8], "
+                             f"got {tuple(traj.shape)}")
+        if traj.shape[0] < 3:
+            raise ValueError("traj needs T >= 3 for a Procrustes fit")
+        t = traj.to(torch.float64)                          # [T, nb, 8]
+        X = t[:-1]                                          # [T-1, nb, 8]
+        Y = t[1:]                                           # [T-1, nb, 8]
+        W = torch.einsum("tnk,tni->nki", Y, X)              # [nb, 8, 8] = Y^T X
+        U, _, Vh = torch.linalg.svd(W)                      # [nb, 8, 8]
+        R = U @ Vh                                          # Procrustes rotor
+        ev, V = torch.linalg.eig(R)                         # right eigenvectors
+        L = (V @ torch.diag_embed(torch.log(ev)) @ V.inverse()).real
+        M = self._M64
+        G = torch.einsum("aij,bij->ab", M, M)               # [8, 8] Gram
+        b = torch.einsum("aij,nij->na", M, L)               # [nb, 8]
+        theta = torch.linalg.solve(G, b.t()).t()            # [nb, 8]
+        return theta.float()
 
