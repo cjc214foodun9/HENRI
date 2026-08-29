@@ -1,0 +1,27 @@
+{
+  "schema_id": "f2-split-seal.v1",
+  "npz_sha256": "469ea80e71a384ef4aa86a363c0839bc8924ad1c6ee42e3ae4a9396eef38ddb2",
+  "jsonl_sha256": "220bef74eb5b4d42b668ea9d0c5531fc35699b168c829481438f57b1113f2693",
+  "manifest_run_id": "production_run_1787993191",
+  "manifest_provenance": "arc-live production_run_1787993191.jsonl",
+  "record_count": 327,
+  "envs": [
+    "cd82-fb555c5d",
+    "sb26-7fbdac44",
+    "wa30-ee6fef47"
+  ],
+  "calibration_envs": [
+    "cd82-fb555c5d",
+    "sb26-7fbdac44"
+  ],
+  "heldout_envs": [
+    "wa30-ee6fef47"
+  ],
+  "n_calibration": 177,
+  "n_heldout": 150,
+  "split_rule": "episode_disjoint_by_env",
+  "split_sha256": "266392f3efc7d286fd17aa397970de4f88a2ee114104dd33c183f2d382943777",
+  "single_use": true,
+  "generator": "f2_split_seal.py@36941afcaafc72dc",
+  "utc": "2026-08-29T09:54:30Z"
+}

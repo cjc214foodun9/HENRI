@@ -1,0 +1,43 @@
+{
+  "schema_id": "f2-egress-gates.v1",
+  "device": "cuda",
+  "npz_sha256": "469ea80e71a384ef4aa86a363c0839bc8924ad1c6ee42e3ae4a9396eef38ddb2",
+  "jsonl_sha256": "220bef74eb5b4d42b668ea9d0c5531fc35699b168c829481438f57b1113f2693",
+  "manifest_provenance": "arc-live production_run_1787993191.jsonl",
+  "record_count": 327,
+  "calibration_envs": [
+    "cd82-fb555c5d",
+    "sb26-7fbdac44"
+  ],
+  "heldout_envs": [
+    "wa30-ee6fef47"
+  ],
+  "n_calibration": 177,
+  "n_heldout": 150,
+  "action_vocab": [
+    "ACTION1",
+    "ACTION2",
+    "ACTION3",
+    "ACTION4",
+    "ACTION5",
+    "ACTION6",
+    "ACTION7"
+  ],
+  "g1_heldout_p1": 0.18,
+  "g1_calibration_p1": 0.8588,
+  "per_action_heldout_p1": {
+    "ACTION1": 0.0,
+    "ACTION2": 0.0,
+    "ACTION3": 0.0,
+    "ACTION4": 0.9643
+  },
+  "g2_syntactic_validity": 1.0,
+  "g2_disclosure": "VACUOUS at V=6 (argmax always a legal action); not a capability claim",
+  "g3_legacy_margin": null,
+  "g3_legacy_status": "BLOCKED_NO_ACTION_TOKEN_MAPPING",
+  "g3_legacy_note": "The legacy head (down_proj 65536->2048 + lm_head 32000) has no verified mapping from ACTION1..6 to token IDs on this checkpoint; a fabricated comparator is prohibited. G3/K2 cannot run on this corpus without that mapping.",
+  "time_calibrate_s": 0.12,
+  "time_snap_s": 0.011,
+  "codebook_bytes": 1835008,
+  "finite": true
+}
