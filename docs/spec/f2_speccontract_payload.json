@@ -1,0 +1,26 @@
+{
+  "spec_id": "SPEC-2026-08-29-F2-EGRESS",
+  "algorithm_name": "F2HopfieldLexicalEgressCalibration",
+  "mathematical_invariants": [
+    "codebook M = A B with A = Y^T (X X^T + lambda I)^{-1}, B = X (dual ridge)",
+    "snap z_clean = Softmax(beta * Re(Psi M^dagger)) M with beta = 8.0",
+    "no dense [D,D] tensor; thin-SVD solve, accumulation float32",
+    "zero trainable parameters in calibrated codebook (no-BPTT)",
+    "default-OFF HENRI_F2_EGRESS=1; OFF => byte-identical pipeline"
+  ],
+  "tensor_contracts": {
+    "wave_input": {"shape": "[N, D]", "dtype": "float32", "dynamic_axes": ["N"]},
+    "codebook_M": {"shape": "[V, D]", "dtype": "float32", "dynamic_axes": ["V"]},
+    "snapped_z": {"shape": "[N, D]", "dtype": "float32", "dynamic_axes": ["N"]},
+    "logits": {"shape": "[N, V]", "dtype": "float32", "dynamic_axes": ["N"]}
+  },
+  "loss_formulations": [
+    "calibration: closed-form dual ridge, no gradient path",
+    "snap energy: E = -beta * Re(Psi M^dagger), softmax temperature beta=8.0",
+    "eligibility: codebook alone never grants score eligibility"
+  ],
+  "baseline_references": [
+    {"arxiv_id": "2008.02217", "vault_note_path": "", "core_insight": "Modern Hopfield snapping (beta scaling, energy minimizer)"},
+    {"arxiv_id": "", "vault_note_path": "vault/K2U2-BLOCKED_SEMANTIC_CAPACITY.md", "core_insight": "legacy linear head uncalibrated; calibrated codebook must beat it"}
+  ]
+}
