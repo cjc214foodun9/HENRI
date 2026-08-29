@@ -863,13 +863,16 @@ if _HAS_TRITON:
             return
         offs_i = tl.arange(0, 8)
         offs_j = tl.arange(0, 8)
-        # ---- load theta [8] (row stride 8) ----
-        th = tl.load(theta_ptr + offs * 8 + offs_i)
         # ---- build A = sum_a th[a] * M_a (M stride 64 per generator) ----
+        # Scalar loads inside static_range: Triton does NOT support indexing a
+        # tensor by a constexpr scalar (`th[a]` -> "unsupported tensor index"),
+        # so load each theta component as a 0-d scalar (same pattern as the
+        # existing _su3_log_kernel scalar loads).
         A = tl.zeros([8, 8], dtype=tl.float32)
         for a in tl.static_range(8):
+            th_a = tl.load(theta_ptr + offs * 8 + a)
             Ma = tl.load(M_ptr + a * 64 + offs_i[:, None] * 8 + offs_j[None, :])
-            A = A + th[a] * Ma
+            A = A + th_a * Ma
         # ---- scaling-and-squaring ----
         nrm = tl.sqrt(tl.maximum(tl.sum(A * A), 0.0))        # F-norm (D26 clamp)
         s_f = tl.ceil(tl.log2(tl.maximum(nrm, 1e-30)))

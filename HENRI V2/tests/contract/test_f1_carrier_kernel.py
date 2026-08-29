@@ -256,6 +256,6 @@ def test_triton_deterministic_and_marker(monkeypatch):
     monkeypatch.setenv("HENRI_F1_CARRIER", "1")
     c = qk.F1LieDisplacementCarrier(16, torch.device("cuda"))
     theta = _rand_theta(16, seed=44, scale=0.5).to("cuda")
-    R1 = qk.f1_expm_triton(theta, c._W32.to("cuda"))
-    R2 = qk.f1_expm_triton(theta, c._W32.to("cuda"))
+    R1 = qk.f1_expm_triton(theta, c._M32.to("cuda"))
+    R2 = qk.f1_expm_triton(theta, c._M32.to("cuda"))
     assert torch.equal(R1, R2)
