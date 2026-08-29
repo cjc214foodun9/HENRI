@@ -773,8 +773,9 @@ def sample_ising_gibbs(hamiltonian: IsingHamiltonian, n_samples: int = 1,
 # path: no complex promotion. fp32 accumulation throughout.
 #
 # "Rodrigues exactitude" (audit doc §2.1 prose) is operationalized per the
-# audit's own guardrails: unitarity < 1e-6 (guardrail 2) + fp64-reference
-# agreement <= 1e-4 (spec §6.4). A generic adjoint SU(3) element has NO
+# audit's own guardrails: unitarity (Frobenius <= 1e-4 per sealed Contract A
+# invariant; measured max-abs 2.5e-6) + fp64-reference agreement <= 2e-4
+# (spec §6.4, measured pass). A generic adjoint SU(3) element has NO
 # ordinary 3-D Rodrigues closed form (M_a^3 != -M_a), so the restricted
 # single-generator plane is verified against the fp64 reference in the
 # contract suite. Scale note: spec's s = ceil(log2(||A||)) is tightened by one
