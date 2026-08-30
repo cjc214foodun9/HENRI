@@ -119,6 +119,7 @@ def main() -> None:
         "envs": envs,
         "per_env_counts": env_counts,
         "n_folds": args.n_folds,
+        "seed": args.seed,
         "folds": folds,
         "split_rule": "grouped_4fold_env_disjoint_lexicographic_mod",
         "fold_manifest_sha256": fold_sha,

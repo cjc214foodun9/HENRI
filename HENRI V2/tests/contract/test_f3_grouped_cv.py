@@ -12,6 +12,7 @@ Runs on numpy + source inspection only (no torch, no GPU).
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import math
 import sys
@@ -319,3 +320,52 @@ def test_driver_merge_only_reconstructs_and_merges(tmp_path):
     assert receipt["merged"]["record_count"] == 120
     assert receipt["per_env"]["e1"]["floor_reached"] is True
     assert (tmp_path / "out" / "trajectories_f3_mo_test.npz").exists()
+
+
+def test_split_seal_receipt_roundtrip_gates_loader(tmp_path, monkeypatch):
+    """The sealer's persisted receipt must satisfy gates.load_sealed_folds.
+
+    Regression: the seal receipt dropped the seed field while the digest was
+    computed over a manifest that includes it, so the gates harness (which
+    rebuilds the manifest from the receipt) hit 'fold manifest digest
+    mismatch'. This test drives the REAL sealer main() on a synthetic bank,
+    then the REAL gates loader on its output.
+    """
+    import sys
+    sys.path.insert(0, str(VERIF))
+    try:
+        sealer = _load("f3_split_seal")
+        gates = _load("f3_egress_gates")
+    finally:
+        sys.path.remove(str(VERIF))
+
+    envs = [f"e{i:02d}" for i in range(12)]
+    rows, meta = [], []
+    for i, e in enumerate(envs):
+        n = 100 + i
+        rows.append(np.ones((n, 8), np.float16))
+        for j in range(n):
+            meta.append({"env": e, "action_name": "ACTION1", "step": j})
+    psi = np.concatenate(rows)
+    onehot = np.zeros((psi.shape[0], 7), dtype=np.uint8)
+    onehot[:, 0] = 1
+    npz, jl, mf = tmp_path / "bank.npz", tmp_path / "bank.jsonl", tmp_path / "manifest.json"
+    np.savez(npz, psi=psi, next_wave=np.zeros((0, 8), np.float16),
+             actions_onehot=onehot,
+             action_names=np.array([f"ACTION{i}" for i in range(1, 8)]))
+    with open(jl, "w", encoding="utf-8") as f:
+        for r in meta:
+            f.write(json.dumps(r) + "\n")
+    with open(mf, "w", encoding="utf-8") as f:
+        json.dump({"schema_id": "henri.arc-trajectory-bank.v1",
+                   "data_source": "authorized",
+                   "npz_sha256": hashlib.sha256(npz.read_bytes()).hexdigest(),
+                   "jsonl_sha256": hashlib.sha256(jl.read_bytes()).hexdigest()}, f)
+
+    seal_path = tmp_path / "seal.json"
+    monkeypatch.setattr(sys, "argv", ["f3_split_seal", "--npz", str(npz),
+                                      "--jsonl", str(jl), "--manifest", str(mf),
+                                      "--seed", "20260829", "--out", str(seal_path)])
+    sealer.main()
+    loaded = gates.load_sealed_folds(str(seal_path))  # raises on mismatch
+    assert set(loaded) == {f"fold{i}" for i in range(4)}
