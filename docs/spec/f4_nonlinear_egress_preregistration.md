@@ -125,3 +125,30 @@ Any nonzero arm exit → `BLOCKED_INFRASTRUCTURE` for the whole run (no per-arm 
 2. USER APPROVAL GATE: approve implementation (TDD harness + remote CUDA arms).
 3. Implement `f4_nonlinear_egress_head.py` + contract tests (RED→GREEN).
 4. Remote kill experiments, fresh split seal, full arms, verdict.
+
+## 11. Amendments (pre-implementation, disclosed 2026-08-30)
+
+Applied before implementation; each is a disclosed completion or correction of
+the sealed text. Re-seal event: `F4_SPEC_AMENDED`. Both SHAs (pre/post) are
+recorded in the governance event.
+
+- **A1 (§4.2):** the F3 fold rule (`grouped_4fold_env_disjoint_lexicographic_mod`)
+  is seed-independent, so a "new seed" under the same rule would reproduce the
+  consumed F3 split byte-for-byte (relabeled replay — forbidden). F4 seals
+  with rule `grouped_4fold_env_disjoint_seeded_permutation_mod` (seeded
+  permutation of the sorted env list, index mod n_folds), guaranteeing a fresh
+  env-disjoint assignment.
+- **A2 (§2 Tier-3 box):** T0=0.5 with unit-normalized noise makes CE descent in
+  3 steps unsatisfiable at this layer geometry (one noise step shifts logits
+  by ~sqrt(hidden2) vs a gradient step of ~eta*||grad||). The same section
+  names `adapt_in_context_sgld_wave` (henri_decoder.py:209, default T0=1e-6)
+  as the reference protocol; Tier-3 default T0 := 1e-6. Spec T0=0.5 remains
+  available by explicit argument and is tested for mechanical invariants only.
+- **A3 (§2):** exact parameter count = 135,272,455 (incl. biases), not
+  135.3M rounded.
+- **A4 (§2 Tier-3):** SGLD noise sign is `+ sqrt(2*T*dt)*xi` (Langevin
+  convention, matching the reference protocol's gradient-side sign).
+- **A5 (§5 arm D):** the linear control is computed with the dual thin-SVD
+  ridge solve `M = (YᵀU)·diag(s/(s²+λ))·Vᵀ` (K4: no dense [D,D] anywhere).
+- **A6 (new):** `f4_kill_smoke.py` implements spec §6 kills 1–3 at production
+  scale on real bank rows (bounded, disposable, no split load) before sealing.
