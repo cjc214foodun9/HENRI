@@ -23,6 +23,7 @@ over the corpus and never writes to the repo.
 
 import hashlib
 import json
+import os
 from dataclasses import dataclass, field
 from typing import List, Optional, Sequence, Tuple
 
@@ -129,10 +130,25 @@ def compile_task_functor(
         return res
 
     # W_task = normalize( sum_i conj(Psi_X,i) * Psi_Y,i )
-    w_task = torch.zeros_like(train[0][0])
-    for wx, wy in train:
-        w_task = w_task + torch.conj(wx) * wy
-    w_task = F.normalize(w_task, p=2, dim=-1)
+    # Carrier F6 (default-OFF, HENRI_F6_FUNCTOR=1): per-task adaptive functor
+    # with Newton-Schulz unitary retraction + de-occlusion masking
+    # (docs/spec/f6_adaptive_functor_preregistration.md). The legacy path is
+    # byte-identical when the flag is unset (Gate G6).
+    f6_mask: Optional[torch.Tensor] = None
+    f6_ns_err: Optional[float] = None
+    f6_ns_iters: Optional[int] = None
+    f6_recon: Optional[float] = None
+    if os.environ.get("HENRI_F6_FUNCTOR") == "1" and len(train) >= 2:
+        from f6_adaptive_functor import compile_adaptive_functor
+        Xtr = torch.stack([wx for wx, _ in train]).to(device)
+        Ytr = torch.stack([wy for _, wy in train]).to(device)
+        w_task, f6_mask, f6_ns_err, f6_ns_iters, f6_recon = compile_adaptive_functor(
+            Xtr, Ytr, max_iters=8, tol=1e-5, eps_floor=1e-3)
+    else:
+        w_task = torch.zeros_like(train[0][0])
+        for wx, wy in train:
+            w_task = w_task + torch.conj(wx) * wy
+        w_task = F.normalize(w_task, p=2, dim=-1)
 
     # Goal anchor = prototype of training outputs.
     goal_c = torch.zeros_like(train[0][1])
