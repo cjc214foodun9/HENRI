@@ -229,3 +229,66 @@ def test_merge_fails_loud_on_missing_env():
     with pytest.raises(AssertionError):
         m.merge_banks("/nonexistent", "/tmp/out", "r", env_cap=150,
                       expect_envs=["e1", "e2"])
+
+
+# --- v2 nested attempt layout (f3_capture_driver.py writes
+# capture_attempts_v2/<env>/attempt_<N>/banks) --------------------------------
+def _write_v2_bank(m, d: Path, env: str, cols: int, nrows: int,
+                   action: str = "ACTION1") -> None:
+    """Write one authorized bank at the v2 nested attempt layout."""
+    d.mkdir(parents=True)
+    onehot = np.zeros((nrows, cols), dtype=np.uint8)
+    onehot[:, 0] = 1
+    names = np.array([f"ACTION{i}" for i in range(1, cols + 1)])
+    np.savez(d / "trajectories_t.npz", psi=np.ones((nrows, 8), np.float16),
+             next_wave=np.ones((nrows, 8), np.float16),
+             actions_onehot=onehot, action_names=names)
+    meta = [{"env": env, "action_name": action, "step": i} for i in range(nrows)]
+    with open(d / "trajectories_t.jsonl", "w", encoding="utf-8") as f:
+        for r in meta:
+            f.write(json.dumps(r) + "\n")
+    with open(d / "trajectories_t_manifest.json", "w", encoding="utf-8") as f:
+        json.dump({"schema_id": "henri.arc-trajectory-bank.v1",
+                   "data_source": "authorized",
+                   "run_id": "run_" + env,
+                   "npz_sha256": m._sha256(str(d / "trajectories_t.npz")),
+                   "jsonl_sha256": m._sha256(str(d / "trajectories_t.jsonl"))},
+                  f)
+    with open(d / "production_run_t.jsonl", "w", encoding="utf-8") as f:
+        f.write(json.dumps({"env": env, "grid_dist": 0.25}) + "\n")
+
+
+def test_merge_descends_into_attempt_subdirs(tmp_path):
+    """v2 layout: banks live at <env>/attempt_<N>/, not directly under <env>/."""
+    m = _load_merge()
+    attempts = tmp_path / "attempts"
+    _write_v2_bank(m, attempts / "e1" / "attempt_1", "e1", 6, 120)
+    _write_v2_bank(m, attempts / "e2" / "attempt_1", "e2", 7, 110)
+    receipt = m.merge_banks(str(attempts), str(tmp_path / "out"),
+                            "f3_nested_test", env_cap=150,
+                            expect_envs=["e1", "e2"])
+    assert receipt["record_count"] == 230
+    assert receipt["envs"] == ["e1", "e2"]
+    assert receipt["per_env_counts"] == {"e1": 120, "e2": 110}
+
+
+def test_merge_multiple_attempts_per_env(tmp_path):
+    """attempt_1 + attempt_2 for the same env both merge; cap trims."""
+    m = _load_merge()
+    attempts = tmp_path / "attempts"
+    _write_v2_bank(m, attempts / "e1" / "attempt_1", "e1", 6, 100)
+    _write_v2_bank(m, attempts / "e1" / "attempt_2", "e1", 6, 100)
+    receipt = m.merge_banks(str(attempts), str(tmp_path / "out"),
+                            "f3_multi_test", env_cap=150,
+                            expect_envs=["e1"])
+    assert receipt["per_env_counts"] == {"e1": 150}  # 200 rows trimmed to cap
+
+
+def test_merge_flat_bank_fallback(tmp_path):
+    """Legacy v1 layout (bank directly under env dir) still merges."""
+    m = _load_merge()
+    attempts = tmp_path / "attempts"
+    _write_v2_bank(m, attempts / "e1", "e1", 6, 80)
+    receipt = m.merge_banks(str(attempts), str(tmp_path / "out"),
+                            "f3_flat_test", env_cap=150, expect_envs=["e1"])
+    assert receipt["per_env_counts"] == {"e1": 80}

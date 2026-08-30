@@ -138,29 +138,44 @@ def merge_banks(
     tele_rows: List[Dict] = []
     env_seen = set()
 
+    def _first_bank(d: Path):
+        """Return (bank_dir, npz, jsonl, manifest) for a dir holding banks."""
+        npzs = sorted(d.glob("trajectories_*.npz"))
+        jls = sorted(d.glob("trajectories_*.jsonl"))
+        mfs = sorted(d.glob("trajectories_*_manifest.json"))
+        if npzs and jls and mfs:
+            return d, npzs[0], jls[0], mfs[0]
+        return None
+
     for sub in sorted(p for p in ad.iterdir() if p.is_dir()):
-        npzs = sorted(sub.glob("trajectories_*.npz"))
-        jls = sorted(sub.glob("trajectories_*.jsonl"))
-        mfs = sorted(sub.glob("trajectories_*_manifest.json"))
-        if not (npzs and jls and mfs):
+        # Collect every bank dir for this env: flat (v1) or all attempt_N (v2).
+        bank_dirs: List[Path] = []
+        if _first_bank(sub) is not None:
+            bank_dirs.append(sub)
+        else:
+            for attempt in sorted(p for p in sub.iterdir() if p.is_dir()):
+                if _first_bank(attempt) is not None:
+                    bank_dirs.append(attempt)
+        if not bank_dirs:
             print(f"[merge] skip attempt dir without bank: {sub}")
             continue
-        npz_path, jl_path, mf_path = npzs[0], jls[0], mfs[0]
-        manifest = json.loads(mf_path.read_text(encoding="utf-8"))
-        verify_source(manifest, npz_path.read_bytes(), jl_path.read_bytes())
-        bank = np.load(npz_path)
-        psi_list.append(bank["psi"])
-        onehot_list.append(bank["actions_onehot"])
-        names_list.append([str(a) for a in bank["action_names"]])
-        if "next_wave" in bank.files and bank["next_wave"].shape[0] == bank["psi"].shape[0]:
-            next_list.append(bank["next_wave"])
-        rows = [json.loads(l) for l in jl_path.open(encoding="utf-8")]
-        meta.extend(rows)
-        env_seen.update(str(r.get("env")) for r in rows)
-        for tp in sorted(sub.glob("production_run_*.jsonl")):
-            for line in tp.open(encoding="utf-8"):
-                if line.strip():
-                    tele_rows.append(json.loads(line))
+        for bank_dir in bank_dirs:
+            npz_path, jl_path, mf_path = _first_bank(bank_dir)[1:]
+            manifest = json.loads(mf_path.read_text(encoding="utf-8"))
+            verify_source(manifest, npz_path.read_bytes(), jl_path.read_bytes())
+            bank = np.load(npz_path)
+            psi_list.append(bank["psi"])
+            onehot_list.append(bank["actions_onehot"])
+            names_list.append([str(a) for a in bank["action_names"]])
+            if "next_wave" in bank.files and bank["next_wave"].shape[0] == bank["psi"].shape[0]:
+                next_list.append(bank["next_wave"])
+            rows = [json.loads(l) for l in jl_path.open(encoding="utf-8")]
+            meta.extend(rows)
+            env_seen.update(str(r.get("env")) for r in rows)
+            for tp in sorted(bank_dir.glob("production_run_*.jsonl")):
+                for line in tp.open(encoding="utf-8"):
+                    if line.strip():
+                        tele_rows.append(json.loads(line))
 
     if expect_envs is not None:
         missing = sorted(set(expect_envs) - env_seen)
