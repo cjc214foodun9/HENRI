@@ -43,7 +43,7 @@ _henri_root = str(Path(__file__).resolve().parents[2])
 if _henri_root not in sys.path:
     sys.path.insert(0, _henri_root)
 
-from f5_codec_gates import load_bank, demo_prefix_mask  # noqa: E402
+from f5_codec_gates import load_bank  # noqa: E402
 from fpb_qfhrr_codec import FPBStructuredCodec  # noqa: E402
 from qfhrr_kernels import fhrr_bind, fpb_power_wave, make_fpb_base_ring  # noqa: E402
 
@@ -109,7 +109,6 @@ def main() -> None:
     codec = FPBStructuredCodec(d_model=D, k_bins=256, device="cpu")
     envs = [str(m.get("env", "?")) for m in meta]
     env_ids = sorted(set(envs))
-    dmask = demo_prefix_mask(meta, env_ids, k=20)
 
     # per-env W_task from demo prefix (psi rows + FPB-encoded action names)
     cos_sum, n_rows = 0.0, 0

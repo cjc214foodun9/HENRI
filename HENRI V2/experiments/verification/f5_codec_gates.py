@@ -150,6 +150,19 @@ def ring_to_wave(q: torch.Tensor) -> torch.Tensor:
     return torch.exp(1j * q.to(torch.float32) * (2.0 * math.pi / 256.0))
 
 
+def action_wave(codec, name: str) -> torch.Tensor:
+    """Encode an action name via the arm's codec (wave-domain).
+
+    FPB codec exposes encode_wave; Run21 (StructuredCharPositionCodec) and
+    legacy (qFHRREpistemicCodec) expose only encode_text (uint8 ring) ->
+    map the ring to a unit-modulus wave. Returns a CPU tensor; callers move
+    to device explicitly (avoids cross-device RuntimeError on CUDA).
+    """
+    if hasattr(codec, "encode_wave"):
+        return codec.encode_wave(name).cpu()
+    return ring_to_wave(codec.encode_text(name)).cpu()
+
+
 def wave_cos(w1: torch.Tensor, w2: torch.Tensor) -> float:
     num = float(torch.abs(torch.vdot(w1, w2)).item())
     den = float(w1.norm().item()) * float(w2.norm().item()) + 1e-12
@@ -162,7 +175,8 @@ def wave_cos(w1: torch.Tensor, w2: torch.Tensor) -> float:
 
 def arm_retrieve_scores(codec, psi_rows: torch.Tensor, action_names: List[str],
                         w_task: Optional[torch.Tensor],
-                        use_w_task: bool = True) -> np.ndarray:
+                        use_w_task: bool = True,
+                        device: str = "cpu") -> np.ndarray:
     """Score matrix [n_rows, n_actions]: wave-domain cos(retrieved, action wave).
 
     W_task compiled in the continuous phase domain (FHRR sum of
@@ -171,7 +185,7 @@ def arm_retrieve_scores(codec, psi_rows: torch.Tensor, action_names: List[str],
     n = psi_rows.shape[0]
     n_a = len(action_names)
     scores = np.zeros((n, n_a), dtype=np.float32)
-    action_waves = [codec.encode_wave(a) for a in action_names]
+    action_waves = [action_wave(codec, a).to(device) for a in action_names]
     for i in range(n):
         x_wave = ring_to_wave(psi_to_ring(psi_rows[i]))
         if use_w_task and w_task is not None:
@@ -218,13 +232,13 @@ def run_arm(codec, psi: np.ndarray, actions_onehot: np.ndarray,
                 use_w_task = False
             else:
                 x_rings = [psi_to_ring(torch.from_numpy(psi[i])) for i in demo_idx]
-                y_waves = [codec.encode_wave(action_names[int(np.argmax(actions_onehot[i]))])
+                y_waves = [action_wave(codec, action_names[int(np.argmax(actions_onehot[i]))])
                            for i in demo_idx]
                 w_task = compile_w_task(codec, x_rings, y_waves, D).to(device)
                 use_w_task = True
             psi_rows = torch.from_numpy(psi[ev_idx]).to(device)
             scores = arm_retrieve_scores(codec, psi_rows, action_names, w_task,
-                                         use_w_task=use_w_task)
+                                         use_w_task=use_w_task, device=device)
             pred = scores.argmax(axis=1)
             true = np.argmax(actions_onehot[ev_idx], axis=1)
             correct = int((pred == true).sum())
@@ -309,16 +323,14 @@ def main() -> None:
             from zone_c_epistemic_axiom_harness import qFHRREpistemicCodec
             codec = qFHRREpistemicCodec(d_model=D, k_bins=256, device="cpu")
         elif arm == "D":
-            codec = None  # identity arm: no codec needed
+            # identity/no-supervision arm: same FPB codec for target waves,
+            # but use_w_task=False (direct wave-to-action cosine).
+            from fpb_qfhrr_codec import FPBStructuredCodec
+            codec = FPBStructuredCodec(d_model=D, k_bins=256, device=device)
         else:
             raise ValueError(f"unknown arm {arm}")
-        # identity arm has no codec; run_arm handles D specially
-        if arm == "D":
-            res = run_arm(None, psi, actions_onehot, action_names, meta, folds,
-                          env_ids, dmask, "D", D, device)
-        else:
-            res = run_arm(codec, psi, actions_onehot, action_names, meta, folds,
-                          env_ids, dmask, arm, D, device)
+        res = run_arm(codec, psi, actions_onehot, action_names, meta, folds,
+                      env_ids, dmask, arm, D, device)
         arms_out.append(res)
         print(json.dumps(res, indent=2))
 
