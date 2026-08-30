@@ -1029,3 +1029,74 @@ class F1LieDisplacementCarrier:
         theta = torch.linalg.solve(G, b.t()).t()            # [nb, 8]
         return theta.float()
 
+
+# ---------------------------------------------------------------------------
+# F5: Fractional Power Binding (FPB) kernels (default-OFF; additive only)
+# ---------------------------------------------------------------------------
+# Carrier F5 (docs/spec/f5_structured_codec_preregistration.md):
+# true Fourier-domain Fractional Power Binding, replacing the SHA-256 random-
+# ring text ingress (Run20 FALSIFIED) and the quantized collinear position
+# scaling of Run21 (FALSIFIED_AT_SCALE). The F5 codec lives in
+# fpb_qfhrr_codec.py and is selected by HENRI_F5_CODEC=1; these kernels are
+# pure functions (no module state, no auto-import of the codec).
+#
+# Construction (calibrated 2026-08-30, deterministic CPU -> exact on CUDA):
+#   base ring q (uint8 [D]) = quantized iid narrow-band phase field
+#       theta_d ~ Unif(-A, A), A = 0.6 rad (position_amplitude)
+#   fpb_power_wave(q, x) = exp(i * x * (q * 2pi/256))   complex64 [D]
+#   fhrr_bind / fhrr_unbind = elementwise complex product / conj-product
+#   (exact phase addition / subtraction; homomorphism cos = 1.00000 measured)
+#   W_task is compiled and scored in the CONTINUOUS phase domain (directive
+#   eq. 1 / G2 inner products); uint8 ring quantization happens only at the
+#   consumer boundary via fpb_ring_from_wave.
+# ---------------------------------------------------------------------------
+
+def make_fpb_base_ring(
+    d_model: int = 65536,
+    k_bins: int = 256,
+    seed: int = 20260830,
+    amplitude: float = 0.6,
+) -> torch.Tensor:
+    """Quantized iid narrow-band phase ring for FPB (position/coordinate comb).
+
+    theta_d ~ Unif(-amplitude, amplitude) radians; q_d = round(theta * 256/2pi)
+    mod 256. The narrow band is what makes the orbit continuous
+    (Spearman rho(sim, -dx) ~ 0.93 at A=0.6, measured); a full-range ring
+    reproduces the random-ring pathology (sim ~ 0 for every distinct x).
+    """
+    g = torch.Generator(device="cpu").manual_seed(int(seed))
+    u = torch.rand(int(d_model), generator=g) * 2.0 - 1.0
+    theta = u * float(amplitude)
+    q = torch.round(theta * (float(k_bins) / (2.0 * math.pi))) % k_bins
+    return q.to(torch.uint8)
+
+
+def fpb_power_wave(base_ring: torch.Tensor, x: float) -> torch.Tensor:
+    """Psi(x) = exp(i * x * theta_q): exact fractional power of the base ring.
+
+    complex64 [D], unit modulus. This is the ring-domain realization of the
+    directive eq. 1 (Psi^x = F^-1(exp(i x Arg(F(Psi))))); for a phasor ring
+    base the exponentiation is exact. Homomorphism: bind(Psi(x), Psi(y)) ==
+    Psi(x+y) (measured cos 1.00000).
+    """
+    theta = base_ring.to(torch.float32) * (2.0 * math.pi / K_PHASE)
+    return torch.exp(1j * float(x) * theta)
+
+
+def fhrr_bind(w1: torch.Tensor, w2: torch.Tensor) -> torch.Tensor:
+    """FHRR binding = elementwise complex product (spectral multiplication)."""
+    return w1 * w2
+
+
+def fhrr_unbind(w_bound: torch.Tensor, w_key: torch.Tensor) -> torch.Tensor:
+    """FHRR unbinding = elementwise product with the conjugate key (phase
+    subtraction). Exact for unit-modulus keys."""
+    return w_bound * torch.conj(w_key)
+
+
+def fpb_ring_from_wave(w: torch.Tensor, k_bins: int = K_PHASE) -> torch.Tensor:
+    """angle(w) in [-pi, pi) -> uint8 ring [0, k_bins-1] (consumer boundary)."""
+    ang = torch.angle(w)
+    q = torch.round(ang * (float(k_bins) / (2.0 * math.pi))) % k_bins
+    return q.to(torch.uint8)
+
