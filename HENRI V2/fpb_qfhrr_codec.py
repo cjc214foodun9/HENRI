@@ -129,15 +129,18 @@ class FPBStructuredCodec(nn.Module):
             raise TypeError(f"text must be str, got {type(text).__name__}")
         if not text:
             return torch.zeros(self.d_model, dtype=torch.complex64, device=self.device)
-        role_phase = 0.0
+        role_phase = torch.zeros(self.d_model, dtype=torch.float32, device=self.device)
         role = role if role is not None else self._default_role
         if role is not None:
-            role_phase = self._role_ring(role).to(torch.float32) * (2.0 * math.pi / self.k_bins)
-        theta_pos = self._pos_ring.to(torch.float32) * (2.0 * math.pi / self.k_bins)
+            role_phase = self._role_ring(role).to(torch.float32).to(self.device) * (
+                2.0 * math.pi / self.k_bins)
+        theta_pos = self._pos_ring.to(torch.float32).to(self.device) * (
+            2.0 * math.pi / self.k_bins)
         real = torch.zeros(self.d_model, dtype=torch.float32, device=self.device)
         imag = torch.zeros_like(real)
         for i, c in enumerate(text):
-            theta_c = self._char_ring(c).to(torch.float32) * (2.0 * math.pi / self.k_bins)
+            theta_c = self._char_ring(c).to(torch.float32).to(self.device) * (
+                2.0 * math.pi / self.k_bins)
             theta = theta_c + float(i) * theta_pos + role_phase
             real.add_(torch.cos(theta))
             imag.add_(torch.sin(theta))
