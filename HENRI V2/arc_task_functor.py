@@ -130,15 +130,34 @@ def compile_task_functor(
         return res
 
     # W_task = normalize( sum_i conj(Psi_X,i) * Psi_Y,i )
-    # Carrier F6 (default-OFF, HENRI_F6_FUNCTOR=1): per-task adaptive functor
-    # with Newton-Schulz unitary retraction + de-occlusion masking
-    # (docs/spec/f6_adaptive_functor_preregistration.md). The legacy path is
-    # byte-identical when the flag is unset (Gate G6).
+    # Carrier F7 (default-OFF, HENRI_F7_AFFINE=1): per-task non-unitary affine
+    # operator (implicit dual ridge, real domain) + supervised egress
+    # (docs/spec/f7_affine_egress_preregistration.md, Appendix C). Carrier F6
+    # (HENRI_F6_FUNCTOR=1) remains available. The legacy path is byte-identical
+    # when BOTH flags are unset (Gate G6-class differential, contract C5).
     f6_mask: Optional[torch.Tensor] = None
     f6_ns_err: Optional[float] = None
     f6_ns_iters: Optional[int] = None
     f6_recon: Optional[float] = None
-    if os.environ.get("HENRI_F6_FUNCTOR") == "1" and len(train) >= 2:
+    _f7_held_cos: Optional[float] = None
+    _f7_identity_cos: Optional[float] = None
+    _f7_active = os.environ.get("HENRI_F7_AFFINE") == "1" and len(train) >= 2
+    if _f7_active:
+        from f7_affine_egress import AffineEgress
+        Xtr = torch.stack([_to_real(wx) for wx, _ in train]).to(device)
+        Ytr = torch.stack([_to_real(wy) for _, wy in train]).to(device)
+        eg = AffineEgress(lam=1e-3).fit(Xtr, Ytr)
+        eg.to(device)
+        hx_r = _to_real(hold_x).to(device).unsqueeze(0)
+        hy_r = F.normalize(_to_real(hold_y).to(device), p=2, dim=-1)
+        z_hold = F.normalize(eg.predict(hx_r).squeeze(0), p=2, dim=-1)
+        w_task = _to_complex(z_hold)
+        _f7_held_cos = float(torch.abs(torch.dot(z_hold, hy_r)).item())
+        _f7_identity_cos = float(torch.abs(
+            torch.dot(F.normalize(hx_r.squeeze(0), p=2, dim=-1), hy_r)).item())
+        _f7_factor_sha = hashlib.sha256(
+            eg._GinvX.detach().cpu().contiguous().numpy().tobytes()).hexdigest()
+    elif os.environ.get("HENRI_F6_FUNCTOR") == "1" and len(train) >= 2:
         from f6_adaptive_functor import compile_adaptive_functor
         Xtr = torch.stack([wx for wx, _ in train]).to(device)
         Ytr = torch.stack([wy for _, wy in train]).to(device)
@@ -158,9 +177,13 @@ def compile_task_functor(
 
     # Falsifiable held-out check.
     with torch.no_grad():
-        pred = F.normalize(w_task * hold_x, p=2, dim=-1)
-        held_out_cos = float(torch.real(torch.vdot(pred, hold_y)).item())
-        identity_cos = float(torch.real(torch.vdot(hold_x, hold_y)).item())
+        if _f7_active:
+            held_out_cos = _f7_held_cos
+            identity_cos = _f7_identity_cos
+        else:
+            pred = F.normalize(w_task * hold_x, p=2, dim=-1)
+            held_out_cos = float(torch.real(torch.vdot(pred, hold_y)).item())
+            identity_cos = float(torch.real(torch.vdot(hold_x, hold_y)).item())
 
     res.held_out_cos = held_out_cos
     res.identity_cos = identity_cos
@@ -188,6 +211,13 @@ def compile_task_functor(
             f"held-out recovery cos={held_out_cos:.4f} vs identity "
             f"{identity_cos:.4f} (threshold {_RECOVERY_COS_THRESHOLD})"
         )
+    if _f7_active:
+        # egress provenance must be merged AFTER the dict assignment above
+        res.provenance["egress"] = {
+            "schema_id": "f7-affine-egress.v1",
+            "implicit": True,
+            "factor_sha256": _f7_factor_sha,
+        }
     return res
 
 
