@@ -107,6 +107,12 @@ class F4NonLinearEgressHead(nn.Module):
 
         self.ln1 = nn.LayerNorm(self.hidden1, eps=1e-5)
         self.ln2 = nn.LayerNorm(self.hidden2, eps=1e-5)
+        # Spec 2: "Trainable: W1,W2,W3 at train time". LayerNorm scale/bias are
+        # frozen so the trainable set is EXACTLY the three weight layers.
+        self.ln1.weight.requires_grad_(False)
+        self.ln1.bias.requires_grad_(False)
+        self.ln2.weight.requires_grad_(False)
+        self.ln2.bias.requires_grad_(False)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """x: [N, d_model] fp32 -> logits [N, n_actions]."""

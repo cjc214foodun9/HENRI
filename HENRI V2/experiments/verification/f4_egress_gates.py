@@ -253,24 +253,33 @@ def main() -> None:
     assert V == 7, f"expected 7 actions, got {V}"
 
     envs = [str(m.get("env", "?")) for m in meta]
-    env_ids = sorted(set(envs))
     folds = load_sealed_folds(args.split_seal)
-    dmask = demo_prefix_mask(meta, env_ids, k=FROZEN_DEMO_K)
-    # Kill 5: static provenance audit BEFORE any arm executes (spec 4.3).
-    provenance_scan(meta, env_ids, folds, dmask, k=FROZEN_DEMO_K)
-    want_arms = {s.strip() for s in args.arms.split(",") if s.strip()}
 
     if args.smoke:
-        # disposable smoke: use ONLY 4 envs (one per fold), no verdict.
-        env_ids = [folds[f"fold{i}"]["heldout_envs"][0] for i in range(FROZEN_N_FOLDS)]
-        counts = {e: int(np.sum(np.array(envs) == e)) for e in env_ids}
+        # Disposable smoke: keep ONLY the 4 held-out envs (one per fold), no
+        # verdict. Prune the DATA arrays so every mask/count stays consistent
+        # with the pruned folds (a pruning bug here produced n_heldout
+        # assertion failures on the full row space).
+        smoke_envs = {folds[f"fold{i}"]["heldout_envs"][0] for i in range(FROZEN_N_FOLDS)}
+        keep = np.isin(np.array(envs), list(smoke_envs))
+        psi = psi[keep]
+        actions_onehot = actions_onehot[keep]
+        envs = [e for e in envs if e in smoke_envs]
+        meta = [m for m in meta if m["env"] in smoke_envs]
+        counts = {e: int(np.sum(np.array(envs) == e)) for e in smoke_envs}
         for f in range(FROZEN_N_FOLDS):
-            held = [e for e in folds[f"fold{f}"]["heldout_envs"] if e in env_ids]
-            train = [e for e in env_ids if e not in held]
+            held = [e for e in folds[f"fold{f}"]["heldout_envs"] if e in smoke_envs]
+            train = [e for e in smoke_envs if e not in held]
             folds[f"fold{f}"]["heldout_envs"] = held
             folds[f"fold{f}"]["train_envs"] = train
             folds[f"fold{f}"]["n_heldout"] = int(sum(counts[e] for e in held))
             folds[f"fold{f}"]["n_train"] = int(sum(counts[e] for e in train))
+
+    env_ids = sorted(set(envs))
+    dmask = demo_prefix_mask(meta, env_ids, k=FROZEN_DEMO_K)
+    # Kill 5: static provenance audit BEFORE any arm executes (spec 4.3).
+    provenance_scan(meta, env_ids, folds, dmask, k=FROZEN_DEMO_K)
+    want_arms = {s.strip() for s in args.arms.split(",") if s.strip()}
 
     # import the live functor compiler + codec (Tier-1 anchors)
     henri_root = str(_P(__file__).resolve().parents[2])
@@ -439,8 +448,8 @@ def main() -> None:
         # ---- arm D: Tier1 + linear dual-ridge (matched protocol) -----------
         if "D" in want_arms:
             lam = FROZEN_RIDGE
-            Xt = cal_unbound.to(torch.float32)
-            Yt = torch.from_numpy(Y_cal).to(torch.float32)
+            Xt = cal_unbound.to(device).to(torch.float32)
+            Yt = torch.from_numpy(Y_cal).to(device).to(torch.float32)
             # Dual thin-SVD ridge solve (no dense [D,D]; K4 invariant):
             #   M = Y^T X (X^T X + lam I)^{-1}
             #     = (Y^T U) diag(s/(s^2+lam)) V^T   via X = U S V^T (thin)
