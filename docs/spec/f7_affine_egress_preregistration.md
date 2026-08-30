@@ -103,8 +103,16 @@ G = Ψ Ψᵀ + λI  [M,M];  A = Yᵀ G⁻¹ Ψ  [7,D] real;  b = ȳ − A Ψ̄  
 
 This satisfies the directive's real-matrix contract exactly and keeps the F7 operator in the same wave family as the bank and the F6 control.
 
-## Appendix C — arc_task_functor wiring disclosure (pre-impl)
+## Appendix C — arc_task_functor wiring disclosure (pre-impl, amended)
 
-`compile_task_functor(demo_pairs, tokenizer, device, task_id, hold_out_index)` encodes grid pairs into COMPLEX waves (`_to_complex(encode(grid))`) and the F6 branch (`HENRI_F6_FUNCTOR=1`) consumes complex `Xtr/Ytr`. The F7 branch (`HENRI_F7_AFFINE=1`) fits the REAL dual ridge on `_to_real(wx)`/`_to_real(wy)` per Appendix B, and emits `w_task = A^T` (the [7,D] operator's transpose) plus the bias for downstream use; the legacy path stays byte-identical when BOTH flags are unset (Gate G6-class differential, contract C5). F7 branch precedence: if `HENRI_F7_AFFINE=1`, the F6 branch is skipped (mutually exclusive default-off flags; F6 remains available at its own flag).
+`compile_task_functor(demo_pairs, tokenizer, device, task_id, hold_out_index)` encodes grid pairs into COMPLEX waves (`_to_complex(encode(grid))`). The F7 branch (`HENRI_F7_AFFINE=1`) fits the REAL dual ridge on `_to_real(wx)`/`_to_real(wy)` per Appendix B via the **implicit affine** form (C8: no `[D,D]` tensor is ever formed):
+
+```
+Xc = X − x̄;  G = Xc Xcᵀ + λI  [M,M];  GinvX = G⁻¹ Xc  [M,D]   (the only factor)
+A x = Ycᵀ (GinvX (x − x̄)) + b,   b = ȳ − Ycᵀ (GinvX x̄)
+```
+
+The held-out check uses the affine's own metric: `held_out_cos = |⟨norm(A·hold_x + b), norm(hold_y)⟩|` in the real domain (identity_cos unchanged: the no-supervision floor). The emitted `w_task` is `_to_complex(norm(A·hold_x + b))` — the affine's predicted goal anchor — so the digest provably differs from the legacy operator (C5). `res.provenance["egress"] = {"schema_id": "f7-affine-egress.v1", "implicit": true, "factor_sha256": …}`. The legacy path stays byte-identical when BOTH flags are unset (C5); F7 branch precedence over F6 (mutually exclusive default-off flags).
+
 
 
