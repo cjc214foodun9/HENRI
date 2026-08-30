@@ -292,3 +292,30 @@ def test_merge_flat_bank_fallback(tmp_path):
     receipt = m.merge_banks(str(attempts), str(tmp_path / "out"),
                             "f3_flat_test", env_cap=150, expect_envs=["e1"])
     assert receipt["per_env_counts"] == {"e1": 80}
+
+
+def test_driver_merge_only_reconstructs_and_merges(tmp_path):
+    """--merge-only crash recovery merges existing attempts (no re-capture)."""
+    import sys
+    sys.path.insert(0, str(VERIF))
+    try:
+        driver = _load("f3_capture_driver")
+    finally:
+        sys.path.remove(str(VERIF))
+    m = _load_merge()
+    attempts = tmp_path / "attempts"
+    _write_v2_bank(m, attempts / "e1" / "attempt_1", "e1", 6, 120)
+    (attempts / "e1" / "attempt_1" / "attempt.json").write_text(
+        json.dumps({"env": "e1", "attempt": 1, "rc": 0, "seed": 20260831,
+                    "rows_env": 120, "log": "attempt.log", "seconds": 10.0}),
+        encoding="utf-8")
+    out = str(tmp_path / "out")
+    driver.merge_only(attempts, out, "f3_mo_test", ["e1"],
+                      env_cap=150, floor=100)
+    receipt = json.loads(
+        (attempts / "f3_capture_driver_receipt.json").read_text(encoding="utf-8"))
+    assert receipt["verdict"] == "CAPTURE_OK"
+    assert receipt["mode"] == "merge_only"
+    assert receipt["merged"]["record_count"] == 120
+    assert receipt["per_env"]["e1"]["floor_reached"] is True
+    assert (tmp_path / "out" / "trajectories_f3_mo_test.npz").exists()

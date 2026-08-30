@@ -112,6 +112,59 @@ def _run_attempt(
     return receipt
 
 
+def merge_only(attempts_root: Path, out: str, run_id: str,
+               envs: Sequence[str], env_cap: int, floor: int) -> None:
+    """Crash-recovery path: merge existing attempt banks without re-capture.
+
+    Reconstructs per-env summaries from the attempt.json receipts written by
+    _run_attempt (preserved on disk), then runs the standard merge. No new
+    runner invocation; the banks are the already-authorized captures.
+    """
+    per_env: Dict[str, Dict] = {}
+    for env in envs:
+        env_dir = attempts_root / env
+        receipts: List[Dict] = []
+        cum = 0
+        if env_dir.is_dir():
+            for attempt in sorted(p for p in env_dir.iterdir() if p.is_dir()):
+                aj = attempt / "attempt.json"
+                if aj.exists():
+                    try:
+                        rec = json.loads(aj.read_text(encoding="utf-8"))
+                    except (json.JSONDecodeError, OSError):
+                        continue
+                    receipts.append(rec)
+                    cum += int(rec.get("rows_env", 0))
+        per_env[env] = {
+            "attempts": receipts,
+            "rows_total": cum,
+            "floor_reached": cum >= floor,
+        }
+    merge = merge_banks(str(attempts_root), out, run_id,
+                        env_cap=env_cap, expect_envs=envs)
+    receipt = {
+        "schema_id": "f3-capture-driver.v1",
+        "run_id": run_id,
+        "verdict": "CAPTURE_OK",
+        "mode": "merge_only",
+        "per_env": per_env,
+        "merged": {
+            "record_count": merge["record_count"],
+            "envs": merge["envs"],
+            "per_env_counts": merge["per_env_counts"],
+            "per_action_counts": merge["per_action_counts"],
+            "npz_sha256": merge["npz_sha256"],
+            "jsonl_sha256": merge["jsonl_sha256"],
+        },
+        "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    with open(attempts_root / "f3_capture_driver_receipt.json", "w",
+              encoding="utf-8") as f:
+        json.dump(receipt, f, indent=2, default=str)
+    print(json.dumps(receipt, indent=2, default=str))
+    print("F3_CAPTURE_DRIVER_DONE")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--attempts-dir", required=True)
@@ -122,6 +175,10 @@ def main() -> None:
     ap.add_argument("--floor", type=int, default=100)
     ap.add_argument("--env-cap", type=int, default=150)
     ap.add_argument("--max-attempts", type=int, default=5)
+    ap.add_argument("--merge-only", action="store_true",
+                    help="crash-recovery: merge existing attempt banks, "
+                         "no re-capture (requires preserved attempt.json "
+                         "receipts under --attempts-dir)")
     ap.add_argument("--seed", type=int, default=20260830)
     ap.add_argument("--python", default=PYTHON)
     ap.add_argument("--runner", default=RUNNER)
@@ -131,6 +188,12 @@ def main() -> None:
     attempts_root.mkdir(parents=True, exist_ok=True)
     run_id = args.run_id or f"production_run_{int(time.time())}"
     envs = list(args.envs)
+
+    if args.merge_only:
+        merge_only(attempts_root, args.out, run_id, envs,
+                   args.env_cap, args.floor)
+        return
+
     per_env: Dict[str, Dict] = {}
     blocked: List[str] = []
 
