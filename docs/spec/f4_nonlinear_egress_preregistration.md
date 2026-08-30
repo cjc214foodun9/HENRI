@@ -152,3 +152,47 @@ recorded in the governance event.
   ridge solve `M = (YᵀU)·diag(s/(s²+λ))·Vᵀ` (K4: no dense [D,D] anywhere).
 - **A6 (new):** `f4_kill_smoke.py` implements spec §6 kills 1–3 at production
   scale on real bank rows (bounded, disposable, no split load) before sealing.
+
+## 12. Measured results (sealed 2026-08-30, remote CUDA, exact SHA `214aba3b`)
+
+Receipts (remote, `/root/f3-run/telemetry/f3_bank_capture_v2/`):
+- `f4_kill_smoke_receipt.json` — SHA-256 `87ae726623f70e3fb1bdd588d13dad09263a2102bba42e1f2a3b9f139142e93e` (measured)
+- `f4_split_seal.json` — SHA-256 `976e01afbf1a31f4e7cc1aca1c93960c33cee66f214233f9cd1336db6c4ea07d` (measured; fold manifest `640763c6…`)
+- `f4_gates_receipt.json` — SHA-256 `abe5900c2e94868555ce81741633abed180349049288655beaa5fc1cb28c6721` (measured)
+
+**Kill smoke (bounded, disposable, real bank rows, CUDA):** `F4_KILL_SMOKE_OK`.
+K1 loss 1.9459→1.4881 (descends, finite); K2 Tier-1 unbind cos(raw, unbound)
+0.00113 ≪ 0.99 (engagement real); K3 ΔW3 0.00687, CE descends, W1/W2 untouched.
+
+**Full arms A–E on the fresh sealed split (seed 20260830, rule
+`grouped_4fold_env_disjoint_seeded_permutation_mod`, digest `640763c6…`,
+single_use):** `F4_GATES_VERDICT=K1_KILLED` (OBSERVED, CUDA).
+
+| Gate | Metric | Threshold | Measured | Result |
+|---|---|---|---|---|
+| G1 | Macro P@1 (arm A) | ≥ 0.99 | 0.2296 | FAIL |
+| G1b | Min-fold P@1 | ≥ 0.95 | 0.1414 | FAIL |
+| G2 | Min scored per-action P@1 | ≥ 0.80 | 0.0 | FAIL |
+| G3 | Payload format | ≥ 0.99 | `BLOCKED_NO_PAYLOAD_IN_BANK` | BLOCKED |
+| G4 | Margin vs train-marginal (arm A) | ≥ +0.05 | **+0.1437** | **PASS** |
+| G5 | A vs D (nonlinearity), paired CI lb | > 0 | mean +0.0675, **lb −0.0807** | FAIL |
+| G6 | A vs C (task conditioning), paired CI lb | > 0 | mean +0.0874, **lb −0.0355** | FAIL |
+| G7 | A vs B (in-situ adaptation), paired CI lb | > 0 | mean +0.0037, **lb 0.0** | FAIL |
+
+**Interpretation (INFERRED, bounded):** the F4 head learns more than the F3
+linear codebook (macro P@1 0.2296 vs 0.178; margin +0.1437 vs +0.0965) but is
+far from the absolute gates. Paired CIs show NO significant structural gain
+from nonlinearity, task conditioning, or in-situ adaptation — consistent with
+the Run20/21 codec-geometry finding: Tier-1 `W_task` is compiled from
+`qFHRREpistemicCodec.encode_text` (SHA-256-seeded random-ring encoder with
+zero compositional structure), so unbinding decorrelates waves (K2 cos
+0.00113) without structuring them toward action discrimination.
+
+**Disposition per directive order (1) — terminate static linear codebooks:**
+`F2HopfieldEgressCodebook` and the F4 MLP head are FALSIFIED as egress
+candidates at these gates. They remain ONLY as sealed historical evidence
+(F3/F4 receipts replay); neither is a candidate for promotion. No further
+egress experiment launches without a NEW pre-registration (K3).
+
+**Verdict sealed:** `F4_GATES_VERDICT=K1_KILLED` — honest negative;
+governance event appended. Main untouched; `HENRI_F4_EGRESS=0` standing.
