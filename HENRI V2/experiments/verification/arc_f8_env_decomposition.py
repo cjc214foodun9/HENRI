@@ -93,7 +93,7 @@ def action_entropy_nats(y: np.ndarray) -> float:
 
 def run_env_cv(psi_e: np.ndarray, y_e: np.ndarray, n_folds: int, seed: int) -> dict:
     """5-fold stratified CV for one environment. Returns per-operator acc."""
-    if int(y_e.max()) + 1 < 2:
+    if len(np.unique(y_e)) < 2:
         return {"probes_skipped": True}
     folds = stratified_folds(y_e, n_folds=n_folds, seed=seed)
     acc_ls, acc_knn3 = [], []
@@ -145,10 +145,11 @@ def main() -> int:
         rows = np.where(env_ids == env_idx)[0]
         psi_e = psi[rows]
         y_e = y[rows]
+        n_distinct = int(len(np.unique(y_e)))
         entry = {
             "env": env_name,
             "n_rows": int(len(rows)),
-            "n_classes": int(y_e.max()) + 1,
+            "n_classes": n_distinct,  # DISTINCT class count, not max_label+1
             "h_action_nats": action_entropy_nats(y_e),
         }
         majority = majority_baseline(y_e)
