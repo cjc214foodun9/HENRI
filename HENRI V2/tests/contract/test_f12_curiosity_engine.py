@@ -169,3 +169,18 @@ def test_c8_rollout_determinism():
     # different seed -> different operators
     e3 = f12.CuriosityEngine(D=64, n_actions=8, seed=43)
     assert not torch.equal(e1.expD[0], e3.expD[0])
+
+
+# ---------------------------------------------------------------------------
+# C9 — hash_wave is safe on grad-requiring tensors (live ingress path)
+# ---------------------------------------------------------------------------
+def test_c9_hash_wave_on_grad_tensor():
+    torch.manual_seed(7)
+    engine = f12.CuriosityEngine(D=64, n_actions=8, seed=7)
+    # Live path: psi from ingress() requires grad; hash must not raise.
+    x = torch.randn(1, 64, requires_grad=True)
+    psi = F.normalize(x, dim=-1)
+    assert psi.requires_grad
+    h = engine.hash_wave(psi)
+    assert isinstance(h, int)
+    assert 0 <= h < 2 ** 32

@@ -96,8 +96,13 @@ class CuriosityEngine(nn.Module):
         return (1.0 - abs_cos(pred, actual)).item()
 
     def hash_wave(self, psi):
-        """h = crc32(packed sign bits) in Z_{2^32} (D6)."""
-        signs = torch.sign(psi.reshape(-1)).cpu().numpy().astype(np.int8)
+        """h = crc32(packed sign bits) in Z_{2^32} (D6).
+
+        Detaches first: the live ingress path produces grad-requiring waves;
+        numpy() on a grad tensor is a fail-closed RuntimeError (F12 run 1,
+        live_error, 0 steps — preserved as evidence).
+        """
+        signs = torch.sign(psi.reshape(-1).detach()).cpu().numpy().astype(np.int8)
         bits = np.packbits((signs > 0).astype(np.uint8))
         return int(zlib.crc32(bits.tobytes()) & 0xFFFFFFFF)
 
