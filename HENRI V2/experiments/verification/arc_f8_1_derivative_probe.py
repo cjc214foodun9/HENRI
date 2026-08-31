@@ -189,6 +189,21 @@ def _onehot(y: np.ndarray) -> np.ndarray:
     return np.eye(int(y.max()) + 1, dtype=np.float32)[y]
 
 
+def _predict_mlp_safe(model, X: np.ndarray) -> np.ndarray:
+    """Predict with X placed on the model's OWN device.
+
+    The sealed F8 predict_mlp moves X to cuda whenever available, which
+    breaks a cpu-trained model on a CUDA host (RuntimeError: mat1 on cuda:0
+    vs weights on cpu). OBSERVED on remote contract C8 (2026-08-31).
+    """
+    dev = next(model.parameters()).device
+    Xt = torch.from_numpy(X).to(dev)
+    model.eval()
+    with torch.no_grad():
+        pred = model(Xt).argmax(dim=1)
+    return pred.cpu().numpy().astype(np.int64)
+
+
 def _cv_probe(
     X: np.ndarray,
     y: np.ndarray,
@@ -207,7 +222,7 @@ def _cv_probe(
             pred = predict_logistic(X[te], Wb)
         elif probe == "mlp":
             model = fit_mlp(X[tr], y[tr], device=device, seed=seed)
-            pred = predict_mlp(model, X[te])
+            pred = _predict_mlp_safe(model, X[te])
         elif probe == "knn3":
             pred = knn_predict(X[tr], y[tr], X[te], k=3)
         else:
@@ -225,7 +240,7 @@ def _train_acc(X: np.ndarray, y: np.ndarray, probe: str, device: str, seed: int)
         pred = predict_logistic(X, Wb)
     elif probe == "mlp":
         model = fit_mlp(X, y, device=device, seed=seed)
-        pred = predict_mlp(model, X)
+        pred = _predict_mlp_safe(model, X)
     else:
         return float("nan")  # kNN train acc excluded from G1 by spec
     return float((pred == y).mean())
