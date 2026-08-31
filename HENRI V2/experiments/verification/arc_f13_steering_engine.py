@@ -121,37 +121,55 @@ class SteeringEngine(nn.Module):
     def beam_search(self, psi, waypoint, candidates, horizon=None, beam=None, alpha=None):
         """Tier 2: K-step beam search; commit a_1* (Tier 3).
 
-        Pruning score at depth k: |cos(psi_k, waypoint)| - alpha * sum Sagnac
-        (consistent with the directive's terminal J). Returns
-        (action, info{horizon, beam, actions, j}).
+        VECTORIZED: per depth, one batched exp(D_a) rollout over the whole
+        beam (einsum) + topk pruning — no per-path host syncs. F13 run 2 hit
+        38.98 ms/step with a Python-loop beam (receipt bd25fec4 preserved as
+        evidence); this is the directive's prescribed single-pass form and
+        selects the identical macro-path (C11 equivalence contract).
+        J = |cos(final, waypoint)| - alpha * sum_k Sagnac(psi_k, waypoint).
+        Returns (action, info{horizon, beam, actions, j}).
         """
         horizon = self.horizon if horizon is None else int(horizon)
         beam = self.beam if beam is None else int(beam)
         alpha = self.alpha if alpha is None else float(alpha)
+        if not candidates:
+            candidates = list(range(self.n_actions))
+        cand = torch.as_tensor(list(candidates), dtype=torch.long, device=self.expD.device)
+        wp = F.normalize(waypoint.reshape(-1).float().to(self.expD.device), p=2, dim=-1)
 
-        paths = [([], psi.reshape(-1).float(), 0.0, 0.0)]  # (actions, state, sagnac_sum, j_partial)
+        states = F.normalize(psi.reshape(-1).float().to(self.expD.device), p=2, dim=-1).unsqueeze(0)  # [1, D]
+        acts = torch.full((1, 0), -1, dtype=torch.long, device=self.expD.device)
+        ssum = torch.zeros(1, device=self.expD.device)
+
         for _ in range(horizon):
-            expanded = []
-            for acts, state, ssum, _j in paths:
-                for a in candidates:
-                    nxt = self.rollout(state, a)
-                    sk = float(self.sagnac_to(nxt, waypoint.reshape(-1)).item())
-                    jp = abs_cos(nxt, waypoint).item() - alpha * (ssum + sk)
-                    expanded.append((acts + [a], nxt, ssum + sk, jp))
-            expanded.sort(key=lambda x: x[3], reverse=True)
-            paths = expanded[:beam]
+            ops = self.expD[cand]  # [A, x, d]
+            nxt = torch.einsum('bd,axd->bax', states, ops)  # [B, A, D] = expD[a] @ state
+            nxt = F.normalize(nxt, p=2, dim=-1)
+            raw = (nxt @ wp)  # [B, A] signed cosine
+            align = raw.abs().clamp(0.0, 1.0)  # |cos| (directive alignment term)
+            sag = (1.0 - raw).clamp(0.0, 2.0)  # Sagnac delta (signed 1 - cos)
+            jp = align - alpha * (ssum[:, None] + sag)  # [B, A]
+            flat = jp.reshape(-1)
+            k = min(beam, flat.numel())
+            top = torch.topk(flat, k)
+            idx = top.indices
+            states = nxt.reshape(-1, nxt.shape[-1])[idx]  # [k, D]
+            b_idx = idx // nxt.shape[1]
+            a_idx = idx % nxt.shape[1]
+            acts = torch.cat([acts[b_idx], cand[a_idx].unsqueeze(1)], dim=1)
+            ssum = ssum[b_idx] + sag.reshape(-1)[idx]
 
-        best_acts, best_state, best_ssum, _ = max(
-            paths, key=lambda x: x[3]
-        )
-        j = abs_cos(best_state, waypoint).item() - alpha * best_ssum
+        raw_f = (states @ wp)
+        j = raw_f.abs().clamp(0.0, 1.0) - alpha * ssum
+        best = int(torch.argmax(j))
+        action = int(acts[best, 0])
         info = {
             "horizon": horizon,
             "beam": beam,
-            "actions": list(best_acts),
-            "j": float(j),
+            "actions": [int(x) for x in acts[best].tolist()],
+            "j": float(j[best].detach()),
         }
-        return best_acts[0], info
+        return action, info
 
     def valence_delta(self, psi_next, psi_t, waypoint):
         """Tier 4: dnu = |<psi_next, waypoint>| - |<psi_t, waypoint>| (signed)."""

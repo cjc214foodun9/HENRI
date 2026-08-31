@@ -206,6 +206,44 @@ def test_c10_horizon_batched_boundary():
 
 
 # ---------------------------------------------------------------------------
+# C11 — vectorized beam search equivalence: the batched tensor beam must
+#       select the SAME macro-path as the naive per-path loop. F13 run 2
+#       (PID 851590) hit 38.98 ms/step with the Python-loop beam (G1 FAIL,
+#       receipt bd25fec4… preserved as evidence); the vectorized form is the
+#       directive's prescribed single-pass batch computation.
+# ---------------------------------------------------------------------------
+def _naive_beam(engine, psi, waypoint, candidates, horizon, beam, alpha):
+    paths = [([], psi.reshape(-1).float(), 0.0, 0.0)]  # (acts, state, ssum, jp)
+    for _ in range(horizon):
+        expanded = []
+        for acts, state, ssum, _jp in paths:
+            for a in candidates:
+                nxt = engine.rollout(state, a)
+                sk = float(engine.sagnac_to(nxt, waypoint).item())
+                jp = f13.abs_cos(nxt, waypoint).item() - alpha * (ssum + sk)
+                expanded.append((acts + [a], nxt, ssum + sk, jp))
+        expanded.sort(key=lambda x: x[3], reverse=True)
+        paths = expanded[:beam]
+    best = max(paths, key=lambda x: x[3])
+    return best[0][0], [int(a) for a in best[0]]
+
+
+def test_c11_vectorized_beam_equivalence():
+    for seed in (0, 1, 2):
+        torch.manual_seed(seed)
+        engine = f13.SteeringEngine(D=64, n_actions=8, seed=seed)
+        psi = F.normalize(torch.randn(64), dim=-1)
+        goal = F.normalize(torch.randn(64), dim=-1)
+        wp = engine.waypoint(psi, goal, 0.25)
+        a_v, info_v = engine.beam_search(psi, wp, list(range(8)), horizon=3, beam=4, alpha=0.05)
+        a_n, acts_n = _naive_beam(engine, psi, wp, list(range(8)), 3, 4, 0.05)
+        assert a_v == a_n, f"seed {seed}: action {a_v} != {a_n}"
+        assert info_v["actions"] == acts_n, f"seed {seed}: path {info_v['actions']} != {acts_n}"
+        assert isinstance(info_v["actions"], list)
+        assert all(isinstance(x, int) for x in info_v["actions"])
+
+
+# ---------------------------------------------------------------------------
 # C9 — steering path is safe on grad-requiring tensors (live ingress path;
 #      no numpy/hash on the steering boundary)
 # ---------------------------------------------------------------------------
