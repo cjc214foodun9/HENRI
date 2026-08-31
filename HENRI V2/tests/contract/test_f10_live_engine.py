@@ -116,6 +116,7 @@ def test_c7_synthetic_in_sample_descent():
     in_dim 128, d 64, scale 3.0, Adam 1e-2, 30 epochs -> CE 0.0104, P@1 0.89).
     """
     m = PatchIngress(in_dim=128, d=64, num_blocks=NUM_BLOCKS, p=P, seed=11)
+    torch.manual_seed(0)  # head init determinism (module init is seeded internally)
     head = torch.nn.Linear(64, 4)
     opt = torch.optim.Adam(list(m.parameters()) + list(head.parameters()), lr=1e-2)
     lossf = torch.nn.CrossEntropyLoss()

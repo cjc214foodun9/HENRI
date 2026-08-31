@@ -52,6 +52,21 @@ class PatchIngress(nn.Module):
         )
         self.pos_emb = nn.Parameter(torch.randn(self.n_patches, d, generator=g) * 0.1)
         self.proj = nn.Linear(self.n_patches * d, num_blocks * 8)
+        self._seed_linear_init(seed)
+
+    def _seed_linear_init(self, seed):
+        """Deterministic parameter init for all Linear layers.
+
+        Default nn.Linear init consumes the GLOBAL RNG, making module output
+        nondeterministic across processes (C7 flake: P@1 0.8281 vs 0.8906 on
+        the same recipe). A sealed carrier must be reproducible.
+        """
+        g = torch.Generator().manual_seed(seed + 1)
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                m.weight.data.normal_(0.0, 0.02, generator=g)
+                if m.bias is not None:
+                    m.bias.data.uniform_(-0.02, 0.02, generator=g)
 
     def forward(self, x):
         B = x.shape[0]
@@ -183,6 +198,7 @@ def run_gauntlet(env_names, steps=60, seed=20260908, out_dir=None,
     telemetry = {
         "envs": list(env_names),
         "steps": 0,
+        "resets": 0,
         "mean_latency_ms": None,
         "sagnac_mean": None,
         "progress": 0.0,
@@ -234,11 +250,24 @@ def run_gauntlet(env_names, steps=60, seed=20260908, out_dir=None,
                 action = actions[sel % max(1, len(actions))]
                 obs = game.step(action)  # single-return step: next obs/outcome
                 latencies.append((time.perf_counter() - t_start) * 1000.0)
+                steps_done += 1
+                # Terminal boundary: step returned None or GAME_OVER (production
+                # pattern production_arc_run.py:2318-2321). Reset and continue
+                # interactively; count resets for telemetry.
+                terminal = obs is None or (
+                    getattr(obs, "state", None) and obs.state.name == "GAME_OVER")
+                if terminal:
+                    telemetry["resets"] += 1
+                    obs = game.reset()
+                    if obs is None or not getattr(obs, "frame", None):
+                        break  # cannot continue this env
+                    goal = None
+                    prev_score = 0.0
+                    continue
                 score = _safe_score(obs)
                 progress += score - prev_score
                 prev_score = score
                 solved += _safe_solved(obs)
-                steps_done += 1
     except Exception as exc:  # live pipeline defect -> K1 class, BLOCKED_INFRA
         telemetry["steps"] = steps_done
         telemetry["reason"] = "live_error: {!r}".format(exc)
