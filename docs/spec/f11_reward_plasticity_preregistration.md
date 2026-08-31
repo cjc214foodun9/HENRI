@@ -63,3 +63,4 @@ Contract test C7 asserts: on a synthetic stream with an unambiguous positive-val
 - D1: M ∈ R^{8×65536} (live GameAction count = 8, incl. RESET), not 7.
 - D2: Δν defined from `levels_completed` deltas minus reset penalty; the directive's `step_result.reward` field does not exist in the live arcade API (probed 2026-08-31).
 - D3: ledger target 1,071+ (not 1,069+); watchdog records 1,068–1,069 exist.
+- D4 (post-seal amendment, 2026-08-31): engine runs at the RATIFIED F10 scale — D=64 (num_blocks=8), so M ∈ R^{8×64}. The blueprint's 8×65536 applies at production scale (D=65,536); the F11 gauntlet at the ratified scale is the faithful F10-comparable carrier. `F11_SPEC_AMENDED` child event records this change with both spec hashes.
