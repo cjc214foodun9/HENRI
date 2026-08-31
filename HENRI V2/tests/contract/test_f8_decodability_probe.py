@@ -5,6 +5,8 @@ GREEN phase: C1-C8 pass on toy fixtures with PLANTED structure.
 
 Per docs/spec/f8_decodability_probe_preregistration.md section 8.
 """
+import json
+
 import numpy as np
 import pytest
 
@@ -144,30 +146,36 @@ class TestC5DefaultOff:
 class TestC6BankLoader:
     def test_validates_schema(self, tmp_path):
         npz = tmp_path / "bank.npz"
+        jsonl = tmp_path / "bank.jsonl"
         n, d = 32, 64
         rng = np.random.default_rng(3)
-        psi = (
-            rng.standard_normal((n, d)) + 1j * rng.standard_normal((n, d))
-        ).astype(np.complex64)
-        action = rng.integers(1, 8, size=n).astype(np.int64)
-        env_id = rng.integers(0, 12, size=n).astype(np.int64)
-        np.savez(npz, psi=psi, action=action, env_id=env_id)
-        out = load_bank(str(npz))
+        psi = rng.standard_normal((n, d)).astype(np.float16)
+        actions_onehot = np.eye(7, dtype=np.uint8)[rng.integers(0, 7, size=n)]
+        np.savez(npz, psi=psi, next_wave=psi, actions_onehot=actions_onehot)
+        envs = [f"env{i % 3}" for i in range(n)]
+        with open(jsonl, "w") as f:
+            for i, e in enumerate(envs):
+                f.write(json.dumps({"env": e, "step": i, "action_name": "ACTION1"}) + "\n")
+        out = load_bank(str(npz), str(jsonl))
         assert out["psi"].shape == (n, d)
-        assert np.iscomplexobj(out["psi"])
-        assert out["action"].min() >= 1 and out["action"].max() <= 7
-        assert out["env_id"].shape == (n,)
+        assert out["psi"].dtype == np.float32  # real, upcast
+        assert out["y"].min() >= 0 and out["y"].max() <= 6
+        assert out["env_ids"].shape == (n,)
+        assert len(out["env_names"]) == 3
 
-    def test_rejects_bad_labels(self, tmp_path):
+    def test_rejects_row_mismatch(self, tmp_path):
         npz = tmp_path / "bank_bad.npz"
+        jsonl = tmp_path / "bank_bad.jsonl"
         n, d = 8, 16
         rng = np.random.default_rng(4)
-        psi = rng.standard_normal((n, d)).astype(np.complex64)
-        action = np.full(n, 8, dtype=np.int64)  # out of range 1..7
-        env_id = np.zeros(n, dtype=np.int64)
-        np.savez(npz, psi=psi, action=action, env_id=env_id)
+        psi = rng.standard_normal((n, d)).astype(np.float16)
+        actions_onehot = np.eye(7, dtype=np.uint8)[rng.integers(0, 7, size=n)]
+        np.savez(npz, psi=psi, actions_onehot=actions_onehot)
+        with open(jsonl, "w") as f:
+            for i in range(n - 1):  # one row short -> mismatch
+                f.write(json.dumps({"env": "e0", "step": i}) + "\n")
         with pytest.raises(ValueError):
-            load_bank(str(npz))
+            load_bank(str(npz), str(jsonl))
 
 
 class TestC7FoldDisjointness:

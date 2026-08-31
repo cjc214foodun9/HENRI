@@ -33,26 +33,42 @@ def require_f8_enabled() -> None:
         )
 
 
-def load_bank(path: str) -> dict[str, np.ndarray]:
-    """Load and validate the bank npz. Raises ValueError on schema mismatch."""
-    data = np.load(path, allow_pickle=False)
+def load_bank(npz_path: str, jsonl_path: str) -> dict:
+    """Load and validate the REAL bank schema. Raises ValueError on mismatch.
+
+    OBSERVED schema (F3 v2 bank, hashes 9e3c01b4/1ca089b2): npz keys
+    psi/next_wave/actions_onehot/action_names; psi is REAL float16
+    [N, 65536] — the directive's complex-assumption is corrected to the
+    real domain (F7 Appendix-B precedent). Env segmentation comes from the
+    jsonl 'env' field in row order (jsonl count must equal npz rows).
+    """
+    data = np.load(npz_path, allow_pickle=False)
     psi = data["psi"]
-    action = data["action"]
-    env_id = data["env_id"]
-    if not np.iscomplexobj(psi):
-        raise ValueError(f"psi must be complex, got {psi.dtype}")
+    actions_onehot = data["actions_onehot"]
     if psi.ndim != 2:
         raise ValueError(f"psi must be 2-D [N, D], got {psi.shape}")
-    if action.ndim != 1 or len(action) != len(psi):
-        raise ValueError("action must be 1-D of length N")
-    if action.min() < LABEL_MIN or action.max() > LABEL_MAX:
+    if np.iscomplexobj(psi):
+        raise ValueError(f"psi must be real float16/float32, got {psi.dtype}")
+    if actions_onehot.shape != (len(psi), N_CLASSES):
         raise ValueError(
-            f"action labels must be in [{LABEL_MIN}, {LABEL_MAX}], "
-            f"got [{action.min()}, {action.max()}]"
+            f"actions_onehot must be [N, {N_CLASSES}], got {actions_onehot.shape}"
         )
-    if env_id.ndim != 1 or len(env_id) != len(psi):
-        raise ValueError("env_id must be 1-D of length N")
-    return {"psi": psi, "action": action, "env_id": env_id}
+    y = np.argmax(actions_onehot.astype(np.float32), axis=1).astype(np.int64)
+    with open(jsonl_path, "r", encoding="utf-8") as fp:
+        meta = [json.loads(line) for line in fp]
+    if len(meta) != len(psi):
+        raise ValueError(
+            f"jsonl/meta row mismatch: {len(meta)} != {len(psi)}"
+        )
+    envs = [str(m["env"]) for m in meta]
+    env_code = {e: i for i, e in enumerate(sorted(set(envs)))}
+    env_ids = np.array([env_code[e] for e in envs], dtype=np.int64)
+    return {
+        "psi": psi.astype(np.float32),
+        "y": y,
+        "env_ids": env_ids,
+        "env_names": sorted(set(envs)),
+    }
 
 
 def sha256_file(path: str) -> str:
@@ -64,8 +80,16 @@ def sha256_file(path: str) -> str:
 
 
 def features(psi: np.ndarray) -> np.ndarray:
-    """Real feature map: concat(Re Psi, Im Psi) -> [N, 2D] float32."""
-    return np.concatenate([psi.real, psi.imag], axis=1).astype(np.float32)
+    """Real feature map, representation-aware.
+
+    complex psi -> concat(Re Psi, Im Psi) -> [N, 2D] float32.
+    REAL psi (observed bank) -> psi itself -> [N, D] float32 (no duplicate
+    concat of identical real/imag copies).
+    """
+    psi = np.asarray(psi)
+    if np.iscomplexobj(psi):
+        return np.concatenate([psi.real, psi.imag], axis=1).astype(np.float32)
+    return psi.astype(np.float32)
 
 
 def majority_baseline(y: np.ndarray) -> float:
@@ -393,7 +417,8 @@ def run_probe_cv(
 
 
 def evaluate(
-    bank_path: str,
+    npz_path: str,
+    jsonl_path: str,
     seed: int = 20260902,
     device: str = "auto",
     quick: bool = False,
@@ -401,11 +426,13 @@ def evaluate(
     """Full F8 evaluation. Returns the receipt dict (JSON-serializable)."""
     require_f8_enabled()
     t0 = time.time()
-    bank_sha = sha256_file(bank_path)
-    bank = load_bank(bank_path)
+    npz_sha = sha256_file(npz_path)
+    jsonl_sha = sha256_file(jsonl_path)
+    bank = load_bank(npz_path, jsonl_path)
     psi = bank["psi"]
-    y = bank["action"] - 1  # 0..6
-    env_id = bank["env_id"]
+    y = bank["y"]  # 0..6
+    env_id = bank["env_ids"]
+    env_names = bank["env_names"]
     n, d = psi.shape
     Xfeat = features(psi)
 
@@ -478,10 +505,14 @@ def evaluate(
 
     receipt = {
         "schema": "f8-decodability-probe.v1",
-        "bank_path": bank_path,
-        "bank_sha256": bank_sha,
+        "npz_path": npz_path,
+        "jsonl_path": jsonl_path,
+        "npz_sha256": npz_sha,
+        "jsonl_sha256": jsonl_sha,
         "bank_shape": [n, d],
+        "bank_is_complex": False,
         "n_envs": int(len(np.unique(env_id))),
+        "env_names": env_names,
         "majority_baseline": maj,
         "g1_train_acc_max": g1_max,
         "g1_ok": g1_ok,
@@ -511,13 +542,16 @@ if __name__ == "__main__":
     import argparse
 
     ap = argparse.ArgumentParser(description="Carrier F8 decodability probe")
-    ap.add_argument("--bank", required=True, help="path to bank npz")
+    ap.add_argument("--npz", required=True, help="path to bank npz")
+    ap.add_argument("--jsonl", required=True, help="path to bank jsonl (env meta)")
     ap.add_argument("--out", required=True, help="receipt json path")
     ap.add_argument("--seed", type=int, default=20260902)
     ap.add_argument("--device", default="auto")
     ap.add_argument("--quick", action="store_true", help="skip MLP (plumbing smoke)")
     args = ap.parse_args()
-    receipt = evaluate(args.bank, seed=args.seed, device=args.device, quick=args.quick)
+    receipt = evaluate(
+        args.npz, args.jsonl, seed=args.seed, device=args.device, quick=args.quick
+    )
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     with open(args.out, "w") as f:
         json.dump(receipt, f, indent=2)
