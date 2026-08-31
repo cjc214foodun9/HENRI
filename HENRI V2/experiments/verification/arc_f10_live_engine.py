@@ -208,12 +208,16 @@ def run_gauntlet(env_names, steps=60, seed=20260908, out_dir=None,
     steps_done = 0
     try:
         for name in env_names:
-            game = arcade.fetch(name)
-            game.reset()
+            game = arcade.make(name)
+            if game is None:  # production fail-closed: make returns None on download/API failure
+                return fail_closed("arcade_make_returned_none: {!r}".format(name))
+            obs = game.reset()
+            if obs is None or not getattr(obs, "frame", None):
+                return fail_closed("null_initial_frame: {!r}".format(name))
             goal = None
             prev_score = 0.0
             for _ in range(steps):
-                frame = game.frame[0] if hasattr(game, "frame") else game.observe()
+                frame = obs.frame[0]
                 raw = torch.as_tensor(_to_flat(frame), dtype=torch.float32, device=device)
                 if raw.numel() < 4096:
                     raw = F.pad(raw, (0, 4096 - raw.numel()))
@@ -228,12 +232,12 @@ def run_gauntlet(env_names, steps=60, seed=20260908, out_dir=None,
                 sagnacs.append(float(sagnac_delta(roll[0, sel], goal).item()))
                 actions = list(game.action_space)
                 action = actions[sel % max(1, len(actions))]
-                outcome = game.step(action)
+                obs = game.step(action)  # single-return step: next obs/outcome
                 latencies.append((time.perf_counter() - t_start) * 1000.0)
-                score = _safe_score(outcome)
+                score = _safe_score(obs)
                 progress += score - prev_score
                 prev_score = score
-                solved += _safe_solved(outcome)
+                solved += _safe_solved(obs)
                 steps_done += 1
     except Exception as exc:  # live pipeline defect -> K1 class, BLOCKED_INFRA
         telemetry["steps"] = steps_done
