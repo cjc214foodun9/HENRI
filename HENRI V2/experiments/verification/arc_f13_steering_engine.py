@@ -280,12 +280,13 @@ def run_gauntlet(env_names=None, steps_per_env=150, seed=20260911,
                 else:
                     raw = raw[:4096]
                 t_start = time.perf_counter()
-                psi = ingress(raw.unsqueeze(0))[0]
+                psi_b = ingress(raw.unsqueeze(0))  # [1, 8, 8] — batched (horizon contract)
+                psi = psi_b[0]  # [8, 8] flat 64 — engine contract
                 if goal is None:
                     goal = psi.detach()  # D1: episodic first-frame axiom
                 psi_s = psi.detach()
                 wp = engine.waypoint(psi_s, goal, tau)
-                roll = horizon_inst(psi)  # G4 measurement instrument (D9)
+                roll = horizon_inst(psi_b)  # G4 measurement instrument (D9)
 
                 # Tier 2: Sagnac-guided macro-action beam search
                 avail = list(getattr(obs, "available_actions", None) or [])

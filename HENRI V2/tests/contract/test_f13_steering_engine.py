@@ -184,6 +184,28 @@ def test_c8_determinism():
 
 
 # ---------------------------------------------------------------------------
+# C10 — live gauntlet data-path boundary: SinglePassHorizon consumes the
+#       BATCHED [1, num_blocks, 8] ingress wave; the flat [64] engine wave
+#       raises. F13 run 1 fail-closed at step 0 on this exact shape
+#       (receipt 8eb1e6ad… preserved as evidence); this test locks the fix.
+# ---------------------------------------------------------------------------
+def test_c10_horizon_batched_boundary():
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "HENRI V2" / "experiments" / "verification"))
+    from arc_f10_live_engine import PatchIngress, SinglePassHorizon
+    torch.manual_seed(20260911)
+    ingress = PatchIngress(in_dim=4096, d=64, num_blocks=8, p=32, seed=20260911)
+    horizon = SinglePassHorizon(d=64, rank=32, K=8, num_blocks=8, seed=20260911)
+    raw = torch.randn(4096)
+    psi_b = ingress(raw.unsqueeze(0))
+    assert tuple(psi_b.shape) == (1, 8, 8)
+    roll = horizon(psi_b)  # batched: must not raise
+    assert tuple(roll[0, 0].shape) == (8, 8)
+    with pytest.raises(RuntimeError):
+        horizon(psi_b[0])  # flat [64]: the run-1 live error shape '[8, 64]' invalid
+
+
+# ---------------------------------------------------------------------------
 # C9 — steering path is safe on grad-requiring tensors (live ingress path;
 #      no numpy/hash on the steering boundary)
 # ---------------------------------------------------------------------------
