@@ -312,13 +312,12 @@ def run_gauntlet(env_names=None, steps_per_env=150, seed=20260914,
                            "goal source unavailable")
 
     # --- Construct substrate -----------------------------------------------
-    try:
-        from henri_vision_encoder import PatchIngress
-    except Exception:
-        PatchIngress = None
-    if PatchIngress is None:
-        return fail_closed("live_error: PatchIngress unavailable")
-
+    # PatchIngress/SinglePassHorizon are module-level imports from
+    # arc_f10_live_engine (canonical). No local re-import: a stale local
+    # `from henri_vision_encoder import PatchIngress` shadowed the module
+    # name with None and fail-closed the live run (OBSERVED 2026-09-01,
+    # run-1 receipt F15_LIVE_ENGINE_BLOCKED / live_error: PatchIngress
+    # unavailable — harness defect, preserved as evidence).
     ingress = PatchIngress(in_dim=4096, d=64, num_blocks=8, p=32, seed=seed).to(device)
     horizon_inst = SinglePassHorizon(d=64, rank=32, K=8, num_blocks=8, seed=seed).to(device)
     engine = TrajectorySteeringEngine(
