@@ -176,8 +176,8 @@ class EDMDGeneratorBank:
         missing = {"psi", "next_wave", "actions_onehot", "action_names"} - set(data.files)
         if missing:
             raise KeyError(f"bank npz missing keys {sorted(missing)} (schema henri.arc-trajectory-bank.v1)")
-        psi_full = torch.from_numpy(np.asarray(data["psi"])).float()          # [N, 65536]
-        nxt_full = torch.from_numpy(np.asarray(data["next_wave"])).float()    # [N, 65536]
+        psi_full = torch.from_numpy(np.asarray(data["psi"])).float().to(self.device)   # [N, 65536]
+        nxt_full = torch.from_numpy(np.asarray(data["next_wave"])).float().to(self.device)  # [N, 65536]
         onehot = torch.from_numpy(np.asarray(data["actions_onehot"])).to(torch.uint8)
         names = [str(n) for n in np.asarray(data["action_names"])]
         ingress = None
@@ -365,8 +365,8 @@ def main():
     bank = EDMDGeneratorBank(args.trajectory_bank, args.trajectory_jsonl, device=args.device, seed=args.seed)
     comp = bank.compile()
     data = np.load(args.trajectory_bank)
-    psi_full = torch.from_numpy(np.asarray(data["psi"])).float()
-    nxt_full = torch.from_numpy(np.asarray(data["next_wave"])).float()
+    psi_full = torch.from_numpy(np.asarray(data["psi"])).float().to(args.device)
+    nxt_full = torch.from_numpy(np.asarray(data["next_wave"])).float().to(args.device)
     onehot = torch.from_numpy(np.asarray(data["actions_onehot"])).to(torch.uint8)
     ingress = PatchIngress(in_dim=4096, d=D_SUB, num_blocks=8, p=32, seed=args.seed).to(args.device) if PatchIngress is not None else None
     psi = _bridge_to_d64_batch(psi_full, ingress=ingress, seed=args.seed)
