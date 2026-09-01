@@ -345,7 +345,9 @@ class F22Engine:
                     raw = F.pad(raw, (0, 4096 - raw.numel()))
                 else:
                     raw = raw[:4096]
-                psi_b = ingress(raw.unsqueeze(0))
+                psi_b = ingress(raw.unsqueeze(0)).reshape(1, -1)
+                if psi_b.shape[-1] != D_SUB:
+                    raise RuntimeError(f"PatchIngress boundary must flatten to [{D_SUB}], got {tuple(psi_b.shape)}")
                 psi = psi_b[0].detach()
                 wp = self._active_waypoint()
                 if waypoint_align_first is None:
@@ -401,7 +403,7 @@ class F22Engine:
                     raw_next = F.pad(raw_next, (0, 4096 - raw_next.numel()))
                 else:
                     raw_next = raw_next[:4096]
-                psi_next = ingress(raw_next.unsqueeze(0))[0].detach()
+                psi_next = ingress(raw_next.unsqueeze(0)).reshape(1, -1)[0].detach()
                 c_next = float((psi_next * wp).sum(-1).abs().clamp(0.0, 1.0).item())
                 dnu = c_next - c_t
                 dnus.append(dnu)

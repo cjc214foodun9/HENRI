@@ -197,7 +197,16 @@ def test_c9_cli_flags_and_receipt_keys():
     assert keys <= set(result)
 
 
-def test_c10_g4_physical_sagnac_not_goal_distance():
+def test_c10_ingress_flatten_boundary():
+    ingress = eng.PatchIngress(in_dim=4096, d=D, num_blocks=8, p=32, seed=20260922)
+    x = torch.randn(1, 4096)
+    structured = ingress(x)
+    assert structured.shape == (1, 8, 8)
+    flat = structured.reshape(1, -1)
+    assert flat.shape == (1, D)
+
+
+def test_c11_g4_physical_sagnac_not_goal_distance():
     """G4 = 1 - |cos(T_a psi_t, axiom)| (operator coherence). A distant goal must
     NOT inflate G4: goal distance is excluded from the physical metric."""
     bank = make_healthy_bank()
