@@ -195,6 +195,7 @@ def compile_free_generators_capped(psi, nxt, onehot, omega_bound=OMEGA_BOUND,
     """
     psi = F.normalize(psi.float(), dim=-1)
     nxt = F.normalize(nxt.float(), dim=-1)
+    onehot = onehot.to(device=psi.device, dtype=torch.float32)
     n_actions = onehot.shape[1]
     displacement = torch.norm(nxt - psi, p=2, dim=-1)
     is_moving = (displacement > moving_thresh).float()
@@ -221,10 +222,10 @@ def compile_free_generators_capped(psi, nxt, onehot, omega_bound=OMEGA_BOUND,
                 F.normalize(X_a @ T.T, dim=-1).mul(Y_a).sum(-1).abs().mean().item()
             )
         else:
-            gens.append(torch.zeros(D_SUB, D_SUB, dtype=psi.dtype))
-            transitions.append(torch.eye(D_SUB, dtype=psi.dtype))
+            gens.append(torch.zeros(D_SUB, D_SUB, dtype=psi.dtype, device=psi.device))
+            transitions.append(torch.eye(D_SUB, dtype=psi.dtype, device=psi.device))
             recon[a] = float(
-                F.normalize(psi[mask_a] @ torch.eye(D_SUB).T, dim=-1).mul(nxt[mask_a]).sum(-1).abs().mean().item()
+                F.normalize(psi[mask_a] @ torch.eye(D_SUB, dtype=psi.dtype, device=psi.device).T, dim=-1).mul(nxt[mask_a]).sum(-1).abs().mean().item()
             ) if mask_a.sum() > 0 else 0.0
     generators = torch.stack(gens)
     transitions = torch.stack(transitions)
@@ -246,10 +247,10 @@ def fit_affordance_classifiers(psi, onehot, is_moving, ridge=RIDGE):
     Returns (W [n,D,D], b [n]).
     """
     psi = F.normalize(psi.float(), dim=-1)
-    y = is_moving.float()
+    y = is_moving.float().to(device=psi.device)
     n_actions = onehot.shape[1]
-    W = torch.zeros(n_actions, D_SUB, D_SUB, dtype=psi.dtype)
-    b = torch.zeros(n_actions, dtype=psi.dtype)
+    W = torch.zeros(n_actions, D_SUB, D_SUB, dtype=psi.dtype, device=psi.device)
+    b = torch.zeros(n_actions, dtype=psi.dtype, device=psi.device)
     for a in range(n_actions):
         mask_a = onehot[:, a].bool()
         if mask_a.sum() >= MIN_AUC_SAMPLES:
@@ -257,10 +258,10 @@ def fit_affordance_classifiers(psi, onehot, is_moving, ridge=RIDGE):
             mean_a = float(y_a.mean().item())
             yc = y_a - mean_a
             W[a] = torch.einsum("i,id,ie->de", yc, psi[mask_a], psi[mask_a]) / y_a.numel()
-            b[a] = torch.logit(torch.clamp(torch.tensor(mean_a), 0.05, 0.95))
+            b[a] = torch.logit(torch.clamp(torch.tensor(mean_a, device=psi.device), 0.05, 0.95))
         else:
             prior = float(y[mask_a].mean().item()) if mask_a.sum() > 0 else 0.5
-            b[a] = torch.logit(torch.clamp(torch.tensor(prior), 0.05, 0.95))
+            b[a] = torch.logit(torch.clamp(torch.tensor(prior, device=psi.device), 0.05, 0.95))
     return W, b
 
 
