@@ -115,7 +115,7 @@ def compile_lie_generators_d64(psi, nxt, onehot, ridge=DEFAULT_RIDGE, seed=0):
         X = psi[idx]
         Y = nxt[idx]
         XtX = X.T @ X
-        K = (Y.T @ X) @ torch.linalg.inv(XtX + ridge * torch.eye(D_SUB, dtype=X.dtype))
+        K = (Y.T @ X) @ torch.linalg.inv(XtX + ridge * torch.eye(D_SUB, dtype=X.dtype, device=X.device))
         U, _, Vt = torch.linalg.svd(K)
         W = U @ Vt
         Da = _principal_logm_skew(W).to(torch.float32)
@@ -226,8 +226,8 @@ class F21Engine:
         Restricts to generators whose bank action name appears in env_action_names
         when the env exposes named actions (F20 candidates semantics).
         """
-        psi = F.normalize(psi.float(), dim=-1)
-        goal = F.normalize(goal.float(), dim=-1)
+        psi = F.normalize(psi.float().to(self.device), dim=-1)
+        goal = F.normalize(goal.float().to(self.device), dim=-1)
         allowed = set(env_action_names) if env_action_names else None
         js = {}
         for a, Ua in self.exp_generators.items():
@@ -275,10 +275,14 @@ class F21Engine:
                                getattr(game, "action_space", None) or []) if game else []
             goal = env_goals.get(env_name) if env_goals else None
             if goal is None:
-                goal = F.normalize(torch.randn(D_SUB, generator=torch.Generator().manual_seed(self.seed)), dim=-1)
+                goal = F.normalize(
+                    torch.randn(D_SUB, generator=torch.Generator().manual_seed(self.seed)).to(self.device),
+                    dim=-1)
             for _ in range(steps_per_env):
                 t1 = time.time()
-                psi = F.normalize(torch.randn(D_SUB), dim=-1)
+                psi = F.normalize(
+                    torch.randn(D_SUB, generator=torch.Generator().manual_seed(self.seed)).to(self.device),
+                    dim=-1)
                 if align_first is None:
                     align_first = float((psi * goal).sum(-1).abs().clamp(0.0, 1.0).item())
                 best, js = self.step_once(psi, goal, env_actions)
