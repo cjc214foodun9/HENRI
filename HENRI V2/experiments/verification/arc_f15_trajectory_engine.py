@@ -28,6 +28,7 @@ import torch.nn.functional as F
 
 from arc_f10_live_engine import PatchIngress, SinglePassHorizon, sagnac_delta, _to_flat
 from arc_f11_plasticity_engine import ActionPrototypeMemory, compute_valence
+LATENCY_BUDGET_MS = 5.0      # G1
 SAGNAC_TAU_F15 = 0.050       # G4
 G3_MIN_DNU = 0.0200          # G3
 MAX_INITIAL_OVERLAP = 0.90   # PG1

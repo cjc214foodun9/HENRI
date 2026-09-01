@@ -289,3 +289,18 @@ def test_c12_determinism(tmp_path):
     g2, m2 = resolve_trajectory_goal(npz, jsonl, "ar25-0c556536")
     assert torch.equal(g1, g2)
     assert m1["terminal_idx"] == m2["terminal_idx"]
+
+
+# ---------------------------------------------------------------------------
+# C13 — Module gate constants exist (guards the LATENCY_BUDGET_MS deletion
+#       class: NameError at the final gate computation AFTER a full live run)
+# ---------------------------------------------------------------------------
+def test_c13_gate_constants_defined():
+    for name in ("LATENCY_BUDGET_MS", "SAGNAC_TAU_F15", "G3_MIN_DNU",
+                 "MAX_INITIAL_OVERLAP", "DEFAULT_TAU", "DEFAULT_HORIZON",
+                 "DEFAULT_ALPHA", "DEFAULT_BEAM", "MIN_TRAJECTORY_DEPTH"):
+        assert hasattr(f15, name), f"missing module constant {name}"
+    assert f15.LATENCY_BUDGET_MS == 5.0
+    assert f15.SAGNAC_TAU_F15 == 0.050
+    assert f15.G3_MIN_DNU == 0.0200
+    assert f15.MAX_INITIAL_OVERLAP == 0.90
