@@ -331,3 +331,20 @@ def test_c15_engagement_gate_sensitivity():
     assert v_noeng == "F17_FALSIFIED_NO_ENGAGEMENT", v_noeng
     v_none = _verdict(gates_g2, {"killing_gamma_std_mean": None})
     assert v_none == "F17_FALSIFIED_NO_ENGAGEMENT", v_none
+
+
+# ---------------------------------------------------------------- C16
+def test_c16_nan_engagement_std_fails_closed():
+    # Live run-1 defect: torch.std(correction=1) on a 1-candidate pool -> NaN,
+    # and NaN <= threshold is False -> E1 engagement gate bypassed (fail-open).
+    # The gate must fail closed on non-finite engagement telemetry.
+    gates_fail = {"PG1": True, "G1": True, "G2": False, "G3": False, "G4": False}
+    assert _verdict(gates_fail, {"killing_gamma_std_mean": float("nan")}) == \
+        "F17_FALSIFIED_NO_ENGAGEMENT"
+    # population std on a single-candidate pool is 0.0 (no variation), not NaN
+    x, y = _orthogonal_pair()
+    eng = _engine()
+    gams = eng.gamma_all([0], omega_goal(x, y))
+    s = float(gams.std(correction=0).item())
+    assert math.isfinite(s)
+    assert s == 0.0

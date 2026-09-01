@@ -28,6 +28,7 @@ Flag: HENRI_F17_DIFFERENTIAL=1 (or --force-enabled for tests).
 """
 import argparse
 import json
+import math
 import os
 import time
 from datetime import datetime, timezone
@@ -217,7 +218,9 @@ def _verdict(gates, telemetry=None):
     # E1 engagement gate: without candidate-differential gamma, no steering
     # mechanism was active — subsumes K2/K3 attribution.
     gstd = telemetry.get("killing_gamma_std_mean")
-    if gstd is None or gstd <= ENGAGEMENT_MIN_GAMMA_STD:
+    # fail-closed: non-finite engagement telemetry cannot prove engagement
+    # (live run-1 defect: NaN <= threshold is False -> gate bypassed)
+    if gstd is None or not math.isfinite(float(gstd)) or gstd <= ENGAGEMENT_MIN_GAMMA_STD:
         return "F17_FALSIFIED_NO_ENGAGEMENT"
     for name in ("G2", "G3", "G4"):
         if not gates.get(name):
@@ -389,7 +392,10 @@ def run_gauntlet(env_names=None, steps_per_env=150, seed=DEFAULT_SEED,
                 avail = list(getattr(obs, "available_actions", None) or [])
                 candidates = [int(a) for a in avail] if avail else list(range(8))
                 gams = engine.gamma_all(candidates, om)
-                gamma_stds.append(float(gams.std().item()))
+                # population std (correction=0): a single-candidate pool has
+                # zero variation, not NaN (torch sample-std on 1 element ->
+                # NaN, observed live in F17 run-1)
+                gamma_stds.append(float(gams.std(correction=0).item()))
                 gamma_mins.append(float(gams.min().item()))
                 gamma_maxs.append(float(gams.max().item()))
                 sel, _info = engine.beam_search(
