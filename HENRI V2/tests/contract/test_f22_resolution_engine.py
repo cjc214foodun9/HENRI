@@ -178,6 +178,7 @@ def test_c9_cli_flags_and_receipt_keys():
             "--receipt-out", "/tmp/henri_f22_resolution/f22_gates_receipt.json"]
     args = ap.parse_args(argv)
     assert args.omega_bound == pytest.approx(0.0982)
+    assert args.beta_sagnac == pytest.approx(0.015)
     assert args.waypoint_advance_thresh == pytest.approx(0.60)
     assert args.langevin_temp == pytest.approx(0.50)
     keys = {"verdict", "steps_done", "resets", "mean_latency_ms", "sagnac_axiom_mean",

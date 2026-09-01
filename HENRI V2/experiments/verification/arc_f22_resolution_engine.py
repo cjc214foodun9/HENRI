@@ -470,6 +470,7 @@ def build_parser():
     ap.add_argument("--seed", type=int, default=20260922)
     ap.add_argument("--horizon", type=int, default=DEFAULT_HORIZON)
     ap.add_argument("--omega-bound", type=float, default=OMEGA_BOUND)
+    ap.add_argument("--beta-sagnac", type=float, default=DEFAULT_BETA_SAGNAC)
     ap.add_argument("--waypoint-advance-thresh", type=float, default=WAYPOINT_ADVANCE_THRESH)
     ap.add_argument("--langevin-temp", type=float, default=LANGEVIN_TEMP)
     ap.add_argument("--trajectory-bank", required=True)
