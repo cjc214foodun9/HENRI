@@ -250,6 +250,24 @@ def predict_affordance_logits(pooled: torch.Tensor, b: torch.Tensor,
     return pooled / tau.unsqueeze(0) + b.unsqueeze(0)
 
 
+def stall_cosine_labels(psi_flat, nxt_flat, tau_stall=TAU_STALL):
+    """Norm-invariant stall-cosine labels on canonical per-block unit waves.
+
+    psi_flat/nxt_flat [N, 65536] (or [N, M, 8]). Normalizes per block to the
+    canonical unit-norm geometry (HENRI invariant ||w_k||_2 = 1.0), then
+    divides the flat dot by the flat norms. Guard against the unnormalized-
+    bank defect class (OBSERVED: bank psi ||.|| ~ 14-22 while next_wave
+    ||.|| = 1.0; a raw-dot label corrupted the G2 launch to 0.8% positives
+    instead of the true 21%).
+    """
+    psi_full = F.normalize(psi_flat.float().view(psi_flat.shape[0], -1, BLK), p=2, dim=-1)
+    nxt_full = F.normalize(nxt_flat.float().view(nxt_flat.shape[0], -1, BLK), p=2, dim=-1)
+    flat_p = psi_full.reshape(psi_full.shape[0], -1)
+    flat_n = nxt_full.reshape(nxt_full.shape[0], -1)
+    cos = (flat_p * flat_n).sum(-1) / (flat_p.norm(dim=-1) * flat_n.norm(dim=-1) + 1e-12)
+    return (cos < tau_stall).float(), cos
+
+
 def fit_local_gauge_classifiers(psi: torch.Tensor, onehot: torch.Tensor,
                                 y: torch.Tensor,
                                 min_samples: int = MIN_AUC_SAMPLES):
@@ -361,10 +379,15 @@ class G2Engine:
         return self.waypoints[k]
 
     def predict_affordance(self, psi_full):
-        """Pi [B, n] = sigmoid(pooled_a / tau_a + b_a) on the FULL wave."""
+        """Pi [B, n] = sigmoid(pooled_a / tau_a + b_a) on the FULL wave.
+
+        Normalizes to canonical per-block unit norm (identity on already-
+        canonical input; guards the unnormalized-bank defect class).
+        """
         psi_full = psi_full.float().to(self.device)
         if psi_full.dim() == 2:
             psi_full = psi_full.unsqueeze(0)
+        psi_full = F.normalize(psi_full, p=2, dim=-1)
         pooled = local_gauge_scores(
             psi_full, self.W_contact.to(self.device), self.pool_beta)
         logits = predict_affordance_logits(
@@ -400,17 +423,30 @@ class G2Engine:
 
     def update_online_affordance(self, psi_full, action_idx, psi_full_next,
                                  eta=None):
-        """Full-D stall-cosine plasticity on the executed action."""
+        """Full-D stall-cosine plasticity on the executed action (norm-divided
+        cosine on canonical per-block unit waves)."""
         eta = self.eta_affordance if eta is None else eta
-        psi_full = psi_full.float().to(self.device)
-        psi_full_next = psi_full_next.float().to(self.device)
-        cos = float((psi_full.reshape(-1) * psi_full_next.reshape(-1)).sum()
-                    .abs().clamp(0.0, 1.0).item())
+        psi_full = F.normalize(psi_full.float().to(self.device), p=2, dim=-1)
+        psi_full_next = F.normalize(psi_full_next.float().to(self.device), p=2, dim=-1)
+        a_f = psi_full.reshape(-1)
+        b_f = psi_full_next.reshape(-1)
+        cos = min(1.0, float((a_f * b_f).sum().abs().item() /
+                             ((a_f.norm() * b_f.norm()).clamp(min=1e-12).item())))
+        # NOTE: clamp AFTER division. A clamp on the raw sum (magnitude
+        # 8192 for per-block-unit waves) caps it at 1.0 -> cos ~ 1.2e-4
+        # -> was_moving=1 even for identical pairs -> W increases on a
+        # collision (C8 defect class, fixed 2026-09-01).
         was_moving = 1.0 if cos < self.tau_stall else 0.0
         pi = self.predict_affordance(psi_full)[0, action_idx].item()
         error = was_moving - pi
         phi = _augment(psi_full)  # [M, 9]
-        A = torch.einsum("bp,bq->pq", phi, phi) / B_FULL  # mean over blocks (fit scale)
+        A = torch.einsum("bp,bq->pq", phi, phi) / B_FULL  # mean over blocks
+        # Scale-matched update: W is unit-Frobenius (fit normalization), so
+        # the update direction must be unit-Frobenius too; eta then bounds
+        # the relative perturbation to |eta*error| <= eta per step (C8 fix:
+        # an unnormalized A with ||A||_F ~ 1.8 flipped the metric direction
+        # at eta >= 1 and raised pi on a collision).
+        A = A / (A.norm().clamp(min=1e-8))
         self.W_contact[action_idx] = self.W_contact[action_idx] + eta * error * A
         self.b_contact[action_idx] = self.b_contact[action_idx] + eta * error
         self.affordance_updates += 1
@@ -707,14 +743,21 @@ def main():
     device = args.device
 
     data = np.load(args.trajectory_bank)
-    psi_full = torch.from_numpy(np.asarray(data["psi"])).float().reshape(-1, B_FULL, BLK).to(device)
-    nxt_full = torch.from_numpy(np.asarray(data["next_wave"])).float().reshape(-1, B_FULL, BLK).to(device)
+    psi_flat = torch.from_numpy(np.asarray(data["psi"])).float().to(device)
+    nxt_flat = torch.from_numpy(np.asarray(data["next_wave"])).float().to(device)
     onehot = torch.from_numpy(np.asarray(data["actions_onehot"])).to(torch.uint8)
 
-    # Full-D stall-cosine labels (PDF lever 2).
-    cos = (psi_full.reshape(psi_full.shape[0], -1) *
-           nxt_full.reshape(nxt_full.shape[0], -1)).sum(-1).abs()
-    y = (cos < args.tau_stall).float()
+    # Canonical [8192, 8] geometry: per-block unit norm (HENRI invariant
+    # ||w_k||_2 = 1.0). The bank's psi is NOT unit-norm (OBSERVED: ||psi_t||
+    # ~ 14-22, next_wave ||.|| = 1.0) — a raw-dot label would be corrupted
+    # (harness defect G2_HARNESS_DEFECT_LABEL_NORM, 0 live steps, relaunched
+    # with identical bounds). Normalize per-block, then the stall-cosine
+    # label is norm-invariant.
+    psi_full = F.normalize(psi_flat.view(-1, B_FULL, BLK), p=2, dim=-1)
+    nxt_full = F.normalize(nxt_flat.view(-1, B_FULL, BLK), p=2, dim=-1)
+
+    # Full-D stall-cosine labels (PDF lever 2); norm-invariant helper.
+    y, _cos = stall_cosine_labels(psi_flat, nxt_flat, args.tau_stall)
 
     W, b, tau = fit_local_gauge_classifiers(psi_full, onehot.float(), y)
     pooled = local_gauge_scores(psi_full, W, args.pool_beta)
