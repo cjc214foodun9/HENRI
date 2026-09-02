@@ -542,7 +542,12 @@ def main() -> int:
     data = np.load(args.trajectory_bank)
     psi_flat = torch.from_numpy(np.asarray(data["psi"])).float().to(device)
     nxt_flat = torch.from_numpy(np.asarray(data["next_wave"])).float().to(device)
-    onehot = torch.from_numpy(np.asarray(data["actions_onehot"])).to(torch.uint8)
+    # onehot MUST live on `device`: every downstream mask operation ANDs it
+    # with y (CUDA, from stall_cosine_labels on CUDA waves). A CPU onehot
+    # raised "Expected all tensors to be on the same device" at main()'s
+    # `mask & (y == 1.0)` on the remote CUDA run (harness defect, 0 live
+    # steps, relaunched with identical bounds — G4 launch #1).
+    onehot = torch.from_numpy(np.asarray(data["actions_onehot"])).to(torch.uint8).to(device)
 
     # Canonical flat-unit geometry (matches bank next_wave; G2-verified label).
     psi_full = F.normalize(psi_flat.float().reshape(psi_flat.shape[0], -1), p=2, dim=-1) \
