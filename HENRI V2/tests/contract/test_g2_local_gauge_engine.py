@@ -43,6 +43,7 @@ try:
         predict_affordance_logits,
         require_flag,
         scatter_prediction,
+        stall_cosine_labels,
         PG1_MIN_AUC,
         G1_LATENCY_MS,
         G2_MIN_SOLVED,
@@ -316,7 +317,7 @@ def test_c8_online_affordance_update():
     eng, _, (fpsi, foh, fy) = _engine()
     psi_full = fpsi[foh[:, 0].bool() & (fy == 1.0)][0]
     pi_before = eng.predict_affordance(psi_full)[0, 0].item()
-    eng.update_online_affordance(psi_full, 0, psi_full, eta=1.0)  # test-scale
+    eng.update_online_affordance(psi_full, 0, psi_full, eta=0.10)  # prod eta
     pi_after = eng.predict_affordance(psi_full)[0, 0].item()
     assert pi_after < pi_before, f"collision must lower pi: {pi_before:.4f} -> {pi_after:.4f}"
     assert eng.affordance_updates == 1
@@ -403,3 +404,26 @@ def test_c12_fast_encoder_equivalence():
         max_d = float((wf - wp).abs().max().item())
         assert cos >= 0.9999, f"({h}x{w}) cos {cos:.6f} < 0.9999"
         assert max_d <= 1e-3, f"({h}x{w}) max|d| {max_d:.2e} > 1e-3"
+
+
+def test_c13_stall_label_norm_invariance():
+    """Regression guard: the stall-cosine label must be norm-invariant.
+
+    The REAL bank's psi is NOT unit-norm (OBSERVED ||psi_t|| ~ 14-22 while
+    next_wave ||.|| = 1.0); a raw-dot label gave 0.8% positives instead of
+    the true 21% (G2 launch defect, 0 live steps, relaunched with identical
+    bounds). stall_cosine_labels must recover the same labels from scaled
+    and unscaled waves.
+    """
+    psi, nxt, onehot, y = _full_bank(n_actions=2, n_open=16, n_block=16)
+    psi_flat = psi.reshape(psi.shape[0], -1)
+    nxt_flat = nxt.reshape(nxt.shape[0], -1)
+    y1, cos1 = stall_cosine_labels(psi_flat, nxt_flat, TAU_STALL)
+    assert torch.equal(y1, y), "label must match construction on canonical waves"
+    # scaled (unnormalized) bank: label must be IDENTICAL
+    y2, cos2 = stall_cosine_labels(psi_flat * 17.3, nxt_flat, TAU_STALL)
+    assert torch.equal(y1, y2), "label must be scale-invariant (norm-divided)"
+    assert torch.allclose(cos1, cos2, atol=1e-4), "cosine must be scale-invariant"
+    # raw-dot would FAIL: frac positives ~ 0 on scaled bank
+    raw_frac = float((torch.abs((psi_flat * 17.3 * nxt_flat).sum(-1)) < TAU_STALL).float().mean())
+    assert raw_frac < float(y.mean()), f"raw-dot label must be corrupted: {raw_frac:.3f}"
