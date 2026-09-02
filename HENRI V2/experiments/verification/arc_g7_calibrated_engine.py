@@ -501,12 +501,26 @@ def main() -> int:
             except Exception:
                 pass
 
-    # Carrier P1 (default-OFF): goal-grounded policy steering engine. The P1
-    # module is imported ONLY under the flag; the default G7 path is untouched
-    # (differential default-OFF proof: flag absent -> P1 module never imported).
+    # Carrier P1/G8 (default-OFF): goal-grounded policy steering engines.
+    # Modules are imported ONLY under their flag; the default G7 path is
+    # untouched (differential default-OFF proof: flags absent -> modules
+    # never imported). G8 subsumes P1 when both flags are set.
+    use_g8 = os.environ.get("HENRI_G8_SUBGOAL") == "1"
     use_p1 = os.environ.get("HENRI_P1_GOAL_STEERING") == "1"
     full_goals = None
-    if use_p1:
+    g8_chains = None
+    if use_g8:
+        from arc_g8_subgoal_engine import (  # lazy, flag-gated
+            G8SubgoalSteeringEngine,
+            build_g8_waypoint_chains,
+            require_g8_flag,
+        )
+        require_g8_flag()
+        engine_cls = G8SubgoalSteeringEngine
+        g8_chains = build_g8_waypoint_chains(
+            args.trajectory_bank, args.trajectory_jsonl, env_names,
+            device=device)
+    elif use_p1:
         from arc_p1_goal_steering_engine import (  # lazy, flag-gated
             P1GoalSteeringEngine,
             build_p1_full_goals,
@@ -537,6 +551,8 @@ def main() -> int:
         ingress=ingress)
     if full_goals is not None:
         engine._p1_full_goals = full_goals
+    if g8_chains is not None:
+        engine._g8_chains = g8_chains
 
     result = engine.run_gauntlet(
         env_names, fast_encoder=FastFullDWaveEncoder(
@@ -550,7 +566,18 @@ def main() -> int:
     # result.update(base_result) clobbered steps_done to 0 after a full run).
     result = finalize_receipt(base_result, result)
     result["pg1_min_auc"] = pg1_min_auc
-    if use_p1:
+    if use_g8:
+        result["policy_mode"] = "G8_SUBGOAL_STEERING"
+        result.update(engine.g8_receipt_fields())
+        result["p1_score_calls"] = engine._p1_score_calls
+        if engine._p1_latencies_ms:
+            result["p1_kernel_latency_ms"] = (
+                sum(engine._p1_latencies_ms) / len(engine._p1_latencies_ms))
+        if engine._p1_drop_accum is not None and engine._p1_score_calls > 0:
+            result["p1_mean_potential_drops"] = [
+                float(v) / engine._p1_score_calls
+                for v in engine._p1_drop_accum]
+    elif use_p1:
         result["policy_mode"] = "P1_GOAL_STEERING"
         result["p1_score_calls"] = engine._p1_score_calls
         if engine._p1_latencies_ms:

@@ -446,7 +446,20 @@ class G4AlignedEngine:
                 env_actions = list(getattr(obs, "available_actions", None) or
                                    getattr(game, "action_space", None) or [])
                 idx = self._action_index(best, env_actions)
-                c_t = float((psi64 * wp).sum(-1).abs().clamp(0.0, 1.0).item())
+                # Carrier G8 guarded meter hook: when a G8 chain is bound, the
+                # M1 delta-nu meter measures FULL-domain alignment to the ACTIVE
+                # waypoint (reference captured at decision time; rebind on
+                # promotion = packet's "reset baseline to wp[k*+1]"). For all
+                # non-G8 engines `_g8_meter_ref` is absent -> legacy D=64 meter
+                # (default path byte-identical).
+                _g8_ref = getattr(self, "_g8_meter_ref", None)
+                if _g8_ref is not None:
+                    _g8_ref = _g8_ref.to(self.device).detach()
+                    c_t = float((F.normalize(
+                        psi_full.reshape(-1), p=2, dim=-1) * _g8_ref
+                    ).sum(-1).abs().clamp(0.0, 1.0).item())
+                else:
+                    c_t = float((psi64 * wp).sum(-1).abs().clamp(0.0, 1.0).item())
                 try:
                     if env_actions:
                         action = env_actions[idx % max(1, len(env_actions))]
@@ -494,7 +507,15 @@ class G4AlignedEngine:
                 psi64_next = ingress(raw_next.unsqueeze(0)).reshape(1, -1)[0].detach()
                 g4s.append(float(self.g4_single_pass(psi64, psi_full, idx, None)))
                 self.update_online_affordance(psi_full, idx, psi_full_next)
-                c_next = float((psi64_next * wp).sum(-1).abs().clamp(0.0, 1.0).item())
+                # Carrier G8 meter hook (post-step; same reference as decision)
+                _g8_ref_n = getattr(self, "_g8_meter_ref", None)
+                if _g8_ref_n is not None:
+                    _g8_ref_n = _g8_ref_n.to(self.device).detach()
+                    c_next = float((F.normalize(
+                        psi_full_next.reshape(-1), p=2, dim=-1) * _g8_ref_n
+                    ).sum(-1).abs().clamp(0.0, 1.0).item())
+                else:
+                    c_next = float((psi64_next * wp).sum(-1).abs().clamp(0.0, 1.0).item())
                 dnus.append(c_next - c_t)
                 if c_next > c_t:
                     self.creeps += 1
