@@ -480,9 +480,21 @@ class G4AlignedEngine:
                 psi_full_next = fast_encoder.encode_grid(
                     torch.as_tensor(np.asarray(frame_next), dtype=torch.long,
                                     device=self.device)).reshape(B_FULL, BLK).detach()
+                # Carrier M1 (measurement repair): derive the post-step D=64
+                # bridge state from the ACTUAL next frame. Previously c_next
+                # reused the stale pre-step psi64, making mean_delta_nu_wp
+                # structurally 0.0 and creeps unreachable (G4..P1 defect).
+                raw_next = torch.as_tensor(
+                    np.asarray(frame_next).reshape(-1).astype(np.float32),
+                    dtype=torch.float32, device=self.device)
+                if raw_next.numel() < 4096:
+                    raw_next = F.pad(raw_next, (0, 4096 - raw_next.numel()))
+                else:
+                    raw_next = raw_next[:4096]
+                psi64_next = ingress(raw_next.unsqueeze(0)).reshape(1, -1)[0].detach()
                 g4s.append(float(self.g4_single_pass(psi64, psi_full, idx, None)))
                 self.update_online_affordance(psi_full, idx, psi_full_next)
-                c_next = float((psi64 * wp).sum(-1).abs().clamp(0.0, 1.0).item())
+                c_next = float((psi64_next * wp).sum(-1).abs().clamp(0.0, 1.0).item())
                 dnus.append(c_next - c_t)
                 if c_next > c_t:
                     self.creeps += 1
