@@ -419,6 +419,24 @@ def test_flag_gate():
     require_flag("HENRI_G7_CALIBRATED_AFFORDANCE")  # no raise
 
 
+def test_finalize_receipt_preserves_live_fields():
+    """Live-loop receipt fields must override pre-flight base fields.
+
+    Regression for the inherited G4 receipt clobber: base_result's hardcoded
+    steps_done: 0 overwrote the live-loop step count after a full run.
+    """
+    from arc_g7_calibrated_engine import finalize_receipt
+    base = {"steps_done": 0, "pg1_min_auc": 1.0, "moving_counts": {"0": 56},
+            "verdict": None}
+    live = {"verdict": "G7_CALIBRATED_AFFORDANCE_VERIFIED", "steps_done": 1350,
+            "wall_s": 12.0}
+    merged = finalize_receipt(base, live)
+    assert merged["steps_done"] == 1350
+    assert merged["verdict"] == "G7_CALIBRATED_AFFORDANCE_VERIFIED"
+    assert merged["pg1_min_auc"] == 1.0
+    assert merged["moving_counts"] == {"0": 56}
+
+
 def test_cli_kill_path_flag_absent():
     """CLI with the gate env absent fails closed BEFORE any computation."""
     code = (

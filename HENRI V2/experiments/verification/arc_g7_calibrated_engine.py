@@ -172,6 +172,15 @@ def calibrated_affordance_score(residuals: torch.Tensor,
     return torch.exp(-residuals / max(float(tau_a), 1e-6))
 
 
+def finalize_receipt(base_result: dict, live_result: dict) -> dict:
+    """Merge pre-flight base fields with the live-loop result; live fields win.
+
+    Fixes the inherited G4 receipt clobber where base_result's hardcoded
+    steps_done: 0 overwrote the live-loop step count after a full run.
+    """
+    return {**base_result, **live_result}
+
+
 def stratified_subset_256(onehot: torch.Tensor,
                           per_action: int = SUBSET_PER_ACTION_G7,
                           seed: int = SEED) -> torch.Tensor:
@@ -515,7 +524,10 @@ def main() -> int:
         trajectory_bank=args.trajectory_bank, trajectory_jsonl=args.trajectory_jsonl,
         ingress=ingress, out_dir=args.out_dir, receipt_out=receipt_out,
         pg1_min_auc=pg1_min_auc, env_goals=env_goals)
-    result.update(base_result)
+    # Live-loop fields (steps_done, verdict, latency, solved, ...) MUST win
+    # over the pre-flight base fields (harness fix: the inherited
+    # result.update(base_result) clobbered steps_done to 0 after a full run).
+    result = finalize_receipt(base_result, result)
     result["pg1_min_auc"] = pg1_min_auc
     pathlib.Path(receipt_out).write_text(json.dumps(result, indent=2, default=str))
     print(json.dumps(result, indent=2, default=str))
