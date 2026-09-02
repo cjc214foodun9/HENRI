@@ -92,16 +92,25 @@ def _make_engine():
 def test_m1_run_gauntlet_measures_true_dnu():
     # Inject a fake arc_agi module so the engine's internal
     # `from arc_agi import Arcade` resolves without the real package.
+    # Restore any prior module afterward (pytest shares one process).
     fake_arcade_mod = types.ModuleType("arc_agi")
     fake_arcade_mod.Arcade = _FakeArcade
+    had = "arc_agi" in sys.modules
+    prev = sys.modules.get("arc_agi")
     sys.modules["arc_agi"] = fake_arcade_mod
-    eng = _make_engine()
-    result = eng.run_gauntlet(
-        ["e1"], fast_encoder=_FakeFastEncoder(),
-        steps_per_env=4, seed=20260927,
-        trajectory_bank=None, trajectory_jsonl=None,
-        ingress=_FakeIngress(), out_dir=None, receipt_out=None,
-        allow_kill=True, pg1_min_auc=1.0, env_goals=None)
+    try:
+        eng = _make_engine()
+        result = eng.run_gauntlet(
+            ["e1"], fast_encoder=_FakeFastEncoder(),
+            steps_per_env=4, seed=20260927,
+            trajectory_bank=None, trajectory_jsonl=None,
+            ingress=_FakeIngress(), out_dir=None, receipt_out=None,
+            allow_kill=True, pg1_min_auc=1.0, env_goals=None)
+    finally:
+        if had:
+            sys.modules["arc_agi"] = prev
+        else:
+            sys.modules.pop("arc_agi", None)
     assert result["steps_done"] == 4
     dnu = result["mean_delta_nu_wp"]
     # Pre-fix this is EXACTLY 0.0 (stale psi64). Post-fix frames differ, so the
