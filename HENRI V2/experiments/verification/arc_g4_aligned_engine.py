@@ -388,6 +388,11 @@ class G4AlignedEngine:
                     64, generator=torch.Generator().manual_seed(seed)).to(self.device), dim=-1)
             wps = [goal]
             self.waypoints = wps
+            # Carrier P1 guarded hook: subclasses may bind a full-wave goal per
+            # env (no-op when the method is absent; default path byte-identical).
+            _p1_hook = getattr(self, "p1_bind_env_goal", None)
+            if _p1_hook is not None:
+                _p1_hook(env_name)
             game = None
             try:
                 game = arcade.make(env_name)

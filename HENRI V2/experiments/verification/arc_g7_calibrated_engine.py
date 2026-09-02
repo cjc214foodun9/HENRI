@@ -501,7 +501,26 @@ def main() -> int:
             except Exception:
                 pass
 
-    engine = G7CalibratedAffordanceEngine(
+    # Carrier P1 (default-OFF): goal-grounded policy steering engine. The P1
+    # module is imported ONLY under the flag; the default G7 path is untouched
+    # (differential default-OFF proof: flag absent -> P1 module never imported).
+    use_p1 = os.environ.get("HENRI_P1_GOAL_STEERING") == "1"
+    full_goals = None
+    if use_p1:
+        from arc_p1_goal_steering_engine import (  # lazy, flag-gated
+            P1GoalSteeringEngine,
+            build_p1_full_goals,
+            require_p1_flag,
+        )
+        require_p1_flag()
+        engine_cls = P1GoalSteeringEngine
+        full_goals = build_p1_full_goals(
+            args.trajectory_bank, args.trajectory_jsonl, env_names,
+            device=device)
+    else:
+        engine_cls = G7CalibratedAffordanceEngine
+
+    engine = engine_cls(
         transitions_g4=transitions_g4, topk_masks=topk_masks,
         theta=[0.0] * len(routes),
         tau=[tau_cal[a] for a in range(len(routes))],
@@ -516,6 +535,8 @@ def main() -> int:
         waypoint_advance_thresh=args.waypoint_advance_thresh,
         langevin_temp=LANGEVIN_TEMP, tau_stall=args.tau_stall,
         ingress=ingress)
+    if full_goals is not None:
+        engine._p1_full_goals = full_goals
 
     result = engine.run_gauntlet(
         env_names, fast_encoder=FastFullDWaveEncoder(
@@ -529,6 +550,16 @@ def main() -> int:
     # result.update(base_result) clobbered steps_done to 0 after a full run).
     result = finalize_receipt(base_result, result)
     result["pg1_min_auc"] = pg1_min_auc
+    if use_p1:
+        result["policy_mode"] = "P1_GOAL_STEERING"
+        result["p1_score_calls"] = engine._p1_score_calls
+        if engine._p1_latencies_ms:
+            result["p1_kernel_latency_ms"] = (
+                sum(engine._p1_latencies_ms) / len(engine._p1_latencies_ms))
+        if engine._p1_drop_accum is not None and engine._p1_score_calls > 0:
+            result["p1_mean_potential_drops"] = [
+                float(v) / engine._p1_score_calls
+                for v in engine._p1_drop_accum]
     pathlib.Path(receipt_out).write_text(json.dumps(result, indent=2, default=str))
     print(json.dumps(result, indent=2, default=str))
     return 0
