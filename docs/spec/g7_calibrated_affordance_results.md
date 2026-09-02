@@ -8,11 +8,11 @@
 
 ## Verdict — SEALED FAIL-CLOSED (27th falsification / 28th carrier)
 
-`G7_AFFORDANCE_FIT_COLLAPSE` — sealed `#25e96e09…` @1,197 (`CARRIER_EXECUTION_VERDICT`, parent `#75873ea1` launch-#1 BLOCKED_INFRA @1,192). **W0 STAYS GATED.** No promotion to `main`.
+`G7_AFFORDANCE_FIT_COLLAPSE` — sealed `#25e96e09…` @1,198 (`CARRIER_EXECUTION_VERDICT`, parent `#75873ea1` launch-#1 BLOCKED_INFRA @1,193). **W0 STAYS GATED.** No promotion to `main`.
 
 ## Launch #1 — BLOCKED_INFRA (zero steps, no verdict)
 
-`#75873ea1` @1,192: PG1 pre-flight PASSED (first full clearance ever) then env #10 `bp35` transient `three.arcprize.org` read-timeout → `arcade.make()` → None → inherited `G4_ARCADE_MAKE_NONE`. Receipt-clobber bug exposed (`result.update(base_result)` zeroed `steps_done`) → fixed in `dce55af` (`finalize_receipt`, live fields win) + regression test. Startup-refusal rule: record + relaunch, NO verdict, NO quarantine.
+`#75873ea1` @1,193: PG1 pre-flight PASSED (first full clearance ever) then env #10 `bp35` transient `three.arcprize.org` read-timeout → `arcade.make()` → None → inherited `G4_ARCADE_MAKE_NONE`. Receipt-clobber bug exposed (`result.update(base_result)` zeroed `steps_done`) → fixed in `dce55af` (`finalize_receipt`, live fields win) + regression test. Startup-refusal rule: record + relaunch, NO verdict, NO quarantine.
 
 ## Launch #2 — LIVE GATE EVALUATION (first in project history)
 
@@ -43,7 +43,7 @@ Receipt SHA `a95e4ee6…`, wall 1,147 s, exit 0, scorecard `42e7652e`.
 
 ## Chain state
 
-28 carriers, 27 sealed falsifications (G7 = 27th), 0 solved envs. Ledger head @1,197 (`#25e96e09…`); events @1,190 packet, @1,191 prereg seal, @1,192 launch-#1 BLOCKED_INFRA, @1,196 G7_LAUNCH2_COMPLETE (`#cc06ce70…`), @1,197 verdict. G7 results doc committed on branch tip; launch-#1 evidence preserved under `/tmp/henri_g7_calibrated/`, launch-#2 under `/tmp/henri_g7_calibrated_l2/`.
+28 carriers, 27 sealed falsifications (G7 = 27th), 0 solved envs. Ledger head @1,198 (`#25e96e09…`, 1,199 records verified); events @1,190 packet, @1,191 prereg seal, @1,193 launch-#1 BLOCKED_INFRA, @1,197 G7_LAUNCH2_COMPLETE (`#cc06ce70…`), @1,198 verdict. G7 results doc committed on branch tip; launch-#1 evidence preserved under `/tmp/henri_g7_calibrated/`, launch-#2 under `/tmp/henri_g7_calibrated_l2/`.
 
 ## Next levers (NOT authorized — require new directive)
 
