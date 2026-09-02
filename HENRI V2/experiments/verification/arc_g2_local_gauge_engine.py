@@ -251,20 +251,22 @@ def predict_affordance_logits(pooled: torch.Tensor, b: torch.Tensor,
 
 
 def stall_cosine_labels(psi_flat, nxt_flat, tau_stall=TAU_STALL):
-    """Norm-invariant stall-cosine labels on canonical per-block unit waves.
+    """Norm-invariant stall-cosine labels: FLAT norm-divided cosine on the
+    as-captured waves (amplitude-weighted; NO per-block renormalization).
 
-    psi_flat/nxt_flat [N, 65536] (or [N, M, 8]). Normalizes per block to the
-    canonical unit-norm geometry (HENRI invariant ||w_k||_2 = 1.0), then
-    divides the flat dot by the flat norms. Guard against the unnormalized-
-    bank defect class (OBSERVED: bank psi ||.|| ~ 14-22 while next_wave
-    ||.|| = 1.0; a raw-dot label corrupted the G2 launch to 0.8% positives
-    instead of the true 21%).
+    cos = |<a,b>| / (||a|| ||b||) on the flat [N, 65536] waves — invariant
+    under global scaling. Per-block renormalization would change the metric
+    to a mean of per-block cosines (equal block weight), which over-weights
+    unstable low-amplitude blocks and drifts the class balance from the
+    prereg-calibrated 19-23% moving per action to 0-73% (OBSERVED launch
+    #2: actions 0-3 labeled 62-73% moving, action 4 0% — G2 label-geometry
+    defect, 0 live steps, relaunched with identical bounds). The bank's
+    next_wave is flat-unit (||.||=1.0); psi is raw (||.||~14-22), so the
+    flat division is required and is scale-invariant.
     """
-    psi_full = F.normalize(psi_flat.float().view(psi_flat.shape[0], -1, BLK), p=2, dim=-1)
-    nxt_full = F.normalize(nxt_flat.float().view(nxt_flat.shape[0], -1, BLK), p=2, dim=-1)
-    flat_p = psi_full.reshape(psi_full.shape[0], -1)
-    flat_n = nxt_full.reshape(nxt_full.shape[0], -1)
-    cos = (flat_p * flat_n).sum(-1) / (flat_p.norm(dim=-1) * flat_n.norm(dim=-1) + 1e-12)
+    a = psi_flat.float().reshape(psi_flat.shape[0], -1)
+    b = nxt_flat.float().reshape(nxt_flat.shape[0], -1)
+    cos = (a * b).sum(-1).abs() / ((a.norm(dim=-1) * b.norm(dim=-1)).clamp(min=1e-12))
     return (cos < tau_stall).float(), cos
 
 
@@ -747,14 +749,15 @@ def main():
     nxt_flat = torch.from_numpy(np.asarray(data["next_wave"])).float().to(device)
     onehot = torch.from_numpy(np.asarray(data["actions_onehot"])).to(torch.uint8)
 
-    # Canonical [8192, 8] geometry: per-block unit norm (HENRI invariant
-    # ||w_k||_2 = 1.0). The bank's psi is NOT unit-norm (OBSERVED: ||psi_t||
-    # ~ 14-22, next_wave ||.|| = 1.0) — a raw-dot label would be corrupted
-    # (harness defect G2_HARNESS_DEFECT_LABEL_NORM, 0 live steps, relaunched
-    # with identical bounds). Normalize per-block, then the stall-cosine
-    # label is norm-invariant.
-    psi_full = F.normalize(psi_flat.view(-1, B_FULL, BLK), p=2, dim=-1)
-    nxt_full = F.normalize(nxt_flat.view(-1, B_FULL, BLK), p=2, dim=-1)
+    # Canonical flat-unit geometry for the classifier input (matches the
+    # live encoder emission: fast encoder and bank next_wave are flat-unit
+    # ||.||=1.0; bank psi is raw ||.||~14-22 — flat-normalize it). The
+    # stall-cosine label is FLAT norm-divided (scale-invariant; per-block
+    # renormalization is a label-geometry defect — OBSERVED launch #2).
+    psi_full = F.normalize(psi_flat.float().reshape(psi_flat.shape[0], -1), p=2, dim=-1) \
+        .view(-1, B_FULL, BLK)
+    nxt_full = F.normalize(nxt_flat.float().reshape(nxt_flat.shape[0], -1), p=2, dim=-1) \
+        .view(-1, B_FULL, BLK)
 
     # Full-D stall-cosine labels (PDF lever 2); norm-invariant helper.
     y, _cos = stall_cosine_labels(psi_flat, nxt_flat, args.tau_stall)
