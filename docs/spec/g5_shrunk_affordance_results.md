@@ -2,7 +2,7 @@
 
 **Directive:** `HENRI-DIR-2026-09-V3-CARRIER-G5-SHRINKAGE-DIRECTIVE` (SHA `fc2dd03a…`, 17,334 B, 315 lines).
 **Prereg:** `docs/spec/g5_shrunk_affordance_preregistration.md` (SHA `8a6fd670…`, sealed `#88e18da9` @1,179).
-**Verdict:** `G5_AFFORDANCE_FIT_COLLAPSE` — sealed `#<ledger-hash>` (ledger @1,180). 25th sealed falsification / 26th carrier.
+**Verdict:** `G5_AFFORDANCE_FIT_COLLAPSE` — sealed `#eeed5b173cc1854a` (ledger @1,181). 25th sealed falsification / 26th carrier.
 **Branch:** `feat/carrier-g5-shrunk-affordance` @ `56ba8e8` (engine + tests, remote CUDA 13/13).
 
 ## Gates (OBSERVED, remote CUDA run, seed 20260928, 12 envs × 150 pre-flight)
