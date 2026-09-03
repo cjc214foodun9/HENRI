@@ -501,11 +501,13 @@ def main() -> int:
             except Exception:
                 pass
 
-    # Carrier P1/G8 (default-OFF): goal-grounded policy steering engines.
+    # Carrier P1/G8/C1 (default-OFF): goal-grounded policy steering engines.
     # Modules are imported ONLY under their flag; the default G7 path is
     # untouched (differential default-OFF proof: flags absent -> modules
-    # never imported). G8 subsumes P1 when both flags are set.
+    # never imported). G8 subsumes P1 when both flags are set; C1 (SO(8)
+    # rotor steering) sits between G8 and P1 in precedence.
     use_g8 = os.environ.get("HENRI_G8_SUBGOAL") == "1"
+    use_c1 = os.environ.get("HENRI_C1_SO8_ROTORS") == "1"
     use_p1 = os.environ.get("HENRI_P1_GOAL_STEERING") == "1"
     full_goals = None
     g8_chains = None
@@ -518,6 +520,17 @@ def main() -> int:
         require_g8_flag()
         engine_cls = G8SubgoalSteeringEngine
         g8_chains = build_g8_waypoint_chains(
+            args.trajectory_bank, args.trajectory_jsonl, env_names,
+            device=device)
+    elif use_c1:
+        from arc_c1_steering_engine import (  # lazy, flag-gated
+            C1RotorSteeringEngine,
+            require_c1_flag,
+        )
+        from arc_p1_goal_steering_engine import build_p1_full_goals
+        require_c1_flag()
+        engine_cls = C1RotorSteeringEngine
+        full_goals = build_p1_full_goals(
             args.trajectory_bank, args.trajectory_jsonl, env_names,
             device=device)
     elif use_p1:
@@ -576,6 +589,16 @@ def main() -> int:
         if engine._p1_drop_accum is not None and engine._p1_score_calls > 0:
             result["p1_mean_potential_drops"] = [
                 float(v) / engine._p1_score_calls
+                for v in engine._p1_drop_accum]
+    elif use_c1:
+        result["policy_mode"] = "C1_SO8_ROTOR_STEERING"
+        result.update(engine.c1_receipt_fields())
+        if engine.c1_latencies_ms:
+            result["c1_kernel_latency_ms"] = (
+                sum(engine.c1_latencies_ms) / len(engine.c1_latencies_ms))
+        if engine._p1_drop_accum is not None and engine.c1_score_calls > 0:
+            result["c1_mean_potential_drops"] = [
+                float(v) / engine.c1_score_calls
                 for v in engine._p1_drop_accum]
     elif use_p1:
         result["policy_mode"] = "P1_GOAL_STEERING"
