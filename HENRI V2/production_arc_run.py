@@ -2379,6 +2379,12 @@ def run():
                         observed_next_wave=observed_next_wave,
                         grid_dist=grid_dist if TASK_WEIGHTED_EIG else None,
                     )
+                    # Optional grounded VLA consumer receives only the
+                    # observed task-progress delta; frame change is not used
+                    # as a proxy for score improvement.
+                    orch.observe_vla_outcome(
+                        game_action, delta_nu=float(task_progressed)
+                    )
                 # Phase 8.20 C1: online Lie generator update + C3 thermostat
                 # observe from the observed SU(3) field transition (default OFF).
                 p820_update_info = None

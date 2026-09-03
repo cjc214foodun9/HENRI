@@ -4,7 +4,7 @@
 **Source:** `G:\My Drive\HENRI_Inbox\Project_HENRI___henri-bundle_Directive_-_VLA_Ingress__Egress__and_Language_Substrate.md`
 **Source hash:** SHA-256 `a4a59cfa019bd67accd6b63a2952474f0fc24cede3c84b3ad4744876f93647ef`, 12,816 bytes (authenticated 2026-09-03)
 **Base commit:** `b31f873` (worktree `vla-grounded`, branch `feat/vla-grounded-ml-substrate`)
-**Status:** CPU contract suite green (23/23); CUDA gates NOT authorized; no production wiring.
+**Status:** CPU contract suite green (25 passed, 1 CUDA test skipped locally); CUDA gates pending remote execution; causal planner consumer wired behind `HENRI_CAUSAL_PLANNER=1`.
 
 ---
 
@@ -29,10 +29,12 @@
 
 | Artifact | Purpose | Notes |
 |---|---|---|
-| `HENRI V2/henri_metric_ingress.py` | Patch-structured, translation-covariant complex-phase visual ingress; optional semantic anchor projector (zero-trainable, QR) | No global mean pooling. Color phase inside the frequency ramp (defect caught pre-commit: color must not factor out). Sparse grids: empty patches contribute zero bands; fail-closed only on fully-empty grids |
-| `HENRI V2/henri_causal_planner.py` | `BoundedExteroceptiveEFEPlanner`: G(a) = β_prag·d_goal + λ_epis·S_RMS − γ_val·E[Δν]; rolling k=5 failure trace → retroactive ν=−1 + anisotropic noise injection | Consumes caller-supplied predictions; does NOT reimplement transition dynamics; default-OFF (never imported by runner) |
+| `HENRI V2/henri_metric_ingress.py` | Patch-structured, shift-sensitive complex-phase visual ingress; optional semantic anchor projector (zero-trainable, QR) | No global mean pooling. Color phase inside the frequency ramp (defect caught pre-commit: color must not factor out). Sparse grids: empty patches contribute zero bands; fail-closed only on fully-empty grids |
+| `HENRI V2/henri_causal_planner.py` | `BoundedExteroceptiveEFEPlanner`: G(a) = β_prag·d_goal + λ_epis·S_RMS − γ_val·E[Δν]; rolling k=5 failure trace → retroactive ν=−1 + anisotropic noise injection | Consumes caller-supplied predictions; does NOT reimplement transition dynamics; lazy import and default-OFF consumer flag `HENRI_CAUSAL_PLANNER` |
 | `HENRI V2/henri_hopfield_egress.py` | Canonical-codebook validator layer over the LIVE `ContinuousHopfieldCleanup` core (β=8.0) | Adds fail-closed syntax rejection (`EgressSyntaxRejectedError`), canonical-id allowlist, `noise_floor_sigma = ε/√D` helper. Hopfield core itself was ALREADY IMPLEMENTED (`henri_egress.py`) |
-| `HENRI V2/tests/contract/test_vla_grounded_components.py` | Gate matrix G-INGRESS / G-VALENCE / G-EGRESS proxies at D=512 CPU | 23/23 PASS (Python 3.14, isolated env, RC=0, artifact `vla_test_run2.txt`) |
+| `HENRI V2/darwinian_phase_swarm.py` | Approved live consumer wiring | Flagged branch feeds live `EFEPlanner.transition` predictions into the bounded causal scorer; default path calls the existing planner unchanged |
+| `HENRI V2/production_arc_run.py` | External-outcome wiring | Forwards only observed `task_progressed` deltas to the causal consumer; frame change is not used as a score proxy |
+| `HENRI V2/tests/contract/test_vla_grounded_components.py` | Gate matrix plus consumer/device contracts | 25 passed, 1 CUDA boundary test skipped locally |
 | `docs/spec/vla_grounding_synthesis.md` | This document | |
 
 ## 4. Gate matrix status (directive §4)
@@ -48,7 +50,7 @@
 ## 5. Honest limits (evidence labels)
 
 - All module tests are `OBSERVED` CPU-proxy results, NOT CUDA verification and NOT external task outcomes.
-- No module is wired into the production runner; nothing here changes the default path. Wiring any consumer is `REQUIRES_APPROVAL`.
+- Ingress, validator egress, and the causal scorer are not equivalent to a complete VLA or language system. Only the causal scorer has an approved production consumer, and it remains default-OFF.
 - The semantic anchor supplies orthogonal geometry, not world knowledge — it does not close the AAII v4.1.1 knowledge gap.
 - The Hopfield egress validator does not add capacity; U4 `BLOCKED_EGRESS_CAPACITY` and K2/U2 `BLOCKED_SEMANTIC_CAPACITY` verdicts stand.
 - Sealed records unchanged: KG5′ instrument at `b31f873` still requires `APPROVE_REMOTE_RUN`; carrier-k3 worktree untouched.
