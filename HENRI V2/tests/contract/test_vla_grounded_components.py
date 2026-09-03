@@ -228,6 +228,76 @@ class TestCausalPlanner:
 
 
 # ---------------------------------------------------------------------------
+# LIVE CONSUMER WIRING
+# ---------------------------------------------------------------------------
+class TestLiveCausalConsumer:
+    def test_default_off_does_not_construct_consumer(self, monkeypatch):
+        monkeypatch.delenv("HENRI_CAUSAL_PLANNER", raising=False)
+        from darwinian_phase_swarm import HenriSwarmOrchestrator
+
+        orch = HenriSwarmOrchestrator(
+            num_experts=8, d_model=64, r_rank=2, num_blocks=8
+        )
+        assert orch._vla_causal_planner is None
+        active = F.normalize(torch.randn(8, 8), p=2, dim=-1)
+        boundary = F.normalize(torch.randn(2, 8, 8), p=2, dim=-1)
+        action, predicted, table = orch.plan_action(active, boundary, top_k=3)
+        assert action in orch.decoder.action_to_id
+        assert predicted.shape == active.shape
+        assert table and all("vla_causal" not in row for row in table)
+
+    def test_enabled_consumer_selects_and_receives_external_outcome(self, monkeypatch):
+        monkeypatch.setenv("HENRI_CAUSAL_PLANNER", "1")
+        from darwinian_phase_swarm import HenriSwarmOrchestrator
+
+        orch = HenriSwarmOrchestrator(
+            num_experts=8, d_model=64, r_rank=2, num_blocks=8
+        )
+        active = F.normalize(torch.randn(8, 8), p=2, dim=-1)
+        boundary = F.normalize(torch.randn(2, 8, 8), p=2, dim=-1)
+        action, predicted, table, chosen = orch.plan_action(
+            active, boundary, top_k=3, return_chosen=True
+        )
+        assert orch._vla_causal_planner is not None
+        assert chosen["vla_causal"] is True
+        assert chosen["action"] == action
+        assert predicted.shape == active.shape
+        assert len(table) == 3
+        assert all(row["vla_causal"] for row in table)
+
+        for _ in range(5):
+            orch.observe_vla_outcome(action, delta_nu=0.0)
+        action_idx = orch.decoder.action_to_id[action]
+        assert orch._vla_causal_planner.expected_delta(action_idx) == -1.0
+
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA contract")
+    def test_cuda_component_boundaries(self):
+        device = torch.device("cuda")
+        ing = HenriMetricPatchIngress(
+            d_model=D, num_blocks=NB, patch_size=PATCH
+        ).to(device)
+        grid = torch.zeros(GRID, GRID, dtype=torch.long, device=device)
+        grid[1:3, 1:3] = 3
+        wave = ing.encode_grid(grid)
+        assert wave.device.type == "cuda"
+        assert abs(float(wave.norm().cpu()) - 1.0) < 1e-5
+
+        causal = BoundedExteroceptiveEFEPlanner(d_model=D, num_actions=4)
+        pred = F.normalize(torch.randn(D, device=device), p=2, dim=-1)
+        goal = F.normalize(torch.randn(D, device=device), p=2, dim=-1)
+        plate = F.normalize(torch.randn(2, D, device=device), p=2, dim=-1)
+        score = causal.score_action(pred, 0, goal_wave=goal, baseplate=plate)
+        assert math.isfinite(score)
+
+        egr = CanonicalCodebookEgress(dim=D, beta=8.0)
+        rows = F.normalize(torch.randn(2, D, device=device), p=2, dim=-1)
+        egr.register(rows, [0, 1])
+        result = egr.decode(rows[0])
+        assert result.status == "SNAPPED"
+        assert result.snapped_index == 0
+
+
+# ---------------------------------------------------------------------------
 # G-EGRESS (canonical codebook + syntax rejection)
 # ---------------------------------------------------------------------------
 class TestHopfieldEgress:

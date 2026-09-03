@@ -16,10 +16,11 @@ rolling window of k=5 steps for the selected action, retroactively assign
 nu = -1.0 and inject anisotropic thermal noise into the failing action's
 operator coordinates.
 
-Default-OFF: gated by HENRI_CAUSAL_PLANNER=1; never imported by the production
-runner.  This module does NOT reimplement transition dynamics.  It consumes a
-caller-supplied prediction map {action_index: predicted_wave} (the live
-LowRankCoupledTransition supplies that map in a real integration).
+Default-OFF: gated by HENRI_CAUSAL_PLANNER=1; imported lazily by the
+approved orchestrator consumer only when enabled.  This module does NOT
+reimplement transition dynamics.  It consumes a caller-supplied prediction map
+{action_index: predicted_wave} (the live LowRankCoupledTransition supplies that
+map in the approved integration).
 
 All methods are CPU-testable at reduced scale; no checkpoint requirement.
 """

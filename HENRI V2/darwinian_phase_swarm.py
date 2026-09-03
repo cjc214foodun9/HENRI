@@ -346,6 +346,16 @@ class HenriSwarmOrchestrator(nn.Module):
             for a in self.decoder.id_to_action.values()
         ])
         self.planner.cleanup.store_engrams(action_real)
+        # Optional grounded VLA consumer.  Lazy import keeps the default path
+        # free of the new component and preserves the historical constructor
+        # and planner behavior when the flag is absent.
+        self._vla_causal_planner = None
+        self._vla_causal_enabled = os.environ.get("HENRI_CAUSAL_PLANNER", "0") == "1"
+        if self._vla_causal_enabled:
+            from henri_causal_planner import BoundedExteroceptiveEFEPlanner
+            self._vla_causal_planner = BoundedExteroceptiveEFEPlanner(
+                d_model=d_model, num_actions=num_actions
+            )
         # Zone C SegmentCache: long-term engram memory. Lazily connected on
         # first use so construction never blocks on a database round-trip.
         self._segment_cache = None
@@ -400,6 +410,70 @@ class HenriSwarmOrchestrator(nn.Module):
             waves.append((action, w_grid))
         return waves
 
+    @torch.no_grad()
+    def _plan_action_vla(self, active_wave: torch.Tensor, boundary_axioms: torch.Tensor,
+                         candidates: list, goal_wave: torch.Tensor = None):
+        """Use the approved bounded causal scorer on live transition predictions."""
+        causal = self._vla_causal_planner
+        if causal is None:  # pragma: no cover - guarded by caller
+            raise RuntimeError("VLA causal planner is not enabled")
+        predictions = {}
+        action_by_idx = {}
+        for action, action_wave in candidates:
+            action_idx = self.decoder.action_to_id.get(action)
+            if action_idx is None or action_idx in predictions:
+                continue
+            # This is the live transition consumer, not a duplicate dynamics
+            # model.  Flatten only at the bounded scorer boundary.
+            predicted = self.planner.transition(active_wave, action_wave)
+            predictions[action_idx] = predicted.reshape(-1).to(torch.float32)
+            action_by_idx[action_idx] = action
+        if not predictions:
+            raise ValueError("VLA causal planner received no indexed candidates")
+
+        plate = boundary_axioms.reshape(boundary_axioms.shape[0], -1)
+        scored = []
+        for action_idx, predicted in predictions.items():
+            efe = causal.score_action(
+                predicted, action_idx, goal_wave=goal_wave, baseplate=plate
+            )
+            scored.append({
+                "action": action_by_idx[action_idx],
+                "efe": float(efe),
+                "predicted_wave": predicted.view_as(active_wave),
+                "goal_distance": float(
+                    causal.cosine_distance(predicted, goal_wave)
+                ) if goal_wave is not None else 0.5,
+                "constraint_penalty": 0.0,
+                "raw_l2_residual": 0.0,
+                "rejected": False,
+                "lambda_active": 0.0,
+                "fallback_executed": False,
+                "admissible_count": len(predictions),
+                "residual_type": "VLA_CAUSAL",
+                "vla_causal": True,
+                "explored": False,
+            })
+        scored.sort(key=lambda row: (row["efe"], self.decoder.action_to_id[row["action"]]))
+        spread = scored[-1]["efe"] - scored[0]["efe"] if len(scored) > 1 else 0.0
+        for row in scored:
+            row["spread"] = spread
+            row["chosen"] = row is scored[0]
+        chosen = dict(scored[0])
+        action = chosen["action"]
+        causal.last_selected_action = self.decoder.action_to_id[action]
+        return action, chosen["predicted_wave"], scored, chosen
+
+    def observe_vla_outcome(self, action, delta_nu: float) -> None:
+        """Forward an observed external progress delta to the causal consumer."""
+        causal = self._vla_causal_planner
+        if causal is None:
+            return
+        action_idx = self.decoder.action_to_id.get(action)
+        if action_idx is None:
+            raise ValueError(f"unmapped action for VLA outcome: {action!r}")
+        causal.observe_outcome(action_idx, delta_nu)
+
     def plan_action(self, active_wave: torch.Tensor, boundary_axioms: torch.Tensor, top_k: int = 4,
                     return_chosen: bool = False, goal_wave: torch.Tensor = None,
                     grid_dist: float = None, allowed_actions=None,
@@ -418,10 +492,15 @@ class HenriSwarmOrchestrator(nn.Module):
             penalties (C3).
         """
         candidates = self.candidate_action_waves(top_k=top_k, allowed_actions=allowed_actions)
-        action, predicted, table, chosen = self.planner.select_action(
-            active_wave, candidates, boundary_axioms, goal_wave=goal_wave,
-            grid_dist=grid_dist, su3_field=su3_field, efe_penalties=efe_penalties
-        )
+        if self._vla_causal_planner is not None:
+            action, predicted, table, chosen = self._plan_action_vla(
+                active_wave, boundary_axioms, candidates, goal_wave=goal_wave
+            )
+        else:
+            action, predicted, table, chosen = self.planner.select_action(
+                active_wave, candidates, boundary_axioms, goal_wave=goal_wave,
+                grid_dist=grid_dist, su3_field=su3_field, efe_penalties=efe_penalties
+            )
         if return_chosen:
             return action, predicted, table, chosen
         return action, predicted, table
