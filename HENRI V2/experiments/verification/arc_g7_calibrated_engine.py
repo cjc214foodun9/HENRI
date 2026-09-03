@@ -507,6 +507,7 @@ def main() -> int:
     # never imported). G8 subsumes P1 when both flags are set; C1 (SO(8)
     # rotor steering) sits between G8 and P1 in precedence.
     use_g8 = os.environ.get("HENRI_G8_SUBGOAL") == "1"
+    use_k3 = os.environ.get("HENRI_K3_KOOPMAN") == "1"
     use_c1 = os.environ.get("HENRI_C1_SO8_ROTORS") == "1"
     use_p1 = os.environ.get("HENRI_P1_GOAL_STEERING") == "1"
     full_goals = None
@@ -520,6 +521,21 @@ def main() -> int:
         require_g8_flag()
         engine_cls = G8SubgoalSteeringEngine
         g8_chains = build_g8_waypoint_chains(
+            args.trajectory_bank, args.trajectory_jsonl, env_names,
+            device=device)
+    elif use_k3:
+        # K3 (empirical block-Koopman) replaces the C1 rotor dictionary per
+        # the supplied spec's immediate action item; it takes precedence over
+        # the sealed-FALSIFIED C1 when both flags are set (default-OFF: absent
+        # flags -> module never imported).
+        from arc_k3_steering_engine import (  # lazy, flag-gated
+            K3KoopmanSteeringEngine,
+            require_k3_flag,
+        )
+        from arc_p1_goal_steering_engine import build_p1_full_goals
+        require_k3_flag()
+        engine_cls = K3KoopmanSteeringEngine
+        full_goals = build_p1_full_goals(
             args.trajectory_bank, args.trajectory_jsonl, env_names,
             device=device)
     elif use_c1:
@@ -590,6 +606,19 @@ def main() -> int:
             result["p1_mean_potential_drops"] = [
                 float(v) / engine._p1_score_calls
                 for v in engine._p1_drop_accum]
+    elif use_k3:
+        result["policy_mode"] = "K3_EMPIRICAL_KOOPMAN"
+        result.update(engine.k3_receipt_fields())
+        if engine.k3_latencies_ms:
+            result["k3_kernel_latency_ms"] = (
+                sum(engine.k3_latencies_ms) / len(engine.k3_latencies_ms))
+        if engine._p1_drop_accum is not None and engine.k3_score_calls > 0:
+            result["k3_mean_potential_drops"] = [
+                float(v) / engine.k3_score_calls
+                for v in engine._p1_drop_accum]
+        result["k3_seal_basis_mean_delta_nu_wp"] = engine.k3_seal_basis_dnu()
+        result["k3_per_env_dnu_mean"] = engine.k3_per_env_dnu_mean()
+        result["k3_goal_envs"] = sorted(engine.k3_envs_with_goal)
     elif use_c1:
         result["policy_mode"] = "C1_SO8_ROTOR_STEERING"
         result.update(engine.c1_receipt_fields())

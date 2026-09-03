@@ -517,6 +517,12 @@ class G4AlignedEngine:
                 else:
                     c_next = float((psi64_next * wp).sum(-1).abs().clamp(0.0, 1.0).item())
                 dnus.append(c_next - c_t)
+                # Carrier K3 guarded meter hook: per-env dnu observer for the
+                # goal-available seal basis (absent on non-K3 engines -> no-op,
+                # default path byte-identical).
+                _k3_obs = getattr(self, "k3_observe_dnu", None)
+                if _k3_obs is not None:
+                    _k3_obs(c_next - c_t)
                 if c_next > c_t:
                     self.creeps += 1
                 cur_levels = _safe_levels(obs) if _safe_levels else 0
