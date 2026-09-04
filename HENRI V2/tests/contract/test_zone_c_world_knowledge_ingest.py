@@ -17,7 +17,6 @@ import pytest
 
 from zone_c_world_knowledge_encoder_pin import EncoderDisabledError
 from zone_c_world_knowledge_ingest import (
-    EncoderUnavailableError,
     IngestDisabledError,
     SourceHashMismatchError,
     chunk_text,
@@ -119,10 +118,25 @@ def test_fixture_encode_deterministic_shape():
     assert proj.shape == (2000,)
 
 
-def test_real_mode_blocked_no_encoder(monkeypatch, scene):
+def test_real_mode_codec_present_then_dsn_gate(monkeypatch, scene):
+    """K5 §9 codec now exists (C2): real mode resolves it, then needs a DSN."""
     monkeypatch.setenv("K5_INGEST_ENCODER", "1")
-    with pytest.raises(EncoderUnavailableError):
+    monkeypatch.delenv("K5_TZCSM_TEST_DSN", raising=False)
+    with pytest.raises(IngestDisabledError):
         ingest(str(scene["manifest"]), str(scene["tmp"]), mode="real")
+
+
+def test_real_mode_roundtrip_rollback_when_dsn_set(monkeypatch, scene):
+    dsn = os.environ.get("K5_TZCSM_TEST_DSN")
+    if not dsn:
+        pytest.skip("K5_TZCSM_TEST_DSN not set")
+    monkeypatch.setenv("K5_INGEST_ENCODER", "1")
+    report = ingest(
+        str(scene["manifest"]), str(scene["tmp"]),
+        mode="real", dsn=dsn, commit=False,
+    )
+    assert report["tx"] == "ROLLED_BACK_RECEIPT_ONLY"
+    assert report["sources"][0]["chunks_written"] >= 1
 
 
 def test_fixture_mode_requires_ingest_flag(monkeypatch, scene):
