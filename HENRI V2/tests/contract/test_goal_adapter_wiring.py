@@ -33,7 +33,12 @@ D_MODEL = 65536
 class TestSealedArtifact(unittest.TestCase):
     def test_adapter_file_hash_matches_sealed(self):
         raw = ADAPTER.read_bytes()
-        self.assertEqual(hashlib.sha256(raw).hexdigest(), SEALED_ADAPTER_SHA)
+        # Canonical LF bytes (git blob normalization; sealed pin 0341a278 is
+        # the LF digest). Windows CRLF checkouts hash raw CRLF bytes and
+        # would mismatch the sealed LF value without this normalization.
+        canonical = raw.replace(b"\r\n", b"\n")
+        self.assertEqual(
+            hashlib.sha256(canonical).hexdigest(), SEALED_ADAPTER_SHA)
 
 
 class TestAdapterAlgebra(unittest.TestCase):

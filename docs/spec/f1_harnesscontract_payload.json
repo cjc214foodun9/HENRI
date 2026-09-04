@@ -1,0 +1,15 @@
+{
+  "spec_id": "SPEC-2026-08-28-F1-CARRIER",
+  "commit_hash": "0e490531e64a0b9f148e712aae5fff3dd62fbe0d",
+  "entrypoint": "python -m pytest tests/contract/test_f1_carrier_kernel.py -q --tb=short",
+  "vast_hardware_spec": {
+    "gpu_type": "RTX 5090",
+    "min_vram_gb": 24,
+    "cuda_version": "cu130"
+  },
+  "verification_suite": {
+    "synthetic_test_cmd": "cd <worktree> && PYTHONPATH=\"HENRI V2\" /venv/main/bin/python -m pytest \"HENRI V2/tests/contract/test_f1_carrier_kernel.py\" -q --tb=short",
+    "gradient_check_cmd": "cd <worktree> && PYTHONPATH=\"HENRI V2\" /venv/main/bin/python -m pytest \"HENRI V2/tests/contract/test_f1_carrier_kernel.py::test_triton_matches_fp64_reference\" \"HENRI V2/tests/contract/test_f1_carrier_kernel.py::test_triton_norm_preservation_and_step\" \"HENRI V2/tests/contract/test_f1_carrier_kernel.py::test_triton_deterministic_and_marker\" -q --tb=short",
+    "benchmark_cmd": ""
+  }
+}

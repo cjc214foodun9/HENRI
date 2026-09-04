@@ -1,0 +1,15 @@
+{
+  "spec_id": "SPEC-2026-08-29-F2-EGRESS",
+  "commit_hash": "6bdbc0c5dc0db451569a380ab1125d1a5a53db8c",
+  "entrypoint": "env HENRI_F2_EGRESS=1 PYTHONPATH=\"HENRI V2\" /venv/main/bin/python \"HENRI V2/experiments/verification/f2_egress_smoke.py\" --N 2048 --D 65536 --V 32000",
+  "vast_hardware_spec": {
+    "gpu_type": "RTX 5090",
+    "min_vram_gb": 24,
+    "cuda_version": "cu130"
+  },
+  "verification_suite": {
+    "synthetic_test_cmd": "env -u VIRTUAL_ENV -u PYTHONPATH -u PYTHONHOME PYTHONPATH=\"HENRI V2\" /c/Python314/python.exe -m pytest \"HENRI V2/tests/contract/test_f2_egress_codebook.py\" -q --tb=short",
+    "gradient_check_cmd": "env HENRI_F2_EGRESS=1 PYTHONPATH=\"HENRI V2\" /venv/main/bin/python \"HENRI V2/experiments/verification/f2_egress_smoke.py\" --N 2048 --D 65536 --V 32000",
+    "benchmark_cmd": "env HENRI_F2_EGRESS=1 PYTHONPATH=\"HENRI V2\" /venv/main/bin/python \"HENRI V2/experiments/verification/f2_egress_smoke.py\" --N 4096 --D 65536 --V 32000"
+  }
+}

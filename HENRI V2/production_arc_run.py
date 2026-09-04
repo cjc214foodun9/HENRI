@@ -45,6 +45,7 @@ from henri_trajectory_bank import TrajectoryBank, bank_enabled_from_env
 from darwinian_phase_swarm import HenriSwarmOrchestrator
 from exteroceptive_sandbox import ExteroceptiveSandboxTransducer
 from henri_vision_encoder import HENRIVisionEncoder
+from henri_r2_mi_estimator import stratum_id
 from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
 from connected_component_segmenter import ConnectedComponentSegmenter
 from sagnac_mcts_planner import SagnacMCTSPlanner
@@ -77,6 +78,8 @@ from arc_public_ingress import (
     resolve_demos,
 )
 from arc_task_functor import compile_task_functor
+from arc_goal_dist import compute_goal_dist_var
+from arc_emergence_gates import compute_emergence_gates
 from arc_phase_map import verify_phase_map_invertibility
 from henri_benchmark_registry import ARCEpisodeTrace
 
@@ -541,9 +544,15 @@ def run():
     HENRI_SFAS_GAMMA = float(os.environ.get("HENRI_SFAS_GAMMA", "0.9") or 0.9)
     if not 0.0 <= HENRI_SFAS_GAMMA < 1.0:
         raise ValueError("HENRI_SFAS_GAMMA must be in [0, 1)")
+    # Universal VLA Pathway doc §4 emergence checklist (default OFF).
+    # Additive gate telemetry + deterministic verifier; NO policy effect.
+    HENRI_EMERGENCE_GATES = os.environ.get("HENRI_EMERGENCE_GATES", "0") == "1"
     HENRI_SFAS_LAMBDA = float(os.environ.get("HENRI_SFAS_LAMBDA", "1.0") or 1.0)
     if HENRI_SFAS_LAMBDA < 0.0:
         raise ValueError("HENRI_SFAS_LAMBDA must be >= 0.0")
+    # M2 horizon-8 open-loop coherence diagnostic (default OFF; telemetry-only,
+    # no action-policy influence). SPEC-2026-08-28-M2SUCC (sealed #bb0be1c9).
+    HENRI_M2_COHERENCE = os.environ.get("HENRI_M2_COHERENCE", "0") == "1"
     # Phase 7.1: public corpus ingress channel (default OFF). Requires an
     # explicit provenance manifest mapping environment ID -> public ARC task
     # ID with corpus path + sha256. Exact match only; no fuzzy fallback.
@@ -1321,6 +1330,23 @@ def run():
         valence = 0.0
         grid_dist = 0.0
         last_action_was_reset = False
+        pre_state_stratum = None
+        _delta_levels = None
+        _last_levels = None
+        # M2 horizon-8 open-loop coherence (default OFF). Pending buffer maps
+        # target step -> (pred_k, k); flushed when the empirical wave arrives.
+        m2_imported = None
+        m2_pending = {}
+        m2_deltas = {}
+        m2_emitted = False
+        if HENRI_M2_COHERENCE:
+            try:
+                from henri_m2_coherence import (
+                    M2_HORIZON, open_loop_rollout, sagnac_delta, due_targets)
+                m2_deltas = {k: [] for k in range(1, M2_HORIZON + 1)}
+                m2_imported = (open_loop_rollout, sagnac_delta, due_targets)
+            except Exception as _m2e:
+                print(f"  [m2] import fail-closed: {type(_m2e).__name__}")
         # Progress-valence EMA state (Task 2.3): per-episode fast/slow
         # baselines of within-invariant motion; None until the first m.
         pv_fast = None
@@ -1340,6 +1366,20 @@ def run():
             t0 = time.perf_counter()
             grid = obs.frame[0].tolist()
             curr_arr = np.array(grid)
+            # R2-successor pre-action state stratum (SPEC-2026-08-28-R2SUCC):
+            # computed from the PRE-action frame ONLY — no future information
+            # enters the stratum. Bins are frozen in henri_r2_mi_estimator.
+            try:
+                _pre_nz = int(np.count_nonzero(curr_arr))
+                _pre_nc = int(len(np.unique(curr_arr)))
+                _pre_shape = list(curr_arr.shape)
+                pre_state_stratum = stratum_id({
+                    "n_nonzero_cells": _pre_nz,
+                    "n_distinct_colors": _pre_nc,
+                    "grid_shape": _pre_shape,
+                })
+            except Exception:
+                pre_state_stratum = None
             if prev_raw_grid is not None:
                 prev_arr = np.array(prev_raw_grid)
                 if curr_arr.shape == prev_arr.shape:
@@ -1358,6 +1398,30 @@ def run():
                 num_objects_segmented = len(obj_records)
 
             state_wave = tokenizer.encode_spatial_grid(grid).squeeze(0).to(DEVICE)
+            # M2: flush pending rollouts whose target step has arrived.
+            # Targets are step+1..step+8 at launch; the flush predicate must
+            # be `t <= step` (a target whose step has arrived), NOT `t == step`
+            # — the old predicate could never match (defect found 2026-08-28:
+            # only horizon-1 values ever emitted; horizons 2-8 stayed None).
+            # The empirical wave is the RAW encoded observation (before recall
+            # blending) — the correct comparison target for the open-loop
+            # predictions.
+            if HENRI_M2_COHERENCE and m2_imported is not None and m2_pending:
+                _open_loop_rollout, _sagnac_delta, _due_targets = m2_imported
+                for _t in _due_targets(m2_pending, step):
+                    # LIST-per-target: pop ALL predictions for the due target
+                    # (one per covering launch) and record each under its own
+                    # horizon k (defect v2: dict-value overwrite kept only the
+                    # latest launch's k=1, so horizons 2..8 were never
+                    # measured).
+                    _items = m2_pending.pop(_t)
+                    for _pred, _k in _items:
+                        try:
+                            _d = _sagnac_delta(_pred, state_wave.detach())
+                            m2_deltas[_k].append(_d)
+                            m2_emitted = True
+                        except Exception:
+                            pass
             raw_wave = state_wave  # pre-blend; recall blending mutates below
 
             # Arm D per-step latent-goal compile (default OFF). One-shot:
@@ -1611,14 +1675,19 @@ def run():
                     state_wave = state_wave / (torch.norm(state_wave, p=2, dim=-1, keepdim=True) + 1e-9)
 
             # Swarm relaxation with SGLD creep (valence drives the thermal
-            # schedule: failure heats, success cools)
+            # schedule: failure heats, success cools). Capture the live
+            # active_temperature from the LAST relaxation step's info dict —
+            # the genuine Langevin temperature signal for the emergence gates.
             sagnac_delta = None
+            _last_swarm_temp = None
             for _ in range(RELAX_STEPS):
-                sagnac_delta, _, _ = orch.process_active_reasoning_step(
+                sagnac_delta, _, _swarm_info = orch.process_active_reasoning_step(
                     state_wave, boundary,
                     t_shock_max=torch.tensor(0.5, device=DEVICE),
                     valence=valence,
                 )
+                if _swarm_info and _swarm_info.get("active_temperature") is not None:
+                    _last_swarm_temp = float(_swarm_info["active_temperature"])
 
             # Latent metrics
             coherence = orch.sagnac_coherence(state_wave, boundary).item()
@@ -1919,6 +1988,18 @@ def run():
                             _action_waves, _tr,
                             horizon=HENRI_SFAS_HORIZON,
                             gamma=HENRI_SFAS_GAMMA)
+                        # R2 (2026-08-27): capture the pre-rerank EFE table
+                        # (action id + raw EFE) for the score/action/outcome
+                        # telemetry join. Additive; selection logic unchanged.
+                        _pre_rows = []
+                        for _r in efe_table:
+                            _aid = _r.get("action")
+                            _k = int(_aid.value if hasattr(_aid, "value") else _aid) \
+                                if _aid is not None else None
+                            _pre_rows.append({
+                                "a": _k,
+                                "efe": round(float(_r.get("efe", 0.0)), 6),
+                            })
                         _new_table, _info = rerank_efe_table(
                             efe_table, _scores, lambda_sfas=HENRI_SFAS_LAMBDA)
                         _info["horizon"] = HENRI_SFAS_HORIZON
@@ -1933,6 +2014,24 @@ def run():
                             print(f"  [sfas] re-rank engaged (discordance="
                                   f"{_info['discordance']}, H="
                                   f"{HENRI_SFAS_HORIZON})")
+                        # R2: post-rerank snapshot with selection ranks and
+                        # per-action SFAS scores (the action/score/selection
+                        # join the reduction needs).
+                        _post_rows = []
+                        for _i, _r in enumerate(efe_table):
+                            _aid = _r.get("action")
+                            _k = int(_aid.value if hasattr(_aid, "value") else _aid) \
+                                if _aid is not None else None
+                            _sc = _scores.get(_k) if _k is not None else None
+                            _post_rows.append({
+                                "a": _k,
+                                "rank": _i,
+                                "efe": round(float(_r.get("efe", 0.0)), 6),
+                                "sc": round(float(_sc), 6) if _sc is not None else None,
+                                "selected": bool(_i == 0),
+                            })
+                        _info["pre_table"] = _pre_rows
+                        _info["table_snapshot"] = _post_rows
                         sfas_info = _info
                 except Exception as _sfas_exc:
                     sfas_info = {"sfas_error": f"{type(_sfas_exc).__name__}"}
@@ -2256,6 +2355,45 @@ def run():
             step_ms = (time.perf_counter() - t0) * 1000
             last_action_was_reset = (macro_actions[0].name == "RESET")
 
+            # M2: launch the open-loop horizon-8 roll from the executed action
+            # (deterministic action-wave source, same as the SFAS block). A
+            # RESET invalidates cross-episode comparisons: clear pending and
+            # do not launch from a pre-reset state.
+            if HENRI_M2_COHERENCE and m2_imported is not None and macro_actions:
+                try:
+                    _open_loop_rollout, _sagnac_delta, _due_targets = m2_imported
+                    _a0 = macro_actions[0]
+                    if _a0.name == "RESET":
+                        m2_pending.clear()
+                    else:
+                        _aw = None
+                        try:
+                            _aw = orch.candidate_action_waves(
+                                top_k=None, allowed_actions=[_a0])[0][1].to(DEVICE)
+                        except Exception:
+                            _aw = None
+                        if _aw is not None:
+                            # pred_0 = the RAW pre-blend wave of the current
+                            # (pre-action) observation — the SAME basis the
+                            # flush compares against (raw encode). Using the
+                            # possibly recall-blended state_wave here compares
+                            # different representations (defect v2 basis).
+                            _preds = _open_loop_rollout(
+                                orch.planner.transition, raw_wave.detach(),
+                                _aw, horizon=8)
+                            if _preds is not None:
+                                for _k, _p in enumerate(_preds, start=1):
+                                    # LIST-per-target: target step+k receives a
+                                    # k-prediction from EVERY launch whose
+                                    # horizon covers it; append, never
+                                    # overwrite (defect v2: dict-value
+                                    # overwrite collapsed horizons 2..8 into
+                                    # the latest launch's k=1).
+                                    m2_pending.setdefault(step + _k, []).append(
+                                        (_p.detach(), _k))
+                except Exception as _m2e:
+                    print(f"  [m2] roll fail-closed: {type(_m2e).__name__}")
+
             # Phase 8.32: record authorized (o_t, a_t, o_t+1) tuple when the
             # bank is enabled. Passive recorder: failures are logged, never
             # fatal to the run. The next-wave is encoded with the SAME
@@ -2379,6 +2517,12 @@ def run():
                         observed_next_wave=observed_next_wave,
                         grid_dist=grid_dist if TASK_WEIGHTED_EIG else None,
                     )
+                    # Optional grounded VLA consumer receives only the
+                    # observed task-progress delta; frame change is not used
+                    # as a proxy for score improvement.
+                    orch.observe_vla_outcome(
+                        game_action, delta_nu=float(task_progressed)
+                    )
                 # Phase 8.20 C1: online Lie generator update + C3 thermostat
                 # observe from the observed SU(3) field transition (default OFF).
                 p820_update_info = None
@@ -2492,7 +2636,114 @@ def run():
                 except Exception as _cpx_exc:
                     complex_sidecar_info = {"status": "CPX_SIDECAR_UNAVAILABLE"}
 
+            # R2 (2026-08-27): read-only per-step external-outcome telemetry
+            # (frame change + level count + reset boundary). The Beta-Bernoulli
+            # posterior and task store stay gated by EXTERNAL_OUTCOME_EFE;
+            # this probe only records what the environment returned.
+            outcome_probe = None
+            try:
+                _frame_changed = None
+                if obs_next is not None and getattr(obs_next, "frame", None):
+                    _post_arr = np.array(obs_next.frame[0].tolist())
+                    _prev_arr = np.array(grid)
+                    _frame_changed = bool(
+                        _post_arr.shape != _prev_arr.shape
+                        or np.any(_post_arr != _prev_arr))
+                _lv_now = None
+                if obs_next is not None and hasattr(obs_next, "levels_completed"):
+                    try:
+                        _lv_now = int(obs_next.levels_completed)
+                    except Exception:
+                        _lv_now = None
+                # Outcome-channel diagnostic (2026-08-27, R2-next): additive
+                # frame-diff MAGNITUDE, because the saturated binary
+                # frame_changed is non-discriminative (1.0 every step). The
+                # magnitude channel may identify natural outcome variance
+                # across environments. Selection logic is untouched.
+                _frame_diff_mean = None
+                _changed_cells = None
+                try:
+                    if _post_arr is not None and _prev_arr is not None:
+                        if _post_arr.shape == _prev_arr.shape:
+                            _diff = np.abs(
+                                _post_arr.astype(np.float64)
+                                - _prev_arr.astype(np.float64))
+                            _changed_cells = int(np.count_nonzero(_diff))
+                            _frame_diff_mean = float(_diff.mean())
+                except Exception:
+                    _frame_diff_mean = None
+                    _changed_cells = None
+                outcome_probe = {
+                    "frame_changed": _frame_changed,
+                    "frame_diff_mean": _frame_diff_mean,
+                    "changed_cells": _changed_cells,
+                    "levels_completed": _lv_now,
+                    "reset": bool(last_action_was_reset),
+                }
+                # R2-successor outcome delta (SPEC-2026-08-28-R2SUCC): TRUE
+                # per-step level delta via a runner-local tracker. The
+                # scorecard_levels_prev path only updates under
+                # HENRI_ARC_SCORECARD_DELTA (OFF here), so subtracting it
+                # would yield cumulative-from-zero, never per-step (Sol
+                # repair 2026-08-28).
+                if _lv_now is not None:
+                    try:
+                        _base = _last_levels if _last_levels is not None else 0
+                        _delta_levels = int(_lv_now) - int(_base)
+                        _last_levels = int(_lv_now)
+                    except Exception:
+                        _delta_levels = None
+                if _delta_levels is not None:
+                    outcome_probe["delta_levels"] = _delta_levels
+            except Exception as _op_exc:
+                outcome_probe = {"probe_error": f"{type(_op_exc).__name__}"}
+
             # Telemetry emit (dense latent record)
+            emergence_gates = None
+            if HENRI_EMERGENCE_GATES:
+                # GATE-1 goal wave norm: DIMENSION-NORMALIZED (||Psi||/sqrt(K))
+                # per the [K,8] block contract — the raw tensor norm is
+                # sqrt(8192) ~ 90.5 and can never equal the 1.0 gate.
+                _goal_norm = None
+                if goal_wave is not None:
+                    _goal_norm = float(torch.norm(goal_wave).item()) / math.sqrt(
+                        float(goal_wave.numel() // 8))
+                # GATE-1 task functor error: derived from the LIVE functor
+                # held-out recovery cosine (1 - cos), present ONLY when the
+                # functor compiled (FUNCTOR_OK). Never a constant.
+                _functor_err = None
+                if functor_result is not None and getattr(
+                        functor_result, "status", "") == "FUNCTOR_OK" \
+                        and functor_result.held_out_cos is not None:
+                    _functor_err = 1.0 - float(functor_result.held_out_cos)
+                # GATE-4 invalid-branch rejection rate: live window ratio of
+                # constraint-rejected candidates over candidates seen.
+                _rej_rate = None
+                if trace_acc.get("candidate_count", 0) > 0:
+                    _rej_rate = trace_acc.get("veto_count", 0) / trace_acc["candidate_count"]
+                _gate_telem = {
+                    "goal_wave_norm": _goal_norm,
+                    "task_functor_error": _functor_err,
+                    "sagnac_stress": sagnac_delta,
+                    "horizon": (HENRI_LATENT_EXPLORE_HORIZON if HENRI_LATENT_EXPLORE
+                                else (HENRI_SFAS_HORIZON if HENRI_SFAS else None)),
+                    "delta_nu": float(outcome_probe.get("levels_completed", 0) or 0)
+                        - float(scorecard_levels_prev or 0),
+                    "langevin_temp": _last_swarm_temp,
+                    "invalid_branch_rejection_rate": _rej_rate,
+                }
+                _gate_telem = {k: v for k, v in _gate_telem.items() if v is not None}
+                emergence_gates = compute_emergence_gates(_gate_telem)
+            # R2-successor complete action identity (SPEC-2026-08-28-R2SUCC):
+            # (GameAction, data). Bare str(game_action) conflates ACTION6
+            # coordinate payloads (Sol repair 2026-08-28).
+            _action_identity = str(game_action)
+            if payload_infos:
+                _pi = payload_infos[-1]
+                if _pi.get("payload_present"):
+                    _action_identity = (
+                        f"{str(game_action)}|x={_pi.get('payload_x')}|"
+                        f"y={_pi.get('payload_y')}|src={_pi.get('payload_source')}")
             action_counts[game_action.name] = action_counts.get(game_action.name, 0) + 1
             tele.emit({
                 "env": env_name, "step": step,
@@ -2513,6 +2764,7 @@ def run():
                 "motion": round(motion, 6) if motion is not None else None,
                 "preference_store_size": orch.planner.preference_store.num_engrams(),
                 "action": str(game_action),
+                "action_identity": _action_identity,
                 "recall": recall_info,
                 "n_axiom_rows": n_axiom_rows,
                 "constraint_penalty": round(float(chosen.get("constraint_penalty", 0.0)), 6),
@@ -2525,12 +2777,7 @@ def run():
                 "thermo_shadow": thermo_shadow_info,
                 "complex_sidecar": complex_sidecar_info,
                 "goal_distance": round(float(chosen.get("goal_distance", 0.0)), 6),
-                "goal_dist_var": round(
-                    (lambda _ds: (sum((_d - sum(_ds) / len(_ds)) ** 2 for _d in _ds) / len(_ds))
-                     if len(_ds) >= 2 else None)(
-                        [float(r["goal_distance"]) for r in efe_table
-                         if r.get("goal_distance") is not None]),
-                    6) if efe_table else None,
+                "goal_dist_var": compute_goal_dist_var(efe_table),
                 "residual_type": str(chosen.get("residual_type", "N/A")),
                 "lambda_goal": LAMBDA_GOAL,
                 "grid_dist": round(grid_dist, 6),
@@ -2551,6 +2798,17 @@ def run():
                 "adapter_info": adapter_info,
                 "sfas": sfas_info,
                 "sfas_flag": HENRI_SFAS,
+                "pre_state_stratum": pre_state_stratum,
+                "m2_sagnac_by_horizon": (
+                    [round(m2_deltas[k][-1], 6) if m2_deltas.get(k) else None
+                     for k in range(1, 9)]
+                    if HENRI_M2_COHERENCE else None),
+                "m2_max_sagnac_8": (
+                    round(max(m2_deltas[k][-1] for k in range(1, 9)
+                              if m2_deltas.get(k)), 6)
+                    if HENRI_M2_COHERENCE and m2_emitted else None),
+                "m2_engaged": (m2_emitted if HENRI_M2_COHERENCE else None),
+                "outcome_probe": outcome_probe,
                 "superposition_load": round(
                     float(orch.planner.cleanup.num_engrams()) / SCALE["d_model"],
                     8) if SCALE["d_model"] else None,
@@ -2560,6 +2818,7 @@ def run():
                     "info": adapter_info,
                 },
                 "extropic_ising": ising_info,
+                "emergence_gates": emergence_gates,
             })
             # Wave-level hypertable log (downsampled for DB volume)
             if db_logger is not None and step % 5 == 0:
