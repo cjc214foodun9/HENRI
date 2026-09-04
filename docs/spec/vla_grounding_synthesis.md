@@ -57,5 +57,7 @@
 
 ## 6. Execution receipt
 
-Commit (local-only, no push): `3cacad6` on `feat/vla-grounded-ml-substrate` at base `b31f873`.
-Files: the five artifacts above. Push and production wiring remain approval-gated.
+Component commit: `3cacad6` on `feat/vla-grounded-ml-substrate` at base `b31f873`.
+Approved wiring commit: `0d562ad` (pushed to `origin/feat/vla-grounded-ml-substrate`).
+Remote CUDA receipt: exact wiring SHA `0d562ada57b3427af4d04aac3a337026961199f6`, clean detached worktree, 26/26 contract tests passed, RC=0. The test covered CUDA boundaries; it did not evaluate external task performance.
+Main and carrier-k3 were not modified.
