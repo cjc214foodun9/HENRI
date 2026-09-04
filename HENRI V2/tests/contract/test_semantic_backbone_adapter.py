@@ -138,3 +138,19 @@ def test_provenance_file_receipt(tmp_path):
     )
     assert receipt.verify_artifact(path) is True
     assert receipt.artifact_bytes == len(payload)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA contract")
+def test_frozen_backbone_cuda_boundary():
+    backbone = TinyBackbone().cuda()
+    for p in backbone.parameters():
+        p.requires_grad_(False)
+    wrapper = FrozenSemanticBackbone(
+        backbone, provenance(), wave_rank=4, num_blocks=4
+    ).cuda()
+    x = torch.randn(2, 3, 8, device="cuda")
+    mask = torch.tensor([[1, 1, 0], [1, 1, 1]], device="cuda")
+    out = wrapper(x, attention_mask=mask)
+    assert out.device.type == "cuda"
+    assert out.shape == (2, 4, 8)
+    assert torch.allclose(out.flatten(1).norm(dim=1), torch.ones(2, device="cuda"), atol=1e-5)
