@@ -260,7 +260,8 @@ class InMemoryWorldKnowledgeStore:
         for record in self.records:
             if record.domain_family not in allowed or record.evidence_status != "VERIFIED":
                 continue
-            sim = float(q @ F.normalize(record.semantic_index, p=2, dim=-1))
+            record_index = record.semantic_index.to(q.device)
+            sim = float(q @ F.normalize(record_index, p=2, dim=-1))
             candidates.append(_hit(record, sim))
         candidates.sort(key=lambda h: (-h.similarity, h.record_id))
         return candidates[:top_k]

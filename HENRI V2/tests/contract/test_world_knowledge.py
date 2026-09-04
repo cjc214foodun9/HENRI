@@ -169,3 +169,26 @@ def test_migration_pins_isolated_provenance_table():
     assert "hnsw" in sql.lower()
     assert "octet_length(wave_payload) = 262144" in sql
     assert "raw_text" not in table
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA contract")
+def test_cuda_ingest_and_query_device_boundary():
+    device = torch.device("cuda")
+
+    def cuda_encoder(text):
+        g = torch.Generator().manual_seed(int.from_bytes(digest(text)[:8].encode(), "little"))
+        return F.normalize(torch.randn(NB, 8, generator=g), p=2, dim=None).to(device)
+
+    store = InMemoryWorldKnowledgeStore(num_blocks=NB, index_dim=INDEX_DIM)
+    ingestor = WorldKnowledgeIngestor(
+        store=store, encode_text=cuda_encoder, num_blocks=NB,
+        index_dim=INDEX_DIM, encoder_version="test-encoder-v1"
+    )
+    query = WorldKnowledgeQuery(
+        store=store, encode_text=cuda_encoder, num_blocks=NB,
+        index_dim=INDEX_DIM
+    )
+    ingestor.ingest([chunk("cuda source")])
+    result = query.query("cuda source", domains=["natural_sciences"])
+    assert result.status == SemanticQueryStatus.OK
+    assert result.conditioning_wave.device.type == "cuda"
