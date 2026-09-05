@@ -520,6 +520,13 @@ def run():
         "HENRI_LATENT_EXPLORE_HORIZON", "2") or 2)
     if HENRI_LATENT_EXPLORE_HORIZON < 1 or HENRI_LATENT_EXPLORE_HORIZON > 4:
         raise ValueError("HENRI_LATENT_EXPLORE_HORIZON must be in [1, 4]")
+    # Carrier G1 (2026-09-05): EDMD latent composition predictor (default OFF).
+    # Fits RecursiveDualEDMD online from PUBLIC demo pairs and uses the
+    # predicted solution wave for the unseen test X as the goal anchor
+    # (egress-from-composition; zero pretraining). Pre-registered gate:
+    # held-out cos > 0.30 AND > identity + 0.10, else fail-closed.
+    # Prereg: experiments/verification/g1_edmd_predict_prereg.md.
+    HENRI_EDMD_PREDICT = os.environ.get("HENRI_EDMD_PREDICT", "0") == "1"
     # Arm E (2026-08-27): goal subspace projection (default OFF). Projects
     # the compiled goal wave into the transition operator's reachable
     # subspace before EFE scoring: Psi_tilde = V V^dag Psi_goal + R^dag
@@ -1255,6 +1262,47 @@ def run():
                     adapter_info = {"status": "FAIL_CLOSED",
                                     "reason": type(_adapter_exc).__name__}
                     print(f"  [goal] adapter fail-closed: {_adapter_exc}")
+
+            # Layer 0c (Carrier G1, default OFF): EDMD latent composition.
+            # Fit RecursiveDualEDMD online from PUBLIC demo pairs, gate on a
+            # leave-one-out pair (held-out cos > 0.30 AND > identity + 0.10),
+            # and use the PREDICTED solution wave for the unseen test X as the
+            # goal anchor (egress-from-composition; zero pretraining).
+            # Fail-closed on underfit/absence; does not preempt Layer 0b.
+            # Prereg: experiments/verification/g1_edmd_predict_prereg.md.
+            if goal_wave is None and HENRI_EDMD_PREDICT:
+                try:
+                    from henri_edmd_predict import predict_solution_grids
+                    if not demo_pairs:
+                        goal_status = "GOAL_EDMD_NO_DEMOS"
+                        edmd_info = {"status": "BLOCKED_NO_DEMOS",
+                                     "demo_pair_count": 0}
+                        print("  [goal] edmd-predict NO_DEMOS fail-closed")
+                    else:
+                        _edmd = predict_solution_grids(
+                            demo_pairs, tokenizer,
+                            obs.frame[0].tolist(), device=DEVICE)
+                        if _edmd.status == "EDMD_PREDICT_OK":
+                            goal_wave = _edmd.predicted_wave.to(DEVICE)
+                            goal_status = "GOAL_EDMD_PREDICT"
+                            edmd_info = _edmd.as_dict()
+                            print(
+                                f"  [goal] edmd-predict OK — held_out_cos="
+                                f"{_edmd.held_out_cos:.4f} "
+                                f"identity_cos={_edmd.identity_cos:.4f} "
+                                f"improvement={_edmd.improvement:+.4f}")
+                        else:
+                            goal_status = "GOAL_EDMD_UNDERFIT"
+                            edmd_info = _edmd.as_dict()
+                            print(f"  [goal] edmd-predict {_edmd.status}: "
+                                  f"{_edmd.reason}")
+                except Exception as _edmd_exc:
+                    goal_status = "GOAL_EDMD_FAIL_CLOSED"
+                    edmd_info = {"status": "FAIL_CLOSED",
+                                 "reason": type(_edmd_exc).__name__}
+                    print(f"  [goal] edmd-predict fail-closed: {_edmd_exc}")
+                tele.emit({"env": env_name, "event_type": "GOAL_EDMD_PREDICT",
+                           "goal_status": goal_status, **edmd_info})
 
             # Layer 1: try Zone C analogical retrieval (8.38: routed through
             # the authorized bridge when HENRI_ZONEC_BRIDGE=1; legacy
