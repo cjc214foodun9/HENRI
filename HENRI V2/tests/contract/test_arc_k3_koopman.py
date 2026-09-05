@@ -309,9 +309,11 @@ def test_cuda_full_scale_fit_and_supplied_kernel():
     if importlib.util.find_spec("triton") is None:
         pytest.skip("triton not available")
     # Reference fit at full scale on CUDA.
+    # CPU generator + device="cuda" raises RuntimeError; generate on CPU with
+    # the deterministic generator, then move to CUDA (canonical device pattern).
     g = torch.Generator().manual_seed(SEED + 8)
     n = 32
-    X = torch.randn(n, N_BLOCKS, D_BLOCK, device="cuda", generator=g)
+    X = torch.randn(n, N_BLOCKS, D_BLOCK, generator=g, device="cpu").to("cuda")
     X = X / X.norm(p=2, dim=-1, keepdim=True)
     Y = torch.roll(X, shifts=1, dims=-1)
     fit = BlockRidgeKoopmanFit(alpha=K3_ALPHA)
