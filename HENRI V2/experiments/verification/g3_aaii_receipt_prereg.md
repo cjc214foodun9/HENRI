@@ -30,7 +30,9 @@ evidence.
 - Terminal-Bench v2.1: task = terminal shell session; published task metadata
   (public). HENRI path attempted = wave→text diagnostic egress. Exec requires
   containerized shell harness — NOT present on Vast (no Docker CLI) →
-  expected status `MODALITY_HARNESS_BLOCKED` (honest), never a fabricated score.
+  expected status `BLOCKED_INFRASTRUCTURE_PENDING_HARBOR_EXEC` (honest), never a
+  fabricated score. Harbor harness pin (verified 2026-09-05):
+  github.com/harbor-framework/harbor @ 5c364a538e0af19eb58a53fdb895d7c0f974cef5, Apache-2.0.
 - SciCode: public full prompts + gold solutions + tests (`test_data.h5`/dataset
   cards). Deterministic grader: exec decoded Python against a published test
   case in the EXISTING HENRI REPL sandbox (python only) — no LLM judge.
