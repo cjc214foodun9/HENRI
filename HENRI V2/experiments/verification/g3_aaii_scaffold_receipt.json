@@ -1,0 +1,92 @@
+{
+  "schema_id": "henri.g3-scaffold.v1",
+  "prereg": "experiments/verification/g3_aaii_receipt_prereg.md",
+  "generated_at_utc": "2026-09-05T09:07:10Z",
+  "wall_seconds": 1.97,
+  "rows": [
+    {
+      "constituent": "terminal-bench-2.1",
+      "license": "Apache-2.0",
+      "checker": "published terminal tasks; containerized shell harness absent on Vast -> MODALITY_HARNESS_BLOCKED at exec",
+      "status": "STAGED_OK",
+      "github_revision": "7131e4375048a0e408a8fb404b5f499d726b695b",
+      "task_dir_entries": 91,
+      "task_dir_sample": [
+        "adaptive-rejection-sampler",
+        "bn-fit-modify"
+      ],
+      "task_files_staged": [
+        "task.toml",
+        "instruction.md"
+      ],
+      "staged_files": [
+        {
+          "name": "tb_LICENSE",
+          "url": "https://raw.githubusercontent.com/harbor-framework/terminal-bench-2-1/7131e4375048a0e408a8fb404b5f499d726b695b/LICENSE",
+          "bytes": 11357,
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        },
+        {
+          "name": "tb_README.md",
+          "url": "https://raw.githubusercontent.com/harbor-framework/terminal-bench-2-1/7131e4375048a0e408a8fb404b5f499d726b695b/README.md",
+          "bytes": 4624,
+          "sha256": "70de9a9a5f040c4e5f39a411d8e925611e37650562959a031e1202bd7f4af321"
+        },
+        {
+          "name": "tb_adaptive-rejection-sampler_task.toml",
+          "url": "https://raw.githubusercontent.com/harbor-framework/terminal-bench-2-1/7131e4375048a0e408a8fb404b5f499d726b695b/tasks/adaptive-rejection-sampler/task.toml",
+          "bytes": 1089,
+          "sha256": "6ed7b37f74beb46e9d47b0f5fad53025667c9548baff4e96d467b56d429fab1a"
+        },
+        {
+          "name": "tb_adaptive-rejection-sampler_instruction.md",
+          "url": "https://raw.githubusercontent.com/harbor-framework/terminal-bench-2-1/7131e4375048a0e408a8fb404b5f499d726b695b/tasks/adaptive-rejection-sampler/instruction.md",
+          "bytes": 2731,
+          "sha256": "e6d28c28acd76bef61817427c74c2a29e3e8d75f535cbd708afcbfd02c54013f"
+        },
+        {
+          "name": "tb_bn-fit-modify_task.toml",
+          "url": "https://raw.githubusercontent.com/harbor-framework/terminal-bench-2-1/7131e4375048a0e408a8fb404b5f499d726b695b/tasks/bn-fit-modify/task.toml",
+          "bytes": 919,
+          "sha256": "6493f7162da424a4fd95da721bd3fd1ce7e5dd26e792132cb9c46db536b67090"
+        },
+        {
+          "name": "tb_bn-fit-modify_instruction.md",
+          "url": "https://raw.githubusercontent.com/harbor-framework/terminal-bench-2-1/7131e4375048a0e408a8fb404b5f499d726b695b/tasks/bn-fit-modify/instruction.md",
+          "bytes": 1256,
+          "sha256": "5f5207ce23c375270c26719fb66d89843bc88cf1d40671ed87c6b7bab4d394e5"
+        }
+      ]
+    },
+    {
+      "constituent": "scicode",
+      "license": "Apache-2.0",
+      "checker": "published gold solutions + tests; exec via HENRI REPL sandbox (python only)",
+      "status": "STAGED_OK",
+      "hf_revision": "4510f6a6aa27c43fad7b43da2c59602a86e88480",
+      "license_repo_revision": "e3158ea011d4235245a547460d3688d7ccbf9900",
+      "staged_files": [
+        {
+          "name": "sc_problems_test.jsonl",
+          "url": "https://huggingface.co/datasets/SciCode1/SciCode/resolve/4510f6a6aa27c43fad7b43da2c59602a86e88480/problems_test.jsonl",
+          "bytes": 933500,
+          "sha256": "38797fef78f434720be6d053b4f3a86839d6f8ea5fb9115450677cd3a6edf81d"
+        },
+        {
+          "name": "sc_LICENSE",
+          "url": "https://raw.githubusercontent.com/scicode-bench/SciCode/e3158ea011d4235245a547460d3688d7ccbf9900/LICENSE",
+          "bytes": 11357,
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        }
+      ]
+    },
+    {
+      "constituent": "hle",
+      "license": "MIT",
+      "checker": "public question subset; private grader components BLOCKED",
+      "status": "STAGED_BLOCKED_GATED",
+      "terms_url": "https://huggingface.co/datasets/cais/hle",
+      "detail": "gated(auto); requires terms acceptance; no bytes staged"
+    }
+  ]
+}
