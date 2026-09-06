@@ -79,3 +79,13 @@ records pass/fail/timeout) / `MODALITY_HARNESS_BLOCKED`.
 
 No sealed artifact is modified. Scaffold adds `experiments/verification/
 g3_aaii_scaffold.py` + this prereg, both default-OFF / no runner wiring.
+
+## 9. HLE flip attempt (2026-09-05, post user token)
+
+- `hf auth whoami` = Chandler (read token). `cais/hle` gated=auto; README.md
+  resolves 200 (public metadata); eval.yaml and the parquet resolve HTTP 403
+  "not in the authorized list" -> terms acceptance NOT granted on this account.
+- Scaffold v2 (92ff501) attempts token-bearing staging and falls back to
+  STAGED_BLOCKED_GATED on 401/403. Local re-run receipt
+  g3_aaii_scaffold_receipt_local_hle_v2.json records TB + SciCode STAGED_OK,
+  HLE STAGED_BLOCKED_GATED (403). Kill criteria unchanged; no score claim.
