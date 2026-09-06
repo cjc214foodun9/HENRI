@@ -54,6 +54,8 @@ CONSTITUENTS = {
         "license": "MIT",
         "gated": True,
         "terms_url": "https://huggingface.co/datasets/cais/hle",
+        "stage_files": ["README.md", "eval.yaml"],
+        "data_file": "data/test-00000-of-00001.parquet",
         "checker": "public question subset; private grader components BLOCKED",
     },
 }
@@ -71,8 +73,23 @@ def http_json(url: str, timeout: int = 45):
         return json.loads(r.read().decode("utf-8", "replace"))
 
 
-def http_bytes(url: str, timeout: int = 120):
+def resolve_token() -> str:
+    """Bearer token from env or huggingface_hub cache (never echoed)."""
+    tok = os.environ.get("HF_TOKEN", "")
+    if tok:
+        return tok
+    try:
+        from huggingface_hub.constants import HF_TOKEN_PATH
+        with open(HF_TOKEN_PATH, "r", encoding="utf-8") as fh:
+            return fh.read().strip()
+    except Exception:
+        return ""
+
+
+def http_bytes(url: str, timeout: int = 120, token: str = ""):
     req = urllib.request.Request(url, headers=UA)
+    if token:
+        req.add_header("Authorization", f"Bearer {token}")
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read()
 
@@ -106,11 +123,57 @@ def main() -> int:
         rec = {"constituent": name, "license": meta["license"],
                "checker": meta["checker"], "status": "STAGED_BLOCKED_INFRA"}
         try:
-            # HLE gated -> record terms; fetch nothing.
+            # HLE gated: attempt staged access when a token is present; fall back
+            # to BLOCKED_GATED only when access is denied (401/403).
             if meta.get("gated"):
-                rec["status"] = "STAGED_BLOCKED_GATED"
-                rec["terms_url"] = meta["terms_url"]
-                rec["detail"] = "gated(auto); requires terms acceptance; no bytes staged"
+                token = resolve_token()
+                if not token:
+                    rec["status"] = "STAGED_BLOCKED_GATED"
+                    rec["terms_url"] = meta["terms_url"]
+                    rec["detail"] = "gated(auto); no HF token present; requires terms acceptance"
+                    rows.append(rec)
+                    continue
+                try:
+                    hf = meta["hf"]
+                    rev = http_json(HF_META.format(ds=hf))["sha"]
+                    rec["hf_revision"] = rev
+                    staged = []
+                    for fname in meta["stage_files"]:
+                        url = HF_RESOLVE.format(ds=hf, rev=rev, path=fname)
+                        data = http_bytes(url, token=token)
+                        staged.append(stage(args.data_dir, f"hle_{fname.replace('/', '__')}", url, data))
+                    # Range probe: proves read access to the full data file without
+                    # downloading 274 MB at scaffold stage (full parquet deferred).
+                    probe_url = HF_RESOLVE.format(ds=hf, rev=rev, path=meta["data_file"])
+                    req = urllib.request.Request(probe_url, headers=UA)
+                    req.add_header("Authorization", f"Bearer {token}")
+                    req.add_header("Range", "bytes=0-7")
+                    with urllib.request.urlopen(req, timeout=120) as r:
+                        probe = r.read()
+                        total = r.headers.get("Content-Range", "")
+                    rec["data_size_probe"] = {"uri": probe_url, "probe_sha256": sha256b(probe),
+                                              "content_range": total}
+                    try:
+                        dsurl = ("https://datasets-server.huggingface.co/rows"
+                                 "?dataset=cais/hle&config=default&split=test&offset=0&length=2")
+                        data = http_bytes(dsurl, token=token)
+                        staged.append(stage(args.data_dir, "hle_rows_0_2.json", dsurl, data))
+                    except urllib.error.HTTPError as exc:
+                        if exc.code in (401, 403):
+                            raise
+                        rec["rows_sample_error"] = f"HTTP {exc.code}: datasets-server rows unavailable"
+                    rec["status"] = "STAGED_OK"
+                    rec["staged_files"] = staged
+                    rec["data_file"] = meta.get("data_file")
+                    rec["detail"] = "gated(auto) access accepted; metadata + range-probe staged; bounded rows sample attempted"
+                except urllib.error.HTTPError as exc:
+                    if exc.code in (401, 403):
+                        rec["status"] = "STAGED_BLOCKED_GATED"
+                        rec["terms_url"] = meta["terms_url"]
+                        rec["detail"] = f"gated(auto); access denied (HTTP {exc.code}); terms acceptance required"
+                    else:
+                        rec["status"] = "STAGED_BLOCKED_INFRA"
+                        rec["detail"] = f"{type(exc).__name__}: {exc}"
                 rows.append(rec)
                 continue
 

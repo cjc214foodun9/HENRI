@@ -1,8 +1,10 @@
 """Contract test for the G3 AAII scaffold (status taxonomy + pin table, no network).
 
-Guards the scaffold's honesty contract: HLE stays BLOCKED_GATED, Terminal-Bench
-is GitHub-origin (HF dataset is metadata-only), SciCode is HF-origin with GitHub
-license pin, and no constituent can be STAGED_OK without staged file hashes.
+Guards the scaffold's honesty contract: HLE is gated (terms acceptance required);
+the scaffold attempts token-bearing staging and falls back to STAGED_BLOCKED_GATED
+only on access denial. Terminal-Bench is GitHub-origin (HF dataset is
+metadata-only), SciCode is HF-origin with GitHub license pin, and no constituent
+can be STAGED_OK without staged file hashes.
 """
 import importlib.util
 import json
@@ -67,3 +69,17 @@ def test_manifest_schema_fields(mod):
     assert set(mod.CONSTITUENTS) == {"terminal-bench-2.1", "scicode", "hle"}
     # staging functions exist and return typed records
     assert callable(mod.stage)
+
+
+def test_pin_table_hle_staging_surface(mod):
+    hle = mod.CONSTITUENTS["hle"]
+    assert "README.md" in hle["stage_files"]
+    assert "eval.yaml" in hle["stage_files"]
+    assert hle["data_file"].startswith("data/")
+    assert hle["data_file"].endswith(".parquet")
+
+
+def test_token_plumbing_available(mod):
+    import inspect
+    assert callable(mod.resolve_token)
+    assert "token" in inspect.signature(mod.http_bytes).parameters
