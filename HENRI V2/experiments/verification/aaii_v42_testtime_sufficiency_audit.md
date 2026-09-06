@@ -36,7 +36,9 @@ fabrication: AAII is API-only; HENRI is NOT_EVALUATED on all 10 members.
 | Demo-pair task compilation (W_task) | EXISTS, online-only, zero-pretrain | main physics; compiled 100% test-time from (X_i,Y_i) |
 | ARC-AGI-3 public demos | 0/16, 0/25 — `BLOCKED_NO_DEMONSTRATIONS` | g1_arcade_demo_audit.json (2026-09-05): provenance=public_api, examples=None |
 | World knowledge | Bounded, NOT complete: 27 sources / 3,433 chunks / 14 domains; world_claims=0 | Zone C corpus_chunks + domain_source_manifest (OBSERVED live) |
-| Text egress | `DIAGNOSTIC_ONLY` — K2/U2 BLOCKED_SEMANTIC_CAPACITY (sealed 2026-08-25); trained linear unbinder is basis-dependent | henri_decoder.py HENRINeuralEgressUnbinder; checkpoint overlay sha 7557238908… |
+| Text egress | `DIAGNOSTIC_ONLY` — measured 2026-09-05 on live Zone C waves: 16/16 distinct chunk waves → SAME top-1 token (29674), `top1_token_unique=1`; linear inverse exact; basis-dependent (rot changes 8–16/16 argmax) | g4_armu_final.log sha256 472f0956… (release worktree @ f220469, overlay 7557238908…) |
+| Hopfield lexical-snap capacity | β=8.0, K5 codec waves: P@1 exact 1.0 @ M=250 … 0.9255 @ M=10,000; noise-robust (eps≤0.5 all 1.0); edit1=0.0; random-neg floor ~0.006 | g4_armh.log sha256 6739a02d… |
+| Retrieval egress (live prod) | 16/16 grounded queries rank-1 (P@1=1.0); top-1 sim 0.2486 vs null 0.0793 (3.1×); 15.9 ms mean; chunk-level dilution present but rank-1 retained | g4_armr_full.log sha256 61899b2a… |
 | Retrieval egress | K5 compositional codec: identical 0.9999 / 1-edit 0.905 / reversal 0.476 / random 0.032; grounded chunk hit_rank ≤ 4/5 probes, sims 0.07–0.12 (chunk-level dilution) | g4_retrieval_probe3 (OBSERVED live pgvector) |
 | Hosted endpoint (AAII evaluates hosted models via API) | ABSENT. No public HENRI endpoint, no submission pipeline | AAII methodology live page; repo is not a submittable unit |
 | Tool/shell execution | Terminal-Bench: no container runtime on Vast (no Docker CLI); Harbor pin verified but not deployable yet | g3 scaffold receipt; OBSERVED `which docker` = absent |

@@ -67,8 +67,8 @@ def main() -> int:
     unb.load_state_dict(ckpt)
     unb.eval()
     state_sha = {
-        "down_proj": [tuple(ckpt["down_proj.weight"].shape), ckpt["down_proj.weight"].dtype],
-        "lm_head": [tuple(ckpt["lm_head.weight"].shape), ckpt["lm_head.weight"].dtype],
+        "down_proj": [tuple(ckpt["down_proj.weight"].shape), str(ckpt["down_proj.weight"].dtype)],
+        "lm_head": [tuple(ckpt["lm_head.weight"].shape), str(ckpt["lm_head.weight"].dtype)],
         "layer_norm": [tuple(ckpt["layer_norm.weight"].shape)],
     }
     out["checkpoint_shapes"] = state_sha
@@ -77,12 +77,16 @@ def main() -> int:
 
     with torch.no_grad():
         logits0 = unb(waves)  # [16, 32000]
-        idx0 = logits0.argmax(dim=-1)
+        idx0 = logits0.argmax(dim=-1).reshape(-1)  # [16]
         # A-repeat determinism
         logits0b = unb(waves)
-        idx0b = logits0b.argmax(dim=-1)
+        idx0b = logits0b.argmax(dim=-1).reshape(-1)
         out["repeat_exact"] = bool(torch.equal(idx0, idx0b))
-        # rotation sensitivity
+        # DEGENERACY CHECK (load-bearing): does the trained unbinder emit distinct
+        # top-1 tokens per distinct wave, or collapse to one token?
+        out["top1_token_unique"] = int(len(set(idx0.tolist())))
+        out["top1_token_list"] = [int(t) for t in idx0.tolist()]
+        # rotation sensitivity (shape-corrected: both flattened to [16])
         Qs = []
         chg = []
         mvmt = []
@@ -90,7 +94,7 @@ def main() -> int:
             Q = rotor(seed).to(device)
             wrot = apply_rot(waves[0:16], Q)  # [16, 65536]
             logits_r = unb(wrot)
-            idx_r = logits_r.argmax(dim=-1)
+            idx_r = logits_r.argmax(dim=-1).reshape(-1)
             chg.append(int((idx_r != idx0).sum().item()))
             mvmt.append(float((logits_r - logits0).abs().mean().item()))
         out["rot_changed_argmax_per_seed"] = chg
@@ -99,14 +103,16 @@ def main() -> int:
         Q = rotor(3).to(device)
         wrot = apply_rot(waves[:4], Q)
         back = apply_rot(wrot, Q.transpose(-1, -2))
-        idx_back = unb(back).argmax(dim=-1)
+        idx_back = unb(back).argmax(dim=-1).reshape(-1)
         idx_orig = idx0[:4]
         out["inverse_restore_exact"] = bool(torch.equal(idx_back, idx_orig))
-        # mismatched-query control: shuffle assignment between waves and logits
+        # permutation-equivariance control (mathematically expected 0; a nonzero
+        # value would indicate batch-order dependence, not semantic content)
         perm = torch.randperm(16, device=device)
-        idx_perm = unb(waves[perm]).argmax(dim=-1)
-        out["mismatch_changed"] = int((idx_perm != idx0[perm]).sum().item())
-        out["mismatch_total"] = int(16)
+        idx_perm = unb(waves[perm]).argmax(dim=-1).reshape(-1)
+        idx_ref = idx0[perm]
+        out["perm_equivariance_changed"] = int((idx_perm != idx_ref).sum().item())
+        out["perm_equivariance_total"] = int(16)
 
     print(json.dumps(out, indent=2))
     with open("/tmp/g4_armu.json", "w") as f:

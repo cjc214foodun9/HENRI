@@ -1,0 +1,51 @@
+{
+  "carrier": "g4-egress-calibration",
+  "base_sha": "f2204692ce01b3d2eb1ca9715c480a33953b5396",
+  "date": "2026-09-05",
+  "remote": "vast-5090 (instance 47411800), release worktree /root/release-main-20260905 @ f220469",
+  "env": "ZONE_C_PROD_DSN set; torch CUDA; checkpoint overlay henri_decoder_checkpoint.pt 799034119 B",
+  "arms": {
+    "ARM_R": {
+      "status": "PASS",
+      "n_queries": 16,
+      "p_at_1": 1.0,
+      "p_at_5": 1.0,
+      "grounded_top1_mean": 0.2486,
+      "latency_ms_mean": 15.89,
+      "null_top1_mean": 0.07927,
+      "null_top1_max": 0.10617,
+      "verdict": "RETRIEVAL_CHANNEL_VERIFIED: 16/16 distinct source-grounded queries rank-1; 3.1x margin over null floor; K5 codec + pgvector HNSW end-to-end on live prod data",
+      "evidence_log_sha256": "61899b2ae58e9c8713a138563149a410dc610be2a4da0447fcd559534f6bbf5d"
+    },
+    "ARM_H": {
+      "status": "CONTRACT_PARTIALLY_VERIFIED",
+      "corpus_unique_words": 41269,
+      "device": "cuda",
+      "M250": {"p_exact": 1.0, "p_noise_eps0.5": 1.0, "p_edit1_disc": 0.0, "random_neg_mean_conf": 0.00584},
+      "M1000": {"p_exact": 0.994, "p_noise_eps0.5": 1.0, "p_edit1_disc": 0.0, "random_neg_mean_conf": 0.006525},
+      "M2500": {"p_exact": 0.9824, "p_noise_eps0.5": 1.0, "p_edit1_disc": 0.0, "random_neg_mean_conf": 0.006174},
+      "M5000": {"p_exact": 0.9624, "p_noise_eps0.5": 1.0, "p_edit1_disc": 0.0, "random_neg_mean_conf": 0.006415},
+      "M10000": {"p_exact": 0.9255, "p_noise_eps0.5": 1.0, "p_edit1_disc": 0.0, "random_neg_mean_conf": 0.006353},
+      "verdict": "Hopfield lexical-snap: noise-robust (eps 0.05-0.5 all 1.0); P@1 >= 0.9824 at M <= 2500; prereg acceptance >= 0.98 at M <= 10000 NOT met at 5000/10000 (0.9624/0.9255) -> FALSIFIED at capacity scale, verified at production-scope scale. edit1=0.0: one-edit substitution does NOT snap to base word. random-neg floor ~0.006.",
+      "evidence_log_sha256": "6739a02d70d190d0dffa2169e9517c6b366a553f56eb0de08d25e3d3f1c7b830"
+    },
+    "ARM_U": {
+      "status": "OBSERVED",
+      "n_waves": 16,
+      "checkpoint_shapes": {"down_proj": [2048, 65536, "float32"], "lm_head": [32000, 2048, "float32"], "layer_norm": [2048]},
+      "repeat_exact": true,
+      "top1_token_unique": 1,
+      "top1_token_list": [29674, 29674, 29674, 29674, 29674, 29674, 29674, 29674, 29674, 29674, 29674, 29674, 29674, 29674, 29674, 29674],
+      "rot_changed_argmax_per_seed": [8, 16, 16, 13],
+      "rot_logit_mean_abs_delta": [0.682867, 0.673816, 0.670508, 0.676208],
+      "inverse_restore_exact": true,
+      "perm_equivariance_changed": 0,
+      "verdict": "SEMANTIC_CAPACITY_BLOCKED CONFIRMED on live Zone C waves: 16 distinct codec waves collapse to ONE top-1 token (29674). Linear inverse exact (basis-consistent); rotation sensitivity high (basis-dependent); zero per-wave token discrimination. Re-measures sealed K2/U2 verdict at the chunk boundary.",
+      "evidence_log_sha256": "472f0956c1305a198a3e4218b3ee689c3a30d5cea7cc44d668830c072e363cac"
+    }
+  },
+  "db_writes": 0,
+  "flags_promoted": 0,
+  "checkpoint_writes": 0,
+  "headline": "Retrieval channel verified (16/16 P@1); Hopfield capacity verified to M=2500 and noise-robust; semantic text egress BLOCKED (collapse to single token) - load-bearing gate for every AAII text-output member."
+}
