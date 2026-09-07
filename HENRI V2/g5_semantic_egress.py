@@ -1,21 +1,18 @@
 """G5 — Deterministic Sparse Code Inversion (DSCI) semantic egress.
 
+FALSIFIED AT SCALE (2026-09-07, sealed): the K5 codec cell map depends only
+on x mod 8192 (distinct_cells_reachable = 8192 of 65536; tokens '013' and
+'duryee' share h mod 8192 -> identical 16-cell signatures), so at K5 vocab
+scale (58,298 words) 1,554/58,298 words satisfy the support gate for one
+40-word window (30 true + 1,524 false; span P=0.0052, R=0.012). Deterministic
+inversion of K5 waves is impossible. This module is retained as the measured
+fail artifact; the successor is g5_separable_codec.py (v5, full-entropy
+cells). Do not use DSCI for production egress.
+
 Inverts the K5 compositional codec (CompositionalTextCodec v4) wave into
 bounded-vocabulary text using matching pursuit over feature codebooks plus
 n-gram evidence DP for word order. Zero trainable parameters, zero
 pretrained-LM dependency, fail-closed ABSTAIN.
-
-Evidence lineage (measured 2026-09-05, sealed #e0099722):
-  ARM-R retrieval P@1=1.0; ARM-H Hopfield exact 0.9255@10k, edit1=0;
-  ARM-U unbinder token collapse (16 waves -> token 29674), i.e.
-  SEMANTIC_CAPACITY_BLOCKED on the trained egress path. This module is the
-  deterministic inversion candidate for the K5 codec (encode-only today).
-
-Codec math (zone_c_world_knowledge_codec): each feature f (w:/b:/t: n-gram)
-maps to 16 signed cells via an LCG over _feature_hash(f); the wave is the
-signed sum of feature codes, rows L2-normalized per 8-dim block. DSCI
-recovers features by unit-code correlation (matching pursuit), then orders
-words by bigram code support (beam DP).
 
 Status vocabulary: OK | ABSTAIN_LOW_CONF | ABSTAIN_NO_ORDER | ABSTAIN_INVALID.
 """

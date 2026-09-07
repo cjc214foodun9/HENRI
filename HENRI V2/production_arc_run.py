@@ -183,6 +183,14 @@ EXTERNAL_TASK_WEIGHT = float(os.environ.get("EXTERNAL_TASK_WEIGHT", "1.0"))
 # before qFHRR UWE binding, and action selection routes through SagnacMCTSPlanner.
 USE_OBJECT_SAGNAC_MCTS = os.environ.get("USE_OBJECT_SAGNAC_MCTS", "0") == "1"
 
+# Phase G5: semantic egress (DSCI / SeparableCodec) + WavePacketPathSearch.
+# Default OFF so the default path stays byte-identical. When set, the wave
+# packet engine is instantiated as a fail-closed consumer (construction error
+# -> None -> UNAVAILABLE, no policy influence); the semantic egress flag arms
+# the bounded-vocab decoder path in the harness (default-OFF).
+HENRI_WAVE_PACKET_SEARCH = os.environ.get("HENRI_WAVE_PACKET_SEARCH", "0") == "1"
+HENRI_SEMANTIC_EGRESS = os.environ.get("HENRI_SEMANTIC_EGRESS", "0") == "1"
+
 # P0.5: task-weighted discriminative EIG (Aletheia postmortem).  Evidence
 # updates to the Beta posterior are weighted by sigmoid(gamma * z_score)
 # of the observed grid displacement vs running jitter statistics.
@@ -696,6 +704,32 @@ def run():
             sagnac_planner = None
             print(f"[phase823] SagnacMCTSPlanner unavailable "
                   f"(fail-closed): {_sag_exc}")
+    # Phase G5: WavePacketPathSearch consumer (default-OFF). Lazy import so
+    # flag-absent runs never import the G5 module (differential contract).
+    # Fail-closed: construction error -> None -> UNAVAILABLE, no policy
+    # influence on the default path.
+    wave_packet_engine = None
+    if HENRI_WAVE_PACKET_SEARCH:
+        try:
+            from g5_wave_packet_search import (
+                WavePacketPathSearch, default_op_encoder)
+            from henri_vision_encoder import HENRIVisionEncoder
+            from sagnac_mcts_planner import SpelkeDSLNode
+            _wp_enc = HENRIVisionEncoder(
+                d_model=SCALE["d_model"], k_blocks=SCALE["num_blocks"],
+                device=DEVICE)
+            wave_packet_engine = WavePacketPathSearch(
+                encoder=lambda g: _wp_enc.encode_spatial_grid(g).reshape(
+                    SCALE["num_blocks"], 8),
+                op_encoder=default_op_encoder(DEVICE),
+                op_exec=lambda op, g: SpelkeDSLNode(op_name=op).execute(g),
+                mode="exact", device=DEVICE)
+            print("[g5] WavePacketPathSearch consumer armed "
+                  "(HENRI_WAVE_PACKET_SEARCH=1)")
+        except Exception as _wp_exc:
+            wave_packet_engine = None
+            print(f"[g5] WavePacketPathSearch unavailable "
+                  f"(fail-closed): {_wp_exc}")
     # Phase 7.5 CONN Module A: advisory Sagnac veto sidecar (default-OFF).
     # The sidecar (arc_sagnac_veto.py) is self-contained; it computes the
     # dual-channel deltas with the canonical norm-consistent metric. Fail-open:

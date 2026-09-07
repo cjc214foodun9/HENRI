@@ -141,10 +141,10 @@ class WavePacketPathSearch:
         """Propagate a superposed wavefront through op codebook, vetoing in one pass."""
         if not _TORCH:
             return PacketResult(status="TORCH_UNAVAILABLE")
-        t0 = time.perf_counter()
-        psi_target = self.encoder(target_grid)
-        op_waves = torch.stack([self.op_encoder(op) for op in ops])  # [K,8192,8]
-        psi_t = self.encoder(input_grid)
+        tac = time.perf_counter()
+        psi_target = self.encoder(target_grid).to(self.device)
+        op_waves = torch.stack([self.op_encoder(op) for op in ops]).to(self.device)  # [K,8192,8]
+        psi_t = self.encoder(input_grid).to(self.device)
 
         frontier = [psi_t]
         best_seq: list[str] = []
@@ -196,7 +196,7 @@ class WavePacketPathSearch:
             current = _norm_rows(current.reshape(1, -1)).reshape(NUM_BLOCKS, BLOCK_DIM)
             frontier.append(current)
 
-        wall = (time.perf_counter() - t0) * 1000.0
+        wall = (time.perf_counter() - tac) * 1000.0
         return PacketResult(
             op_sequence=best_seq,
             delta_best=best_delta,

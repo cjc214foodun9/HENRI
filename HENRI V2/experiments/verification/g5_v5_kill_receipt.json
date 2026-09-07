@@ -1,0 +1,31 @@
+{
+  "carrier": "g5-egress-wavepacket",
+  "commit": "262fd358039c11da08e75b1410b4ee2f48e59925",
+  "base_main": "88fde19128c70d2757799e6253bd67b83e92e636",
+  "date": "2026-09-07",
+  "remote": "vast-5090 (47411800), worktree /root/g5-v5-verify @ exact SHA, WT_DIRTY=0",
+  "experiment": "G5 v5 SeparableCodec self-consistent encode/decode (60-window prereg)",
+  "run": {"n_windows": 40, "n_ok": 40, "n_abstain": 0, "determinism_all": true},
+  "metrics": {
+    "exact_sequence_frac": 0.025,
+    "token_precision": 1.0,
+    "token_recall": 1.0,
+    "fabricated_tokens_total": 0,
+    "oov_guard_abstained": true
+  },
+  "prereg_criteria": {
+    "V1_exact_ge_0.90": false,
+    "V2_p_r_ge_0.95": true,
+    "V3_oov_abstain": true,
+    "V4_determinism": true,
+    "V5_zero_false_positives": true
+  },
+  "kill": {
+    "fired": true,
+    "criteria": "V1 exact sequence >= 0.90; measured 0.025; kill threshold V1 < 0.70",
+    "root_cause": "Word-SET recovery is exact (P/R=1.0); ORDER + MULTIPLICITY are lost. Bag-code structure: duplicates collapse to one signature (decode dedups), so exact-sequence comparison can never be 1 when a word repeats (every real window repeats 'the' etc.). Bigram beam DP over a deduped word set cannot reconstruct the sequence. Count information survives pre-normalization (signed accumulate) but v5's support-membership gate discards it."
+  },
+  "verdict": "KILLED_BY_PREREG_V1 (word-set solved; sequence not solved)",
+  "v6_requirement": "Count-aware decode (magnitude -> multiplicity) + order via directed bigram chain with multiplicity; NEW prereg required. K5 codec inversion remains FALSIFIED (address-space collapse 8192/65536, sealed same date).",
+  "evidence_log": "C:/Users/chan/henri-telemetry/g5-egress-20260907/g5_v5_remote.log sha256 1f206db4027e566e..."
+}

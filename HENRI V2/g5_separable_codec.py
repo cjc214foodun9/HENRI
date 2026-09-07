@@ -1,23 +1,28 @@
 """G5 v5 — Separable sparse codec + exact support-membership decode.
 
-Measured falsification (2026-09-07, sealed): the K5 codec cell map depends
-only on x mod 8192 (probe: distinct_cells_reachable = 8192 of 65536; tokens
-'013' and 'duryee' share h mod 8192 -> IDENTICAL 16-cell signatures). At K5
-vocab scale 1,554/58,298 words satisfy the support gate (30 true, 1,524
-false) -> deterministic inversion of K5 waves FALSIFIED (span P=0.0052,
-R=0.012, OOV guard failed).
+STATUS (2026-09-07, sealed g5_v5_kill_receipt.json): word-SET recovery is
+EXACT (P=1.0, R=1.0, zero fabricated tokens on 40/40 windows, OOV abstain,
+deterministic). Exact SEQUENCE recovery FAILED (exact_seq_frac = 0.025) ->
+pre-registered kill criterion V1 (< 0.70 -> KILLED). Root cause: bag-code
+structure loses count/order (duplicates collapse to one signature; bigram
+beam DP over deduped word sets cannot reconstruct sequence). v6 requirement:
+count-aware decode (magnitude -> multiplicity) + directed bigram chain with
+multiplicity; NEW pre-registration required before production use.
 
-v5 fixes the map: cell indices are derived from the FULL feature hash via
-splitmix64 mixing (cell_s = splitmix64(hash ^ s*GOLDEN) % 65536). Effective
-address space becomes 65536; two features collide on all 16 cells only if
-their hashes collide (negligible). In the sparse regime (message <= ~200
-features -> occupancy <= 5%), the support gate (all 16 cells present AND
-sign-matched) is near-exact, so decode = exact word recovery or ABSTAIN.
+Measured falsification of the K5 map that motivated v5 (2026-09-07): K5
+cell map depends only on x mod 8192 (distinct_cells_reachable = 8192 of
+65536; tokens '013' and 'duryee' share h mod 8192 -> IDENTICAL 16-cell
+signatures) -> deterministic inversion of K5 waves FALSIFIED.
+
+v5 fixes the map: cell indices derive from the FULL feature hash via
+splitmix64 (cell_s = splitmix64(hash ^ s*GOLDEN) % 65536). Effective address
+space = 65536; two features collide on all 16 cells only on a full 64-bit
+hash collision (negligible). Sparse-regime support gate is near-exact.
 
 Contracts:
   * Deterministic, zero trainable parameters, fail-closed.
   * encode returns [8192,8] row-unit wave payload (pipeline-compatible) +
-    2000-d projection for retrieval (kept identical to K5 for ARM-R parity).
+    2000-d projection for retrieval (K5-shaped, ARM-R parity).
   * decode returns OK (exact) or ABSTAIN_*; never fabricates partial text.
 """
 from __future__ import annotations

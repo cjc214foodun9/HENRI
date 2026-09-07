@@ -53,3 +53,10 @@ Kill experiment vs MCTS at same budget (pre-registered). Flag `HENRI_WAVE_PACKET
 OBSERVED: ARM-R (16/16 P@1=1.0), ARM-H (0.9255@10k, edit1=0), ARM-U (token collapse 29674),
 MCTS discrete loop (source), flags default-OFF (source), main @ 88fde19 (git).
 HYPOTHESIS: DSCI recovery precision >= 0.90 (to be measured, preregistered).
+
+## Evidence correction (2026-09-07)
+Advisory Ref-3 claimed `wave_jepa.py` is invoked at MCTS leaf nodes. FALSIFIED by direct symbol
+search: no exact `wave_jepa` import exists in `sagnac_mcts_planner.py` (imports: henri_vision_encoder,
+zone_c_epistemic_axiom_harness, henri_universal_repl, henri_decoder, efe_planner). The per-child
+score is `dual_channel_sagnac_veto` over vision-encoder waves. Lens B discrete-UTC-loop claims:
+VERIFIED. Lens B wave_jepa-leaf claim: NOT SUPPORTED.
