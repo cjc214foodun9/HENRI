@@ -29,6 +29,9 @@ HENRI2 = os.path.join(G6_ROOT, "HENRI V2")
 sys.path.insert(0, HENRI2); sys.path.insert(0, G6_ROOT)
 import numpy as np
 
+from zone_c_world_knowledge_codec import tokenize
+from g5_separable_codec import v5_feature_cells
+
 SRC = "/workspace/k5-sources"
 SRC_NAMES = ["arts_g5000.txt", "democracy_and_education.txt",
              "elements_of_style.txt", "engineering_g17132.txt",
@@ -71,10 +74,7 @@ def count_walks(words, counts, strong, order=1, cap=2):
 
 
 def main() -> int:
-    sys.path.insert(0, HENRI2)
-    from zone_c_world_knowledge_codec import tokenize
     import g6_count_aware_codec as g6v
-    from g5_separable_codec import v5_feature_cells
 
     texts = []
     for sp in Path(SRC).rglob("*"):
