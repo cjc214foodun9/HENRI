@@ -1,0 +1,33 @@
+{
+  "kind": "G6_V6_KILL_RECEIPT",
+  "date_utc": "2026-09-07",
+  "branch": "carrier/g6-count-aware-egress",
+  "sha": "c523c41795323dac67f589239e7a384954e875bd",
+  "base_main": "f4dcb69a50718f5585012e2b29407ed9b6e9d87c",
+  "prereg": "experiments/verification/g6_v6_count_aware_prereg.md",
+  "freeze_manifest": "experiments/verification/g6_k5_freeze_manifest.json (45 files, vast-5090, verified at runtime)",
+  "probe": "experiments/verification/g6_v6_remote_probe.py @ e65d6bd (60 windows, seed 20260907)",
+  "evidence_class": "REPRESENTATION_CAPACITY_EVIDENCE (self-consistent encode->decode round-trip; NOT a benchmark/task score)",
+  "results": {
+    "n_windows": 60,
+    "n_ok": 60,
+    "n_abstain": 0,
+    "exact_seq_frac": 0.0333,
+    "mean_p": 1.0,
+    "mean_r": 1.0,
+    "n_fabricated_total": 0,
+    "mult_exact_rate": 1.0,
+    "determinism_all": true,
+    "oov_guard_abstained": true
+  },
+  "prereg_criteria": {
+    "V1_exact_ge_0.90": "FAIL 0.0333",
+    "V2_p_r_ge_0.95": "PASS",
+    "V3_oov_abstain": "PASS",
+    "V4_determinism": "PASS",
+    "V5_zero_fabrications": "PASS",
+    "V6_mult_exact_ge_0.90": "PASS"
+  },
+  "kill_check": {"V1_below_0.70": "FIRED", "any_fabrication": false},
+  "verdict": "V1 KILL FIRED. v6 = sealed negative + mechanism evidence. Multiset/multiplicity exact; sequence recovery blocked by decode-side walk ambiguity under repeats (order information verified present in wave: true edges strong 60/60; no-repeat windows unique+exact). 2nd-order signal: one window uniquely recovered; diagnostic defect disclosed (0-walk/cap_hit=0 contradiction). v7 requires new prereg."
+}
