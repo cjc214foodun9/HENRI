@@ -83,19 +83,10 @@ class TrigramCodec:
                 self._tri_cache[k] = _sig(flat, v5_feature_cells(f"t:{a} {b} {c}"))[0] / 16.0
             return self._tri_cache[k]
 
-        # 2nd-order beam: state = (path, last1, last2)
-        paths = []
-        for a in admitted:
-            for b in admitted:
-                if b != a or counts.get(a, 0) >= 2:
-                    paths.append(([a, b], 0.0))
-                    break
-            if paths:
-                break
-        # simpler: seed with single word then expand with 2nd-order from 2 words
-        cands = [w for w in admitted]
-        first = cands[0]
-        paths = [([first], 0.0)]
+        # 2nd-order beam: seed from EVERY admitted word (single lexicographic
+        # start is a defect: if the true sequence starts elsewhere the beam can
+        # never recover it, making trigram_exact_seq artificially 0.0).
+        paths = [([w], 0.0) for w in admitted]
         for _ in range(total - 1):
             nxt = []
             for path, sc in paths:

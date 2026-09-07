@@ -37,12 +37,15 @@ SRC_NAMES = ["arts_g5000.txt", "democracy_and_education.txt",
              "elements_of_style.txt", "engineering_g17132.txt",
              "computing/bisect.rst", "computing/collections.rst"]
 THRESH = 12 / 16
-STATE_CAP = 20000
+STATE_CAP = 300000
 
 
 def count_walks(words, counts, strong, order=1, cap=2):
     """Count distinct sequences consuming counts exactly, following strong
-    adjacency (bigram if order==1; bigram+trigram if order==2)."""
+    adjacency (bigram if order==1; bigram+trigram if order==2).
+    Returns (n_found, cap_hit): cap_hit True when STATE_CAP cut the search
+    before all walks were enumerated (0 found + cap_hit = inconclusive, NOT
+    'no walk exists' — the gold walk is always valid by construction)."""
     total = sum(counts.values())
     starts = sorted(w for w in counts if counts[w] > 0)
     found = []
@@ -70,7 +73,7 @@ def count_walks(words, counts, strong, order=1, cap=2):
                 return
 
     dfs([])
-    return len(found)
+    return len(found), explored[0] > STATE_CAP
 
 
 def main() -> int:
@@ -116,12 +119,12 @@ def main() -> int:
                     for b in adm:
                         for c in adm:
                             strong[("t", a, b, c)] = trig.tri(flat, a, b, c) >= THRESH
-            n1 = count_walks(adm, counts, strong, order=1, cap=2)
-            n2 = count_walks(adm, counts, strong, order=2, cap=2) if order_diag2 else None
+            n1, c1 = count_walks(adm, counts, strong, order=1, cap=2)
+            n2, c2 = count_walks(adm, counts, strong, order=2, cap=2) if order_diag2 else (None, False)
             rows_out.append({
                 "src": src, "n_words": len(gt), "has_repeats": int(any(c > 1 for c in gtc.values())),
-                "n_walks_1st": n1,
-                "n_walks_2nd": n2,
+                "n_walks_1st": n1, "cap_hit_1st": int(c1),
+                "n_walks_2nd": n2, "cap_hit_2nd": int(c2),
             })
 
     def agg(rows, key, sel=lambda r: True):
