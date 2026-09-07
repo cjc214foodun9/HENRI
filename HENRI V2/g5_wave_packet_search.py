@@ -112,16 +112,23 @@ class WavePacketPathSearch:
         self.device = device or ("cuda" if (_TORCH and torch.cuda.is_available()) else "cpu")
 
     def _sagnac_delta(self, psi: "torch.Tensor", psi_target: "torch.Tensor") -> "torch.Tensor":
-        """1 - |mean(conj(psi_cand) * psi_target)| per candidate in a batch."""
+        """1 - |cos(psi_cand, psi_target)| per candidate in a batch.
+
+        v2: normalized dot (cosine distance). Elementwise mean collapses unit
+        waves to cos/D (D=65536); unnormalized dot conflates scales between
+        encoder outputs (unit) and codec op waves (non-unit). Cosine distance
+        is scale-invariant and is the honest Sagnac-relevant inner product.
+        """
         if psi.is_complex():
-            inner = torch.abs(torch.mean(psi.conj() * psi_target.unsqueeze(0), dim=(-2, -1)))
+            a = psi.reshape(psi.shape[0], -1)
+            b = psi_target.reshape(-1)
+            a = a / torch.linalg.vector_norm(a, dim=-1, keepdim=True)
+            b = b / torch.linalg.vector_norm(b, dim=0).clamp_min(1e-12)
+            inner = torch.abs(torch.real(a @ b))
         else:
-            inner = torch.abs(
-                torch.mean(
-                    psi.reshape(psi.shape[0], -1) * psi_target.reshape(1, -1),
-                    dim=-1,
-                )
-            )
+            a = F.normalize(psi.reshape(psi.shape[0], -1), p=2, dim=-1)
+            b = F.normalize(psi_target.reshape(1, -1), p=2, dim=-1)
+            inner = torch.abs((a * b).sum(dim=-1))
         return 1.0 - inner
 
     def search(

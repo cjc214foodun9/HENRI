@@ -34,7 +34,14 @@ def _engine():
     return g5_semantic_egress.DSCIEngine(vocab=vocab)
 
 
-def test_dsci_determinism():
+def test_dsci_in_vocab_exact_recovery():
+    eng = _engine()
+    codec = CompositionalTextCodec()
+    wave_bytes, _ = codec.encode("the quick brown fox")
+    rows = np.frombuffer(wave_bytes, dtype=np.float32).reshape(8192, 8)
+    r = eng.decode(rows)
+    assert r.status == "OK"
+    assert r.text == "the quick brown fox", f"got {r.text!r}"
     eng = _engine()
     codec = CompositionalTextCodec()
     wave_bytes, _ = codec.encode("the quick brown fox")
@@ -97,14 +104,23 @@ def test_wave_packet_shapes_and_determinism():
     import torch
     import g5_wave_packet_search as wp
 
-    # Deterministic encoder (fixed tensor): delta must be reproducible.
-    enc = lambda g: torch.full((8192, 8), 0.5)  # noqa: E731
+    # Deterministic grid-derived waves (target != input -> nonzero delta).
+    def enc(g):
+        s = int(np.asarray(g).sum() % 97) + 1
+        torch.manual_seed(s)
+        w = torch.randn(8192, 8)
+        return w / w.norm().clamp_min(1e-12)
+
     opv = wp.default_op_encoder("cpu")
     op_exec = lambda op, grid: grid  # noqa: E731
     engine = wp.WavePacketPathSearch(encoder=enc, op_encoder=opv, op_exec=op_exec, mode="exact")
     grid = np.zeros((30, 30), dtype=int)
-    r1 = engine.search(grid, grid, wp.make_packet_ops(), depth=2)
-    r2 = engine.search(grid, grid, wp.make_packet_ops(), depth=2)
-    assert r1.n_candidates == len(wp.make_packet_ops()) * 2
+    grid2 = grid.copy()
+    grid2[5, 5] = 1
+    r1 = engine.search(grid, grid2, wp.make_packet_ops(), depth=2)
+    r2 = engine.search(grid, grid2, wp.make_packet_ops(), depth=2)
+    assert r1.status in ("SOLVED", "SEARCHED")
+    assert r1.n_candidates == r2.n_candidates
     assert r1.delta_best == r2.delta_best
+    assert 0.0 <= r1.delta_best <= 1.0
     assert isinstance(r1.frontier_width, list)

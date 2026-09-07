@@ -115,35 +115,26 @@ class DSCIEngine:
         if flat.size != WAVE_DIM or self._uni_idx.shape[0] == 0:
             return DecodeResult(status="ABSTAIN_INVALID_INPUT")
 
-        # 1) Matching pursuit: recover unigram feature codes.
-        residual = flat.copy()
-        initial_norm = float(np.linalg.norm(residual)) or 1.0
+        # v2 (corrected): block-address code inversion requires EXACT support
+        # membership. For sparse text the codec wave has exactly one nonzero
+        # cell per block (fill occupies empty rows; feature cells replace them),
+        # so a present feature's 16 cells are ALL in the wave support with
+        # sign match (rs = 4.0). Fill-seeded cells can alias PART of an
+        # in-vocab code (13-14/16 cells -> conf 0.84 on an OOV string), so a
+        # score threshold alone fabricates. Gate: every cell of the candidate
+        # code must be nonzero in the wave AND sign-match (16/16 membership).
+        support = np.nonzero(flat)[0]
+        support_set = set(int(i) for i in support)
         chosen: list[tuple[int, float]] = []
-        active = np.ones(self._uni_idx.shape[0], dtype=bool)
-        for _ in range(self.max_decode_iter):
-            ai = np.nonzero(active)[0]
-            if ai.size == 0:
-                break
-            vals = residual[self._uni_idx[ai]] * self._uni_sign[ai]
-            rs = vals.sum(axis=1) * _UNIT
-            best_local = int(np.argmax(rs))
-            if float(rs[best_local]) < self.tau_accept:
-                break
-            gi = int(ai[best_local])
-            chosen.append((gi, float(rs[best_local])))
-            u = np.zeros(WAVE_DIM, dtype=np.float32)
-            u[self._uni_idx[gi]] = self._uni_sign[gi] * _UNIT
-            residual -= float(rs[best_local]) * u
-            active[gi] = False
+        for gi in range(self._uni_idx.shape[0]):
+            cells = self._uni_idx[gi]
+            if all(int(c) in support_set for c in cells):
+                rs = float((flat[cells] * self._uni_sign[gi]).sum() * _UNIT)
+                if rs >= 3.999:
+                    chosen.append((int(gi), rs))
 
         if not chosen:
             return DecodeResult(status="ABSTAIN_LOW_CONF", n_pursued=0)
-
-        # Fail-closed coverage gate: if the pursued features explain less than
-        # 50% of the wave energy, ABSTAIN rather than emit a partial guess.
-        coverage = 1.0 - float(np.linalg.norm(residual)) / initial_norm
-        if coverage < 0.5:
-            return DecodeResult(status="ABSTAIN_LOW_CONF", n_pursued=len(chosen))
 
         cand = [self.vocab[i] for i, _ in chosen]
         uniq = list(dict.fromkeys(cand))[:64]
@@ -177,8 +168,10 @@ class DSCIEngine:
 
         path, sc, _ = beam_paths[0]
         n = max(1, len(path))
-        conf = float(np.clip((sc / n - self.tau_accept) / (1.0 - self.tau_accept), 0.0, 1.0))
-        if conf < 0.1:
+        # v2 confidence: mean matched-cell fraction over the emitted path.
+        # Max per-word score is 4.0 (16/16 cells); rs values are on that scale.
+        conf = float(np.clip(np.mean([uni_score.get(w, 0.0) for w in path]) / 4.0, 0.0, 1.0))
+        if conf < 0.5:
             return DecodeResult(status="ABSTAIN_NO_ORDER", words=uniq, path=path, n_pursued=len(chosen))
         return DecodeResult(
             text=" ".join(path),
