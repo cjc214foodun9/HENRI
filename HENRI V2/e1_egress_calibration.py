@@ -206,8 +206,11 @@ def build_window_pairs(texts: Sequence[str],
             raise ValueError(
                 "teacher_embeddings required (fail-closed; no synthetic fallback)")
         elif tokenizer is not None:
-            ids = tokenizer.encode(window) if hasattr(tokenizer, "encode") \
-                else tokenizer(window)["input_ids"]
+            if hasattr(tokenizer, "encode"):
+                ids = tokenizer.encode(window)
+            else:
+                raw = tokenizer(window)
+                ids = raw.get("input_ids", []) if isinstance(raw, dict) else raw
             ids = [i for i in ids if 0 <= i < teacher_embeddings.size(0)]
             if not ids:
                 continue
