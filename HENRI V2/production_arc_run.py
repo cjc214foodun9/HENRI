@@ -713,7 +713,6 @@ def run():
         try:
             from g5_wave_packet_search import (
                 WavePacketPathSearch, default_op_encoder)
-            from henri_vision_encoder import HENRIVisionEncoder
             from sagnac_mcts_planner import SpelkeDSLNode
             _wp_enc = HENRIVisionEncoder(
                 d_model=SCALE["d_model"], k_blocks=SCALE["num_blocks"],
