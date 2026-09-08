@@ -309,7 +309,10 @@ class HenriSwarmOrchestrator(nn.Module):
                  task_eig_gamma: float = 4.0,
                  use_diagonal_transition: bool = False,
                  use_complex_transition: bool = False,
-                 action_outcome_store=None):
+                 action_outcome_store=None,
+                 thermo_partition: bool = False,
+                 thermo_limit_order: str = "prior",
+                 thermo_seed: int = 0):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
@@ -339,7 +342,10 @@ class HenriSwarmOrchestrator(nn.Module):
                                   num_actions=num_actions,
                                   use_diagonal_transition=use_diagonal_transition,
                                   use_complex_transition=use_complex_transition,
-                                  action_outcome_store=action_outcome_store)
+                                  action_outcome_store=action_outcome_store,
+                                  thermo_partition=thermo_partition,
+                                  thermo_limit_order=thermo_limit_order,
+                                  thermo_seed=thermo_seed)
         # flattened to real width d_model to match the planner's store.
         action_real = torch.stack([
             torch.view_as_real(self.decoder.get_action_wave(a)).reshape(-1)[:d_model]
