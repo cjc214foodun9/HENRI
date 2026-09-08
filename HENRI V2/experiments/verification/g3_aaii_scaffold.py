@@ -77,6 +77,19 @@ def http_bytes(url: str, timeout: int = 120):
         return r.read()
 
 
+def _hf_token() -> str:
+    p = os.path.expanduser("~/.cache/huggingface/token")
+    if os.path.exists(p):
+        return open(p, "r", encoding="utf-8").read().strip()
+    return os.environ.get("HF_TOKEN", "")
+
+
+def http_bytes_auth(url: str, token: str, timeout: int = 600) -> bytes:
+    req = urllib.request.Request(url, headers={**UA, "Authorization": f"Bearer {token}"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
+
+
 def stage(dst_dir: str, name: str, url: str, data: bytes) -> dict:
     dst = os.path.join(dst_dir, name)
     with open(dst, "wb") as fh:
@@ -94,6 +107,8 @@ def main() -> int:
     ap.add_argument("--out-dir", default="/tmp/g3_scaffold")
     ap.add_argument("--max-tasks", type=int, default=MAX_TASKS)
     ap.add_argument("--constituent", choices=list(CONSTITUENTS), default=None)
+    ap.add_argument("--hle-granted", action="store_true",
+                    help="HLE terms accepted (user 2026-09-08, cais/hle); stage README/eval.yaml/parquet with HF token, hash only.")
     args = ap.parse_args()
     os.makedirs(args.data_dir, exist_ok=True)
     os.makedirs(args.out_dir, exist_ok=True)
@@ -106,8 +121,26 @@ def main() -> int:
         rec = {"constituent": name, "license": meta["license"],
                "checker": meta["checker"], "status": "STAGED_BLOCKED_INFRA"}
         try:
-            # HLE gated -> record terms; fetch nothing.
+            staged = []
             if meta.get("gated"):
+                if args.hle_granted and meta.get("hf"):
+                    token = _hf_token()
+                    if not token:
+                        rec["status"] = "STAGED_BLOCKED_INFRA"
+                        rec["detail"] = "HLE granted but no HF token available"
+                        rows.append(rec)
+                        continue
+                    rev = http_json(HF_META.format(ds=meta["hf"]))["sha"]
+                    rec["hf_revision"] = rev
+                    for fname in ["README.md", "eval.yaml", "data/test-00000-of-00001.parquet"]:
+                        url = HF_RESOLVE.format(ds=meta["hf"], rev=rev, path=fname)
+                        data = http_bytes_auth(url, token)
+                        staged.append(stage(args.data_dir, f"hle_{fname.replace('/', '__')}", url, data))
+                    rec["status"] = "STAGED_OK"
+                    rec["staged_files"] = staged
+                    rec["note"] = "terms authorized 2026-09-08; parquet hashed only (answers present in file, not read into receipt)"
+                    rows.append(rec)
+                    continue
                 rec["status"] = "STAGED_BLOCKED_GATED"
                 rec["terms_url"] = meta["terms_url"]
                 rec["detail"] = "gated(auto); requires terms acceptance; no bytes staged"
