@@ -107,3 +107,16 @@ def test_default_off_non_import():
 def test_teacher_loader_missing_artifact_fails_closed(config, tmp_path):
     with pytest.raises(FileNotFoundError):
         load_teacher_embeddings(Path(tmp_path) / "nope.pt")
+
+
+def test_per_block_rotation_geometry(config):
+    """E1 G4 rotation: per-block O(8) rotation must preserve row norms."""
+    torch.manual_seed(7)
+    w0 = torch.randn(2, config.num_blocks, config.block_dim)
+    R = torch.randn(8, 8)
+    Q, _ = torch.linalg.qr(R)
+    wrot = torch.einsum("ij,bkj->bki", Q, w0)     # production geometry
+    assert wrot.shape == w0.shape
+    assert torch.norm(wrot[0, :, :], dim=-1).shape == (config.num_blocks,)
+    err = (torch.norm(wrot[0], dim=-1) - torch.norm(w0[0], dim=-1)).abs().max().item()
+    assert err <= 1e-5, f"rotation broke row norms: {err}"

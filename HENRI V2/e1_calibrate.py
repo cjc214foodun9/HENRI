@@ -97,7 +97,7 @@ def gate_g4_rotation(head, eval_pairs, teacher_emb, device, seed=7, probes=16):
             # draw on CPU first, then transfer.
             R = torch.randn(8, 8, generator=g, device="cpu").to(device)
             Q, _ = torch.linalg.qr(R)
-            wrot = torch.einsum("ij,bjk->bik", Q, w0)
+            wrot = torch.einsum("ij,bkj->bki", Q, w0)
             feats1, _ = head(wrot)
             pred1 = F.normalize(feats1, dim=-1) @ F.normalize(emb, dim=-1).t()
             i1 = int(pred1.argmax(-1).item())
