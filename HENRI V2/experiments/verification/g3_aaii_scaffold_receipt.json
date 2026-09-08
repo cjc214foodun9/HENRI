@@ -1,8 +1,8 @@
 {
   "schema_id": "henri.g3-scaffold.v1",
   "prereg": "experiments/verification/g3_aaii_receipt_prereg.md",
-  "generated_at_utc": "2026-09-05T09:07:10Z",
-  "wall_seconds": 1.97,
+  "generated_at_utc": "2026-09-08T17:29:08Z",
+  "wall_seconds": 29.64,
   "rows": [
     {
       "constituent": "terminal-bench-2.1",
@@ -84,9 +84,29 @@
       "constituent": "hle",
       "license": "MIT",
       "checker": "public question subset; private grader components BLOCKED",
-      "status": "STAGED_BLOCKED_GATED",
-      "terms_url": "https://huggingface.co/datasets/cais/hle",
-      "detail": "gated(auto); requires terms acceptance; no bytes staged"
+      "status": "STAGED_OK",
+      "hf_revision": "5a81a4c7271a2a2a312b9a690f0c2fde837e4c29",
+      "staged_files": [
+        {
+          "name": "hle_README.md",
+          "url": "https://huggingface.co/datasets/cais/hle/resolve/5a81a4c7271a2a2a312b9a690f0c2fde837e4c29/README.md",
+          "bytes": 2574,
+          "sha256": "f16f96e69791f83bb835120613fe419233b0345beae7296cce543593c5c57b5a"
+        },
+        {
+          "name": "hle_eval.yaml",
+          "url": "https://huggingface.co/datasets/cais/hle/resolve/5a81a4c7271a2a2a312b9a690f0c2fde837e4c29/eval.yaml",
+          "bytes": 1118,
+          "sha256": "c8190840d6aa605a13197215da46556cd47f14c81665e929151631293365bf32"
+        },
+        {
+          "name": "hle_data__test-00000-of-00001.parquet",
+          "url": "https://huggingface.co/datasets/cais/hle/resolve/5a81a4c7271a2a2a312b9a690f0c2fde837e4c29/data/test-00000-of-00001.parquet",
+          "bytes": 274276147,
+          "sha256": "6d0ee0602e8aea6b159509577e884f48ecac7b8e3f6822a35f51335a446c726a"
+        }
+      ],
+      "note": "terms authorized 2026-09-08; parquet hashed only (answers present in file, not read into receipt)"
     }
   ]
 }
