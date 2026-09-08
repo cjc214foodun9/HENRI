@@ -203,9 +203,8 @@ def build_window_pairs(texts: Sequence[str],
             .reshape(NUM_BLOCKS, BLOCK_DIM).copy()
         ).float()
         if teacher_embeddings is None:
-            # Plumbing fixture if caller forgot: deterministic unit vector.
-            g = torch.Generator().manual_seed(seed + len(pairs))
-            tgt = torch.randn(TEACHER_DIM, generator=g)
+            raise ValueError(
+                "teacher_embeddings required (fail-closed; no synthetic fallback)")
         elif tokenizer is not None:
             ids = tokenizer.encode(window) if hasattr(tokenizer, "encode") \
                 else tokenizer(window)["input_ids"]

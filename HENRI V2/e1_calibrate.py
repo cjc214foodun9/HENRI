@@ -44,8 +44,6 @@ def make_tokenizer(teacher_root: Path):
 
 
 def gate_g3_retrieval(head, eval_pairs, teacher_emb, device):
-    """P@1 of head feats -> nearest teacher row; returns (trained, untrained, random)."""
-    from torch.utils.data import DataLoader  # noqa: F401  (kept for parity)
     waves = torch.stack([p.wave for p in eval_pairs]).to(device)
     targets = torch.stack([p.target for p in eval_pairs]).to(device)
     emb = teacher_emb.to(device)
