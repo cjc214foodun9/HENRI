@@ -1,0 +1,14 @@
+{
+  "mode": "scaffold",
+  "pairs_calib": 16,
+  "pairs_eval": 0,
+  "losses": [
+    2.980809211730957,
+    2.0489368438720703,
+    1.3110525608062744
+  ],
+  "loss_first": 2.980809211730957,
+  "loss_last": 1.3110525608062744,
+  "steps": 3,
+  "scaffold_ok": true
+}
