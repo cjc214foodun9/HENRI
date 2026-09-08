@@ -24,11 +24,8 @@ import torch.nn.functional as F
 
 from e1_egress_calibration import (
     E1Config, E1Trainer, build_window_pairs, load_teacher_embeddings,
-    isometry_penalty, qr_retraction, TEACHER_WEIGHTS_SHA256,
-    TEACHER_WEIGHTS_BYTES, WAVE_DIM,
+    isometry_penalty,
 )
-
-TEACHER_COLORS = 151936
 
 
 def sentence_split(text: str) -> list[str]:
@@ -123,8 +120,6 @@ def run(mode: str, data: Path, teacher_root: Path, out: Path,
     config = E1Config(device=device)
     limit = 16 if mode == "scaffold" else None
     train_texts = sents[:limit] if limit else sents
-    import random as _r
-    _r.seed(20260908)
     # ordered split by sentence order
     n = len(train_texts)
     if mode == "full":
