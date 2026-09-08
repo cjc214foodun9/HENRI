@@ -191,6 +191,17 @@ USE_OBJECT_SAGNAC_MCTS = os.environ.get("USE_OBJECT_SAGNAC_MCTS", "0") == "1"
 HENRI_WAVE_PACKET_SEARCH = os.environ.get("HENRI_WAVE_PACKET_SEARCH", "0") == "1"
 HENRI_SEMANTIC_EGRESS = os.environ.get("HENRI_SEMANTIC_EGRESS", "0") == "1"
 
+# Phase G8: timescale-separated partition-function calibration (Corberi et al.,
+# arXiv:2609.04732). Default OFF so the default path stays byte-identical. When
+# set, Zone B selection becomes a Gibbs draw P(a) ~ e^{-beta_sigma EFE(a)} and
+# Zone C axiom surprise becomes the softmin fast free energy, with the beta
+# ratio schedule beta_sigma > beta_S, beta_j > beta_S and n,m -> 0. Both
+# recover the current argmin/hard-min behavior as beta -> infinity. Zero
+# trainable parameters; no DB writes.
+HENRI_THERMO_PARTITION = os.environ.get("HENRI_THERMO_PARTITION", "0") == "1"
+HENRI_THERMO_LIMIT_ORDER = os.environ.get("HENRI_THERMO_LIMIT_ORDER", "prior")
+HENRI_THERMO_SEED = int(os.environ.get("HENRI_THERMO_SEED", "0") or 0)
+
 # P0.5: task-weighted discriminative EIG (Aletheia postmortem).  Evidence
 # updates to the Beta posterior are weighted by sigmoid(gamma * z_score)
 # of the observed grid displacement vs running jitter statistics.
@@ -643,6 +654,9 @@ def run():
         external_task_weight=EXTERNAL_TASK_WEIGHT,
         task_weighted_eig=TASK_WEIGHTED_EIG,
         task_eig_gamma=TASK_EIG_GAMMA,
+        thermo_partition=HENRI_THERMO_PARTITION,
+        thermo_limit_order=HENRI_THERMO_LIMIT_ORDER,
+        thermo_seed=HENRI_THERMO_SEED,
         **SCALE,
     ).to(DEVICE)
     # Freeze-closure (audit deleg_a003e770): explicit eval mode. The planner

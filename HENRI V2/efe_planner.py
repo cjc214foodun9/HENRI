@@ -218,6 +218,9 @@ class EFEPlanner(nn.Module):
         use_diagonal_transition: bool = False,
         use_complex_transition: bool = False,
         action_outcome_store=None,
+        thermo_partition: bool = False,
+        thermo_limit_order: str = "prior",
+        thermo_seed: int = 0,
     ):
         super().__init__()
         if use_diagonal_transition and use_complex_transition:
@@ -228,6 +231,25 @@ class EFEPlanner(nn.Module):
         self.d_model = d_model
         self.epistemic_weight = epistemic_weight
         self.pragmatic_weight = pragmatic_weight
+        # Phase G8 (Corberi et al. arXiv:2609.04732) timescale-separated
+        # partition-function calibration. DEFAULT OFF: the flag-gated path
+        # keeps the default path byte-identical to the previous behavior.
+        # Zone B selection becomes a Gibbs draw P(a) ~ e^{-beta_sigma EFE(a)}
+        # and Zone C surprise becomes the softmin fast free energy
+        # -(1/beta_j) log sum exp(-beta_j * delta_a); both recover the current
+        # argmin/hard-min limits as beta -> inf. Zero trainable parameters.
+        self.thermo_partition = bool(thermo_partition)
+        self.thermo_limit_order = thermo_limit_order
+        self.thermo_seed = int(thermo_seed)
+        self._thermo_evals = 0
+        self._thermo_select_evals = 0
+        self._thermo_last_ratios = None
+        self._thermo_select_ratios = None
+        if self.thermo_partition:
+            from thermo_partition import schedule
+            self._thermo_schedule = schedule
+        else:
+            self._thermo_schedule = None
         self._grid_dist_epistemic = grid_dist_epistemic
         self._happy_tensor_cut = happy_tensor_cut
         self._interoceptive_viability = interoceptive_viability
@@ -705,7 +727,23 @@ class EFEPlanner(nn.Module):
             a = a / (torch.norm(a) + 1e-12)
             inner = torch.dot(p, a)  # real waves: plain inner product
             deltas.append(1.0 - inner)
-        surprise = torch.stack(deltas).min()  # closest axiom governs
+        deltas_t = torch.stack(deltas)
+        if self.thermo_partition and self._thermo_schedule is not None:
+            # Zone C: fast free energy over axiom energies (Corberi Eq 5-7):
+            # F = -(1/beta_j) log sum_exp(-beta_j * delta). Hard-min limit as
+            # beta_j -> inf recovers the current .min() behavior. e advances
+            # per scoring call (input-exposure timescale).
+            r = self._thermo_schedule(self._thermo_evals + 1,
+                                      limit_order=self.thermo_limit_order)
+            bj = r.beta_j
+            m = deltas_t.min()
+            surprise = m - (1.0 / bj) * torch.log(
+                torch.exp(-bj * (deltas_t - m)).sum())
+            self._thermo_evals += 1
+            self._thermo_last_ratios = r.as_dict()
+        else:
+            surprise = deltas_t.min()  # closest axiom governs
+            self._thermo_last_ratios = None
 
         goal_dist = self.lambda_goal * self.goal_distance(predicted_wave, goal_wave)
 
@@ -1097,11 +1135,45 @@ class EFEPlanner(nn.Module):
             epistemic_best = max(results, key=lambda r: r["epistemic"])
             best = dict(epistemic_best, explored=True)
         else:
-            best = dict(best, explored=False)
+            if (self.thermo_partition and self._thermo_schedule is not None
+                    and len(results) > 1):
+                # Zone B (Corberi Eq 5): Gibbs policy over candidate EFE.
+                # P(a) = e^{-beta_sigma EFE(a)} / Z; as beta_sigma -> inf this
+                # recovers argmin. Deterministic given thermo_seed + exposure
+                # count. Draw only over admissible candidates (same rule as
+                # the hard-rejection hybrid above).
+                admissible = [r for r in results if not r["rejected"]]
+                if not admissible:
+                    admissible = results
+                r = self._thermo_schedule(
+                    self._thermo_select_evals + 1,
+                    limit_order=self.thermo_limit_order)
+                bet = r.beta_sigma
+                v = torch.tensor([x["efe"] for x in admissible],
+                                 dtype=torch.float64)
+                m = v.min()
+                w = torch.exp(-bet * (v - m))
+                w = w / w.sum()
+                gen = torch.Generator().manual_seed(
+                    self.thermo_seed + self._thermo_select_evals * 7919)
+                idx = int(torch.multinomial(w, 1, generator=gen).item())
+                best = dict(admissible[idx], explored=False,
+                            thermo_gibbs=True, thermo_beta=bet)
+                self._thermo_select_evals += 1
+                self._thermo_select_ratios = r.as_dict()
+            else:
+                best = dict(best, explored=False)
+                self._thermo_select_ratios = None
         explore_threshold = accuracy_floor
 
         best["spread"] = spread
         best["explore_threshold"] = explore_threshold
+        if self.thermo_partition:
+            # Zone A telemetry: emit the live beta-ratio schedule so the
+            # timescale-separation signal (beta_sigma > beta_S, beta_j > beta_S,
+            # n,m -> 0) is observable per step on the action path.
+            best["thermo_ratios"] = (self._thermo_select_ratios
+                                     or self._thermo_last_ratios)
         # Annotate which table entry was actually chosen so callers can see
         # whether the returned action was the exploit or explore pick.
         chosen = dict(best)
