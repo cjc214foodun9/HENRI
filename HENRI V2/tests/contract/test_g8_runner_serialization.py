@@ -14,7 +14,7 @@ Static source-assert pattern (same family as test_arc_thermostat_shadow.py).
 import sys
 from pathlib import Path
 
-HENRI2 = Path(__file__).resolve().parents[1]  # <wt>/HENRI V2
+HENRI2 = Path(__file__).resolve().parents[2]  # <wt>/HENRI V2
 sys.path.insert(0, str(HENRI2))
 
 SRC = (HENRI2 / "production_arc_run.py").read_text(encoding="utf-8")
@@ -31,7 +31,11 @@ def test_runner_serializes_gibbs_marker():
 def test_keys_live_in_same_record_as_shadow():
     a = SRC.index('"thermo_ratios": chosen.get("thermo_ratios")')
     b = SRC.index('"thermo_shadow": thermo_shadow_info')
-    assert abs(a - b) < 200, (a, b)
+    between = SRC[a:b]
+    # Both keys must sit inside the SAME tele.emit({...}) literal:
+    # no new emit call and no dict-close between them.
+    assert "tele.emit" not in between
+    assert "})" not in between
 
 
 def test_default_off_path_none_safe():
