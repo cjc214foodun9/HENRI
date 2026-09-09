@@ -903,6 +903,10 @@ def run():
         ext_beta_start = [1.0] * len(orch.planner.external_beta)
         # Phase 7.5 D3: last observed scorecard levels-completed count per env.
         scorecard_levels_prev = 0
+        # Stage 3 (Mechanism A): scorecard delta status is initialized at
+        # run() scope so HENRI_DELTA_GAIN=1 never hits UnboundLocalError when
+        # the P0 scorecard block is skipped (EXTERNAL_OUTCOME_EFE=0).
+        scorecard_delta_status = None
         # Phase 8: PSG plan status per env (None until the loop runs).
         psg_status = None
 

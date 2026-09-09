@@ -86,3 +86,21 @@ def test_A_runner_flag_and_delta_gain_wiring():
     assert '"scorecard_delta":' in src
     assert "delta_gain_valid" in src
     assert "scorecard_delta_nu" in src
+
+
+def test_A_scorecard_status_initialized_before_step_loop():
+    # Regression (Stage3 AB verify ON-arm crash): scorecard_delta_status was
+    # bound only inside `if EXTERNAL_OUTCOME_EFE:`; HENRI_DELTA_GAIN=1 evaluated
+    # the name in train_ctx before any P0 block ran -> UnboundLocalError.
+    # The variable must be initialized at run() scope BEFORE the step loop.
+    src = RUNNER.read_text(encoding="utf-8")
+    loop_idx = src.index("for step in range(args.steps)")
+    init_idx = src.rfind("scorecard_delta_status = None", 0, loop_idx)
+    assert init_idx != -1, (
+        "scorecard_delta_status must be initialized before the step loop "
+        "(UnboundLocalError guard for HENRI_DELTA_GAIN=1 without EXTERNAL_OUTCOME_EFE)")
+    # The initialization must not be inside a conditional block: the line
+    # should carry exactly 8-space (run() body) indentation.
+    line_start = src.rfind("\n", 0, init_idx) + 1
+    line = src[line_start:src.index("\n", init_idx)]
+    assert line.startswith("        scorecard_delta_status = None"), line
