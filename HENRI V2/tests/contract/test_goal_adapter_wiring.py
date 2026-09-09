@@ -5,9 +5,10 @@ Covers the sealed adapter artifact (file SHA pin), the adapter's algebra
 the fail-closed NO_DEMOS path, and the runner wiring (flag consumer,
 default-OFF default, Layer 1b presence, telemetry emission).
 
-Sealed artifact: henri_goal_adapter.py @ f30afdde, file SHA-256
-0341a278039313261d0cc63faa336afff1bb9f396d7aa8d65ae214ceaea28888
-(computed from the extracted bytes; matches governance ID 0341a278).
+Sealed artifact: henri_goal_adapter.py (Stage 3 amendment), file SHA-256
+5823ed49ad12bb4d796f8b8ef2665680a2c1d397fe163f657e3862321902b618
+(computed from LF-normalized bytes; prior pin 0341a278 replaced by
+STAGE3_GOAL_ADAPTER_PIN_AMENDED).
 """
 
 import hashlib
@@ -22,7 +23,7 @@ RUNNER = REPO_ROOT / "production_arc_run.py"
 ADAPTER = REPO_ROOT / "henri_goal_adapter.py"
 
 SEALED_ADAPTER_SHA = (
-    "0341a278039313261d0cc63faa336afff1bb9f396d7aa8d65ae214ceaea28888"
+    "5823ed49ad12bb4d796f8b8ef2665680a2c1d397fe163f657e3862321902b618"
 )
 
 NUM_BLOCKS = 8192

@@ -122,6 +122,14 @@ class HenriPromptCodec(nn.Module):
             json.dumps(self.manifest(), sort_keys=True).encode()).hexdigest()
 
 
+class AxiomaticDeficiencyError(RuntimeError):
+    """Raised when demonstration rank is degenerate (< 2) for Procrustes compilation.
+
+    Stage 3 (Mechanism B): a silent W_task = I fallback is banned; the live
+    operation must fail closed on rank-deficient demos instead.
+    """
+
+
 class HenriTaskOperator(nn.Module):
     """Per-block orthogonal Procrustes: W_task = blockdiag{O_k}, O_k = U_k V_k^T.
 
@@ -130,8 +138,20 @@ class HenriTaskOperator(nn.Module):
 
     def compile_from_demos(self, psi_x: torch.Tensor, psi_y: torch.Tensor) -> torch.Tensor:
         # psi_x, psi_y: [m, 8192, 8] per-block unit-row waves
+        m_pairs = psi_x.shape[0]
+        if m_pairs < 2:
+            raise AxiomaticDeficiencyError(
+                f"demonstration rank deficiency: m={m_pairs} < 2")
         m = torch.einsum("mka,mkb->kab", psi_y, psi_x)  # [8192,8,8]
-        u, _, vh = torch.linalg.svd(m)
+        u, s, vh = torch.linalg.svd(m)
+        # Per-block rank<2 = second singular value at/below 1e-6 of the first.
+        s1 = s[..., 0].clamp(min=1e-12)
+        degenerate = s[..., 1] <= 1e-6 * s1
+        if bool(degenerate.any()):
+            idx = int(torch.nonzero(degenerate)[0].item())
+            raise AxiomaticDeficiencyError(
+                f"demonstration rank deficiency: block {idx} "
+                f"sigma2/sigma1 <= 1e-6")
         return torch.einsum("kab,kbc->kac", u, vh)  # [8192,8,8]
 
     def apply(self, w: torch.Tensor, psi: torch.Tensor) -> torch.Tensor:

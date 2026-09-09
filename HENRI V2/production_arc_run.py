@@ -1253,7 +1253,8 @@ def run():
             # arm C proved Zone C preempts the goal 30/30 otherwise.
             if goal_wave is None and HENRI_GOAL_ADAPTER:
                 try:
-                    from henri_goal_adapter import HenriGoalAdapter
+                    from henri_goal_adapter import (
+                        HenriGoalAdapter, AxiomaticDeficiencyError)
                     if not demo_pairs:
                         if HENRI_LATENT_EXPLORE:
                             # Latent demo source: compiled per-step from the
@@ -1296,6 +1297,15 @@ def run():
                         print(f"  [goal] adapter v1 — demo_cos="
                               f"{_res['demo_recon_cos']:.4f} "
                               f"orth_err={_res['orthogonality_err']:.2e}")
+                except AxiomaticDeficiencyError:
+                    # Stage 3 (Mechanism B): degenerate demonstration rank is a
+                    # fail-closed axiomatic deficiency — no identity fallback,
+                    # no goal wave, planner proceeds without goal (default path).
+                    goal_status = "GOAL_ADAPTER_AXIOMATIC_DEFICIENCY"
+                    adapter_info = {"status": "AXIOMATIC_DEFICIENCY_FAIL_CLOSED",
+                                    "demo_pair_count": len(demo_pairs)}
+                    print("  [goal] adapter rank deficiency fail-closed "
+                          "(AxiomaticDeficiencyError)")
                 except Exception as _adapter_exc:
                     goal_status = "GOAL_ADAPTER_FAIL_CLOSED"
                     adapter_info = {"status": "FAIL_CLOSED",
