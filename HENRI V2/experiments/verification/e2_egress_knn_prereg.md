@@ -33,7 +33,7 @@ k=16, tau=0.07 (frozen). No dense [131072,131072]; factorized blocks only.
 ## 3. Corpus pipeline (deterministic, session-safe)
 
 wikitext-2-raw-v1 parquet -> sentence split -> tokenize with pinned Qwen tokenizer
-(remote tokenizer.json sha verified) -> windows of <=16 BPE tokens -> pairs
+(remote tokenizer.json sha verified) -> windows of <=16 words (typ. <=32 BPE tokens) -> pairs
 (window_text, token_ids). Ordered by (file, line); calibration 10,000 windows,
 evaluation 1,000 disjoint windows. Sentence-disjoint by construction (distinct
 sentences; no overlap). Seed 20260909. Split rule fixed before any training.
