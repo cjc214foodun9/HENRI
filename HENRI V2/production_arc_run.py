@@ -2853,6 +2853,8 @@ def run():
                 "efe_best": round(chosen["efe"], 6),
                 "efe_spread": round(efe_table[-1]["efe"] - efe_table[0]["efe"], 6),
                 "explored": explored,
+                "thermo_ratios": chosen.get("thermo_ratios"),
+                "thermo_gibbs": bool(chosen.get("thermo_gibbs", False)),
                 "loss_ema": round(loss_ema, 6),
                 "transition_loss": round(transition_loss, 6) if transition_loss is not None else None,
                 "valence": valence,
