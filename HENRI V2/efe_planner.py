@@ -1119,6 +1119,7 @@ class EFEPlanner(nn.Module):
         lr: float = 0.05,
         surprise_modulate: bool = True,
         valence: float = 0.0,
+        outcome_delta: Optional[float] = None,
     ) -> float:
         """
         Online latent-space dynamics learning (T1 + T2), fast NL level.
@@ -1156,6 +1157,10 @@ class EFEPlanner(nn.Module):
                    = lr * (0.25 + delta/2) * (1 + nu)^2   for nu < 0
         clamped to (0, 1.25x lr]. The (1+nu)^2 failure branch damps
         consolidation quadratically without a hard zero-halt.
+
+        Stage 3 (Mechanism A): outcome_delta overrides valence when provided
+        (exteroceptive scorecard delta-gain). Default None keeps the
+        valence-gated behavior byte-identical.
 
         Returns the pre-update loss (the Sagnac delta this step).
         """
@@ -1197,10 +1202,13 @@ class EFEPlanner(nn.Module):
                 lr_eff = lr * min(1.25, 0.25 + 0.5 * delta)
             else:
                 lr_eff = lr
-            if valence > 0.0:
-                lr_eff /= (1.0 + valence)       # crystallize: damped update
-            elif valence < 0.0:
-                lr_eff *= (1.0 + valence) ** 2  # failed trajectory: damp
+            # Stage 3 (Mechanism A): the exteroceptive scorecard delta (when
+            # provided) replaces the motion-based valence in the update gate.
+            update_quality = valence if outcome_delta is None else float(outcome_delta)
+            if update_quality > 0.0:
+                lr_eff /= (1.0 + update_quality)       # crystallize: damped update
+            elif update_quality < 0.0:
+                lr_eff *= (1.0 + update_quality) ** 2  # failed trajectory: damp
                 lr_eff = max(lr_eff, 1e-4 * lr)  # never fully freeze
             self.transition.field_V.add_(-lr_eff * gV)
             self.transition.field_W.add_(-lr_eff * gW)

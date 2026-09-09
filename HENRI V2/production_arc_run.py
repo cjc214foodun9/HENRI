@@ -203,6 +203,12 @@ TASK_EIG_GAMMA = float(os.environ.get("TASK_EIG_GAMMA", "4.0"))
 # the default path stays byte-identical.
 HENRI_ARC_SCORECARD_DELTA = os.environ.get("HENRI_ARC_SCORECARD_DELTA", "0") == "1"
 
+# Stage 3 (Mechanism A): exteroceptive scorecard delta-gain. When set (with
+# HENRI_ARC_SCORECARD_DELTA=1), the authoritative scorecard delta overrides
+# the transition-update valence at the deferred T1 boundary. Default OFF:
+# the default path stays byte-identical.
+HENRI_DELTA_GAIN = os.environ.get("HENRI_DELTA_GAIN", "0") == "1"
+
 # Phase 7.5 CONN Module A: advisory Sagnac dual-channel veto sidecar. When
 # set, the production SagnacMCTSPlanner.dual_channel_sagnac_veto re-ranks the
 # EFE candidate table (first non-vetoed candidate wins). Default OFF: the
@@ -1660,6 +1666,7 @@ def run():
                 transition_loss = orch.planner.train_transition_step(
                     train_ctx["state"], train_ctx["action_wave"], state_wave,
                     lr=0.05, valence=valence,
+                    outcome_delta=train_ctx.get("scorecard_delta"),
                 )
                 # Wire A: consolidate favorable trajectories into the
                 # pragmatic preference store.
@@ -2638,6 +2645,12 @@ def run():
                 if HENRI_ARC_SCORECARD_DELTA:
                     _p0_extra["scorecard_delta_status"] = scorecard_delta_status
                     _p0_extra["scorecard_levels_completed"] = scorecard_levels_prev
+                if HENRI_DELTA_GAIN:
+                    _p0_extra["delta_gain_valid"] = bool(
+                        scorecard_delta_status == "SCORECARD_DELTA_OK")
+                    _p0_extra["scorecard_delta_nu"] = (
+                        float(task_progressed)
+                        if scorecard_delta_status == "SCORECARD_DELTA_OK" else None)
                 tele.emit({
                     "env": env_name, "step": step,
                     "external_eig": round(orch.planner.external_information_gain(action_idx), 6)
@@ -2663,6 +2676,14 @@ def run():
                     None,
                 ),
                 "pending_reset": game_action.name == "RESET",
+                # Stage 3 (Mechanism A): authoritative scorecard delta captured
+                # at the same step the transition triple is stashed (causal:
+                # the update applies next step against the OBSERVED wave).
+                "scorecard_delta": (
+                    float(task_progressed)
+                    if HENRI_DELTA_GAIN and scorecard_delta_status == "SCORECARD_DELTA_OK"
+                    else None
+                ),
             }
 
             # P1: accumulate per-episode trace fields (honest instrumentation;
