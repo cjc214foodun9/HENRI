@@ -48,7 +48,8 @@ def test_runner_fail_closed_codes():
     src = RUNNER.read_text(encoding="utf-8")
     for code in ("E2_CKPT_MISSING", "TEACHER_SHARD_MISSING", "CORPUS_MISSING",
                  "E2_CKPT_SHA_MISMATCH", "CORPUS_SHA_MISMATCH",
-                 "TEACHER_EMBED_KEY_MISSING", "EVAL_SPLIT_MISMATCH"):
+                 "TEACHER_EMBED_KEY_MISSING", "EVAL_SPLIT_MISMATCH",
+                 "GOLD_TOKEN_PREFIX_MISMATCH"):
         assert code in src, code
 
 

@@ -1,23 +1,23 @@
 """Gate 3.1 — P@1 / P@5 / perplexity diagnostic (teacher-anchored single-shot).
 
-Carrier: carrier/p1-pk-diagnostics. Prereg (sealed, verified against the real
-E2 export format {config, model_state, telemetry} — NOT the fabricated W/b):
+Carrier: carrier/p1-pk-diagnostics. Prereg (sealed):
 experiments/verification/gate31_p1pk_prereg.md
 
 TEACHER-ANCHORED SINGLE-SHOT definitions (NOT autoregressive LM perplexity):
-  z_i      = normalize(E1EgressHead(Ψ_i)[0])          # teacher space [896]
-  logits_i = E_norm @ z_i                             # [V=151936]
+  feats_i = normalize(E1EgressHead(Psi_i)[0])         # teacher space [896]
+  logits_i = E_norm @ feats_i                         # [V]
   P@1      = mean I[argmax(logits_i) == y_i]
   P@5      = mean I[y_i in top5(logits_i)]
   PPL      = exp(mean -log softmax(logits_i)[y_i])
 
-Split: the SEALED E2 evaluation partition reconstructed via the real
-e2_calibrate.build_pairs_ordered (corpus rows ordered; calib 10,000 / eval
-1,000; seed semantics = E1Config.seed 20260908 for head init, ordered corpus
-split deterministic). Label: CONDITIONAL_SAME_CORPUS_HELDOUT.
+Split: the SEALED E2 evaluation partition reconstructed EXACTLY as the E2 full
+run did — e2_calibrate.build_pairs_ordered (ordered, no seed arg → builder
+default 20260909; head-init seed = E1Config.seed 20260908). windows: first
+10,000 calibration, next 1,000 evaluation. Label: CONDITIONAL_SAME_CORPUS_HELDOUT.
 
-Frozen artifacts (fail-closed on absence/mismatch):
-  - E2 checkpoint e2_egress_production.pt (sha prefix 08747c70)
+Frozen artifacts, fail-closed on absence/mismatch:
+  - E2 checkpoint e2_egress_production.pt (sha256 prefix 08747c70; verified
+    keys {'config','model_state','telemetry'})
   - teacher shard model.safetensors @ rev 060db6499f32... (embed key
     model.embed_tokens.weight, [151936, 896])
   - corpus wikitext2_train.parquet (sha e83889ba...)
@@ -62,22 +62,13 @@ def _require(cond, msg, code):
         raise SystemExit(2)
 
 
-def load_token_embeddings(shard_path: Path, device: str) -> torch.Tensor:
-    """Frozen Qwen2.5-0.5B token-embedding table [151936, 896]."""
-    from safetensors import safe_open
-    key = "model.embed_tokens.weight"
-    with safe_open(str(shard_path), framework="pt", device="cpu") as f:
-        keys = list(f.keys())
-        _require(key in keys, f"missing {key}", "TEACHER_EMBED_KEY_MISSING")
-        E = f.get_tensor(key)
-    return E.to(device=device, dtype=torch.float32)
-
-
 def gold_next_token(text: str, tok) -> int:
-    """First BPE token of the last word (the token after the prefix wave).
+    """First BPE token of the window's last word.
 
-    The E2 WindowPair wave encodes the PREFIX (all but last word); this is the
-    pre-registered teacher-anchored 'next token' (single-shot, non-autoregressive).
+    The E2 WindowPair wave encodes the PREFIX (all but last word); the gold
+    token is the next token after that prefix — single-shot, non-autoregressive.
+    BPE must be prefix-stable for `y = ids_all[len(ids_pre)]` to be
+    well-defined; otherwise fail closed.
     """
     words = text.split()
     if len(words) < 2:
@@ -85,8 +76,9 @@ def gold_next_token(text: str, tok) -> int:
     prefix = " ".join(words[:-1])
     ids_all = tok(text)
     ids_pre = tok(prefix)
-    _require(len(ids_all) > len(ids_pre),
-             f"tokenization mismatch for {text[:40]!r}", "GOLD_TOKEN_UNRESOLVED")
+    _require(ids_all[:len(ids_pre)] == ids_pre and len(ids_all) > len(ids_pre),
+             f"tokenization prefix instability for {text[:40]!r}",
+             "GOLD_TOKEN_PREFIX_MISMATCH")
     return ids_all[len(ids_pre)]
 
 
@@ -100,10 +92,10 @@ def main() -> None:
 
     ckpt = e2_dir / "e2_egress_production.pt"
     shard = teacher_dir / "model.safetensors"
+    tokj = teacher_dir / "tokenizer.json"
     _require(ckpt.exists(), str(ckpt), "E2_CKPT_MISSING")
     _require(shard.exists(), str(shard), "TEACHER_SHARD_MISSING")
-    _require((teacher_dir / "tokenizer.json").exists(),
-             "tokenizer.json missing", "TOKENIZER_MISSING")
+    _require(tokj.exists(), str(tokj), "TOKENIZER_MISSING")
     _require((teacher_dir / "teacher_embeddings.pt").exists(),
              "teacher_embeddings.pt missing", "TEACHER_EMBEDDINGS_MISSING")
     _require(corpus_path.exists(), str(corpus_path), "CORPUS_MISSING")
@@ -142,21 +134,25 @@ def main() -> None:
     head.to(device)
     head.eval()
 
-    E = load_token_embeddings(shard, device)
+    # Frozen teacher token-embedding table [151936, 896] from the shard.
+    from safetensors import safe_open
+    with safe_open(str(shard), framework="pt", device="cpu") as f:
+        keys = list(f.keys())
+        key = "model.embed_tokens.weight"
+        _require(key in keys, key, "TEACHER_EMBED_KEY_MISSING")
+        E = f.get_tensor(key).to(device=device, dtype=torch.float32)
     E_norm = F.normalize(E, p=2, dim=-1)
     del E
     if device == "cuda":
         torch.cuda.empty_cache()
 
-    # Reconstruct eval pairs exactly as the sealed E2 full run did.
+    # Reconstruct the eval split EXACTLY as e2_calibrate.run() (no seed arg).
     sents = []
     for r in load_corpus(corpus_path):
         sents.extend(sentence_split(r))
     emb = load_teacher_embeddings(teacher_dir / "teacher_embeddings.pt")
     tok = make_tokenizer(teacher_dir)
     cfg_eval = E1Config(device="cpu")
-    # Mirror e2_calibrate.run() EXACTLY (sealed E2 split): no seed argument,
-    # builder default 20260909 (head-init seed is E1Config.seed=20260908).
     pairs = build_pairs_ordered(sents, cfg_eval, emb, tok,
                                 want=N_CALIB + N_EVAL)
     eval_pairs = pairs[N_CALIB:N_CALIB + N_EVAL]
@@ -186,7 +182,8 @@ def main() -> None:
             nll = -torch.log_softmax(scores.float(), dim=-1).gather(
                 1, gold.unsqueeze(1)).sum()
             rnd = F.normalize(
-                torch.randn(B, z.shape[1], generator=g).to(device), p=2, dim=-1)
+                torch.randn(len(batch), z.shape[1], generator=g).to(device),
+                p=2, dim=-1)
             rnd_hits = int((rnd @ E_norm.t()).argmax(dim=-1).eq(gold).sum())
             p1_total += p1_hits
             p5_total += p5_hits
