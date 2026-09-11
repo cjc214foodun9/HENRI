@@ -24,8 +24,12 @@ def test_runner_exists():
 
 def test_runner_defines_bounds_as_constants():
     src = RUNNER.read_text(encoding="utf-8")
-    assert "P_AT_1_BOUND = 0.285" in src
-    assert "P_AT_5_BOUND = 0.640" in src
+    # RETIRED 2026-09-11: the legacy 0.285/0.640 bound sits below the
+    # measured trivial baseline and must never be reinstated.
+    assert "P_AT_1_BOUND = 0.285" not in src
+    assert "P_AT_5_BOUND = 0.640" not in src
+    assert "load_registered_bounds" in src
+    assert "LEGACY_BOUNDS_RETIRED" in src
 
 
 def test_runner_pins_frozen_artifacts():

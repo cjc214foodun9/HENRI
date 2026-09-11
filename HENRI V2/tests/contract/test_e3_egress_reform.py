@@ -104,8 +104,12 @@ def test_isometry_error_reported_small_after_construction():
 
 def test_runner_pins_bounds_and_artifacts():
     src = (HENRI2 / "e3_calibrate.py").read_text(encoding="utf-8")
-    assert "P_AT_1_BOUND = 0.285" in src
-    assert "P_AT_5_BOUND = 0.640" in src
+    # RETIRED 2026-09-11: the legacy 0.285/0.640 bound sits below the
+    # measured trivial baseline and must never be reinstated.
+    assert "P_AT_1_BOUND = 0.285" not in src
+    assert "P_AT_5_BOUND = 0.640" not in src
+    assert "load_registered_bounds" in src
+    assert "LEGACY_BOUNDS_RETIRED" in src
     assert "08747c70" in src and "e83889ba" in src and "48b174e9" in src
     assert 'os.environ.get("P_AT_1_BOUND"' not in src
     assert 'os.environ.get("P_AT_5_BOUND"' not in src

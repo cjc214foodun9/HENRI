@@ -37,8 +37,50 @@ import torch
 import torch.nn.functional as F
 
 # ---- pre-registered bounds (module constants; NOT env-overridable) --------
-P_AT_1_BOUND = 0.285
-P_AT_5_BOUND = 0.640
+# ---- legacy bounds RETIRED 2026-09-11 (see bounds_retirement_receipt.json) --
+# The E3 legacy constants (historically 0.285 / 0.640) are RETIRED:
+# E4a measured the context-free marginal at 0.440 and the strongest trivial
+# baseline at 0.483 on a fresh split, so 0.285 sits BELOW the trivial baseline
+# and cannot separate a mechanism from a constant predictor. Bounds are now
+# loaded per construct from the sealed E4a receipt and are never hard-coded.
+LEGACY_BOUNDS_RETIRED = {"p_at_1": 0.285, "p_at_5": 0.640}
+E4A_RECEIPT = Path(os.environ.get(
+    "HENRI_E4A_RECEIPT",
+    r"C:\Users\chan\henri-telemetry\e3\e4a_construct_audit.json"))
+
+
+def load_registered_bounds(construct: str = "C1_sentence_window") -> dict:
+    """Load per-construct bounds from the sealed E4a audit; fail closed."""
+    if not E4A_RECEIPT.exists():
+        print("BOUNDS_VERDICT=BLOCKED_INFRA reason=E4A_RECEIPT_MISSING")
+        raise SystemExit(2)
+    rec = json.loads(E4A_RECEIPT.read_text(encoding="utf-8"))
+    b = rec["registered_bounds"][construct]
+    base = rec["constructs"][construct]["best_trivial_baseline"]["p1"]
+    if not (b["p1"] > base and 0 < b["ce_max"]):
+        print("BOUNDS_VERDICT=BLOCKED_INFRA reason=BOUND_NOT_ABOVE_TRIVIAL")
+        raise SystemExit(2)
+    return b
+
+
+_REG = None  # resolved lazily; import must never fail closed
+
+
+def __getattr__(name: str):
+    """Resolve retired bounds lazily (PEP 562).
+
+    Importing this module always succeeds; the bound is loaded from the
+    sealed E4a receipt on FIRST ACCESS and fails closed only then. This keeps
+    importers such as e3_diag_target_gap.py (gold_next_token) working on a
+    host that has no receipt, while the bound itself can never be
+    hard-coded again.
+    """
+    global _REG
+    if name in ("P_AT_1_BOUND", "P_AT_5_BOUND"):
+        if _REG is None:
+            _REG = load_registered_bounds()
+        return _REG["p1"] if name == "P_AT_1_BOUND" else _REG["p5"]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 E2_CKPT_SHA_PREFIX = "08747c70"
 TEACHER_REV = "060db6499f32"
