@@ -161,3 +161,84 @@ and the mechanistic constants. No silent conflation.
 ---
 
 **Verdict:** `E6_SPEC_AWAITING_APPROVAL`. No code. No remote run. `main` = `10f5f23`.
+
+---
+
+## 10. AMENDMENT A1 — corpus-grounded (2026-09-11)
+
+Added after the NotebookLM corpus was restored (§11). Sources: arXiv **2609.10817**
+(Jha et al.) and Levin, *Ingressing Minds* (MDPI *Philosophies*). Evidence class
+`INFERRED` (grounded corpus synthesis with citations) unless stated.
+
+### 10.1 How Zone A is supposed to learn
+
+Zone A does **not** learn by multi-epoch BPTT or offline gradient descent. The
+corpus states the reason: passing continuous wave states through **un-adapted
+linear projection heads** collapses mutual information `I(Ψ;Y) → 0`. Three
+in-situ mechanisms replace it:
+
+| Mechanism | Form | Trigger / cost |
+|---|---|---|
+| Closed-form Procrustes | `K = (1/N) Σ Ψ_Y,i Ψ_X,i†` | needs in-context demo pairs; `O(r²D)`, <1 ms |
+| Anisotropic SGLD creep | thermal variance into misaligned orthants | Zone B veto; claimed 3–5 steps |
+| Hopfield "lexical snap" | continuous attractor → discrete token | single pass, pre-seeded engrams |
+
+This **supports** the Tier 0 / Tier 1 split in §3 and adds a hard constraint: these
+mechanisms **do not inject closed-book world knowledge**. Test-time Procrustes
+aligns to what was demonstrated; it cannot manufacture unseen facts. §2's backbone
+requirement therefore survives Amendment A1 unchanged.
+
+### 10.2 Zone C is the memory; weights are not the knowledge store
+
+Zone B is stateless. Zone C (TimescaleDB + pgvector) holds engrams, retrieved by
+asynchronous **Holo-Fetch** and used as just-in-time phase biasing. Without Zone C,
+wave minimization collapses to a trivial null state. This is the corpus's statement
+of §4's conclusion: **continuous learning lives in memory accretion, not gradients.**
+
+### 10.3 Verified paper parameters (2609.10817, verbatim-cited)
+
+| Parameter | Value |
+|---|---|
+| Population | **16,384** programs (128×128 grid, `L_pop = 128`) |
+| Program / tape | **32 B** → **64 B** cyclic shared tape |
+| STEAL absorption α | **0.8** (destroys `(1−α)δ` per steal) |
+| Baseline injection ε | **24** (explored {12, 16, 24, 32, 64}) |
+| Energy bounds | `E_max = 255`, `E_min = 0` |
+| Mutation rarity / write cost / max steps | 1/128 · 1 · 512 |
+| **Viability condition** | **`2ε > 2L`** (L = writes needed to replicate) |
+| Scarcity correlation | `r = −0.427`, `p = 7.7e-05` |
+
+**The viability condition is a hard precondition, not a tunable.** Too low and
+agents starve before they can act; too high and cooperation is unnecessary. Any E6
+energy budget must satisfy the analogue of `2ε > 2L`.
+
+### 10.4 Topology: the paper says GRID, not torus
+
+Verified by direct scan: **"torus" appears 0 times** in the paper, which says "a 2D
+spatial grid (pairings restricted to the four immediate horizontal and vertical
+neighbors)". The Blueprint changes **both** topology (grid → periodic torus) **and**
+scale (16,384 → 1,024); neither change is in the paper. The paper does contain a
+spatial-asymmetry precedent — Figure 21, uniform `+24`/timestep vs asymmetric
+`24/0` left/right — which is the closest paper-side analogue a lattice carrier
+should cite.
+
+### 10.5 Gate status after grounding
+
+- **G-AUTO-1** (structural entropy) — now **has** an operational definition:
+  `H_shannon(seq) − K(seq)/n`, with `K` approximated by LZ compressed size. Still
+  **not runnable**: the metric is defined on discrete **byte tapes**, while Zone A
+  carries continuous wave states. A canonical discrete projection is a prerequisite
+  carrier.
+- **G-AUTO-2** — partially specified (fixation threshold, epoch budget absent).
+- **G-AUTO-3** — still under-specified (no units for N epochs or variance threshold).
+
+**No E6 remote run is admissible yet.** Contacting the gates required a metric
+definition, and that definition exposed the real blocker.
+
+## 11. Corpus channel restoration
+
+NotebookLM auth moved `stale` → `configured` this session (`nlm login` completed;
+`refresh_auth` validated; three grounded queries returned `status=success`). Source
+audit found the bank held `philosophies-11-00161.pdf` but **not** `2609.10817`; it
+was ingested (source_id `54f8c05b-…`, `ready`). Seals: `#b0dbaa24` (Zone A consult),
+`#eb84bc6e` (paper parameters).
