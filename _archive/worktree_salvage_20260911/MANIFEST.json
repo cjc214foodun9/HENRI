@@ -1,0 +1,608 @@
+{
+  "generated": "2026-09-11",
+  "pass": "2 (corrected: git status -uall)",
+  "defect_fixed": "pass 1 used git status without -uall, so an untracked directory appeared as one '?? dir/' entry and was skipped because Path.is_file() is False. 9 files were missed.",
+  "purpose": "Unique-content salvage from linked worktrees before archival. Each sha256 was ABSENT from the git object database at capture time, so the file existed only inside its worktree.",
+  "source_triage": "C:\\Users\\chan\\AppData\\Local\\hermes\\reports\\worktree_triage_uall_20260911.json",
+  "files_salvaged": 59,
+  "bytes_salvaged": 194118,
+  "files_failed": 0,
+  "new_in_pass2": 59,
+  "records": [
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/ar25/0c556536/metadata.json",
+      "bytes": 331,
+      "sha256": "c79bd316f9c3b883da622073b4f0571460d5e1660a4b56bf7528b838f91a4438",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/ar25/0c556536/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/bp35/0a0ad940/metadata.json",
+      "bytes": 341,
+      "sha256": "a37e51ce7b4c74c9d3a8880650b6cb400d7fc266039cba4963ba077e558ac0a5",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/bp35/0a0ad940/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/cd82/fb555c5d/metadata.json",
+      "bytes": 311,
+      "sha256": "ae6565c22987c3f4aacc8ae4e9d4c0a3e13dbdaa0dee35633a0971b6ac8e26e6",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/cd82/fb555c5d/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/cn04/2fe56bfb/metadata.json",
+      "bytes": 314,
+      "sha256": "054bb42f6fc1b7972accda2bbb8f850259f5e80a6d8aaca717ab3cb7dee235d0",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/cn04/2fe56bfb/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/dc22/fdcac232/metadata.json",
+      "bytes": 315,
+      "sha256": "1e4f45b667f67ce8b8be95d0f5cab7764fcc4394c9bbfde474c41bd0907af564",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/dc22/fdcac232/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/ft09/0d8bbf25/metadata.json",
+      "bytes": 285,
+      "sha256": "49a0ba1cdf7e0dfb0d121d1912c181098283db15b76b97100cd01942b91b8179",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/ft09/0d8bbf25/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/g50t/5849a774/metadata.json",
+      "bytes": 318,
+      "sha256": "7b8dbd137a8fef89efd205550cdee442b3c097277c7ec761ce319702b6c745a7",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/g50t/5849a774/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/ka59/38d34dbb/metadata.json",
+      "bytes": 324,
+      "sha256": "8ce50692d0c36da1efa5e54e0c8a2130187d1855f2e67377b0bf68d2248e378d",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/ka59/38d34dbb/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/lf52/271a04aa/metadata.json",
+      "bytes": 345,
+      "sha256": "61f3860544cfb4bdcf9c10533f52dbbc619b24162edaab991985f8583b30d398",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/lf52/271a04aa/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/lp85/305b61c3/metadata.json",
+      "bytes": 322,
+      "sha256": "bcf9f2a88ff2d0a44ed078b880a18ea3df1e96c8eaf6652d6e44da35bda6bf43",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/lp85/305b61c3/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/ls20/9607627b/metadata.json",
+      "bytes": 318,
+      "sha256": "043105500b9c46f5eab7bd2ffc0bfd832f46c72d67ed2eb0fbed61e3b3419c57",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/ls20/9607627b/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/m0r0/492f87ba/metadata.json",
+      "bytes": 315,
+      "sha256": "f9df4e8840d5a9aef30a11066fd7158567b826f4398f0bc87a663c6288e80f16",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/m0r0/492f87ba/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/r11l/495a7899/metadata.json",
+      "bytes": 303,
+      "sha256": "1bfb29507be0a762caf9801dfb208cdc0959ff9e679d5f962e891f246903d36b",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/r11l/495a7899/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/re86/8af5384d/metadata.json",
+      "bytes": 335,
+      "sha256": "61b0c0737c040ead6a5ec747444b47742b1e6c3c0ec9834085cf4db8cfe0b392",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/re86/8af5384d/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/s5i5/18d95033/metadata.json",
+      "bytes": 323,
+      "sha256": "34ba5856559baa25ed3582d529f7ac046b91b3204b27ad1ec73b285ba1b834b3",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/s5i5/18d95033/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/sb26/7fbdac44/metadata.json",
+      "bytes": 330,
+      "sha256": "66388cd4bd5a55197d8bc92ba69f2a84cd151a8a711f1f7b75099c14ce8c58fe",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/sb26/7fbdac44/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/sc25/635fd71a/metadata.json",
+      "bytes": 312,
+      "sha256": "446a26ce9473ca0c1b79a7a9ab062f368339f3bb86e67f64808c713cd8f1fa6d",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/sc25/635fd71a/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/sk48/d8078629/metadata.json",
+      "bytes": 336,
+      "sha256": "0a9c5a0d7ef12b8e2124976c77de3c83e186ef21be7918e1c8c73b16d1f0ae34",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/sk48/d8078629/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/sp80/589a99af/metadata.json",
+      "bytes": 314,
+      "sha256": "848a477b85d182b159e9ddb9aad6ad748c5c3c60e3b623f223d6e95b01241b11",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/sp80/589a99af/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/su15/1944f8ab/metadata.json",
+      "bytes": 330,
+      "sha256": "2a19ca088c2caa4e20bef09f2b9b34ba41df0c93de52cbf42a0ce9120743e432",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/su15/1944f8ab/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/tn36/ef4dde99/metadata.json",
+      "bytes": 311,
+      "sha256": "e27680bab3e0f804d0d2cbac65b7110c0a65f52288d3563958683d5933124bdc",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/tn36/ef4dde99/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/tr87/cd924810/metadata.json",
+      "bytes": 307,
+      "sha256": "8e69a5d8b860cf575c1c4756be9df1d23ab69d3c819b5f4307f29d415c88b9d9",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/tr87/cd924810/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/tu93/0768757b/metadata.json",
+      "bytes": 341,
+      "sha256": "4004f07e988b5a05019ca020a0c7aea50d82b02d78316af5ceab4a8c2566dbf7",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/tu93/0768757b/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/vc33/5430563c/metadata.json",
+      "bytes": 313,
+      "sha256": "c73751ab7fd7a7f71c3ec96be9de4f573fc2cd2dcbdf431f0d9f0b714718f30b",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/vc33/5430563c/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "environment_files/wa30/ee6fef47/metadata.json",
+      "bytes": 337,
+      "sha256": "4672e40cab1b7955fd6b2eb4fcc785e2031f0f2bd1476fce642ab754643cfc8f",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/environment_files/wa30/ee6fef47/metadata.json",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-821-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "34c6f1b36d4388e84521a90d15938719ca0b056e23b10a043a34ac4ad5c2def0",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-821-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/Users/chan/henri-worktrees/accuracy-main",
+      "path": "data/HumanEval.jsonl.gz",
+      "bytes": 44877,
+      "sha256": "b796127e635a67f93fb35c04f4cb03cf06f38c8072ee7cee8833d7bee06979ef",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_Users_chan_henri-worktrees_accuracy-main/data/HumanEval.jsonl.gz",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/Users/chan/henri-worktrees/accuracy-main",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "7341f48da1cf696d3d9185d4dbde4631e7967fdfcef16f72bc42bb39ee450300",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_Users_chan_henri-worktrees_accuracy-main/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/Users/chan/henri-worktrees/unified-vla",
+      "path": "HENRI V2/henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "adb9e1e3a79b31b32b3f0f3a378485f584ff1ca1629509ec0b696fc1ce167124",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_Users_chan_henri-worktrees_unified-vla/HENRI V2/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/Users/chan/henri-worktrees/unified-vla",
+      "path": "henri_audit_chain.json",
+      "bytes": 361,
+      "sha256": "e1359365144e578e6055e4f7909f2d367c67d4d60f6397bd621e213216ba040b",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_Users_chan_henri-worktrees_unified-vla/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri_p1",
+      "path": "henri_audit_chain.json",
+      "bytes": 362,
+      "sha256": "fc3acbc1f21f04c7968be183de4c634502a5beedea9f0cf4074ea749f5041f55",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri_p1/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri_conv",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "28a5b2cd7884b80f2fd4ca64cb13f56ce46a4deb4c0bd1e76c09dff9635a2c17",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri_conv/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/Users/chan/henri-worktrees/mbpp-heldout-v1",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "d40ed63b5e4e518a52ad5aa00851a8629b474173c5cb5ef21320ffb431557f5d",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_Users_chan_henri-worktrees_mbpp-heldout-v1/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-810-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "07b22002d8b1269824a150aff6d08b6638393b0276c2340f05f64c3e228d5604",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-810-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-811-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 362,
+      "sha256": "7018b0618c005d26d999476edfd1dec60c334a92075051c04dcf29e5c1c7f6f5",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-811-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-812-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "ab4c166f55c9a133118a17db78aba45b7434d8757c74f3a4b77dca5f7c3d2176",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-812-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-813-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "4cd47a9293b48cd95b06d127cafacd332db6417f98baaa66a0edd6c74fbfc8f7",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-813-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-814-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "7e13bddd94138dda5f431f86500291786f5274ed943e1480384dca482ac78090",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-814-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-82-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "61f8df0396d9cd238ad67f5e92ee31143da756a00350b3c4d829a12d6e38d6a5",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-82-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-823-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "e6c401eb029cb417dc1b0332be2bf979cd7fedb6926a380bd42cc09f4e9371c7",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-823-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-82ic-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "fb511933245c9d625c2bca7010341751f62c433e1847db49b64e2b19556f5020",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-82ic-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-83-r1-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "450294dfceb870f5ed6cf0a068b9596176b1619a9d7ed7d4ee1b2b704292fbe0",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-83-r1-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-831-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "bb855001bdcab7f4c43b9389b90da6364a8ad4be5951c706792574d63d66b67d",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-831-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-832-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 362,
+      "sha256": "2bda014063d08efdd64ad97280b25d6008021c5a0265b4ed3cd60d3a8ab48229",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-832-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-833-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "8357aded6032fcb88171d4f8c039eed1345aa7641fae3e4b3a3c365fc4eb7587",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-833-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-834-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "55f93e8d6d08b92caf45ea4c6266a9343075815bd0a7409fe734541fb493d41e",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-834-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-835-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "5fc4f52134586e16f5e8fb945e39507e5bc3692a2731bbbc1379310d33d5bfcb",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-835-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-83r-efe-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "c3851eefb7c4f4c790734c75348edb9f57bff5cc18d24c5cf25eba668dfce873",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-83r-efe-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-84-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "8d1a9770f46a53fb526d4285e1d4972bc2267c1d1973b553ef459c6899f72afc",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-84-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-86-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 362,
+      "sha256": "c8414e6a05fe1b898e4bee8b4bce1da58f03cb841393b888a9c801a0bd7e9365",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-86-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-87-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 362,
+      "sha256": "97569f08f5f87a0e197f8b8474744ba1834c566151d0c9e380da5d2e24cfdfb9",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-87-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-88-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "f31117d83287de75c7ef46ccbd08a557cddeaa6a563a71e9fa7059a98999d6f3",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-88-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-89-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 362,
+      "sha256": "f8f949de575b222e494abf789e2869bdf953b99ffd65fce3f629de3d07904bfa",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-89-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-dm-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "04f3972dc4e2d2719944337287976ad4d798aecdc7d3212d56ae0a91e5f02291",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-dm-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-merge-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 362,
+      "sha256": "92d922d3f679cf1263359766bcc99d0a016c0fbb7a8cf2e6358f88ed3b6654af",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-merge-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/tmp/henri-psg-wt",
+      "path": "henri_audit_chain.json",
+      "bytes": 362,
+      "sha256": "07d2ded541fc811f53ef8a477c5cb845376ed8ac7c29447ca5ec07aab472b35e",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_tmp_henri-psg-wt/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/Users/chan/AppData/Local/Temp/henri-p79e-score",
+      "path": "p79f_evidence/sources/phase7.9e.pdf",
+      "bytes": 129605,
+      "sha256": "5ff62b6ee7e1977ef10946d53e99f365d16a791b81e0b4b122afc52c6a1c96d4",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_Users_chan_AppData_Local_Temp_henri-p79e-score/p79f_evidence/sources/phase7.9e.pdf",
+      "status": "SALVAGED",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/Users/chan/henri-worktrees/carrier-k3",
+      "path": "henri_audit_chain.json",
+      "bytes": 363,
+      "sha256": "baca0f08a5f94375e82eab594fb16e1b74fae71ca2d9248aebd0d7768bb17813",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_Users_chan_henri-worktrees_carrier-k3/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    },
+    {
+      "worktree": "C:/Users/chan/henri-worktrees/rc-main-20260904",
+      "path": "henri_audit_chain.json",
+      "bytes": 362,
+      "sha256": "52534a8d576836e6c4b02ef6c7c04b2c88680317bb45962a8f47087068cd26a1",
+      "salvaged_to": "_archive/worktree_salvage_20260911/C_Users_chan_henri-worktrees_rc-main-20260904/henri_audit_chain.json",
+      "status": "SALVAGED",
+      "ledger_records": 13,
+      "ledger_first_action": "PRETTY_OBJECT_OR_UNPARSEABLE",
+      "found_in": "pass2-uall"
+    }
+  ]
+}
