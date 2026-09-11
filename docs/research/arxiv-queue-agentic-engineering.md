@@ -33,6 +33,54 @@ never invent an identifier.
 | 4 | Long-horizon context management | `long-horizon LLM agent context management memory state` | `context_packer` 4-layer design; 137k-token p50 prompt |
 | 5 | Vision-in-the-loop verification | `multimodal LLM chart figure understanding evaluation` | digest-figure → `vision_analyze` loop |
 | 6 | Agentic harness engineering | `agentic engineering harness evaluation agent benchmark` | harness design; AAII v4.1 alignment |
+| 6&#8203;b | ~~search~~ **SUPERSEDED 2026-09-11** | — | replaced by the ScientistOne ingest below |
+
+## Item 6 replaced: ScientistOne ingest (EXECUTED)
+
+Item 6 was "search for a paper about agentic harness engineering." That search is
+unnecessary: the paper is **already in the repository** at `2605.26340` and the
+CoE doctrine is already written into `henri-agent-integration` §6A.
+
+`OBSERVED` 2026-09-11:
+
+| fact | value |
+|---|---|
+| file | `2605.26340` (untracked, stays untracked) |
+| bytes | 5,166,892 |
+| sha256 | `9d4fa9d1e9e6b1cdccfeff02fecbd28b5b961594952a1ac96e00ad135bed0a51` |
+| pages | 35 |
+| title | ScientistOne: Towards Human-Level Autonomous Research via Chain-of-Evidence |
+| authors | Meng, Dalvi Mishra, Chen, Li, Goyal, Parmar, Song, Song, Sinha, Ranganathan, Gokturk, Yoon, Pfister |
+| affiliation | Google Cloud AI Research |
+| extracted text | `%LOCALAPPDATA%\hermes\reports\scientistone_2605.26340.txt` (115,272 chars, LF-canonical) |
+
+The computed sha256 **matches** the digest already recorded in
+`references/scientistone-chain-of-evidence.md` §I3, so the local doc and the PDF
+agree. That is the ingest proof.
+
+Paper-grounded facts, verified by text search (not paraphrase):
+
+- Claim taxonomy is **four** types: citation, numerical, methodological,
+  conclusion. Each requires a distinct evidence-chain shape. The paper states
+  the taxonomy "is not exhaustive."
+- CoE Integrity Audit runs four checks: **I1 Score Verification**,
+  **I2 Specification Violation**, **I3 Reference Verification**,
+  **I4 Method-Code Alignment** — over **75 papers** across 5 systems.
+- The paper's own scope limit, quoted: the checks "cover structural integrity,
+  not scientific correctness or novelty." Honest framing to preserve.
+- Paper names no "stop condition" section (0 hits); the stop-condition list is
+  HENRI's operational extension in `references/scientistone-chain-of-evidence.md`.
+
+**What was built, not just read.** `OBSERVED`: `scripts/henri_coe_gate.py`
+enforces the doctrine as a runnable gate — selftest 7/7 (prose-only, citation
+without canonical ID, method without code location, tampered artifact,
+nonexistent declared artifact, and blocked-without-limitations all REJECT). Run
+against the real ledger `experiments/verification/coe_claims_20260911.json` it
+returns **CPR 9/10 (90.0%)**, rejecting the negative control via rule R9.
+
+**Remaining ingest work (`QUEUED`):** NotebookLM routing of the paper for the
+vault projection. Not blocking; the deterministic extraction above already
+supersedes it for claims that the gate can check.
 
 ## Method (per `henri-research`)
 
