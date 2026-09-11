@@ -60,3 +60,23 @@ scripts/.henri_router_state.json
 
 # Runtime environment caches (downloaded by arcade at run time; eval machinery, not source)
 environment_files/
+
+# Obsidian vault Drive links (NTFS junctions to G:\My Drive — local-only, never commit)
+Drive Links.md
+HENRI V2/Drive_Telemetry/
+HENRI V2/Drive_Research_Vault/
+HENRI V2/Drive_Inbox/
+
+# Vendored third-party reference corpora. 2.0 GB / 964 trace files (STRACE WebArena).
+# Untracked by policy: reference data, not project source. Never git add -A over these.
+HENRI V2/agentic_graph/STRACE-main/Dataset/
+HENRI V2/agentic_graph/*/Dataset/
+
+# Worktrees are transient branch scratch space, never committed content
+.worktrees/
+
+# NOTE: mmlu_839_scorecard.json (5.94 MB / 196,616 lines) is already TRACKED, so a
+# .gitignore entry here would be a no-op. Mitigation is procedural: never inline it.
+# Use scripts/henri_experiment_digest.py to read it. Untracking it requires
+# `git rm --cached experiments/verification/mmlu_839_scorecard.json`, which is a
+# repository-content change and needs explicit approval.
