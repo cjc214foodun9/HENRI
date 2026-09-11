@@ -131,3 +131,33 @@ passed. Regression guard: run triage twice; the first artifact must survive.
 **Lesson.** A tool that measures a disappearing resource must never write its
 record to a fixed, unguarded path. Structural fix: evidence artifacts are
 write-once, and verification loops must not re-run stateful collectors.
+
+## Scope correction (found by post-hoc probe, 2026-09-11T13:53:17)
+
+The result above — **45 -> 1 worktrees, zero data loss** — is accurate for the
+worktrees registered in `git worktree list`. It is **not** a statement about the
+whole workspace.
+
+A later probe found **13 directories that are not registered worktrees** and were
+therefore never triaged: 4 under `C:\tmp\henri-*` and 9 under
+`C:\Users\chan\henri-worktrees`. Nothing was deleted from them, so no data was
+lost. But they were never assessed, and one of them holds a 23.6 MB production
+trajectory archive.
+
+Salvage (additive, nothing deleted): `27` files, `23,826,268` B absent
+from the git object DB and not gitignored, copied to
+`%LOCALAPPDATA%\hermes\archive\orphan_dirs_salvage_20260911\` and replicated to
+`HENRI V2/Drive_Telemetry/orphan_dirs_salvage_20260911/`. Manifest:
+`MANIFEST.json` in both locations.
+
+**Measurement caveat.** Object membership was decided with `git hash-object`.
+A hand-rolled `sha1("blob <n>\0" + data)` variant disagreed with git by ~93% on
+the same files while producing *identical* digests on spot checks, so that
+variant is unreliable here and was rejected. An earlier probe using it reported
+8,204 "unique" files (139 MB); the git-based count is ~27 files (23.8 MB). Two
+probes of one quantity disagreed ~300x; only the git-based one should be used.
+`git count-objects -vA` also returned no output on this repo, so enumeration
+completeness could not be independently confirmed — a residual uncertainty.
+
+Disposition of the 13 orphan directories themselves (keep / archive / delete) is
+**not** made here and needs explicit approval.
