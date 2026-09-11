@@ -386,6 +386,51 @@ def dag_layer() -> dict:
     return res
 
 
+def sync_layer() -> dict:
+    """Four-surface sync topology (local, github, drive, vast).
+
+    The manifest is declarative: it names ONE writer surface per path class and
+    the flows between them. This layer reports whether the declared topology
+    still matches live state, so sync drift cannot hide from the report.
+    """
+    script = HOME / "scripts" / "henri_sync_manifest.py"
+    out = {"present": script.is_file(), "err": None, "drift": None,
+           "surfaces": 0, "flows": 0, "invariants": 0}
+    if not script.is_file():
+        out["err"] = "sync manifest tool absent"
+        return out
+    note_prov("sync_manifest", script)
+    try:
+        import importlib.util as _iu
+        spec = _iu.spec_from_file_location("henri_sync_manifest", script)
+        mod = _iu.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        man = getattr(mod, "MANIFEST", {}) or {}
+        out["surfaces"] = len(man.get("surfaces", {}))
+        out["flows"] = len(man.get("flows", []))
+        out["invariants"] = len(man.get("invariants", []))
+        fn = None
+        for cand in ("verify", "check_drift", "drift", "run"):
+            f = getattr(mod, cand, None)
+            if callable(f):
+                fn = f
+                break
+        if fn is None:
+            out["err"] = "no verifier exposed"
+            return out
+        for args in ((), (str(REPO),), (True,)):
+            try:
+                out["drift"] = fn(*args)
+                break
+            except TypeError:
+                continue
+        if out["drift"] is None:
+            out["err"] = "verifier signature not matched"
+    except Exception as e:
+        out["err"] = f"{type(e).__name__}: {e}"
+    return out
+
+
 def esc(s: str) -> str:
     return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
@@ -397,6 +442,7 @@ def main() -> int:
     rl = repo_layer()
     coe = coe_layer()
     dag = dag_layer()
+    sy = sync_layer()
 
     cfig = fig_cache(cl)
     gfig = fig_gates(brows) if brows else None
@@ -576,8 +622,28 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:11px}
              'a defect only when it is <b>not</b> declared. Detection is deterministic; '
              'the rendered figure is a coarse filter for <code>vision_analyze</code>.</div>')
 
+    # layer 6: four-surface sync topology
+    h.append("<h2>6 &middot; Four-surface sync</h2>")
+    if sy["err"]:
+        h.append(f'<div class="note"><b>BLOCKED:</b> {esc(sy["err"])}</div>')
+    h.append('<table><tr><th>check</th><th>value</th></tr>')
+    h.append(f'<tr><td>surfaces declared</td><td>{sy["surfaces"]}</td></tr>')
+    h.append(f'<tr><td>flows declared</td><td>{sy["flows"]}</td></tr>')
+    h.append(f'<tr><td>invariants declared</td><td>{sy["invariants"]}</td></tr>')
+    d = sy["drift"]
+    if isinstance(d, dict):
+        for k in sorted(d)[:12]:
+            if isinstance(d[k], (str, int, float, bool)):
+                h.append(f'<tr><td>drift.{esc(str(k))}</td><td>{esc(str(d[k]))}</td></tr>')
+    else:
+        h.append(f'<tr><td>drift verdict</td><td>{esc(str(d)[:200])}</td></tr>')
+    h.append("</table>")
+    h.append('<div class="note">One writer surface per path class. Vast holds '
+             'ephemeral compute only. A drift verdict is DERIVED from git and '
+             'filesystem probes, not from a declaration.</div>')
+
     # provenance
-    h.append("<h2>6 &middot; Provenance (sha256 of every source read)</h2>")
+    h.append("<h2>7 &middot; Provenance (sha256 of every source read)</h2>")
     h.append("<table><tr><th>source</th><th>path &middot; sha256 &middot; bytes</th></tr>")
     for k, v in sorted(PROV.items()):
         h.append(f"<tr><td>{esc(k)}</td><td><code>{esc(v)}</code></td></tr>")
@@ -640,6 +706,15 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:11px}
                       f"{'ACCEPT' if c['ok'] else 'REJECT'} |")
         for cid, why in coe["rejected"]:
             md.append(f"- REJECT `{cid}`: {'; '.join(why)[:160]}")
+    md += ["", "## 5b Four-surface sync", "",
+           f"- surfaces **{sy['surfaces']}** \u00b7 flows **{sy['flows']}** \u00b7 "
+           f"invariants **{sy['invariants']}**"]
+    if sy["err"]:
+        md += [f"- BLOCKED: {sy['err']}"]
+    elif isinstance(sy["drift"], dict):
+        for k in sorted(sy["drift"])[:10]:
+            if isinstance(sy["drift"][k], (str, int, float, bool)):
+                md += [f"- `drift.{k}` = {sy['drift'][k]}"]
     md += ["", "## 5 Holonic graph audit", "",
            f"- verdict **{dag['verdict']}** · {dag['nodes']} nodes · "
            f"{dag['edges']} edges · cycle status **{dag['cycle_status']}**",
