@@ -80,3 +80,6 @@ HENRI V2/agentic_graph/*/Dataset/
 # experiments/verification/mmlu_839_summary.json (headline + all 57 subjects).
 # Read the body only through scripts/henri_experiment_digest.py.
 experiments/verification/mmlu_839_scorecard.json
+
+# Salvage: 32 duplicate genesis ledger stubs (identical modulo ts/hash)
+_archive/worktree_salvage_20260911/**/henri_audit_chain.json

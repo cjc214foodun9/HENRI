@@ -1,0 +1,173 @@
+{
+  "schema": "henri.coe-claims.v1",
+  "generated": "2026-09-11",
+  "commit": "3df5dc2",
+  "n_claims": 10,
+  "claims": [
+    {
+      "claim_id": "claim-pdf-identity",
+      "claim_text": "Local artifact 2605.26340 is the paper 'ScientistOne: Towards Human-Level Autonomous Research via Chain-of-Evidence' (Google Cloud AI Research, 35 pages).",
+      "claim_type": "citation",
+      "status": "observed",
+      "source_artifacts": [
+        {
+          "uri_or_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\2605.26340",
+          "sha256": "9d4fa9d1e9e6b1cdccfeff02fecbd28b5b961594952a1ac96e00ad135bed0a51",
+          "canonical_id": "arXiv:2605.26340",
+          "extraction": "pymupdf 1.x (system python)"
+        }
+      ],
+      "verifier": "pymupdf metadata + page-1 text",
+      "verification_command": "python -c \"import pymupdf;print(pymupdf.open(p)[0].get_text()[:200])\"",
+      "commit": "3df5dc2"
+    },
+    {
+      "claim_id": "claim-coe-taxonomy",
+      "claim_text": "The paper defines four primary claim types: citation, numerical, methodological, conclusion; each requires a distinct evidence-chain shape.",
+      "claim_type": "citation",
+      "status": "observed",
+      "source_artifacts": [
+        {
+          "uri_or_path": "C:\\Users\\chan\\AppData\\Local\\hermes\\reports\\scientistone_2605.26340.txt",
+          "sha256": "0767eb2a277a1bb90ae2dbef7163528b6e4457e6a6e7eccf867eac49e0a1dcf3",
+          "canonical_id": "arXiv:2605.26340 \u00a73",
+          "extraction": "pymupdf text, LF-canonical"
+        }
+      ],
+      "verifier": "paper text search for 'claim taxonomy'",
+      "verification_command": "grep -i 'claim taxonomy' reports/scientistone_2605.26340.txt",
+      "commit": "3df5dc2"
+    },
+    {
+      "claim_id": "claim-coe-integrity-checks",
+      "claim_text": "The CoE Integrity Audit performs four checks: I1 Score Verification, I2 Specification Violation, I3 Reference Verification, I4 Method-Code Alignment; evaluated over 75 papers.",
+      "claim_type": "citation",
+      "status": "observed",
+      "source_artifacts": [
+        {
+          "uri_or_path": "C:\\Users\\chan\\AppData\\Local\\hermes\\reports\\scientistone_2605.26340.txt",
+          "sha256": "0767eb2a277a1bb90ae2dbef7163528b6e4457e6a6e7eccf867eac49e0a1dcf3",
+          "canonical_id": "arXiv:2605.26340 \u00a75",
+          "extraction": "pymupdf text, LF-canonical"
+        }
+      ],
+      "verifier": "paper text search for 'I1 Score Verification'",
+      "verification_command": "grep -i 'Score Verification' reports/scientistone_2605.26340.txt",
+      "commit": "3df5dc2"
+    },
+    {
+      "claim_id": "claim-coe-gate-enforces",
+      "claim_text": "henri_coe_gate.py rejects a prose-only observed claim and accepts a fully-evidenced one (selftest 6/6).",
+      "claim_type": "method",
+      "status": "observed",
+      "source_artifacts": [
+        {
+          "uri_or_path": "C:\\Users\\chan\\AppData\\Local\\hermes\\scripts\\henri_coe_gate.py",
+          "sha256": "677308b16cc206ecbb4d1e38beeaac1dd335d7df341b0b9012ce0b3bddcd2568"
+        }
+      ],
+      "verifier": "scripts/henri_coe_gate.py selftest",
+      "verification_command": "python scripts/henri_coe_gate.py selftest",
+      "commit": "3df5dc2",
+      "limitations": "Selftest uses synthetic fixtures; real-ledger validation is the run that produced this file."
+    },
+    {
+      "claim_id": "claim-salvage-size",
+      "claim_text": "The irreplaceable unique-content set across all linked worktrees is 50 files totalling 79,004 bytes, salvaged to _archive/worktree_salvage_20260911/.",
+      "claim_type": "metric",
+      "status": "observed",
+      "source_artifacts": [
+        {
+          "uri_or_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\_archive\\worktree_salvage_20260911\\MANIFEST.json",
+          "sha256": "e639e8616d13d5faab71a5eaa8c28c4d550a7d703f9c3f7dbb0595943f1741d6"
+        },
+        {
+          "uri_or_path": "C:\\Users\\chan\\AppData\\Local\\hermes\\reports\\worktree_inventory_20260911.json",
+          "sha256": "7bc45b9c29069f771f4f6e340723a6081639fd6effd0e25950d1e98fede22b3c"
+        }
+      ],
+      "verifier": "salvage script + manifest reconciliation",
+      "verification_command": "python scripts/henri_worktree_salvage.py && python salvage.py",
+      "commit": "3df5dc2"
+    },
+    {
+      "claim_id": "claim-cache-hit-rate",
+      "claim_text": "Aggregate MoA reference prompt-cache hit rate over the 3 newest traces (27 turns) is 21.7% by hitA = cache_read/(cache_read+fresh_input); 12.0% of all prompt tokens when cache_write is included.",
+      "claim_type": "metric",
+      "status": "observed",
+      "source_artifacts": [
+        {
+          "uri_or_path": "C:\\Users\\chan\\AppData\\Local\\hermes\\scripts\\henri_cache_diag.py",
+          "sha256": "d20e0991773b3023632330b72000f71d9f110a30c5d28f5f4804ce0c07bb46ae"
+        }
+      ],
+      "verifier": "scripts/henri_cache_diag.py",
+      "verification_command": "python scripts/henri_cache_diag.py --newest 3",
+      "commit": "3df5dc2"
+    },
+    {
+      "claim_id": "claim-cache-ceiling",
+      "claim_text": "The arithmetic ceiling for the aggregate hit rate is ~99.9-100%: the minimum new content per turn is 105-266 tokens against a median prompt of ~200-223k tokens. Therefore >90% is arithmetically reachable.",
+      "claim_type": "metric",
+      "status": "derived",
+      "source_artifacts": [
+        {
+          "uri_or_path": "C:\\Users\\chan\\AppData\\Local\\hermes\\scripts\\henri_cache_diag.py",
+          "sha256": "d20e0991773b3023632330b72000f71d9f110a30c5d28f5f4804ce0c07bb46ae"
+        }
+      ],
+      "verifier": "ceiling = 1 - floor_new/median_prompt, computed in henri_cache_diag.py",
+      "verification_command": "python scripts/henri_cache_diag.py --newest 3",
+      "commit": "3df5dc2",
+      "limitations": "Ceiling assumes the provider bills a stable prefix as a cache read; it is an upper bound, not a promise."
+    },
+    {
+      "claim_id": "claim-ttl-not-the-lever",
+      "claim_text": "Hit rate is NOT explained by the inter-turn wall-clock gap: Spearman(gap, hit%) = -0.118 (n=24). The governing factor is prefix stability, not cadence.",
+      "claim_type": "metric",
+      "status": "observed",
+      "source_artifacts": [
+        {
+          "uri_or_path": "C:\\Users\\chan\\AppData\\Local\\hermes\\scripts\\henri_cache_ttl_probe.py",
+          "sha256": "9ac8252e3b0621cb314388928f4d8b05449e3f9e2297135faf857c2d867be8a7"
+        }
+      ],
+      "verifier": "scripts/henri_cache_ttl_probe.py",
+      "verification_command": "python scripts/henri_cache_ttl_probe.py",
+      "commit": "3df5dc2",
+      "limitations": "n=24 turns from 3 traces; |rho|<0.3 is a null result, not proof of no effect at larger n."
+    },
+    {
+      "claim_id": "claim-cache-write-zero",
+      "claim_text": "cache_write_tokens is reported as 0 for every reference slot in every sampled turn, while cache_read_tokens is non-zero in most turns.",
+      "claim_type": "metric",
+      "status": "observed",
+      "source_artifacts": [
+        {
+          "uri_or_path": "C:\\Users\\chan\\AppData\\Local\\hermes\\scripts\\henri_cache_diag.py",
+          "sha256": "d20e0991773b3023632330b72000f71d9f110a30c5d28f5f4804ce0c07bb46ae"
+        }
+      ],
+      "verifier": "field extraction over moa-traces/*.jsonl",
+      "verification_command": "python scripts/henri_cache_diag.py --newest 3",
+      "commit": "3df5dc2",
+      "limitations": "A zero write counter may mean the provider does not report writes, not that no cache was written. Aggregator slots carry no usage block at all, so aggregator cache is UNVERIFIED."
+    },
+    {
+      "claim_id": "claim-fabricated-coe-module",
+      "claim_text": "HENRI V2/henri_scientistone_coe_v2.py exists and implements CoE enforcement in 670 lines. (Asserted by a MoA reference model as OBSERVED; retained here as a negative control.)",
+      "claim_type": "method",
+      "status": "observed",
+      "source_artifacts": [
+        {
+          "uri_or_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\henri_scientistone_coe_v2.py",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "code_location": "HENRI V2/henri_scientistone_coe_v2.py:1"
+        }
+      ],
+      "verifier": "claimed by reference model; disproved by ls",
+      "verification_command": "ls 'HENRI V2/henri_scientistone_coe_v2.py'",
+      "commit": "3df5dc2"
+    }
+  ]
+}
