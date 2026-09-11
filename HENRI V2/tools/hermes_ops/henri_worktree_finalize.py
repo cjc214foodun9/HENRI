@@ -18,6 +18,7 @@ Fail-closed: if a tar cannot be written and verified, that worktree is not remov
 """
 from __future__ import annotations
 
+import datetime
 import argparse
 import hashlib
 import json
@@ -30,6 +31,28 @@ H = Path(r"C:\Users\chan\AppData\Local\hermes")
 TRIAGE = H / "reports" / "worktree_triage_uall_20260911.json"
 MAN = REPO / "_archive" / "worktree_salvage_20260911" / "MANIFEST.json"
 ARCDIR = H / "archive" / "worktree_ignored_20260911"
+
+def _write_evidence(path: Path, payload: str, force: bool = False,
+                    encoding: str = "utf-8") -> Path:
+    """Write an evidence artifact WITHOUT destroying a prior one.
+
+    The disposition record documents IRREVERSIBLE worktree removals. A later
+    dry-run or re-apply must not replace the record of the earlier set
+    (observed incident 2026-09-11: an unguarded re-run reduced a 44-worktree
+    triage record to 0 rows). Non-trivial existing content is never silently
+    replaced; a timestamped sibling is written instead.
+    """
+    if path.exists() and not force and path.stat().st_size > 512:
+        stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        alt = path.with_name(f"{path.stem}_{stamp}{path.suffix}")
+        alt.write_text(payload, encoding=encoding)
+        print(f"REFUSED to overwrite evidence ({path.stat().st_size:,} B): "
+              f"{path.name}")
+        print(f"  wrote {alt.name} instead (pass --force to replace)")
+        return alt
+    path.write_text(payload, encoding=encoding)
+    return path
+
 REPORT = H / "reports" / "worktree_disposition_20260911.json"
 IGNORE_LIMIT = 100 * 1024 * 1024
 
@@ -157,8 +180,8 @@ def main() -> int:
 
     if not a.apply:
         print("\n(dry run)")
-        REPORT.write_text(json.dumps({"plan": plan, "applied": False},
-                                     indent=2), encoding="utf-8")
+        _write_evidence(REPORT, json.dumps({"plan": plan, "applied": False},
+                                     indent=2))
         return 0
 
     # ---- remove ----
@@ -191,11 +214,11 @@ def main() -> int:
     for s in still[:5]:
         print(f"  {s}")
 
-    REPORT.write_text(json.dumps(
+    _write_evidence(REPORT, json.dumps(
         {"plan": plan, "applied": True, "removed": removed, "failed": failed,
          "tar_failures": tar_fail, "worktrees_remaining": n_wt,
          "branches_preserved": n_br, "paths_still_present": still},
-        indent=2), encoding="utf-8")
+        indent=2))
     print(f"\nreport: {REPORT}")
     return 0
 
