@@ -109,3 +109,47 @@ Measure with `henri_cache_diag.py` (per-slot + ceiling) and
   carries no usage block at all (`UNVERIFIED`, 0/27 turns).
 - Do **not** change the roster mid-session; that voids the very prefix the
   protocol depends on.
+
+## 8. Findings added after the kill experiment (`OBSERVED` 2026-09-11)
+
+**F4 — The miss is NOT global; it is per-slot.** `scripts/henri_cache_slot_probe.py`
+on the current session trace:
+
+| slot | cache_read | fresh_in | hit% | turns with a hit |
+|---|---:|---:|---:|---:|
+| z-ai/glm-5.3-flash | 162,368 | 146,978 | 52.5 | 1/4 |
+| meta/muse-spark-1.3 | 6,257 | 297,749 | 2.1 | 1/4 |
+| minimax/minimax-m3 | 384 | 307,778 | 0.1 | 3/4 |
+
+In **4 of 4** multi-slot turns the slots disagreed (0 turns where all slots
+agreed). A single global prefix protocol therefore cannot reach 90%; each slot's
+own prefix must be stabilised. `LIMITATION`: n=4 turns in one trace — a strong
+lead, not a settled law. Re-run with `--newest 5` before acting.
+
+**F5 — Per-slot `max_tokens` is NOT a supported key.** The live `config.yaml`
+exposes exactly one token knob, `moa.max_tokens: 4096`, at MoA level. No
+per-slot field exists. Adding `max_tokens` inside a `reference_models[]` entry
+would be a **phantom flag** — written but never read. Per-slot output bounding is
+`BLOCKED` until the runtime exposes the field. Slot *selection* remains the lever.
+
+**F6 — `prompt_caching.cache_ttl` is a closed enum, not a free duration.**
+`hermes-agent/agent/agent_init.py` reads `prompt_caching.cache_ttl` and **keeps
+`"5m"` for unknown values**; `agent_runtime_helpers.py` refers to "the two
+cache_ttl tiers accepted by config". P5 in §5 must read the accepted pair before
+proposing any value. A made-up TTL would silently fall back to 5m and appear to
+work.
+
+## 9. Revised acceptance (supersedes §6)
+
+Because F4 shows per-slot behaviour, the ≥90% target is evaluated **per slot**,
+not only in aggregate:
+
+| outcome | criterion |
+|---|---|
+| **ACCEPT** | every paid slot reaches hitA ≥ 90.0% over ≥5 traces under one frozen-prefix session |
+| **PARTIAL** | ≥1 slot reaches ≥90% but others do not — report per slot; do not average |
+| **REJECT** | no slot moves above 70.0% — H-PREFIX falsified for this provider |
+
+Aggregate-only reporting is explicitly insufficient: an aggregate can look
+healthy while a single expensive slot runs at 0%.
+
