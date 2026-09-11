@@ -95,3 +95,39 @@ unmerged commits (all 44 reported 0 unmerged commits). 130 branches preserved.
 The archive is a local, single-copy store on one disk. It is not replicated.
 If that path is lost, the codec checkpoints and A/B telemetry are gone. A
 follow-up may copy it to Drive or object storage; that is not claimed here.
+
+## Incident: evidence artifact clobbered, then recovered
+
+**Found by** post-hoc probing after a stale background-completion notification.
+
+**What happened.** `henri_worktree_triage.py` wrote a FIXED path with no
+overwrite guard. A verification loop re-ran it **after** the 44 worktrees had
+been removed, so it computed an empty set and replaced the record of the real
+set: `44 worktrees -> 0 worktrees (79 B)`.
+
+**Why it matters.** That JSON was the machine-readable record underlying an
+irreversible action. Destroying it is the same evidence-preservation failure the
+M-3 preregistration exists to prevent. Nothing was lost from disk — only the
+*record* was overwritten.
+
+**What survived (`OBSERVED`).** The disposition report (30 plan entries,
+25,243,510 B recorded), the run log with the full table and per-file listings,
+the git-committed salvage `MANIFEST.json`, and both codec `.pt` checkpoints in
+the 30 tars.
+
+**Recovery.** `worktree_triage_20260911_recovered.json` is rebuilt by parsing the
+surviving run log and is labelled `RECONSTRUCTED` with its provenance.
+
+| check | manifest (committed) | reconstruction | agree |
+|---|---:|---:|---|
+| unique files | 59 | 59 | yes |
+| unique bytes | 194,118 | 194,118 | yes |
+| worktrees with unique content | 32 | 32 | yes |
+
+**Hardening.** The triage tool now refuses to overwrite non-trivial evidence
+(`_write_evidence`), writing a timestamped sibling instead unless `--force` is
+passed. Regression guard: run triage twice; the first artifact must survive.
+
+**Lesson.** A tool that measures a disappearing resource must never write its
+record to a fixed, unguarded path. Structural fix: evidence artifacts are
+write-once, and verification loops must not re-run stateful collectors.

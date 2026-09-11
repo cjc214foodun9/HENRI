@@ -1,0 +1,361 @@
+{
+  "generated": "2026-09-11T13:34:53",
+  "status": "RECONSTRUCTED",
+  "provenance": "The original artifact was overwritten by an unguarded re-run of henri_worktree_triage.py after the worktrees had been removed. This file is rebuilt by parsing the surviving run log (reports/wt_triage_run.log). Cross-checked against the git-committed salvage MANIFEST. Treat the MANIFEST as authoritative for file bytes; treat this file as authoritative for the per-worktree classification.",
+  "source_log": "C:\\Users\\chan\\AppData\\Local\\hermes\\reports\\wt_triage_run.log",
+  "summary": {
+    "worktrees_examined": 44,
+    "with_any_change": 36,
+    "with_unique_content": 32,
+    "total_unique_files": 59,
+    "total_unique_bytes": 194118,
+    "max_changed_all": 51
+  },
+  "worktrees": [
+    {
+      "path": "C:/tmp/henri-821-wt",
+      "unique": 26,
+      "changed_all": 51,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "environment_files/ar25/0c556536/metadata.json",
+        "environment_files/bp35/0a0ad940/metadata.json",
+        "environment_files/cd82/fb555c5d/metadata.json",
+        "environment_files/cn04/2fe56bfb/metadata.json",
+        "environment_files/dc22/fdcac232/metadata.json",
+        "environment_files/ft09/0d8bbf25/metadata.json",
+        "environment_files/g50t/5849a774/metadata.json",
+        "environment_files/ka59/38d34dbb/metadata.json",
+        "environment_files/lf52/271a04aa/metadata.json",
+        "environment_files/lp85/305b61c3/metadata.json",
+        "environment_files/ls20/9607627b/metadata.json",
+        "environment_files/m0r0/492f87ba/metadata.json",
+        "environment_files/r11l/495a7899/metadata.json",
+        "environment_files/re86/8af5384d/metadata.json",
+        "environment_files/s5i5/18d95033/metadata.json",
+        "environment_files/sb26/7fbdac44/metadata.json",
+        "environment_files/sc25/635fd71a/metadata.json",
+        "environment_files/sk48/d8078629/metadata.json",
+        "environment_files/sp80/589a99af/metadata.json",
+        "environment_files/su15/1944f8ab/metadata.json",
+        "environment_files/tn36/ef4dde99/metadata.json",
+        "environment_files/tr87/cd924810/metadata.json",
+        "environment_files/tu93/0768757b/metadata.json",
+        "environment_files/vc33/5430563c/metadata.json",
+        "environment_files/wa30/ee6fef47/metadata.json",
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/Users/chan/henri-worktrees/accuracy-main",
+      "unique": 2,
+      "changed_all": 2,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "data/HumanEval.jsonl.gz",
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/Users/chan/henri-worktrees/unified-vla",
+      "unique": 2,
+      "changed_all": 2,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "HENRI V2/henri_audit_chain.json",
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri_p1",
+      "unique": 1,
+      "changed_all": 16,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri_conv",
+      "unique": 1,
+      "changed_all": 2,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/Users/chan/henri-worktrees/mbpp-heldout-v1",
+      "unique": 1,
+      "changed_all": 2,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-810-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-811-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-812-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-813-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-814-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-82-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-823-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-82ic-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-83-r1-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-831-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-832-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-833-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-834-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-835-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-83r-efe-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-84-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-86-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-87-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-88-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-89-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-dm-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-merge-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/tmp/henri-psg-wt",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/Users/chan/AppData/Local/Temp/henri-p79e-score",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "p79f_evidence/sources/phase7.9e.pdf"
+      ]
+    },
+    {
+      "path": "C:/Users/chan/henri-worktrees/carrier-k3",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/Users/chan/henri-worktrees/rc-main-20260904",
+      "unique": 1,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": [
+        "henri_audit_chain.json"
+      ]
+    },
+    {
+      "path": "C:/Users/chan/henri-worktrees/phase-codec-adapter",
+      "unique": 0,
+      "changed_all": 4,
+      "unmerged_commits": 0,
+      "unique_files": []
+    },
+    {
+      "path": "C:/Users/chan/henri-worktrees/projective-hopfield",
+      "unique": 0,
+      "changed_all": 4,
+      "unmerged_commits": 0,
+      "unique_files": []
+    },
+    {
+      "path": "C:/Users/chan/henri-worktrees/phase838",
+      "unique": 0,
+      "changed_all": 2,
+      "unmerged_commits": 0,
+      "unique_files": []
+    },
+    {
+      "path": "C:/tmp/henri-rc-wt",
+      "unique": 0,
+      "changed_all": 1,
+      "unmerged_commits": 0,
+      "unique_files": []
+    }
+  ],
+  "total_unique_files": 59,
+  "total_unique_bytes": 194118
+}
