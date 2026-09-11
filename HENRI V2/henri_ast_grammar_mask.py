@@ -23,6 +23,9 @@ class HENRIASTGrammarMask:
     valid next-token AST grammar masks.
     """
     def __init__(self, vocab_map: Optional[Dict[int, str]] = None):
+        # Decision 2 (Carrier E6): discrete-token egress strip, default-OFF.
+        from henri_discrete_egress_flag import guard_discrete_egress
+        guard_discrete_egress("HENRIASTGrammarMask")
         self.code_vocab_map = vocab_map or {
             0: "def ", 1: "solution():\n", 2: "    ", 3: "return ", 4: "True\n",
             5: "False\n", 6: "0\n", 7: "1\n", 8: "[]\n", 9: "{}\n"

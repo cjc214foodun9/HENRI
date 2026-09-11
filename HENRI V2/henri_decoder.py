@@ -62,6 +62,11 @@ class HENRINeuralEgressUnbinder(nn.Module):
     Governed by Bingham Plastic yield mechanics and anisotropic Langevin noise.
     """
     def __init__(self, d_model: int = 65536, d_hidden: int = 2048, vocab_size: int = 32000, device: str = "cuda"):
+        # Decision 2 (Carrier E6, approved 2026-09-11): discrete-token egress
+        # strip. Default-OFF: when HENRI_STRIP_DISCRETE_EGRESS is unset this has
+        # no effect and construction is unchanged.
+        from henri_discrete_egress_flag import guard_discrete_egress
+        guard_discrete_egress("HENRINeuralEgressUnbinder")
         super().__init__()
         self.d_model = d_model
         self.d_hidden = d_hidden
@@ -347,6 +352,9 @@ class PhaseRingCodebookDecoder:
     Transduces continuous wave hypervector phase states into vocabulary token choices.
     """
     def __init__(self, d_model: int = 65536, k_bins: int = 256, device: str = "cuda"):
+        # Decision 2 (Carrier E6): discrete-token egress strip, default-OFF.
+        from henri_discrete_egress_flag import guard_discrete_egress
+        guard_discrete_egress("PhaseRingCodebookDecoder")
         self.d_model = d_model
         self.k_bins = k_bins
         self.device = device if torch.cuda.is_available() else "cpu"
@@ -464,6 +472,11 @@ class HENRIUnifiedEgressTransducer:
     ):
         if checkpoint_policy not in {"auto", "required", "disabled"}:
             raise ValueError(f"unknown checkpoint_policy={checkpoint_policy!r}")
+        # Decision 2 (Carrier E6): discrete-token egress strip, default-OFF.
+        # Placed after argument validation so a bad policy still reports as a
+        # ValueError, but before any sub-object construction.
+        from henri_discrete_egress_flag import guard_discrete_egress
+        guard_discrete_egress("HENRIUnifiedEgressTransducer")
         self.d_model = d_model
         self.hidden_dim = hidden_dim
         self.vocab_size = vocab_size
