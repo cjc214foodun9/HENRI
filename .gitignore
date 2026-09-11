@@ -75,8 +75,8 @@ HENRI V2/agentic_graph/*/Dataset/
 # Worktrees are transient branch scratch space, never committed content
 .worktrees/
 
-# NOTE: mmlu_839_scorecard.json (5.94 MB / 196,616 lines) is already TRACKED, so a
-# .gitignore entry here would be a no-op. Mitigation is procedural: never inline it.
-# Use scripts/henri_experiment_digest.py to read it. Untracking it requires
-# `git rm --cached experiments/verification/mmlu_839_scorecard.json`, which is a
-# repository-content change and needs explicit approval.
+# mmlu_839_scorecard.json (5.94 MB / 196,616 lines) UNTRACKED 2026-09-11 (approved).
+# The body stays on disk and remains in git history. The tracked compact record is
+# experiments/verification/mmlu_839_summary.json (headline + all 57 subjects).
+# Read the body only through scripts/henri_experiment_digest.py.
+experiments/verification/mmlu_839_scorecard.json

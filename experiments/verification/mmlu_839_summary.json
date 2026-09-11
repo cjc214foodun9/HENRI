@@ -1,0 +1,319 @@
+{
+  "accept_margin": 0.05,
+  "accuracy": 0.2598,
+  "attempted": 14042,
+  "benchmark": "MMLU",
+  "body_bytes": 5940600,
+  "body_file": "mmlu_839_scorecard.json",
+  "body_git_state": "untracked 2026-09-11 (approved); body remains on disk; full content also in git history from earlier commits",
+  "body_sha256": "00f73a900a6fc8f1e1711e5d23d6cd1f5154cf757969075697f6bd2710a0d0bf",
+  "chance": 0.25,
+  "checkpoint_used": false,
+  "codec_geometry_control": {
+    "mean_correct_option_cosine": 0.34302,
+    "mean_distinct_option_cosine": 0.358752,
+    "mean_wrong_option_cosine": 0.338306,
+    "random_baseline_1_over_sqrt_d": 0.003906
+  },
+  "commit": "3b00b01543495f597edfd0924e7fb9728d98555f",
+  "correct": 3648,
+  "d_model": 65536,
+  "dataset_sha256": "15b6785d49e0012602e089558a7a0dfb916baf97e9295aa25b48062f13c6afbb",
+  "dataset_source": "https://openaipublic.blob.core.windows.net/simple-evals/mmlu.csv",
+  "device": "cuda",
+  "egress_path": "STRUCTURED_CODEC_WAVE_RANK",
+  "item_count": 14042,
+  "margin": 0.0098,
+  "note": "Tracked compact record for the MMLU scorecard. Read the full body only via %LOCALAPPDATA%/hermes/scripts/henri_experiment_digest.py",
+  "per_subject": {
+    "abstract_algebra": {
+      "acc": 0.32,
+      "correct": 32,
+      "n": 100
+    },
+    "anatomy": {
+      "acc": 0.3037,
+      "correct": 41,
+      "n": 135
+    },
+    "astronomy": {
+      "acc": 0.3026,
+      "correct": 46,
+      "n": 152
+    },
+    "business_ethics": {
+      "acc": 0.18,
+      "correct": 18,
+      "n": 100
+    },
+    "clinical_knowledge": {
+      "acc": 0.283,
+      "correct": 75,
+      "n": 265
+    },
+    "college_biology": {
+      "acc": 0.2361,
+      "correct": 34,
+      "n": 144
+    },
+    "college_chemistry": {
+      "acc": 0.25,
+      "correct": 25,
+      "n": 100
+    },
+    "college_computer_science": {
+      "acc": 0.29,
+      "correct": 29,
+      "n": 100
+    },
+    "college_mathematics": {
+      "acc": 0.22,
+      "correct": 22,
+      "n": 100
+    },
+    "college_medicine": {
+      "acc": 0.2428,
+      "correct": 42,
+      "n": 173
+    },
+    "college_physics": {
+      "acc": 0.2353,
+      "correct": 24,
+      "n": 102
+    },
+    "computer_security": {
+      "acc": 0.32,
+      "correct": 32,
+      "n": 100
+    },
+    "conceptual_physics": {
+      "acc": 0.2128,
+      "correct": 50,
+      "n": 235
+    },
+    "econometrics": {
+      "acc": 0.2193,
+      "correct": 25,
+      "n": 114
+    },
+    "electrical_engineering": {
+      "acc": 0.2552,
+      "correct": 37,
+      "n": 145
+    },
+    "elementary_mathematics": {
+      "acc": 0.2566,
+      "correct": 97,
+      "n": 378
+    },
+    "formal_logic": {
+      "acc": 0.2381,
+      "correct": 30,
+      "n": 126
+    },
+    "global_facts": {
+      "acc": 0.24,
+      "correct": 24,
+      "n": 100
+    },
+    "high_school_biology": {
+      "acc": 0.2806,
+      "correct": 87,
+      "n": 310
+    },
+    "high_school_chemistry": {
+      "acc": 0.2562,
+      "correct": 52,
+      "n": 203
+    },
+    "high_school_computer_science": {
+      "acc": 0.21,
+      "correct": 21,
+      "n": 100
+    },
+    "high_school_european_history": {
+      "acc": 0.2788,
+      "correct": 46,
+      "n": 165
+    },
+    "high_school_geography": {
+      "acc": 0.2828,
+      "correct": 56,
+      "n": 198
+    },
+    "high_school_government_and_politics": {
+      "acc": 0.2176,
+      "correct": 42,
+      "n": 193
+    },
+    "high_school_macroeconomics": {
+      "acc": 0.2667,
+      "correct": 104,
+      "n": 390
+    },
+    "high_school_mathematics": {
+      "acc": 0.2741,
+      "correct": 74,
+      "n": 270
+    },
+    "high_school_microeconomics": {
+      "acc": 0.2353,
+      "correct": 56,
+      "n": 238
+    },
+    "high_school_physics": {
+      "acc": 0.3444,
+      "correct": 52,
+      "n": 151
+    },
+    "high_school_psychology": {
+      "acc": 0.2422,
+      "correct": 132,
+      "n": 545
+    },
+    "high_school_statistics": {
+      "acc": 0.2917,
+      "correct": 63,
+      "n": 216
+    },
+    "high_school_us_history": {
+      "acc": 0.3088,
+      "correct": 63,
+      "n": 204
+    },
+    "high_school_world_history": {
+      "acc": 0.3038,
+      "correct": 72,
+      "n": 237
+    },
+    "human_aging": {
+      "acc": 0.1973,
+      "correct": 44,
+      "n": 223
+    },
+    "human_sexuality": {
+      "acc": 0.2519,
+      "correct": 33,
+      "n": 131
+    },
+    "international_law": {
+      "acc": 0.2975,
+      "correct": 36,
+      "n": 121
+    },
+    "jurisprudence": {
+      "acc": 0.3333,
+      "correct": 36,
+      "n": 108
+    },
+    "logical_fallacies": {
+      "acc": 0.3067,
+      "correct": 50,
+      "n": 163
+    },
+    "machine_learning": {
+      "acc": 0.2679,
+      "correct": 30,
+      "n": 112
+    },
+    "management": {
+      "acc": 0.1748,
+      "correct": 18,
+      "n": 103
+    },
+    "marketing": {
+      "acc": 0.312,
+      "correct": 73,
+      "n": 234
+    },
+    "medical_genetics": {
+      "acc": 0.3,
+      "correct": 30,
+      "n": 100
+    },
+    "miscellaneous": {
+      "acc": 0.2427,
+      "correct": 190,
+      "n": 783
+    },
+    "moral_disputes": {
+      "acc": 0.2775,
+      "correct": 96,
+      "n": 346
+    },
+    "moral_scenarios": {
+      "acc": 0.2726,
+      "correct": 244,
+      "n": 895
+    },
+    "nutrition": {
+      "acc": 0.3039,
+      "correct": 93,
+      "n": 306
+    },
+    "philosophy": {
+      "acc": 0.2347,
+      "correct": 73,
+      "n": 311
+    },
+    "prehistory": {
+      "acc": 0.1975,
+      "correct": 64,
+      "n": 324
+    },
+    "professional_accounting": {
+      "acc": 0.273,
+      "correct": 77,
+      "n": 282
+    },
+    "professional_law": {
+      "acc": 0.2653,
+      "correct": 407,
+      "n": 1534
+    },
+    "professional_medicine": {
+      "acc": 0.2353,
+      "correct": 64,
+      "n": 272
+    },
+    "professional_psychology": {
+      "acc": 0.219,
+      "correct": 134,
+      "n": 612
+    },
+    "public_relations": {
+      "acc": 0.2,
+      "correct": 22,
+      "n": 110
+    },
+    "security_studies": {
+      "acc": 0.2245,
+      "correct": 55,
+      "n": 245
+    },
+    "sociology": {
+      "acc": 0.199,
+      "correct": 40,
+      "n": 201
+    },
+    "us_foreign_policy": {
+      "acc": 0.3,
+      "correct": 30,
+      "n": 100
+    },
+    "virology": {
+      "acc": 0.3133,
+      "correct": 52,
+      "n": 166
+    },
+    "world_religions": {
+      "acc": 0.3158,
+      "correct": 54,
+      "n": 171
+    }
+  },
+  "status": "EVALUATED",
+  "timestamp_utc": "2026-08-20T14:15:20.977648+00:00",
+  "verdict": "FALSIFIED",
+  "wall_clock_sec": 1150.918
+}
