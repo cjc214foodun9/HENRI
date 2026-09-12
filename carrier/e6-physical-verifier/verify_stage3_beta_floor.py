@@ -94,7 +94,14 @@ def main():
     print(f"gate : H(Y) <= {H_GATE} bits")
     print()
 
+    # Gate tolerance for the closed form. Overridable so the FAIL path can be
+    # demonstrated: a gate whose failure cannot be triggered is not a gate.
+    tol = 0.05
+    if "--tolerance" in sys.argv:
+        tol = float(sys.argv[sys.argv.index("--tolerance") + 1])
     eps = 0.15
+    if "--eps" in sys.argv:
+        eps = float(sys.argv[sys.argv.index("--eps") + 1])
     grid = [(512, 100), (8192, 100), (8192, 1000), (8192, 2000), (65536, 200)]
     betas = [4.0, 8.0, 16.0, 32.0]
     rows = []
@@ -137,7 +144,30 @@ def main():
     print()
     print("-" * 78)
     print(f"  worst |H_measured - H_predicted| = {worst:.4f} bits")
-    print(f"  closed form valid (max err < 0.05 bits): {worst < 0.05}")
+    print(f"  closed form valid (max err < {tol} bits): {worst < tol}")
+    print()
+
+    # FAIL-CLOSED VERDICT. The receipt makes three falsifiable claims; assert all
+    # three, so this harness can gate CI instead of always exiting 0.
+    #   C1  the closed form reproduces the live engine within tol
+    #   C2  beta=8.0 FAILS the gate at M >= 1000 (the derivation's core claim)
+    #   C3  beta=8.0 PASSES at M < 1000 (miss-tuned, not wrong in kind)
+    #   C4  sqrt(D) PASSES at every measured (D, M)
+    closed_form_valid = worst < tol
+    b8f = [r for r in rows if abs(r["beta"] - 8.0) < 1e-9]
+    sqd = [r for r in rows if abs(r["beta"] - math.sqrt(r["D"])) < 1e-3]
+    c2 = all(r["verdict"] == "FAIL" for r in b8f if r["M"] >= 1000)
+    c3 = all(r["verdict"] == "PASS" for r in b8f if r["M"] < 1000)
+    c4 = all(r["verdict"] == "PASS" for r in sqd)
+    gate_pass = bool(closed_form_valid and c2 and c3 and c4
+                     and len(b8f) and len(sqd))
+    for nm, ok, desc in (
+            ("C1 closed_form_valid", closed_form_valid, f"worst={worst:.4f} < {tol}"),
+            ("C2 beta=8 FAILS M>=1000", c2, f"n={len([r for r in b8f if r['M'] >= 1000])}"),
+            ("C3 beta=8 PASSES M<1000", c3, f"n={len([r for r in b8f if r['M'] < 1000])}"),
+            ("C4 sqrt(D) PASSES all", c4, f"n={len(sqd)}")):
+        print(f"  [{'PASS' if ok else 'FAIL'}] {nm:<26} {desc}")
+    print(f"  GATE RESULT: {'PASS' if gate_pass else 'FAIL'}")
     print()
     print("  KEY RESULT: the floor scales as ln(M), NOT with D.")
     print("  beta=8 sits just BELOW the floor at M=1000 (floor ~9.0), which is why")
@@ -156,6 +186,14 @@ def main():
             "H": "h2(p_true) + (1 - p_true) * log2(M)",
             "beta_floor": "(ln M + ln((1-r)/r)) / c,  r = H_GATE/log2(M)",
             "worst_abs_error_bits": round(worst, 4),
+            "tolerance_bits": tol,
+        },
+        "gate_pass": gate_pass,
+        "gate_assertions": {
+            "C1_closed_form_valid": bool(closed_form_valid),
+            "C2_beta8_fails_M_ge_1000": bool(c2),
+            "C3_beta8_passes_M_lt_1000": bool(c3),
+            "C4_sqrtD_passes_all": bool(c4),
         },
         "findings": [
             "The dominant entropy term is the TAIL (1-p) log2(M), not the winner's "
@@ -184,7 +222,7 @@ def main():
     with open(out, "w", encoding="utf-8") as f:
         json.dump(receipt, f, indent=2)
     print(f"receipt written: {out}")
-    return 0
+    return 0 if gate_pass else 1
 
 
 if __name__ == "__main__":

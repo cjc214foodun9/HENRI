@@ -3,12 +3,20 @@
   "artifact": "HENRI V2/henri_egress.py + HENRI V2/hopfield_cleanup.py",
   "gate": "logit entropy H(Y) <= 1.2 bits (fail-closed H(Y) >= 4.5)",
   "evidence_class": "OBSERVED",
-  "timestamp_utc": "2026-09-12T21:11:11Z",
+  "timestamp_utc": "2026-09-12T21:22:27Z",
   "closed_form": {
     "p_true": "e^(beta*c) / (e^(beta*c) + M)",
     "H": "h2(p_true) + (1 - p_true) * log2(M)",
     "beta_floor": "(ln M + ln((1-r)/r)) / c,  r = H_GATE/log2(M)",
-    "worst_abs_error_bits": 0.0219
+    "worst_abs_error_bits": 0.0219,
+    "tolerance_bits": 0.05
+  },
+  "gate_pass": true,
+  "gate_assertions": {
+    "C1_closed_form_valid": true,
+    "C2_beta8_fails_M_ge_1000": true,
+    "C3_beta8_passes_M_lt_1000": true,
+    "C4_sqrtD_passes_all": true
   },
   "findings": [
     "The dominant entropy term is the TAIL (1-p) log2(M), not the winner's sharpness. A fixed beta therefore cannot work across memory counts.",
