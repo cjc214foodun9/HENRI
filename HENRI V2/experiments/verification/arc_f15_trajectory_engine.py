@@ -94,7 +94,13 @@ def _bridge_to_d64(wave_65536, device):
         w = F.pad(w, (0, 65536 - w.numel()))
     else:
         w = w[:65536]
-    pooled = w.view(16, 4096).mean(dim=0)  # [4096]
+    if os.environ.get("HENRI_LOCAL_CLIFFORD_BRIDGE") == "1":
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from local_clifford_bridge import local_clifford_pool
+        pooled = local_clifford_pool(w)  # [4096]
+    else:
+        pooled = w.view(16, 4096).mean(dim=0)  # [4096]
     pooled = F.normalize(pooled, p=2, dim=-1) * 64.0  # scale-matched (K=64)
     return pooled
 

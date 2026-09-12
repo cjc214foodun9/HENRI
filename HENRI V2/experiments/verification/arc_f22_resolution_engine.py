@@ -86,7 +86,13 @@ def _bridge_to_d64_single(wave_65536, ingress=None, seed=0, device="cpu"):
         w = F.pad(w, (0, 65536 - w.numel()))
     else:
         w = w[:65536]
-    pooled = w.view(16, 4096).mean(dim=0)
+    if os.environ.get("HENRI_LOCAL_CLIFFORD_BRIDGE") == "1":
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from local_clifford_bridge import local_clifford_pool
+        pooled = local_clifford_pool(w)
+    else:
+        pooled = w.view(16, 4096).mean(dim=0)
     pooled = F.normalize(pooled, p=2, dim=-1) * 64.0
     if ingress is not None:
         with torch.no_grad():
