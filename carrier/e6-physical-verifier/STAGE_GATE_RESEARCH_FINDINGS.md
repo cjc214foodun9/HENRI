@@ -321,7 +321,7 @@ each one is a joint function of additional variables:
 |---|---|---|
 | 1 | `||G|| <= 0.02` | stream length `n` (via zlib warm-up) |
 | 2 | `AUC >= 0.85` | which pooling site is meant; the named file has none |
-| 3 | `H(Y) <= 1.2` | `beta` is coupled to `D` and to the query regime |
+| 3 | `H(Y) <= 1.2` | the memory count `M` and probe coherence `c`: `beta_floor = (ln M + ln((1-r)/r)) / c`. Not primarily `D`. |
 | 4 | `delta <= 0.15` | the error metric; sample count and conditioning |
 
 Every bound needs its companion pre-conditions stated, or it cannot be
@@ -332,11 +332,41 @@ source document.
 
 ## Open items
 
-1. Stage 2 fix target is the four `_bridge_to_d64*` bridges under
-   `HENRI V2/experiments/verification/` (lines 106 / 97 / 89 / 93), not the
-   named file `arc_public_ingress.py`, which has no pooling at all.
-2. Stage 3 `beta`: decide between `beta = sqrt(D)` and a regime-dependent value
-   using real post-unbinding wavefronts, not synthetic noise.
+1. Stage 2 fix target: the four `_bridge_to_d64*` bridges under
+   `HENRI V2/experiments/verification/` (lines 106 / 97 / 89 / 93). The named
+   file `arc_public_ingress.py` contains no pooling at all.
+
+   STATUS: **IMPLEMENTED** behind `HENRI_LOCAL_CLIFFORD_BRIDGE` (commit
+   `833ddee`). Flag OFF is byte-identical to the pre-patch source taken from
+   `git show HEAD:<path>` (max abs diff 0.000e+00); 49/49 engine contract tests
+   pass in both flag states. Promotion still requires real wave data.
+2. Stage 3 `beta`. STATUS: **RESOLVED to a closed form** (commit `0faf8e6`).
+   `beta_floor = (ln M + ln((1-r)/r)) / c`, validated to 0.0219 bits over 25
+   points against the live engine. `sqrt(D)` clears every measured floor by
+   ~10x. Wired behind `HENRI_EGRESS_BETA_AUTO`, default OFF.
+
+   Boundary: a lower bound only. Real engram banks have finite coherence, which
+   **raises** the floor. Do not promote to default without real-memory evidence.
 3. Stage 4: raise ledger payload volume to ~12000 transitions, then re-run; and
-   fix the metric to noise-normalized Frobenius (state it in the gate).
-4. The four draft-kernel defects D-A..D-D remain open for Stage 1.
+   fix the metric to noise-normalized Frobenius (state it in the gate). **OPEN.**
+4. The four draft-kernel defects D-A..D-D remain open for Stage 1. **OPEN.**
+5. No real wave corpus (`*.npz` psi trajectory bank) exists on this machine, so
+   the Stage 2 collapse on REAL ARC ingress through the REAL ingress path is
+   **not** established. Synthetic fixtures only. **OPEN.**
+6. `HENRI V2/experiments/verification/e6_gauto1_p1_bias_curve.md` is an untracked
+   **prior-session** document (mtime 2026-09-11 14:25, before this session). It
+   independently reached the same Stage 1 defect-D1 conclusion by a different
+   criterion: its structured-stream knee is `n_min = 128`, while this session's
+   control-band criterion gives `n_min = 16384`. The two are consistent once the
+   criteria are separated (structured onset vs `|G| <= eps` on the controls), and
+   both name `eps ~ 0.02`. Sibling documents in that directory are tracked.
+   **Disposition pending user decision.**
+
+### Convergence note (independent corroboration of defect D1)
+
+Two sessions, different criteria, same defect: the prereg's one-sided `G < 0`
+rejection rule discards its own dead/noise control streams, because both approach
+zero **from below** and never cross. This session's receipt records it as
+`defect_d1_resolution`; the prior document records it as "the rejection rule and
+the acceptance evidence are mutually incompatible as written." Independent
+agreement on a specification defect is stronger evidence than either alone.
