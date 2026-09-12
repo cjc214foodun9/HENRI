@@ -146,29 +146,105 @@ Correction to file: the fix target is the four `_bridge_to_d64*` bridges under
 
 `henri_egress.py` already uses `ContinuousHopfieldCleanup(beta=8.0)`.
 
-Measured (`OBSERVED`, remote Blackwell, D=8192, M=1000, sqrt(D)=90.51):
+**Verdict: the gate FAILS at beta=8.0, and the cause is now DERIVED, not asserted.**
 
-| beta | H(Y) on-manifold | H(Y) off-manifold |
-|---|---|---|
-| 1.00 | 9.9568 | 4.0711 |
-| 8.00 | 2.7433 | 0.4273 |
-| 90.51 | 0.0000 | 0.0000 |
-| 100.00 | 0.0000 | 0.0000 |
+### Two measurement errors, both mine, both corrected
 
-At the specified beta=8 the harness reports `H(Y) = 9.9601` bits against a
-`<= 1.2` bound and returns `GATE RESULT: FAIL`. Only `beta = sqrt(D) = 90.5`
-snaps to 0.0 bits.
+The first Stage 3 numbers were contaminated twice and must not be reused.
 
-FALSIFIED hypothesis: an earlier note claimed a random Gaussian query produces
-near-uniform logits, making `H(Y)` an off-manifold detector. On real silicon the
-opposite holds — `H(Y)` falls **monotonically with beta in both regimes**, and
-the off-manifold value at beta=8 (0.4273) is *lower* than the on-manifold value.
-`H(Y)` therefore does not separate the regimes and cannot serve as that detector.
+1. **Un-normalised probes on the GPU.** The off-manifold probe was
+   `3.0 * randn(D)`, norm `3*sqrt(8192) = 271`, against unit memories. Every
+   logit inflated and the reported "snap" was an artifact of probe magnitude.
+   This produced the bogus table `H(off) = 0.0000` at every beta. With normalised
+   probes, `H(off)` stays flat at 9.2-9.6 bits (near-uniform), which is the
+   correct response when no neighbour exists.
+2. **Dimension-blind noise.** The first replacement used a fixed
+   `0.10 * randn(D)`. At D=8192 that noise has norm 9.05, i.e. **nine times the
+   unit memory norm**, so the "on-manifold" query was not near the manifold.
+   This is the dimension-blindness fallacy: a raw scale reused across dimensions
+   without `sqrt(D)` normalisation. The codebase already documents the fix at
+   `HENRI V2/henri_hopfield_egress.py:45`:
 
-Consequence: `beta` is a joint function of the operator and the query regime.
-Fixing `beta = 8` in the specification, independent of `D` and of the query
-distribution, is not well posed. The bound must be stated together with the
-query distribution it applies to.
+   ```
+   sigma_elem = eps / sqrt(D)      # eps=0.15, D=65536 -> 5.86e-4
+   ```
+
+**FALSIFIED hypothesis:** an earlier note claimed a random Gaussian query
+produces near-uniform logits, so `H(Y)` could serve as an off-manifold detector.
+Both corrected runs reject this. `H(Y)` measures retrieval sharpness only; it
+does not separate on- from off-manifold queries.
+
+### Closed form for the beta floor (DERIVED, then verified)
+
+Retrieval is `p = softmax(beta * <probe, M_k>)` over M stored memories. With
+`c = cos(probe, true)` and orthonormal memories, the true logit is `beta*c` while
+the other `M-1` competitors are near zero. The competitors are individually
+tiny but number `M-1`, so:
+
+```text
+p_true  = e^(beta*c) / (e^(beta*c) + M)
+H(Y)    = h2(p_true) + (1 - p_true) * log2(M)
+```
+
+The **tail term `(1-p) log2(M)` dominates** — the entropy of M alternatives,
+not the sharpness of the winner. Setting `H(Y) <= H_GATE` gives
+
+```text
+beta_floor = (ln M + ln((1 - r)/r)) / c,     r = H_GATE / log2(M)
+```
+
+**The floor grows as `ln(M)`, and not with `D`.** That is why a fixed beta
+cannot work across memory counts.
+
+### Measurements (`OBSERVED`, CPU, live `hopfield_cleanup`, eps = 0.15)
+
+| D | M | c | beta_floor | beta=8 |
+|---|---|---|---|---|
+| 512 | 100 | 0.9890 | 6.186 | ABOVE floor |
+| 8192 | 100 | 0.9888 | 6.187 | ABOVE floor |
+| 65536 | 200 | 0.9889 | 7.058 | ABOVE floor |
+| **8192** | **1000** | 0.9890 | **8.996** | **BELOW floor** |
+| **8192** | **2000** | 0.9889 | **9.807** | **BELOW floor** |
+
+| D | M | beta | H(Y) measured | H(Y) predicted | verdict |
+|---|---|---|---|---|---|
+| 8192 | 1000 | 4.00 | 9.7543 | 9.7559 | FAIL |
+| 8192 | 1000 | **8.00** | **3.5093** | 3.5113 | **FAIL** |
+| 8192 | 1000 | 16.00 | 0.0033 | 0.0033 | PASS |
+| 8192 | 1000 | 90.51 | -0.0000 | 0.0000 | PASS |
+| 8192 | 2000 | 8.00 | 5.6188 | 5.6229 | FAIL |
+| 65536 | 200 | 8.00 | 0.8772 | 0.8819 | PASS |
+| 512 | 100 | 8.00 | 0.4523 | 0.4554 | PASS |
+
+Worst deviation between closed form and the live engine: **0.0219 bits** over 25
+points. The form is valid; it predicts the `H(Y) <= 1.2` gate at every setting.
+
+This resolves the apparent paradox: beta=8.0 **passes at M=100 and M=200 and
+fails at M=1000 and M=2000**, exactly as the `ln(M)` floor requires. It is
+miss-tuned by a small margin (8.0 against a floor of 8.996), not wrong in kind.
+
+### The defect in the live code
+
+`hopfield_cleanup.py:39` already carries the principled default:
+
+```python
+self.beta = beta if beta is not None else math.sqrt(dim)
+```
+
+documented there as "the proven regime for clean separation when memories are
+~orthogonal on the sphere". But `henri_egress.py` passed `beta=8.0` explicitly at
+three sites, **defeating that default**. `sqrt(D) = 90.5` clears every measured
+floor by roughly 10x, so it snaps at all tested (D, M).
+
+Action taken: the three call sites now route through `_resolve_beta()`, which
+returns `8.0` unchanged by default and defers to `sqrt(dim)` when
+`HENRI_EGRESS_BETA_AUTO=1`. Default path verified byte-identical (`beta == 8.0`
+for `TextEgress`, `ToolEgress`, `UniversalEgress`).
+
+Honest boundary: verified on synthetic orthonormal banks with dimension-aware
+noise. Real engram banks have finite coherence, which **raises** the effective
+floor, so this closed form is a lower bound. It correctly orders beta=8.0 against
+`sqrt(D)`; it does not by itself certify a production value.
 
 ---
 

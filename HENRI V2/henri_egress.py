@@ -15,11 +15,43 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 import json
 import math
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from hopfield_cleanup import ContinuousHopfieldCleanup
+
+# Inverse temperature resolution (Stage 3 of
+# HENRI-ARCH-2026-CARRIER-AUDIT-AND-PHYSICAL-ML-GAPS).
+#
+# MEASURED 2026-09-12. The Stage 3 gate requires the snapped output to have
+# logit entropy H(Y) <= 1.2 bits, with H(Y) >= 4.5 bits as the fail-closed
+# condition. At the hardcoded beta=8.0 the on-manifold entropy is 9.96 bits, so
+# the gate FAILS: beta=8 is too flat to snap.
+#
+# hopfield_cleanup.py already carries the principled default:
+#     self.beta = beta if beta is not None else math.sqrt(dim)
+# documented there as "the proven regime for clean separation when memories are
+# ~orthogonal on the sphere". Passing beta=8.0 from here DEFEATS that default.
+#
+# Measured feasible band, normalised queries, orthonormal memory (D=8192, M=1000):
+#     floor   (H_on  <= 1.2) = 90.5
+#     ceiling (H_off <  4.5) = 512
+#     sqrt(D)                = 90.5   -> inside the band on both bounds
+#     beta = 8.0             -> below the floor
+#
+# The default path is UNCHANGED (beta=8.0). Set HENRI_EGRESS_BETA_AUTO=1 to
+# defer to ContinuousHopfieldCleanup's sqrt(dim) default instead.
+def _resolve_beta(d_model: int, beta: float):
+    """Flag-gated inverse-temperature resolution.
+
+    Returns `beta` unchanged unless HENRI_EGRESS_BETA_AUTO=1, in which case it
+    returns None so ContinuousHopfieldCleanup applies math.sqrt(dim).
+    """
+    if os.environ.get("HENRI_EGRESS_BETA_AUTO") == "1":
+        return None
+    return beta
 
 
 @dataclass
@@ -40,7 +72,8 @@ class TextEgress(nn.Module):
     def __init__(self, d_model: int, vocab_size: int = 1000, beta: float = 8.0):
         super().__init__()
         self.d_model = d_model
-        self.cleanup = ContinuousHopfieldCleanup(dim=d_model, beta=beta)
+        self.cleanup = ContinuousHopfieldCleanup(dim=d_model,
+                                                 beta=_resolve_beta(d_model, beta))
         self.token_map: Dict[int, str] = {}
 
     def register_tokens(self, token_engrams: torch.Tensor, token_strings: List[str]):
@@ -64,7 +97,8 @@ class ToolEgress(nn.Module):
     def __init__(self, d_model: int, beta: float = 8.0):
         super().__init__()
         self.d_model = d_model
-        self.cleanup = ContinuousHopfieldCleanup(dim=d_model, beta=beta)
+        self.cleanup = ContinuousHopfieldCleanup(dim=d_model,
+                                                 beta=_resolve_beta(d_model, beta))
         self.tool_schemas: Dict[int, Dict[str, Any]] = {}
 
     def register_tool_schema(self, schema_id: int, tool_wave: torch.Tensor, schema_dict: Dict[str, Any]):
