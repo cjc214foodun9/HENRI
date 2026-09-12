@@ -1,0 +1,17 @@
+========================================================================
+STAGE 1 GATE - qFHRR AUTOPOIETIC CARRIER
+========================================================================
+device            : NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+capability        : [12, 0] (sm_120)
+cuda / triton     : True / True
+n / epsilon       : 16384 / 0.02  (n_min=16384)
+------------------------------------------------------------------------
+check                     role                    G       |G|  verdict
+dead                      control          -0.01904   0.01904  ACCEPT_CONTROL_STREAM [PASS]
+noise                     control          -0.01744   0.01744  ACCEPT_CONTROL_STREAM [PASS]
+structured_markov         positive          1.82005   1.82005  ACCEPT_STRUCTURED_COMPLEXITY [PASS]
+sub_minimum_quarantine    precondition            -         -  BLOCKED_SUB_MINIMUM_N [PASS]
+------------------------------------------------------------------------
+GATE RESULT       : PASS
+========================================================================
+receipt written   : /root/work/carrier/e6-physical-verifier/gate_receipt.json

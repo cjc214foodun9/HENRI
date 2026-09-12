@@ -1,0 +1,8 @@
+device=NVIDIA RTX PRO 6000 Blackwell Workstation Edition D=8192 M=1000 sqrt(D)=90.51
+    beta      H(on)     H(off)  note
+    1.00     9.9568     4.0711
+    8.00     2.7433     0.4273
+   90.51     0.0000     0.0000
+  100.00     0.0000     0.0000
+NOTE: random-query logits are NOT uniform; H falls monotonically with beta
+for both regimes. H(Y) is therefore not an off-manifold detector.

@@ -1,0 +1,29 @@
+==============================================================================
+STAGE 4 GATE - TRANSITION IDENTIFICATION (Koopman one-step)
+==============================================================================
+gate: one-step prediction error delta <= 0.15
+fail-closed: digest-only payloads, or non-contractive error growth
+state d=8, actions=4, episodes=40+10 x 30 steps
+workdir: /tmp/stage4_xa_49o38
+
+### dynamics family: linear
+  A) DIGEST-ONLY : rows=1500 rows_without_payload=1500 recoverable_pairs=0
+     identification: BLOCKED (no payload to fit)
+  B) FULL PAYLOAD : rows=1500 payload_blobs=1554 unusable=0 recoverable_pairs=1500
+     delta(one-step) = 0.381738  -> FAIL
+     rollout err first/last/mean = 0.224456 / 1.026771 / 1.237993 over 25 steps  contractive=False
+
+### dynamics family: tanh
+  A) DIGEST-ONLY : rows=1500 rows_without_payload=1500 recoverable_pairs=0
+     identification: BLOCKED (no payload to fit)
+  B) FULL PAYLOAD : rows=1500 payload_blobs=1554 unusable=0 recoverable_pairs=1500
+     delta(one-step) = 0.479137  -> FAIL
+     rollout err first/last/mean = 1.822623 / 1.00137 / 2.500146 over 25 steps  contractive=True
+
+------------------------------------------------------------------------------
+linear dynamics, full payload : delta = 0.381738  -> FAIL
+digest-only control           : BLOCKED (fail-closed condition reproduced)
+GATE RESULT (with payloads)   : FAIL
+==============================================================================
+receipt written: /root/work/carrier/e6-physical-verifier/stage4_receipt.json
+artifacts kept in: /tmp/stage4_xa_49o38

@@ -1,0 +1,21 @@
+==============================================================================
+STAGE 2 GATE - METRIC LOCALITY (mean pooling vs Clifford blocks)
+==============================================================================
+task: 8-way spatial classification, 12 grids/class
+gate: mean AUC >= 0.85     fail-closed: AUC < 0.85
+
+--- mean_pool_CURRENT ---
+    mean AUC = 0.9292   min AUC = 0.8839
+    block-permutation cosine = 1.000000  collides=True
+
+--- clifford_blocks_PROPOSED ---
+    mean AUC = 1.0000   min AUC = 1.0000
+    block-permutation cosine = -0.102439  collides=False
+
+------------------------------------------------------------------------------
+CURRENT  mean pooling : AUC = 0.9292  -> PASS
+PROPOSED Clifford     : AUC = 1.0000  -> PASS
+Clifford blocks improve locality: True
+GATE RESULT (on proposed fix): PASS
+==============================================================================
+receipt written: /root/work/carrier/e6-physical-verifier/stage2_receipt.json

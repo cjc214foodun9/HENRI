@@ -1,0 +1,24 @@
+==============================================================================
+STAGE 3 GATE - DISCRETE EGRESS SNAP (Modern Hopfield)
+==============================================================================
+gate: H(Y) <= 1.2 bits (snap)   fail-closed: H(Y) >= 4.5 bits (flat)
+M=1000 engrams, D=8192, log2(M)=9.966 bits max entropy
+
+--- henri_egress beta=8.0 (as deployed) ---  (beta_used=8.0000)
+    regime              H(Y) bits     top_p   sim_std  sim_max  verdict
+    clean_exact            3.3223    0.7481   0.03354   1.0000  IN_BETWEEN
+    perturbed_0.1          9.9591    0.0026   0.01150   0.1219  FAIL_FLAT
+    off_manifold           9.9601    0.0013   0.01114   0.0308  FAIL_FLAT
+
+--- cleanup default beta=sqrt(D) ---  (beta_used=90.5097)
+    regime              H(Y) bits     top_p   sim_std  sim_max  verdict
+    clean_exact            0.0000    1.0000   0.03354   1.0000  PASS_SNAP
+    perturbed_0.1          0.4242    0.9734   0.01150   0.1219  PASS_SNAP
+    off_manifold           9.2837    0.0096   0.01114   0.0308  FAIL_FLAT
+
+------------------------------------------------------------------------------
+on-manifold snap (clean + perturbed): FAIL
+off-manifold H(Y) = 9.9601 bits -> FAIL_FLAT (expected: no stored neighbour)
+GATE RESULT: FAIL
+==============================================================================
+receipt written: /root/work/carrier/e6-physical-verifier/stage3_receipt.json
