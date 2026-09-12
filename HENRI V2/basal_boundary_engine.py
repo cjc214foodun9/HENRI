@@ -104,6 +104,44 @@ SPEC_R_GATE = 0.93
 # channels, where the value is measured directly.
 SPEC_MEASURED_MIN_LEAKAGE_FRACTION = 0.0205
 
+# ---------------------------------------------------------------------------
+# SEALED HARDWARE DEFAULTS (HENRI-ARCH-2026-FRONTIER-EVALUATION, section 5.1)
+# ---------------------------------------------------------------------------
+# These two values are the measured baseline. They are sealed as module-level
+# constants and enforced at the PRODUCTION tiling by MarkovBlanketSpec, so that
+# a later drift is a construction error rather than a silent behaviour change.
+#
+# SPEC_NON_LOCAL_SPAN = 504
+#   The non-local coupling span in channel units, on the 8192-channel
+#   production ring. This is 3x the measured percolation knee of 168 channels
+#   (0.0205 of the ring). MEASURED: decay 160 -> r = 0.165 FAIL,
+#   decay 168 -> r = 0.940 PASS. The sealed value is the ROUNDED form of the
+#   auto-scaled 8192 * 0.0205 * 3.0 = 503.808, hence the 1.0-channel tolerance
+#   in the enforcing validator.
+#
+#   HONEST BOUNDARY: 504 is a SIMULATION working point on the measured
+#   ring-fraction rule. It is not a hardware measurement, and the rule is not
+#   uniform across ring sizes (N=512 is a finite-size resonance that fails
+#   while every neighbouring size locks). Do not restate it as a physical
+#   fabrication specification.
+#
+# SPEC_LOCK_HORIZON_STEPS = 1024
+#   Relaxation steps to reach r >= r_gate from cold. MEASURED: r crosses 0.93
+#   at 750 steps from BOTH a wave-seeded and a cold uniform-random start
+#   (identical). 1024 gives 1.37x margin.
+#
+#   HONEST BOUNDARY: this is a RELAXATION count, NOT a time-slot aperture. It
+#   must stay decoupled from shutter_hz (20 kHz, 50 us). Reaching the horizon
+#   from cold spans ceil(1024 / ticks_per_slot) ingress slots. The two numbers
+#   must never be derived from one another.
+SPEC_NON_LOCAL_SPAN = 504
+SPEC_LOCK_HORIZON_STEPS = 1024
+# Tolerance in channel units when enforcing SPEC_NON_LOCAL_SPAN at the
+# production tiling. Absorbs the rounding of 503.808 -> 504 without weakening
+# the seal: any real drift (a changed margin, fraction, or block size) moves
+# the resolved span by far more than one channel.
+SPEC_NON_LOCAL_SPAN_TOLERANCE = 1.0
+
 
 def recommended_leakage_length(num_channels: int, margin: float = 3.0) -> float:
     """Leakage length in channel units for the given ring, with margin.

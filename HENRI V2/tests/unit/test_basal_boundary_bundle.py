@@ -880,9 +880,91 @@ class TestUnifiedEngine:
         assert b.slot_seconds == pytest.approx(5e-5)
         assert b.lock_horizon_steps != b.ticks_per_slot
 
+
+class TestSealedHardwareDefaults:
+    """Section 5.1: seal lock_horizon_steps=1024 and non_local_span=504.
+
+    The seal must BIND (a drift is rejected) without being a tautology. These
+    tests therefore assert the direction that could fail: the production
+    default is accepted, a drifted value is REJECTED, and a reduced-scale
+    configuration is NOT forced to carry production numbers.
+    """
+
+    def _prod(self, **kw):
+        from unified_henri_vla_engine import MarkovBlanketSpec
+        return MarkovBlanketSpec(**kw)
+
+    def test_sealed_constants_hold_their_measured_values(self):
+        from basal_boundary_engine import (
+            SPEC_LOCK_HORIZON_STEPS,
+            SPEC_NON_LOCAL_SPAN,
+            recommended_leakage_length,
+        )
+        assert SPEC_LOCK_HORIZON_STEPS == 1024
+        assert SPEC_NON_LOCAL_SPAN == 504
+        # The sealed span must be the rounded auto-scaled value at the
+        # production ring, within the declared 1-channel tolerance.
+        resolved = recommended_leakage_length(8192, 3.0)
+        assert abs(resolved - SPEC_NON_LOCAL_SPAN) <= 1.0
+
+    def test_production_default_config_accepts_the_sealed_values(self):
+        m = self._prod()  # D=65536, the production tiling
+        assert m.dimension_D == 65536
+        assert m.lock_horizon_steps == 1024
+        assert abs(m.resolve_leakage_length() - 504.0) <= 1.0
+
+    def test_seal_rejects_lock_horizon_drift(self):
+        """NEGATIVE CONTROL: the seal must be able to fail."""
+        with pytest.raises(Exception) as ei:
+            self._prod(lock_horizon_steps=2048)
+        assert "lock horizon" in str(ei.value).lower()
+
+    def test_seal_rejects_leakage_margin_drift(self):
+        """Changing the margin must move the RESOLVED span, not just a field."""
+        with pytest.raises(Exception) as ei:
+            self._prod(evanescent_leakage_margin=8.0)
+        assert "non-local span" in str(ei.value).lower()
+
+    def test_seal_rejects_fixed_span_drift(self):
+        with pytest.raises(Exception) as ei:
+            self._prod(auto_leakage_from_ring=False, evanescent_decay_length=8.0)
+        assert "non-local span" in str(ei.value).lower()
+
+    def test_reduced_scale_config_is_exempt_from_the_production_seal(self):
+        """The seal is scoped to D=65536; a test tiling must not inherit it.
+
+        This is the guard against the seal becoming a tautology that forbids
+        every reduced-scale configuration.
+        """
+        m = self._prod(
+            dimension_D=1024, clifford_block_size=8,
+            lock_horizon_steps=2048, evanescent_leakage_margin=3.0,
+        )
+        assert m.dimension_D == 1024
+        assert m.lock_horizon_steps == 2048   # not forced to 1024
+
+    def test_sealed_horizon_is_not_derived_from_the_shutter(self):
+        """The 50 us aperture and the horizon must stay independent."""
+        m = self._prod()
+        assert m.slot_seconds == pytest.approx(5e-5)
+        assert m.lock_horizon_steps == 1024
+        # No derivation either way: the slot is a time, the horizon a count.
+        assert m.lock_horizon_steps != m.ticks_per_slot
+        # Reaching the horizon from cold spans slots: ceil(1024/32) = 32.
+        assert m.slots_to_lock() == pytest.approx(32.0)
+
+class TestHopfieldEgress:
+    """Gap 2: continuous Modern Hopfield lexical snapping (beta contract)."""
+
     def test_hopfield_beta_defaults_to_the_spec_value(self):
         """Gap 2: beta == 8.0 by default, with the auto path available."""
-        eng = self._engine()
+        from unified_henri_vla_engine import (
+            MarkovBlanketSpec, UnifiedHENRIVLAConfig, UnifiedHENRIVLAEngine,
+        )
+        cfg = UnifiedHENRIVLAConfig(
+            blanket=MarkovBlanketSpec(dimension_D=1024, clifford_block_size=8),
+        )
+        eng = UnifiedHENRIVLAEngine(cfg)
         assert eng.describe()["zone_b"]["beta"] == pytest.approx(8.0)
         assert eng.describe()["zone_b"]["auto_beta_from_dim"] is False
 

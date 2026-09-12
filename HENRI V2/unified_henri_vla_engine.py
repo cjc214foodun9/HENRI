@@ -68,7 +68,10 @@ from basal_boundary_engine import (
     SPEC_HOPFIELD_BETA,
     SPEC_KURAMOTO_COUPLING_K,
     SPEC_LANGEVIN_GAMMA,
+    SPEC_LOCK_HORIZON_STEPS,
     SPEC_MEASURED_MIN_LEAKAGE_FRACTION,
+    SPEC_NON_LOCAL_SPAN,
+    SPEC_NON_LOCAL_SPAN_TOLERANCE,
     SPEC_NUM_TILES,
     SPEC_R_GATE,
     SPEC_SAGNAC_VETO_THRESHOLD,
@@ -185,6 +188,60 @@ class MarkovBlanketSpec(BaseModel):
                 f"spec tiling drift: D={self.dimension_D} / "
                 f"block={self.clifford_block_size} gives {self.num_tiles} tiles, "
                 f"expected {SPEC_NUM_TILES}"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _seal_hardware_defaults(self):
+        """Enforce the sealed hardware defaults AT THE PRODUCTION TILING.
+
+        Section 5.1 of the frontier ledger seals `lock_horizon_steps = 1024` and
+        `non_local_span = 504` as immutable defaults. Sealing is enforced here,
+        not only documented, so that a drift is a construction error.
+
+        The check is scoped to `dimension_D == 65536` on purpose:
+
+          * Both values were MEASURED on the 8192-channel production ring. A
+            reduced-scale configuration (a contract test at D=1024) is not
+            spec-compliant and must not be forced to carry production numbers.
+          * A global check would also break the negative controls, which
+            deliberately set out-of-spec values to prove the gates can fail.
+
+        The seal is on the RESOLVED span, not only on the raw field, so that
+        changing `evanescent_leakage_margin` cannot silently move the working
+        point while `evanescent_decay_length` stays nominal.
+        """
+        if self.dimension_D != SPEC_DIMENSION_D:
+            return self
+
+        span = self.resolve_leakage_length()
+        if abs(span - SPEC_NON_LOCAL_SPAN) > SPEC_NON_LOCAL_SPAN_TOLERANCE:
+            raise ValueError(
+                f"sealed non-local span violated: resolved span is {span:.3f} "
+                f"channels but SPEC_NON_LOCAL_SPAN is {SPEC_NON_LOCAL_SPAN} "
+                f"(tolerance {SPEC_NON_LOCAL_SPAN_TOLERANCE}ch). The span is "
+                f"{self.num_tiles} tiles x "
+                f"SPEC_MEASURED_MIN_LEAKAGE_FRACTION x margin "
+                f"{self.evanescent_leakage_margin}. Changing any of those "
+                "changes the measured working point."
+            )
+        if not self.auto_leakage_from_ring and abs(
+            self.evanescent_decay_length - SPEC_NON_LOCAL_SPAN
+        ) > SPEC_NON_LOCAL_SPAN_TOLERANCE:
+            raise ValueError(
+                f"sealed non-local span violated: with auto_leakage_from_ring "
+                f"disabled, the fixed evanescent_decay_length is "
+                f"{self.evanescent_decay_length} but SPEC_NON_LOCAL_SPAN is "
+                f"{SPEC_NON_LOCAL_SPAN}"
+            )
+        if self.lock_horizon_steps != SPEC_LOCK_HORIZON_STEPS:
+            raise ValueError(
+                f"sealed lock horizon violated: lock_horizon_steps is "
+                f"{self.lock_horizon_steps} but SPEC_LOCK_HORIZON_STEPS is "
+                f"{SPEC_LOCK_HORIZON_STEPS}. The horizon is a MEASURED "
+                "relaxation count (r crosses 0.93 at 750 steps; 1024 gives "
+                "1.37x margin). It is NOT the shutter slot and must not be "
+                "derived from it."
             )
         return self
 
