@@ -1,0 +1,123 @@
+{
+  "receipt": "basal_triton_parity",
+  "claims": {
+    "anchor_N64": {
+      "pass": true,
+      "detail": "L1(ring_kernel, evanescent_kernel) = 0.000e+00"
+    },
+    "anchor_N256": {
+      "pass": true,
+      "detail": "L1(ring_kernel, evanescent_kernel) = 0.000e+00"
+    },
+    "anchor_N1024": {
+      "pass": true,
+      "detail": "L1(ring_kernel, evanescent_kernel) = 0.000e+00"
+    },
+    "anchor_N2048": {
+      "pass": true,
+      "detail": "L1(ring_kernel, evanescent_kernel) = 0.000e+00"
+    },
+    "algo_full_span": {
+      "pass": true,
+      "detail": "r_span=0.914782 r_fft=0.914780 delta=2.15e-06"
+    },
+    "live_parity": {
+      "pass": true,
+      "detail": "live_r=0.914780 fft_r=0.914780"
+    },
+    "truncation_reach_504": {
+      "pass": true,
+      "detail": "r@504span=0.897647 vs full=0.914780 delta=0.0171"
+    }
+  },
+  "failures": [],
+  "truncation": {
+    "reach": 252,
+    "taps": 505,
+    "r_504span": 0.8976470232009888,
+    "r_full": 0.9147799015045166
+  },
+  "tau_budget": {
+    "steps": 1024,
+    "num_channels": 8192,
+    "num_blocks": 8,
+    "per_step_budget_ns": 12.5,
+    "sync_floor_us_design_a": [
+      1024.0,
+      3072.0
+    ],
+    "sync_floor_us_design_b": [
+      20.48,
+      40.96
+    ],
+    "compute_floor_us_single_block": 33095.68,
+    "compute_floor_us_multi_block": 4136.96,
+    "compute_floor_us_fft_multi_block": 34.304,
+    "floor_us_design_a": [
+      5160.96,
+      7208.96
+    ],
+    "floor_us_design_b": [
+      33116.16,
+      33136.64
+    ],
+    "binding_constraint": "synchronization",
+    "macs_per_step": 8273920.0,
+    "compute_cycles_single_block": 64640.0,
+    "sub_budget_us": 12.8,
+    "shutter_us": 50.0,
+    "sub_budget_reachable": false,
+    "shutter_reachable": false,
+    "shutter_reachable_compute_only": true,
+    "verdict": "SUB-BUDGET NOT REACHABLE. 12.8 us over 1024 steps is 12.50 ns/step. A Kuramoto step is GLOBAL: every channel reads its neighbours out to the span, so the updated phases must be visible to all readers before the next step. That costs one barrier per step, and 12.50 ns is below the cost of a single barrier (20-40 ns for __syncthreads). THE DECISIVE TERM: even if ALL synchronization is ignored and the compute of the whole device is used, the floor is 34.3 us (34.3 us via FFT, 258.6 us via the tap sum) -- already above the budget. Adding the grid barrier a distributed design requires: 1283 us, over 12.8 us and over the 50 us shutter. The spec's own 8-block halo layout costs 5161-7209 us (grid sync per step); a persistent single block costs 33116-33137 us (compute-bound on one SM). Binding constraint: synchronization.",
+    "evidence_class": "DERIVED",
+    "measured_tau_us": null
+  },
+  "slot_budget": {
+    "ticks_per_slot": 32,
+    "macs_per_step_tap_sum": 8273920.0,
+    "macs_per_step_fft": 1097728.0,
+    "compute_slot_us_tap_sum": 8.08,
+    "compute_slot_us_fft": 1.072,
+    "sync_slot_us_grid": [
+      32.0,
+      96.0
+    ],
+    "sync_slot_us_block": [
+      0.64,
+      1.28
+    ],
+    "floor_slot_us_grid_fft": [
+      33.072,
+      97.072
+    ],
+    "floor_slot_us_grid_tap": [
+      40.08,
+      104.08
+    ],
+    "floor_slot_us_block_tap": [
+      1034.88,
+      1035.52
+    ],
+    "best_configuration": "multi-block FFT coupling + grid sync per step",
+    "best_floor_us": 33.072,
+    "fits_shutter_50us": true,
+    "fits_sub_budget_12p8us": false,
+    "slots_to_lock_from_cold": 32,
+    "evidence_class": "DERIVED",
+    "measured_tau_us": null,
+    "verdict": "PER-SLOT: the best configuration (FFT coupling spread over 128 SMs, one grid barrier per step) floors at 33.1-97.1 us for 32 ticks. That FITS the 50 us shutter and DOES NOT fit the 12.8 us sub-budget. So the aperture is satisfiable PER SLOT but the 1024-step COLD LOCK is not a single-slot operation: it spans 32 slots. The mandate's '1024 steps inside one 50 us shutter' is FALSIFIED; '32 ticks inside one 50 us shutter' is feasible at the optimistic grid-sync figure. The tap-sum kernel as written costs 8.1 us of pure compute per slot and does NOT fit the shutter, which is why the FFT form is the production choice."
+  },
+  "backend": {
+    "triton_available": false,
+    "triton_import_error": "ModuleNotFoundError: No module named 'triton'",
+    "cuda_available": false,
+    "torch_version": "2.13.0+cpu",
+    "device_name": null,
+    "measured_tau_us": null,
+    "status": "BLOCKED",
+    "note": "measured_tau_us stays None until a real GPU run fills it. The tau figures from tau_budget_analysis() are DERIVED."
+  },
+  "elapsed_s": 1.06,
+  "ok": true
+}
