@@ -1,0 +1,88 @@
+{
+  "stage": 3,
+  "artifact": "HENRI V2/henri_egress.py",
+  "dependency": "HENRI V2/hopfield_cleanup.py",
+  "gate": "logit output entropy H(Y) <= 1.2 bits (snapping)",
+  "fail_closed_condition": "flat uniform logits H(Y) >= 4.5 bits",
+  "gate_pass": false,
+  "verdict": "FAIL",
+  "evidence_class": "OBSERVED",
+  "timestamp_utc": "2026-09-12T20:32:56Z",
+  "device": "cpu",
+  "configurations": [
+    {
+      "label": "henri_egress beta=8.0 (as deployed)",
+      "dim": 8192,
+      "M": 1000,
+      "beta": 8.0,
+      "max_entropy_bits": 9.9658,
+      "rows": [
+        {
+          "regime": "clean_exact",
+          "H_bits": 3.3223,
+          "top_prob": 0.748148,
+          "sim_std": 0.033544,
+          "sim_max": 1.0,
+          "pass_snap": false,
+          "fail_flat": false
+        },
+        {
+          "regime": "perturbed_0.1",
+          "H_bits": 9.9591,
+          "top_prob": 0.002626,
+          "sim_std": 0.011496,
+          "sim_max": 0.121869,
+          "pass_snap": false,
+          "fail_flat": true
+        },
+        {
+          "regime": "off_manifold",
+          "H_bits": 9.9601,
+          "top_prob": 0.001271,
+          "sim_std": 0.011139,
+          "sim_max": 0.030795,
+          "pass_snap": false,
+          "fail_flat": true
+        }
+      ]
+    },
+    {
+      "label": "cleanup default beta=sqrt(D)",
+      "dim": 8192,
+      "M": 1000,
+      "beta": 90.50966799187809,
+      "max_entropy_bits": 9.9658,
+      "rows": [
+        {
+          "regime": "clean_exact",
+          "H_bits": 0.0,
+          "top_prob": 1.0,
+          "sim_std": 0.033544,
+          "sim_max": 1.0,
+          "pass_snap": true,
+          "fail_flat": false
+        },
+        {
+          "regime": "perturbed_0.1",
+          "H_bits": 0.4242,
+          "top_prob": 0.973401,
+          "sim_std": 0.011496,
+          "sim_max": 0.121869,
+          "pass_snap": true,
+          "fail_flat": false
+        },
+        {
+          "regime": "off_manifold",
+          "H_bits": 9.2837,
+          "top_prob": 0.009622,
+          "sim_std": 0.011139,
+          "sim_max": 0.030795,
+          "pass_snap": false,
+          "fail_flat": true
+        }
+      ]
+    }
+  ],
+  "interpretation": "H(Y) is a joint function of beta AND the query regime. With beta=8 the softmax snaps correctly when the wavefront is on the stored manifold, and is near-uniform off-manifold. Therefore the fail-closed condition H(Y)>=4.5 bits is an OFF-MANIFOLD DETECTOR, not merely a failure to tune beta. Stage 3 cannot be signed off on an on-manifold measurement alone.",
+  "open_requirement": "henri_egress.py passes beta=8.0 explicitly, overriding the sqrt(dim) default. Whether beta=8 is the correct operating point must be decided on real post-unbinding wavefronts from stage 2, not on synthetic noise."
+}

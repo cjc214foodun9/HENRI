@@ -1,0 +1,53 @@
+{
+  "stage": 2,
+  "gate": "ingress spatial classification AUC >= 0.85",
+  "fail_closed_condition": "AUC < 0.85 (metric locality collapse)",
+  "gate_pass": true,
+  "evidence_class": "OBSERVED",
+  "timestamp_utc": "2026-09-12T20:34:50Z",
+  "spec_target_correction": {
+    "spec_says": "Replace mean pooling in arc_public_ingress.py",
+    "actual": "arc_public_ingress.py has no pooling (read-only manifest parser). Real site: arc_g1_topological_engine.py:106 pooled = w.view(16, 4096).mean(dim=0), plus f15/f22/f23.",
+    "action_taken": "Patched the real bridge, not the named file."
+  },
+  "measurements": {
+    "mean_pool_CURRENT": {
+      "per_class_auc": {
+        "0": 0.9375,
+        "1": 0.9692,
+        "2": 0.9514,
+        "3": 0.9028,
+        "4": 0.9196,
+        "5": 0.8839,
+        "6": 0.9127,
+        "7": 0.9563
+      },
+      "mean_auc": 0.9292,
+      "min_auc": 0.8839,
+      "cosine_original_vs_block_permuted": 1.0,
+      "collides": true
+    },
+    "clifford_blocks_PROPOSED": {
+      "per_class_auc": {
+        "0": 1.0,
+        "1": 1.0,
+        "2": 1.0,
+        "3": 1.0,
+        "4": 1.0,
+        "5": 1.0,
+        "6": 1.0,
+        "7": 1.0
+      },
+      "mean_auc": 1.0,
+      "min_auc": 1.0,
+      "cosine_original_vs_block_permuted": -0.102439,
+      "collides": false
+    }
+  },
+  "verdicts": {
+    "current_mean_pooling_auc": 0.9292,
+    "proposed_clifford_auc": 1.0,
+    "clifford_improves": true,
+    "proposed_passes_gate": true
+  }
+}

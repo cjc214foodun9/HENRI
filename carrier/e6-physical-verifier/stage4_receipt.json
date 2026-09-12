@@ -1,0 +1,85 @@
+{
+  "stage": 4,
+  "artifact": "HENRI V2/temporal_transition_ledger.py",
+  "dependency": "HENRI V2/ledger_payload_store.py",
+  "gate": "one-step Koopman prediction error delta <= 0.15",
+  "fail_closed_condition": "digest-only payloads or non-contractive error accumulation",
+  "gate_pass": false,
+  "evidence_class": "OBSERVED",
+  "timestamp_utc": "2026-09-12T20:38:24Z",
+  "config": {
+    "d_state": 8,
+    "n_actions": 4,
+    "episodes": [
+      40,
+      10
+    ],
+    "steps_per_episode": 30,
+    "noise": 0.02,
+    "delta_gate": 0.15
+  },
+  "results": {
+    "linear_digest_only": {
+      "rows": 1500,
+      "recoverable_pairs": 0,
+      "identification": "BLOCKED_NO_PAYLOADS",
+      "delta_one_step": null
+    },
+    "linear_payload": {
+      "identification": "ran",
+      "payload_blobs": 1554,
+      "recoverable_pairs": 1500,
+      "n_pairs": 1500,
+      "n_train": 1200,
+      "n_test": 300,
+      "n_actions_fit": 4,
+      "delta_one_step": 0.381738,
+      "gate_pass": false,
+      "rollout_steps": 25,
+      "rollout_err_first": 0.224456,
+      "rollout_err_last": 1.026771,
+      "rollout_err_mean": 1.237993,
+      "contractive": false,
+      "operator_frobenius_norm": {
+        "0": 2.422541,
+        "1": 2.31667,
+        "2": 2.081769,
+        "3": 2.615433
+      }
+    },
+    "tanh_digest_only": {
+      "rows": 1500,
+      "recoverable_pairs": 0,
+      "identification": "BLOCKED_NO_PAYLOADS",
+      "delta_one_step": null
+    },
+    "tanh_payload": {
+      "identification": "ran",
+      "payload_blobs": 1554,
+      "recoverable_pairs": 1500,
+      "n_pairs": 1500,
+      "n_train": 1200,
+      "n_test": 300,
+      "n_actions_fit": 4,
+      "delta_one_step": 0.479137,
+      "gate_pass": false,
+      "rollout_steps": 25,
+      "rollout_err_first": 1.822623,
+      "rollout_err_last": 1.00137,
+      "rollout_err_mean": 2.500146,
+      "contractive": true,
+      "operator_frobenius_norm": {
+        "0": 2.915816,
+        "1": 3.067283,
+        "2": 2.493076,
+        "3": 3.117239
+      }
+    }
+  },
+  "gap3_resolution": {
+    "statement": "T0 ledger rows carry digests only, so no (obs, action, obs_next) pair is reconstructable and no Koopman operator can be identified.",
+    "fix": "K0 content-addressed payload sidecar (HENRI_LEDGER_PAYLOADS=1) persists canonical bytes per digest; digests are re-verified against the bytes on read.",
+    "measured": "digest-only -> 0 recoverable pairs, identification BLOCKED; full payload -> identification runs and delta is scored."
+  },
+  "honest_boundary": "The tanh family is a stress case whose delta is reported separately; a quadratic dictionary cannot represent tanh exactly. Only the linear family isolates payload sufficiency from model misspecification."
+}
