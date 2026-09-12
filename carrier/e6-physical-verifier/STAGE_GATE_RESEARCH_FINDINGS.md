@@ -61,14 +61,29 @@ Draft-kernel defects flagged and recorded, not hidden:
 ## Stage 2 — metric locality: PASS, but the stated defect is FALSIFIED
 
 The source document names `arc_public_ingress.py` as the mean-pooling site.
-That file is a read-only manifest parser and contains **no pooling of any
-kind** (`OBSERVED`). The real site is `arc_g1_topological_engine.py:106`:
+That file exists (7 742 B) and contains **no pooling of any kind** (`OBSERVED`).
+
+The real sites are four identical `_bridge_to_d64*` projections, each the
+canonical wave-to-d64 bridge for one ARC engine (`OBSERVED`, all tracked):
+
+| file, relative to `HENRI V2/experiments/verification/` | line | enclosing function |
+|---|---|---|
+| `arc_g1_topological_engine.py` | 106 | `_bridge_to_d64_single` |
+| `arc_f15_trajectory_engine.py` | 97 | `_bridge_to_d64` |
+| `arc_f22_resolution_engine.py` | 89 | `_bridge_to_d64_single` |
+| `arc_f23_causal_engine.py` | 93 | `_bridge_to_d64_single` |
+
+All four contain the identical line:
 
 ```python
-w.view(16, 4096).mean(dim=0)
+pooled = w.view(16, 4096).mean(dim=0)     # 65536 -> [16, 4096] -> mean -> 4096
 ```
 
-plus sibling sites at f15, f22, f23.
+`arc_g1_topological_engine.py:106` sits inside `_bridge_to_d64_single`, which
+collapses a 65536-dimension wave to d=64: reshapes to `[16, 4096]`, averages the
+16 blocks away, rescales to 64, then L2-normalizes. That is exactly the
+metric-locality destruction this stage names. **The fix must be applied to all
+four sites**, not to one file.
 
 Measured AUC (`OBSERVED`, 8 classes x 12 per class):
 
@@ -85,8 +100,8 @@ pooling is invariant under block permutation (cosine 1.0 between permuted
 inputs), while 8-channel Clifford blocks are not (cosine drops to -0.10). Metric
 locality is a real property, but it is not the cause of an AUC failure.
 
-Correction to file: the fix must be applied to
-`arc_g1_topological_engine.py:106`, not `arc_public_ingress.py`.
+Correction to file: the fix target is the four `_bridge_to_d64*` bridges under
+`HENRI V2/experiments/verification/`, not `arc_public_ingress.py`.
 
 ---
 
@@ -204,7 +219,9 @@ source document.
 
 ## Open items
 
-1. Stage 2 fix target is `arc_g1_topological_engine.py:106`, not the named file.
+1. Stage 2 fix target is the four `_bridge_to_d64*` bridges under
+   `HENRI V2/experiments/verification/` (lines 106 / 97 / 89 / 93), not the
+   named file `arc_public_ingress.py`, which has no pooling at all.
 2. Stage 3 `beta`: decide between `beta = sqrt(D)` and a regime-dependent value
    using real post-unbinding wavefronts, not synthetic noise.
 3. Stage 4: raise ledger payload volume to ~12000 transitions, then re-run; and
