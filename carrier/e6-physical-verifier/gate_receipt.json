@@ -1,0 +1,90 @@
+{
+  "stage": 1,
+  "target": "carrier/e6-physical-verifier",
+  "artifact": "carrier/e6-physical-verifier/qfhrr_autopoietic_carrier.py",
+  "gate": "synthetic dead/noise streams yield ||G|| <= 0.02",
+  "fail_closed_condition": "any control stream yields ||G|| > 0.02 or rejection",
+  "gate_pass": true,
+  "evidence_class": "OBSERVED",
+  "timestamp_utc": "2026-09-12T20:30:04Z",
+  "duration_s": 0.03,
+  "device": {
+    "python": "3.11.15",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "torch_available": true,
+    "triton_available": false,
+    "cuda_available": false,
+    "device_name": null,
+    "device_capability": null,
+    "sm_arch": null,
+    "torch_version": "2.13.0+cpu"
+  },
+  "discrete_gate": {
+    "n": 16384,
+    "epsilon": 0.02,
+    "n_min": 16384,
+    "checks": [
+      {
+        "name": "dead",
+        "role": "control",
+        "n": 16384,
+        "h_shannon": 0.0,
+        "k_lz": 0.019043,
+        "G_stat": -0.019043,
+        "abs_G": 0.019043,
+        "verdict": "ACCEPT_CONTROL_STREAM",
+        "pass": true,
+        "rule": "|G| <= epsilon AND verdict == ACCEPT_CONTROL_STREAM"
+      },
+      {
+        "name": "noise",
+        "role": "control",
+        "n": 16384,
+        "h_shannon": 7.987926,
+        "k_lz": 8.005371,
+        "G_stat": -0.017445,
+        "abs_G": 0.017445,
+        "verdict": "ACCEPT_CONTROL_STREAM",
+        "pass": true,
+        "rule": "|G| <= epsilon AND verdict == ACCEPT_CONTROL_STREAM"
+      },
+      {
+        "name": "structured_markov",
+        "role": "positive",
+        "n": 16384,
+        "h_shannon": 3.998278,
+        "k_lz": 2.178223,
+        "G_stat": 1.820055,
+        "abs_G": 1.820055,
+        "verdict": "ACCEPT_STRUCTURED_COMPLEXITY",
+        "pass": true,
+        "rule": "G > epsilon AND verdict == ACCEPT_STRUCTURED_COMPLEXITY"
+      },
+      {
+        "name": "sub_minimum_quarantine",
+        "role": "precondition",
+        "n": 8192,
+        "verdict": "BLOCKED_SUB_MINIMUM_N",
+        "pass": true,
+        "rule": "n < n_min(16384) implies BLOCKED_SUB_MINIMUM_N"
+      }
+    ],
+    "all_pass": true
+  },
+  "kernel_gate": {
+    "attempted": false,
+    "ran": false,
+    "reason": "skipped_by_flag"
+  },
+  "open_defects": [
+    "D-A: kernel reductions are block-local, not global (spec admits 'Block-level approximation'). Global reference implemented for comparison.",
+    "D-B: energy_pool_ptr is stored from every block; write race.",
+    "D-C: atan2 phase is undefined at |Psi|->0; retraction assumes unit modulus.",
+    "D-D: dt_eff = 1/max(E,1e-2) is dimensionless; not a Margolus-Levitin bound."
+  ],
+  "defect_d1_resolution": {
+    "statement": "One-sided rule G > eps rejected its own negative controls because a finite-n compressor has warm-up cost.",
+    "measured_boundary": "|G| for dead/noise falls below eps only at n >= 16384 (measured 2026-09-12).",
+    "fix": "Two-sided classification plus a pre-condition gate at n_min = 16384, derived as ceil(overhead_bits / epsilon)."
+  }
+}
