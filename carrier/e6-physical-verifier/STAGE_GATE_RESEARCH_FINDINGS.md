@@ -20,12 +20,13 @@ observed data) / `FALSIFIED` (contradicted by measurement).
 | Stage | Gate bound | Verdict | Classification |
 |---|---|---|---|
 | 1 Carrier execution | `||G|| <= 0.02` on dead/noise | **PASS** | Fix required: defect D1 quantified |
-| 2 Metric locality | AUC >= 0.85 | **PASS** on the fix; mean pooling already passes | **Spec defect** — premise not reproduced |
+| 2 Metric locality | AUC >= 0.85 | **PASS** on the fix | Mechanism **CONFIRMED**; my first gate could not see it |
 | 3 Discrete egress snap | `H(Y) <= 1.2` bits at beta=8 | **FAIL** | **Spec defect** — beta is a joint function of query regime |
 | 4 Transition identification | one-step `delta <= 0.15` | **FAIL** at 1500 rows; **PASS** at 12000 | **Spec defect** — metric and sample diversity unstated |
 
-Three of the four gates as written in the source document do not survive
-measurement. None of the three is an estimator or carrier failure.
+Two of the four gates as written in the source document do not survive
+measurement. A third (Stage 2) initially appeared to fail and does not: the
+fault was in this harness, and the correction is recorded below.
 
 ---
 
@@ -58,7 +59,7 @@ Draft-kernel defects flagged and recorded, not hidden:
 
 ---
 
-## Stage 2 — metric locality: PASS, but the stated defect is FALSIFIED
+## Stage 2 — metric locality: mechanism CONFIRMED (earlier "falsified" verdict withdrawn)
 
 The source document names `arc_public_ingress.py` as the mean-pooling site.
 That file exists (7 742 B) and contains **no pooling of any kind** (`OBSERVED`).
@@ -85,20 +86,56 @@ collapses a 65536-dimension wave to d=64: reshapes to `[16, 4096]`, averages the
 metric-locality destruction this stage names. **The fix must be applied to all
 four sites**, not to one file.
 
-Measured AUC (`OBSERVED`, 8 classes x 12 per class):
+Measured AUC on the ORIGINAL gate task (`OBSERVED`, 8 classes x 12 per class):
 
 | Method | mean AUC | min AUC | Gate (0.85) |
 |---|---|---|---|
 | Mean pooling (current) | 0.9292 | 0.8839 | **PASS** |
 | 8-channel local Clifford blocks (proposed) | 1.0000 | 1.0000 | PASS |
 
-The document predicts mean pooling collapses AUC below 0.85. It does not:
-0.9292 passes. So the stated failure mode is **not reproduced**.
+That table alone suggests the document's predicted collapse does not occur.
+**It is misleading, and the fault is in this harness.** `make_wave` put class
+identity on the block axis AND the channel axis:
 
-The proposed fix is still an improvement and is independently justified: mean
-pooling is invariant under block permutation (cosine 1.0 between permuted
-inputs), while 8-channel Clifford blocks are not (cosine drops to -0.10). Metric
-locality is a real property, but it is not the cause of an AUC failure.
+```python
+blocks = [(label * 3 + i) % NUM_BLOCKS for i in range(3)]
+chans  = [(label * 2 + i) % CHANNELS   for i in range(3)]
+```
+
+Mean pooling is `w.view(16, 4096).mean(dim=0)`. It averages over the 16 BLOCK
+axis and **retains the channel axis**. So the channel signature survived
+averaging and carried the classification to 0.9292. The harness author put
+identity on the one axis the operator preserves, which is the defect.
+
+### The discriminating test
+
+`verify_stage2_task_dependence.py` imports both bridges from the gate and varies
+only where class identity lives (`OBSERVED`, 8 classes x 12 per class):
+
+| task | mean pooling AUC | Clifford AUC | block-perm cosine (mean) |
+|---|---|---|---|
+| `both` (original gate task) | 0.9292 PASS | 1.0000 PASS | 1.0000 |
+| `channel_only` (blocks fixed) | **1.0000 PASS** | 0.9939 PASS | 1.0000 |
+| `block_only` (channels fixed) | **0.5014 FAIL** | 0.9959 PASS | 1.0000 |
+
+Verdict `MECHANISM_CONFIRMED`. On the minimal task where identity lives only in
+block position, mean pooling collapses to **0.5014**, which is chance. The
+document's Gap 1 mechanism is **real and measured**; the earlier "premise not
+reproduced" verdict was an artifact of this harness and is withdrawn.
+
+The mechanism is also visible directly: block-permutation cosine is `1.0000` for
+mean pooling (a wave and its block-permuted twin are indistinguishable) versus
+`-0.1024` for Clifford blocks (they are separated). Averaging over blocks is
+exactly what destroys the local metric interval.
+
+### What remains unestablished
+
+Whether the collapse occurs on **real ARC grids through the real ingress path**
+is not established. No wave corpus exists on this machine (`OBSERVED`: no `.npz`
+`psi` banks; `HENRI V2/data/` holds only text benchmarks — gpqa, mbpp, mmlu, …;
+no trajectory jsonl matching the `arc_g1` input contract). What is established
+is the operator's behaviour: it destroys block-level locality whenever class
+identity is not on the retained axis, and classification then falls to chance.
 
 Correction to file: the fix target is the four `_bridge_to_d64*` bridges under
 `HENRI V2/experiments/verification/`, not `arc_public_ingress.py`.

@@ -1,0 +1,34 @@
+{
+  "stage": 2,
+  "artifact": "HENRI V2/experiments/verification/arc_g1_topological_engine.py:106",
+  "purpose": "Discriminating test for Gap 1. The primary Stage 2 gate used a task whose class identity was placed on the channel axis, which mean pooling preserves, so that gate could not adjudicate the spec's claim. This test varies where identity lives.",
+  "gate": "mean pooling AUC >= 0.85",
+  "evidence_class": "OBSERVED",
+  "timestamp_utc": "2026-09-12T21:02:21Z",
+  "config": {
+    "n_classes": 8,
+    "per_class": 12
+  },
+  "results": {
+    "both": {
+      "mean_pool_auc": 0.9292,
+      "clifford_auc": 1.0,
+      "mean_perm_cosine": 1.0,
+      "clifford_perm_cosine": -0.102439
+    },
+    "channel_only": {
+      "mean_pool_auc": 1.0,
+      "clifford_auc": 0.9939,
+      "mean_perm_cosine": 1.0,
+      "clifford_perm_cosine": -0.102439
+    },
+    "block_only": {
+      "mean_pool_auc": 0.5014,
+      "clifford_auc": 0.9959,
+      "mean_perm_cosine": 1.0,
+      "clifford_perm_cosine": -0.102439
+    }
+  },
+  "verdict": "MECHANISM_CONFIRMED",
+  "honest_boundary": "Still synthetic. Whether the collapse occurs on REAL ARC grids through the REAL ingress path is not established, because no wave corpus or trajectory bank exists on this machine (verified: no .npz psi banks, no trajectory jsonl matching the arc_g1 input contract). What is established is that the operator destroys block-level locality whenever class identity is not on the retained axis."
+}
