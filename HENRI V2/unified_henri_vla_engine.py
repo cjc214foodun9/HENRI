@@ -56,7 +56,7 @@ import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated, Any, Dict, List, Optional, Sequence, Tuple
+from typing import Annotated, Any, Dict, List, Literal, Optional, Sequence, Tuple
 
 import torch
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -139,6 +139,22 @@ class MarkovBlanketSpec(BaseModel):
     auto_leakage_from_ring: bool = True
     syncytium_dt: Annotated[float, Field(gt=0.0, le=1.0)] = 0.01
     r_gate: UnitFloat = SPEC_R_GATE
+
+    # Zone B coupling backend. This is the INTEGRATION POINT between the engine
+    # and `basal_triton_kernel`, which previously had no production consumer.
+    #
+    #   "fft"    EvanescentKuramotoSyncytium.relax -- the LIVE production path,
+    #            and the default. Changing this default changes production.
+    #   "span"   the direct tap sum (`relax_span`): the CPU parity reference for
+    #            the GPU kernel. Uses FULL-RING reach so it reproduces "fft".
+    #            See the note on tap reach in `relax_backend`.
+    #   "triton" `fused_relax`: the fused GPU kernel. FAILS CLOSED when Triton
+    #            or CUDA is absent -- it never falls back to CPU, so a "GPU
+    #            measurement" can never report CPU numbers.
+    #
+    # The backend does NOT change the seal: span, K, dt and the lock horizon are
+    # shared, so `_seal_hardware_defaults` still binds for every value here.
+    coupling_backend: Literal["fft", "span", "triton"] = "fft"
 
     # MEASURED LOCK HORIZON (2026-09-12, basal_syncytium_horizon.json): at the
     # working point above, r crosses 0.93 at 750 relaxation steps, from BOTH a
@@ -634,6 +650,123 @@ class UnifiedHENRIVLAEngine:
         self.step_index += 1
         return out
 
+    # -- Zone B coupling backend (basal_triton_kernel integration) ---------
+
+    @torch.no_grad()
+    def relax_backend(
+        self,
+        phases: torch.Tensor,
+        *,
+        steps: int,
+        dt: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Relax `phases` through the CONFIGURED coupling backend.
+
+        This is the live consumer for `basal_triton_kernel`. Before this method
+        existed, that module had four consumers (two test files, two experiment
+        scripts) and zero production callers, so the GPU carrier could not be
+        reached from the engine at all.
+
+        The three backends share the sealed parameters (span, K, dt) and differ
+        only in HOW the coupling field is computed:
+
+          "fft"    EvanescentKuramotoSyncytium -- circular convolution. O(N log N).
+          "span"   relax_span -- direct tap sum. O(N * taps). The CPU parity
+                   reference for the GPU kernel; must match "fft".
+          "triton" fused_relax -- the fused GPU kernel. RAISES without
+                   Triton/CUDA. There is deliberately NO CPU fallback.
+
+        Returns {backend, r, r_gate, phases, steps, dt, leakage_length}.
+        """
+        b = self.cfg.blanket
+        backend = b.coupling_backend
+        dt_v = float(b.syncytium_dt if dt is None else dt)
+        n = int(phases.reshape(-1).shape[0])
+        theta = torch.as_tensor(phases, dtype=torch.float32).reshape(-1).clone()
+
+        # BOUNDARY CHECK. The blanket's syncytium and its coupling kernel are
+        # built for `b.num_tiles` channels. A state of a different length used to
+        # fail deep inside the FFT as
+        #   "The size of tensor a (2048) must match the size of tensor b (8192)"
+        # which names tensors, not the boundary that was actually violated.
+        # Fail closed here with the real constraint instead.
+        if n != int(b.num_tiles):
+            raise ValueError(
+                f"relax_backend got {n} channels but this engine's Zone B "
+                f"syncytium is configured for {b.num_tiles} "
+                f"(dimension_D={b.dimension_D} / block="
+                f"{b.clifford_block_size}). The coupling kernel is fixed at "
+                f"construction, so the state length must match the tiling. "
+                f"Construct the engine with the matching dimension_D, or use a "
+                f"backend-agnostic reference such as "
+                f"`basal_triton_kernel.relax_span` directly."
+            )
+
+        if backend == "fft":
+            # The live production path. Use the blanket's own syncytium so the
+            # arithmetic is byte-identical to `blanket_step`, but SAVE AND
+            # RESTORE its phase state: this helper must not advance the live
+            # integrator as a side effect.
+            syn = self.blanket.syncytium
+            keep = None if syn.phases is None else syn.phases.clone()
+            try:
+                syn.phases = theta.clone()
+                r_final = float(syn.relax(steps, dt=dt_v)["r"])
+            finally:
+                syn.phases = keep
+        else:
+            # Lazy import: keeps the engine importable on a CPU-only host and
+            # avoids paying the Triton import cost on the default path.
+            import basal_triton_kernel as tk
+
+            if backend == "span":
+                # FULL-RING REACH. The tap sum must cover the whole kernel to be
+                # a parity reference for the fft backend.
+                #
+                # MEASURED (basal_span_truncation_scale.json): a +/-252-tap
+                # window (SPEC_NON_LOCAL_SPAN//2) spans only 1.0 decay length at
+                # decay 504, drops ~half the kernel mass, and yields r = 0.3694
+                # against the full ring's 0.7352 at N=8192 -- a gap of 0.3658.
+                # At decay 64 the same window spans 3.9 decay lengths and the
+                # gap stays under 0.02. So the reach must scale with decay; here
+                # it is widened to the whole ring, which makes the two backends
+                # agree by construction.
+                weights = tk.span_evanescent_weights(
+                    n, self.leakage_length, max(1, n // 2 - 1)
+                )
+                out = tk.relax_span(
+                    theta, weights, coupling_K=b.kuramoto_coupling_K,
+                    dt=dt_v, steps=steps,
+                )
+            else:  # "triton"
+                if not (tk.TRITON_AVAILABLE and tk.cuda_available()):
+                    raise RuntimeError(
+                        "coupling_backend='triton' requires Triton AND CUDA; "
+                        f"triton_available={tk.TRITON_AVAILABLE}, "
+                        f"cuda_available={tk.cuda_available()}. There is no CPU "
+                        "fallback by design: a silent fallback would let a "
+                        "'GPU measurement' report CPU numbers."
+                    )
+                weights = tk.span_evanescent_weights(
+                    n, self.leakage_length, max(1, n // 2 - 1)
+                )
+                out = tk.fused_relax(
+                    theta, weights, coupling_K=b.kuramoto_coupling_K,
+                    dt=dt_v, steps=steps,
+                )
+            r_final = float(tk.order_parameter(out))
+
+        return {
+            "backend": backend,
+            "r": float(r_final),
+            "r_gate": float(b.r_gate),
+            "clears_r_gate": bool(float(r_final) >= float(b.r_gate)),
+            "steps": int(steps),
+            "dt": dt_v,
+            "leakage_length": float(self.leakage_length),
+            "channels": n,
+        }
+
     # -- self-description ---------------------------------------------------
 
     def describe(self) -> Dict[str, Any]:
@@ -651,6 +784,7 @@ class UnifiedHENRIVLAEngine:
                 "theoretical_k_c": self.blanket.syncytium.theoretical_k_c(),
                 "r_gate": self.cfg.blanket.r_gate,
                 "evanescent_decay_length": self.cfg.blanket.evanescent_decay_length,
+                "coupling_backend": self.cfg.blanket.coupling_backend,
             },
             "zone_b": {
                 "beta": self._beta,

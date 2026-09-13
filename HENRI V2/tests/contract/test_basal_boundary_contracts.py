@@ -421,3 +421,109 @@ class TestCrossModuleWiring:
         assert zes.wave_digest(w * 1.5) != env.digest
         # The envelope is byte-owning: its payload survives the source tensor.
         assert len(env.payload) == w.numel() * 4          # float32 little-endian
+
+
+# ---------------------------------------------------------------------------
+# 7. Zone B coupling-backend wiring (basal_triton_kernel integration)
+# ---------------------------------------------------------------------------
+
+class TestCouplingBackendWiring:
+    """The engine must be able to REACH the GPU carrier.
+
+    Before this wiring existed, `basal_triton_kernel` had four consumers and all
+    four were tests or experiment scripts, so no production path could execute
+    the kernel. These tests pin the dispatch, the parity of the CPU reference,
+    and the fail-closed behaviour of the GPU path.
+    """
+
+    # D=8192 / block 8 -> 1024 channels. Deliberately NOT the production tiling:
+    # the seal only binds at D=65536, so a reduced-scale engine is exempt and the
+    # parity check stays cheap on CPU.
+    D = 8192
+    BLK = 8
+
+    def _engine(self, backend: str):
+        cfg = uve.UnifiedHENRIVLAConfig(
+            blanket=uve.MarkovBlanketSpec(
+                dimension_D=self.D, clifford_block_size=self.BLK,
+                kuramoto_coupling_K=2.45, coupling_backend=backend,
+            )
+        )
+        return uve.UnifiedHENRIVLAEngine(cfg)
+
+    def _phases(self, n: int):
+        g = torch.Generator().manual_seed(7)
+        return (torch.rand(n, generator=g) * 2.0 - 1.0) * math.pi
+
+    def test_default_backend_is_the_live_path(self):
+        """The default MUST stay 'fft'. Changing it changes production."""
+        assert uve.UnifiedHENRIVLAEngine().cfg.blanket.coupling_backend == "fft"
+
+    def test_describe_surfaces_the_backend(self):
+        eng = self._engine("fft")
+        assert eng.describe()["zone_a"]["coupling_backend"] == "fft"
+
+    def test_span_backend_reproduces_the_fft_backend(self):
+        """The CPU parity reference must actually agree with production.
+
+        Both backends use full-ring reach. A truncated tap window would NOT
+        agree: measured at N=8192 decay 504, a +/-252-tap window gave r = 0.3694
+        against the full ring's 0.7352 (gap 0.3658). This test would fail if the
+        reach were narrowed again.
+        """
+        n = self.D // self.BLK
+        theta = self._phases(n)
+        r_fft = self._engine("fft").relax_backend(theta, steps=200)["r"]
+        r_span = self._engine("span").relax_backend(theta, steps=200)["r"]
+        assert abs(r_span - r_fft) < 1e-4, (r_span, r_fft)
+
+    def test_backends_report_their_identity_and_gate(self):
+        out = self._engine("span").relax_backend(
+            self._phases(self.D // self.BLK), steps=8)
+        assert out["backend"] == "span"
+        assert out["channels"] == self.D // self.BLK
+        assert out["clears_r_gate"] == (out["r"] >= out["r_gate"])
+
+    @pytest.mark.skipif(
+        __import__("basal_triton_kernel").TRITON_AVAILABLE
+        and __import__("basal_triton_kernel").cuda_available(),
+        reason="GPU present: the fail-closed path is not active",
+    )
+    def test_triton_backend_fails_closed_without_a_gpu(self):
+        """No silent CPU fallback: a 'GPU measurement' must never be CPU numbers."""
+        eng = self._engine("triton")
+        with pytest.raises(RuntimeError) as ei:
+            eng.relax_backend(self._phases(self.D // self.BLK), steps=1)
+        assert "requires Triton AND CUDA" in str(ei.value)
+
+    def test_wrong_channel_count_fails_closed_with_a_clear_error(self):
+        """A mis-shaped state must name the boundary, not an FFT size mismatch.
+
+        Without the guard this raised
+        'The size of tensor a (64) must match the size of tensor b (1024)',
+        which names tensors rather than the tiling constraint.
+        """
+        eng = self._engine("fft")
+        with pytest.raises(ValueError) as ei:
+            eng.relax_backend(torch.rand(64), steps=1)
+        assert "channels" in str(ei.value)
+
+    def test_fft_backend_does_not_advance_the_live_integrator(self):
+        """A diagnostic helper must not mutate the live syncytium state."""
+        eng = self._engine("fft")
+        before = eng.blanket.syncytium.phases
+        eng.relax_backend(self._phases(self.D // self.BLK), steps=16)
+        assert eng.blanket.syncytium.phases is before
+
+    def test_seal_binds_regardless_of_backend(self):
+        """The backend choice must not create a hole in the sealed defaults."""
+        for backend in ("fft", "span", "triton"):
+            with pytest.raises(Exception):
+                uve.MarkovBlanketSpec(
+                    coupling_backend=backend, lock_horizon_steps=2048
+                )
+
+    def test_backend_value_is_constrained(self):
+        """An unknown backend must be rejected at construction, not at first use."""
+        with pytest.raises(Exception):
+            uve.MarkovBlanketSpec(coupling_backend="not_a_backend")

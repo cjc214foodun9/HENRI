@@ -14,33 +14,33 @@
         {
           "K": 2.45,
           "dt": 0.01,
-          "ramp_r_32": 0.22374548017978668,
-          "ramp_r_1024": 0.5648791193962097,
-          "eva_r_32": 0.37697848677635193,
-          "eva_r_1024": 0.9999719262123108
+          "ramp_r_32": 0.02697088196873665,
+          "ramp_r_1024": 0.9172674417495728,
+          "eva_r_32": 0.026978874579072,
+          "eva_r_1024": 0.9998450875282288
         },
         {
           "K": 2.45,
           "dt": 0.015,
-          "ramp_r_32": 0.3155710995197296,
-          "ramp_r_1024": 0.48235630989074707,
-          "eva_r_32": 0.5277261734008789,
-          "eva_r_1024": 0.999998927116394
+          "ramp_r_32": 0.03274863213300705,
+          "ramp_r_1024": 0.9540486335754395,
+          "eva_r_32": 0.03277728706598282,
+          "eva_r_1024": 0.9999939799308777
         },
         {
           "K": 4.5,
           "dt": 0.01,
-          "ramp_r_32": 0.3694209158420563,
-          "ramp_r_1024": 0.43523430824279785,
-          "eva_r_32": 0.6133721470832825,
-          "eva_r_1024": 0.9999998211860657
+          "ramp_r_32": 0.037284448742866516,
+          "ramp_r_1024": 0.964308500289917,
+          "eva_r_32": 0.03734063357114792,
+          "eva_r_1024": 0.9999992847442627
         },
         {
           "K": 4.5,
           "dt": 0.015,
-          "ramp_r_32": 0.4827364683151245,
-          "ramp_r_1024": 0.33258914947509766,
-          "eva_r_32": 0.7848988771438599,
+          "ramp_r_32": 0.052862364798784256,
+          "ramp_r_1024": 0.9801773428916931,
+          "eva_r_32": 0.053108181804418564,
           "eva_r_1024": 1.0
         }
       ],
@@ -50,14 +50,14 @@
       "note": "The sealed 504 span and the measured 168-channel percolation knee belong to the EVANESCENT kernel. The linear ramp is a different operator and cannot inherit that result without its own sweep."
     },
     "2b_shape_vs_width": {
-      "ramp_span504_r_1024": 0.5648791193962097,
-      "ramp_span2016_r_1024": 0.9999989867210388,
-      "eva_decay168_r_1024": 0.571295440196991,
-      "eva_decay504_r_1024": 0.9999719262123108,
+      "ramp_span504_r_1024": 0.9172674417495728,
+      "ramp_span2016_r_1024": 0.999984860420227,
+      "eva_decay168_r_1024": 0.9561610221862793,
+      "eva_decay504_r_1024": 0.9998450875282288,
       "evidence_class": "OBSERVED",
       "ramp_needs_wider_support": true,
       "equivalent_at_matched_span": false,
-      "verdict": "At MATCHED support 504 the two kernels DISAGREE: ramp r=0.5649 (gate 0.93) vs evanescent r=1.0000. Widening the ramp to span 2016 reaches r=1.0000, so support width is a real factor; but the ramp then needs roughly 4x the nominal support of the exponential to reach the same r, and the exponential passes at decay 168 (r=0.5713). The sealed 504 span and the measured 168-channel knee are properties of the EXPONENTIAL kernel. The document's ramp is not a drop-in substitute and cannot inherit those results without its own sweep."
+      "verdict": "At MATCHED support 504 the two kernels DISAGREE: ramp r=0.9173 (gate 0.93) vs evanescent r=0.9998. Widening the ramp to span 2016 reaches r=1.0000, so support width is a real factor; but the ramp then needs roughly 4x the nominal support of the exponential to reach the same r, and the exponential passes at decay 168 (r=0.9562). The sealed 504 span and the measured 168-channel knee are properties of the EXPONENTIAL kernel. The document's ramp is not a drop-in substitute and cannot inherit those results without its own sweep."
     },
     "sealed_live_configuration": {
       "decay_length": 504,
@@ -89,6 +89,6 @@
     }
   },
   "failures": [],
-  "elapsed_s": 2.01,
+  "elapsed_s": 1.89,
   "ok": true
 }

@@ -69,13 +69,35 @@ D = 8192
 STEPS_PER_SLOT = 32
 SLOTS_TO_LOCK = 1024 // STEPS_PER_SLOT
 
+# ---------------------------------------------------------------------------
+# DISPOSITION SEALED 2026-09-13. The ratification document's section-5 kernel is
+# REFERENCE ONLY. It is retained so its behaviour stays reproducible and
+# auditable, and it is NEVER imported by a production module. The production
+# operator is `basal_boundary_engine.evanescent_kernel` (the exponential).
+#
+# Grounds, measured on the LIVE operator (receipt:
+# basal_operator_parity_adjudication.json), 4000 steps, K=2.45, dt=0.01:
+#   matched span 504   evanescent  r = 1.0000 at EVERY seed tested
+#                      linear ramp  r = 0.1422 / 0.3066 / 0.9908 (seeds 0/99/1234)
+#   kernel L1 |ramp - evanescent| = 0.8185 (normalized weights)
+# The ramp's worst seed fails the 0.93 gate by 0.79. The sealed constants
+# (span 504, r = 0.9998, lock horizon 1024) were MEASURED on the exponential and
+# cannot be inherited by a different operator without its own percolation sweep.
+RAMP_REFERENCE_ONLY = True
+RAMP_KERNEL_NAME = "linear_ramp__w_i__1_minus_i_over_span_plus_1"
+PRODUCTION_KERNEL_NAME = "evanescent_exponential__exp_minus_d_over_decay"
 
 # ---------------------------------------------------------------------------
-# The document's proposed kernel and step, transcribed faithfully
+# REFERENCE ONLY -- the document's proposed kernel and step, transcribed
+# faithfully. Do not wire into a production path.
 # ---------------------------------------------------------------------------
 
 def ratified_ramp_kernel(dim: int, span: int) -> torch.Tensor:
-    """SECTION 5's kernel VERBATIM: a linear ramp, not an exponential."""
+    """REFERENCE ONLY (see RAMP_REFERENCE_ONLY).
+
+    SECTION 5's kernel VERBATIM: a linear ramp w_i = 1 - i/(span+1), NOT the
+    measured evanescent exponential. Retained for audit and reproduction only.
+    """
     raw = torch.zeros(dim, dtype=torch.float32)
     raw[0] = 1.0
     for i in range(1, span + 1):
@@ -93,12 +115,24 @@ def ratified_relaxation(
     dt: float,
     steps: int,
     use_real_transform: bool = True,
+    live_operator: bool = True,
 ) -> torch.Tensor:
-    """SECTION 5's per_slot_relaxation VERBATIM.
+    """SECTION 5's per_slot_relaxation, with the operator form corrected.
 
-    `use_real_transform=True` reproduces the document exactly (rfft/irfft on a
-    complex tensor). `False` uses the full complex transform, which is the
-    correction the live code already carries.
+    `use_real_transform=True` reproduces the document's transform call exactly
+    (rfft on a complex tensor), which is FALSIFIED as written.
+
+    `live_operator` selects the coupling term:
+      True  force = Im[e^{-i theta} Z] = |Z| sin(angle(Z) - theta)   PRODUCTION
+      False force = sin(angle(Z) - theta)                            defective
+
+    The first version of this harness used the False form, which omits the
+    factor |Z| (the LOCAL order parameter r_local). Measured on a 64-channel
+    ring, decay 8: live 0.223056, defective 0.944423, |Z| 0.236182, and
+    live/defective = 0.236182 == |Z| exactly. Every r value this harness
+    published before 2026-09-13 was produced on the defective form, so those
+    MAGNITUDES are superseded. Parity with the live class is now 0.00e+00 at
+    D=8192 (receipt: basal_operator_parity_adjudication.json).
     """
     t = theta.clone()
     for _ in range(steps):
@@ -109,7 +143,10 @@ def ratified_relaxation(
         else:
             f = torch.fft.fft(phasor, dim=-1)
             coupled = torch.fft.ifft(f * kernel_fft, dim=-1)
-        pull = torch.sin(torch.angle(coupled) - t)
+        if live_operator:
+            pull = torch.cos(t) * coupled.imag - torch.sin(t) * coupled.real
+        else:
+            pull = torch.sin(torch.angle(coupled) - t)
         t = t + (K * pull) * dt
     return t
 
@@ -224,15 +261,14 @@ def main() -> int:
         "evidence_class": "OBSERVED",
     }
     # The measured grid separates the two factors, and the answer is NOT the
-    # one the equivalence claim needs. At MATCHED nominal support (504):
-    #   ramp      r = 0.5649   FAILS the gate
-    #   evanescent r = 1.0000  PASSES
-    # Widening the ramp to span 2016 makes it pass (r = 1.0000), so support
-    # width is a real factor; but the ramp then needs ~4x the nominal support
-    # of the exponential to reach the same r. The two operators are therefore
-    # NOT interchangeable at equal span, and the ramp cannot inherit the
-    # 168-channel knee or the sealed 504 span, both measured on the
-    # exponential. Reported as measured, not as a preference.
+    # one the equivalence claim needs. On the LIVE operator at MATCHED nominal
+    # support (504), 4000 steps (values read from
+    # basal_operator_parity_adjudication.json; the earlier 0.5649/1.0000 pair
+    # came from a harness with the defective coupling form and is superseded):
+    #   evanescent r = 1.0000 at every seed tested
+    #   ramp       r = 0.1422 / 0.3066 / 0.9908 across seeds 0 / 99 / 1234
+    # So the ramp is SEED-CONDITIONAL and its worst seed fails by 0.79 while the
+    # exponential is seed-robust. Reported as measured, not as a preference.
     _ramp504 = svw["ramp_span504_r_1024"]
     _ramp2016 = svw["ramp_span2016_r_1024"]
     _eva168 = svw["eva_decay168_r_1024"]

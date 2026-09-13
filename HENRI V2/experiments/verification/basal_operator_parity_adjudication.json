@@ -1,0 +1,448 @@
+{
+  "spec": "operator-form adjudication (defect found 2026-09-13)",
+  "D": 8192,
+  "K": 2.45,
+  "dt": 0.01,
+  "r_gate": 0.93,
+  "forms": {
+    "live": "Im[e^{-i theta} Z]  (production; includes |Z|)",
+    "wrong": "sin(angle(Z) - theta)  (audit harness; omits |Z|)"
+  },
+  "questions": {
+    "Q2_grid": [
+      {
+        "kernel": "evanescent_504",
+        "form": "live",
+        "seed": 0,
+        "steps": 1024,
+        "r": 0.994825005531311
+      },
+      {
+        "kernel": "evanescent_504",
+        "form": "live",
+        "seed": 0,
+        "steps": 4000,
+        "r": 1.0
+      },
+      {
+        "kernel": "evanescent_504",
+        "form": "live",
+        "seed": 99,
+        "steps": 1024,
+        "r": 0.9999284148216248
+      },
+      {
+        "kernel": "evanescent_504",
+        "form": "live",
+        "seed": 99,
+        "steps": 4000,
+        "r": 1.0
+      },
+      {
+        "kernel": "evanescent_504",
+        "form": "live",
+        "seed": 1234,
+        "steps": 1024,
+        "r": 0.9998450875282288
+      },
+      {
+        "kernel": "evanescent_504",
+        "form": "live",
+        "seed": 1234,
+        "steps": 4000,
+        "r": 1.0
+      },
+      {
+        "kernel": "evanescent_504",
+        "form": "wrong",
+        "seed": 0,
+        "steps": 1024,
+        "r": 0.9987960457801819
+      },
+      {
+        "kernel": "evanescent_504",
+        "form": "wrong",
+        "seed": 0,
+        "steps": 4000,
+        "r": 1.0
+      },
+      {
+        "kernel": "evanescent_504",
+        "form": "wrong",
+        "seed": 99,
+        "steps": 1024,
+        "r": 0.9999765753746033
+      },
+      {
+        "kernel": "evanescent_504",
+        "form": "wrong",
+        "seed": 99,
+        "steps": 4000,
+        "r": 1.0
+      },
+      {
+        "kernel": "evanescent_504",
+        "form": "wrong",
+        "seed": 1234,
+        "steps": 1024,
+        "r": 0.9999719262123108
+      },
+      {
+        "kernel": "evanescent_504",
+        "form": "wrong",
+        "seed": 1234,
+        "steps": 4000,
+        "r": 1.0
+      },
+      {
+        "kernel": "evanescent_168",
+        "form": "live",
+        "seed": 0,
+        "steps": 1024,
+        "r": 0.42903968691825867
+      },
+      {
+        "kernel": "evanescent_168",
+        "form": "live",
+        "seed": 0,
+        "steps": 4000,
+        "r": 0.9396781921386719
+      },
+      {
+        "kernel": "evanescent_168",
+        "form": "live",
+        "seed": 99,
+        "steps": 1024,
+        "r": 0.7041262984275818
+      },
+      {
+        "kernel": "evanescent_168",
+        "form": "live",
+        "seed": 99,
+        "steps": 4000,
+        "r": 0.2696911692619324
+      },
+      {
+        "kernel": "evanescent_168",
+        "form": "live",
+        "seed": 1234,
+        "steps": 1024,
+        "r": 0.9561610221862793
+      },
+      {
+        "kernel": "evanescent_168",
+        "form": "live",
+        "seed": 1234,
+        "steps": 4000,
+        "r": 0.9967482686042786
+      },
+      {
+        "kernel": "evanescent_168",
+        "form": "wrong",
+        "seed": 0,
+        "steps": 1024,
+        "r": 0.3681463599205017
+      },
+      {
+        "kernel": "evanescent_168",
+        "form": "wrong",
+        "seed": 0,
+        "steps": 4000,
+        "r": 0.12363584339618683
+      },
+      {
+        "kernel": "evanescent_168",
+        "form": "wrong",
+        "seed": 99,
+        "steps": 1024,
+        "r": 0.3467313349246979
+      },
+      {
+        "kernel": "evanescent_168",
+        "form": "wrong",
+        "seed": 99,
+        "steps": 4000,
+        "r": 0.7480669617652893
+      },
+      {
+        "kernel": "evanescent_168",
+        "form": "wrong",
+        "seed": 1234,
+        "steps": 1024,
+        "r": 0.571295440196991
+      },
+      {
+        "kernel": "evanescent_168",
+        "form": "wrong",
+        "seed": 1234,
+        "steps": 4000,
+        "r": 0.19853562116622925
+      },
+      {
+        "kernel": "ramp_504",
+        "form": "live",
+        "seed": 0,
+        "steps": 1024,
+        "r": 0.31253841519355774
+      },
+      {
+        "kernel": "ramp_504",
+        "form": "live",
+        "seed": 0,
+        "steps": 4000,
+        "r": 0.14220592379570007
+      },
+      {
+        "kernel": "ramp_504",
+        "form": "live",
+        "seed": 99,
+        "steps": 1024,
+        "r": 0.6781538128852844
+      },
+      {
+        "kernel": "ramp_504",
+        "form": "live",
+        "seed": 99,
+        "steps": 4000,
+        "r": 0.30660730600357056
+      },
+      {
+        "kernel": "ramp_504",
+        "form": "live",
+        "seed": 1234,
+        "steps": 1024,
+        "r": 0.9172674417495728
+      },
+      {
+        "kernel": "ramp_504",
+        "form": "live",
+        "seed": 1234,
+        "steps": 4000,
+        "r": 0.9907892346382141
+      },
+      {
+        "kernel": "ramp_504",
+        "form": "wrong",
+        "seed": 0,
+        "steps": 1024,
+        "r": 0.2528024911880493
+      },
+      {
+        "kernel": "ramp_504",
+        "form": "wrong",
+        "seed": 0,
+        "steps": 4000,
+        "r": 0.10036858171224594
+      },
+      {
+        "kernel": "ramp_504",
+        "form": "wrong",
+        "seed": 99,
+        "steps": 1024,
+        "r": 0.22339850664138794
+      },
+      {
+        "kernel": "ramp_504",
+        "form": "wrong",
+        "seed": 99,
+        "steps": 4000,
+        "r": 0.5185122489929199
+      },
+      {
+        "kernel": "ramp_504",
+        "form": "wrong",
+        "seed": 1234,
+        "steps": 1024,
+        "r": 0.5648791193962097
+      },
+      {
+        "kernel": "ramp_504",
+        "form": "wrong",
+        "seed": 1234,
+        "steps": 4000,
+        "r": 0.23572012782096863
+      },
+      {
+        "kernel": "ramp_2016",
+        "form": "live",
+        "seed": 0,
+        "steps": 1024,
+        "r": 0.9997301697731018
+      },
+      {
+        "kernel": "ramp_2016",
+        "form": "live",
+        "seed": 0,
+        "steps": 4000,
+        "r": 0.9999999403953552
+      },
+      {
+        "kernel": "ramp_2016",
+        "form": "live",
+        "seed": 99,
+        "steps": 1024,
+        "r": 0.9999984502792358
+      },
+      {
+        "kernel": "ramp_2016",
+        "form": "live",
+        "seed": 99,
+        "steps": 4000,
+        "r": 1.0
+      },
+      {
+        "kernel": "ramp_2016",
+        "form": "live",
+        "seed": 1234,
+        "steps": 1024,
+        "r": 0.999984860420227
+      },
+      {
+        "kernel": "ramp_2016",
+        "form": "live",
+        "seed": 1234,
+        "steps": 4000,
+        "r": 1.0
+      },
+      {
+        "kernel": "ramp_2016",
+        "form": "wrong",
+        "seed": 0,
+        "steps": 1024,
+        "r": 0.9999699592590332
+      },
+      {
+        "kernel": "ramp_2016",
+        "form": "wrong",
+        "seed": 0,
+        "steps": 4000,
+        "r": 1.0
+      },
+      {
+        "kernel": "ramp_2016",
+        "form": "wrong",
+        "seed": 99,
+        "steps": 1024,
+        "r": 0.9999998807907104
+      },
+      {
+        "kernel": "ramp_2016",
+        "form": "wrong",
+        "seed": 99,
+        "steps": 4000,
+        "r": 1.0
+      },
+      {
+        "kernel": "ramp_2016",
+        "form": "wrong",
+        "seed": 1234,
+        "steps": 1024,
+        "r": 0.9999989867210388
+      },
+      {
+        "kernel": "ramp_2016",
+        "form": "wrong",
+        "seed": 1234,
+        "steps": 4000,
+        "r": 0.9999999403953552
+      }
+    ],
+    "Q2_evidence_class": "OBSERVED",
+    "Q1_harness_parity": {
+      "decay504_seed0": {
+        "live_class": 1.0,
+        "corrected_harness": 1.0,
+        "abs_diff": 0.0
+      },
+      "decay504_seed99": {
+        "live_class": 1.0,
+        "corrected_harness": 1.0,
+        "abs_diff": 0.0
+      },
+      "decay168_seed0": {
+        "live_class": 0.9396781921386719,
+        "corrected_harness": 0.9396781921386719,
+        "abs_diff": 0.0
+      },
+      "decay168_seed99": {
+        "live_class": 0.2696911692619324,
+        "corrected_harness": 0.2696911692619324,
+        "abs_diff": 0.0
+      },
+      "max_abs_diff": 0.0,
+      "parity_achieved": true
+    },
+    "Q2_ramp_verdict": {
+      "ramp_504_live_form": [
+        0.14220592379570007,
+        0.30660730600357056,
+        0.9907892346382141
+      ],
+      "ramp_504_live_min": 0.14220592379570007,
+      "evanescent_504_live_min": 1.0,
+      "ramp_504_wrong_form": [
+        0.10036858171224594,
+        0.5185122489929199,
+        0.23572012782096863
+      ],
+      "evanescent_504_wrong_form": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ramp_still_fails_gate_corrected": true,
+      "verdict": "RAMP FALSIFICATION HOLDS on the corrected operator: worst-seed ramp r = 0.1422 < gate 0.93, evanescent r = 1.0000. The earlier numbers were produced on a defective harness, so the MAGNITUDES are superseded, but the disposition (keep the exponential) survives on the live operator.",
+      "evidence_class": "OBSERVED"
+    },
+    "Q3_receipt_reproduction": {
+      "seed": 0,
+      "steps": 4000,
+      "decay": 168,
+      "measured": 0.9396781921386719,
+      "boundary_receipt": 0.93968,
+      "reproduced": true,
+      "evidence_class": "OBSERVED"
+    },
+    "Q4_seed_stability": {
+      "seed_spread_4000steps": [
+        {
+          "seed": 0,
+          "r_4000": 0.9396781921386719
+        },
+        {
+          "seed": 7,
+          "r_4000": 0.12511461973190308
+        },
+        {
+          "seed": 99,
+          "r_4000": 0.2696911692619324
+        },
+        {
+          "seed": 1234,
+          "r_4000": 0.9967482686042786
+        },
+        {
+          "seed": 2024,
+          "r_4000": 0.021637465804815292
+        },
+        {
+          "seed": 31337,
+          "r_4000": 0.9334803819656372
+        },
+        {
+          "seed": 424242,
+          "r_4000": 0.25024667382240295
+        }
+      ],
+      "min": 0.021637465804815292,
+      "max": 0.9967482686042786,
+      "fraction_clearing_gate": 0.42857142857142855,
+      "all_clear": false,
+      "evidence_class": "OBSERVED",
+      "verdict": "KNEE IS SEED-CONDITIONAL even at 4000 steps: only 43% of seeds clear the gate (min r = 0.0216, max 0.9967). The sealed 504 span is therefore a margin over the WORST seed, and any '168 is THE knee' claim must be stated per-seed or as a distribution."
+    }
+  },
+  "failures": [],
+  "kernel_l1_ramp504_vs_eva504": 0.8185030817985535,
+  "elapsed_s": 23.71
+}
