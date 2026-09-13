@@ -1,0 +1,94 @@
+{
+  "spec": "HENRI-ARCH-2026-MULTISLOT-RELAXATION-RATIFICATION",
+  "dimension": 8192,
+  "steps_per_slot": 32,
+  "slots_to_lock": 32,
+  "live_sealed": {
+    "non_local_span": 504,
+    "kuramoto_K": 2.45,
+    "r_gate": 0.93
+  },
+  "claims": {
+    "2_3_kernel_and_K_grid": {
+      "rows": [
+        {
+          "K": 2.45,
+          "dt": 0.01,
+          "ramp_r_32": 0.22374548017978668,
+          "ramp_r_1024": 0.5648791193962097,
+          "eva_r_32": 0.37697848677635193,
+          "eva_r_1024": 0.9999719262123108
+        },
+        {
+          "K": 2.45,
+          "dt": 0.015,
+          "ramp_r_32": 0.3155710995197296,
+          "ramp_r_1024": 0.48235630989074707,
+          "eva_r_32": 0.5277261734008789,
+          "eva_r_1024": 0.999998927116394
+        },
+        {
+          "K": 4.5,
+          "dt": 0.01,
+          "ramp_r_32": 0.3694209158420563,
+          "ramp_r_1024": 0.43523430824279785,
+          "eva_r_32": 0.6133721470832825,
+          "eva_r_1024": 0.9999998211860657
+        },
+        {
+          "K": 4.5,
+          "dt": 0.015,
+          "ramp_r_32": 0.4827364683151245,
+          "ramp_r_1024": 0.33258914947509766,
+          "eva_r_32": 0.7848988771438599,
+          "eva_r_1024": 1.0
+        }
+      ],
+      "ramp_is_exponential": false,
+      "kernel_l1_between_the_two": 0.8185030817985535,
+      "evidence_class": "OBSERVED",
+      "note": "The sealed 504 span and the measured 168-channel percolation knee belong to the EVANESCENT kernel. The linear ramp is a different operator and cannot inherit that result without its own sweep."
+    },
+    "2b_shape_vs_width": {
+      "ramp_span504_r_1024": 0.5648791193962097,
+      "ramp_span2016_r_1024": 0.9999989867210388,
+      "eva_decay168_r_1024": 0.571295440196991,
+      "eva_decay504_r_1024": 0.9999719262123108,
+      "evidence_class": "OBSERVED",
+      "ramp_needs_wider_support": true,
+      "equivalent_at_matched_span": false,
+      "verdict": "At MATCHED support 504 the two kernels DISAGREE: ramp r=0.5649 (gate 0.93) vs evanescent r=1.0000. Widening the ramp to span 2016 reaches r=1.0000, so support width is a real factor; but the ramp then needs roughly 4x the nominal support of the exponential to reach the same r, and the exponential passes at decay 168 (r=0.5713). The sealed 504 span and the measured 168-channel knee are properties of the EXPONENTIAL kernel. The document's ramp is not a drop-in substitute and cannot inherit those results without its own sweep."
+    },
+    "sealed_live_configuration": {
+      "decay_length": 504,
+      "K": 2.45,
+      "dt": 0.01,
+      "r_after_1024_steps": 0.9998450875282288,
+      "clears_r_gate": true,
+      "evidence_class": "OBSERVED"
+    },
+    "4_tau_figures": {
+      "document_quotes_us": 33.1,
+      "derived_floor_us_optimistic": 33.072,
+      "derived_floor_us_pessimistic": 97.072,
+      "optimistic_fits_50us": true,
+      "pessimistic_fits_50us": false,
+      "sub_budget_12p8_reachable": false,
+      "measured_tau_us": null,
+      "evidence_class": "DERIVED",
+      "verdict": "33.1 us is the OPTIMISTIC end of the derived range 33.1-97.1 us. Quoting it alone as settled overstates the result: the pessimistic grid-sync figure does NOT fit the 50 us shutter. The honest statement is 'feasible at the optimistic figure, UNVERIFIED until measured'. No measurement exists on this host."
+    },
+    "5_cold_lock_arithmetic": {
+      "slots_to_lock": 32,
+      "shutter_us": 50.0,
+      "derived_ms": 1.6,
+      "document_states_ms": 1.6,
+      "agrees": true,
+      "is_arithmetic_identity": true,
+      "evidence_class": "DERIVED"
+    }
+  },
+  "failures": [],
+  "elapsed_s": 2.01,
+  "ok": true
+}
