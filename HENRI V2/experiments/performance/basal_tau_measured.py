@@ -341,21 +341,67 @@ try:
     for k in ("binding_constraint","sub_budget_us","compute_floor_us_multi_block",
               "compute_floor_us_fft_multi_block","sub_budget_reachable"):
         print(f"    DERIVED {k:34s} = {REP['derived_reference'][k]}")
+    # UNITS CORRECTED 2026-09-14. `compute_floor_us_fft_multi_block` is the floor
+    # for the WHOLE 1024-STEP HORIZON, not per step: at steps=1 it is 0.0335 us and
+    # the ratio between the two is exactly 1024.0 (verified). This block previously
+    # divided the measured 32-STEP slot by that 1024-STEP floor and printed
+    # "41.083x" -- a ratio between two different quantities. A mandate then
+    # inherited that figure.
+    #
+    # MAGNITUDE, HONESTLY: the wrong ratio (41.08) and the correct like-for-like
+    # slot-vs-slot ratio (1409.31 / 33.072 = 42.61) are CLOSE BY COINCIDENCE, not
+    # because the method was safe. The derived per-step FFT cost is the SAME in
+    # both places (34.304/1024 == 1.072/32 == 0.0335 us) while the derived total is
+    # dominated by the grid-sync term (32 us of the 33.072 us), which makes the
+    # 1024-step compute total numerically near the 32-tick total. Against the
+    # compute-only floor the same trap yields 1409.31/1.072 = 1314.7x.
+    #
+    # So the defect is a METHOD defect with a benign magnitude HERE and a 31x
+    # magnitude one term over. The fix is to compare like with like and to label
+    # every floor with its scale, not to correct a number.
+    #
+    # The like-for-like comparison is slot vs slot: the measured 32-step slot
+    # against `slot_budget_analysis()`'s per-SLOT derived floor, which is what the
+    # slot measurement actually corresponds to. Both are recorded.
     cmp_ = {}
-    for label, key, pred in (("fft_per_slot", "fft_32step", d.get("compute_floor_us_fft_multi_block")),
-                             ("span_per_slot", "span_32step", d.get("compute_floor_us_multi_block"))):
+    slot = tk.slot_budget_analysis()
+    fft_slot_pred = slot.get("compute_slot_us_fft")
+    best_slot_pred = slot.get("best_floor_us")
+    for label, key, pred, pred_src in (
+        ("fft_per_slot", "fft_32step", fft_slot_pred, "slot_budget_analysis.compute_slot_us_fft"),
+        ("fft_per_slot_vs_best_config", "fft_32step", best_slot_pred, "slot_budget_analysis.best_floor_us"),
+        ("span_per_slot", "span_32step", slot.get("compute_slot_us_tap_sum"),
+         "slot_budget_analysis.compute_slot_us_tap_sum"),
+    ):
         m = MEAS.get(key)
-        if isinstance(m, dict):
+        if isinstance(m, dict) and pred:
             cmp_[label] = {
                 "measured_device_us": m["cuda_event_mean_us"],
                 "derived_floor_us": pred,
-                "ratio_measured_over_derived": (round(m["cuda_event_mean_us"] / pred, 3)
-                                                if pred else None),
+                "derived_source": pred_src,
+                "ratio_measured_over_derived": round(m["cuda_event_mean_us"] / pred, 3),
             }
     REP["measured_vs_derived"] = cmp_
+
+    # The horizon floor is reported SEPARATELY, labelled with its own scale, so the
+    # two quantities can never be divided by each other again.
+    REP["derived_horizon_floor"] = {
+        "evidence_class": "DERIVED",
+        "scale": "whole 1024-step horizon",
+        "steps": 1024,
+        "compute_floor_us_fft": d.get("compute_floor_us_fft_multi_block"),
+        "compute_floor_us_tap_sum": d.get("compute_floor_us_multi_block"),
+        "note": ("Do NOT divide a per-slot or per-step measurement by these. "
+                 "They are horizon totals; the per-slot floor is in "
+                 "slot_budget_analysis()."),
+    }
+    print("    derived HORIZON floors (1024-step totals, not per-step):")
+    print(f"      fft    {d.get('compute_floor_us_fft_multi_block')} us"
+          f"   tap-sum {d.get('compute_floor_us_multi_block')} us")
     for k, v in cmp_.items():
-        print(f"    {k}: measured {v['measured_device_us']} us vs derived {v['derived_floor_us']} us"
-              f"  ratio {v['ratio_measured_over_derived']}")
+        print(f"    {k}: measured {v['measured_device_us']} us vs derived "
+              f"{v['derived_floor_us']} us ({v['derived_source']})  ratio "
+              f"{v['ratio_measured_over_derived']}")
 except Exception as e:
     REP["derived_reference"] = {"error": f"{type(e).__name__}: {e}"}
     print("    FAILED:", e)

@@ -145,9 +145,13 @@ class MarkovBlanketSpec(BaseModel):
     #
     #   "fft"    EvanescentKuramotoSyncytium.relax -- the LIVE production path,
     #            and the default. Changing this default changes production.
-    #   "span"   the direct tap sum (`relax_span`): the CPU parity reference for
-    #            the GPU kernel. Uses FULL-RING reach so it reproduces "fft".
-    #            See the note on tap reach in `relax_backend`.
+    #   "span"   the direct tap sum (`relax_span`): the parity reference for the
+    #            GPU KERNEL's own tap set, NOT a twin of "fft". Restated
+    #            2026-09-13: "fft" uses full-ring reach; "span" walks the same
+    #            truncated reach the Triton kernel walks, so it measures KERNEL
+    #            IMPLEMENTATION parity and not truncation fidelity. Conflating
+    #            those two is what let the +/-252 reach defect ship. See the note
+    #            on tap reach in `relax_backend`.
     #   "triton" `fused_relax`: the fused GPU kernel. FAILS CLOSED when Triton
     #            or CUDA is absent -- it never falls back to CPU, so a "GPU
     #            measurement" can never report CPU numbers.
@@ -671,8 +675,9 @@ class UnifiedHENRIVLAEngine:
         only in HOW the coupling field is computed:
 
           "fft"    EvanescentKuramotoSyncytium -- circular convolution. O(N log N).
-          "span"   relax_span -- direct tap sum. O(N * taps). The CPU parity
-                   reference for the GPU kernel; must match "fft".
+          "span"   relax_span -- direct tap sum. O(N * taps). The parity
+                   reference for the GPU KERNEL's tap set (it walks the same
+                   truncated reach), NOT a reference for "fft".
           "triton" fused_relax -- the fused GPU kernel. RAISES without
                    Triton/CUDA. There is deliberately NO CPU fallback.
 

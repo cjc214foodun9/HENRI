@@ -1,0 +1,342 @@
+{
+  "schema": "henri.basal.tau-decomposition.v2",
+  "evidence_class": "OBSERVED_GPU",
+  "corrections_to_v1": [
+    "verdict.graph_captured_per_step_us divided the 32-step graph by 1024",
+    "verdict.launch_bound compared a one-time cost to a per-step cost"
+  ],
+  "device": {
+    "name": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+    "sm_count": 188,
+    "cc": [
+      12,
+      0
+    ],
+    "torch": "2.12.0+cu130",
+    "cuda": "13.0",
+    "python": "3.12.3",
+    "kernel_sm_constant": 128
+  },
+  "operator": {
+    "num_channels": 8192,
+    "decay_length": 503.808,
+    "half_width": 1512,
+    "taps": 3025
+  },
+  "launch_reference": {
+    "null_op_sync": {
+      "iters": 30,
+      "mean_us": 6.592,
+      "median_us": 6.368,
+      "min_us": 6.112
+    }
+  },
+  "fft_steps_sweep": {
+    "1": {
+      "iters": 20,
+      "mean_us": 74.2496,
+      "median_us": 72.896,
+      "min_us": 71.264
+    },
+    "2": {
+      "iters": 20,
+      "mean_us": 116.6288,
+      "median_us": 116.416,
+      "min_us": 113.248
+    },
+    "4": {
+      "iters": 20,
+      "mean_us": 200.9968,
+      "median_us": 200.832,
+      "min_us": 199.488
+    },
+    "8": {
+      "iters": 20,
+      "mean_us": 372.3248,
+      "median_us": 372.576,
+      "min_us": 369.056
+    },
+    "16": {
+      "iters": 20,
+      "mean_us": 714.2288,
+      "median_us": 713.856,
+      "min_us": 708.992
+    },
+    "32": {
+      "iters": 20,
+      "mean_us": 1395.4992,
+      "median_us": 1395.264,
+      "min_us": 1389.4399
+    },
+    "64": {
+      "iters": 20,
+      "mean_us": 2799.2561,
+      "median_us": 2778.3041,
+      "min_us": 2758.4641
+    },
+    "128": {
+      "iters": 20,
+      "mean_us": 5483.3169,
+      "median_us": 5484.9281,
+      "min_us": 5464.9601
+    },
+    "256": {
+      "iters": 20,
+      "mean_us": 10924.7616,
+      "median_us": 10923.2635,
+      "min_us": 10893.9838
+    },
+    "512": {
+      "iters": 3,
+      "mean_us": 21789.1305,
+      "median_us": 21782.9113,
+      "min_us": 21774.5914
+    },
+    "1024": {
+      "iters": 3,
+      "mean_us": 43597.4515,
+      "median_us": 43584.7054,
+      "min_us": 43532.8331
+    }
+  },
+  "fft_decomposition": {
+    "fit_intercept_us": 37.099,
+    "fit_marginal_us_per_step": 42.5304,
+    "per_step_us_at_1": 74.2496,
+    "per_step_us_at_32": 43.6093,
+    "per_step_us_at_1024": 42.5756,
+    "per_step_improvement_1_to_1024_pct": 42.6588,
+    "amortisation_is_material": false
+  },
+  "cuda_graph": {
+    "32": {
+      "iters": 10,
+      "mean_us": 805.1168,
+      "median_us": 805.664,
+      "min_us": 803.552,
+      "steps": 32,
+      "per_step_us": 25.1599,
+      "eager_us": 1395.4992,
+      "speedup_vs_eager": 1.7333,
+      "host_launch_us_per_step": 18.4494
+    },
+    "1024": {
+      "iters": 10,
+      "mean_us": 25415.4209,
+      "median_us": 25415.2966,
+      "min_us": 25411.4552,
+      "steps": 1024,
+      "per_step_us": 24.8197,
+      "eager_us": 43597.4515,
+      "speedup_vs_eager": 1.7154,
+      "host_launch_us_per_step": 17.7559
+    }
+  },
+  "batched_rings": {
+    "1": {
+      "iters": 10,
+      "mean_us": 1440.5152,
+      "median_us": 1445.4401,
+      "min_us": 1426.688,
+      "batch": 1,
+      "steps": 32,
+      "per_ring_step_us": 45.0161
+    },
+    "2": {
+      "iters": 10,
+      "mean_us": 1438.0128,
+      "median_us": 1436.352,
+      "min_us": 1432.992,
+      "batch": 2,
+      "steps": 32,
+      "per_ring_step_us": 22.4689
+    },
+    "4": {
+      "iters": 10,
+      "mean_us": 1434.2016,
+      "median_us": 1434.912,
+      "min_us": 1422.976,
+      "batch": 4,
+      "steps": 32,
+      "per_ring_step_us": 11.2047
+    },
+    "8": {
+      "iters": 10,
+      "mean_us": 1434.544,
+      "median_us": 1435.5201,
+      "min_us": 1430.688,
+      "batch": 8,
+      "steps": 32,
+      "per_ring_step_us": 5.6037
+    },
+    "16": {
+      "iters": 10,
+      "mean_us": 1438.4768,
+      "median_us": 1438.848,
+      "min_us": 1433.0879,
+      "batch": 16,
+      "steps": 32,
+      "per_ring_step_us": 2.8095
+    },
+    "32": {
+      "iters": 10,
+      "mean_us": 1431.2576,
+      "median_us": 1431.04,
+      "min_us": 1425.6639,
+      "batch": 32,
+      "steps": 32,
+      "per_ring_step_us": 1.3977
+    }
+  },
+  "batch_gain_pct": 96.8951,
+  "triton_block_sweep": {
+    "16": {
+      "block_size": 16,
+      "programs": 512,
+      "programs_per_sm": 2.7234,
+      "one_step": {
+        "iters": 10,
+        "mean_us": 112.8768,
+        "median_us": 109.28,
+        "min_us": 108.064
+      },
+      "n_regs": 80,
+      "n_spills": 8
+    },
+    "32": {
+      "block_size": 32,
+      "programs": 256,
+      "programs_per_sm": 1.3617,
+      "one_step": {
+        "iters": 10,
+        "mean_us": 153.0464,
+        "median_us": 151.328,
+        "min_us": 150.304
+      },
+      "n_regs": 128,
+      "n_spills": 8
+    },
+    "64": {
+      "block_size": 64,
+      "programs": 128,
+      "programs_per_sm": 0.6809,
+      "one_step": {
+        "iters": 10,
+        "mean_us": 354.7328,
+        "median_us": 351.904,
+        "min_us": 348.864
+      },
+      "n_regs": 254,
+      "n_spills": 8
+    },
+    "128": {
+      "block_size": 128,
+      "programs": 64,
+      "programs_per_sm": 0.3404,
+      "one_step": {
+        "iters": 10,
+        "mean_us": 1202.6848,
+        "median_us": 1201.856,
+        "min_us": 1199.936
+      },
+      "n_regs": 255,
+      "n_spills": 192
+    },
+    "256": {
+      "block_size": 256,
+      "programs": 32,
+      "programs_per_sm": 0.1702,
+      "one_step": {
+        "iters": 10,
+        "mean_us": 2973.6448,
+        "median_us": 2974.2401,
+        "min_us": 2970.2079
+      },
+      "n_regs": 168,
+      "n_spills": 848
+    },
+    "512": {
+      "block_size": 512,
+      "programs": 16,
+      "programs_per_sm": 0.0851,
+      "one_step": {
+        "iters": 10,
+        "mean_us": 7002.4609,
+        "median_us": 7005.312,
+        "min_us": 6983.4881
+      },
+      "n_regs": 168,
+      "n_spills": 1838
+    },
+    "1024": {
+      "block_size": 1024,
+      "programs": 8,
+      "programs_per_sm": 0.0426,
+      "one_step": {
+        "iters": 10,
+        "mean_us": 24697.2994,
+        "median_us": 24696.2242,
+        "min_us": 24693.2163
+      },
+      "n_regs": 48,
+      "n_spills": 4076
+    }
+  },
+  "triton_best": {
+    "block_size": 16,
+    "one_step_us": 112.8768,
+    "n_spills": 8,
+    "n_regs": 80
+  },
+  "triton_zero_spill_configs": [],
+  "block_span_sweep": {
+    "block_size": 16,
+    "results": {
+      "64": {
+        "one_step": {
+          "iters": 10,
+          "mean_us": 109.0016,
+          "median_us": 108.544,
+          "min_us": 107.232
+        },
+        "n_spills": 8,
+        "n_regs": 80
+      },
+      "256": {
+        "one_step": {
+          "iters": 10,
+          "mean_us": 103.8912,
+          "median_us": 102.656,
+          "min_us": 101.664
+        },
+        "n_spills": 8,
+        "n_regs": 168
+      },
+      "1024": {
+        "one_step": {
+          "iters": 10,
+          "mean_us": 281.4496,
+          "median_us": 280.896,
+          "min_us": 278.72
+        },
+        "n_spills": 304,
+        "n_regs": 255
+      }
+    }
+  },
+  "verdict": {
+    "shutter_us": 50.0,
+    "sub_budget_us": 12.8,
+    "per_step_eager_us": 42.5756,
+    "per_step_graphed_us": 24.8197,
+    "host_launch_us_per_step": 17.7559,
+    "host_share_of_per_step_pct": 41.7,
+    "one_step_fits_shutter": true,
+    "graph_32step_slot_us": 805.1168,
+    "graph_32step_slot_fits_shutter": false,
+    "graph_1024_horizon_us": 25415.4209,
+    "graph_1024_horizon_fits_shutter": false,
+    "per_step_drops_materially_with_steps": false,
+    "shutter_is_execution_model_question": false
+  }
+}

@@ -75,6 +75,43 @@ SPEC_SHUTTER_US = 50.0
 SPEC_NUM_BLOCKS = SPEC_NUM_TILES // SPEC_BLOCK_SIZE      # 8192 / 1024 = 8
 
 # ---------------------------------------------------------------------------
+# FUSED KERNEL TILE SIZE -- MEASURED, and deliberately NOT SPEC_BLOCK_SIZE.
+#
+# SPEC_BLOCK_SIZE (1024) is the SPEC's 8-block halo partition over 8192
+# channels: a DESIGN partition. It was also being used as the Triton
+# thread-block tile, which is a different quantity -- the tile sets per-thread
+# register pressure and program count and has no relation to the halo layout.
+# Same conflation class as span-vs-reach and taps-vs-ring.
+#
+# OBSERVED_GPU 2026-09-14 (RTX PRO 6000 WS, sm_120, 188 SMs), one launch per
+# step, EXACT parity against `relax_span` at every size (max circular difference
+# 2.384e-07). Source of record:
+#   experiments/verification/basal_tau_decomposition_observed_v2.json
+#
+#   BLOCK  programs  progs/SM  n_regs  n_spills     1-step
+#      16       512      2.72      80         8     112.88 us
+#      32       256      1.36     128         8     153.05 us
+#      64       128      0.68     254         8     354.73 us
+#     128        64      0.34     255       192    1202.68 us
+#     256        32      0.17     168       848    2973.64 us   <- mandate's pick
+#     512        16      0.09     168      1838    7002.46 us
+#    1024         8      0.04      48      4076   24697.30 us   <- old default
+#
+# TWO MANDATE CLAIMS ARE FALSIFIED BY THIS TABLE:
+#   * BLOCK_SIZE = 256 is 26.4x SLOWER than 16 (2973.64 vs 112.88 us/step).
+#     Spills worsen monotonically above 64, so that remedy moves the wrong way.
+#   * n_spills == 0 is NOT ACHIEVED at ANY swept size; the minimum is 8.
+#     "Eliminate 4,076 spills" is deliverable as 4076 -> 8 (509.5x lower),
+#     not as zero.
+#
+# WHAT THE FIX DOES DELIVER: 1024 -> 16 is a 218.8x latency reduction and a
+# 509.5x spill reduction, from program-count coverage alone (8 -> 512 programs,
+# 0.04 -> 2.72 programs/SM). n_regs RISES (48 -> 80): a starved register budget
+# at a huge block size is not a win when it forces spills.
+# ---------------------------------------------------------------------------
+FUSED_TILE_SIZE = 16
+
+# ---------------------------------------------------------------------------
 # Tap reach, in DECAY LENGTHS. This is NOT the sealed span.
 #
 # SPEC_NON_LOCAL_SPAN (=504) is the sealed coupling width IN CHANNELS at the
@@ -115,6 +152,12 @@ TAP_REACH_DECAY_LENGTHS = 3.0
 SYNCTHREADS_LATENCY_NS = (20.0, 40.0)
 GRID_SYNC_LATENCY_US = (1.0, 3.0)
 BLACKWELL_SM_FMA_PER_CLK = 128
+# DESIGN constant for the reference partition, NOT the measured device.
+# OBSERVED_GPU 2026-09-14: the provisioning target (RTX PRO 6000 WS, sm_120)
+# reports 188 SMs, not 128. Floors computed from this constant are therefore
+# ~1.47x pessimistic (fft 34.304 -> 23.356 us; tap-sum 24780.8 -> 16872.0 us).
+# Left at 128 deliberately: it is the conservative direction for a LOWER bound,
+# and the sealed conclusion (sub-budget unreachable) is unchanged either way.
 BLACKWELL_SM_COUNT = 128
 
 # ---------------------------------------------------------------------------
@@ -466,7 +509,7 @@ def fused_relax(
     coupling_K: float = SPEC_KURAMOTO_COUPLING_K,
     dt: float = 0.01,
     steps: int = SPEC_LOCK_HORIZON_STEPS,
-    block_size: int = SPEC_BLOCK_SIZE,
+    block_size: int = FUSED_TILE_SIZE,
     block_span: int = 64,
     natural_frequencies: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
@@ -528,6 +571,10 @@ class TauBudget:
     sync_floor_us_design_a: Tuple[float, float]
     sync_floor_us_design_b: Tuple[float, float]
     compute_floor_us_single_block: float
+    # SCALE: these two are totals for ALL `steps` (default 1024), NOT per-step.
+    # Verified: at steps=1 the FFT form is 0.0335 us and the ratio to the 1024-step
+    # value is exactly 1024.0. Retired as a prediction 2026-09-14 -- see the
+    # RETIREMENT note at the assignment site for the measured value.
     compute_floor_us_multi_block: float
     compute_floor_us_fft_multi_block: float
     floor_us_design_a: Tuple[float, float]

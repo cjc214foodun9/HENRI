@@ -1,0 +1,255 @@
+{
+  "schema": "henri.basal.frame-budget.v1",
+  "evidence_class": "OBSERVED_GPU",
+  "device": {
+    "name": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+    "sm_count": 188,
+    "cc": [
+      12,
+      0
+    ],
+    "torch": "2.12.0+cu130",
+    "cuda": "13.0",
+    "python": "3.12.3"
+  },
+  "operator": {
+    "num_channels": 8192,
+    "decay_length": 503.808,
+    "taps": 3025,
+    "sealed_span": 504,
+    "sealed_horizon": 1024
+  },
+  "eager_frame_scale": {
+    "1": {
+      "iters": 25,
+      "mean_us": 75.5034,
+      "median_us": 72.192,
+      "min_us": 70.72,
+      "fits_shutter": false,
+      "steps_per_frame_at_this_cost": 0.662
+    },
+    "2": {
+      "iters": 25,
+      "mean_us": 116.1331,
+      "median_us": 115.776,
+      "min_us": 113.76,
+      "fits_shutter": false,
+      "steps_per_frame_at_this_cost": 0.431
+    },
+    "4": {
+      "iters": 25,
+      "mean_us": 202.3872,
+      "median_us": 201.92,
+      "min_us": 200.064,
+      "fits_shutter": false,
+      "steps_per_frame_at_this_cost": 0.247
+    },
+    "8": {
+      "iters": 25,
+      "mean_us": 374.6842,
+      "median_us": 374.464,
+      "min_us": 371.04,
+      "fits_shutter": false,
+      "steps_per_frame_at_this_cost": 0.133
+    },
+    "16": {
+      "iters": 25,
+      "mean_us": 725.4822,
+      "median_us": 722.688,
+      "min_us": 714.496,
+      "fits_shutter": false,
+      "steps_per_frame_at_this_cost": 0.069
+    },
+    "32": {
+      "iters": 25,
+      "mean_us": 1412.3098,
+      "median_us": 1411.232,
+      "min_us": 1405.5361,
+      "fits_shutter": false,
+      "steps_per_frame_at_this_cost": 0.035
+    }
+  },
+  "graphed_frame_scale": {
+    "1": {
+      "iters": 25,
+      "mean_us": 36.3853,
+      "median_us": 36.704,
+      "min_us": 35.008,
+      "steps": 1,
+      "fits_shutter": true,
+      "steps_per_frame_at_this_cost": 1.374,
+      "eager_us": 75.5034
+    },
+    "2": {
+      "iters": 25,
+      "mean_us": 61.3414,
+      "median_us": 61.568,
+      "min_us": 60.16,
+      "steps": 2,
+      "fits_shutter": false,
+      "steps_per_frame_at_this_cost": 0.815,
+      "eager_us": 116.1331
+    },
+    "4": {
+      "iters": 25,
+      "mean_us": 110.7341,
+      "median_us": 110.816,
+      "min_us": 110.016,
+      "steps": 4,
+      "fits_shutter": false,
+      "steps_per_frame_at_this_cost": 0.452,
+      "eager_us": 202.3872
+    },
+    "8": {
+      "iters": 25,
+      "mean_us": 209.9085,
+      "median_us": 209.696,
+      "min_us": 208.768,
+      "steps": 8,
+      "fits_shutter": false,
+      "steps_per_frame_at_this_cost": 0.238,
+      "eager_us": 374.6842
+    },
+    "16": {
+      "iters": 25,
+      "mean_us": 408.5914,
+      "median_us": 408.608,
+      "min_us": 407.456,
+      "steps": 16,
+      "fits_shutter": false,
+      "steps_per_frame_at_this_cost": 0.122,
+      "eager_us": 725.4822
+    },
+    "32": {
+      "iters": 25,
+      "mean_us": 806.1965,
+      "median_us": 805.952,
+      "min_us": 803.808,
+      "steps": 32,
+      "fits_shutter": false,
+      "steps_per_frame_at_this_cost": 0.062,
+      "eager_us": 1412.3098
+    },
+    "64": {
+      "iters": 25,
+      "mean_us": 1599.9207,
+      "median_us": 1599.872,
+      "min_us": 1597.856,
+      "steps": 64,
+      "fits_shutter": false,
+      "steps_per_frame_at_this_cost": 0.031,
+      "eager_us": null
+    }
+  },
+  "graphed_fit": {
+    "intercept_us": 11.554,
+    "marginal_us_per_step": 24.8205,
+    "max_steps_per_frame": 1.549
+  },
+  "batch_graph_compose": {
+    "1": {
+      "iters": 15,
+      "mean_us": 802.1632,
+      "median_us": 801.504,
+      "min_us": 800.576,
+      "batch": 1,
+      "steps": 32,
+      "per_ring_step_us": 25.0676,
+      "relative_throughput_vs_B1": 1.0
+    },
+    "8": {
+      "iters": 15,
+      "mean_us": 875.3237,
+      "median_us": 875.136,
+      "min_us": 873.376,
+      "batch": 8,
+      "steps": 32,
+      "per_ring_step_us": 3.4192,
+      "relative_throughput_vs_B1": 7.331
+    },
+    "32": {
+      "iters": 15,
+      "mean_us": 957.0304,
+      "median_us": 956.352,
+      "min_us": 955.04,
+      "batch": 32,
+      "steps": 32,
+      "per_ring_step_us": 0.9346,
+      "relative_throughput_vs_B1": 26.822
+    }
+  },
+  "triton_launch_separation": {
+    "16": {
+      "block_size": 16,
+      "programs": 512,
+      "steps_1": {
+        "iters": 10,
+        "mean_us": 111.4336,
+        "median_us": 110.784,
+        "min_us": 107.552
+      },
+      "steps_8": {
+        "iters": 10,
+        "mean_us": 708.576,
+        "median_us": 708.448,
+        "min_us": 706.432
+      },
+      "steps_32": {
+        "iters": 10,
+        "mean_us": 2761.0656,
+        "median_us": 2756.0,
+        "min_us": 2747.2
+      },
+      "launch_us": 25.9616,
+      "marginal_us_per_step": 85.472
+    },
+    "256": {
+      "block_size": 256,
+      "programs": 32,
+      "steps_1": {
+        "iters": 10,
+        "mean_us": 2990.016,
+        "median_us": 2993.1519,
+        "min_us": 2980.5119
+      },
+      "steps_8": {
+        "iters": 10,
+        "mean_us": 23722.3619,
+        "median_us": 23722.1432,
+        "min_us": 23703.7449
+      },
+      "steps_32": {
+        "iters": 10,
+        "mean_us": 94806.4293,
+        "median_us": 94801.7273,
+        "min_us": 94768.3487
+      },
+      "launch_us": 28.1962,
+      "marginal_us_per_step": 2961.8198
+    }
+  },
+  "span_anchor": {
+    "iters": 5,
+    "mean_us": 1121.9264,
+    "median_us": 1122.816,
+    "min_us": 1110.88
+  },
+  "stream_overlap": {
+    "sequential_2x32_us": 2808.869,
+    "two_stream_2x32_us": 2798.571,
+    "overlap_speedup": 1.004,
+    "second_ring_nearly_free": false
+  },
+  "verdict": {
+    "shutter_us": 50.0,
+    "steps_per_slot_default": 32,
+    "eager_1step_us": 75.5034,
+    "graphed_1step_us": 36.3853,
+    "graphed_2step_us": 61.3414,
+    "graphed_32step_us": 806.1965,
+    "eager_32step_within_shutter": false,
+    "graphed_1step_within_shutter": true,
+    "graphed_2step_within_shutter": false,
+    "graphed_32step_within_shutter": false
+  }
+}

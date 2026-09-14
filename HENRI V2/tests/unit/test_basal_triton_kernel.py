@@ -37,6 +37,7 @@ from basal_boundary_engine import (  # noqa: E402
     evanescent_kernel,
 )
 from basal_triton_kernel import (  # noqa: E402
+    BLACKWELL_SM_COUNT,
     SPEC_BLOCK_SIZE,
     SPEC_SHUTTER_US,
     SPEC_TAU_BUDGET_US,
@@ -279,6 +280,65 @@ class TestTauBound:
             SPEC_LOCK_HORIZON_STEPS / s["ticks_per_slot"])
         assert s["measured_tau_us"] is None
         assert s["evidence_class"] == "DERIVED"
+
+    def test_horizon_floor_is_a_total_not_a_per_step_cost(self):
+        """The units trap that produced a published 41x error.
+
+        `compute_floor_us_fft_multi_block` is the compute floor for ALL `steps`
+        (default 1024), NOT for one step. This was verified by scaling: the value
+        is exactly linear in `steps`.
+
+        On 2026-09-14 the measured 32-STEP slot (1409.31 us) was divided by this
+        1024-STEP total (34.304 us) and reported as "measured/derived = 41.083x".
+        That is a ratio between two different quantities, and a downstream
+        architecture document inherited the figure.
+
+        The two ratios are numerically close (41.08 wrong vs 42.61 like-for-like)
+        BY COINCIDENCE, because the derived total is dominated by grid sync while
+        the derived per-step compute is identical in both places. The same trap
+        yields 1314.7x against the compute-only floor (1.072 us). The method, not
+        the magnitude, is the defect -- which is why this test pins the SCALE of
+        the field rather than any particular ratio.
+
+        This test fails if the field is ever redefined as a per-step cost, or if
+        the linear scaling in `steps` is broken.
+        """
+        one = tau_budget_analysis(steps=1)
+        horizon = tau_budget_analysis()
+        assert horizon.compute_floor_us_fft_multi_block == pytest.approx(
+            1024.0 * one.compute_floor_us_fft_multi_block, rel=1e-6
+        ), "the FFT floor must be a TOTAL over `steps`; if it is now per-step, the"
+        " published 41x correction and every consumer of this field must be revisited"
+        assert one.compute_floor_us_fft_multi_block < 1.0, (
+            "one step of FFT coupling is sub-microsecond; a ~34 us per-step floor"
+            " would mean the field changed scale"
+        )
+
+        s = slot_budget_analysis()
+        assert "compute_slot_us_fft" in s, (
+            "the per-SLOT floor is the only quantity comparable to a per-slot"
+            " measurement; it must stay exposed"
+        )
+        assert s["compute_slot_us_fft"] < s["best_floor_us"]
+        assert s["ticks_per_slot"] == 32
+
+    def test_design_sm_count_does_not_exceed_the_measured_device(self):
+        """The design constant must stay on the conservative side.
+
+        OBSERVED_GPU 2026-09-14 (RTX PRO 6000 WS, sm_120): the provisioned device
+        reports 188 SMs, while `BLACKWELL_SM_COUNT` is 128. Floors computed from
+        the constant are therefore ~1.47x pessimistic (fft 34.304 -> 23.356 us;
+        tap-sum 24780.8 -> 16872.0 us), which is the safe direction for a lower
+        bound and leaves the sealed conclusion (12.8 us unreachable) unchanged.
+
+        The test pins the DIRECTION, not the value: if the constant ever exceeds
+        the real device count, the "floors" would stop being lower bounds and the
+        impossibility argument would be overstated.
+        """
+        assert BLACKWELL_SM_COUNT <= 188, (
+            "BLACKWELL_SM_COUNT exceeds the measured sm_120 device (188 SMs); the"
+            " derived floors would no longer be lower bounds"
+        )
 
 
 class TestFailClosed:
