@@ -1,0 +1,54 @@
+{
+  "C1": {
+    "pydantic": "2.13.4",
+    "conint_ok": true
+  },
+  "C2": {
+    "shape": [
+      256,
+      4096
+    ],
+    "want": [
+      256,
+      4096
+    ],
+    "shape_ok": true,
+    "row_orthonormality_max_err": 5.960464477539062e-07
+  },
+  "C3": {
+    "live_shape": [
+      8192,
+      8
+    ],
+    "supplied_shape": [
+      1,
+      65536
+    ],
+    "compatible": false,
+    "adapter_required": true,
+    "name_trap": "SPEC_BLOCK_SIZE (triton tile, 1024) != SPEC_CLIFFORD_BLOCK_SIZE (8)"
+  },
+  "C4": {
+    "metric": "|cos(psi_goal, psi_target_true)| -- the orthogonality the PDF names",
+    "mandate_threshold": 0.5,
+    "structured_task": "y = roll(x, 3)",
+    "results": {
+      "structured (y = roll(x, 3))": {
+        "alignment": 0.9416536688804626,
+        "chance": 0.010307106467394078
+      },
+      "iid random (no relation)": {
+        "alignment": 0.003161693923175335,
+        "chance": 0.012936772748275871
+      }
+    },
+    "finding": "the operator is CORRECT and does ground the goal -- but ONLY when the demo pairs carry a consistent relation. On iid pairs it returns noise. So 'restores the gradient' is true conditionally on the demo set, and the failure mode is a bad demo set, not the operator."
+  },
+  "supplied_class_exists_in_repo": false,
+  "live_alternatives": [
+    "zone_c_epistemic_axiom_harness.HolographicTaskFunctorCompiler",
+    "arc_task_functor.TaskFunctorResult"
+  ],
+  "evidence_class": "DERIVED",
+  "utc": "2026-09-14T05:45:12Z"
+}

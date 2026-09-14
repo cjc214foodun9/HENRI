@@ -1,0 +1,49 @@
+{
+  "evidence_class": "DERIVED",
+  "goal_adapter_functions": [
+    "_hash_expand",
+    "is_enabled"
+  ],
+  "goal_adapter_classes": [
+    "HenriPromptCodec",
+    "HenriTaskOperator",
+    "HenriGoalAdapter"
+  ],
+  "goal_adapter_callers": [
+    "experiments\\verification\\basal_drivetrain_supplied_code_audit.py",
+    "experiments\\verification\\basal_goal_coldstart_audit.py",
+    "experiments\\verification\\basal_premise_probe.py",
+    "henri_latent_explorer.py",
+    "production_arc_run.py",
+    "tests\\contract\\test_goal_adapter_wiring.py",
+    "tests\\contract\\test_latent_explorer.py"
+  ],
+  "runner_goal_lines": {
+    "LAMBDA_GOAL": [
+      133,
+      520,
+      634,
+      635,
+      1232,
+      1384,
+      2863
+    ],
+    "HENRI_ARC_TARGET_GROUNDING": [
+      381,
+      394,
+      515,
+      516,
+      635,
+      687,
+      695,
+      1232
+    ],
+    "GOAL_HENRI_ADAPTER": [
+      1282,
+      1524
+    ]
+  },
+  "random_goal_construction_found": true,
+  "finding": "SEE STDOUT: the goal adapter is flag-gated (HENRI_GOAL_ADAPTER) and contains no randomness; the decisive question is what the runner does when demos are absent, which the printed goal block answers directly.",
+  "utc": "2026-09-14T05:45:12Z"
+}
