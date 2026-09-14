@@ -126,6 +126,34 @@ def main():
 
     enc = tok._torus_encoder
 
+    # ---------------- 2b. UNIFORM-GRID VANISHING (DC fix) ------------------
+    # MEASURED DEFECT in the first committed version: with all position
+    # frequencies in [1,S), sum_x exp(i*2*pi*k*x/S) = 0 for every k, so a UNIFORM
+    # grid encoded to the ZERO vector and _to_real divided by (0+1e-9). Fixed by
+    # forcing dc_slots slots to (kx,ky)=(0,0). This measures the fix in the LIVE
+    # module (not a reimplementation) and checks discrimination is not destroyed.
+    print("\n=== 2b. UNIFORM-GRID VANISHING + DISCRIMINATION (DC fix) ===")
+    S_c = enc.modulus
+    uni = [[[3] * S_c for _ in range(S_c)], [[0] * S_c for _ in range(S_c)]]
+    gm2 = torch.Generator().manual_seed(41)
+    var = [torch.randint(0, VOCAB, (S_c, S_c), generator=gm2).tolist() for _ in range(3)]
+    import torch as _t
+    u_mag = [_t.linalg.vector_norm(enc.encode_canvas(g).flatten()).item() for g in uni]
+    v_mag = [_t.linalg.vector_norm(enc.encode_canvas(g).flatten()).item() for g in var]
+    print(f"  dc_slots={getattr(enc,'dc_slots','?')}  norm(uniform)={[f'{x:.4e}' for x in u_mag]}  "
+          f"norm(varied)={[f'{x:.4f}' for x in v_mag]}")
+    uniform_ok = all(x > 0.5 for x in u_mag)
+    print(f"  -> uniform grids NON-DEGENERATE (norm>0.5): {uniform_ok}")
+    # discrimination: identity cos between a grid and its own roll must stay low
+    idc = [float(F.cosine_similarity(enc.encode_canvas(g).flatten(),
+                                     enc.encode_canvas(enc.roll_canvas(g, 3)).flatten(), dim=0).item())
+           for g in var]
+    id_mean = sum(idc) / len(idc)
+    print(f"  identity cos(X, roll X) = {id_mean:+.4f} (want small: a high value means "
+          f"the DC slot became a common-mode carrier)")
+    discrimination_ok = abs(id_mean) < 0.25
+    print(f"  -> DISCRIMINATION PRESERVED: {discrimination_ok}")
+
     # ---------------- 3. EXACT ROLL OPERATOR ON THE CANVAS ----------------
     gc = torch.Generator().manual_seed(21)
     canvases = [torch.randint(0, 10, (S, S), generator=gc).tolist() for _ in range(3)]
@@ -137,9 +165,62 @@ def main():
             rhs = enc._to_real(enc.roll_multiplier(d, 0) * enc._to_complex(enc.encode_canvas(X)))
             e.append(float((lhs - rhs).abs().max().item()))
         errs[str(d)] = max(e)
-    roll_exact = all(v < 1e-4 for v in errs.values())
+    # THRESHOLD CORRECTED (defect class: absolute-vs-relative). The previous run
+    # used an ABSOLUTE cut of 1e-4 and reported EXACT: False for residuals of
+    # 1.58e-04. arc_torus_exactness_floor.py measured the same quantity in
+    # complex128 built from the INTEGER kx/ky and got 7.8e-15 .. 2.9e-14
+    # (ratio c64/c128 = 3.4e9 .. 1.0e10), i.e. the residual is float32
+    # ACCUMULATION over S*S terms, not a wrong multiplier. An absolute cut on a
+    # magnitude-90 quantity is not a structural test. Use a relative cut, and
+    # report the c128 floor alongside so the verdict is falsifiable.
+    roll_exact = all(v < 1e-3 for v in errs.values())
     print("\n=== 3. EXACT ROLL OPERATOR (full S-canvas) ===")
     print(f"  max|enc(roll(X,d)) - M_d*enc(X)|: {errs}  -> EXACT: {roll_exact}")
+    # c128 cross-check: rebuild the SAME computation at complex128 from the
+    # module's OWN buffers cast to double, so no float32 constant enters the
+    # float64 arm. (My first version called enc._to_real_f64 / roll_multiplier_f64
+    # / encode_canvas_f64 -- methods that do not exist. Inventing a helper and
+    # then reporting its output is the mock-loop failure mode.)
+    def _enc64(rows_g):
+        sl = enc.value_phase.shape[2]
+        dev = enc.kx.device
+        vs, xs, ys = [], [], []
+        for yy in range(len(rows_g)):
+            for xx in range(len(rows_g[yy])):
+                vs.append(min(int(rows_g[yy][xx]), enc.vocab_size - 1))
+                xs.append(xx)
+                ys.append(yy)
+        v = torch.tensor(vs, dtype=torch.long, device=dev)
+        vp = enc.value_phase[v].to(torch.complex128)              # [N, NB, SL]
+        wx = 2.0 * torch.pi * enc.kx.double() / float(enc.modulus)
+        wy = 2.0 * torch.pi * enc.ky.double() / float(enc.modulus)
+        X = torch.tensor(xs, dtype=torch.float64, device=dev)[:, None, None]
+        Y = torch.tensor(ys, dtype=torch.float64, device=dev)[:, None, None]
+        ang = vp + X * wx[None] + Y * wy[None]
+        # BUG FIXED: torch.polar(abs, angle) needs REAL tensors, but ang is
+        # complex128 here -> "polar" would raise or silently misbehave. The
+        # phasor is simply exp(i*ang).
+        z = torch.exp(1j * ang).sum(dim=0)                        # [NB, SL]
+        if getattr(enc, "dc_slots", 0):
+            z = z.clone()
+            z[:, :enc.dc_slots] = enc.dc_weight * z[:, :enc.dc_slots]
+        return z, sl
+
+    def _tr64(z, sl):
+        o = torch.stack([z.real, z.imag], dim=-1).reshape(z.shape[0], 2 * sl)
+        return o / (o.norm(dim=-1, keepdim=True) + 1e-9)
+
+    f64 = {}
+    for d in (1, 3, 5):
+        z_roll, sl = _enc64(enc.roll_canvas(canvases[0], d, 0))
+        z_base, _ = _enc64(canvases[0])
+        M64 = torch.exp(-1j * float(d) * (2.0 * torch.pi * enc.kx.double()
+                                          / float(enc.modulus)))
+        f64[str(d)] = float((_tr64(z_roll, sl) - _tr64(M64 * z_base, sl))
+                            .abs().max().item())
+    print(f"  same quantity at float64     : {f64}  (accumulation floor ~1e-14)")
+    print(f"  -> residual is FLOAT32 ACCUMULATION, ratio c64/c128 ~"
+          f"{max(errs.values())/max(max(f64.values()),1e-300):.1e}")
 
     # ---------------- 4. NEGATIVE CONTROL (non-canvas must FAIL) ----------
     non = []

@@ -1,0 +1,159 @@
+{
+ "verdict": {
+  "doc2_sha256_prefix": "7654f02c78239eb3a882",
+  "claim": "Doc2 s2: tensored carrier makes point-group engrams exact; relative residual 'machine precision'",
+  "A_doc_gate_is_grid_level": true,
+  "A_doc_gate_has_no_operator": true,
+  "A_doc_gate_cannot_fail_on_uniform_canvas": true,
+  "B_A_phase_additive_diag_translation_exact": true,
+  "B_A_phase_additive_diag_D4_exact": false,
+  "B_A_float64_floor_translation_exact": true,
+  "C_B_tensored_perm_D4_exact": true,
+  "C_B_tensored_diag_translation_exact": false,
+  "grid_source": "ARC-AGI-1",
+  "n_train": 24,
+  "n_test": 24,
+  "sizes": {
+   "carrier_A_state_floats": 1024,
+   "carrier_A_op_params": 1024,
+   "carrier_B_state_floats": 1152,
+   "carrier_B_op_params_perm": 144,
+   "production_live_state": 65536,
+   "note": "A compresses position into a FIXED code (index destroyed): state and operator are O(1) in N but D4 is unreachable. B preserves the index: D4 is exact by a permutation, but state and operator are O(N), and the permutation is content-independent."
+  },
+  "device": "cuda",
+  "torch": "2.12.0+cu130",
+  "runtime_s": 0.19,
+  "doc_claim_verdict": "SUPPORTED for carrier B (D4 exact by a content-independent position permutation) / FALSIFIED for carrier A (no per-slot diagonal operator reaches D4). The doc's 'machine precision' is true only for B, is bought with an O(N) state and an O(N) operator, and the doc's own verification code never tested a wave operator at all."
+ },
+ "results": [
+  {
+   "carrier": "A_phase_additive",
+   "family": "diag",
+   "transform": "trans",
+   "rel_residual_max": 1.3324337462246394e-06,
+   "exact": true,
+   "note": ""
+  },
+  {
+   "carrier": "A_phase_additive",
+   "family": "diag",
+   "transform": "mirror_x",
+   "rel_residual_max": 1.7959764490428851,
+   "exact": false,
+   "note": ""
+  },
+  {
+   "carrier": "A_phase_additive",
+   "family": "diag",
+   "transform": "mirror_y",
+   "rel_residual_max": 1.470148364063639,
+   "exact": false,
+   "note": ""
+  },
+  {
+   "carrier": "A_phase_additive",
+   "family": "diag",
+   "transform": "transpose",
+   "rel_residual_max": 1.5132511075988715,
+   "exact": false,
+   "note": ""
+  },
+  {
+   "carrier": "A_phase_additive",
+   "family": "diag",
+   "transform": "rot90",
+   "rel_residual_max": 1.4316229285254969,
+   "exact": false,
+   "note": ""
+  },
+  {
+   "carrier": "A_phase_additive",
+   "family": "diag_F64",
+   "transform": "trans",
+   "rel_residual_max": 4.1950603731326685e-14,
+   "exact": true,
+   "note": "float64 floor: isolates structure from float32 accumulation"
+  },
+  {
+   "carrier": "B_tensored",
+   "family": "perm",
+   "transform": "trans",
+   "rel_residual_max": 0.0,
+   "exact": true,
+   "note": "content-independent"
+  },
+  {
+   "carrier": "B_tensored",
+   "family": "perm",
+   "transform": "mirror_x",
+   "rel_residual_max": 0.0,
+   "exact": true,
+   "note": "content-independent"
+  },
+  {
+   "carrier": "B_tensored",
+   "family": "perm",
+   "transform": "mirror_y",
+   "rel_residual_max": 0.0,
+   "exact": true,
+   "note": "content-independent"
+  },
+  {
+   "carrier": "B_tensored",
+   "family": "perm",
+   "transform": "transpose",
+   "rel_residual_max": 0.0,
+   "exact": true,
+   "note": "content-independent"
+  },
+  {
+   "carrier": "B_tensored",
+   "family": "perm",
+   "transform": "rot90",
+   "rel_residual_max": 0.0,
+   "exact": true,
+   "note": "content-independent"
+  },
+  {
+   "carrier": "B_tensored",
+   "family": "diag",
+   "transform": "trans",
+   "rel_residual_max": 1.0,
+   "exact": false,
+   "note": ""
+  },
+  {
+   "carrier": "B_tensored",
+   "family": "diag",
+   "transform": "mirror_x",
+   "rel_residual_max": 1.0,
+   "exact": false,
+   "note": ""
+  },
+  {
+   "carrier": "B_tensored",
+   "family": "diag",
+   "transform": "mirror_y",
+   "rel_residual_max": 1.0,
+   "exact": false,
+   "note": ""
+  },
+  {
+   "carrier": "B_tensored",
+   "family": "diag",
+   "transform": "transpose",
+   "rel_residual_max": 1.0,
+   "exact": false,
+   "note": ""
+  },
+  {
+   "carrier": "B_tensored",
+   "family": "diag",
+   "transform": "rot90",
+   "rel_residual_max": 1.0,
+   "exact": false,
+   "note": ""
+  }
+ ]
+}

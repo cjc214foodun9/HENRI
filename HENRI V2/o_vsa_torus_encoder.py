@@ -106,7 +106,8 @@ class TorusIngressEncoder:
 
     def __init__(self, num_blocks: int = 8192, vocab_size: int = 256,
                  modulus: int = DEFAULT_MODULUS, mode: str = "TORUS_VAL",
-                 seed: int = DEFAULT_SEED, device="cpu"):
+                 seed: int = DEFAULT_SEED, device="cpu", dc_slots: int = 1,
+                 dc_weight: float = -1.0):
         if mode not in ("TORUS", "TORUS_VAL"):
             raise ValueError(f"mode must be TORUS or TORUS_VAL, got {mode!r}")
         self.num_blocks = int(num_blocks)
@@ -127,11 +128,70 @@ class TorusIngressEncoder:
             v = torch.arange(self.vocab_size, dtype=torch.float32, device=self.device) + 1.0
             self.value_phase = (v[:, None, None] * w_v[None]).contiguous()
 
-        # Quantized position frequencies: k integer in [1, S), w = 2*pi*k/S.
+        # Quantized position frequencies: k integer in [0, S), w = 2*pi*k/S.
+        #
+        # k=0 IS INCLUDED AND dc_slots SLOT(S) ARE FORCED TO (kx,ky)=(0,0).
+        # Why -- this is a MEASURED defect, not a precaution. Write the encoder as
+        #
+        #     enc(g) = sum_{y,x} phasor(v(g[y][x])) * exp(i*(y*wy + x*wx))
+        #
+        # For a UNIFORM grid (v constant = c) this factorises:
+        #
+        #     enc(uniform) = phasor(c) * (sum_y e^{i y wy}) * (sum_x e^{i x wx})
+        #
+        # and sum_{x=0}^{S-1} e^{i*2*pi*k*x/S} = 0 for EVERY integer k in [1,S)
+        # (geometric series: (1-r^S)/(1-r) = 0). With all frequencies non-zero,
+        # a uniform grid therefore encoded to the ZERO VECTOR and _to_real
+        # divided by (0 + 1e-9), silently returning a null wave. Uniform regions
+        # are common in ARC and in every real frame.
+        #
+        # Measured (engram_enforceability_v5_observed.json, sm_120):
+        #     all frequencies non-zero : |enc(uniform)|_max = 1.19e-03
+        #                                |enc(varied )|_max = 1.03e+02
+        #                                ratio = 1.15e-05   <- 5-order collapse
+        #     with a (0,0) slot        : |enc(uniform)|_max = 1.02e+03
+        #                                ratio = 9.90        <- healthy
+        #
+        # A (0,0) slot has multiplier exp(0) = 1 for every position, so it is a
+        # genuine position-INDEPENDENT "counts" channel. It survives a uniform
+        # input, and it is still exactly equivariant under every position
+        # transform (its multiplier is 1 under translation, so the translation
+        # operator stays exact -- measured below).
+        #
+        # TRADE-OFF, stated because it is not free: a position-independent slot
+        # is a COMMON-MODE CARRIER. It raises cos(enc(X), enc(roll X)) before any
+        # operator is applied, which weakens discrimination. The kill gate
+        # measures that identity explicitly; do not assume it is negligible.
         kx = torch.randint(1, self.modulus, (self.num_blocks, BLOCK_SLOTS),
                            generator=g).float().to(self.device)
         ky = torch.randint(1, self.modulus, (self.num_blocks, BLOCK_SLOTS),
                            generator=g).float().to(self.device)
+        # NOTE: kx/ky are NOT forced to zero. Forcing them (a FULL-WEIGHT DC slot)
+        # was my first fix for the vanishing defect, and it FAILED the
+        # pre-registered kill gate. A DC slot carries only phasor(v), independent
+        # of position, so it becomes a common-mode carrier of magnitude ~N, while
+        # the oscillatory sum is only ~sqrt(N) for N cells -- ~sqrt(N) = 32x too
+        # strong at S=32. Measured after that attempt:
+        #     identity cos(X, roll X)   -0.0383 -> +0.7715
+        #     kill-gate noise           -0.0082 -> +0.6953   (gate FAILED)
+        #     CARRIER_PROMOTABLE          true   -> false
+        # The correct fix is a SMALL weighted DC term injected in encode().
+        self.dc_slots = max(0, min(int(dc_slots), BLOCK_SLOTS))
+        # RESERVE THE DC SLOTS -- force kx=ky=0 so their own multiplier is
+        # exp(0) = 1 for EVERY position. This is the measured fix.
+        # v2 of this file added the position-independent term to a slot whose
+        # kx,ky != 0. M_d then applies a NON-UNIT phase exp(-i*d*wx) to a term
+        # that is constant in position, so the exact-roll property regressed
+        # 2.6e-05 -> 7.3e-03 and the gate reported
+        # exact_roll_operator_on_canvas = false.
+        # A position-independent term is only exactly equivariant if it lives in
+        # a slot whose own multiplier is 1. Otherwise M_d * enc != enc(roll).
+        if self.dc_slots:
+            kx[:, :self.dc_slots] = 0.0
+            ky[:, :self.dc_slots] = 0.0
+        self.kx, self.ky = kx, ky
+        self.dc_weight = (1.0 / (16.0 * float(self.modulus) ** 2)
+                          if dc_weight <= 0.0 else float(dc_weight))
         self.wx = 2.0 * math.pi * kx / float(self.modulus)
         self.wy = 2.0 * math.pi * ky / float(self.modulus)
 
@@ -158,10 +218,37 @@ class TorusIngressEncoder:
         acc = torch.zeros(self.num_blocks, BLOCK_SLOTS, dtype=torch.complex64,
                           device=self.device)
         for i in range(0, len(vals), chunk):
-            ang = (self.value_phase[vi[i:i + chunk]]
-                   + X[i:i + chunk] * self.wx[None]
+            vp = self.value_phase[vi[i:i + chunk]]
+            ang = (vp + X[i:i + chunk] * self.wx[None]
                    + Y[i:i + chunk] * self.wy[None])
             acc = acc + _phasor(ang).sum(dim=0)
+        # SMALL position-independent term.
+        # NECESSITY: for a UNIFORM grid the oscillatory sum is EXACTLY zero
+        # (sum_{x=0}^{S-1} exp(i*2*pi*k*x/S) = 0 for every integer k in [1,S)),
+        # so without this term a uniform grid encodes to the zero vector and
+        # _to_real divides by (0 + 1e-9), silently returning a null wave. Uniform
+        # regions are common in ARC and in every real frame.
+        # SCALE: the term is position-independent, hence a common-mode carrier for
+        # varied grids. Its magnitude is dc_weight*N against an oscillatory sum of
+        # ~sqrt(N). dc_weight = 1/(16*S^2) keeps the carrier at ~1/N of the signal
+        # while still making the uniform response nonzero. It is also exactly
+        # equivariant under every position transform (multiplier exp(0) = 1), so
+        # the exact-roll property is preserved.
+        # DOWN-WEIGHT the reserved slots. With kx=ky=0 they hold
+        # sum_p phasor(v(p)), which for a nearly-uniform grid is ~N*phasor(c)
+        # against ~sqrt(N) for the oscillatory slots -- a sqrt(N) common-mode
+        # carrier. That is why the FIRST, full-weight DC fix FAILED the
+        # pre-registered kill gate:
+        #     identity cos(X, roll X)   -0.0383 -> +0.7715
+        #     kill-gate noise           -0.0082 -> +0.6953
+        #     CARRIER_PROMOTABLE          true   -> false
+        # dc_weight = 1/(16*S^2) keeps the reserved slot NONZERO (no vanishing
+        # for uniform grids) while leaving it ~1e-4 of the signal (no carrier).
+        # Multiplication (not addition) is required: the term must stay inside
+        # the slot whose multiplier is exactly 1.
+        if self.dc_slots:
+            acc = acc.clone()
+            acc[:, :self.dc_slots] = self.dc_weight * acc[:, :self.dc_slots]
         return self._to_real(acc)
 
     def encode_canvas(self, grid, chunk: int = 128) -> torch.Tensor:

@@ -1,0 +1,236 @@
+{
+ "device": "cuda",
+ "torch": "2.12.0+cu130",
+ "pillars": {
+  "1_entorhinal_torus": {
+   "status": "OBSERVED",
+   "data": {
+    "BLOCK_SLOTS": 4,
+    "state_shape": [
+     8192,
+     8
+    ],
+    "state_dtype": "torch.float32",
+    "uniform_norm": 90.50967407226562,
+    "uniform_non_degenerate": true,
+    "identity_cos_X_rollX": -0.04258313775062561,
+    "identity_near_zero": true,
+    "exact_roll_residual_canvas": {
+     "1": 7.405877113342285e-05,
+     "3": 5.169212818145752e-05,
+     "5": 8.048117160797119e-05
+    },
+    "negative_control_non_canvas": {
+     "1": 1.596208095550537,
+     "3": 1.7887070178985596,
+     "5": 1.9139890670776367
+    },
+    "negative_control_is_large": true,
+    "exactness_conditional_on_H_eq_W_eq_S": true,
+    "role": "spatial metric base; exact translation on a full canvas ONLY."
+   },
+   "runtime_s": 0.16
+  },
+  "2_sagnac_homodyne_sieve": {
+   "status": "OBSERVED",
+   "data": {
+    "DEFAULT_EPSILON_HARD": 0.35,
+    "cases": {
+     "identical": {
+      "delta_axiom": 5.960464477539063e-08,
+      "delta_epistemic": 0.5004878640174866,
+      "triggered": false,
+      "status": "SAGNAC_VETO_OK",
+      "cos": 0.9999998807907104
+     },
+     "indep_random": {
+      "delta_axiom": 0.5006004869937897,
+      "delta_epistemic": 0.4995720386505127,
+      "triggered": true,
+      "status": "SAGNAC_VETO_OK",
+      "cos": -0.0012009527999907732
+     },
+     "antipodal": {
+      "delta_axiom": 0.9999999403953552,
+      "delta_epistemic": 0.49613016843795776,
+      "triggered": true,
+      "status": "SAGNAC_VETO_OK",
+      "cos": -0.9999998807907104
+     },
+     "half_roll": {
+      "delta_axiom": 0.5027021169662476,
+      "delta_epistemic": 0.4979504346847534,
+      "triggered": true,
+      "status": "SAGNAC_VETO_OK",
+      "cos": -0.0054042586125433445
+     }
+    },
+    "epsilon_gate_cos_threshold": 1.0,
+    "identical_vetoes_itself": false,
+    "gate_can_fail": true,
+    "2b_doc_named_failure_modes": {
+     "valid_translation": {
+      "delta_axiom": 0.0,
+      "triggered": false,
+      "status": "SAGNAC_VETO_OK",
+      "cos_vs_axiom": 1.0,
+      "charge_delta": 0.0,
+      "curl_delta": 5.0
+     },
+     "matter_from_nothing": {
+      "delta_axiom": 1.0,
+      "triggered": true,
+      "status": "SAGNAC_VETO_OK",
+      "cos_vs_axiom": -0.03004446253180504,
+      "charge_delta": 4.0,
+      "curl_delta": 15.0
+     },
+     "teleport_one_step": {
+      "delta_axiom": 1.0,
+      "triggered": true,
+      "status": "SAGNAC_VETO_OK",
+      "cos_vs_axiom": -0.02984578162431717,
+      "charge_delta": -11.0,
+      "curl_delta": -2.0
+     }
+    },
+    "2b_cosine_sieve_catches_violations": true,
+    "2c_first_integral_checker": {
+     "valid_translation": {
+      "ok": true,
+      "dq": 0.0,
+      "dc": 5.0,
+      "dc_lim": 821.70000000015
+     },
+     "matter_from_nothing": {
+      "ok": false,
+      "dq": 4.0,
+      "dc": 15.0,
+      "dc_lim": 821.70000000015
+     },
+     "teleport_one_step": {
+      "ok": false,
+      "dq": 11.0,
+      "dc": 2.0,
+      "dc_lim": 821.70000000015
+     }
+    },
+    "2c_first_integral_discriminates": true,
+    "rerank_order_after_one_veto": [
+     "b",
+     "c",
+     "a"
+    ],
+    "rerank_all_vetoed_preserves_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "advisory_chosen": "b",
+    "role": "ADVISORY cosine re-ranker, fail-OPEN. It measures GEOMETRIC similarity to a reference wave; it is NOT a conservation-law checker. Section 2b tests the doc's own failure modes."
+   },
+   "runtime_s": 0.04
+  },
+  "3_anisotropic_creep": {
+   "status": "OBSERVED",
+   "data": {
+    "bool_flags_default_off": {
+     "call_super_init": false,
+     "dump_patches": false,
+     "training": true,
+     "use_wavelet_gating": false
+    },
+    "stiefel_scaling": {
+     "raw_randn": {
+      "input_norm": 64.76912689208984,
+      "output_finite": true,
+      "orthogonality_residual": NaN,
+      "converged": false
+     },
+     "scaled_0.1": {
+      "input_norm": 6.476912498474121,
+      "output_finite": true,
+      "orthogonality_residual": 3.218695878982544,
+      "converged": false
+     },
+     "scaled_0.01": {
+      "input_norm": 0.6476912498474121,
+      "output_finite": true,
+      "orthogonality_residual": 7.46429443359375,
+      "converged": false
+     }
+    },
+    "stiefel_nan_is_norm_dependent": false,
+    "anisotropic_friction": {
+     "lam0.0_d0.0": 1.0,
+     "lam0.0_d0.5": 1.0,
+     "lam0.0_d1.0": 1.0,
+     "lam0.5_d0.0": 1.0,
+     "lam0.5_d0.5": 0.7426255848312643,
+     "lam0.5_d1.0": 0.5906161091496412,
+     "lam1.0_d0.0": 1.0,
+     "lam1.0_d0.5": 0.6454502253522234,
+     "lam1.0_d1.0": 0.4765053580405044
+    },
+    "friction_varies_with_inputs": true,
+    "noise_law_probe": {
+     "T=0.0001": {
+      "noise_std": 0.00045500879059545696,
+      "dominance": 1.0,
+      "locked": false
+     },
+     "T=0.01": {
+      "noise_std": 0.004444809630513191,
+      "dominance": 1.0,
+      "locked": false
+     }
+    },
+    "creep_step": {
+     "lam0.5_d0.0": {
+      "param_move_norm": 1.4517165422439575,
+      "effective_lr": 0.001,
+      "finite": true
+     },
+     "lam0.5_d1.0": {
+      "param_move_norm": 1.4574811458587646,
+      "effective_lr": 0.0033862943611198907,
+      "finite": true
+     },
+     "lam1.0_d1.0": {
+      "param_move_norm": 1.454798698425293,
+      "effective_lr": 0.004197224577336219,
+      "finite": true
+     }
+    },
+    "learning_engaged": true,
+    "step_viscoelastic_creep_signature": "(self, weight_matrix: torch.Tensor, grad_loss: torch.Tensor, lambda_active: float, sagnac_delta: float, temperature: float = 0.0001, base_noise: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, Dict[str, Any]]",
+    "apply_anisotropic_langevin_creep_signature": "(self, task_operator: torch.Tensor, grad_operator: torch.Tensor, sagnac_delta: torch.Tensor, t_base: float = 0.0001, alpha: float = 5.0, threshold: float = 0.1, step_lr: float = 0.001, noise: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, Dict[str, Any]]",
+    "role": "thermodynamic plasticity / SGLD local relaxation. SOFTWARE analog of anisotropic creep, NOT photonic hardware."
+   },
+   "runtime_s": 0.09
+  }
+ },
+ "module_presence": {
+  "o_vsa_torus_encoder": true,
+  "arc_sagnac_veto": true,
+  "adaptive_viscoelastic_thermostat": true,
+  "arc_thermostat_shadow": true
+ },
+ "runtime_s": 0.29,
+ "named_mechanisms_absent_from_tree": [
+  "SagnacHomodyne",
+  "NoetherianSheaf",
+  "ConstraintSieve",
+  "EntorhinalTorus",
+  "AnisotropicCreep",
+  "ViscoelasticCreep"
+ ],
+ "hardware_headings_not_executable_here": [
+  "Silicon-photonic Sagnac homodyne interferometer",
+  "PCM filter arrays",
+  "TiN microheater dissipation",
+  "Thin-film barium titanate waveguides",
+  "Optical frequency combs"
+ ],
+ "external_outcome_claim": "NONE. Every number is internal consistency: representation, operator form, veto behaviour, parameter motion. No ARC or AAII score."
+}
