@@ -313,7 +313,11 @@ class TestGpuPathFailsClosed:
 
         b = tk.tau_budget_analysis()
         assert b.sub_budget_reachable is False
-        assert b.binding_constraint == "synchronization"
+        assert b.binding_constraint == "compute", (
+            "flipped 2026-09-13 when the tap window widened to 3.0 decay "
+            "lengths: tap-sum compute 258.6 -> 1548.8 us now exceeds the "
+            "1024.0 us grid-sync floor"
+        )
 
     def test_kernel_source_is_absent_without_triton(self):
         """A stub named like the kernel would be worse than no kernel."""
@@ -463,19 +467,83 @@ class TestCouplingBackendWiring:
         eng = self._engine("fft")
         assert eng.describe()["zone_a"]["coupling_backend"] == "fft"
 
-    def test_span_backend_reproduces_the_fft_backend(self):
-        """The CPU parity reference must actually agree with production.
+    def test_span_backend_matches_a_direct_tap_sum_with_the_kernels_weights(self):
+        """`span` is the KERNEL's parity reference, not the fft backend's twin.
 
-        Both backends use full-ring reach. A truncated tap window would NOT
-        agree: measured at N=8192 decay 504, a +/-252-tap window gave r = 0.3694
-        against the full ring's 0.7352 (gap 0.3658). This test would fail if the
-        reach were narrowed again.
+        RESTATED 2026-09-13, not deleted. This test previously asserted
+        span == fft to 1e-4, which held only because `span` was handed
+        FULL-RING reach. `span` now walks `basal_triton_kernel.default_kernel`
+        -- the SAME tap set the Triton carrier walks -- so it measures KERNEL
+        IMPLEMENTATION parity (engine path vs a direct tap sum) rather than
+        TRUNCATION FIDELITY. Conflating those two properties is what let the
+        original +/-252 defect ship. The truncation gap is asserted separately.
         """
+        import basal_triton_kernel as tk
+
         n = self.D // self.BLK
         theta = self._phases(n)
-        r_fft = self._engine("fft").relax_backend(theta, steps=200)["r"]
-        r_span = self._engine("span").relax_backend(theta, steps=200)["r"]
-        assert abs(r_span - r_fft) < 1e-4, (r_span, r_fft)
+        eng = self._engine("span")
+        out = eng.relax_backend(theta, steps=200)
+        weights = tk.default_kernel(n, eng.leakage_length)
+        ref = tk.relax_span(
+            theta, weights,
+            coupling_K=eng.cfg.blanket.kuramoto_coupling_K,
+            dt=eng.cfg.blanket.syncytium_dt, steps=200,
+        )
+        # `relax_backend` reports the scalar `r`, not the phase vector, so the
+        # comparison is scalar-to-scalar: the engine's r against the reference's
+        # own order parameter over the SAME weights. Identical arithmetic, so
+        # this is exact up to float rounding.
+        assert float(out["r"]) == pytest.approx(
+            float(tk.order_parameter(ref)), abs=1e-9)
+
+    def test_sealed_span_window_was_half_a_decay_length_at_production_scale(self):
+        """The defect expressed exactly, in the units that caused it.
+
+        The original carrier walked SPEC_NON_LOCAL_SPAN//2 = 252 taps because it
+        confused the sealed CHANNEL span with the tap REACH. At the production
+        ring the resolved decay is 503.808, so 252 taps is 0.50 decay lengths --
+        half of ONE decay length. This cheap numeric pin fails if the reach is
+        ever tied back to the sealed span.
+        """
+        import basal_triton_kernel as tk
+
+        n = 8192
+        decay = tk.recommended_leakage_length(n)
+        old_hw = int(tk.SPEC_NON_LOCAL_SPAN) // 2
+        new_hw = tk.default_half_width(n, decay)
+        assert old_hw / decay < 0.6, (old_hw, decay)      # 0.50 -> the defect
+        assert new_hw / decay >= 2.9, (new_hw, decay)     # 3.00 -> the repair
+        assert new_hw == 1512, new_hw
+
+    def test_truncation_gap_at_the_widened_reach_is_under_five_percent(self):
+        """Assert the MEASURED gap, not the mandate's asserted tolerance.
+
+        The mandate claims +/-1512 restores parity to kernel L1 <= 1e-5.
+        MEASURED at the production ring (basal_tap_reach_sweep.json): kernel L1
+        is 9.880e-02 and r_gap is 6.54e-02, so L1 <= 1e-5 is false by ~4 orders
+        of magnitude. L1 <= 1e-5 needs >= 12.1 decay lengths, wider than the
+        8.13-decay-length half-ring -- only FULL-RING reach achieves it.
+
+        At this reduced ring (1024 channels, decay 62.976) the reach is 3.0
+        decay lengths and the measured r_gap is 3.26e-02.
+        """
+        import basal_triton_kernel as tk
+
+        n = self.D // self.BLK
+        eng = self._engine("span")
+        decay = eng.leakage_length
+        theta = self._phases(n)
+        r_full = float(tk.order_parameter(
+            tk.fft_relax(theta, tk.ring_kernel(n, decay), steps=400)))
+        hw = tk.default_half_width(n, decay)
+        r_trunc = float(tk.order_parameter(tk.relax_span(
+            theta, tk.span_evanescent_weights(n, decay, hw), steps=400)))
+        gap = abs(r_trunc - r_full)
+        assert gap < 5e-2, (gap, r_trunc, r_full)
+        # And the reach that produced it must be the widened one, not the
+        # sealed-span window.
+        assert hw >= int(3.0 * decay) - 1, hw
 
     def test_backends_report_their_identity_and_gate(self):
         out = self._engine("span").relax_backend(

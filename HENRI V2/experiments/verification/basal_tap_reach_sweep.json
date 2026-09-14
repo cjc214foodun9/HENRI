@@ -1,0 +1,204 @@
+{
+  "constants": {
+    "SPEC_NON_LOCAL_SPAN": 504,
+    "sealed_half_width": 252,
+    "K": 2.45,
+    "dt": 0.01,
+    "recommended_leakage_length_8192": 503.808,
+    "half_ring_in_decay_lengths_8192": 8.130081300813009
+  },
+  "h1_ring_1024": {
+    "n": 1024,
+    "decay": 62.976,
+    "steps": 1024,
+    "r_full": 0.9970011711120605,
+    "rows": [
+      {
+        "m_decay_lengths": 0.5,
+        "half_width": 32,
+        "taps": 65,
+        "kernel_l1": 1.1934484243392944,
+        "r_truncated": 0.3984260857105255,
+        "r_gap": 0.598575085401535
+      },
+      {
+        "m_decay_lengths": 1.0,
+        "half_width": 63,
+        "taps": 127,
+        "kernel_l1": 0.7292649745941162,
+        "r_truncated": 0.3958676755428314,
+        "r_gap": 0.6011334955692291
+      },
+      {
+        "m_decay_lengths": 2.0,
+        "half_width": 126,
+        "taps": 253,
+        "kernel_l1": 0.26780667901039124,
+        "r_truncated": 0.9570164680480957,
+        "r_gap": 0.039984703063964844
+      },
+      {
+        "m_decay_lengths": 3.0,
+        "half_width": 189,
+        "taps": 379,
+        "kernel_l1": 0.09811047464609146,
+        "r_truncated": 0.9868125319480896,
+        "r_gap": 0.010188639163970947
+      },
+      {
+        "m_decay_lengths": 4.0,
+        "half_width": 252,
+        "taps": 505,
+        "kernel_l1": 0.03570640832185745,
+        "r_truncated": 0.9936763644218445,
+        "r_gap": 0.0033248066902160645
+      },
+      {
+        "m_decay_lengths": 6.0,
+        "half_width": 378,
+        "taps": 757,
+        "kernel_l1": 0.0043190554715693,
+        "r_truncated": 0.9966364502906799,
+        "r_gap": 0.00036472082138061523
+      },
+      {
+        "m_decay_lengths": 8.0,
+        "half_width": 504,
+        "taps": 1009,
+        "kernel_l1": 7.445961091434583e-05,
+        "r_truncated": 0.9969948530197144,
+        "r_gap": 6.318092346191406e-06
+      }
+    ]
+  },
+  "h1_ring_4096": {
+    "n": 4096,
+    "decay": 251.904,
+    "steps": 1024,
+    "r_full": 0.9995863437652588,
+    "rows": [
+      {
+        "m_decay_lengths": 0.5,
+        "half_width": 126,
+        "taps": 253,
+        "kernel_l1": 1.2101901769638062,
+        "r_truncated": 0.5829036831855774,
+        "r_gap": 0.4166826605796814
+      },
+      {
+        "m_decay_lengths": 1.0,
+        "half_width": 252,
+        "taps": 505,
+        "kernel_l1": 0.7336458563804626,
+        "r_truncated": 0.900191068649292,
+        "r_gap": 0.0993952751159668
+      },
+      {
+        "m_decay_lengths": 2.0,
+        "half_width": 504,
+        "taps": 1009,
+        "kernel_l1": 0.26941779255867004,
+        "r_truncated": 0.9899646639823914,
+        "r_gap": 0.009621679782867432
+      },
+      {
+        "m_decay_lengths": 3.0,
+        "half_width": 756,
+        "taps": 1513,
+        "kernel_l1": 0.09870284050703049,
+        "r_truncated": 0.9976897239685059,
+        "r_gap": 0.0018966197967529297
+      },
+      {
+        "m_decay_lengths": 4.0,
+        "half_width": 1008,
+        "taps": 2017,
+        "kernel_l1": 0.035924267023801804,
+        "r_truncated": 0.9990058541297913,
+        "r_gap": 0.0005804896354675293
+      },
+      {
+        "m_decay_lengths": 6.0,
+        "half_width": 1512,
+        "taps": 3025,
+        "kernel_l1": 0.004348487127572298,
+        "r_truncated": 0.9995248317718506,
+        "r_gap": 6.151199340820312e-05
+      },
+      {
+        "m_decay_lengths": 8.0,
+        "half_width": 2016,
+        "taps": 4033,
+        "kernel_l1": 7.838624878786504e-05,
+        "r_truncated": 0.9995855093002319,
+        "r_gap": 8.344650268554688e-07
+      }
+    ]
+  },
+  "h2_production_ring": {
+    "n": 8192,
+    "decay": 503.808,
+    "steps": 512,
+    "r_full": 0.8954403400421143,
+    "rows": [
+      {
+        "m_decay_lengths": 0.5,
+        "half_width": 252,
+        "taps": 505,
+        "kernel_l1": 1.2113944292068481,
+        "r_truncated": 0.3857504725456238,
+        "r_gap": 0.5096898674964905
+      },
+      {
+        "m_decay_lengths": 1.0,
+        "half_width": 504,
+        "taps": 1009,
+        "kernel_l1": 0.7343758940696716,
+        "r_truncated": 0.5597579479217529,
+        "r_gap": 0.33568239212036133
+      },
+      {
+        "m_decay_lengths": 2.0,
+        "half_width": 1008,
+        "taps": 2017,
+        "kernel_l1": 0.2696863114833832,
+        "r_truncated": 0.7602344155311584,
+        "r_gap": 0.1352059245109558
+      },
+      {
+        "m_decay_lengths": 3.0,
+        "half_width": 1512,
+        "taps": 3025,
+        "kernel_l1": 0.0988016426563263,
+        "r_truncated": 0.8299987316131592,
+        "r_gap": 0.06544160842895508
+      },
+      {
+        "m_decay_lengths": 4.0,
+        "half_width": 2016,
+        "taps": 4033,
+        "kernel_l1": 0.03596055135130882,
+        "r_truncated": 0.8647884726524353,
+        "r_gap": 0.030651867389678955
+      },
+      {
+        "m_decay_lengths": 6.0,
+        "half_width": 3023,
+        "taps": 6047,
+        "kernel_l1": 0.004363246262073517,
+        "r_truncated": 0.8909489512443542,
+        "r_gap": 0.00449138879776001
+      },
+      {
+        "m_decay_lengths": 8.0,
+        "half_width": 4031,
+        "taps": 8063,
+        "kernel_l1": 8.053302735788748e-05,
+        "r_truncated": 0.8953558206558228,
+        "r_gap": 8.45193862915039e-05
+      }
+    ]
+  },
+  "verdict": "The mandate's ARITHMETIC is right and its TOLERANCE is wrong. At the production ring the resolved decay is 503.808, so +/-1512 IS 3.00 decay lengths and +/-252 is 0.50. But +/-1512 yields kernel L1 = 9.880e-02, NOT <= 1.0e-05: the mandate's parity claim overstates the improvement by ~4 orders of magnitude. L1 falls off as ~1.76*exp(-m), so L1 <= 1e-5 needs m >= 12.1 decay lengths, beyond the 8.13-decay-length half-ring. Only FULL-RING reach achieves that tolerance. The reachable endpoints are: (a) the mandate's 3.0 decay lengths, a 12.3x kernel-L1 improvement over today's 0.5, and (b) full-ring reach, which is exact by construction. r_gap at 3.0 decay lengths is 6.54e-02.",
+  "elapsed_s": 312.6
+}

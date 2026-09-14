@@ -227,11 +227,37 @@ class TestTauBound:
         Compute alone fits the 50 us shutter; compute plus the mandatory
         per-step barrier does not. Collapsing them would hide which constraint
         actually binds.
+
+        BINDING TERM RE-ARGUED 2026-09-13 (not silenced). This test fired when
+        the coupling tap window widened from 0.5 to 3.0 decay lengths, exactly
+        as its sibling's docstring asked. Widening 505 -> 3025 taps raised the
+        tap-sum compute over all SMs from 258.6 us to 1548.8 us, which now
+        EXCEEDS the 1024.0 us grid-sync floor, so the binding term moved from
+        "synchronization" to "compute". The sealed conclusion is unchanged and
+        is asserted separately: the 12.8 us sub-budget stays unreachable.
         """
         b = tau_budget_analysis()
         assert b.shutter_reachable_compute_only is True
         assert b.shutter_reachable is False
-        assert b.binding_constraint == "synchronization"
+        assert b.binding_constraint == "compute", (
+            "binding moved from synchronization to compute when the tap window "
+            "widened; if it flips again, re-argue the attribution"
+        )
+
+    def test_widening_the_tap_window_did_not_make_the_sub_budget_reachable(self):
+        """The repair must not be mistaken for a feasibility win.
+
+        A 6x wider kernel is 6x more MACs. It buys coupling fidelity, and it
+        makes the tap-sum path MORE clearly infeasible, not less.
+        """
+        b = tau_budget_analysis()
+        assert b.sub_budget_reachable is False
+        # The tap-sum compute floor alone now exceeds the shutter, with zero
+        # synchronization costed.
+        assert b.compute_floor_us_multi_block > SPEC_SHUTTER_US
+        # The FFT form is still the production choice and still floors above
+        # the 12.8 us sub-budget.
+        assert b.compute_floor_us_fft_multi_block > SPEC_TAU_BUDGET_US
 
     def test_tau_scales_linearly_with_steps(self):
         a = tau_budget_analysis(steps=512)

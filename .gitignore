@@ -60,3 +60,14 @@ scripts/.henri_router_state.json
 
 # Runtime environment caches (downloaded by arcade at run time; eval machinery, not source)
 environment_files/
+
+# Basal helper scripts archived out of the repo root (2026-09-13).
+# These are session-local push tooling, NOT production code, so their
+# absence from main is deliberate. They are listed here so a future
+# reader knows the absence is a policy and not a lost file.
+# The DURABLE copy lives OUTSIDE this host and outside this repo:
+#   G:/My Drive/HENRI_Archive/basal_helpers_20260913/
+# verified byte-for-byte against a SHA-256 manifest at archive time.
+# A fresh clone will not contain that path; do not read its absence as
+# data loss.
+_archive/basal_helpers_20260913/

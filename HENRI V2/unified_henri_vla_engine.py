@@ -720,20 +720,20 @@ class UnifiedHENRIVLAEngine:
             import basal_triton_kernel as tk
 
             if backend == "span":
-                # FULL-RING REACH. The tap sum must cover the whole kernel to be
-                # a parity reference for the fft backend.
+                # The KERNEL's parity reference: the SAME tap set the Triton
+                # carrier walks, evaluated by a direct tap sum. This measures
+                # KERNEL IMPLEMENTATION parity (engine path vs tap sum), which
+                # is a DIFFERENT property from TRUNCATION FIDELITY (tap sum vs
+                # the full ring). Conflating the two is what let the original
+                # +/-252 defect ship, so they are asserted separately.
                 #
-                # MEASURED (basal_span_truncation_scale.json): a +/-252-tap
-                # window (SPEC_NON_LOCAL_SPAN//2) spans only 1.0 decay length at
-                # decay 504, drops ~half the kernel mass, and yields r = 0.3694
-                # against the full ring's 0.7352 at N=8192 -- a gap of 0.3658.
-                # At decay 64 the same window spans 3.9 decay lengths and the
-                # gap stays under 0.02. So the reach must scale with decay; here
-                # it is widened to the whole ring, which makes the two backends
-                # agree by construction.
-                weights = tk.span_evanescent_weights(
-                    n, self.leakage_length, max(1, n // 2 - 1)
-                )
+                # MEASURED (basal_tap_reach_sweep.json, n=8192, decay 503.808,
+                # K=2.45, dt=0.01, 512 steps, r_full = 0.895440):
+                #   +/-252 = 0.50 decay lengths -> r_gap 5.10e-01
+                #   3.0 decay lengths           -> r_gap 6.54e-02
+                # The reach comes from TAP_REACH_DECAY_LENGTHS, never from
+                # SPEC_NON_LOCAL_SPAN (the sealed CHANNEL span).
+                weights = tk.default_kernel(n, self.leakage_length)
                 out = tk.relax_span(
                     theta, weights, coupling_K=b.kuramoto_coupling_K,
                     dt=dt_v, steps=steps,
@@ -747,9 +747,7 @@ class UnifiedHENRIVLAEngine:
                         "fallback by design: a silent fallback would let a "
                         "'GPU measurement' report CPU numbers."
                     )
-                weights = tk.span_evanescent_weights(
-                    n, self.leakage_length, max(1, n // 2 - 1)
-                )
+                weights = tk.default_kernel(n, self.leakage_length)
                 out = tk.fused_relax(
                     theta, weights, coupling_K=b.kuramoto_coupling_K,
                     dt=dt_v, steps=steps,

@@ -63,6 +63,7 @@ from basal_boundary_engine import (
     SPEC_NON_LOCAL_SPAN,
     SPEC_NUM_TILES,
     SPEC_R_GATE,
+    recommended_leakage_length,
 )
 
 # ---------------------------------------------------------------------------
@@ -72,6 +73,37 @@ SPEC_BLOCK_SIZE = 1024
 SPEC_TAU_BUDGET_US = 12.8
 SPEC_SHUTTER_US = 50.0
 SPEC_NUM_BLOCKS = SPEC_NUM_TILES // SPEC_BLOCK_SIZE      # 8192 / 1024 = 8
+
+# ---------------------------------------------------------------------------
+# Tap reach, in DECAY LENGTHS. This is NOT the sealed span.
+#
+# SPEC_NON_LOCAL_SPAN (=504) is the sealed coupling width IN CHANNELS at the
+# production ring. It is NOT the number of taps the GPU carrier must walk.
+# Conflating the two caused the original defect: the carrier walked
+# SPEC_NON_LOCAL_SPAN//2 = 252 taps, which at the production ring's resolved
+# decay of 503.808 is only 0.50 decay lengths -- HALF of one decay length.
+#
+# MEASURED (basal_tap_reach_sweep.json; n=8192, decay=503.808, K=2.45,
+# dt=0.01, 512 steps, r_full = 0.895440):
+#
+#   reach(decay lengths)  taps   kernel L1     r_trunc    r_gap
+#   0.5  (today)           505   1.2114e+00    0.385750   5.10e-01
+#   1.0                   1009   7.3438e-01    0.559758   3.36e-01
+#   2.0                   2017   2.6969e-01    0.760234   1.35e-01
+#   3.0  (this default)   3025   9.8802e-02    0.829999   6.54e-02
+#   4.0                   4033   3.5961e-02    0.864788   3.07e-02
+#   6.0                   6047   4.3632e-03    0.890949   4.49e-03
+#   8.0                   8063   8.0533e-05    0.895356   8.45e-05
+#
+# L1 falls off as ~1.76 * exp(-m) for reach m in decay lengths, so L1 <= 1e-5
+# needs m >= 12.1 -- WIDER than the 8.13-decay-length half-ring at the sealed
+# n/decay ratio. No truncation can reach L1 <= 1e-5 at this operating point;
+# only FULL-RING reach can (measured 5.945e-07). A mandate that asks for
+# +/-1512 taps AND L1 <= 1e-5 is asking for two incompatible things.
+#
+# What 3.0 decay lengths DOES buy, honestly: r_gap falls from 5.10e-01 to
+# 6.54e-02, a 7.8x improvement. It is a real repair, not a parity proof.
+TAP_REACH_DECAY_LENGTHS = 3.0
 
 # ---------------------------------------------------------------------------
 # Hardware latency inputs to the DERIVED bound.
@@ -150,6 +182,47 @@ def span_evanescent_weights(
     if total <= 0.0:
         raise ValueError("degenerate reach: all weights are zero")
     return weights / total
+
+
+def default_half_width(
+    num_channels: int,
+    decay_length: float,
+    decay_lengths: float = TAP_REACH_DECAY_LENGTHS,
+) -> int:
+    """Tap half-width for a reach of `decay_lengths` decay lengths.
+
+    Clamped to the ring. A reach wider than `num_channels // 2 - 1` is not
+    expressible on a periodic ring of that size: taps would wrap past the
+    antipode and count the same channel twice. Small rings therefore bind to
+    full-ring reach automatically, which is why an N=1024 sweep is a valid
+    proxy for the reach SHAPE but not for the clamp.
+    """
+    if num_channels < 2:
+        raise ValueError("num_channels must be >= 2")
+    if decay_length <= 0.0:
+        raise ValueError("decay_length must be positive")
+    if decay_lengths <= 0.0:
+        raise ValueError("decay_lengths must be positive")
+    want = int(math.ceil(float(decay_lengths) * float(decay_length)))
+    return int(max(1, min(want, num_channels // 2 - 1)))
+
+
+def default_kernel(
+    num_channels: int,
+    decay_length: float,
+    decay_lengths: float = TAP_REACH_DECAY_LENGTHS,
+) -> torch.Tensor:
+    """The carrier's default tap set: a widened, decay-scaled truncated window.
+
+    Replaces the old `taps_for_reach(SPEC_NON_LOCAL_SPAN // 2)`, which tied the
+    tap count to the sealed channel span and so silently shrank as the ring
+    grew relative to the decay.
+    """
+    return span_evanescent_weights(
+        num_channels,
+        decay_length,
+        default_half_width(num_channels, decay_length, decay_lengths),
+    )
 
 
 def ring_kernel(
@@ -508,7 +581,9 @@ def tau_budget_analysis(
     design_a = (steps * a_lo, steps * a_hi)
     design_b = (steps * b_lo_ns / 1000.0, steps * b_hi_ns / 1000.0)
 
-    taps = taps_for_reach(int(SPEC_NON_LOCAL_SPAN) // 2)
+    taps = taps_for_reach(
+        default_half_width(num_channels, recommended_leakage_length(num_channels))
+    )
     macs = 2.0 * float(num_channels) * float(taps)
     cycles_single = macs / float(BLACKWELL_SM_FMA_PER_CLK)
     total_macs = macs * float(steps)
@@ -632,7 +707,9 @@ def slot_budget_analysis(
     Synchronization is costed explicitly and is the binding term: a coupling
     step is global, so every step needs a barrier before the next.
     """
-    taps = taps_for_reach(int(SPEC_NON_LOCAL_SPAN) // 2)
+    taps = taps_for_reach(
+        default_half_width(num_channels, recommended_leakage_length(num_channels))
+    )
     n = float(num_channels)
     lanes_all = float(BLACKWELL_SM_FMA_PER_CLK) * float(sm_count)
 
