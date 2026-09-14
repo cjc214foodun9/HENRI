@@ -1,0 +1,209 @@
+{
+  "schema": "henri.basal.blackwell-observed.v1",
+  "evidence_class": "OBSERVED_GPU",
+  "generated_utc": "2026-09-14T06:35:21Z",
+  "code_root": "/workspace/vt_6cdd19b/HENRI V2",
+  "python": "3.12.3",
+  "platform": "Linux-7.0.0-30-generic-x86_64-with-glibc2.39",
+  "torch_version": "2.12.0+cu130",
+  "cuda_version": "13.0",
+  "triton_version": "3.7.1",
+  "cuda_available": true,
+  "device_name": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+  "compute_capability": [
+    12,
+    0
+  ],
+  "is_blackwell_sm120": true,
+  "vram_total_mib": 97249.5,
+  "sm_count": 188,
+  "triton_available": true,
+  "triton_import_error": "",
+  "operator": {
+    "num_channels": 8192,
+    "clifford_block": 8,
+    "decay_length_resolved": 503.808,
+    "half_width": 1512,
+    "taps": 3025,
+    "reach_decay_lengths": 3.0011,
+    "sealed_span_unchanged": 504,
+    "sealed_horizon_unchanged": 1024,
+    "steps_per_slot": 32,
+    "kernel_l1_vs_full_ring": 0.09880157602592021
+  },
+  "measurements_us": {
+    "fft_1step": {
+      "device": "cuda:0",
+      "iters": 20,
+      "cuda_event_mean_us": 78.7648,
+      "cuda_event_median_us": 77.76,
+      "cuda_event_min_us": 74.144,
+      "host_visible_mean_us": 87.5661,
+      "host_visible_min_us": 80.88
+    },
+    "fft_32step": {
+      "device": "cuda:0",
+      "iters": 20,
+      "cuda_event_mean_us": 1477.6416,
+      "cuda_event_median_us": 1476.0,
+      "cuda_event_min_us": 1463.36,
+      "host_visible_mean_us": 1484.7806,
+      "host_visible_min_us": 1470.72
+    },
+    "fft_1024step": {
+      "device": "cuda:0",
+      "iters": 5,
+      "cuda_event_mean_us": 44015.9622,
+      "cuda_event_median_us": 44048.9616,
+      "cuda_event_min_us": 43942.1768,
+      "host_visible_mean_us": 44030.3074,
+      "host_visible_min_us": 43950.546
+    },
+    "fft_final_r": 0.9866800904273987,
+    "span_1step": {
+      "device": "cuda:0",
+      "iters": 10,
+      "cuda_event_mean_us": 38993.9812,
+      "cuda_event_median_us": 39070.8466,
+      "cuda_event_min_us": 38728.8017,
+      "host_visible_mean_us": 39015.7753,
+      "host_visible_min_us": 38749.231
+    },
+    "span_32step": {
+      "device": "cuda:0",
+      "iters": 5,
+      "cuda_event_mean_us": 1250062.085,
+      "cuda_event_median_us": 1251517.9443,
+      "cuda_event_min_us": 1240864.0137,
+      "host_visible_mean_us": 1250074.0382,
+      "host_visible_min_us": 1240893.683
+    },
+    "span_1024step": {
+      "device": "cuda:0",
+      "iters": 3,
+      "cuda_event_mean_us": 40323321.6146,
+      "cuda_event_median_us": 40338054.6875,
+      "cuda_event_min_us": 40244417.9688,
+      "host_visible_mean_us": 40322820.9077,
+      "host_visible_min_us": 40243910.633
+    },
+    "span_final_r": 0.9527183175086975,
+    "triton_1step": {
+      "device": "cuda:0",
+      "iters": 20,
+      "cuda_event_mean_us": 24673.4353,
+      "cuda_event_median_us": 24670.5914,
+      "cuda_event_min_us": 24661.2167,
+      "host_visible_mean_us": 24681.495,
+      "host_visible_min_us": 24667.748
+    },
+    "triton_32step": {
+      "device": "cuda:0",
+      "iters": 5,
+      "cuda_event_mean_us": 788685.4858,
+      "cuda_event_median_us": 788676.2695,
+      "cuda_event_min_us": 788670.8374,
+      "host_visible_mean_us": 788685.2286,
+      "host_visible_min_us": 788667.975
+    },
+    "triton_final_r_1024": 0.9527183175086975,
+    "triton_vs_span_max_abs_phase_diff": 4.76837158203125e-07,
+    "null_op_sync": {
+      "device": "cuda:0",
+      "iters": 30,
+      "cuda_event_mean_us": 6.6805,
+      "cuda_event_median_us": 6.496,
+      "cuda_event_min_us": 6.112,
+      "host_visible_mean_us": 16.1074,
+      "host_visible_min_us": 14.597
+    }
+  },
+  "register_pressure": {
+    "status": "OBSERVED",
+    "n_regs": 48,
+    "n_spills": 4076,
+    "n_max_threads": 1024,
+    "metadata": {
+      "allowed_dot_input_precisions": "['tf32', 'tf32x3', 'ieee', 'bf16x3', 'bf16x6']",
+      "arch": "sm120",
+      "backend_name": "cuda",
+      "debug": false,
+      "default_dot_input_precision": "tf32",
+      "deprecated_fp8_dot_operand_dtypes": "['fp8e4b15']",
+      "enable_fp_fusion": true,
+      "enable_reflect_ftz": true,
+      "extern_libs": "[['libdevice', '/usr/local/lib/python3.12/dist-packages/triton/backends/nvidia/lib/libdevice.10.bc']]",
+      "global_scratch_align": 1,
+      "global_scratch_size": 0,
+      "hash": "5e8c1b705de25bed37c6ac8bea2d9654fa087381d79177c74d360376d89f3b6d",
+      "instrumentation_mode": "",
+      "ir_override": null,
+      "launch_cooperative_grid": false,
+      "launch_pdl": false,
+      "max_num_imprecise_acc_default": 0,
+      "maxnreg": null,
+      "name": "_fused_autopoietic_kuramoto_kernel",
+      "num_ctas": 1,
+      "num_stages": 3,
+      "num_warps": 4,
+      "profile_scratch_align": 1,
+      "profile_scratch_size": 0,
+      "ptx_options": null,
+      "ptx_version": null,
+      "sanitize_overflow": true,
+      "shared": 8192,
+      "supported_fp8_dtypes": "['fp8e4b15', 'fp8e4nv', 'fp8e5']",
+      "target": "GPUTarget(backend='cuda', arch=120, warp_size=32)",
+      "tensordesc_meta": "[]",
+      "tmem_size": 0,
+      "triton_version": "3.7.1",
+      "warp_size": 32
+    }
+  },
+  "derived_reference": {
+    "source": "basal_triton_kernel.tau_budget_analysis()",
+    "evidence_class": "DERIVED",
+    "binding_constraint": "compute",
+    "sub_budget_us": 12.8,
+    "shutter_us": 50.0,
+    "compute_floor_us_multi_block": 24780.8,
+    "compute_floor_us_fft_multi_block": 34.304,
+    "floor_us_design_a": [
+      25804.8,
+      27852.8
+    ],
+    "floor_us_design_b": [
+      198266.88,
+      198287.36
+    ],
+    "sub_budget_reachable": false,
+    "shutter_reachable": false,
+    "verdict": "SUB-BUDGET NOT REACHABLE. 12.8 us over 1024 steps is 12.50 ns/step. A Kuramoto step is GLOBAL: every channel reads its neighbours out to the span, so the updated phases must be visible to all readers before the next step. That costs one barrier per step, and 12.50 ns is below the cost of a single barrier (20-40 ns for __syncthreads). THE DECISIVE TERM: even if ALL synchronization is ignored and the compute of the whole device is used, the floor is 34.3 us (34.3 us via FFT, 1548.8 us via the tap sum) -- already above the budget. Adding the grid barrier a distributed design requires: 2573 us, over 12.8 us and over the 50 us shutter. The spec's own 8-block halo layout costs 25805-27853 us (grid sync per step); a persistent single block costs 198267-198287 us (compute-bound on one SM). Binding constraint: compute."
+  },
+  "measured_vs_derived": {
+    "fft_per_slot": {
+      "measured_device_us": 1477.6416,
+      "derived_floor_us": 34.304,
+      "ratio_measured_over_derived": 43.075
+    },
+    "span_per_slot": {
+      "measured_device_us": 1250062.085,
+      "derived_floor_us": 24780.8,
+      "ratio_measured_over_derived": 50.445
+    }
+  },
+  "measured_verdict": {
+    "sub_budget_us": 12.8,
+    "shutter_us": 50.0,
+    "fft_per_slot_us_measured": 1477.6416,
+    "span_per_slot_us_measured": 1250062.085,
+    "fft_within_sub_budget": false,
+    "fft_within_shutter": false,
+    "span_within_sub_budget": false,
+    "span_within_shutter": false,
+    "measured_tau_us": 1477.6416,
+    "note": "measured_tau_us is the CUDA-event mean of the production cuFFT backend over one 32-step Zone A shutter slot."
+  },
+  "failures": [],
+  "verdict": "OBSERVED_GPU"
+}

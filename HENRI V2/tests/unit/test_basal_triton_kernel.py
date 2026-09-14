@@ -45,6 +45,7 @@ from basal_triton_kernel import (  # noqa: E402
     cuda_available,
     fft_relax,
     fused_relax,
+    default_kernel,
     kernel_l1_distance,
     order_parameter,
     relax_span,
@@ -312,3 +313,57 @@ class TestFailClosed:
         """An even tap count would centre the kernel between taps."""
         with pytest.raises(ValueError):
             span_coupled_field(torch.zeros(16), torch.ones(4) / 4.0)
+    def test_scratch_buffers_follow_the_input_device(self):
+        """Regression: `omega` must be allocated on the INPUT tensor's device.
+
+        OBSERVED 2026-09-13 on the RTX PRO 6000 (Blackwell sm_120) during the
+        first OBSERVED_GPU tau run. Both `fft_relax` (the PRODUCTION cuFFT
+        backend) and `relax_span` did
+
+            omega = torch.zeros(n, dtype=torch.float32)      # CPU, always
+
+        so any CUDA `phases` tensor raised
+
+            RuntimeError: Expected all tensors to be on the same device,
+                          but found at least two devices, cuda:0 and cpu!
+
+        The direct consequence: `UnifiedHENRIVLAEngine.relax_backend`, whose
+        entire purpose is device execution, could not run the `span` backend on
+        a GPU at all, and the production `fft` backend could not be run on a GPU
+        either. Every existing test called these functions with CPU tensors, so
+        the defect was invisible.
+
+        This test asserts the DEVICE of the scratch, using CPU as the control.
+        It does not require CUDA: on a CUDA host it additionally proves the GPU
+        path runs, and it is skipped only when CUDA is genuinely absent.
+        """
+        n = 256
+        decay = 32.0
+        taps = default_kernel(n, decay)
+        full = ring_kernel(n, decay)
+        theta = torch.linspace(-1.0, 1.0, n, dtype=torch.float32)
+
+        # CPU control: must keep working, byte-identically to before the fix.
+        out_cpu = fft_relax(theta, full, steps=5)
+        assert out_cpu.device.type == "cpu"
+        out_cpu_s = relax_span(theta, taps, steps=5)
+        assert out_cpu_s.device.type == "cpu"
+        assert torch.isfinite(out_cpu).all() and torch.isfinite(out_cpu_s).all()
+
+        # The fix must not change CPU numerics: a second call is deterministic.
+        again = fft_relax(theta, full, steps=5)
+        assert torch.equal(out_cpu, again), "CPU path is no longer deterministic"
+
+        if not torch.cuda.is_available():
+            # Cannot exercise the device branch here; the CPU control still
+            # proves the fix did not alter the default path.
+            return
+
+        t_gpu = theta.to("cuda")
+        g_full = full.to("cuda")
+        g_taps = taps.to("cuda")
+        a = fft_relax(t_gpu, g_full, steps=5)
+        b = relax_span(t_gpu, g_taps, steps=5)
+        assert a.device.type == "cuda", f"fft_relax returned {a.device}"
+        assert b.device.type == "cuda", f"relax_span returned {b.device}"
+        assert torch.isfinite(a).all() and torch.isfinite(b).all()

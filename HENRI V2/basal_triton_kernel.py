@@ -293,12 +293,22 @@ def span_coupled_field(
     """
     phases = torch.as_tensor(phases, dtype=torch.float32)
     n = int(phases.shape[0])
+    weights = torch.as_tensor(weights, dtype=torch.float32, device=phases.device)
     taps = int(weights.shape[0])
     if taps % 2 == 0:
         raise ValueError(f"taps must be odd for a symmetric kernel; got {taps}")
     H = taps // 2
-    idx = torch.arange(n)
-    dist = torch.arange(taps) - H
+    # INDEX TENSORS FOLLOW THE INPUT DEVICE (fixed 2026-09-13).
+    # `torch.arange` defaults to CPU, so `j` was a CPU int64 [n, taps] tensor.
+    # Indexing a CUDA `phases` with a CPU index tensor makes PyTorch stage the
+    # indices across PCIe on EVERY step: at n=8192, taps=3025 that is 198 MB of
+    # int64 per step. It dominated the first OBSERVED_GPU span timing
+    # (1,250,062 us per 32-step slot = 39 ms/step, ~80x above the memory
+    # bandwidth floor for the same gather). This is the SAME DEFECT CLASS as the
+    # `omega` allocation in `relax_span`/`fft_relax`: derived scratch state must
+    # inherit the input tensor's device. CPU behaviour is byte-identical.
+    idx = torch.arange(n, device=phases.device)
+    dist = torch.arange(taps, device=phases.device) - H
     j = (idx[:, None] - dist[None, :]) % n
     th = phases[j]
     zr = (torch.cos(th) * weights[None, :]).sum(dim=1)
@@ -325,10 +335,19 @@ def relax_span(
     """Euler integration through the direct tap sum."""
     theta = torch.as_tensor(phases, dtype=torch.float32).clone()
     n = int(theta.shape[0])
+    # SCRATCH FOLLOWS THE INPUT DEVICE (fixed 2026-09-13). This allocated `omega`
+    # on CPU unconditionally, so a CUDA `theta` raised
+    #   RuntimeError: Expected all tensors to be on the same device,
+    #                 but found at least two devices, cuda:0 and cpu!
+    # That made the direct tap-sum path UNRUNNABLE on a GPU -- including via
+    # UnifiedHENRIVLAEngine.relax_backend, whose whole purpose is device
+    # execution. Default-preserving on CPU: a CPU `theta` still gets a CPU
+    # `omega` with identical bytes.
     if natural_frequencies is None:
-        omega = torch.zeros(n, dtype=torch.float32)
+        omega = torch.zeros(n, dtype=torch.float32, device=theta.device)
     else:
-        omega = torch.as_tensor(natural_frequencies, dtype=torch.float32)
+        omega = torch.as_tensor(natural_frequencies, dtype=torch.float32,
+                                device=theta.device)
     for _ in range(int(steps)):
         zr, zi = span_coupled_field(theta, weights)
         theta = _step(theta, omega, zr, zi, coupling_K, dt)
@@ -357,10 +376,16 @@ def fft_relax(
         raise ValueError(
             f"kernel length {int(kernel.shape[0])} != channel count {n}"
         )
+    kernel = kernel.to(theta.device)
+    # SCRATCH FOLLOWS THE INPUT DEVICE (fixed 2026-09-13). Same defect as
+    # `relax_span`: `omega` was allocated on CPU, so the PRODUCTION cuFFT backend
+    # could not run on a GPU at all. The kernel tensor is also moved to `theta`'s
+    # device rather than trusting the caller to have done it.
     if natural_frequencies is None:
-        omega = torch.zeros(n, dtype=torch.float32)
+        omega = torch.zeros(n, dtype=torch.float32, device=theta.device)
     else:
-        omega = torch.as_tensor(natural_frequencies, dtype=torch.float32)
+        omega = torch.as_tensor(natural_frequencies, dtype=torch.float32,
+                                device=theta.device)
     kf = torch.fft.fft(kernel)
     for _ in range(int(steps)):
         z = torch.fft.ifft(torch.fft.fft(torch.exp(1j * theta)) * kf)

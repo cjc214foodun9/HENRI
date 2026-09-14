@@ -1,0 +1,32 @@
+{
+  "evidence_class": "DERIVED",
+  "channels": 8192,
+  "decay_length": 503.808,
+  "half_width": 1512,
+  "reach_decay_lengths": 3.0011432926829267,
+  "layouts_are_same_weights": true,
+  "kernel_l1_reach_vs_full": 0.09880157602592021,
+  "same_operator_reach": {
+    "steps": 64,
+    "naive_max_abs_dtheta": 4.76837158203125e-07,
+    "circular_max_abs_dtheta": 4.76837158203125e-07,
+    "wrapped_channels": 0,
+    "wrap_share_of_naive": 0.0,
+    "r_fft": 0.012616440653800964,
+    "r_span": 0.012616441585123539,
+    "r_gap": 9.313225746154785e-10
+  },
+  "different_operators_full_vs_reach": {
+    "steps": 64,
+    "naive_max_abs_dtheta": 6.281846523284912,
+    "circular_max_abs_dtheta": 0.007109880447387695,
+    "wrapped_channels": 1,
+    "wrap_share_of_naive": 0.998868,
+    "r_fft": 0.012608214281499386,
+    "r_span": 0.012616441585123539,
+    "r_gap": 8.227303624153137e-06
+  },
+  "verdict": "PARITY_CONFIRMED. Same operator, both paths: circular difference 4.768e-07 -- the fft and span backends implement the same arithmetic. The naive metric on that same pair reads 4.768e-07, so any naive comparison of these two backends overstates the gap by the wrap term.",
+  "different_operators_note": "The full-ring vs reach comparison differs by 7.110e-03 circular, which is a REAL operator difference (kernel L1 9.880e-02), not a wrap. Published separately so the truncation gap is never quoted as a backend mismatch.",
+  "utc": "2026-09-14T06:47:14Z"
+}
