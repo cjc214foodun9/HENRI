@@ -1,3 +1,5 @@
+import os
+
 import torch
 import math
 
@@ -63,7 +65,16 @@ class O_VSA_IngressTokenizer:
         """
         Fractional Binding: Bypasses string tokenization. Maps a 2D spatial grid directly
         into a continuous FHRR superposed wave tensor of shape [1, num_blocks, 8].
+
+        DEFAULT-OFF REFORM (HENRI_ENCODER_TORUS=1): delegates to the
+        group-structured torus encoder (o_vsa_torus_encoder.py), where a cyclic
+        grid roll IS an exact wave operator. Default path is byte-identical and
+        unchanged. See o_vsa_torus_encoder.py for the measured justification.
         """
+        if os.environ.get("HENRI_ENCODER_TORUS", "0") == "1":
+            from o_vsa_torus_encoder import encode_spatial_grid_torus
+            return encode_spatial_grid_torus(self, grid)
+
         superposed_wave = torch.zeros(self.num_blocks, 4, 2, device=self.device)
         
         height = len(grid)

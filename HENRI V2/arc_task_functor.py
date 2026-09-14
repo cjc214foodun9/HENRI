@@ -5,8 +5,29 @@ demonstrations in the complex half-space of the live continuous UWE
 ([D/2] complex, stored as [Re, Im] in [D] real).
 
 Protocol (per Phase 7.2 PDF Lens A):
-    W_task = normalize( sum_i conj(Psi_X,i) * Psi_Y,i )   (elementwise,
-    complex domain = circular convolution of the two waves in time domain)
+    W_task = normalize( sum_i conj(Psi_X,i) * Psi_Y,i )   (elementwise)
+
+CORRECTION -- OBSERVED_GPU 2026-09-14 (arc_encoder_reform_gate_v4_observed.json):
+    The legacy parenthetical claimed this elementwise product IS "circular
+    convolution of the two waves in time domain". That claim is FALSIFIED.
+    Measured on sm_120 (RTX PRO 6000, torch 2.12.0+cu130):
+      - On a FLAT wave, an elementwise product recovers a pure circular shift at
+        cos 0.0049, while a true FFT circular cross-correlation recovers it at
+        1.0000. They are DIFFERENT operators for DIFFERENT relation families
+        (elementwise-bound VSA unbinding vs Fourier convolution).
+    SEPARATELY FALSIFIED for THIS representation: on the production
+    [num_blocks, 8] layout the FFT/circulant form scores approx 0.00 on both a
+    synthetic cyclic roll and on 60 real ARC training tasks, because it
+    circulates the BLOCK axis, whereas a spatial transform lives in the
+    per-(block, slot) phase. Do NOT swap this operator to the FFT form.
+    The family that is actually correct for [num_blocks, 8] is a per-slot
+    DIAGONAL operator, least-squares optimum
+        W* = sum_p conj(x_p)*y_p / sum_p |x_p|^2
+    which recovers a cyclic roll at 1.0000 and reaches in-sample real-ARC
+    ceilings of 0.76-0.82 (vs 0.41-0.56 identity). A cyclic grid roll is an
+    exact wave operator ONLY when position frequencies are quantized to the
+    canvas modulus (w = 2*pi*k/S); the incumbent fractional position code is not.
+    See experiments/verification/arc_encoder_reform_gate_v4_observed.json.
 
 Goal anchor for the live episode (no X_test available):
     Psi_goal = normalize( mean_i Psi_Y,i )   (prototype of outputs)

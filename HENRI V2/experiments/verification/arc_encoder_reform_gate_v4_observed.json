@@ -1,0 +1,240 @@
+{
+ "schema": "henri.arc.encoder-reform-gate.v4",
+ "utc": "2026-09-14T18:02:30Z",
+ "arm_P_roll_operator": {
+  "1": {
+   "TORUS_analytic_maxabs": 1.971423625946045e-05,
+   "TORUS_VAL_analytic_maxabs": 2.4259090423583984e-05,
+   "TORUS_bestfit_meanabs": 3.235058329664753e-06,
+   "TORUS_VAL_bestfit_meanabs": 4.513774001679849e-06,
+   "LIVE_bestfit_meanabs": 9.734450031828601e-06
+  },
+  "3": {
+   "TORUS_analytic_maxabs": 2.9793009161949158e-05,
+   "TORUS_VAL_analytic_maxabs": 3.045797348022461e-05,
+   "TORUS_bestfit_meanabs": 3.234795258322265e-06,
+   "TORUS_VAL_bestfit_meanabs": 4.5138235691410955e-06,
+   "LIVE_bestfit_meanabs": 1.2307458746363409e-05
+  },
+  "5": {
+   "TORUS_analytic_maxabs": 2.849102020263672e-05,
+   "TORUS_VAL_analytic_maxabs": 2.4683773517608643e-05,
+   "TORUS_bestfit_meanabs": 3.234695668652421e-06,
+   "TORUS_VAL_bestfit_meanabs": 4.51418509328505e-06,
+   "LIVE_bestfit_meanabs": 1.5908883142401464e-05
+  },
+  "analytic_roll_operator_EXACT": true
+ },
+ "arm_G_kill_gate": {
+  "TORUS": {
+   "repo_mean.l2": {
+    "structured": 0.928779274225235,
+    "noise": -0.004840409324970096,
+    "identity": -0.03993575647473335
+   },
+   "repo_mean.phase": {
+    "structured": 1.0,
+    "noise": -0.003663101000711322,
+    "identity": -0.0362639594823122
+   },
+   "ls_diag_CEILING.l2": {
+    "structured": 1.0000000596046448,
+    "noise": -0.0051072584465146065,
+    "identity": -0.03993575647473335
+   },
+   "ls_diag_CEILING.phase": {
+    "structured": 1.0,
+    "noise": -0.003663100767880678,
+    "identity": -0.0362639594823122
+   },
+   "fft_circulant.l2": {
+    "structured": -0.00010918814223259687,
+    "noise": 0.0018068974022753537,
+    "identity": -0.03993575647473335
+   },
+   "fft_circulant.phase": {
+    "structured": 0.0017663966864347458,
+    "noise": 0.002143544261343777,
+    "identity": -0.0362639594823122
+   }
+  },
+  "TORUS_VAL": {
+   "repo_mean.l2": {
+    "structured": 0.9272777438163757,
+    "noise": -0.008629994001239538,
+    "identity": -0.038323648273944855
+   },
+   "repo_mean.phase": {
+    "structured": 0.9999057054519653,
+    "noise": -0.008735948009416461,
+    "identity": -0.03476198576390743
+   },
+   "ls_diag_CEILING.l2": {
+    "structured": 1.0000000298023224,
+    "noise": -0.008162364363670349,
+    "identity": -0.038323648273944855
+   },
+   "ls_diag_CEILING.phase": {
+    "structured": 0.9999999701976776,
+    "noise": -0.008748922031372786,
+    "identity": -0.03476198576390743
+   },
+   "fft_circulant.l2": {
+    "structured": 0.0032653058297000825,
+    "noise": 0.0027797130460385233,
+    "identity": -0.038323648273944855
+   },
+   "fft_circulant.phase": {
+    "structured": 0.005875090369954705,
+    "noise": 0.0006215647445060313,
+    "identity": -0.03476198576390743
+   }
+  },
+  "LIVE": {
+   "repo_mean.l2": {
+    "structured": 0.8701066970825195,
+    "noise": 0.5941669046878815,
+    "identity": 0.859167754650116
+   },
+   "repo_mean.phase": {
+    "structured": 0.8773565292358398,
+    "noise": 0.3175141215324402,
+    "identity": 0.7516907453536987
+   },
+   "ls_diag_CEILING.l2": {
+    "structured": 0.931142121553421,
+    "noise": 0.5758351385593414,
+    "identity": 0.859167754650116
+   },
+   "ls_diag_CEILING.phase": {
+    "structured": 0.8773563802242279,
+    "noise": 0.31751395761966705,
+    "identity": 0.7516907453536987
+   },
+   "fft_circulant.l2": {
+    "structured": -0.006525787990540266,
+    "noise": -0.007260829210281372,
+    "identity": 0.859167754650116
+   },
+   "fft_circulant.phase": {
+    "structured": -0.004296377534046769,
+    "noise": -0.0040027081267908216,
+    "identity": 0.7516907453536987
+   }
+  }
+ },
+ "arm_R_real_arc": {
+  "TORUS": {
+   "n": 60,
+   "skipped": 0,
+   "identity_mean": 0.41359296391019595,
+   "grid_best_roll_mean": 0.9833333184321721,
+   "repo_mean": {
+    "held_mean": 0.4137417357414961,
+    "held_beats_identity": true,
+    "ceiling_mean": 0.6947118025687006,
+    "ceiling_beats_identity": true
+   },
+   "ls_diag_CEILING": {
+    "held_mean": 0.4284550616168417,
+    "held_beats_identity": true,
+    "ceiling_mean": 0.7628292951318953,
+    "ceiling_beats_identity": true
+   },
+   "fft_circulant": {
+    "held_mean": -0.0012984450489360218,
+    "held_beats_identity": false,
+    "ceiling_mean": -0.001226507535385382,
+    "ceiling_beats_identity": false
+   }
+  },
+  "TORUS_VAL": {
+   "n": 60,
+   "skipped": 0,
+   "identity_mean": 0.4139735261676833,
+   "grid_best_roll_mean": 0.9833333184321721,
+   "repo_mean": {
+    "held_mean": 0.4187780102947727,
+    "held_beats_identity": true,
+    "ceiling_mean": 0.6961436240209474,
+    "ceiling_beats_identity": true
+   },
+   "ls_diag_CEILING": {
+    "held_mean": 0.4368103335921963,
+    "held_beats_identity": true,
+    "ceiling_mean": 0.7645019506414731,
+    "ceiling_beats_identity": true
+   },
+   "fft_circulant": {
+    "held_mean": 0.0007605716358132971,
+    "held_beats_identity": false,
+    "ceiling_mean": 0.000674875671716614,
+    "ceiling_beats_identity": false
+   }
+  },
+  "LIVE": {
+   "n": 60,
+   "skipped": 0,
+   "identity_mean": 0.5645275365047079,
+   "grid_best_roll_mean": 0.9833333184321721,
+   "repo_mean": {
+    "held_mean": 0.570896809338592,
+    "held_beats_identity": true,
+    "ceiling_mean": 0.737514250477155,
+    "ceiling_beats_identity": true
+   },
+   "ls_diag_CEILING": {
+    "held_mean": 0.5958491739584133,
+    "held_beats_identity": true,
+    "ceiling_mean": 0.8152900177571509,
+    "ceiling_beats_identity": true
+   },
+   "fft_circulant": {
+    "held_mean": -7.02450624279057e-05,
+    "held_beats_identity": false,
+    "ceiling_mean": 4.431048162384954e-06,
+    "ceiling_beats_identity": false
+   }
+  }
+ },
+ "verdict": {
+  "armP_analytic_roll_operator_EXACT": true,
+  "armG_best": {
+   "encoder": "TORUS",
+   "variant": "ls_diag_CEILING.l2",
+   "structured": 1.0000000596046448,
+   "noise": -0.0051072584465146065,
+   "identity": -0.03993575647473335
+  },
+  "armG_gate_structured_gt_0.75": true,
+  "armG_gate_noise_lt_0.05": true,
+  "armG_kill_gate_PASS": true,
+  "armR_best_held": {
+   "encoder": "LIVE",
+   "family": "ls_diag_CEILING",
+   "held_mean": 0.5958491739584133,
+   "held_beats_identity": true,
+   "ceiling_mean": 0.8152900177571509,
+   "ceiling_beats_identity": true
+  },
+  "armR_best_ceiling": {
+   "encoder": "LIVE",
+   "family": "ls_diag_CEILING",
+   "held_mean": 0.5958491739584133,
+   "held_beats_identity": true,
+   "ceiling_mean": 0.8152900177571509,
+   "ceiling_beats_identity": true
+  },
+  "gate_real_arc_held_beats_identity": true,
+  "gate_real_arc_CEILING_beats_identity": true,
+  "OPERATOR_FAMILY_SUFFICIENT": true,
+  "tasks_scored_per_encoder": {
+   "TORUS": 60,
+   "TORUS_VAL": 60,
+   "LIVE": 60
+  },
+  "interpretation": "family sufficient -> fitting/encoder work can pay off",
+  "evidence_class": "OBSERVED",
+  "runtime_s": 6.8
+ }
+}

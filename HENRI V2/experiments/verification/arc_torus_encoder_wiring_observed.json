@@ -1,0 +1,64 @@
+{
+ "schema": "henri.arc.torus-encoder-wiring.v2",
+ "utc": "2026-09-14T18:12:03Z",
+ "default_off_differential": {
+  "max_abs_diffs": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "sha_equal": true
+ },
+ "contract": {
+  "shape": [
+   1,
+   8192,
+   8
+  ],
+  "shape_ok": true,
+  "dtype": "torch.float32",
+  "device": "cuda:0",
+  "device_ok": true,
+  "norm_min": 0.9999998807907104,
+  "norm_max": 1.0000001192092896,
+  "norm_ok": true,
+  "changed_by_flag": true
+ },
+ "roll_operator_maxabs_canvas": {
+  "1": 4.048645496368408e-05,
+  "3": 3.288686275482178e-05,
+  "5": 2.551823854446411e-05
+ },
+ "negative_control_noncanvas_maxabs": 1.7870781421661377,
+ "kill_gate": {
+  "structured": 1.0000000298023224,
+  "noise": -0.008162364130839705,
+  "identity": -0.038323646411299706
+ },
+ "real_arc": {
+  "n": 60,
+  "skipped": 0,
+  "identity_mean": 0.4139735207310878,
+  "held_out_mean": 0.4368103286251426,
+  "held_beats_identity": true,
+  "in_sample_ceiling_mean": 0.7645019392172495,
+  "ceiling_beats_identity": true
+ },
+ "verdict": {
+  "default_off_byte_identical": true,
+  "shape_device_norm_contract_ok": true,
+  "flag_changes_output": true,
+  "exact_roll_operator_on_canvas": true,
+  "roll_property_conditional_PROVEN": true,
+  "negative_control_noncanvas_err": 1.7870781421661377,
+  "kill_gate_PASS": true,
+  "kill_gate_identity_near_zero": true,
+  "real_arc_family_sufficient": true,
+  "real_arc_held_out_beats_identity": true,
+  "CARRIER_PROMOTABLE": true,
+  "HONEST_LIMIT": "Proves default-OFF byte identity, the exact wave-operator form for canvas translations, and discrimination (noise ~0, identity ~0). Does NOT produce an external ARC win: held-out 0.44 vs in-sample ceiling 0.76 = a few-shot FITTING gap. The exact-roll property is CONDITIONAL on H=W=S.",
+  "evidence_class": "OBSERVED",
+  "runtime_s": 0.4
+ }
+}
