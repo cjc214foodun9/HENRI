@@ -125,7 +125,7 @@ sites are byte-identical, so "frozen" cannot silently become "refactored".
 - No TimescaleDB DDL was executed; under the freeze directive, building a storage
   layer for a frozen subsystem would be fabrication.
 
-## 7. MEASURED OUTCOME (OBSERVED, local CPU, 60 tasks, `n_skipped=0`, 6.0 s)
+## 7. MEASURED OUTCOME (OBSERVED, local CPU, 60 tasks, `n_skipped=0`, 5.3 s)
 
 `experiments/verification/evaluate_60_task_koopman_gap.py` →
 `evaluate_60_task_koopman_gap_observed.json`. `torch 2.13.0+cpu`.
@@ -139,9 +139,10 @@ comparison is valid and the run is not VOID.
 | `diag_ls` (incumbent) | **+0.4215** | **+0.7536** | **0.3320** | 45.0 % |
 | `koopman_8@0.01` | +0.3907 | +0.4180 | 0.0274 | 30.0 % |
 | `koopman_8@0.1` | +0.3661 | +0.3922 | 0.0261 | 13.3 % |
-| `koopman_named6@0.01` | +0.3907 | +0.4180 | 0.0274 | 30.0 % |
-| `koopman_no_refl@0.01` | +0.3879 | +0.4152 | 0.0273 | 30.0 % |
+| `koopman_diagonly@0.01` | +0.3879 | +0.4152 | 0.0273 | 30.0 % |
+| `koopman_diagonly@0.1` | +0.3634 | +0.3892 | 0.0258 | 13.3 % |
 | `koopman_9_withmixer@0.01` | +0.3917 | +0.4191 | 0.0274 | 31.7 % |
+| `koopman_9_withmixer@0.1` | +0.3674 | +0.3937 | 0.0263 | 13.3 % |
 
 ### The acceptance gate FALSIFIED
 
@@ -165,9 +166,13 @@ gate component that should carry weight here.
 
 ### Ablations: mode coupling contributes nothing
 
-- Removing **both** dihedral reflections (the only genuinely off-diagonal
-  operators): held-out `0.3907 → 0.3879`, i.e. `−0.0028`.
-- Adding the extra `SL×SL` unitary mixer: `0.3907 → 0.3917`, i.e. `+0.0010`.
+- `koopman_8` → `koopman_diagonly` (removes BOTH dihedral permutations, the only
+  genuinely off-diagonal operators present): held-out `0.3907 → 0.3879`, `−0.0028`.
+- `koopman_8` → `koopman_9_withmixer` (ADDS one off-diagonal `SL×SL` unitary):
+  held-out `0.3907 → 0.3917`, `+0.0010`.
+- An earlier arm called `koopman_named6` was **deleted**: in the phase-split bank it
+  filtered to the same 8 generators as `koopman_8`, so it was a duplicate by
+  construction, not an ablation. Its matching numbers were **not** evidence.
 
 So the directive's section 4.2 requirement ("only an operator family that couples
 distinct frequency modes can cross the floor") is **not satisfied by this bank**,
@@ -176,7 +181,7 @@ The subspace, not the coupling, is the constraint.
 
 ### Why the subspace is too small: rank deficiency, measured
 
-`mean_rank_G = 5.75` of `K = 8` across 480 solves; `n_gram_effectively_diagonal = 0`.
+`mean_rank_G = 5.667` of `K = 8` across 360 solves; `n_gram_effectively_diagonal = 0`.
 Six of the eight generators (identity, `i·wx`, `i·wy`, Laplacian, colour shift,
 charge projection) are **diagonal** in the live frequency basis and therefore
 span a space the diagonal family already covers; the two reflections are
@@ -195,7 +200,7 @@ does not.
    (`dst[dst] == src` asserted at build). This *lowered* the Koopman arms
    (`0.4113 → 0.3907`) — the earlier, higher number was flattered by my bug.
 2. **The ridge was numerically absent.** `reg_lambda = 1e-2` read as an absolute
-   value against a mean Gram diagonal mass of `2.5e+07` is a relative `4e-10`;
+   value against a mean Gram diagonal mass of `2.534e+07` is a relative `4e-10`;
    `1e-2` and `1e-1` returned bit-identical results. Now relative by default
    (`lambda_eff = reg_lambda * mean|diag(G)|`), which is why the two lambdas now
    differ. Solving a rank-5.75-of-8 system without an effective ridge is the exact

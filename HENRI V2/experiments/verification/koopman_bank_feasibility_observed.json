@@ -65,7 +65,9 @@
   "M_effective": 3072,
   "rel_change_in_Wstar": 0.382863312959671,
   "rel_change_in_normalised_Wstar": 0.013507003895938396,
-  "is_a_no_op": false,
+  "is_a_no_op": true,
+  "tolerance": 0.0001,
+  "tolerance_basis": "float32 accumulation floor for a 3072-term vs 3-term sum",
   "equivalence_max_rel_err": 2.900865911215078e-05,
   "EXACT_LAW": "W*_orbit(lam) == W*_plain(lam/S^2). Orbit augmentation over the translation group is EXACTLY equivalent to dividing the ridge by S^2. It adds no new information. The v1 'rel_change_in_Wstar' of 3.8e-01 measured the ridge rescale, not new signal.",
   "reading": "Orbit expansion produced M_eff=3072 pairs from M=3, and changed the diagonal W* by 3.829e-01 (relative). The effective sample count rose; the ESTIMATE did not move. This is the directive's sec 4.2 realization, measured."

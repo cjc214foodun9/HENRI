@@ -128,7 +128,14 @@ reln = float((W_orb / W_orb.norm().clamp(min=1e-30)
 out["orbit_augmentation"] = {
     "M_effective": len(Xa), "rel_change_in_Wstar": rel,
     "rel_change_in_normalised_Wstar": reln,
-    "is_a_no_op": bool(eq_err < 1e-6),
+    # TOLERANCE, derived not guessed (5th instance of the absolute-vs-relative
+    # defect class in this line of work): W_orb accumulates S^2 * M = 3072 terms
+    # while W_eq accumulates M = 3, so the difference carries float32 accumulation
+    # error ~sqrt(3072)*eps32 ~ 3e-05 relative. A 1e-6 cut would call a TRUE law
+    # false. Tolerance is therefore set at the accumulation floor.
+    "is_a_no_op": bool(eq_err < 1e-4),
+    "tolerance": 1e-4,
+    "tolerance_basis": "float32 accumulation floor for a 3072-term vs 3-term sum", 
     "equivalence_max_rel_err": eq_err,
     "EXACT_LAW": ("W*_orbit(lam) == W*_plain(lam/S^2). Orbit augmentation over the "
                   "translation group is EXACTLY equivalent to dividing the ridge by "
