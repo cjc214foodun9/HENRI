@@ -1,0 +1,25 @@
+{
+ "raw_receipt": "stiefel_reachability_observed.json",
+ "corrected": {
+  "rule": "REACHABLE iff an input a greppable live caller actually passes has a non-finite or >=1e-4 orthogonality residual at the live default iters.",
+  "live_caller_inputs": {
+   "eye128 (bridge)": "henri_api_bridge.py:94  W = torch.eye(128, device=DEVICE)",
+   "eye256 + randn*0.01 (module __main__ demo)": "adaptive_viscoelastic_thermostat.py:384  W = torch.eye(256) + randn*0.01"
+  },
+  "invented_probe_inputs_not_passed_by_any_caller": [
+   "raw randn (NOT produced by any caller)",
+   "eye*0.5 (under-scaled)"
+  ],
+  "live_inputs_failing": [
+   "eye256 + randn*0.01 (module __main__ demo)"
+  ],
+  "invented_inputs_failing": [
+   "raw randn (NOT produced by any caller)",
+   "eye*0.5 (under-scaled)"
+  ],
+  "end_to_end_live_calls_failing": [],
+  "classification": "REACHABLE",
+  "defect": "project_stiefel_manifold does not converge outside sigma in (1/sqrt3, sqrt3); raw randn (sigma 0.007..16.4) -> NaN residual, eye*0.5 (sigma 0.5) -> 0.552.",
+  "my_harness_error": "The raw receipt's verdict set 'live_caller_inputs_converge' from a set that included eye*0.5, which no caller passes, and tested output_finite rather than the residual. Both made the verdict report REACHABLE. Both are label bugs in MY harness, not findings about the code."
+ }
+}

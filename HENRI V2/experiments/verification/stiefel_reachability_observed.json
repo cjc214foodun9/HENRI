@@ -1,0 +1,114 @@
+{
+ "device": "cuda",
+ "torch": "2.12.0+cu130",
+ "stiefel_iters_default": 3,
+ "cases": {
+  "eye128 (henri_api_bridge.py:94)": {
+   "input_shape": [
+    128,
+    128
+   ],
+   "input_norm": 11.313708305358887,
+   "sigma_min": 0.9999999403953552,
+   "sigma_max": 0.9999999403953552,
+   "output_finite": true,
+   "orthogonality_residual": 0.0,
+   "converged": true
+  },
+  "eye256 + randn*0.01 (module __main__ demo)": {
+   "input_shape": [
+    256,
+    256
+   ],
+   "input_norm": 16.18566131591797,
+   "sigma_min": 0.782560408115387,
+   "sigma_max": 1.223923921585083,
+   "output_finite": true,
+   "orthogonality_residual": 0.0006148600950837135,
+   "converged": false
+  },
+  "true orthogonal via QR (a genuine Stiefel point)": {
+   "input_shape": [
+    128,
+    128
+   ],
+   "input_norm": 11.313708305358887,
+   "sigma_min": 0.9999096989631653,
+   "sigma_max": 1.0000320672988892,
+   "output_finite": true,
+   "orthogonality_residual": 1.6776235725046718e-06,
+   "converged": true
+  },
+  "eye*0.5 (under-scaled)": {
+   "input_shape": [
+    128,
+    128
+   ],
+   "input_norm": 5.656854152679443,
+   "sigma_min": 0.4999999701976776,
+   "sigma_max": 0.4999999701976776,
+   "output_finite": true,
+   "orthogonality_residual": 0.5520009994506836,
+   "converged": false
+  },
+  "raw randn (NOT produced by any caller)": {
+   "input_shape": [
+    64,
+    64
+   ],
+   "input_norm": 64.53018951416016,
+   "sigma_min": 0.006738788448274136,
+   "sigma_max": 16.42420768737793,
+   "output_finite": true,
+   "orthogonality_residual": NaN,
+   "converged": false
+  }
+ },
+ "iteration_sweep": {
+  "iters=1": {
+   "orthogonality_residual": 0.30776432156562805,
+   "converged": false
+  },
+  "iters=3": {
+   "orthogonality_residual": 3.189503331668675e-05,
+   "converged": true
+  },
+  "iters=5": {
+   "orthogonality_residual": 6.565063586094766e-07,
+   "converged": true
+  },
+  "iters=10": {
+   "orthogonality_residual": 6.455238690250553e-07,
+   "converged": true
+  },
+  "iters=30": {
+   "orthogonality_residual": 6.454748131545784e-07,
+   "converged": true
+  },
+  "iters=100": {
+   "orthogonality_residual": 6.4547174360996e-07,
+   "converged": true
+  }
+ },
+ "end_to_end_live_call": {
+  "eye128 (bridge)": {
+   "output_finite": true,
+   "orthogonality_residual": 6.717145879520103e-07,
+   "stiefel_contract_met": true,
+   "weight_norm_telem": 11.313708305358887
+  },
+  "eye128 + randn*0.01": {
+   "output_finite": true,
+   "orthogonality_residual": 3.237518103560433e-05,
+   "stiefel_contract_met": true,
+   "weight_norm_telem": 11.313703536987305
+  }
+ },
+ "verdict": {
+  "live_caller_inputs_converge": false,
+  "reachable_from_live_caller": true,
+  "nan_only_on_inputs_no_caller_produces": false,
+  "docstring_contract_holds_at_default_iters": true,
+  "reading": "Stiefel contract FAILS on a live caller input -> REACHABLE defect."
+ }
+}
