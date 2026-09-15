@@ -33,21 +33,35 @@ fi
 
 V2="$ROOT/HENRI V2"
 GATE="${HENRI_SEAL_GATE:-$V2/experiments/verification/validate_seal_consistency.py}"
-DOC="${HENRI_SEAL_DOC:-$V2/references/henri_phase10_1_operator_gap_adjudication.md}"
-RECEIPT="${HENRI_SEAL_RECEIPT:-$V2/experiments/verification/evaluate_60_task_koopman_gap_observed.json}"
 
-for f in "$GATE" "$DOC" "$RECEIPT"; do
+# Default: cover EVERY sealed pair (validate_seal_consistency.PAIRS). Passing
+# --doc/--receipt checks one pair only, which would silently stop covering seals
+# added later. The overrides exist for the installer's 3-direction test.
+if [ -n "${HENRI_SEAL_DOC:-}" ] && [ -n "${HENRI_SEAL_RECEIPT:-}" ]; then
+  ARGS=(--doc "$HENRI_SEAL_DOC" --receipt "$HENRI_SEAL_RECEIPT")
+  REQUIRED=("$GATE" "$HENRI_SEAL_DOC" "$HENRI_SEAL_RECEIPT")
+else
+  ARGS=()
+  REQUIRED=("$GATE")
+fi
+
+for f in "${REQUIRED[@]}"; do
   [ -f "$f" ] || { echo "PRE-COMMIT BLOCKED: required file missing: $f" >&2; exit 1; }
 done
 
-out="$(python "$GATE" --doc "$DOC" --receipt "$RECEIPT" --quiet 2>&1)"
+out="$(python "$GATE" ${ARGS[@]+"${ARGS[@]}"} --quiet 2>&1)"
 rc=$?
 if [ "$rc" -ne 0 ]; then
   echo "PRE-COMMIT BLOCKED: seal-consistency gate FAILED (rc=$rc)." >&2
   printf '%s\n' "$out" | tail -8 >&2
-  echo "  Inspect: python \"$GATE\" --doc \"$DOC\" --receipt \"$RECEIPT\"" >&2
+  echo "  Inspect: python \"$GATE\" ${ARGS[@]+"${ARGS[@]}"}" >&2
   echo "  Intentional bypass only: git commit --no-verify" >&2
   exit 1
 fi
+# Report WHAT WAS COVERED. Without this line the hook swallows the gate's coverage
+# count, so narrowing PAIRS back to a single pair would be invisible in the commit
+# transcript -- the hook would keep printing PASS while silently checking less.
+# test_precommit_hook.py::test_hook_covers_every_registered_pair asserts this line.
+printf '%s\n' "$out" | grep -E "^RESULT:" >&2 || true
 echo "pre-commit: seal-consistency gate PASS"
 exit 0

@@ -1,0 +1,7 @@
+# Phase 10.3: the k3 supplied artifacts are byte-pinned by SHA-256 in
+# tests/contract/test_arc_k3_koopman.py. With core.autocrlf=true and no
+# attributes, git rewrites LF->CRLF on checkout, so `read_bytes()` hashed CRLF
+# and the integrity assertion failed on unmodified content. Pin canonical LF.
+# Reference: HENRI-DIR-2026-PHASE-10.3-STATICITY-PARTITION, directive 1.
+/docs/spec/carrier_k3_supplied_prereg.md text eol=lf
+"HENRI V2/experiments/verification/carrier_k3_supplied_kernel.py" text eol=lf

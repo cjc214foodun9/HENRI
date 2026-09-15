@@ -30,9 +30,28 @@ if [ "$action" = "install" ]; then
   cmp -s "$SRC_M" "$DST_M" && echo "  identical to versioned source: yes" \
                            || echo "  IDENTICAL: NO"
   echo
-  echo "=== receipt-filename audit (a wrong name blocks EVERY commit) ==="
-  echo "  'observable' (typo): $(grep -c observable "$DST_M" || true)"
-  echo "  'observed'   (right): $(grep -c observed "$DST_M" || true)"
+  echo "=== seal-pair registry audit ==="
+  echo "  'observable' (typo in hook): $(grep -c observable "$DST_M" || true)"
+  # The hook DEFERS to validate_seal_consistency.PAIRS, so the thing worth checking
+  # is the registry itself: every registered pair must exist, or the hook blocks
+  # EVERY commit (fail-closed but wrong). The previous audit grepped for one receipt
+  # FILENAME, which became vacuous once the hook stopped hardcoding a pair.
+  python - "$V2_N" <<'PYEOF'
+import importlib.util, pathlib, sys
+v2 = pathlib.Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location(
+    "vsc", v2 / "experiments" / "verification" / "validate_seal_consistency.py")
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+print(f"  registered pairs: {len(m.PAIRS)}")
+bad = 0
+for d, r in m.PAIRS:
+    ok = d.is_file() and r.is_file()
+    bad += 0 if ok else 1
+    print(f"    {'ok    ' if ok else 'MISSING'} {d.name} | {r.name}")
+print(f"  missing: {bad}")
+sys.exit(0)
+PYEOF
   exit 0
 fi
 
@@ -41,8 +60,8 @@ mkdir -p "$TMP_M"
 echo "=== hook present? ==="
 [ -f "$DST_M" ] || { echo "  MISSING: $DST_M"; exit 1; }
 echo "  bytes: $(wc -c < "$DST_M")"
-echo "  receipt paths referenced:"
-grep -o "evaluate_60_task_koopman_gap_[a-z]*\.json" "$DST_M" | sort -u | sed 's/^/    /'
+echo "  covers (registry-driven, not hardcoded):"
+grep -o "PAIRS\|--doc\|--receipt" "$DST_M" | sort -u | sed 's/^/    /'
 
 echo
 echo "=== direction A: real pair -> hook must ALLOW (expect rc 0) ==="

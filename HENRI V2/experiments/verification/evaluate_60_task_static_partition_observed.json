@@ -1,0 +1,258 @@
+{
+ "schema": "henri.arc.static-partition-eval.v3",
+ "utc": "2026-09-15T22:01:37Z",
+ "evidence_class": "OBSERVED",
+ "device_kind": "cpu",
+ "torch": "2.13.0+cpu",
+ "n_blocks": 8192,
+ "D_flat_complex": 32768,
+ "doc_sha256": "d33f24e0dc01055217fa90bd16cbb84c3ef0dca4c30ff8014ba4d7a9c4545712",
+ "doc_pages": 22,
+ "doc_chars_extracted": 37203,
+ "baseline_to_reproduce": {
+  "held": 0.4215062024071813,
+  "ceiling": 0.7535529502564007,
+  "identity": 0.4032919658173341
+ },
+ "floor_60task_reference_only": 0.4215,
+ "grid_lambda": 0.1,
+ "wave_lambdas": [
+  0.0001,
+  0.01,
+  0.1
+ ],
+ "defect_ledger": {
+  "D1": "v1 compared 27-task arms against 60-task arms -> false ACCEPT",
+  "D1B": "v2 gated on the 60-task floor for a 27-task subset -> false ACCEPT",
+  "D2": "v1 negative control unequal (different task subsets)",
+  "D3": "grid ridge is row-uniform -> no-op for argmax; duplicates",
+  "D4": "87.4% is the per-pair median, not the consensus fraction",
+  "D5": "v2 all_active fallback reported 100% static (artefact)",
+  "D6": "v2 wave_maskonly is lambda-invariant -> duplicates"
+ },
+ "n_scored_identity": 60,
+ "n_skipped": 0,
+ "n_requested": 60,
+ "errors": [
+  "007bbfb7/grid_gate@0.1: {'mode': 'fit_failed'}",
+  "007bbfb7/grid_nogate@0.1: {'mode': 'fit_failed'}",
+  "00d62c1b/grid_gate@0.1: {'mode': 'fit_failed'}",
+  "00d62c1b/grid_nogate@0.1: {'mode': 'fit_failed'}",
+  "017c7c7b/grid_gate@0.1: {'mode': 'fit_failed'}",
+  "017c7c7b/grid_nogate@0.1: {'mode': 'fit_failed'}",
+  "025d127b/grid_gate@0.1: {'mode': 'fit_failed'}",
+  "025d127b/grid_nogate@0.1: {'mode': 'fit_failed'}"
+ ],
+ "n_common_subset": 27,
+ "n_wave_applicable": 27,
+ "size_of_each_arm_scored_set": {
+  "identity": 60,
+  "diag_ls": 60,
+  "wave_gate@0.0001": 27,
+  "wave_gate@0.01": 27,
+  "wave_gate@0.1": 27,
+  "wave_maskonly": 27,
+  "grid_gate@0.1": 27,
+  "grid_nogate@0.1": 27,
+  "grid_identity": 60,
+  "wave_identity": 60
+ },
+ "arms_per_arm_scored_set": {
+  "identity": {
+   "held_out_mean": 0.4032921709896376,
+   "in_sample_ceiling_mean": 0.4032921709896376,
+   "gap": 0.0,
+   "n": 60
+  },
+  "diag_ls": {
+   "held_out_mean": 0.42150651891715823,
+   "in_sample_ceiling_mean": 0.753553180727694,
+   "gap": 0.3320466618105357,
+   "n": 60
+  },
+  "wave_gate@0.0001": {
+   "held_out_mean": 0.5150744208583126,
+   "in_sample_ceiling_mean": 0.6978904049337648,
+   "gap": 0.1828159840754522,
+   "n": 27
+  },
+  "wave_gate@0.01": {
+   "held_out_mean": 0.515464080704583,
+   "in_sample_ceiling_mean": 0.6967395448390349,
+   "gap": 0.18127546413445184,
+   "n": 27
+  },
+  "wave_gate@0.1": {
+   "held_out_mean": 0.515481346183353,
+   "in_sample_ceiling_mean": 0.6919856191049386,
+   "gap": 0.17650427292158566,
+   "n": 27
+  },
+  "wave_maskonly": {
+   "held_out_mean": 0.5027878670953214,
+   "in_sample_ceiling_mean": 0.5443982858121694,
+   "gap": 0.04161041871684801,
+   "n": 27
+  },
+  "grid_gate@0.1": {
+   "held_out_mean": 0.4940212920860008,
+   "in_sample_ceiling_mean": 0.6229892036429158,
+   "gap": 0.12896791155691495,
+   "n": 27
+  },
+  "grid_nogate@0.1": {
+   "held_out_mean": 0.33913061336648687,
+   "in_sample_ceiling_mean": 0.38310924270995156,
+   "gap": 0.04397862934346469,
+   "n": 27
+  },
+  "grid_identity": {
+   "held_out_mean": 0.4032921709896376,
+   "in_sample_ceiling_mean": 0.4032921709896376,
+   "gap": 0.0,
+   "n": 60
+  },
+  "wave_identity": {
+   "held_out_mean": 0.4032921709896376,
+   "in_sample_ceiling_mean": 0.4032921709896376,
+   "gap": 0.0,
+   "n": 60
+  }
+ },
+ "arms_common": {
+  "identity": {
+   "held_out_mean": 0.5341670405361112,
+   "in_sample_ceiling_mean": 0.5341670405361112,
+   "gap": 0.0,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.0,
+   "n": 27
+  },
+  "diag_ls": {
+   "held_out_mean": 0.5468879998834045,
+   "in_sample_ceiling_mean": 0.8041087742205018,
+   "gap": 0.2572207743370972,
+   "beats_identity": true,
+   "frac_tasks_beating_identity": 0.4444444444444444,
+   "n": 27
+  },
+  "wave_gate@0.0001": {
+   "held_out_mean": 0.5150744208583126,
+   "in_sample_ceiling_mean": 0.6978904049337648,
+   "gap": 0.1828159840754522,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.2962962962962963,
+   "n": 27
+  },
+  "wave_gate@0.01": {
+   "held_out_mean": 0.515464080704583,
+   "in_sample_ceiling_mean": 0.6967395448390349,
+   "gap": 0.18127546413445184,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.2962962962962963,
+   "n": 27
+  },
+  "wave_gate@0.1": {
+   "held_out_mean": 0.515481346183353,
+   "in_sample_ceiling_mean": 0.6919856191049386,
+   "gap": 0.17650427292158566,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.2962962962962963,
+   "n": 27
+  },
+  "wave_maskonly": {
+   "held_out_mean": 0.5027878670953214,
+   "in_sample_ceiling_mean": 0.5443982858121694,
+   "gap": 0.04161041871684801,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.25925925925925924,
+   "n": 27
+  },
+  "grid_gate@0.1": {
+   "held_out_mean": 0.4940212920860008,
+   "in_sample_ceiling_mean": 0.6229892036429158,
+   "gap": 0.12896791155691495,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.2962962962962963,
+   "n": 27
+  },
+  "grid_nogate@0.1": {
+   "held_out_mean": 0.33913061336648687,
+   "in_sample_ceiling_mean": 0.38310924270995156,
+   "gap": 0.04397862934346469,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.25925925925925924,
+   "n": 27
+  },
+  "grid_identity": {
+   "held_out_mean": 0.5341670405361112,
+   "in_sample_ceiling_mean": 0.5341670405361112,
+   "gap": 0.0,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.0,
+   "n": 27
+  },
+  "wave_identity": {
+   "held_out_mean": 0.5341670405361112,
+   "in_sample_ceiling_mean": 0.5341670405361112,
+   "gap": 0.0,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.0,
+   "n": 27
+  }
+ },
+ "perpair_unchanged_frac_median": 0.873015873015873,
+ "consensus_static_frac_median_over_consensus_tasks": 0.68,
+ "n_consensus_tasks": 27,
+ "n_all_active_fallback_tasks": 33,
+ "n_active_slots_median": 45.5,
+ "mask_modes": {
+  "all_active": 33,
+  "consensus": 27
+ },
+ "identity_common": 0.5341670405361112,
+ "baseline_replica_over_60": {
+  "diag_ls_held": 0.42150651891715823,
+  "diag_ls_ceiling": 0.753553180727694,
+  "reproduces_recorded_baseline": true
+ },
+ "negative_control": {
+  "grid_identity_minus_identity": 0.0,
+  "wave_identity_minus_identity": 0.0,
+  "ok": true,
+  "why": "v1 failed this because arms were compared across DIFFERENT task sets."
+ },
+ "applicability": {
+  "n_wave_applicable": 27,
+  "n_tasks": 60,
+  "frac": 0.45,
+  "why": "the partition needs the held-out test grid to share the demo grid shape, otherwise no position-wise mask transfers. This coverage is a property of the METHOD, not of the corpus."
+ },
+ "gamma_local": {
+  "formula": "M_eff / D_eff from measured counts. The request text's 9.38 does NOT occur in the authenticated extraction ('9.38','9.4','9.5','gamma', Greek letters -> 0 hits), so it is COMPUTED here, never adopted.",
+  "M_eff_median_active_positions": 45.5,
+  "D_eff_median_colour_slots": 9.0,
+  "gamma_median_of_ratios": 6.166666666666666,
+  "note": "Conditioning indicator for the ACTIVE fit only. NOT a claim about wave-domain conditioning, where the fit has D=32768 slots."
+ },
+ "verdict": {
+  "n_common_subset": 27,
+  "n_tasks_total": 60,
+  "baseline_replica_reproduces_over_60": true,
+  "negative_control_ok": true,
+  "identity_on_common": 0.5341670405361112,
+  "diag_ls_on_common_COMPARABLE_INCUMBENT": 0.5468879998834045,
+  "best_partition_arm": "wave_gate@0.1",
+  "best_partition_held_out_common": 0.515481346183353,
+  "best_partition_ceiling_common": 0.6919856191049386,
+  "partition_beats_diag_ls_on_common": false,
+  "partition_beats_identity_on_common": false,
+  "floor_60task_REFERENCE_ONLY": 0.4215,
+  "exceeds_60task_floor_but_INVALID_COMPARISON": true,
+  "ACCEPT": false,
+  "ACCEPT_CRITERION": "controls exact AND held-out > diag_ls ON THE SAME TASKS AND held-out > identity ON THE SAME TASKS. The 60-task floor 0.4215 is NOT used to decide (defect D1-B).",
+  "HONEST_LIMIT": "Internal-representation held-out cosine recovery on ARC-AGI-1 training tasks (test[0] held out, first 3 train pairs as demos). NOT an ARC solve rate. Gap contraction is NOT accepted as progress (Phase 10.1 ceiling-collapse trap).",
+  "evidence_class": "OBSERVED",
+  "runtime_s": 10.8
+ }
+}

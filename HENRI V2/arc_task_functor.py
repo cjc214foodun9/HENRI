@@ -265,6 +265,7 @@ def compile_task_functor(
     _den_min = 0.0
     _koop_apply = None
     _koop_diag = None
+    _sp_diag = None
     _alpha = None
     _bank_meta = None
     if _f7_active:
@@ -299,7 +300,8 @@ def compile_task_functor(
         # any receipt or script that already cites koopman_8).
         if _req == "koopman":
             _req = "koopman_8"
-        _fit_mode = _req if _req in ("diag_ls", "mean_corr", "koopman_8") else "diag_ls"
+        _fit_mode = (_req if _req in ("diag_ls", "mean_corr", "koopman_8",
+                                        "static_partition") else "diag_ls")
         _reg_lambda = float(os.environ.get("HENRI_FUNCTOR_RIDGE", "1e-4"))
         Xtr = torch.stack([wx for wx, _ in train]).to(device)
         Ytr = torch.stack([wy for _, wy in train]).to(device)
@@ -320,6 +322,40 @@ def compile_task_functor(
             w_task = _koop_apply(torch.zeros_like(Xtr[0]).reshape(1, -1)).reshape(-1)
         elif _fit_mode == "diag_ls":
             w_task = compute_optimal_task_functor(Xtr, Ytr, reg_lambda=_reg_lambda)
+        elif _fit_mode == "static_partition":
+            # Phase 10.3 directive 2: HENRI_FUNCTOR_FIT=static_partition.
+            # WHY THIS IS GRID-MEDIATED AND NOT A MULTIPLICATIVE W:
+            # the staticity mask is defined on CANVAS POSITIONS, but a wave
+            # component is a SUM over positions (see staticity_partition_functor
+            # module docstring). A position mask is therefore not diagonal in wave
+            # space, and this encoder exposes no inverse. The partition is
+            # evaluated in the grid domain it is defined on and then re-encoded,
+            # so the score goes through the SAME encoder as diag_ls/identity and
+            # remains comparable. Documented in provenance, not hidden.
+            from staticity_partition_functor import predict_grid_partition
+            _tr = []
+            for _i, (_x, _y) in enumerate(demo_pairs):
+                if _i == hold_out_index:
+                    continue
+                _a = _x.tolist() if hasattr(_x, "tolist") else _x
+                _b = _y.tolist() if hasattr(_y, "tolist") else _y
+                _tr.append((_a, _b))
+            _hin = demo_pairs[hold_out_index][0]
+            _hin = _hin.tolist() if hasattr(_hin, "tolist") else _hin
+            _vmax = 1
+            for _a, _b in _tr + [(_hin, _hin)]:
+                for _row in list(_a) + list(_b):
+                    _vmax = max(_vmax, max(_row) + 1)
+            _spred, _sdiag = predict_grid_partition(
+                _tr, _hin, v_max=int(_vmax),
+                reg_lambda=_reg_lambda if _reg_lambda > 0 else 1e-1)
+            if _spred is None:
+                raise RuntimeError(f"BLOCKED_STATIC_PARTITION: {_sdiag}")
+            _swave = encode(_spred.tolist()).squeeze(0).reshape(-1).to(device)
+            w_task = _to_complex(_swave)          # representative only
+            _sp_diag = dict(_sdiag)
+            _sp_diag["v_max"] = int(_vmax)
+            _sp_diag["applied_as"] = "grid re-encode (NOT multiplicative)"
         else:
             w_task = torch.zeros_like(train[0][0])
             for wx, wy in train:
@@ -344,6 +380,12 @@ def compile_task_functor(
         if _f7_active:
             held_out_cos = _f7_held_cos
             identity_cos = _f7_identity_cos
+        elif _fit_mode == "static_partition":
+            # NOT multiplicative: the partition is applied in the GRID domain and
+            # re-encoded, so w_task IS the predicted held-out wave here.
+            pred = F.normalize(w_task, p=2, dim=-1)
+            held_out_cos = float(torch.real(torch.vdot(pred, hold_y)).item())
+            identity_cos = float(torch.real(torch.vdot(hold_x, hold_y)).item())
         elif _fit_mode == "koopman_8":
             # NOT multiplicative: the Koopman operator is applied as a callable.
             # `w_task * hold_x` would be the diagonal-application defect.
@@ -379,8 +421,12 @@ def compile_task_functor(
             "operator_family": (
                 "per_slot_koopman_subspace" if _fit_mode == "koopman_8"
                 else "per_slot_diagonal_ridge_ls" if _fit_mode == "diag_ls"
+                else "staticity_partition_identity_plus_colour_ls"
+                if _fit_mode == "static_partition"
                 else "mean_conj_corr"),
         }
+        if _fit_mode == "static_partition" and _sp_diag is not None:
+            res.provenance["fit"]["staticity_partition"] = _sp_diag
         if _fit_mode == "koopman_8" and _koop_diag is not None:
             res.provenance["fit"]["koopman"] = {
                 "K": _koop_diag["K"],
