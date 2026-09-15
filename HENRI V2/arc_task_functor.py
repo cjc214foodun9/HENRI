@@ -146,6 +146,55 @@ def compute_optimal_task_functor(
     return numerator / (denom + lam)
 
 
+def compute_koopman_amortized_functor(
+    X_demos: torch.Tensor,
+    Y_demos: torch.Tensor,
+    generators: Sequence,
+    reg_lambda: float = 1e-2,
+):
+    """Phase 10.1 directive 2: low-rank Koopman subspace estimator.
+
+        W* = sum_{j=1..K} alpha_j L_j,   alpha = (G + reg_lambda*I)^-1 b
+        G[j,k] = sum_m <L_j X_m, L_k X_m>     b[j] = sum_m <L_j X_m, Y_m>
+
+    Reduces the estimation problem from D parameters to K (K=8 default), which is
+    the directive's sample-efficiency argument: with M=3 demonstrations the
+    diagonal family is underdetermined (3 samples for 32768 slots) while K=8
+    parameters from 3 samples is merely a small ridge problem.
+
+    IMPORTANT -- this operator is NOT diagonal, so it must NOT be applied as
+    `w * x`. It is returned as a CALLABLE plus the weights. Applying a Koopman
+    operator multiplicatively is the defect this signature exists to prevent.
+
+    Returns (alpha [K], apply_fn(x_complex_flat) -> x_complex_flat, diagnostics).
+
+    DELEGATION ONLY: the math lives in koopman_subspace_functor.py and the bank in
+    koopman_generator_bank.py, so this module keeps its existing surface and the
+    default path is untouched when HENRI_FUNCTOR_FIT is not "koopman_8".
+    """
+    from koopman_subspace_functor import compute_koopman_subspace_functor
+    return compute_koopman_subspace_functor(X_demos, Y_demos, generators,
+                                            reg_lambda=reg_lambda)
+
+
+def _koopman_bank_for(tokenizer, device: str):
+    """Build (and cache) the K=8 bank from the host tokenizer's LIVE encoder buffers.
+
+    Returns None when the torus encoder is not armed, so the caller fails closed
+    instead of silently falling back to a diagonal operator.
+    """
+    enc = getattr(tokenizer, "_torus_encoder", None)
+    if enc is None:
+        return None
+    cached = getattr(tokenizer, "_koopman_bank_cache", None)
+    if cached is None:
+        from koopman_generator_bank import build_generator_bank
+        gens, meta = build_generator_bank(enc, device=device)
+        cached = (gens, meta)
+        tokenizer._koopman_bank_cache = cached
+    return cached
+
+
 def compile_task_functor(
     demo_pairs: Sequence[Tuple],
     tokenizer: object,
@@ -214,6 +263,10 @@ def compile_task_functor(
     _reg_lambda = 0.0
     _ridge_rel = 0.0
     _den_min = 0.0
+    _koop_apply = None
+    _koop_diag = None
+    _alpha = None
+    _bank_meta = None
     if _f7_active:
         from f7_affine_egress import AffineEgress
         Xtr = torch.stack([_to_real(wx) for wx, _ in train]).to(device)
@@ -240,11 +293,26 @@ def compile_task_functor(
         # HENRI_FUNCTOR_FIT=mean_corr restores the legacy normalised correlation
         # so one run yields the A/B pair required to measure gap closure.
         _req = os.environ.get("HENRI_FUNCTOR_FIT")
-        _fit_mode = _req if _req in ("diag_ls", "mean_corr") else "diag_ls"
+        _fit_mode = _req if _req in ("diag_ls", "mean_corr", "koopman_8") else "diag_ls"
         _reg_lambda = float(os.environ.get("HENRI_FUNCTOR_RIDGE", "1e-4"))
         Xtr = torch.stack([wx for wx, _ in train]).to(device)
         Ytr = torch.stack([wy for _, wy in train]).to(device)
-        if _fit_mode == "diag_ls":
+        if _fit_mode == "koopman_8":
+            _bank = _koopman_bank_for(tokenizer, device)
+            if _bank is None:
+                raise RuntimeError(
+                    "BLOCKED_NO_TORUS_ENCODER: HENRI_FUNCTOR_FIT=koopman_8 needs "
+                    "HENRI_ENCODER_TORUS=1 so the generator bank can be built from "
+                    "live encoder buffers. Failing closed rather than silently "
+                    "using a diagonal operator.")
+            _gens, _bank_meta = _bank
+            _alpha, _koop_apply, _koop_diag = compute_koopman_amortized_functor(
+                Xtr.reshape(len(train), -1), Ytr.reshape(len(train), -1),
+                _gens, reg_lambda=_reg_lambda)
+            # w_task is a REPRESENTATIVE vector for digests only. The live
+            # operator is _koop_apply; w_task is NOT applied multiplicatively.
+            w_task = _koop_apply(torch.zeros_like(Xtr[0]).reshape(1, -1)).reshape(-1)
+        elif _fit_mode == "diag_ls":
             w_task = compute_optimal_task_functor(Xtr, Ytr, reg_lambda=_reg_lambda)
         else:
             w_task = torch.zeros_like(train[0][0])
@@ -270,6 +338,13 @@ def compile_task_functor(
         if _f7_active:
             held_out_cos = _f7_held_cos
             identity_cos = _f7_identity_cos
+        elif _fit_mode == "koopman_8":
+            # NOT multiplicative: the Koopman operator is applied as a callable.
+            # `w_task * hold_x` would be the diagonal-application defect.
+            applied = _koop_apply(hold_x.reshape(1, -1)).reshape(-1)
+            pred = F.normalize(applied, p=2, dim=-1)
+            held_out_cos = float(torch.real(torch.vdot(pred, hold_y)).item())
+            identity_cos = float(torch.real(torch.vdot(hold_x, hold_y)).item())
         else:
             pred = F.normalize(w_task * hold_x, p=2, dim=-1)
             held_out_cos = float(torch.real(torch.vdot(pred, hold_y)).item())
@@ -295,9 +370,23 @@ def compile_task_functor(
             "reg_lambda": _reg_lambda,
             "ridge_rel_to_mean_excitation": _ridge_rel,
             "min_slot_excitation": _den_min,
-            "operator_family": ("per_slot_diagonal_ridge_ls"
-                                if _fit_mode == "diag_ls" else "mean_conj_corr"),
+            "operator_family": (
+                "per_slot_koopman_subspace" if _fit_mode == "koopman_8"
+                else "per_slot_diagonal_ridge_ls" if _fit_mode == "diag_ls"
+                else "mean_conj_corr"),
         }
+        if _fit_mode == "koopman_8" and _koop_diag is not None:
+            res.provenance["fit"]["koopman"] = {
+                "K": _koop_diag["K"],
+                "alpha_abs": _koop_diag["alpha_abs"],
+                "alpha_argmax": _koop_diag["alpha_argmax"],
+                "rank_G": _koop_diag["rank_G"],
+                "gram_is_diagonal": _koop_diag["gram_is_diagonal"],
+                "gram_diag_mass": _koop_diag["gram_diag_mass"],
+                "gram_offdiag_mass": _koop_diag["gram_offdiag_mass"],
+                "bank": [m["name"] for m in (_bank_meta or [])],
+                "applied_as": "callable (NOT multiplicative)",
+            }
     if held_out_cos > _RECOVERY_COS_THRESHOLD and held_out_cos > identity_cos + _IDENTITY_MARGIN:
         res.status = STATUS_OK
         res.reason = (

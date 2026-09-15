@@ -46,6 +46,55 @@ import torch.nn.functional as F
 
 FEATURE_FLAG = "HENRI_ARC_PSG"
 SCHEMA_ID = "henri.psg-engine.v1"
+
+# ---------------------------------------------------------------- ZONE C FREEZE
+# Phase 10.1 directive 1.1 (doc sha256 972c29ffdc67d125..., 11 pages): this engine
+# is FROZEN. It is NOT patched, NOT refactored, NOT extended. Both naive operator
+# sites (`w_task + conj(wx)*wy` in compile_functor_wave and the delegating class
+# method) remain byte-identical. Every compute entry point now fails closed so no
+# unintended execution path can reach them.
+#
+# SEMANTICS (faithful to the directive, which prints:
+#     if os.getenv("HENRI_ARC_PSG", "0") == "1":
+#         raise NotImplementedError("PSG engine frozen pending Phase 10.1 ...")
+#  ): the freeze fires exactly when the PSG path is REQUESTED. With the feature
+# flag OFF (its default) the engine is inert and the existing contract tests stay
+# green; with it ON, compute raises BLOCKED_ZONE_C_FROZEN. A module-level raise
+# was rejected because experiments/performance/psg_cuda_check.py sets
+# HENRI_ARC_PSG="1" at its line 24 and imports this module at line 26, so the
+# import itself would raise before any guard could report a typed status.
+FREEZE_ENV = "HENRI_ZONE_C_FREEZE"
+FROZEN_MSG = ("PSG engine frozen pending Phase 10.1 operator resolution. "
+              "See references/henri_phase10_1_operator_gap_adjudication.md")
+
+
+def psg_frozen() -> bool:
+    """True when the PSG path is requested AND the freeze is in force.
+
+    Requested  = HENRI_ARC_PSG == "1"   (the directive's own condition)
+    Override   = HENRI_ZONE_C_FREEZE == "0" (development escape hatch, explicit)
+    """
+    requested = os.environ.get(FEATURE_FLAG, "0") == "1"
+    override = os.environ.get(FREEZE_ENV, "1") == "0"
+    return bool(requested and not override)
+
+
+def assert_psg_not_frozen(where: str, task_id: str = "") -> None:
+    """Fail closed. Raises; never silently computes the frozen operator."""
+    if psg_frozen():
+        raise RuntimeError(
+            "BLOCKED_ZONE_C_FROZEN at " + where
+            + ((" (task_id=" + str(task_id) + ")") if task_id else "")
+            + ": " + FROZEN_MSG)
+
+
+if psg_frozen():
+    import warnings as _warnings
+    _warnings.warn("progressive_semantic_grounding_engine is FROZEN (Phase 10.1); "
+                   "compute entry points raise BLOCKED_ZONE_C_FROZEN. Set "
+                   + FREEZE_ENV + "=0 to develop the engine.",
+                   RuntimeWarning, stacklevel=2)
+
 STATUS_FEATURE_DISABLED = "FEATURE_DISABLED"
 STATUS_NO_DEMOS = "BLOCKED_NO_DEMONSTRATIONS"
 STATUS_OK = "OK"
@@ -174,7 +223,12 @@ def compile_functor_wave(
     Same math as arc_task_functor.compile_task_functor but returns the actual
     tensors (the production helper returns only digests).
     Returns (w_task, goal_anchor, result); tensors are None on failure.
+
+    FROZEN (Phase 10.1 directive 1.1): raises BLOCKED_ZONE_C_FROZEN before ANY
+    compute when the PSG path is requested. The operator below is left
+    byte-identical -- this guard exists only to prevent unintended execution.
     """
+    assert_psg_not_frozen("compile_functor_wave", task_id=task_id)
     res = PSGFunctorResult(task_id=task_id, demo_pair_count=len(demo_pairs))
     if not demo_pairs:
         res.status = STATUS_NO_DEMOS
@@ -385,6 +439,11 @@ class ProgressiveSemanticGroundingEngine:
     def compile_task_functor(
         self, demo_pairs: Sequence[Tuple[Any, Any]], task_id: str = ""
     ) -> PSGFunctorResult:
+        # FROZEN (Phase 10.1 directive 1.1). Redundant with the guard inside
+        # compile_functor_wave and kept deliberately: the directive names both
+        # sites, and this makes the refusal location explicit in tracebacks.
+        assert_psg_not_frozen(
+            "ProgressiveSemanticGroundingEngine.compile_task_functor", task_id=task_id)
         w_task, goal_c, res = compile_functor_wave(
             demo_pairs, self.tokenizer, device=self.device, task_id=task_id,
             num_blocks=self.num_blocks, block_dim=self.block_dim)

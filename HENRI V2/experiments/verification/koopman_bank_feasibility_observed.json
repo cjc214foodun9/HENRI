@@ -1,0 +1,89 @@
+{
+ "schema": "henri.koopman.bank-feasibility.v1",
+ "evidence_class": "OBSERVED",
+ "doc_sha256_prefix": "972c29ffdc67d125",
+ "num_blocks": 8192,
+ "block_slots": 4,
+ "D_complex": 32768,
+ "modulus_S": 32,
+ "device_kind": "cpu",
+ "torch": "2.13.0+cpu",
+ "T_unit_modulus": {
+  "rows": [
+   {
+    "dw": 1,
+    "dh": 0,
+    "min_abs": 1.0,
+    "max_abs": 1.0,
+    "max_dev_from_1": 0.0
+   },
+   {
+    "dw": 0,
+    "dh": 1,
+    "min_abs": 1.0,
+    "max_abs": 1.0,
+    "max_dev_from_1": 0.0
+   },
+   {
+    "dw": 1,
+    "dh": 1,
+    "min_abs": 1.0,
+    "max_abs": 1.0,
+    "max_dev_from_1": 0.0
+   },
+   {
+    "dw": 3,
+    "dh": 5,
+    "min_abs": 1.0,
+    "max_abs": 1.0,
+    "max_dev_from_1": 0.0
+   },
+   {
+    "dw": 31,
+    "dh": 31,
+    "min_abs": 0.9999999403953552,
+    "max_abs": 1.0,
+    "max_dev_from_1": 5.960464477539063e-08
+   },
+   {
+    "dw": 7,
+    "dh": 19,
+    "min_abs": 0.9999999403953552,
+    "max_abs": 1.0,
+    "max_dev_from_1": 5.960464477539063e-08
+   }
+  ],
+  "all_unit_modulus": true
+ },
+ "cancellation": {
+  "max_abs_numerator_diff": 1.922192041092785e-06,
+  "max_rel_denominator_diff": 0.0,
+  "claim_holds": true,
+  "consequence": "W* = sum conj(X)Y/(sum|X|^2+lam) is EXACTLY invariant under a common translation of X and Y. Translation augmentation cannot move the gap, and ridge cannot either."
+ },
+ "orbit_augmentation": {
+  "M_effective": 3072,
+  "rel_change_in_Wstar": 0.382863312959671,
+  "rel_change_in_normalised_Wstar": 0.013507003895938396,
+  "is_a_no_op": false,
+  "equivalence_max_rel_err": 2.900865911215078e-05,
+  "EXACT_LAW": "W*_orbit(lam) == W*_plain(lam/S^2). Orbit augmentation over the translation group is EXACTLY equivalent to dividing the ridge by S^2. It adds no new information. The v1 'rel_change_in_Wstar' of 3.8e-01 measured the ridge rescale, not new signal.",
+  "reading": "Orbit expansion produced M_eff=3072 pairs from M=3, and changed the diagonal W* by 3.829e-01 (relative). The effective sample count rose; the ESTIMATE did not move. This is the directive's sec 4.2 realization, measured."
+ },
+ "named_generator_realizability": {
+  "in_block_reflection_closure_negx": 0.2759368414622973,
+  "in_block_reflection_closure_negy": 0.27505115597226887,
+  "freqs_are_random_per_block": true,
+  "conjugation_is_exact_freq_negation": true,
+  "rot180_needs_constant_phase_offset": "theta' = v + (S-1-x)wx + (S-1-y)wy = -theta + (S-1)(wx+wy): conj() alone is exact only if (S-1)(wx+wy) == 0 mod 2pi"
+ },
+ "diagonal_mask_trap": {
+  "K": 8,
+  "W_shape": [
+   32768
+  ],
+  "sum_of_diagonal_masks_is_diagonal": true,
+  "reading": "The sketch's `generators: [K, D]` masks are DIAGONAL. Any W* = sum_j alpha_j L_j over diagonal L_j is diagonal, i.e. inside the very family whose ceiling is 0.7536 and which sec 4.2 says is insufficient. The sketch as printed cannot cross the floor its own text requires. Mode coupling needs a [D,D] or callable bank.",
+  "memory_note": "a dense [K,D,D] complex64 bank would be 68.7 GB at K=8, D=32768 -> the bank MUST be callables, not matrices."
+ }
+}

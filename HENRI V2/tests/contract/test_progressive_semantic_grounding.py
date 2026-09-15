@@ -32,6 +32,12 @@ from progressive_semantic_grounding_engine import (  # noqa: E402
 
 @pytest.fixture(scope="module")
 def harness():
+    # This module DELIBERATELY exercises the Phase 10.1-frozen PSG operator, so it
+    # opts out of the freeze EXPLICITLY and locally. The freeze itself (the
+    # fail-closed raise on the requested path) is asserted in
+    # tests/contract/test_arc_zone_c_freeze.py. Opting out does not weaken the
+    # operator coverage below, all of which still runs the real math.
+    os.environ["HENRI_ZONE_C_FREEZE"] = "0"
     from efe_planner import EFEPlanner
     from henri_vision_encoder import HENRIVisionEncoder
     from darwinian_phase_swarm import HenriSwarmOrchestrator

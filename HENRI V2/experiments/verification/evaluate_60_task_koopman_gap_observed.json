@@ -1,0 +1,185 @@
+{
+ "schema": "henri.arc.koopman-gap-eval.v1",
+ "utc": "2026-09-15T19:57:42Z",
+ "evidence_class": "OBSERVED",
+ "device_kind": "cpu",
+ "torch": "2.13.0+cpu",
+ "doc_sha256_prefix": "972c29ffdc67d125",
+ "gate": {
+  "held_out_min": 0.5,
+  "gap_max": 0.249
+ },
+ "baseline_to_reproduce": {
+  "held": 0.4215062024071813,
+  "ceiling": 0.7535529502564007,
+  "identity": 0.4032919658173341
+ },
+ "bank_meta": [
+  {
+   "idx": 0,
+   "name": "identity",
+   "is_diagonal_in_freq_basis": true,
+   "note": "L=I"
+  },
+  {
+   "idx": 1,
+   "name": "diff_dx",
+   "is_diagonal_in_freq_basis": true,
+   "note": "d/dx is multiplication by i*wx: diagonal by construction",
+   "freq_factor": "i*wx"
+  },
+  {
+   "idx": 2,
+   "name": "diff_dy",
+   "is_diagonal_in_freq_basis": true,
+   "note": "d/dy is multiplication by i*wy: diagonal by construction",
+   "freq_factor": "i*wy"
+  },
+  {
+   "idx": 3,
+   "name": "laplacian",
+   "is_diagonal_in_freq_basis": true,
+   "note": "Laplacian is -(wx^2+wy^2): diagonal by construction",
+   "freq_factor": "-(wx^2+wy^2)"
+  },
+  {
+   "idx": 4,
+   "name": "dihedral_refl_negx",
+   "is_diagonal_in_freq_basis": false,
+   "note": "frequency-conjugated reflection as an INVOLUTION PERMUTATION over the full bank (v2: v1 was a collapsing projection and was fixed)",
+   "coverage": 0.64471435546875,
+   "involution_verified": true,
+   "within_block_only": false
+  },
+  {
+   "idx": 5,
+   "name": "dihedral_refl_negy",
+   "is_diagonal_in_freq_basis": false,
+   "note": "frequency-conjugated reflection as an INVOLUTION PERMUTATION over the full bank (v2: v1 was a collapsing projection and was fixed)",
+   "coverage": 0.64556884765625,
+   "involution_verified": true,
+   "within_block_only": false
+  },
+  {
+   "idx": 6,
+   "name": "color_permutation_shift",
+   "is_diagonal_in_freq_basis": true,
+   "note": "cyclic value relabeling = uniform phase advance: diagonal",
+   "phase_per_step": 0.09817477042468103
+  },
+  {
+   "idx": 7,
+   "name": "topological_charge_projection",
+   "is_diagonal_in_freq_basis": true,
+   "note": "projects out the reserved DC slots: diagonal",
+   "dc_slots": 1
+  }
+ ],
+ "bank_K": {
+  "koopman_8": 8,
+  "koopman_diagonly": 6,
+  "koopman_9_withmixer": 9
+ },
+ "bank_arm_notes": {
+  "koopman_8": "K=8 = the directive's 6 named generators split into 8 basis operators (differential -> dx,dy ; dihedral -> 2 reflections)",
+  "koopman_diagonly": "K=6 = the 6 generators that ARE diagonal in the live frequency basis. Removes the 2 permutation reflections; this is the diagonal-subspace control.",
+  "koopman_9_withmixer": "K=9 = koopman_8 plus one ADDED off-diagonal per-block unitary. ABLATION, not directive-named.",
+  "REMOVED": "an arm previously called koopman_named6 was a duplicate of koopman_8 by construction and was deleted."
+ },
+ "koopman_lams": [
+  0.01,
+  0.1
+ ],
+ "bank_diagonal_count": 6,
+ "bank_offdiagonal_count": 2,
+ "n_scored": 60,
+ "n_skipped": 0,
+ "n_requested": 60,
+ "errors": [],
+ "identity_mean": 0.4032921709896376,
+ "arms": {
+  "legacy": {
+   "held_out_mean": 0.40708130502219625,
+   "in_sample_ceiling_mean": 0.6994487626685034,
+   "gap": 0.29236745764630717,
+   "beats_identity": true,
+   "frac_tasks_beating_identity": 0.4
+  },
+  "diag_ls": {
+   "held_out_mean": 0.42150651891715823,
+   "in_sample_ceiling_mean": 0.753553180727694,
+   "gap": 0.3320466618105357,
+   "beats_identity": true,
+   "frac_tasks_beating_identity": 0.45
+  },
+  "koopman_8@0.01": {
+   "held_out_mean": 0.390655067031427,
+   "in_sample_ceiling_mean": 0.4180442678354061,
+   "gap": 0.027389200803979108,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.3
+  },
+  "koopman_8@0.1": {
+   "held_out_mean": 0.3660879862611182,
+   "in_sample_ceiling_mean": 0.3922355001624156,
+   "gap": 0.02614751390129738,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.13333333333333333
+  },
+  "koopman_diagonly@0.01": {
+   "held_out_mean": 0.3879127229951943,
+   "in_sample_ceiling_mean": 0.41522673357588563,
+   "gap": 0.027314010580691328,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.3
+  },
+  "koopman_diagonly@0.1": {
+   "held_out_mean": 0.36342134453201047,
+   "in_sample_ceiling_mean": 0.38922220687769976,
+   "gap": 0.02580086234568929,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.13333333333333333
+  },
+  "koopman_9_withmixer@0.01": {
+   "held_out_mean": 0.3917175196635071,
+   "in_sample_ceiling_mean": 0.4191205358430226,
+   "gap": 0.027403016179515516,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.31666666666666665
+  },
+  "koopman_9_withmixer@0.1": {
+   "held_out_mean": 0.36744835388381036,
+   "in_sample_ceiling_mean": 0.3937400107026203,
+   "gap": 0.02629165681880996,
+   "beats_identity": false,
+   "frac_tasks_beating_identity": 0.13333333333333333
+  }
+ },
+ "koopman_diagnostics": {
+  "n_solves": 360,
+  "mean_rank_G": 5.666666666666667,
+  "mean_gram_diag_mass": 25337488.533333335,
+  "mean_gram_offdiag_mass": 15979012.177777778,
+  "n_gram_effectively_diagonal": 0,
+  "identity_generator_alpha_mean": 0.025235322970708136
+ },
+ "baseline_replica_reproduces": true,
+ "verdict": {
+  "baseline_replica_reproduces": true,
+  "best_arm_overall": "diag_ls",
+  "best_held_out_overall": 0.42150651891715823,
+  "best_koopman_arm": "koopman_9_withmixer@0.01",
+  "best_koopman_held_out": 0.3917175196635071,
+  "best_koopman_gap": 0.027403016179515516,
+  "koopman_beats_diag_ls": false,
+  "koopman_beats_legacy": false,
+  "koopman_beats_identity": false,
+  "gate_held_out_met": false,
+  "gate_gap_met": true,
+  "ACCEPT": false,
+  "mode_coupling_effect": "koopman_8 minus koopman_diagonly isolates the two dihedral PERMUTATIONS (the only off-diagonal ops present); koopman_9_withmixer minus koopman_8 isolates the ADDED unitary mixer.",
+  "HONEST_LIMIT": "Internal-representation held-out cosine recovery on the first 60 ARC-AGI-1 training tasks (test[0] held out, first 3 train pairs as demos). NOT an ARC solve rate. No external claim.",
+  "evidence_class": "OBSERVED",
+  "runtime_s": 5.3
+ }
+}
