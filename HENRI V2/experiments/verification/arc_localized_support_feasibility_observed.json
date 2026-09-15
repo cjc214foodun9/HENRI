@@ -1,0 +1,100 @@
+{
+ "schema": "henri.arc-localized-support-feasibility.v1",
+ "evidence_class": "OBSERVED",
+ "doc": "Phase 10.2 directive, sections 2.1 and 3",
+ "device_kind": "cpu",
+ "corpus": "C:/Users/chan/henri_data/ARC-AGI/data",
+ "n_tasks": 60,
+ "n_pairs": 182,
+ "seed": 3,
+ "background_color": 0,
+ "segmenter_available": true,
+ "segmenter_import_error": null,
+ "segmenter_failures": 0,
+ "object_frac": {
+  "mean": 0.3821265312816595,
+  "median": 0.3333333333333333,
+  "p10": 0.049444444444444444,
+  "p90": 0.9036281179138322,
+  "min": 0.0044444444444444444,
+  "max": 1.0,
+  "n": 182
+ },
+ "background_frac": {
+  "mean": 0.6178734687183405,
+  "median": 0.6666666666666666,
+  "p10": 0.09637188208616781,
+  "p90": 0.9505555555555556,
+  "min": 0.0,
+  "max": 0.9955555555555555,
+  "n": 182
+ },
+ "dominance_ratio": {
+  "mean": Infinity,
+  "median": 0.5,
+  "p10": 0.0520164046479836,
+  "p90": 9.388297872340432,
+  "min": 0.004464285714285714,
+  "max": Infinity,
+  "n": 182
+ },
+ "unchanged_frac": {
+  "mean": 0.7895011409670502,
+  "median": 0.8739595719381689,
+  "p10": 0.5,
+  "p90": 0.95,
+  "min": 0.0,
+  "max": 1.0,
+  "n": 117
+ },
+ "changed_frac": {
+  "mean": 0.2104988590329499,
+  "median": 0.12604042806183113,
+  "p10": 0.050000000000000044,
+  "p90": 0.5,
+  "min": 0.0,
+  "max": 1.0,
+  "n": 117
+ },
+ "transition_mass": {
+  "bg->bg": 0.5994844402665959,
+  "bg->obj": 0.1347561088999372,
+  "obj->bg": 0.02186906567858949,
+  "obj->obj": 0.24389038515487754
+ },
+ "n_pairs_with_shape_change": 65,
+ "n_pairs_zero_background": 13,
+ "components_per_grid": {
+  "mean": 13.142857142857142,
+  "median": 4.0,
+  "p90": 12.0,
+  "max": 343,
+  "n": 182
+ },
+ "component_area": {
+  "mean": 4.941471571906354,
+  "median": 1.0,
+  "max": 364,
+  "n": 2392
+ },
+ "runtime_s": 1.82,
+ "HONEST_LIMIT": "Grid-domain statistics over real ARC-AGI-1 training tasks. This measures the PREMISE of the localized-support argument, NOT the localized-support operator's score. The grid->wave projector is unbuilt and is not assumed.",
+ "verdict": {
+  "premise_stated": "|Omega_obj| << |Omega_bg| (background heavily outnumbers object)",
+  "central_statistic": "median",
+  "central_statistic_basis": "dominance_ratio has infinite values when a pair's input is all background, so the arithmetic mean is not well-defined as a summary.",
+  "n_pairs_zero_background": 13,
+  "object_frac_mean": 0.3821265312816595,
+  "object_frac_median": 0.3333333333333333,
+  "object_frac_p10": 0.049444444444444444,
+  "object_frac_p90": 0.9036281179138322,
+  "dominance_ratio_median": 0.5,
+  "background_over_object_ratio_median": 2.0,
+  "premise_supported_strongly": false,
+  "premise_supported_moderately": false,
+  "premise_supported_weakly": true,
+  "unchanged_frac_mean": 0.7895011409670502,
+  "unchanged_frac_median": 0.8739595719381689,
+  "reading": "TWO SEPARATE claims, tested separately. (a) DOMINANCE: object_frac is the non-background pixel fraction; a value near zero would make the mean-field cancellation argument strong, and a large value weakens it. (b) STATICITY: unchanged_frac is the fraction of positions with identical colour in and out; a high value explains why identity scores as well as it does, because any damped-identity operator retains that mass. Staticity and dominance are NOT the same measurement and must not be conflated."
+ }
+}

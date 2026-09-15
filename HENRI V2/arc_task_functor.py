@@ -293,6 +293,12 @@ def compile_task_functor(
         # HENRI_FUNCTOR_FIT=mean_corr restores the legacy normalised correlation
         # so one run yields the A/B pair required to measure gap closure.
         _req = os.environ.get("HENRI_FUNCTOR_FIT")
+        # Phase 10.2 directive 4.2 names the experimental arm `koopman`. The live
+        # implementation has always been `koopman_8`. Accept BOTH so the directive's
+        # documented name works without renaming the arm (which would silently break
+        # any receipt or script that already cites koopman_8).
+        if _req == "koopman":
+            _req = "koopman_8"
         _fit_mode = _req if _req in ("diag_ls", "mean_corr", "koopman_8") else "diag_ls"
         _reg_lambda = float(os.environ.get("HENRI_FUNCTOR_RIDGE", "1e-4"))
         Xtr = torch.stack([wx for wx, _ in train]).to(device)

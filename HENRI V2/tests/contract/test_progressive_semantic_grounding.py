@@ -38,6 +38,16 @@ def harness():
     # tests/contract/test_arc_zone_c_freeze.py. Opting out does not weaken the
     # operator coverage below, all of which still runs the real math.
     os.environ["HENRI_ZONE_C_FREEZE"] = "0"
+    # Phase 10.2 directive 1b: external C-extension guard. Scoped to THIS fixture
+    # rather than module level, because a module-level importorskip would skip the
+    # two pure-function tests (payload shape, bounded macro-options) that run
+    # without this fixture and still guard the engine. Effect: the 8 tests needing
+    # `arcengine` report SKIPPED instead of ERROR, and the rest stay active.
+    pytest.importorskip(
+        "arcengine",
+        reason="arcengine C-extension not compiled on host; PSG compute tests "
+               "skipped per the Phase 10 freeze. Wiring/freeze tests stay active.",
+    )
     from efe_planner import EFEPlanner
     from henri_vision_encoder import HENRIVisionEncoder
     from darwinian_phase_swarm import HenriSwarmOrchestrator
