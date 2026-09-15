@@ -53,7 +53,7 @@ class AdaptiveViscoelasticThermostat(nn.Module):
         base_learning_rate: float = 1e-3,
         lambda_threshold: float = 0.10,
         max_lambda: float = 5.0,
-        stiefel_iters: int = 3,
+        stiefel_iters: int = 5,
         device: Optional[str] = None,
         signal_lock_steps: int = 12,
         use_wavelet_gating: bool = False,

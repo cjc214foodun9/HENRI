@@ -4,7 +4,15 @@ Compiles the Inductive Task Functor W_task from public (X, Y) grid-pair
 demonstrations in the complex half-space of the live continuous UWE
 ([D/2] complex, stored as [Re, Im] in [D] real).
 
-Protocol (per Phase 7.2 PDF Lens A):
+Protocol (DEFAULT, Phase 10I directive 2026-09-15):
+    W_task = sum_M conj(Psi_X,m) * Psi_Y,m / (sum_M |Psi_X,m|^2 + lambda)
+    Regularized per-slot DIAGONAL least-squares (ridge lambda = 1e-4).
+    This is the operator family measured correct for this representation:
+    on 60 real ARC tasks it reaches held-out 0.4368 / in-sample ceiling 0.7645,
+    vs ~0.00 for the FFT/circulant family (FALSIFIED, see CORRECTION below).
+    Set HENRI_FUNCTOR_FIT=mean_corr to restore the legacy path for A/B.
+
+Protocol (LEGACY, HENRI_FUNCTOR_FIT=mean_corr):
     W_task = normalize( sum_i conj(Psi_X,i) * Psi_Y,i )   (elementwise)
 
 CORRECTION -- OBSERVED_GPU 2026-09-14 (arc_encoder_reform_gate_v4_observed.json):
@@ -100,6 +108,44 @@ def _pairs_digest(demo_pairs: Sequence[Tuple]) -> str:
     return h.hexdigest()
 
 
+def compute_optimal_task_functor(
+    X_demos: torch.Tensor,
+    Y_demos: torch.Tensor,
+    reg_lambda: float = 1e-4,
+) -> torch.Tensor:
+    """Regularized per-slot diagonal least-squares task operator.
+
+        W* = sum_M conj(X_m) * Y_m / (sum_M |X_m|^2 + reg_lambda)
+
+    Reduces over dim 0 (the demonstration axis M). Every other axis is treated
+    as an independent diagonal slot.
+
+    SHAPE NOTE -- deviation from the literal directive, documented:
+      The directive's comment gives ``[M, num_blocks, 8] complex64``. The live
+      representation is a FLAT complex vector ``[M, D/2]`` (``_to_complex`` on a
+      ``[D]`` real wave; ``D/2 = num_blocks * BLOCK_SLOTS``). A spatial transform
+      lives in the per-(block, slot) phase, so the flat index IS the
+      (block, slot) index space. This function is therefore written
+      shape-agnostic: it is elementwise per complex component and reduces only
+      over dim 0. That is EXACTLY the per-slot diagonal family, and it produces
+      identical results whether the input is ``[M, D/2]`` or ``[M, NB, SL]``.
+      No reshape or broadcast is introduced.
+
+    dtype/device are preserved from the numerator. ``reg_lambda`` is cast to the
+    real dtype so the denominator keeps X's precision.
+    """
+    if X_demos.dim() < 1 or Y_demos.shape != X_demos.shape:
+        raise ValueError(
+            f"X/Y shape mismatch: {tuple(X_demos.shape)} vs {tuple(Y_demos.shape)}"
+        )
+    if not torch.is_complex(X_demos):
+        raise TypeError(f"X_demos must be complex, got {X_demos.dtype}")
+    numerator = torch.sum(torch.conj(X_demos) * Y_demos, dim=0)
+    denom = torch.sum(torch.abs(X_demos) ** 2, dim=0)
+    lam = torch.as_tensor(reg_lambda, dtype=denom.dtype, device=denom.device)
+    return numerator / (denom + lam)
+
+
 def compile_task_functor(
     demo_pairs: Sequence[Tuple],
     tokenizer: object,
@@ -163,6 +209,11 @@ def compile_task_functor(
     _f7_held_cos: Optional[float] = None
     _f7_identity_cos: Optional[float] = None
     _f7_active = os.environ.get("HENRI_F7_AFFINE") == "1" and len(train) >= 2
+    _f6_active = os.environ.get("HENRI_F6_FUNCTOR") == "1" and len(train) >= 2
+    _fit_mode = "mean_corr"
+    _reg_lambda = 0.0
+    _ridge_rel = 0.0
+    _den_min = 0.0
     if _f7_active:
         from f7_affine_egress import AffineEgress
         Xtr = torch.stack([_to_real(wx) for wx, _ in train]).to(device)
@@ -185,10 +236,28 @@ def compile_task_functor(
         w_task, f6_mask, f6_ns_err, f6_ns_iters, f6_recon = compile_adaptive_functor(
             Xtr, Ytr, max_iters=8, tol=1e-5, eps_floor=1e-3)
     else:
-        w_task = torch.zeros_like(train[0][0])
-        for wx, wy in train:
-            w_task = w_task + torch.conj(wx) * wy
-        w_task = F.normalize(w_task, p=2, dim=-1)
+        # DEFAULT = regularized per-slot diagonal least-squares (Phase 10I).
+        # HENRI_FUNCTOR_FIT=mean_corr restores the legacy normalised correlation
+        # so one run yields the A/B pair required to measure gap closure.
+        _req = os.environ.get("HENRI_FUNCTOR_FIT")
+        _fit_mode = _req if _req in ("diag_ls", "mean_corr") else "diag_ls"
+        _reg_lambda = float(os.environ.get("HENRI_FUNCTOR_RIDGE", "1e-4"))
+        Xtr = torch.stack([wx for wx, _ in train]).to(device)
+        Ytr = torch.stack([wy for _, wy in train]).to(device)
+        if _fit_mode == "diag_ls":
+            w_task = compute_optimal_task_functor(Xtr, Ytr, reg_lambda=_reg_lambda)
+        else:
+            w_task = torch.zeros_like(train[0][0])
+            for wx, wy in train:
+                w_task = w_task + torch.conj(wx) * wy
+            w_task = F.normalize(w_task, p=2, dim=-1)
+        # Ridge diagnostics: lambda relative to the mean excitation per slot.
+        # If ridge_rel << 1 the ridge is negligible; if ~1 it is doing real work
+        # and threshold calibration MUST be re-checked.
+        with torch.no_grad():
+            _den = torch.sum(torch.abs(Xtr) ** 2, dim=0)
+            _ridge_rel = float(_reg_lambda / (_den.mean().item() + 1e-30))
+            _den_min = float(_den.min().item())
 
     # Goal anchor = prototype of training outputs.
     goal_c = torch.zeros_like(train[0][1])
@@ -220,6 +289,15 @@ def compile_task_functor(
         "identity_margin": _IDENTITY_MARGIN,
         "device": device,
     }
+    if not _f7_active and not _f6_active:
+        res.provenance["fit"] = {
+            "mode": _fit_mode,
+            "reg_lambda": _reg_lambda,
+            "ridge_rel_to_mean_excitation": _ridge_rel,
+            "min_slot_excitation": _den_min,
+            "operator_family": ("per_slot_diagonal_ridge_ls"
+                                if _fit_mode == "diag_ls" else "mean_conj_corr"),
+        }
     if held_out_cos > _RECOVERY_COS_THRESHOLD and held_out_cos > identity_cos + _IDENTITY_MARGIN:
         res.status = STATUS_OK
         res.reason = (

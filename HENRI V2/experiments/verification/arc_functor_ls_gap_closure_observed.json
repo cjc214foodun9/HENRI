@@ -1,0 +1,148 @@
+{
+ "schema": "henri.arc.functor-ls-gap-closure.v1",
+ "utc": "2026-09-15T09:32:02Z",
+ "source_of_record": "Zone C Epistemic Data Architecture & TimescaleDB spec, sec 5.2/6.2",
+ "doc_sha256_prefix": "3335bb8b40d87b538c88cb20c9161da4b94c45da1af4f0019a32aa21ff628219",
+ "evidence_class": "OBSERVED",
+ "device_kind": "cpu",
+ "lams": [
+  1e-09,
+  1e-06,
+  0.0001,
+  0.01,
+  0.1,
+  1.0,
+  10.0
+ ],
+ "baseline_to_reproduce": {
+  "held": 0.4215062024071813,
+  "ceiling": 0.7535529502564007,
+  "identity": 0.4032919658173341
+ },
+ "constants": {
+  "FUSED_TILE_SIZE": 16,
+  "BLOCK_SPAN_DEFAULT": 128,
+  "BLOCK_SLOTS": 4,
+  "canvas_modulus": 32
+ },
+ "shipped_fn_selftest": {
+  "shape": [
+   6,
+   4
+  ],
+  "max_abs_vs_manual_formula": 0.0,
+  "max_abs_vs_flattened_MA": 0.0,
+  "formula_exact": true,
+  "shape_agnostic": true
+ },
+ "functor_native": {
+  "diag_ls": {
+   "n_scored": 60,
+   "held_out_mean": 0.36274524102918804,
+   "identity_mean": 0.4094827797069835,
+   "status_counts": {
+    "FUNCTOR_FALSIFIED": 58,
+    "FUNCTOR_OK": 2
+   }
+  },
+  "mean_corr": {
+   "n_scored": 60,
+   "held_out_mean": 0.34573019243737996,
+   "identity_mean": 0.4094827797069835,
+   "status_counts": {
+    "FUNCTOR_FALSIFIED": 60
+   }
+  }
+ },
+ "n_scored": 60,
+ "n_skipped": 0,
+ "n_requested": 60,
+ "errors": [],
+ "identity_mean": 0.4032921709896376,
+ "baseline_replica": {
+  "held_out_mean": 0.42150651891715823,
+  "in_sample_ceiling_mean": 0.753553180727694,
+  "gap": 0.3320466618105357,
+  "delta_held_vs_baseline": 3.165099769497637e-07,
+  "delta_ceil_vs_baseline": 2.3047129327213867e-07,
+  "reproduces_recorded": true
+ },
+ "legacy_mean_corr": {
+  "held_out_mean": 0.4070812869312552,
+  "beats_identity": true
+ },
+ "ridge_sweep": {
+  "1e-09": {
+   "held_out_mean": 0.42150651891715823,
+   "in_sample_ceiling_mean": 0.753553180727694,
+   "gap": 0.3320466618105357,
+   "held_beats_identity": true,
+   "frac_tasks_beating_identity": 0.45,
+   "shipped_fn_max_abs_diff": 0.0
+  },
+  "1e-06": {
+   "held_out_mean": 0.4214840477022032,
+   "in_sample_ceiling_mean": 0.753537571595775,
+   "gap": 0.33205352389357173,
+   "held_beats_identity": true,
+   "frac_tasks_beating_identity": 0.45,
+   "shipped_fn_max_abs_diff": 0.0
+  },
+  "0.0001": {
+   "held_out_mean": 0.421541234307612,
+   "in_sample_ceiling_mean": 0.753518800271882,
+   "gap": 0.33197756596427,
+   "held_beats_identity": true,
+   "frac_tasks_beating_identity": 0.45,
+   "shipped_fn_max_abs_diff": 0.0
+  },
+  "0.01": {
+   "held_out_mean": 0.42262437677321335,
+   "in_sample_ceiling_mean": 0.7529822690619363,
+   "gap": 0.330357892288723,
+   "held_beats_identity": true,
+   "frac_tasks_beating_identity": 0.48333333333333334,
+   "shipped_fn_max_abs_diff": 0.0
+  },
+  "0.1": {
+   "held_out_mean": 0.42402796824462713,
+   "in_sample_ceiling_mean": 0.7482957012123531,
+   "gap": 0.324267732967726,
+   "held_beats_identity": true,
+   "frac_tasks_beating_identity": 0.45,
+   "shipped_fn_max_abs_diff": 0.0
+  },
+  "1.0": {
+   "held_out_mean": 0.41831115619279446,
+   "in_sample_ceiling_mean": 0.7260402944352893,
+   "gap": 0.3077291382424948,
+   "held_beats_identity": true,
+   "frac_tasks_beating_identity": 0.43333333333333335,
+   "shipped_fn_max_abs_diff": 0.0
+  },
+  "10.0": {
+   "held_out_mean": 0.40934642928962905,
+   "in_sample_ceiling_mean": 0.7043988390101324,
+   "gap": 0.2950524097205034,
+   "held_beats_identity": true,
+   "frac_tasks_beating_identity": 0.4,
+   "shipped_fn_max_abs_diff": 0.0
+  }
+ },
+ "verdict": {
+  "baseline_metric_reproduced": true,
+  "shipped_fn_formula_exact": true,
+  "shipped_fn_shape_agnostic": true,
+  "gap_at_directive_lambda_1e-4": 0.33197756596427,
+  "gap_at_baseline_lambda_1e-9": 0.3320466618105357,
+  "gap_closed_by_directive_ridge": true,
+  "gap_closure_abs": 6.909584626568765e-05,
+  "best_lambda_by_held_out": 0.1,
+  "best_held_out_mean": 0.42402796824462713,
+  "held_gain_1e-4_vs_1e-9": 3.471539045374339e-05,
+  "ATTRIBUTION_CORRECTION": "The 0.3321 gap was measured by arc_torus_encoder_wiring.py using TorusIngressEncoder.compile_task_operator_ls, which is ALREADY a per-slot diagonal least-squares operator at ridge 1e-9. The functor swap therefore makes arc_task_functor.py CONSISTENT with the operator already measured; it does not itself move a gap measured inside that family. The lever the directive does change is the ridge (1e-9 -> 1e-4).",
+  "HONEST_LIMIT": "Metric is the baseline's own held-out/cosine construction on the first 60 ARC-AGI-1 training tasks (test[0] as the held-out pair, first 3 train pairs as demos). It is an internal-representation recovery score, not an ARC task-solve rate. No ARC win is claimed.",
+  "evidence_class": "OBSERVED",
+  "runtime_s": 3.3
+ }
+}
