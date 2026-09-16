@@ -40,6 +40,7 @@ path. It makes no claim about optical hardware or about retrieval quality.
 from __future__ import annotations
 
 import hashlib
+import inspect
 import os
 import threading
 import time
@@ -55,6 +56,38 @@ STATUS_THROTTLED = "THROTTLED"
 STATUS_COMMITTED = "COMMITTED"
 STATUS_DISABLED = "SYNC_DISABLED"
 STATUS_FAIL_CLOSED = "FAIL_CLOSED_OVERFLOW"
+
+
+def _accepts_provenance(write_engram) -> bool:
+    """True when ``write_engram`` can receive the four CLASS49 provenance fields.
+
+    Discovered from the callable's REAL signature. Two contracts are documented for
+    this module's store: the minimal 3-argument form
+    ``write_engram(wave, domain, sagnac_stress)`` and the CLASS49 7-argument form.
+    Both must keep working.
+
+    A blind ``except TypeError`` retry is deliberately NOT used: it would also
+    swallow a genuine TypeError raised *inside* a correct 7-argument store, turning a
+    real fault into a fallback that appears to succeed.
+    """
+    try:
+        sig = inspect.signature(write_engram)
+    except (TypeError, ValueError):
+        # Non-introspectable callable (C builtin, functools.partial without a
+        # signature, etc.). Assume the modern contract and let a genuine arity
+        # mismatch raise where it occurs.
+        return True
+    params = list(sig.parameters.values())
+    if any(p.kind is inspect.Parameter.VAR_POSITIONAL for p in params):
+        return True
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params):
+        return True
+    positional = [
+        p for p in params
+        if p.kind in (inspect.Parameter.POSITIONAL_ONLY,
+                      inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    ]
+    return len(positional) >= 7
 
 
 class SyncDisabledError(RuntimeError):
@@ -213,6 +246,10 @@ class DecoupledEngramSync:
         self.committed = 0
         self.commit_failures = 0
         self.bytes_persisted = 0
+        # Counted, never inferred: how many commits went to a store whose
+        # write_engram cannot accept CLASS49 provenance. Non-zero means lineage
+        # was NOT delivered for those engrams, and the caller can see that.
+        self.provenance_undeliverable = 0
         self._publish_ns_total = 0.0
         self._last_drain_utc: Optional[float] = None
 
@@ -296,11 +333,29 @@ class DecoupledEngramSync:
         # envelope's provenance is FORWARDED here. Dropping it would leave the
         # store to fall back on process-global env vars, decoupling lineage
         # from the payload it belongs to.
+        #
+        # CONTRACT WIDTH IS DISCOVERED, NOT ASSUMED.
+        # This module's documented store contract allows the minimal 3-argument
+        # form `write_engram(wave, domain, sagnac_stress)` as well as the CLASS49
+        # 7-argument form. An earlier revision hard-coded the 7-argument call,
+        # which broke the documented 3-argument form: `drain()` swallows the
+        # resulting TypeError in its `except Exception` handler, so the failure
+        # surfaced far away as a missing-dict-key error in the caller rather than
+        # as a contract error here. Dispatch on the store's ACTUAL arity instead.
+        # A blind `except TypeError` retry is deliberately NOT used: it would
+        # mask genuine TypeErrors raised inside a correct 7-argument store.
         wave = torch.frombuffer(bytearray(env.payload), dtype=torch.float32).clone()
         wave = wave.view(env.num_blocks, env.block_dim)
-        return str(store.write_engram(wave, env.domain, env.sagnac_stress,
-                                      env.run_id, env.arm_id, env.commit_sha,
-                                      env.domain_family))
+        if _accepts_provenance(store.write_engram):
+            return str(store.write_engram(wave, env.domain, env.sagnac_stress,
+                                          env.run_id, env.arm_id, env.commit_sha,
+                                          env.domain_family))
+        # Minimal legacy contract: the store cannot receive provenance.
+        # This is recorded rather than hidden, because a silent 3-argument commit
+        # is exactly the "unattributed row wearing a provenance costume" pattern
+        # CLASS49 exists to prevent.
+        self.provenance_undeliverable += 1
+        return str(store.write_engram(wave, env.domain, env.sagnac_stress))
 
     # -- telemetry -----------------------------------------------------------
 
@@ -333,6 +388,7 @@ class DecoupledEngramSync:
             "committed": self.committed,
             "commit_failures": self.commit_failures,
             "bytes_persisted": self.bytes_persisted,
+            "provenance_undeliverable": self.provenance_undeliverable,
             "lag_ms": self.lag_ms(),
             "mean_publish_us": self.mean_publish_microseconds,
             "last_drain_utc": self._last_drain_utc,
