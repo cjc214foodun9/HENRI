@@ -1,0 +1,132 @@
+{
+  "worktree_module_sha_before": "b5dcdd8d6917cf275901eb726739506136f196bcdea05d695d8046e227114ef5",
+  "worktree_module_sha_after": "b5dcdd8d6917cf275901eb726739506136f196bcdea05d695d8046e227114ef5",
+  "worktree_test_sha_before": "a43b83b64bff73c7ba3fbdcf211133bb32c5af9d883793dc0f308c307ed1b752",
+  "worktree_test_sha_after": "a43b83b64bff73c7ba3fbdcf211133bb32c5af9d883793dc0f308c307ed1b752",
+  "worktree_unchanged": true,
+  "shadowing_ok": true,
+  "resolved_module": "C:\\Users\\chan\\AppData\\Local\\Temp\\wkb_mut_probe\\henri_wave_kb.py",
+  "mutation_dir": "C:\\Users\\chan\\AppData\\Local\\Temp\\wkb_mut_probe",
+  "n_mutations": 5,
+  "results": {
+    "C0_IDENTITY_baseline": {
+      "passed": 28,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "attempted": 28,
+      "verdict": "NOT_CAUGHT",
+      "rc": 0,
+      "failed_tests": [],
+      "tail": "............................                                             [100%] | 28 passed in 1.65s",
+      "mutated_module_sha256": "60f55ab27980d5208357401425232f9bc3839ecd21148fde0a4143284f2f7abf",
+      "module_bytes": 94299,
+      "changed_bytes": false
+    },
+    "M1_calibrate_eps_ignores_distribution": {
+      "passed": 24,
+      "failed": 4,
+      "errors": 0,
+      "skipped": 0,
+      "attempted": 28,
+      "verdict": "CAUGHT",
+      "rc": 1,
+      "failed_tests": [
+        "test_calibrated_epsilon_differs_and_accepts_the_measured_pairs",
+        "test_doc_reported_self_stress_is_rejected_by_the_hardcoded_gate",
+        "test_selfcheck_receipt_reports_a_pass_with_all_checks_true",
+        "test_verdict_is_a_function_of_the_negative_control"
+      ],
+      "tail": "FAILED tests/contract/test_wave_kb.py::TestSelfcheckHarness::test_selfcheck_receipt_reports_a_pass_with_all_checks_true | 4 failed, 24 passed in 1.65s",
+      "mutated_module_sha256": "7a1de97c285e55ab4b27fe2f927b804810809c29463f37e7830d1b3c5a1bcf81",
+      "module_bytes": 94274,
+      "changed_bytes": true
+    },
+    "M2_pinned_falls_back_to_qr_randn": {
+      "passed": 26,
+      "failed": 2,
+      "errors": 0,
+      "skipped": 0,
+      "attempted": 28,
+      "verdict": "CAUGHT",
+      "rc": 1,
+      "failed_tests": [
+        "test_fails_closed_without_a_pinned_basis",
+        "test_selfcheck_receipt_reports_a_pass_with_all_checks_true"
+      ],
+      "tail": "FAILED tests/contract/test_wave_kb.py::TestSelfcheckHarness::test_selfcheck_receipt_reports_a_pass_with_all_checks_true | 2 failed, 26 passed in 1.69s",
+      "mutated_module_sha256": "437b3d652cc7d61b4251f8b1273f9cf38374fc679ab8cf52f9d9fcf559915e01",
+      "module_bytes": 94057,
+      "changed_bytes": true
+    },
+    "M3_assert_clean_noop": {
+      "passed": 26,
+      "failed": 2,
+      "errors": 0,
+      "skipped": 0,
+      "attempted": 28,
+      "verdict": "CAUGHT",
+      "rc": 1,
+      "failed_tests": [
+        "test_contamination_guard_fires_negative_control_and_is_silent_when_clean",
+        "test_selfcheck_receipt_reports_a_pass_with_all_checks_true"
+      ],
+      "tail": "FAILED tests/contract/test_wave_kb.py::TestSelfcheckHarness::test_selfcheck_receipt_reports_a_pass_with_all_checks_true | 2 failed, 26 passed in 1.73s",
+      "mutated_module_sha256": "30678e28665342d7984f0d7ef8ef48391a8aae12b8c09b15ce942fe87689084f",
+      "module_bytes": 94271,
+      "changed_bytes": true
+    },
+    "M4_null_arm_from_randn": {
+      "passed": 25,
+      "failed": 3,
+      "errors": 0,
+      "skipped": 0,
+      "attempted": 28,
+      "verdict": "CAUGHT",
+      "rc": 1,
+      "failed_tests": [
+        "test_null_basis_is_provably_information_free",
+        "test_null_control_does_not_beat_random_or_pinned_on_held_out_probe",
+        "test_selfcheck_receipt_reports_a_pass_with_all_checks_true"
+      ],
+      "tail": "FAILED tests/contract/test_wave_kb.py::TestSelfcheckHarness::test_selfcheck_receipt_reports_a_pass_with_all_checks_true | 3 failed, 25 passed in 1.69s",
+      "mutated_module_sha256": "047e44aa72e4a9359f5f7a1d6bf08c3789513437764672a386fd42ff749c61a7",
+      "module_bytes": 94280,
+      "changed_bytes": true
+    },
+    "M5_grounded_answer_never_abstains": {
+      "passed": 23,
+      "failed": 5,
+      "errors": 0,
+      "skipped": 0,
+      "attempted": 28,
+      "verdict": "CAUGHT",
+      "rc": 1,
+      "failed_tests": [
+        "test_abstains_below_the_floor",
+        "test_floor_above_every_score_forces_abstention_above_floor_allows_it",
+        "test_grounded_answer_on_empty_store_abstains",
+        "test_registered_floor_does_not_separate_but_calibration_does",
+        "test_selfcheck_receipt_reports_a_pass_with_all_checks_true"
+      ],
+      "tail": "FAILED tests/contract/test_wave_kb.py::TestSelfcheckHarness::test_selfcheck_receipt_reports_a_pass_with_all_checks_true | 5 failed, 23 passed in 1.71s",
+      "mutated_module_sha256": "f381366f8532fb4dc3255c321f4a84ea184e5b04d742adcabe98f7a952ceb699",
+      "module_bytes": 94263,
+      "changed_bytes": true
+    },
+    "C_INERT_comment_append": {
+      "passed": 28,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "attempted": 28,
+      "verdict": "NOT_CAUGHT",
+      "rc": 0,
+      "failed_tests": [],
+      "tail": "............................                                             [100%] | 28 passed in 1.64s",
+      "mutated_module_sha256": "0d32eaf01b979b0d4081c32ad5816224303ad68920e2e1ab5d16905cb8fce887",
+      "module_bytes": 94327,
+      "changed_bytes": true
+    }
+  }
+}
