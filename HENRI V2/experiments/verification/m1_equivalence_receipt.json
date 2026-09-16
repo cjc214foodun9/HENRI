@@ -1,0 +1,101 @@
+{
+  "preregistration": {
+    "n_calib": 40,
+    "n_test": 60,
+    "E1": 0.9,
+    "E3": 0.6,
+    "margin": 0.05,
+    "seed": 20260916,
+    "chance": 0.5,
+    "template": "move the {a} block to the {b} tray",
+    "synonyms": [
+      [
+        "move",
+        "push"
+      ],
+      [
+        "move",
+        "pull"
+      ],
+      [
+        "push",
+        "pull"
+      ],
+      [
+        "grasp",
+        "place"
+      ],
+      [
+        "block",
+        "brick"
+      ]
+    ],
+    "antonyms": [
+      [
+        "large",
+        "small"
+      ]
+    ],
+    "void_attempts": [
+      "A1 length-changing",
+      "A2 byte-unmatched",
+      "A3 table too small",
+      "A4 UNFAIR control: wave calibrated vs byte fixed-0.5 -> byte bal 0.5000"
+    ]
+  },
+  "n_pos": 616,
+  "n_neg": 100,
+  "arms": {
+    "phasor_bind": {
+      "position_binding": "phasor_bind",
+      "len_ok": true,
+      "tau_wave": 0.8827837258577347,
+      "tau_byte": 0.8845554601780867,
+      "mean_byte_sim_pos": 0.908107139924363,
+      "mean_byte_sim_neg": 0.8688664481346379,
+      "byte_delta": 0.03924069178972511,
+      "test_pos_mean": 0.9085080236610439,
+      "test_neg_mean": 0.8617482264836629,
+      "E1_agreement": 0.9575471698113207,
+      "E2_wave_balanced": 0.8272569444444444,
+      "E3_kappa": 0.6898457537116638,
+      "wave_tpr": 0.9878472222222222,
+      "wave_tnr": 0.6666666666666666,
+      "E5_byte_balanced": 0.8272569444444444,
+      "byte_tpr": 0.9878472222222222,
+      "byte_tnr": 0.6666666666666666,
+      "wave_minus_byte": 0.0,
+      "literal_pass": true,
+      "controlled_pass": false,
+      "verdict": "M1_PART2_PASS_LITERAL_ONLY_WAVE_DOES_NOT_EXCEED_BYTE_BASELINE"
+    },
+    "fractional_shift": {
+      "position_binding": "fractional_shift",
+      "len_ok": true,
+      "tau_wave": 0.963868223875761,
+      "tau_byte": 0.8845554601780867,
+      "mean_byte_sim_pos": 0.908107139924363,
+      "mean_byte_sim_neg": 0.8688664481346379,
+      "byte_delta": 0.03924069178972511,
+      "test_pos_mean": 0.966679578853978,
+      "test_neg_mean": 0.9591299702723821,
+      "E1_agreement": 0.6320754716981132,
+      "E2_wave_balanced": 0.5803819444444445,
+      "E3_kappa": 0.21173728813559328,
+      "wave_tpr": 0.6440972222222222,
+      "wave_tnr": 0.5166666666666667,
+      "E5_byte_balanced": 0.8272569444444444,
+      "byte_tpr": 0.9878472222222222,
+      "byte_tnr": 0.6666666666666666,
+      "wave_minus_byte": -0.24687499999999996,
+      "literal_pass": false,
+      "controlled_pass": false,
+      "verdict": "M1_PART2_FAIL:E1,E3"
+    }
+  },
+  "verdict": {
+    "phasor_bind": "M1_PART2_PASS_LITERAL_ONLY_WAVE_DOES_NOT_EXCEED_BYTE_BASELINE",
+    "fractional_shift": "M1_PART2_FAIL:E1,E3"
+  },
+  "interpretation": "An untrained byte+position transducer cannot recognise semantic equivalence except where it coincides with byte similarity. Literal reading passes at chance=0.50; the controlled reading fails against a byte baseline. Satisfying the clause meaningfully requires a learned or test-time-compiled equivalence map, which does not exist yet."
+}
