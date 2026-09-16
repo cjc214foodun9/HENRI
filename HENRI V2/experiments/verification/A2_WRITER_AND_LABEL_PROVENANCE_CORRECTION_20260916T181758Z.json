@@ -1,0 +1,62 @@
+{
+  "schema": "henri.a2-writer-and-label-provenance.CORRECTION.v1",
+  "ts_utc": "20260916T181758Z",
+  "supersedes": [
+    "A2_WRITER_AND_LABEL_PROVENANCE_20260916T181729Z.json",
+    "A2_RETRAIN_SPEC_20260916T181641Z.json",
+    "A2_MOCK_VOCABULARY_FINDING_20260916T181541Z.json"
+  ],
+  "retracted_claims": [
+    {
+      "claim": "the head is INPUT-BLIND / emits an input-independent marginal",
+      "status": "FALSIFIED_BY_OWN_MEASUREMENT",
+      "measurement": {
+        "var_across_inputs": 0.3155906,
+        "var_within_input": 0.5582882,
+        "ratio": 0.5652827,
+        "distinct_argmax_over_32_inputs": 13,
+        "entropy_mean_nats": 9.9866,
+        "ln32000": 10.3735
+      },
+      "note": "T4 refuted it; the T5 narrative printed anyway (static text, not conditioned on the measurement). Defect D1."
+    },
+    {
+      "claim": "100% token-unbinding accuracy is impossible here",
+      "status": "WITHDRAWN_AS_UNSUPPORTED_ABOUT_THE_ARTIFACT",
+      "note": "source-level torch.randint is evidence about CODE, not about which process produced this FILE. Defect D2."
+    }
+  ],
+  "established_facts": {
+    "id_to_string_table_entries": 10,
+    "head_width": 32000,
+    "coverage": 0.0003125,
+    "host_tokenizers_with_vocab_32000": 0,
+    "decode_path": "henri_decoder.py:422 code_vocab_map.get(top_token_id) -> None for ~31990 of 32000 slots"
+  },
+  "writer_attribution": {
+    "inferred": "HENRI V2/scripts/training/train_sgld_500_runner.py:159 (flat state_dict -> models/henri_decoder_checkpoint.pt, matching the observed 4-key OrderedDict)",
+    "basis": "shape match only",
+    "class": "INFERRED",
+    "corroborations_absent": [
+      "C:\\Users\\chan\\henri-worktrees\\aaii-v43\\HENRI V2\\telemetry_logs\\sgld_500_run_10100.jsonl",
+      "C:\\Users\\chan\\henri-worktrees\\aaii-v43\\HENRI V2\\checkpoints\\henri_egress_unbinder_sgld_500.pt"
+    ],
+    "alternative_not_excluded": "any other flat-writing process, incl. one that did not ship its source"
+  },
+  "provenance": {
+    "original_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\models\\henri_decoder_checkpoint.pt",
+    "original_bytes": 799034119,
+    "original_sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+    "original_mtime_utc": "2026-07-30 21:16:20Z",
+    "copy_sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+    "copy_matches_original": true,
+    "mtime_warning": "the worktree copy's mtime is the time of MY cp"
+  },
+  "verdict": "RETRAIN_REQUIRED",
+  "verdict_basis": "no honest id->string binding exists: the head's width is 32000 while the only id->string map in the tree has 10 entries and the only decode consumer .get()s into it. The binding cannot be reconstructed from any shipped artifact.",
+  "not_claimed": [
+    "that the on-disk head was trained on random labels",
+    "that any accuracy figure is falsified",
+    "that the head is input-independent"
+  ]
+}

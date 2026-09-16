@@ -1,0 +1,64 @@
+{
+  "schema": "henri.a2-writer-and-label-provenance.v1",
+  "ts_utc": "20260916T181729Z",
+  "corrects": "A2_RETRAIN_SPEC_* and A2_MOCK_VOCABULARY_FINDING_* (writer attribution)",
+  "my_prior_error": "attributed the flat checkpoint to train_henri_decoder.py:54 hash()%32000; the real writer is train_sgld_500_runner.py:159",
+  "writer": {
+    "file": "HENRI V2/scripts/training/train_sgld_500_runner.py",
+    "save_lines": [
+      158,
+      159
+    ],
+    "save_form": "torch.save(unbinder.state_dict(), path)  # FLAT, no metadata",
+    "path_models": "models/henri_decoder_checkpoint.pt",
+    "path_checkpoints": "checkpoints/henri_egress_unbinder_sgld_500.pt"
+  },
+  "labels": {
+    "line": 88,
+    "code": "a_target = torch.randint(0, vocab_size, (batch_size,), device=device)",
+    "kind": "uniform random integers",
+    "loss_line": 102,
+    "loss_code": "loss_ce = F.cross_entropy(z_egress, a_target)"
+  },
+  "inputs": {
+    "lines": [
+      86,
+      87,
+      94
+    ],
+    "code": "X_demo/Y_demo/psi_query = F.normalize(torch.randn(batch_size, D), p=2, dim=-1)",
+    "kind": "random Gaussian unit waves, not text"
+  },
+  "loss_floor_nats": 10.373491181781864,
+  "training_log": {
+    "path": "C:\\Users\\chan\\henri-worktrees\\aaii-v43\\HENRI V2\\telemetry_logs\\sgld_500_run_10100.jsonl",
+    "exists": false,
+    "steps": 0,
+    "loss_ce_last": null
+  },
+  "checkpoint": {
+    "path": "C:\\Users\\chan\\henri-worktrees\\aaii-v43\\HENRI V2\\models\\henri_decoder_checkpoint.pt",
+    "bytes": 799034119,
+    "sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+    "keys": [
+      "down_proj.weight",
+      "layer_norm.bias",
+      "layer_norm.weight",
+      "lm_head.weight"
+    ],
+    "flat_no_metadata": true
+  },
+  "input_blind": {
+    "var_across_inputs": 0.31559064984321594,
+    "var_within_input": 0.5582881569862366,
+    "ratio": 0.5652827234359481,
+    "verdict_input_blind": false,
+    "entropy_mean_nats": 9.986563682556152,
+    "distinct_argmax_over_32": 13
+  },
+  "verdict": "RETRAIN_REQUIRED@HEAD",
+  "falsified_claims": [
+    "decoder_state=TRAINED_DECODER from loading this file",
+    "100.00% token unbinding accuracy (impossible with random labels)"
+  ]
+}

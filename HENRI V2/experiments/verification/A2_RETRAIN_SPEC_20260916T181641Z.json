@@ -1,0 +1,61 @@
+{
+  "schema": "henri.a2-retrain-spec.v1",
+  "ts_utc": "20260916T181641Z",
+  "verdict": "RETRAIN_REQUIRED",
+  "not_repairable_by": "supplying a tokenizer / lookup table",
+  "on_disk_checkpoint": {
+    "path": "C:\\Users\\chan\\henri-worktrees\\aaii-v43\\HENRI V2\\models\\henri_decoder_checkpoint.pt",
+    "bytes": 799034119,
+    "sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+    "keys": [
+      "down_proj.weight",
+      "layer_norm.bias",
+      "layer_norm.weight",
+      "lm_head.weight"
+    ],
+    "shapes": {
+      "down_proj.weight": [
+        2048,
+        65536
+      ],
+      "layer_norm.weight": [
+        2048
+      ],
+      "layer_norm.bias": [
+        2048
+      ],
+      "lm_head.weight": [
+        32000,
+        2048
+      ]
+    },
+    "params": 199757824,
+    "flat_no_metadata": true
+  },
+  "trained_on": {
+    "rule": "target_id = hash(text_target) % 32000",
+    "source": "HENRI V2/scripts/training/train_henri_decoder.py:54",
+    "distinct_classes": 35,
+    "coverage_of_head": 0.00109375,
+    "process_salted": true
+  },
+  "real_tokenizer_files": {
+    "henri_calibrator_ingest.py": {
+      "wired_to_head": false
+    },
+    "henri_trajectory_bank.py": {
+      "wired_to_head": false
+    },
+    "o_vsa_torus_encoder.py": {
+      "wired_to_head": false
+    }
+  },
+  "host_tokenizers_matching_32000": 0,
+  "retrain_requirements": [
+    "ids from a pinned tokenizer revision, never builtin hash()",
+    "lm_head width must equal the tokenizer vocab width (32000 -> select or pad)",
+    "corpus must be provenance-pinned text with recorded dataset sha256",
+    "checkpoint envelope must record tokenizer_id + tokenizer_revision",
+    "do not initialize this head from the 799 MB 35-class overlay"
+  ]
+}
