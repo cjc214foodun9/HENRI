@@ -10,9 +10,29 @@ None is wrong. Quoting one without its tree is.
 collected : 1608 tests, 0 collection errors
 commit    : 3660e8efb38322d923ba83701fed90e6bf2da009
 source    : $LOCALAPPDATA/Temp/tip_suite.txt
-sha256    : 3b0d145bfc31a24898eb13d268a347cbb868d7ecef2b00c5a20932290e2ccc3e
+sha256    : 5603c3daa533aadedbba6428151b562f523105facaacc918f476777b59efe7e8
 artifact  : HENRI V2/experiments/verification/suite_receipt_merge_3660e8ef.txt
 ```
+
+> **Hash provenance (corrected 2026-09-16).** An earlier revision of this file
+> published `sha256: 3b0d145b…` for this receipt. That is the hash of the **scratch**
+> file `$LOCALAPPDATA/Temp/tip_suite.txt`, NOT of the artifact a clone receives. The
+> receipt is tracked `i/lf`, so `core.autocrlf=true` stripped 252 CR bytes at commit
+> time: scratch is 20,696 B, the committed blob is 20,444 B, and
+> `blob == scratch` with every CR byte removed holds exactly. A verifier hashing the
+> committed receipt got `5603c3da…` and read the published hash as corruption.
+>
+> **The hash above is the BLOB hash and is the one to verify.** Reproduce it with:
+>
+> ```bash
+> git cat-file -s main:HENRI\ V2/experiments/verification/suite_receipt_merge_3660e8ef.txt   # 20444
+> git show    main:HENRI\ V2/experiments/verification/suite_receipt_merge_3660e8ef.txt | sha256sum
+> # 5603c3daa533aadedbba6428151b562f523105facaacc918f476777b59efe7e8
+> ```
+>
+> Receipts 2 and 3 below are unaffected: both are tracked `i/crlf`, so their blobs
+> kept CRLF and their published hashes already match their blobs (`MATCH: True`,
+> verified byte-for-byte). Only the newly added receipt was normalized.
 
 Measured at the **committed tip** of the promotion branch, in an external worktree
 whose porcelain was 0 lines before the run. The carrier branch tip `3ae27c7` and
