@@ -1,0 +1,135 @@
+{
+  "OVERALL_VERDICT": "EGRESS_DISCRIMINATES",
+  "arms": {
+    "A_ring_uint8_scaled": {
+      "distinct_ratio": 0.3047,
+      "distinct_top1": 39,
+      "entropy_max_nats": 10.0031,
+      "entropy_mean_nats": 9.9858,
+      "entropy_min_nats": 9.965,
+      "logits_sha256": "6ca02ae6580aa04614f80a4ba7a00f40c7ac2c48af16d4053133818a9a0329e4",
+      "n": 128,
+      "top1_hist_top": [
+        [
+          9237,
+          24
+        ],
+        [
+          29674,
+          20
+        ],
+        [
+          26605,
+          14
+        ],
+        [
+          10882,
+          9
+        ],
+        [
+          12043,
+          7
+        ],
+        [
+          21659,
+          5
+        ]
+      ],
+      "top1_unique_values": [
+        234,
+        683,
+        995,
+        2523,
+        3866,
+        5675,
+        6783,
+        7049,
+        7400,
+        7471,
+        8334,
+        9237
+      ],
+      "wall_ms": 2457.2
+    },
+    "B_transduce_real": {
+      "distinct_ratio": 0.1484,
+      "distinct_top1": 19,
+      "entropy_max_nats": 10.0057,
+      "entropy_mean_nats": 9.9892,
+      "entropy_min_nats": 9.9746,
+      "logits_sha256": "6a9651f4efed6622a4ef1e0dc5dd544aa8337e0dfe6ff6b6e13117609d3c162a",
+      "n": 128,
+      "top1_hist_top": [
+        [
+          6783,
+          27
+        ],
+        [
+          9237,
+          25
+        ],
+        [
+          24381,
+          14
+        ],
+        [
+          12444,
+          10
+        ],
+        [
+          26605,
+          9
+        ],
+        [
+          9698,
+          8
+        ]
+      ],
+      "top1_unique_values": [
+        5375,
+        6783,
+        9237,
+        9698,
+        12444,
+        13810,
+        14249,
+        14919,
+        15051,
+        20063,
+        20594,
+        21659
+      ],
+      "wall_ms": 2707.4
+    },
+    "C_random_control": {
+      "distinct_top1": 37,
+      "entropy_mean_nats": 9.9838,
+      "logits_sha256": "1bc6071cfc56bded702b3276433f42145178c2aed6b10b6f5950d6b0bde3b6e4",
+      "n": 128
+    },
+    "D_shuffle_control": {
+      "distinct_top1": 19,
+      "n": 128
+    }
+  },
+  "checkpoint": {
+    "bytes": 799034119,
+    "sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+    "status": "LOADED"
+  },
+  "commit_sha256": "7750abba6f21803fe80355de3a390c0e80784d06",
+  "cuda_available": false,
+  "device": "cpu",
+  "generated_at_utc": "2026-09-16T17:43:26Z",
+  "items_jsonl": "C:\\Users\\chan\\henri-worktrees\\aaii-v43\\HENRI V2\\telemetry_logs\\kaa_egress\\kaa-egress-probe__7750abba6f21__20260916T174313Z-d162d38a\\items.jsonl",
+  "items_rows": 512,
+  "items_sha256": "937f4517fac582149f7841838a8e1ec3cf5b52e0846cfeb96989148bd48839d1",
+  "n_prompts": 128,
+  "run_id": "20260916T174313Z-d162d38a",
+  "schema_id": "henri.kaa-egress-probe.v1",
+  "seed": 20260916,
+  "spec": "SPEC-2026-09-16-AAII-V43-RD-PIPELINE.json#kill-K-A",
+  "torch": "2.11.0+cu128",
+  "verdict_arm_A": "EGRESS_DISCRIMINATES",
+  "verdict_arm_B": "EGRESS_DISCRIMINATES"
+}

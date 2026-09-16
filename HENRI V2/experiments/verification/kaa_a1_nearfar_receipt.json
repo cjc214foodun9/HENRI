@@ -1,0 +1,63 @@
+{
+  "VERDICT": "INGRESS_LOSES_CONTENT",
+  "amendment": "KAA_AMENDMENT_A1_nearfar_egress.md",
+  "boundary_L_logit_egress": {
+    "ci95": [
+      -0.006283,
+      0.00489
+    ],
+    "ci_excludes_zero": false,
+    "far_mean": 0.544992,
+    "margin": -0.000608,
+    "near_mean": 0.544385
+  },
+  "boundary_W_wave_ingress": {
+    "ci95": [
+      -0.00105,
+      0.003965
+    ],
+    "ci_excludes_zero": false,
+    "far_mean": -0.000808,
+    "margin": 0.001369,
+    "near_mean": 0.000561
+  },
+  "checkpoint": {
+    "bytes": 799034119,
+    "sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+    "status": "LOADED"
+  },
+  "commit_sha256": "7750abba6f21803fe80355de3a390c0e80784d06",
+  "cuda_available": false,
+  "determinism_same_prompt_twice_bit_identical": true,
+  "device": "cpu",
+  "elapsed_s": 4.51,
+  "generated_at_utc": "2026-09-16T17:45:50Z",
+  "items_jsonl": "C:\\Users\\chan\\henri-worktrees\\aaii-v43\\HENRI V2\\telemetry_logs\\kaa_a1\\kaa-a1-nearfar__7750abba6f21__20260916T174543Z-3a39f0c7\\items.jsonl",
+  "items_sha256": "629936e899a8b2797907b5b5da6df532391aabbae295bfc2d79934e56a2a51b8",
+  "n_pairs": 32,
+  "noise_control_L": {
+    "ci95": [
+      0.449223,
+      0.456475
+    ],
+    "ci_excludes_zero": true,
+    "far_mean": 0.543976,
+    "margin": 0.453037,
+    "near_mean": 0.997012
+  },
+  "noise_control_W": {
+    "ci95": [
+      0.993792,
+      0.996569
+    ],
+    "ci_excludes_zero": true,
+    "far_mean": -0.000114,
+    "margin": 0.995153,
+    "near_mean": 0.995039
+  },
+  "reason_for_amendment": "K-A counted distinct top-1 tokens; its random control matched the content arms (37 vs 39 of 128), so that gate was vacuous.",
+  "run_id": "kaa-a1-nearfar__7750abba6f21__20260916T174543Z-3a39f0c7",
+  "schema_id": "henri.kaa-a1-nearfar.v1",
+  "supersedes": "K-A in SPEC-2026-09-16-AAII-V43-RD-PIPELINE.json",
+  "torch": "2.11.0+cu128"
+}

@@ -1,0 +1,113 @@
+{
+  "INGRESSES_CARRYING_CONTENT": [
+    "S_structured_charpos",
+    "T_universal_transducer"
+  ],
+  "checkpoint": {
+    "sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+    "status": "LOADED"
+  },
+  "commit_sha256": "7750abba6f21803fe80355de3a390c0e80784d06",
+  "device": "cpu",
+  "generated_at_utc": "2026-09-16T17:46:55Z",
+  "ingresses_tested": [
+    "Z_epistemic_ring_uint8",
+    "S_structured_charpos",
+    "T_universal_transducer"
+  ],
+  "items_jsonl": "C:\\Users\\chan\\henri-worktrees\\aaii-v43\\HENRI V2\\telemetry_logs\\kaa_a1_multi\\kaa-a1-multi-ingress__7750abba6f21__20260916T174639Z-3475467f\\items.jsonl",
+  "items_sha256": "a0d8acaf222210e82dc01ae161fe95a29e7e438000ffe34baa5eb6fa43b68b98",
+  "n_pairs": 32,
+  "noise_control_L": {
+    "ci95": [
+      0.449223,
+      0.456475
+    ],
+    "ci_excludes_zero": true,
+    "far_mean": 0.543976,
+    "margin": 0.453037,
+    "near_mean": 0.997012
+  },
+  "noise_control_W": {
+    "ci95": [
+      0.993792,
+      0.996569
+    ],
+    "ci_excludes_zero": true,
+    "far_mean": -0.000114,
+    "margin": 0.995153,
+    "near_mean": 0.995039
+  },
+  "per_ingress": {
+    "S_structured_charpos": {
+      "L": {
+        "ci95": [
+          0.024849,
+          0.026776
+        ],
+        "ci_excludes_zero": true,
+        "far_mean": 0.916941,
+        "margin": 0.025792,
+        "near_mean": 0.942733
+      },
+      "VERDICT": "INGRESS_CARRIES_CONTENT",
+      "W": {
+        "ci95": [
+          0.047787,
+          0.048656
+        ],
+        "ci_excludes_zero": true,
+        "far_mean": 0.855078,
+        "margin": 0.04821,
+        "near_mean": 0.903288
+      }
+    },
+    "T_universal_transducer": {
+      "L": {
+        "ci95": [
+          0.329427,
+          0.331868
+        ],
+        "ci_excludes_zero": true,
+        "far_mean": 0.58728,
+        "margin": 0.330701,
+        "near_mean": 0.917982
+      },
+      "VERDICT": "INGRESS_CARRIES_CONTENT",
+      "W": {
+        "ci95": [
+          0.77181,
+          0.772063
+        ],
+        "ci_excludes_zero": true,
+        "far_mean": 0.076041,
+        "margin": 0.771927,
+        "near_mean": 0.847969
+      }
+    },
+    "Z_epistemic_ring_uint8": {
+      "L": {
+        "ci95": [
+          -0.006283,
+          0.00489
+        ],
+        "ci_excludes_zero": false,
+        "far_mean": 0.544992,
+        "margin": -0.000608,
+        "near_mean": 0.544385
+      },
+      "VERDICT": "INGRESS_LOSES_CONTENT",
+      "W": {
+        "ci95": [
+          -0.00105,
+          0.003965
+        ],
+        "ci_excludes_zero": false,
+        "far_mean": -0.000808,
+        "margin": 0.001369,
+        "near_mean": 0.000561
+      }
+    }
+  },
+  "schema_id": "henri.kaa-a1-multi-ingress.v1"
+}
