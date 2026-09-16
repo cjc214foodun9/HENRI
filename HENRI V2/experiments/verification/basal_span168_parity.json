@@ -1,0 +1,92 @@
+{
+  "question": "reconcile decay=168 r=0.93968 (boundary) vs r=0.5713 (audit)",
+  "D": 8192,
+  "K": 2.45,
+  "dt": 0.01,
+  "r_gate": 0.93,
+  "claims": {
+    "C1_steps": {
+      "kernel_decay": 168.0,
+      "harness": "audit(full-complex FFT)",
+      "r_at_256_steps": 0.6680644750595093,
+      "r_at_512_steps": 0.6689307689666748,
+      "r_at_1024_steps": 0.571295440196991,
+      "r_at_1500_steps": 0.48128706216812134,
+      "r_at_2000_steps": 0.4026024341583252,
+      "r_at_3000_steps": 0.2831772267818451,
+      "first_step_count_clearing_gate": null,
+      "audit_reproduced_0p5713_at_1024": true,
+      "evidence_class": "OBSERVED"
+    },
+    "C1b_sealed_width_steps": {
+      "kernel_decay": 504.0,
+      "harness": "audit(full-complex FFT)",
+      "r_at_256_steps": 0.9936375617980957,
+      "r_at_512_steps": 0.9992728233337402,
+      "r_at_1024_steps": 0.9999719262123108,
+      "r_at_2048_steps": 0.9999999403953552,
+      "evidence_class": "OBSERVED"
+    },
+    "C2_seed": {
+      "harness": "live EvanescentKuramotoSyncytium",
+      "steps": 2000,
+      "r_seed99_2000steps": 0.5247000455856323,
+      "boundary_receipt_value": 0.93968,
+      "boundary_reproduced": false,
+      "seed_spread_2000steps": [
+        {
+          "seed": 7,
+          "r_2000": 0.2652447819709778
+        },
+        {
+          "seed": 99,
+          "r_2000": 0.5247000455856323
+        },
+        {
+          "seed": 1234,
+          "r_2000": 0.9836403131484985
+        },
+        {
+          "seed": 2024,
+          "r_2000": 0.20390288531780243
+        },
+        {
+          "seed": 31337,
+          "r_2000": 0.697940468788147
+        },
+        {
+          "seed": 424242,
+          "r_2000": 0.46802517771720886
+        }
+      ],
+      "seed_r_min": 0.20390288531780243,
+      "seed_r_max": 0.9836403131484985,
+      "seed_all_clear_gate": false,
+      "seed_fraction_clearing": 0.16666666666666666,
+      "evidence_class": "OBSERVED"
+    },
+    "C3_harness_parity": {
+      "initial_condition": "audit seed 1234",
+      "kernel_decay": 168.0,
+      "live_r_at_1024_steps": 0.9561610221862793,
+      "live_r_at_1500_steps": 0.9745779633522034,
+      "live_r_at_2000_steps": 0.9836403727531433,
+      "live_r_at_3000_steps": 0.992757260799408,
+      "audit_r_at_1024": 0.571295440196991,
+      "audit_r_at_2000": 0.4026024341583252,
+      "max_abs_diff_1024": 0.38486558198928833,
+      "max_abs_diff_2000": 0.5810379385948181,
+      "harness_parity": false,
+      "evidence_class": "OBSERVED"
+    }
+  },
+  "failures": [
+    "audit vs live harness disagreement on identical inputs"
+  ],
+  "adjudication": [
+    "HARNESS DEFECT: on identical inputs the audit harness and the live class differ by 0.581038. One of them is wrong; do not publish either until fixed.",
+    "MARGIN IS SEED-CONDITIONAL: only 17% of seeds clear the gate at decay 168 (min r=0.2039). So '168 is the knee' is a per-seed statement, and the 504 margin must be read as a margin over the WORST observed seed."
+  ],
+  "elapsed_s": 4.2,
+  "ok": false
+}

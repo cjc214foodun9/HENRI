@@ -1,0 +1,119 @@
+{
+  "evidence_class": "DERIVED",
+  "source": "PDF HENRI-ARCH-2026-KERNEL-REACH-AND-DRIVETRAIN-RATIFICATION, pp.10-14",
+  "A0_untestable_at_reduced_scale": {
+    "blocks_ge": 1024,
+    "target_dim_ge": 1024,
+    "attempted_m64_d512": "pydantic ValidationError: num_clifford_blocks >= 1024; target_dimension_D >= 1024",
+    "smallest_legal_pair": {
+      "num_clifford_blocks": 1024,
+      "clifford_block_dim": 8,
+      "target_dimension_D": 8192
+    },
+    "consequence": "the adapter cannot be exercised below 8192 output dimensions; reduced-scale CPU verification is impossible as specified"
+  },
+  "A1": {
+    "defaults_ok": true,
+    "rotor_shape": [
+      8192
+    ],
+    "assertion_fires": true
+  },
+  "A2A3": {
+    "in": [
+      4,
+      1024,
+      8
+    ],
+    "out": [
+      4,
+      8192
+    ],
+    "dtype": "torch.complex64",
+    "norm_min": 0.9999999403953552,
+    "norm_max": 1.0000001192092896,
+    "unit_norm": true
+  },
+  "A4": {
+    "max_abs_err": 1.7881393432617188e-07,
+    "exact": true
+  },
+  "A5": {
+    "max_abs_err": 393.1678771972656,
+    "relative_err": 0.996372640132904,
+    "psi_first_half_norm": 0.7071067094802856,
+    "is_identity_on_general_input": false,
+    "dimensionality_lost": 1024
+  },
+  "A6": {
+    "second_half_is_deterministic_function_of_first": true,
+    "max_err": 4.165001232792065e-09,
+    "output_complex_dims": 8192,
+    "free_complex_dims": 4096,
+    "redundancy_factor": 2.0
+  },
+  "A7": {
+    "channel_grades": [
+      "scalar(0)",
+      "vector(1)",
+      "vector(1)",
+      "vector(1)",
+      "bivector(2)",
+      "bivector(2)",
+      "bivector(2)",
+      "pseudoscalar(3)"
+    ],
+    "pairing": [
+      [
+        0,
+        1
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        4,
+        5
+      ],
+      [
+        6,
+        7
+      ]
+    ],
+    "grades_mixed_within_pairs": true,
+    "cos_scalar_vs_pseudoscalar": 0.0,
+    "grade_equivariant": false
+  },
+  "A8": {
+    "changed_output_entries": 8192,
+    "total": 8192,
+    "locally_supported": false
+  },
+  "A9": {
+    "declared": true,
+    "read_by_class": false,
+    "dead_field": true
+  },
+  "A10": {
+    "cuda_ok": null,
+    "note": "no local CUDA; torch.complex/cat are device-agnostic"
+  },
+  "findings": [
+    "A5: 'zero metric loss' FALSIFIED on general input. The forward divides by the GLOBAL norm, so it depends only on the DIRECTION of the 32768-dim complex state; the inverse re-normalizes PER BLOCK. inv(fwd(x)) lands on the per-block-unit sphere (max err 3.932e+02, relative 0.9964) and discards one radial scale per block (1024 dims at this size, 8192 at production). The map is lossless ONLY on the per-block-unit submanifold, which is a measure-zero subset of R^{M x B}.",
+    "A6: the 'Spin(3) harmonic expansion' is NOT an expansion. The second half is exactly first_half * rotor (max err 4.165e-09), so the image lies on a 4096-complex-dim submanifold of C^8192 -- a 2x redundant copy. It is an isometric EMBEDDING, not a harmonic expansion, and it adds no information.",
+    "A7: the channel pairing is GRADE-BLIND. Cl(3,0) grades are 0,1,1,1,2,2,2,3 per channel, and the adapter packs (0,1)(2,3)(4,5)(6,7) into complex numbers, so grade 0 is entangled with grade 1 and grade 2 with grade 3. The Euclidean L2 norm is preserved but the ALGEBRA is not: no grade decomposition survives, and the claimed 'no flattening of spatial metric intervals' is CL(3,0)-metric-blind. This is the same class as the earlier D4 orbit finding: a scalar invariant was mistaken for a structure-preserving map.",
+    "A8: GLOBAL normalization destroys local support. Changing ONE input channel alters 8192 of 8192 output entries, because the forward divides by the norm of the whole state, so every element rescales. 'Conserving topological metric locality' is FALSIFIED for any perturbation.",
+    "A9: `orthogonality_tolerance` is a DEAD config field -- declared with a default of 1e-6 and never read. The class therefore never verifies orthogonality/unitarity, which is the property the PDF's title claims ('Kan-extension', 'Stiefel orthogonality'). A declared-but-unread tolerance is a phantom contract."
+  ],
+  "positives": [
+    "A1 config builds at production dims; the dimensional assertion fires on a bad combination",
+    "A2 correct shapes in and out",
+    "A3 ||psi||_2 = 1.0 to machine precision (the retraction claim holds)",
+    "A4 round trip is EXACT on the per-block-unit-norm sphere",
+    "injective: the first half alone recovers the input direction",
+    "no CUDA-specific ops; device-agnostic"
+  ],
+  "verdict": "BOUNDED_IMPLEMENTABLE_WITH_DOMAIN_RESTRICTION",
+  "utc": "2026-09-14T06:46:19Z"
+}

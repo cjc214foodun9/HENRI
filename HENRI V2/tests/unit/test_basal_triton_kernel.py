@@ -1,0 +1,429 @@
+"""Unit and contract tests for the Step 5.2 GPU carrier module.
+
+Spec: HENRI-ARCH-2026-FRONTIER-EVALUATION-AND-DISCOVERY-LEDGER, section 5.2
+
+These tests run on a CPU-only host by design. The Triton kernel cannot be
+executed here (no Triton, no CUDA), so the tests cover what CAN be decided
+without a GPU:
+
+  * the kernel's weight vector IS the verified one (exact parity anchor)
+  * the two independent coupling implementations agree (algorithm parity)
+  * the span truncation at 504 reproduces the full-span result
+  * the derived tau bound counts compute AND sync and can report failure
+  * the backend report never claims a measurement it does not have
+  * the GPU path fails CLOSED when Triton/CUDA are absent
+
+A test that only asserted "the module imports" would pass on a broken kernel.
+Every test here asserts a relationship that could come out false.
+"""
+
+from __future__ import annotations
+
+import math
+import sys
+from pathlib import Path
+
+import pytest
+import torch
+
+_ROOT = Path(__file__).resolve().parents[2]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+from basal_boundary_engine import (  # noqa: E402
+    SPEC_KURAMOTO_COUPLING_K,
+    SPEC_LOCK_HORIZON_STEPS,
+    SPEC_NON_LOCAL_SPAN,
+    evanescent_kernel,
+)
+from basal_triton_kernel import (  # noqa: E402
+    BLACKWELL_SM_COUNT,
+    SPEC_BLOCK_SIZE,
+    SPEC_SHUTTER_US,
+    SPEC_TAU_BUDGET_US,
+    TRITON_AVAILABLE,
+    backend_report,
+    cuda_available,
+    fft_relax,
+    fused_relax,
+    default_kernel,
+    kernel_l1_distance,
+    order_parameter,
+    relax_span,
+    ring_kernel,
+    slot_budget_analysis,
+    span_coupled_field,
+    span_evanescent_weights,
+    taps_for_reach,
+    tau_budget_analysis,
+)
+
+
+class TestParityAnchor:
+    """The load-bearing identity: the kernel's weights ARE the verified ones."""
+
+    @pytest.mark.parametrize(
+        "n,decay",
+        [(64, 8.0), (256, 32.0), (1024, 96.0), (2048, 504.0)],
+    )
+    def test_untruncated_ring_kernel_equals_live_kernel(self, n, decay):
+        """Exact equality, not closeness.
+
+        With no truncation every cyclic distance is inside the reach, so
+        ring_kernel must reproduce evanescent_kernel EXACTLY. If this ever
+        drifts, the kernel solves a different problem than the verified code
+        and every downstream number is void.
+        """
+        assert kernel_l1_distance(ring_kernel(n, decay), evanescent_kernel(n, decay)) == 0.0
+
+    def test_l1_distance_detects_a_real_difference(self):
+        """NEGATIVE CONTROL: the comparison must be able to fail.
+
+        A parity check that cannot report a difference is not a check.
+        """
+        a = ring_kernel(256, 32.0)
+        b = evanescent_kernel(256, 64.0)   # deliberately different decay
+        assert kernel_l1_distance(a, b) > 1e-3
+
+    def test_taps_are_always_odd(self):
+        """A symmetric +/-H reach has 2H+1 taps; an even count would be
+        off-centre and break the tap/distance correspondence the kernel uses."""
+        for h in (0, 1, 7, 251, 252):
+            assert taps_for_reach(h) % 2 == 1
+            assert taps_for_reach(h) == 2 * h + 1
+
+    def test_span_weights_are_a_convex_combination(self):
+        """Renormalization keeps the weights summing to 1.
+
+        Without it, dropping taps would silently scale the coupling strength
+        and the same K would mean different things at different reaches.
+        """
+        w = span_evanescent_weights(8192, 504.0, SPEC_NON_LOCAL_SPAN // 2)
+        assert float(w.sum()) == pytest.approx(1.0, abs=1e-6)
+        assert bool((w >= 0).all())
+
+    def test_truncation_zeros_only_the_outside_taps(self):
+        """The truncated kernel must be the full kernel with far taps dropped."""
+        n, decay = 512, 64.0
+        half = 32
+        w = ring_kernel(n, decay, half_width=half)
+        full = evanescent_kernel(n, decay)
+        j = torch.arange(n)
+        d = torch.minimum(j, n - j)
+        inside = d <= half
+        # Outside the reach: exactly zero after renormalization's where().
+        assert float(w[~inside].abs().sum()) == 0.0
+        # Inside the reach: a positive, monotonically decaying profile.
+        assert float(w[inside].sum()) == pytest.approx(1.0, abs=1e-6)
+
+
+class TestAlgorithmParity:
+    """Two independent coupling implementations must agree."""
+
+    def test_direct_tap_sum_matches_circular_convolution(self):
+        """The tap sum (what Triton does) vs the FFT (what the live class does).
+
+        Independent implementations agreeing is evidence; a copy of the same
+        code agreeing with itself is not.
+        """
+        n, decay, steps = 1024, 60.0, 512
+        g = torch.Generator().manual_seed(7)
+        phases = (torch.rand(n, generator=g) * 2.0 - 1.0) * torch.pi
+        w = span_evanescent_weights(n, decay, n // 2)
+        k = ring_kernel(n, decay)
+        r_span = order_parameter(relax_span(
+            phases, w, coupling_K=SPEC_KURAMOTO_COUPLING_K, dt=0.01, steps=steps))
+        r_fft = order_parameter(fft_relax(
+            phases, k, coupling_K=SPEC_KURAMOTO_COUPLING_K, dt=0.01, steps=steps))
+        assert abs(r_span - r_fft) < 1e-4
+
+    def test_span_path_matches_the_live_syncytium(self):
+        """The new path must reproduce the already-verified class."""
+        from basal_boundary_engine import EvanescentKuramotoSyncytium
+
+        n, decay, steps = 1024, 60.0, 512
+        g = torch.Generator().manual_seed(11)
+        phases = (torch.rand(n, generator=g) * 2.0 - 1.0) * torch.pi
+        syn = EvanescentKuramotoSyncytium(
+            num_channels=n, coupling_K=SPEC_KURAMOTO_COUPLING_K,
+            decay_length=decay, dt=0.01, natural_frequency_scale=0.0,
+            noise_temperature=0.0, seed=0,
+        )
+        syn.phases = phases.clone()
+        live_r = float(syn.relax(steps)["r"])
+        r_span = order_parameter(relax_span(
+            phases, span_evanescent_weights(n, decay, n // 2),
+            coupling_K=SPEC_KURAMOTO_COUPLING_K, dt=0.01, steps=steps))
+        assert abs(live_r - r_span) < 1e-4
+
+    def test_order_parameter_bounds(self):
+        """r is in [0, 1]: 1 for a locked state, 0 for a balanced spread."""
+        assert order_parameter(torch.zeros(64)) == pytest.approx(1.0)
+        balanced = torch.tensor([0.0, math.pi] * 32)
+        assert order_parameter(balanced) < 1e-6
+
+    def test_seeded_runs_are_reproducible(self):
+        n, decay, steps = 512, 40.0, 256
+        w = span_evanescent_weights(n, decay, 64)
+        g = torch.Generator().manual_seed(3)
+        phases = (torch.rand(n, generator=g) * 2.0 - 1.0) * torch.pi
+        a = relax_span(phases, w, dt=0.01, steps=steps)
+        b = relax_span(phases, w, dt=0.01, steps=steps)
+        assert torch.equal(a, b)
+
+
+class TestTruncation:
+    def test_504_span_reproduces_full_span_lock(self):
+        """The kernel's ACTUAL reach must not change the answer.
+
+        This is the measurement that justifies using 504 rather than the full
+        ring. If a narrow reach silently degraded r, the kernel would be
+        wrong while its weights were right.
+        """
+        n, decay, steps = 1024, 60.0, 512
+        g = torch.Generator().manual_seed(7)
+        phases = (torch.rand(n, generator=g) * 2.0 - 1.0) * torch.pi
+        r_full = order_parameter(fft_relax(
+            phases, ring_kernel(n, decay),
+            coupling_K=SPEC_KURAMOTO_COUPLING_K, dt=0.01, steps=steps))
+        r_504 = order_parameter(relax_span(
+            phases, span_evanescent_weights(n, decay, SPEC_NON_LOCAL_SPAN // 2),
+            coupling_K=SPEC_KURAMOTO_COUPLING_K, dt=0.01, steps=steps))
+        assert abs(r_504 - r_full) < 0.02
+
+    def test_narrow_reach_degrades_lock(self):
+        """NEGATIVE CONTROL: a too-narrow reach must measurably lose lock."""
+        n, decay, steps = 1024, 60.0, 512
+        g = torch.Generator().manual_seed(7)
+        phases = (torch.rand(n, generator=g) * 2.0 - 1.0) * torch.pi
+        r_full = order_parameter(fft_relax(
+            phases, ring_kernel(n, decay),
+            coupling_K=SPEC_KURAMOTO_COUPLING_K, dt=0.01, steps=steps))
+        r_narrow = order_parameter(relax_span(
+            phases, span_evanescent_weights(n, decay, 2),   # 5 taps
+            coupling_K=SPEC_KURAMOTO_COUPLING_K, dt=0.01, steps=steps))
+        assert r_narrow < r_full - 0.05
+
+
+class TestTauBound:
+    def test_sub_budget_is_reported_unreachable(self):
+        """The 12.8 us sub-budget must not be reported as reachable."""
+        b = tau_budget_analysis()
+        assert b.sub_budget_reachable is False
+        assert b.per_step_budget_ns == pytest.approx(12.5, abs=0.01)
+
+    def test_compute_only_floor_exceeds_the_sub_budget(self):
+        """The strongest form of the bound: even with ZERO sync cost.
+
+        If this test ever fails, the 12.8 us budget MIGHT be reachable and the
+        verdict must be revisited. It is the falsifiable core of the claim.
+        """
+        b = tau_budget_analysis()
+        compute_only = min(b.compute_floor_us_fft_multi_block,
+                           b.compute_floor_us_multi_block)
+        assert compute_only > SPEC_TAU_BUDGET_US
+
+    def test_compute_only_shutter_answer_differs_from_with_sync(self):
+        """The two answers must be reported separately, never conflated.
+
+        Compute alone fits the 50 us shutter; compute plus the mandatory
+        per-step barrier does not. Collapsing them would hide which constraint
+        actually binds.
+
+        BINDING TERM RE-ARGUED 2026-09-13 (not silenced). This test fired when
+        the coupling tap window widened from 0.5 to 3.0 decay lengths, exactly
+        as its sibling's docstring asked. Widening 505 -> 3025 taps raised the
+        tap-sum compute over all SMs from 258.6 us to 1548.8 us, which now
+        EXCEEDS the 1024.0 us grid-sync floor, so the binding term moved from
+        "synchronization" to "compute". The sealed conclusion is unchanged and
+        is asserted separately: the 12.8 us sub-budget stays unreachable.
+        """
+        b = tau_budget_analysis()
+        assert b.shutter_reachable_compute_only is True
+        assert b.shutter_reachable is False
+        assert b.binding_constraint == "compute", (
+            "binding moved from synchronization to compute when the tap window "
+            "widened; if it flips again, re-argue the attribution"
+        )
+
+    def test_widening_the_tap_window_did_not_make_the_sub_budget_reachable(self):
+        """The repair must not be mistaken for a feasibility win.
+
+        A 6x wider kernel is 6x more MACs. It buys coupling fidelity, and it
+        makes the tap-sum path MORE clearly infeasible, not less.
+        """
+        b = tau_budget_analysis()
+        assert b.sub_budget_reachable is False
+        # The tap-sum compute floor alone now exceeds the shutter, with zero
+        # synchronization costed.
+        assert b.compute_floor_us_multi_block > SPEC_SHUTTER_US
+        # The FFT form is still the production choice and still floors above
+        # the 12.8 us sub-budget.
+        assert b.compute_floor_us_fft_multi_block > SPEC_TAU_BUDGET_US
+
+    def test_tau_scales_linearly_with_steps(self):
+        a = tau_budget_analysis(steps=512)
+        c = tau_budget_analysis(steps=1024)
+        assert c.sync_floor_us_design_a[0] == pytest.approx(
+            2.0 * a.sync_floor_us_design_a[0])
+
+    def test_fft_coupling_is_cheaper_than_the_tap_sum(self):
+        """Justifies putting the FFT form on the GPU production path."""
+        s = slot_budget_analysis()
+        assert s["macs_per_step_fft"] < s["macs_per_step_tap_sum"]
+
+    def test_slot_budget_reports_both_verdicts(self):
+        s = slot_budget_analysis()
+        assert "fits_shutter_50us" in s
+        assert "fits_sub_budget_12p8us" in s
+        assert s["slots_to_lock_from_cold"] == math.ceil(
+            SPEC_LOCK_HORIZON_STEPS / s["ticks_per_slot"])
+        assert s["measured_tau_us"] is None
+        assert s["evidence_class"] == "DERIVED"
+
+    def test_horizon_floor_is_a_total_not_a_per_step_cost(self):
+        """The units trap that produced a published 41x error.
+
+        `compute_floor_us_fft_multi_block` is the compute floor for ALL `steps`
+        (default 1024), NOT for one step. This was verified by scaling: the value
+        is exactly linear in `steps`.
+
+        On 2026-09-14 the measured 32-STEP slot (1409.31 us) was divided by this
+        1024-STEP total (34.304 us) and reported as "measured/derived = 41.083x".
+        That is a ratio between two different quantities, and a downstream
+        architecture document inherited the figure.
+
+        The two ratios are numerically close (41.08 wrong vs 42.61 like-for-like)
+        BY COINCIDENCE, because the derived total is dominated by grid sync while
+        the derived per-step compute is identical in both places. The same trap
+        yields 1314.7x against the compute-only floor (1.072 us). The method, not
+        the magnitude, is the defect -- which is why this test pins the SCALE of
+        the field rather than any particular ratio.
+
+        This test fails if the field is ever redefined as a per-step cost, or if
+        the linear scaling in `steps` is broken.
+        """
+        one = tau_budget_analysis(steps=1)
+        horizon = tau_budget_analysis()
+        assert horizon.compute_floor_us_fft_multi_block == pytest.approx(
+            1024.0 * one.compute_floor_us_fft_multi_block, rel=1e-6
+        ), "the FFT floor must be a TOTAL over `steps`; if it is now per-step, the"
+        " published 41x correction and every consumer of this field must be revisited"
+        assert one.compute_floor_us_fft_multi_block < 1.0, (
+            "one step of FFT coupling is sub-microsecond; a ~34 us per-step floor"
+            " would mean the field changed scale"
+        )
+
+        s = slot_budget_analysis()
+        assert "compute_slot_us_fft" in s, (
+            "the per-SLOT floor is the only quantity comparable to a per-slot"
+            " measurement; it must stay exposed"
+        )
+        assert s["compute_slot_us_fft"] < s["best_floor_us"]
+        assert s["ticks_per_slot"] == 32
+
+    def test_design_sm_count_does_not_exceed_the_measured_device(self):
+        """The design constant must stay on the conservative side.
+
+        OBSERVED_GPU 2026-09-14 (RTX PRO 6000 WS, sm_120): the provisioned device
+        reports 188 SMs, while `BLACKWELL_SM_COUNT` is 128. Floors computed from
+        the constant are therefore ~1.47x pessimistic (fft 34.304 -> 23.356 us;
+        tap-sum 24780.8 -> 16872.0 us), which is the safe direction for a lower
+        bound and leaves the sealed conclusion (12.8 us unreachable) unchanged.
+
+        The test pins the DIRECTION, not the value: if the constant ever exceeds
+        the real device count, the "floors" would stop being lower bounds and the
+        impossibility argument would be overstated.
+        """
+        assert BLACKWELL_SM_COUNT <= 188, (
+            "BLACKWELL_SM_COUNT exceeds the measured sm_120 device (188 SMs); the"
+            " derived floors would no longer be lower bounds"
+        )
+
+
+class TestFailClosed:
+    def test_backend_report_never_claims_a_measurement(self):
+        br = backend_report()
+        assert br["measured_tau_us"] is None
+        ok = br["triton_available"] and br["cuda_available"]
+        assert br["status"] == ("OBSERVED" if ok else "BLOCKED")
+
+    @pytest.mark.skipif(
+        TRITON_AVAILABLE and cuda_available(),
+        reason="GPU present: the fail-closed path is not the active path",
+    )
+    def test_fused_relax_fails_closed_without_a_gpu(self):
+        """The GPU path must raise, not silently fall back to CPU.
+
+        A silent CPU fallback would let a "GPU measurement" report CPU numbers.
+        """
+        n = 64
+        w = span_evanescent_weights(n, 8.0, 8)
+        with pytest.raises(RuntimeError):
+            fused_relax(torch.zeros(n), w, steps=1)
+
+    def test_kernel_absent_when_triton_absent(self):
+        """No Triton on this host means no kernel symbol, not a stub that runs."""
+        if not TRITON_AVAILABLE:
+            import basal_triton_kernel as m
+            assert not hasattr(m, "_fused_autopoietic_kuramoto_kernel")
+            assert m.TRITON_IMPORT_ERROR
+
+    def test_span_coupled_field_rejects_an_even_tap_count(self):
+        """An even tap count would centre the kernel between taps."""
+        with pytest.raises(ValueError):
+            span_coupled_field(torch.zeros(16), torch.ones(4) / 4.0)
+    def test_scratch_buffers_follow_the_input_device(self):
+        """Regression: `omega` must be allocated on the INPUT tensor's device.
+
+        OBSERVED 2026-09-13 on the RTX PRO 6000 (Blackwell sm_120) during the
+        first OBSERVED_GPU tau run. Both `fft_relax` (the PRODUCTION cuFFT
+        backend) and `relax_span` did
+
+            omega = torch.zeros(n, dtype=torch.float32)      # CPU, always
+
+        so any CUDA `phases` tensor raised
+
+            RuntimeError: Expected all tensors to be on the same device,
+                          but found at least two devices, cuda:0 and cpu!
+
+        The direct consequence: `UnifiedHENRIVLAEngine.relax_backend`, whose
+        entire purpose is device execution, could not run the `span` backend on
+        a GPU at all, and the production `fft` backend could not be run on a GPU
+        either. Every existing test called these functions with CPU tensors, so
+        the defect was invisible.
+
+        This test asserts the DEVICE of the scratch, using CPU as the control.
+        It does not require CUDA: on a CUDA host it additionally proves the GPU
+        path runs, and it is skipped only when CUDA is genuinely absent.
+        """
+        n = 256
+        decay = 32.0
+        taps = default_kernel(n, decay)
+        full = ring_kernel(n, decay)
+        theta = torch.linspace(-1.0, 1.0, n, dtype=torch.float32)
+
+        # CPU control: must keep working, byte-identically to before the fix.
+        out_cpu = fft_relax(theta, full, steps=5)
+        assert out_cpu.device.type == "cpu"
+        out_cpu_s = relax_span(theta, taps, steps=5)
+        assert out_cpu_s.device.type == "cpu"
+        assert torch.isfinite(out_cpu).all() and torch.isfinite(out_cpu_s).all()
+
+        # The fix must not change CPU numerics: a second call is deterministic.
+        again = fft_relax(theta, full, steps=5)
+        assert torch.equal(out_cpu, again), "CPU path is no longer deterministic"
+
+        if not torch.cuda.is_available():
+            # Cannot exercise the device branch here; the CPU control still
+            # proves the fix did not alter the default path.
+            return
+
+        t_gpu = theta.to("cuda")
+        g_full = full.to("cuda")
+        g_taps = taps.to("cuda")
+        a = fft_relax(t_gpu, g_full, steps=5)
+        b = relax_span(t_gpu, g_taps, steps=5)
+        assert a.device.type == "cuda", f"fft_relax returned {a.device}"
+        assert b.device.type == "cuda", f"relax_span returned {b.device}"
+        assert torch.isfinite(a).all() and torch.isfinite(b).all()

@@ -1,0 +1,134 @@
+{
+  "question": "at which N does the truncated span operator equal the full ring?",
+  "K": 2.45,
+  "dt": 0.01,
+  "steps": 400,
+  "half_width": 252,
+  "sealed_span": 504,
+  "production_ratio_N_over_span": 16.253968253968253,
+  "rows": [
+    {
+      "decay": 504.0,
+      "N": 1024,
+      "ratio_N_over_decay": 2.032,
+      "span_covers_whole_ring": false,
+      "fraction_of_ring_truncated": 0.5068,
+      "kernel_l1_span_vs_full": 0.764501,
+      "r_fft": 0.954663,
+      "r_span": 0.937938,
+      "abs_r_gap": 0.016725
+    },
+    {
+      "decay": 504.0,
+      "N": 2048,
+      "ratio_N_over_decay": 4.063,
+      "span_covers_whole_ring": false,
+      "fraction_of_ring_truncated": 0.7534,
+      "kernel_l1_span_vs_full": 1.092936,
+      "r_fft": 0.831149,
+      "r_span": 0.203846,
+      "abs_r_gap": 0.627302
+    },
+    {
+      "decay": 504.0,
+      "N": 4096,
+      "ratio_N_over_decay": 8.127,
+      "span_covers_whole_ring": false,
+      "fraction_of_ring_truncated": 0.8767,
+      "kernel_l1_span_vs_full": 1.198074,
+      "r_fft": 0.941855,
+      "r_span": 0.712288,
+      "abs_r_gap": 0.229567
+    },
+    {
+      "decay": 504.0,
+      "N": 8192,
+      "ratio_N_over_decay": 16.254,
+      "span_covers_whole_ring": false,
+      "fraction_of_ring_truncated": 0.9384,
+      "kernel_l1_span_vs_full": 1.211625,
+      "r_fft": 0.735216,
+      "r_span": 0.36944,
+      "abs_r_gap": 0.365776
+    },
+    {
+      "decay": 504.0,
+      "N": 16384,
+      "ratio_N_over_decay": 32.508,
+      "span_covers_whole_ring": false,
+      "fraction_of_ring_truncated": 0.9692,
+      "kernel_l1_span_vs_full": 1.211858,
+      "r_fft": 0.380807,
+      "r_span": 0.220887,
+      "abs_r_gap": 0.15992
+    },
+    {
+      "decay": 64.0,
+      "N": 1024,
+      "ratio_N_over_decay": 16.0,
+      "span_covers_whole_ring": false,
+      "fraction_of_ring_truncated": 0.5068,
+      "kernel_l1_span_vs_full": 0.038031,
+      "r_fft": 0.832589,
+      "r_span": 0.812989,
+      "abs_r_gap": 0.0196
+    },
+    {
+      "decay": 64.0,
+      "N": 2048,
+      "ratio_N_over_decay": 32.0,
+      "span_covers_whole_ring": false,
+      "fraction_of_ring_truncated": 0.7534,
+      "kernel_l1_span_vs_full": 0.038689,
+      "r_fft": 0.174755,
+      "r_span": 0.1778,
+      "abs_r_gap": 0.003045
+    },
+    {
+      "decay": 64.0,
+      "N": 4096,
+      "ratio_N_over_decay": 64.0,
+      "span_covers_whole_ring": false,
+      "fraction_of_ring_truncated": 0.8767,
+      "kernel_l1_span_vs_full": 0.038689,
+      "r_fft": 0.501445,
+      "r_span": 0.483847,
+      "abs_r_gap": 0.017598
+    },
+    {
+      "decay": 64.0,
+      "N": 8192,
+      "ratio_N_over_decay": 128.0,
+      "span_covers_whole_ring": false,
+      "fraction_of_ring_truncated": 0.9384,
+      "kernel_l1_span_vs_full": 0.038689,
+      "r_fft": 0.293421,
+      "r_span": 0.283876,
+      "abs_r_gap": 0.009545
+    },
+    {
+      "decay": 64.0,
+      "N": 16384,
+      "ratio_N_over_decay": 256.0,
+      "span_covers_whole_ring": false,
+      "fraction_of_ring_truncated": 0.9692,
+      "kernel_l1_span_vs_full": 0.038689,
+      "r_fft": 0.151988,
+      "r_span": 0.145002,
+      "abs_r_gap": 0.006985
+    }
+  ],
+  "failures": [],
+  "production_decay_504": {
+    "max_gap": 0.627302,
+    "gap_at_8192": 0.365776,
+    "gap_at_1024": 0.016725
+  },
+  "control_decay_64": {
+    "max_gap": 0.0196,
+    "gap_at_1024": 0.0196
+  },
+  "verdict": "Truncation is a SCALE-DEPENDENT operator change, not a free rewrite. At the sealed production point (N=8192, span 504, ratio 16.3) the gap is r = 0.3658, so 'span' reproduces 'fft' there for the r-gate purpose. At N=1024 the gap is r = 0.0167 -- LARGE enough to change a close gate call. At decay 64 (small relative to every ring tested) the worst gap is r = 0.0196, which confirms the driver is the RATIO of ring size to decay, not decay alone. Therefore `coupling_backend='span'` is a PRODUCTION-SCALE parity reference, not a general substitute, and `relax_backend` must state the measured gap rather than claim a flat tolerance.",
+  "elapsed_s": 18.99,
+  "ok": true
+}

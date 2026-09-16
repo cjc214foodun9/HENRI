@@ -83,3 +83,17 @@ experiments/verification/mmlu_839_scorecard.json
 
 # Salvage: 32 duplicate genesis ledger stubs (identical modulo ts/hash)
 _archive/worktree_salvage_20260911/**/henri_audit_chain.json
+
+# --- Basal helper archive policy (from main; displaced by the carrier .gitignore
+# --- block during the release/main-promotion merge on 2026-09-15). Merged as a
+# --- UNION: both policies are live, neither is silently dropped.
+# Basal helper scripts archived out of the repo root (2026-09-13).
+# These are session-local push tooling, NOT production code, so their
+# absence from main is deliberate. They are listed here so a future
+# reader knows the absence is a policy and not a lost file.
+# The DURABLE copy lives OUTSIDE this host and outside this repo:
+#   G:/My Drive/HENRI_Archive/basal_helpers_20260913/
+# verified byte-for-byte against a SHA-256 manifest at archive time.
+# A fresh clone will not contain that path; do not read its absence as
+# data loss.
+_archive/basal_helpers_20260913/

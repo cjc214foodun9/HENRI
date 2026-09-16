@@ -1,0 +1,81 @@
+{
+  "spec": "HENRI-BASAL-TAP-REACH-WIDENING",
+  "evidence_class": "DERIVED",
+  "measured_tau_us": null,
+  "TAP_REACH_DECAY_LENGTHS": 3.0,
+  "reach_by_ring": {
+    "1024": {
+      "decay": 62.976,
+      "half_width": 189,
+      "taps": 379,
+      "reach_decay_lengths": 3.0011432926829267,
+      "sealed_span_half": 252,
+      "sealed_span_reach_decay_lengths": 4.001524390243903
+    },
+    "4096": {
+      "decay": 251.904,
+      "half_width": 756,
+      "taps": 1513,
+      "reach_decay_lengths": 3.0011432926829267,
+      "sealed_span_half": 252,
+      "sealed_span_reach_decay_lengths": 1.0003810975609757
+    },
+    "8192": {
+      "decay": 503.808,
+      "half_width": 1512,
+      "taps": 3025,
+      "reach_decay_lengths": 3.0011432926829267,
+      "sealed_span_half": 252,
+      "sealed_span_reach_decay_lengths": 0.5001905487804879
+    }
+  },
+  "engine_ring": {
+    "backend_default": "fft",
+    "channels": 1024,
+    "reach": {
+      "decay": 62.976,
+      "half_width": 189,
+      "taps": 379,
+      "reach_decay_lengths": 3.0011432926829267,
+      "sealed_span_half": 252,
+      "sealed_span_reach_decay_lengths": 4.001524390243903
+    }
+  },
+  "production_ring_gap": {
+    "r_full": 0.89544,
+    "reach_0p5_decay_lengths": {
+      "r": 0.38575,
+      "r_gap": 0.5097,
+      "kernel_l1": 1.2114
+    },
+    "reach_3p0_decay_lengths": {
+      "r": 0.829999,
+      "r_gap": 0.06544,
+      "kernel_l1": 0.098802
+    },
+    "steps": 512,
+    "K": 2.45,
+    "dt": 0.01,
+    "source": "basal_tap_reach_sweep.json"
+  },
+  "tau_budget": {
+    "binding_constraint": "compute",
+    "sub_budget_reachable": false,
+    "shutter_reachable": false,
+    "compute_floor_us_multi_block": 24780.8,
+    "sync_floor_us_design_a": [
+      1024.0,
+      3072.0
+    ],
+    "macs_per_step": 49561600.0,
+    "note": "widening 505 -> 3025 taps raised tap-sum compute from 258.6 to 1548.8 us, moving the binding term from synchronization to compute; the sealed conclusion is unchanged"
+  },
+  "mandate_claims_tested": {
+    "+/-1512 == 3.0 decay lengths at the sealed ring": true,
+    "L1 <= 1.0e-5 at 3.0 decay lengths": false,
+    "L1 <= 1e-5 requires full-ring reach": true,
+    "reach for L1 <= 1e-5 (decay lengths)": 12.08,
+    "half_ring_available (decay lengths)": 8.130081300813009
+  },
+  "utc": "2026-09-14T05:38:22Z"
+}
