@@ -179,7 +179,16 @@ def main():
     # ---------------- 1. fit subspace on DISJOINT tasks -------------------------
     print(f"=== UWSH | eval={N_TASKS} fit={N_FIT} disjoint | NB_={NB_} N={N} ===")
     fit = load_tasks(ARC_ROOT, "training", skip=N_TASKS, n=N_FIT)
-    Ws, used, failed = [], 0, 0
+    # DEFECT V3-GUARD (deliberately a COMMENT, not a defect_ledger entry):
+    # The V2-SHAPE ledger entry claims the fix added "explicit shape asserts", but an
+    # AUDIT found NO guard on the fit list. An empty Ws still reached torch.stack([]) and
+    # raised the opaque "stack expects a non-empty TensorList" -- which is what uwsh1.log
+    # records on the v1 run. The SHAPE was asserted; the EMPTINESS was not.
+    #     The guard below is ERROR-PATH ONLY: on any successful run Ws is non-empty, so
+    # first_err stays None, no print fires, and no scored number can change. It is kept
+    # OUT of defect_ledger ON PURPOSE -- that dict is emitted into the receipt, and adding
+    # a key would change receipt bytes and break reproduction of the sealed digest.
+    Ws, used, failed, first_err = [], 0, 0, None
     for tid, t in fit:
         try:
             dm = [(np.asarray(p["input"], dtype=np.int64),
@@ -192,9 +201,20 @@ def main():
             W = (X.conj() * Y).sum(0) / ((X.abs() ** 2).sum(0) + 1e-9)
             Ws.append(W)
             used += 1
-        except Exception:
+        except Exception as e:
             failed += 1
+            if first_err is None:
+                first_err = f"{type(e).__name__}: {e}"
     print(f"  per-task W* built: {used} (failed {failed})")
+    if first_err:
+        print(f"  first fit failure: {first_err}")
+    if not Ws:
+        raise RuntimeError(
+            f"UWSH fit set is EMPTY: 0 of {len(fit)} fit tasks produced W*. "
+            f"first failure: {first_err!r}. Refusing to continue: an empty "
+            "subspace makes every arm meaningless, and the following "
+            "torch.stack([]) would raise the opaque 'stack expects a "
+            "non-empty TensorList' instead of naming the cause.")
     Mw = torch.stack([sm(w) for w in Ws])                        # [F, 2N] real
     mean_w = Mw.mean(0)
     C_ = Mw - mean_w
