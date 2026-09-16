@@ -178,7 +178,14 @@ def main(argv: list[str] | None = None) -> int:
     for p in skipped:
         say(f"      (not a pytest module by config) {p}")
 
-    missing = [p for p in collectible if p not in collected]
+    # Match by suffix: pytest prints its rootdir as the first tree component
+    # ("HENRI V2/tests/unit/test_x.py") while git ls-files returns paths relative to
+    # the cwd ("tests/unit/test_x.py"). An exact-string compare therefore reported
+    # EVERY module as missing -- a bug in this gate, not a defect in the repository.
+    def _collected(p: str) -> bool:
+        return any(c == p or c.endswith("/" + p) for c in collected)
+
+    missing = [p for p in collectible if not _collected(p)]
     for p in missing:
         say(f"  MISSING FROM COLLECTION: {p}")
     gate1 = not missing
