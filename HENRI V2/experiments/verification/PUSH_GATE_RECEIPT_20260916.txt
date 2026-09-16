@@ -1,0 +1,71 @@
+=== PUSH GATE @ 2026-09-16T17:49:47Z ===
+worktree HEAD = 5ab46c297933c7b4d72d519468d7e11ad3f99e5c
+branch        = DETACHED
+
+--- 0. worktree status (what is left uncommitted) ---
+?? "HENRI V2/henri_audit_chain.json"
+status lines = 1
+
+--- 1. all 21 committed paths exist in HEAD ---
+  OK   henri_eval_infra.py
+  OK   henri_eval_runner.py
+  OK   henri_pdf_ingress.py
+  OK   henri_sandbox_harness.py
+  OK   henri_agent_loop.py
+  OK   tests/contract/test_eval_infra.py
+  OK   tests/contract/test_eval_runner.py
+  OK   tests/contract/test_pdf_ingress.py
+  OK   tests/contract/test_sandbox_harness.py
+  OK   tests/contract/test_agent_loop.py
+  OK   experiments/verification/kaa_egress_probe.py
+  OK   experiments/verification/kaa_a1_nearfar_probe.py
+  OK   experiments/verification/kaa_a1_multi_ingress.py
+  OK   experiments/verification/KAA_AMENDMENT_A1_nearfar_egress.md
+  OK   experiments/verification/M1_EGRESS_RESOLUTION_20260916.md
+  missing_in_HEAD=0
+
+--- 2. GATE 1: --collect-only over the committed test tree ---
+    print(f"Wave-JEPA Energy (\Delta_Sagnac): {energy.item():.6f}")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 1799 tests collected in 2.23s ========================
+
+--- 3. GATE 2: import-closure scan (every local import resolves to a TRACKED file) ---
+<unknown>:6: SyntaxWarning: "\h" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\h"? A raw string is also an option.
+<unknown>:87: SyntaxWarning: "\d" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\d"? A raw string is also an option.
+<unknown>:8: SyntaxWarning: "\D" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\D"? A raw string is also an option.
+<unknown>:44: SyntaxWarning: "\D" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\D"? A raw string is also an option.
+<unknown>:63: SyntaxWarning: "\D" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\D"? A raw string is also an option.
+<unknown>:64: SyntaxWarning: "\g" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\g"? A raw string is also an option.
+test root : C:\Users\chan\henri-worktrees\aaii-v43\HENRI V2
+
+GATE 1  collection coverage (scope follows python_files)
+  python_files pattern : test_.*.py
+  collected modules    : 149
+  tracked test_*.py    : 149
+  tracked non-matching : 1
+      (not a pytest module by config) tests/contract/check_static_partition_wiring.py
+  GATE 1 PASS
+
+GATE 2  import closure (imports must not target untracked local modules)
+  files scanned        : 505
+  untracked-module edges: 0
+  GATE 2 PASS
+
+RESULT: PASS - collection and import closure are clean
+GATE2_RC=0
+
+--- 4. GATE 3: the 5 new modules import from the COMMITTED tree ---
+  OK   henri_eval_infra
+  OK   henri_eval_runner
+  OK   henri_pdf_ingress
+  OK   henri_sandbox_harness
+  OK   henri_agent_loop
+ALL_IMPORT_OK=True
+
+--- 5. GATE 4: the 5 new test files COLLECT (count tests, not just no-error) ---
+        <Function test_scaffold_cli_reports_zero_infrastructure_errors>
+
+======================== 191 tests collected in 1.30s =========================
+
+=== END PUSH GATE ===
