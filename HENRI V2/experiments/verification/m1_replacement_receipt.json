@@ -1,0 +1,81 @@
+{
+  "preregistration": {
+    "N": 120,
+    "R2": 0.5,
+    "R3": 0.15,
+    "R4": 0.15,
+    "R5": 0.35,
+    "freq_cutoff": 0.5,
+    "seed": 20260916,
+    "note": "distinct-count metric retired 2026-09-16"
+  },
+  "n_candidates": 141,
+  "arms": {
+    "fractional_shift": {
+      "position_binding": "fractional_shift",
+      "treatment": {
+        "n_scored": 120,
+        "ipwr": 0.15833333333333333,
+        "determinism": 1.0,
+        "paired_margin": 0.7408510108788808,
+        "distinct": 28
+      },
+      "random_control": {
+        "n_scored": 120,
+        "ipwr": 0.09166666666666666,
+        "determinism": 1.0,
+        "paired_margin": 0.008788428015153234,
+        "distinct": 76
+      },
+      "shuffled_null": {
+        "n_scored": 120,
+        "ipwr": 0.05,
+        "determinism": 1.0,
+        "paired_margin": -0.030205310384432475,
+        "distinct": 28
+      },
+      "chance": 0.04636752136752137,
+      "R1_determinism": true,
+      "R2_ipwr_floor": false,
+      "R3_random_ceiling": true,
+      "R4_null_ceiling": true,
+      "R5_separation": false,
+      "R6_margin_positive": true,
+      "control_max": 0.09166666666666666,
+      "verdict": "M1_REPLACEMENT_GATE_FAIL:R2,R5"
+    },
+    "phasor_bind": {
+      "position_binding": "phasor_bind",
+      "treatment": {
+        "n_scored": 120,
+        "ipwr": 0.9833333333333333,
+        "determinism": 1.0,
+        "paired_margin": 0.47420036177694175,
+        "distinct": 14
+      },
+      "random_control": {
+        "n_scored": 120,
+        "ipwr": 0.03333333333333333,
+        "determinism": 1.0,
+        "paired_margin": -0.0005783787036004166,
+        "distinct": 82
+      },
+      "shuffled_null": {
+        "n_scored": 120,
+        "ipwr": 0.11666666666666667,
+        "determinism": 1.0,
+        "paired_margin": 0.034735541354166344,
+        "distinct": 14
+      },
+      "chance": 0.04636752136752137,
+      "R1_determinism": true,
+      "R2_ipwr_floor": true,
+      "R3_random_ceiling": true,
+      "R4_null_ceiling": true,
+      "R5_separation": true,
+      "R6_margin_positive": true,
+      "control_max": 0.11666666666666667,
+      "verdict": "M1_REPLACEMENT_GATE_PASS"
+    }
+  }
+}
