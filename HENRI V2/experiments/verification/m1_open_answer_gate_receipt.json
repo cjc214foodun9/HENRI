@@ -1,0 +1,52 @@
+{
+  "preregistration": {
+    "N": 120,
+    "P1": 1.0,
+    "P2": 0.5,
+    "P3": 0.5,
+    "P4": 0.5,
+    "seed": 20260916
+  },
+  "arms": {
+    "fractional_shift": {
+      "position_binding": "fractional_shift",
+      "n": 120,
+      "vocab": 156,
+      "determinism": 1.0,
+      "distinct_ratio": 0.23333333333333334,
+      "distinct_count": 28,
+      "order_sensitivity": 0.5083333333333333,
+      "equivalence": 0.6666666666666666,
+      "rand_distinct_ratio": 0.5916666666666667,
+      "rand_distinct_count": 71,
+      "mean_entropy_nats": 4.586086750030518,
+      "ln_vocab": 5.049856185913086,
+      "P1_determinism": true,
+      "P2_distinct": false,
+      "P3_order": true,
+      "P4_equivalence": true,
+      "P5_nonvacuous": false,
+      "verdict": "VACUOUS_DISTINCT_COUNT_NOT_INFORMATIVE"
+    },
+    "phasor_bind": {
+      "position_binding": "phasor_bind",
+      "n": 120,
+      "vocab": 156,
+      "determinism": 1.0,
+      "distinct_ratio": 0.11666666666666667,
+      "distinct_count": 14,
+      "order_sensitivity": 0.9916666666666667,
+      "equivalence": 0.8166666666666667,
+      "rand_distinct_ratio": 0.7,
+      "rand_distinct_count": 84,
+      "mean_entropy_nats": 4.783841609954834,
+      "ln_vocab": 5.049856185913086,
+      "P1_determinism": true,
+      "P2_distinct": false,
+      "P3_order": true,
+      "P4_equivalence": true,
+      "P5_nonvacuous": false,
+      "verdict": "VACUOUS_DISTINCT_COUNT_NOT_INFORMATIVE"
+    }
+  }
+}
