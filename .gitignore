@@ -97,3 +97,8 @@ _archive/worktree_salvage_20260911/**/henri_audit_chain.json
 # A fresh clone will not contain that path; do not read its absence as
 # data loss.
 _archive/basal_helpers_20260913/
+
+# Runtime-regenerated audit-ledger stub. The live hash-linked ledger is
+# %LOCALAPPDATA%/hermes/audit/henri_audit_chain.jsonl; this repo-root file
+# is a single GENESIS row written at import time and must not be tracked.
+HENRI V2/henri_audit_chain.json
