@@ -1,0 +1,83 @@
+{
+  "schema_id": "henri.run-evidence.v1",
+  "run_id": "20260916T183331Z-9eb0c6c1",
+  "commit_sha256": "f3fecfe44c5b87b2b610e06b0ead172982578f2d",
+  "benchmark_id": "scicode-instrument-control-close",
+  "dataset_source": "hf://SciCode1/SciCode",
+  "dataset_sha256": "193968aff23b7ed931c8f6d196b611e2f6694adb49e6cc085444a60ad2fc4f7b",
+  "item_count": 2,
+  "attempted_count": 2,
+  "passed_count": 2,
+  "failed_count": 0,
+  "execution_error_count": 12,
+  "item_results_sha256": null,
+  "generated_at_utc": "2026-09-16T18:33:47Z",
+  "status": "INVALID",
+  "accounting": {
+    "valid": false,
+    "problems": [
+      "attempted(2) + execution_errors(12) = 14 != item_count(2)"
+    ]
+  },
+  "schema": "henri.m3-instrument-control.v6",
+  "ts_utc": "20260916T183331Z",
+  "control_type": "POSITIVE_CONTROL",
+  "label": "INSTRUMENT_CONTROL",
+  "not_a_capability_claim": true,
+  "supersedes": [
+    "v1 (isolation; truncated classifier)",
+    "v2 (predicate unverified; deps unprovisioned)",
+    "v3 (diagnosis only)",
+    "v4 (rows persisted without stderr)",
+    "v5 (classifier lacked resource + isolation-artifact branches)"
+  ],
+  "sandbox": {
+    "mode": "container-rlimit",
+    "isolated": false,
+    "surrogate": true,
+    "python_executable": "C:\\Users\\chan\\AppData\\Local\\Temp\\m3_bench_venv\\Scripts\\python.exe",
+    "venv_provisioned": true,
+    "downgrade_reason": "namespace isolation NOT PROVEN: unshare-direct rc=None: cannot spawn '/usr/bin/unshare': [WinError 2] The system cannot find the file specified | unshare-via-bash rc=127: probe exit 127: henri-ns-prob"
+  },
+  "pass_statuses": [
+    "PASSED"
+  ],
+  "window_attribution": {
+    "BLOCKED_INFRA_RESOURCE": 12,
+    "BLOCKED_EXTERNAL_CONSTANT": 14,
+    "ISOLATION_ARTIFACT(get_lattice_coords)": 2,
+    "BLOCKED_DEPENDENCY(scicode)": 2,
+    "ISOLATION_ARTIFACT(select_big_weights)": 1,
+    "ISOLATION_ARTIFACT(get_alpha)": 1
+  },
+  "unattributed_rows": 0,
+  "resource_fix": {
+    "env": {
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "OPENBLAS_DEFAULT_NUM_THREADS": "1"
+    },
+    "mem_limit_mb": 4096,
+    "cleared": [
+      "10.1",
+      "10.4",
+      "10.5",
+      "10.6",
+      "10.8",
+      "10.9",
+      "10.10",
+      "10.11"
+    ]
+  },
+  "positive_control": {
+    "n": 2,
+    "passed": 2,
+    "items": [
+      "78.1",
+      "78.2"
+    ]
+  },
+  "dataset_limitation": "2 of 50 dev sub_steps (78.1/78.2) and 0 of 54 general_tests carry self-contained assertions. Every other published test needs an external `target` constant supplied by SciCode's official grader, absent from the dev split. Supplying one would substitute a local grader -- refused.",
+  "verdict": "INSTRUMENT_VALIDATED"
+}

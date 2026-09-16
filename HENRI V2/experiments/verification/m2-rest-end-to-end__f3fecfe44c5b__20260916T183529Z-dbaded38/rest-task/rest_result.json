@@ -1,0 +1,10 @@
+{
+  "server_hits": 1,
+  "hits": [
+    {
+      "method": "GET",
+      "path": "/record/HENRI-SCAFFOLD-42",
+      "body": ""
+    }
+  ]
+}

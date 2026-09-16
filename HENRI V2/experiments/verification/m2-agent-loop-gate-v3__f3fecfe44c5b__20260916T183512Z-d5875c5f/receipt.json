@@ -1,0 +1,68 @@
+{
+  "schema_id": "henri.run-evidence.v1",
+  "run_id": "20260916T183512Z-d5875c5f",
+  "commit_sha256": "f3fecfe44c5b87b2b610e06b0ead172982578f2d",
+  "benchmark_id": "m2-agent-loop-gate",
+  "dataset_source": "henri://scripted-scaffold",
+  "dataset_sha256": null,
+  "item_count": 16,
+  "attempted_count": 16,
+  "passed_count": 16,
+  "failed_count": 0,
+  "execution_error_count": 0,
+  "item_results_sha256": null,
+  "generated_at_utc": "2026-09-16T18:35:12Z",
+  "status": "OBSERVED",
+  "accounting": {
+    "valid": true,
+    "problems": []
+  },
+  "schema": "henri.m2-scaffold.v3",
+  "ts_utc": "20260916T183512Z",
+  "control_type": "INSTRUMENT_CONTROL",
+  "label": "INSTRUMENT_CONTROL",
+  "not_a_capability_claim": true,
+  "scripted_policy": true,
+  "corrects": [
+    "v1 false PASS (unread result, method-as-boolean, root unset)",
+    "v2 false FAIL (D26 .json outputs filtered out; D27 halt_reason not 'halted'; D28 item_id not task_id)"
+  ],
+  "part_i_clauses": {
+    "tasks_attempted_16": true,
+    "zero_infra_errors": true,
+    "per_turn_telemetry": true,
+    "file_output_written": true,
+    "output_parses_json": true,
+    "item_ledger_rows_16": true,
+    "accounting_valid": true
+  },
+  "part_ii_rest": {
+    "verdict": "BLOCKED_SCHEMA",
+    "error": "TypeError: BuiltinToolbox.dispatch() missing 1 required positional argument: 'tool_args'"
+  },
+  "counts": {
+    "files": 34,
+    "non_empty_outputs": 32,
+    "distinct_item_ids": 16,
+    "turn_rows": 48,
+    "action_type": {
+      "tool_call": 32,
+      "final_answer": 16
+    }
+  },
+  "returned_summary": {
+    "attempted": 16,
+    "passed": 16,
+    "failed": 0,
+    "execution_errors": 0,
+    "turn_rows": 48,
+    "outcome_rows": 16,
+    "tool_call_count": 32,
+    "accounting": {
+      "valid": true,
+      "problems": []
+    }
+  },
+  "wall_s": 0.16,
+  "verdict": "M2_GATE_PARTIAL"
+}
