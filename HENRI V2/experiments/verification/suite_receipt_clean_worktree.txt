@@ -1,0 +1,244 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.0, pytest-9.0.2, pluggy-1.6.0
+rootdir: C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2
+configfile: pytest.ini
+testpaths: tests/unit, tests/integration, tests/contract
+plugins: anyio-4.12.1, langsmith-0.10.10
+collected 1416 items
+
+tests\unit\test_algebraic_action_head.py ................                [  1%]
+tests\unit\test_architectural_milestones.py ....                         [  1%]
+tests\unit\test_ast_grammar_mask_all_masked.py ...                       [  1%]
+tests\unit\test_henri_calibrated_action_head.py ..........               [  2%]
+tests\unit\test_henri_calibrator_ingest.py ......                        [  2%]
+tests\unit\test_henri_class49_attribution.py ...                         [  2%]
+tests\unit\test_henri_core.py .......................................... [  5%]
+............................s                                            [  7%]
+tests\unit\test_henri_extropic_thermalizer.py ...............            [  9%]
+tests\unit\test_henri_phase834_coupled_edmd.py ......                    [  9%]
+tests\unit\test_henri_phase837_zonec_ingest.py .......                   [  9%]
+tests\unit\test_henri_phase838_zonec_bridge_wiring.py ........           [ 10%]
+tests\unit\test_henri_trajectory_bank.py .......                         [ 11%]
+tests\unit\test_phase836_cuda_harness.py ...                             [ 11%]
+tests\unit\test_phase_codec_adapter.py ........                          [ 11%]
+tests\unit\test_thermostat_wavelet_gating.py ..........                  [ 12%]
+tests\integration\test_progressive_capabilities.py ................      [ 13%]
+tests\contract\test_action_gate.py .......                               [ 14%]
+tests\contract\test_agentic_graph_contracts.py ......................... [ 15%]
+......                                                                   [ 16%]
+tests\contract\test_arc_action_head.py .........                         [ 16%]
+tests\contract\test_arc_action_payloads.py .........................     [ 18%]
+tests\contract\test_arc_c1_rotors.py ..................s                 [ 20%]
+tests\contract\test_arc_complex_sidecar.py ........                      [ 20%]
+tests\contract\test_arc_curriculum_replay.py ........................... [ 22%]
+...........                                                              [ 23%]
+tests\contract\test_arc_diagnostic_harness.py ...............            [ 24%]
+tests\contract\test_arc_egress_contract.py ..........                    [ 25%]
+tests\contract\test_arc_freeze_closure.py ......                         [ 25%]
+tests\contract\test_arc_goal_dist.py ......                              [ 25%]
+tests\contract\test_arc_integrity_p1.py .....                            [ 26%]
+tests\contract\test_arc_k3_koopman.py ..................s                [ 27%]
+tests\contract\test_arc_k3_triton_sram.py ....                           [ 27%]
+tests\contract\test_arc_phase_map.py ......                              [ 28%]
+tests\contract\test_arc_psg_wiring.py ...........                        [ 29%]
+tests\contract\test_arc_public_ingress.py .........                      [ 29%]
+tests\contract\test_arc_sagnac_veto.py .............                     [ 30%]
+tests\contract\test_arc_sans_play.py ...                                 [ 30%]
+tests\contract\test_arc_score_gate.py ..............                     [ 31%]
+tests\contract\test_arc_scorecard_delta.py ...........                   [ 32%]
+tests\contract\test_arc_spatial_basis.py ......                          [ 33%]
+tests\contract\test_arc_task_functor.py .......                          [ 33%]
+tests\contract\test_arc_thermostat_shadow.py .........                   [ 34%]
+tests\contract\test_arc_training_graph.py ..........                     [ 34%]
+tests\contract\test_arc_zone_c_freeze.py .......                         [ 35%]
+tests\contract\test_benchmark_registry.py ..............                 [ 36%]
+tests\contract\test_deep_egress.py ........                              [ 36%]
+tests\contract\test_discrete_egress_strip.py ........................... [ 38%]
+....                                                                     [ 39%]
+tests\contract\test_emergence_gates.py ...........                       [ 39%]
+tests\contract\test_f10_live_engine.py ........                          [ 40%]
+tests\contract\test_f11_plasticity_engine.py ........                    [ 41%]
+tests\contract\test_f12_curiosity_engine.py .........                    [ 41%]
+tests\contract\test_f13_steering_engine.py ...........                   [ 42%]
+tests\contract\test_f14_exogenous_engine.py ............                 [ 43%]
+tests\contract\test_f15_trajectory_engine.py ..............              [ 44%]
+tests\contract\test_f16_warped_engine.py ..............                  [ 45%]
+tests\contract\test_f17_differential_engine.py ................          [ 46%]
+tests\contract\test_f18_norm_invariant_engine.py .................       [ 47%]
+tests\contract\test_f19_rebalanced_engine.py ..................          [ 48%]
+tests\contract\test_f1_carrier_kernel.py ............sss                 [ 49%]
+tests\contract\test_f20_adjoint_engine.py ...................            [ 51%]
+tests\contract\test_f21_1_vectorized_engine.py .........                 [ 51%]
+tests\contract\test_f21_edmd_engine.py ................                  [ 53%]
+tests\contract\test_f22_resolution_engine.py ...........                 [ 53%]
+tests\contract\test_f23_causal_engine.py ............                    [ 54%]
+tests\contract\test_f2_egress_codebook.py .........                      [ 55%]
+tests\contract\test_f3_grouped_cv.py .....................               [ 56%]
+tests\contract\test_f4_nonlinear_egress.py ................              [ 57%]
+tests\contract\test_f5_fpb_codec.py ................                     [ 59%]
+tests\contract\test_f6_adaptive_functor.py ........                      [ 59%]
+tests\contract\test_f7_affine_egress.py ........                         [ 60%]
+tests\contract\test_f8_1_derivative_probe.py ........                    [ 60%]
+tests\contract\test_f8_decodability_probe.py ..........                  [ 61%]
+tests\contract\test_f8_env_decomposition.py ......                       [ 61%]
+tests\contract\test_f9_1_riemannian_engine.py ........                   [ 62%]
+tests\contract\test_f9_active_policy_engine.py .........                 [ 63%]
+tests\contract\test_field_channel_preflight.py ....s                     [ 63%]
+tests\contract\test_g1_edmd_predict.py .........                         [ 64%]
+tests\contract\test_g1_topological_engine.py ............                [ 64%]
+tests\contract\test_g2_local_gauge_engine.py .............               [ 65%]
+tests\contract\test_g3_scaffold_pins.py ......                           [ 66%]
+tests\contract\test_g3_wave_packet_search.py ...........                 [ 67%]
+tests\contract\test_g4_aligned_engine.py ............                    [ 67%]
+tests\contract\test_g5_semantic_egress.py ........                       [ 68%]
+tests\contract\test_g5_separable_codec.py ......                         [ 68%]
+tests\contract\test_g5_shrunk_engine.py ........s....                    [ 69%]
+tests\contract\test_g6_gated_engine.py ............s....                 [ 70%]
+tests\contract\test_g7_calibrated_engine.py ...........s......           [ 72%]
+tests\contract\test_g7_highorder_codec.py ..........                     [ 72%]
+tests\contract\test_g8_subgoal_engine.py ........                        [ 73%]
+tests\contract\test_g8_waypoint_extractor.py ...                         [ 73%]
+tests\contract\test_goal_adapter_wiring.py ....                          [ 74%]
+tests\contract\test_goal_subspace_projection.py .......                  [ 74%]
+tests\contract\test_henri_backbone_adapter.py .............              [ 75%]
+tests\contract\test_henri_vision_encoder_variants.py ......              [ 75%]
+tests\contract\test_latent_explorer.py ......                            [ 76%]
+tests\contract\test_ledger_payload_store.py ........                     [ 76%]
+tests\contract\test_ledger_payload_store_digest.py ....                  [ 77%]
+tests\contract\test_m1_measurement_repair.py .                           [ 77%]
+tests\contract\test_m2_coherence.py ........                             [ 77%]
+tests\contract\test_p0_grounding_guards.py ....                          [ 78%]
+tests\contract\test_p0_score_gate.py ..                                  [ 78%]
+tests\contract\test_p1_goal_steering_engine.py ......                    [ 78%]
+tests\contract\test_phase811_native_complex_transition.py .........      [ 79%]
+tests\contract\test_phase812_complex_native_ingress.py ....              [ 79%]
+tests\contract\test_phase814_complex_boundary.py .....                   [ 79%]
+tests\contract\test_phase815_chromodynamic_grounding.py ..........       [ 80%]
+tests\contract\test_phase8161_shared_projection.py ......                [ 81%]
+tests\contract\test_phase816_egress.py .......                           [ 81%]
+tests\contract\test_phase817_in_context_alignment.py .......             [ 81%]
+tests\contract\test_phase818_transducer.py ......ss                      [ 82%]
+tests\contract\test_phase820_action_grounding.py .......                 [ 83%]
+tests\contract\test_phase821_action_space_reform.py ........             [ 83%]
+tests\contract\test_phase822_d38_nan_guard.py ..                         [ 83%]
+tests\contract\test_phase822_rt_mcts_wiring.py ......                    [ 84%]
+tests\contract\test_phase823_target_grounding.py ........                [ 84%]
+tests\contract\test_phase824_meta_prior.py .....                         [ 85%]
+tests\contract\test_phase825_deep_mcts.py ....                           [ 85%]
+tests\contract\test_phase826_cegis_snap.py .....                         [ 85%]
+tests\contract\test_phase827_promotion_mode.py ....                      [ 86%]
+tests\contract\test_phase8_batched_nav_probe.py ...........              [ 86%]
+tests\contract\test_precommit_hook.py ........                           [ 87%]
+tests\contract\test_progressive_semantic_grounding.py ..........         [ 88%]
+tests\contract\test_r2_mi_estimator.py ...........                       [ 88%]
+tests\contract\test_roadmap_g4_hash_chain.py ....                        [ 89%]
+tests\contract\test_seal_consistency.py ......                           [ 89%]
+tests\contract\test_semantic_backbone_adapter.py ..........s             [ 90%]
+tests\contract\test_successor_feature_scorer.py ............             [ 91%]
+tests\contract\test_temporal_ledger_bridge.py ......                     [ 91%]
+tests\contract\test_temporal_transition_ledger.py .........              [ 92%]
+tests\contract\test_torus_adjoint_gate.py ...                            [ 92%]
+tests\contract\test_unified_vla.py ......                                [ 92%]
+tests\contract\test_vla_grounded_components.py ....................s.... [ 94%]
+.                                                                        [ 94%]
+tests\contract\test_zone_c_axiom_loader.py .....                         [ 95%]
+tests\contract\test_zone_c_fail_closed.py ...                            [ 95%]
+tests\contract\test_zone_c_provenance_roundtrip.py ........              [ 95%]
+tests\contract\test_zone_c_world_knowledge_codec.py ............         [ 96%]
+tests\contract\test_zone_c_world_knowledge_harness.py ......s            [ 97%]
+tests\contract\test_zone_c_world_knowledge_ingest.py ......s.......s     [ 98%]
+tests\contract\test_zone_c_world_knowledge_k5.py .....s..s.s             [ 99%]
+tests\contract\test_zone_c_world_knowledge_k5_option1.py .............s  [100%]
+
+============================== warnings summary ===============================
+henri_decoder.py:5
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\henri_decoder.py:5: SyntaxWarning: "\m" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\m"? A raw string is also an option.
+    Includes dimension-specific Sagnac phase error vector (\mathbf{\Delta\Phi}_k), anisotropic Langevin noise (\mathbf{T}_k),
+
+henri_decoder.py:118
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\henri_decoder.py:118: SyntaxWarning: "\m" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\m"? A raw string is also an option.
+    Computes dimension-specific Sagnac phase error vector \mathbf{\Delta\Phi}_k \in [0, \pi]^D.
+
+henri_decoder.py:132
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\henri_decoder.py:132: SyntaxWarning: "\i" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\i"? A raw string is also an option.
+    Computes TAME Dynamic Gap-Junction Conductance G_{ij}(t) \in [0, 1]^D.
+
+henri_decoder.py:321
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\henri_decoder.py:321: SyntaxWarning: "\m" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\m"? A raw string is also an option.
+    Replaces synthetic golden-ratio phase rotations (\mathcal{R}_{golden}) with
+
+henri_decoder.py:342
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\henri_decoder.py:342: SyntaxWarning: "\m" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\m"? A raw string is also an option.
+    Applies learned AST production phase shift operator to the wave state on \mathbb{S}^{D-1}.
+
+henri_decoder.py:351
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\henri_decoder.py:351: SyntaxWarning: "\m" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\m"? A raw string is also an option.
+    Real-Valued Phase Ring Codebook Decoder (\mathbb{Z}_{256}).
+
+henri_decoder.py:365
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\henri_decoder.py:365: SyntaxWarning: "\m" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\m"? A raw string is also an option.
+    Maps real hypervector [-1, 1] to \mathbb{Z}_{256} phase rings.
+
+henri_decoder.py:374
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\henri_decoder.py:374: SyntaxWarning: "\m" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\m"? A raw string is also an option.
+    Reconstructs real hypervector [-1, 1] from \mathbb{Z}_{256} phase rings.
+
+henri_decoder.py:381
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\henri_decoder.py:381: SyntaxWarning: "\h" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\h"? A raw string is also an option.
+    Performs Hadamard circular unbinding: \hat{v} = goal_wave \odot prompt_wave
+
+wave_jepa.py:7
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\wave_jepa.py:7: SyntaxWarning: "\h" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\h"? A raw string is also an option.
+    3. Action-Conditioned Latent Predictor p_psi(Psi_t, a_t) -> \hat{Psi}_{t+1} (R-EDMD Koopman Operator)
+
+wave_jepa.py:102
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\wave_jepa.py:102: SyntaxWarning: "\D" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\D"? A raw string is also an option.
+    Latent Energy Metric L_JEPA: Sagnac Homodyne Delta \Delta_{Sagnac}(\hat{Psi}_{t+1}, Psi_{t+1}) \in [0, 2].
+
+wave_jepa.py:119
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\wave_jepa.py:119: SyntaxWarning: "\h" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\h"? A raw string is also an option.
+    3. \hat{Psi}_{t+1} = p_psi(Psi_t, a_t)
+
+wave_jepa.py:148
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\wave_jepa.py:148: SyntaxWarning: "\D" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\D"? A raw string is also an option.
+    print(f"Wave-JEPA Energy (\Delta_Sagnac): {energy.item():.6f}")
+
+henri_vision_encoder.py:237
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\henri_vision_encoder.py:237: SyntaxWarning: "\d" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\d"? A raw string is also an option.
+    Adapts spatial scale frequencies in real-time under IDBD viscoelastic creep (\dot{\omega}).
+
+henri_vision_encoder.py:273
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\henri_vision_encoder.py:273: SyntaxWarning: "\P" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\P"? A raw string is also an option.
+    Computes O(1) pixel velocity field v_t = d\Psi / dt via Clifford Cl(3,0) rotor differencing.
+
+zone_c_epistemic_axiom_harness.py:6
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\zone_c_epistemic_axiom_harness.py:6: SyntaxWarning: "\h" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\h"? A raw string is also an option.
+    2. NextLat Latent Prefetching Engine: Predicts \hat{\Psi}_{t+1} via Koopman R-EDMD to pre-fetch boundary axioms.
+
+zone_c_epistemic_axiom_harness.py:87
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\zone_c_epistemic_axiom_harness.py:87: SyntaxWarning: "\d" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\d"? A raw string is also an option.
+    W_task = sum_i (Psi_Y_i * Psi_X_i^\dag)
+
+tests\contract\test_f18_norm_invariant_engine.py:319
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\tests\contract\test_f18_norm_invariant_engine.py:319: PytestUnknownMarkWarning: Unknown pytest.mark.network - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.network
+
+tests\contract\test_f19_rebalanced_engine.py:324
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\tests\contract\test_f19_rebalanced_engine.py:324: PytestUnknownMarkWarning: Unknown pytest.mark.network - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.network
+
+tests\contract\test_f20_adjoint_engine.py:357
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\tests\contract\test_f20_adjoint_engine.py:357: PytestUnknownMarkWarning: Unknown pytest.mark.network - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.network
+
+tests\contract\test_field_channel_preflight.py:34
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\tests\contract\test_field_channel_preflight.py:34: PytestUnknownMarkWarning: Unknown pytest.mark.contract - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.contract
+
+tests/integration/test_progressive_capabilities.py::TestStageII_ManifoldDynamics::test_kuramoto_phase_lock_rate
+  C:\Users\chan\AppData\Local\Temp\henri-clean-wt\HENRI V2\tests\integration\test_progressive_capabilities.py:182: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+  Consider using tensor.detach() first. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\autograd\generated\python_variable_methods.cpp:837.)
+    rs.append(float(torch.abs(torch.mean(torch.exp(1j * phases)))))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========== 1395 passed, 21 skipped, 22 warnings in 124.15s (0:02:04) ==========
