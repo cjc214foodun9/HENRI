@@ -64,4 +64,37 @@ fi
 # test_precommit_hook.py::test_hook_covers_every_registered_pair asserts this line.
 printf '%s\n' "$out" | grep -E "^RESULT:" >&2 || true
 echo "pre-commit: seal-consistency gate PASS"
+
+# ---------------------------------------------------------------------------
+# DEPENDENT-PIN GATE (added 2026-09-16).
+#
+# Commit 05a9121 changed the arc_task_functor DEFAULT operator family and did NOT
+# advance the two contract baselines pinned to the old default. Both tests then
+# failed for ~15 hours against a working tree. The pins were RIGHT; the commit was
+# INCOMPLETE. Same defect class as doc/receipt divergence, so same treatment.
+#
+# This is an ADDITIVE check: it does not modify the seal-consistency gate above.
+# It agrees the source module's declared DEFAULT operator family with the explicit
+# DEFAULT_OPERATOR_FAMILY sentinels in the dependent contract tests.
+# Fail-closed: a missing/blind gate blocks the commit.
+# ---------------------------------------------------------------------------
+PINGATE="${HENRI_PIN_GATE:-$V2/experiments/verification/validate_dependent_pins.py}"
+if [ -f "$PINGATE" ]; then
+  pout="$(python "$PINGATE" --quiet 2>&1)"
+  prc=$?
+  if [ "$prc" -ne 0 ]; then
+    echo "PRE-COMMIT BLOCKED: dependent-pin gate FAILED (rc=$prc)." >&2
+    printf '%s\n' "$pout" | tail -8 >&2
+    echo "  Advance the pinned baselines in the SAME commit as the default change" >&2
+    echo "  (or revert the default). Do not silence the pin." >&2
+    echo "  Intentional bypass only: git commit --no-verify" >&2
+    exit 1
+  fi
+  printf '%s\n' "$pout" | grep -E "^RESULT:" >&2 || true
+  echo "pre-commit: dependent-pin gate PASS"
+else
+  # Not fail-closed when the gate file is absent from a checkout that predates it,
+  # but SAY SO: a silently missing gate is the same class of defect it prevents.
+  echo "pre-commit: NOTE dependent-pin gate not present at $PINGATE (not checked)" >&2
+fi
 exit 0

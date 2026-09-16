@@ -22,12 +22,46 @@ _verif = str(Path(_root) / "experiments" / "verification")
 if _verif not in sys.path:
     sys.path.insert(0, _verif)
 
+
+# ---------------------------------------------------------------------------
+# DEPENDENT-PIN-GATE sentinels. Read MECHANICALLY by
+# experiments/verification/validate_dependent_pins.py -- do not rename or remove
+# without updating that gate. Full rationale in test_f6_adaptive_functor.py:
+# scraping every operator-family literal out of the test made the gate
+# satisfiable by EITHER default (measured 2026-09-16, negative control B), so
+# the default arm is declared explicitly here instead.
+# ---------------------------------------------------------------------------
+DEFAULT_OPERATOR_FAMILY = "per_slot_diagonal_ridge_ls"
+LEGACY_OPERATOR_FAMILY = "mean_conj_corr"
+
 # Captured pre-wiring baseline (f7_capture_legacy_baseline.py, commit cccf7c4)
+# ---------------------------------------------------------------------------
+# Pins re-derived 2026-09-16 on the canonical local runtime
+# (Python 3.14.0 / torch 2.11.0+cu128 / numpy 2.4.4), cwd = HENRI V2.
+#
+# DEFAULT advanced to the Phase 10I per-slot diagonal ridge least-squares family
+# (`arc_task_functor` default changed at commit 05a9121, 2026-09-15). The LEGACY
+# values are RETAINED below and still asserted through the
+# HENRI_FUNCTOR_FIT=mean_corr arm, so the A/B pair survives and a silent
+# reversion to EITHER operator is still detected. Advancing a pin is not
+# relaxing it.
+#
+# The new default is NOT a capability win: held_out_cos 0.0306 vs identity
+# 0.0079 at this fixture. The 0.3321 gap-closure claim remains FALSIFIED.
+# ---------------------------------------------------------------------------
 BASELINE = {
+    # default arm: per_slot_diagonal_ridge_ls (reg_lambda = 1e-4)
+    "w_task_sha256": "2b447a87c68a3072c906dc0ce4bad0ae7cba4936e1339d04fc7d8d54ab4b0b31",
+    "held_out_cos": 0.030572745949029922,
+    "identity_cos": 0.007914380170404911,
+    "pairs_digest": "3cff4b657c00e1c0754551c0085be4102727c481d6b8f7c49608bd8ba0a6ad23",
+}
+
+# Superseded default (pre-05a9121), still reachable via HENRI_FUNCTOR_FIT=mean_corr.
+LEGACY_BASELINE = {
     "w_task_sha256": "4496f2bea4a299382d1667c8eeae3e54779c5e35f64bf42e7c8e3154cfae235b",
     "held_out_cos": 0.017941679805517197,
     "identity_cos": 0.007914380170404911,
-    "pairs_digest": "3cff4b657c00e1c0754551c0085be4102727c481d6b8f7c49608bd8ba0a6ad23",
 }
 
 
@@ -157,9 +191,13 @@ def test_c5_differential():
     from arc_task_functor import compile_task_functor
 
     assert "HENRI_F7_AFFINE" not in os.environ
+    # Default-operator arm: the ambient fit-mode must not leak in from another test.
+    os.environ.pop("HENRI_FUNCTOR_FIT", None)
     r0 = compile_task_functor(_pairs(), _MockTok(), device="cpu", task_id="f7-diff")
     r0b = compile_task_functor(_pairs(), _MockTok(), device="cpu", task_id="f7-diff")
     assert r0.pairs_digest == BASELINE["pairs_digest"]
+    assert r0.provenance.get("fit", {}).get("operator_family") == \
+        DEFAULT_OPERATOR_FAMILY, "default operator family drifted from diag_ls"
     assert abs(r0.held_out_cos - BASELINE["held_out_cos"]) < 1e-6
     assert abs(r0.identity_cos - BASELINE["identity_cos"]) < 1e-6
     assert r0b.w_task_sha256 == r0.w_task_sha256, "flag-unset path must be deterministic"
@@ -169,6 +207,23 @@ def test_c5_differential():
               f"({r0.w_task_sha256[:12]}... vs {BASELINE['w_task_sha256'][:12]}...) "
               "with semantic pins equal; digest is runtime-bound.")
 
+    # --- LEGACY A/B arm: the superseded operator stays bound and reachable ---
+    os.environ["HENRI_FUNCTOR_FIT"] = "mean_corr"
+    try:
+        rlg = compile_task_functor(_pairs(), _MockTok(), device="cpu", task_id="f7-diff")
+    finally:
+        os.environ.pop("HENRI_FUNCTOR_FIT", None)
+    assert rlg.provenance.get("fit", {}).get("operator_family") == \
+        LEGACY_OPERATOR_FAMILY, \
+        "HENRI_FUNCTOR_FIT=mean_corr did not reach the operator (dead flag)"
+    assert rlg.pairs_digest == BASELINE["pairs_digest"], \
+        "pairs_digest is input identity and must be equal in BOTH arms"
+    assert abs(rlg.held_out_cos - LEGACY_BASELINE["held_out_cos"]) < 1e-6, \
+        "legacy mean_corr arm drifted from its captured baseline"
+    assert rlg.identity_cos <= LEGACY_BASELINE["identity_cos"] + 1e-6
+    assert rlg.w_task_sha256 != r0.w_task_sha256, \
+        "mean_corr arm reproduced the default digest (A/B arm is vacuous)"
+
     os.environ["HENRI_F7_AFFINE"] = "1"
     try:
         r1 = compile_task_functor(_pairs(), _MockTok(), device="cpu", task_id="f7-diff")
@@ -177,6 +232,10 @@ def test_c5_differential():
     assert r1.w_task_sha256 != r0.w_task_sha256, "F7 branch must change the operator"
     assert r1.w_task_sha256 != BASELINE["w_task_sha256"], "F7 branch must change the operator"
     assert r1.provenance.get("egress", {}).get("schema_id") == "f7-affine-egress.v1"
+
+    # --- anti-vacuity: the two arms must be distinguishable ---
+    assert BASELINE["w_task_sha256"] != LEGACY_BASELINE["w_task_sha256"], \
+        "default and legacy digests must be distinct or the A/B arm proves nothing"
 
 
 def test_c6_rank_cap():

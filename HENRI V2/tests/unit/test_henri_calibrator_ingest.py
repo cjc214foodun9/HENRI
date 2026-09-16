@@ -127,12 +127,25 @@ def test_cli_smoke(workdir):
     out = os.path.join(workdir, "cli_artifact.json")
     import subprocess
     import sys
+    # Location-agnostic: this test must pass from ANY invocation cwd. The CLI
+    # lives at the code root (this file's grandparent), so resolve it from
+    # __file__ instead of assuming cwd == repo toplevel -- the literal
+    # "HENRI V2/henri_calibrator_ingest.py" doubled to
+    # "HENRI V2/HENRI V2/..." whenever pytest ran from the code dir (the
+    # canonical cwd, since pytest.ini lives there). PYTHONPATH is pinned to
+    # the same anchor so the child imports its sibling modules under any cwd.
+    code_dir = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))))
+    script = os.path.join(code_dir, "henri_calibrator_ingest.py")
+    assert os.path.isfile(script), f"calibrator entrypoint not found: {script}"
+    env = dict(os.environ)
+    env["PYTHONPATH"] = code_dir + os.pathsep + env.get("PYTHONPATH", "")
     proc = subprocess.run(
-        [sys.executable, "HENRI V2/henri_calibrator_ingest.py",
+        [sys.executable, script,
          "--bank", r["npz_path"], "--manifest", r["manifest_path"],
          "--artifact", out, "--wave-dim", str(D), "--latent-dim", str(LATENT),
          "--action-dim", "6", "--max-records", "24"],
-        capture_output=True, text=True, timeout=180)
+        capture_output=True, text=True, timeout=180, cwd=code_dir, env=env)
     assert proc.returncode == 0, proc.stderr
     assert os.path.isfile(out)
     assert "activation: False" in proc.stdout  # honest gate in CLI output

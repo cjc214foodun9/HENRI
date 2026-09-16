@@ -1,0 +1,97 @@
+{
+ "schema_id": "henri.zone-abc-cpu-e2e.v1",
+ "run_id": "e2e-cpu-1789530700",
+ "utc": "2026-09-16T03:51:40Z",
+ "device": "cpu",
+ "torch": "2.11.0+cu128",
+ "python": "3.14.0",
+ "scale": {
+  "num_blocks": 256,
+  "d_model": 2048,
+  "steps": 3
+ },
+ "arc_root": "C:\\Users\\chan\\henri_data\\ARC-AGI\\data",
+ "stages": {
+  "zone_a_ingress": {
+   "tasks_loaded": 3,
+   "task_ids": [
+    "007bbfb7",
+    "00d62c1b",
+    "017c7c7b"
+   ],
+   "grid_shape": [
+    3,
+    3
+   ],
+   "wave_flat_shape": [
+    2048
+   ],
+   "wave_shape": [
+    256,
+    8
+   ],
+   "wave_norm": 1.0,
+   "per_block_norm_min": 0.048868,
+   "per_block_norm_max": 0.076522,
+   "wave_sha256": "77bb2476537c71f481dcdadb8ca4fe339b6aeed325f9ccc8dc48ba0cc38acee1",
+   "distinct_grid_sagnac_similarity": 0.513956,
+   "distinct_waves_differ": true
+  },
+  "zone_a_planner": {
+   "steps": 3,
+   "operator_family": "EFEPlanner",
+   "chosen_actions": [
+    0,
+    3,
+    3
+   ],
+   "distinct_actions": 2,
+   "efe_table_len": 8,
+   "efe_min": 0.95867765,
+   "efe_max": 1.01317298,
+   "efe_discriminates": true,
+   "chosen_efe": 0.96365881,
+   "error_fraction": 1.0
+  },
+  "zone_b_cleanup": {
+   "engrams_stored": 32,
+   "query_is_stored_engram_plus_noise": true,
+   "noise_fraction": 0.25,
+   "sagnac_delta_before": 0.030292,
+   "sagnac_delta_after_snap": 3e-06,
+   "snap_improved": true
+  },
+  "zone_bc_sync": {
+   "store_backend": "dev-timescaledb",
+   "envelope_digest": "77bb2476537c71f4",
+   "publish_status": "QUEUED",
+   "drain": {
+    "status": "COMMITTED",
+    "committed": 1,
+    "failed": 0,
+    "depth": 0
+   },
+   "payload_verifies": true,
+   "committed": 1,
+   "bytes_persisted": 8192
+  },
+  "zone_c_readback": {
+   "hits": 3,
+   "store_count": 7,
+   "top_similarity": 1.0,
+   "conditioning_wave_present": true,
+   "oldest_age_hours": 1.4950788444444445
+  }
+ },
+ "errors": [],
+ "evidence_class": "OBSERVED_WIRING_ONLY",
+ "score_claim": null,
+ "verdicts": {
+  "zone_a_ingress": "ENGAGED",
+  "zone_a_planner": "ENGAGED",
+  "zone_b_cleanup": "ENGAGED",
+  "zone_bc_sync": "ENGAGED",
+  "zone_c_readback": "ENGAGED"
+ },
+ "overall": "ENGAGED_WIRING_ONLY"
+}

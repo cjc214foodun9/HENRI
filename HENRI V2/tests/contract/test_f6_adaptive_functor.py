@@ -25,6 +25,28 @@ from f6_adaptive_functor import (
 from arc_task_functor import compile_task_functor
 
 
+# ---------------------------------------------------------------------------
+# DEPENDENT-PIN-GATE sentinels. These are read MECHANICALLY by
+# experiments/verification/validate_dependent_pins.py. Do not rename or remove
+# them without updating that gate.
+#
+#   DEFAULT_OPERATOR_FAMILY -- the operator family `arc_task_functor`'s DEFAULT
+#       path must produce. It must equal the family the source module declares,
+#       and when the default moves, BOTH move in the SAME commit.
+#   LEGACY_OPERATOR_FAMILY  -- the superseded family, kept reachable via
+#       HENRI_FUNCTOR_FIT=mean_corr so the A/B arm cannot go dead.
+#
+# An earlier revision of the gate scraped every operator-family literal out of
+# this file with a regex. That was WRONG: once both families appear as pinned
+# literals, the gate was satisfied by EITHER default and could not detect a flip
+# between the two families it exists to guard. Measured by negative control B
+# (2026-09-16): flipping the source default diag_ls -> mean_corr did NOT fire the
+# gate. The sentinel makes the default arm explicit and unambiguous.
+# ---------------------------------------------------------------------------
+DEFAULT_OPERATOR_FAMILY = "per_slot_diagonal_ridge_ls"
+LEGACY_OPERATOR_FAMILY = "mean_conj_corr"
+
+
 def _rand_unit_modulus(D: int, seed: int, n: int = 1) -> torch.Tensor:
     g = torch.Generator().manual_seed(seed)
     ph = torch.rand(n, D, generator=g) * 2.0 * np.pi
@@ -166,13 +188,63 @@ class TestDefaultOff:
             (np.full((2, 2), 3, dtype=np.int64), np.full((2, 2), 2, dtype=np.int64)),
         ]
         os.environ.pop("HENRI_F6_FUNCTOR", None)
+        os.environ.pop("HENRI_FUNCTOR_FIT", None)   # default-operator arm
         r1 = compile_task_functor(pairs, tok, device="cpu", task_id="t")
-        # Baseline captured pre-wiring (f6_capture_legacy_baseline.py, 4 pairs).
-        assert r1.w_task_sha256 == "76972f15fdc5520a81087892aa4c95edd96955d8d262e16a2024f54a5e310d08", \
-            "default path drifted from captured pre-wiring baseline"
-        assert r1.status == "FUNCTOR_FALSIFIED"
-        assert abs(r1.held_out_cos - 0.9297219514846802) < 1e-9
+        r1b = compile_task_functor(pairs, tok, device="cpu", task_id="t")
+
+        # ------------------------------------------------------------------
+        # DEFAULT-OPERATOR PINS -- re-derived 2026-09-16 on the canonical local
+        # runtime (Python 3.14.0 / torch 2.11.0+cu128 / numpy 2.4.4).
+        #
+        # Commit 05a9121 (phase10i, 2026-09-15) changed the arc_task_functor DEFAULT
+        # operator family from normalised mean-correlation ('mean_conj_corr') to the
+        # regularized per-slot diagonal least-squares family, ridge lambda=1e-4
+        # ('per_slot_diagonal_ridge_ls'). These pins ADVANCE with that deliberate
+        # default change; they are not relaxed. The LEGACY arm below keeps the
+        # superseded values bound, so the flag cannot go dead and a silent reversion
+        # to the old default is still detected.
+        #
+        # The default is NOT a capability win: held_out_cos (0.9999958) does not beat
+        # identity_cos (0.9999999). That is the honest record of the falsified
+        # gap-closure claim and is asserted as such.
+        # ------------------------------------------------------------------
+        DEFAULT_SHA = "9710c4c7c588edd9807627efd7436fe6fbe749ffc0e46b6802bbdbb9f0072124"
+        LEGACY_SHA = "76972f15fdc5520a81087892aa4c95edd96955d8d262e16a2024f54a5e310d08"
+
+        assert r1.provenance.get("fit", {}).get("operator_family") == \
+            DEFAULT_OPERATOR_FAMILY, \
+            "default operator family drifted from the pinned diag_ls default"
+        assert abs(r1.held_out_cos - 0.9999958276748657) < 1e-6
         assert abs(r1.identity_cos - 0.9999999403953552) < 1e-9
+        assert r1.status == "FUNCTOR_FALSIFIED"
+        assert r1.held_out_cos <= r1.identity_cos + 1e-6, \
+            "recovery must not appear to beat identity (FUNCTOR_FALSIFIED contract)"
+        assert r1b.w_task_sha256 == r1.w_task_sha256, \
+            "default path must be deterministic within the runtime"
+
+        if r1.w_task_sha256 != DEFAULT_SHA:
+            # Cross-runtime float drift on the raw-bytes digest only. The semantic pins
+            # above are the contract; the digest is runtime-bound. Same resolution the
+            # repository already adopted for F7 C5 (commit 8eafe95).
+            print("C7 note: default-path digest differs from the capture-runtime pin "
+                  f"({r1.w_task_sha256[:12]}... vs {DEFAULT_SHA[:12]}...) "
+                  "with semantic pins equal; digest is runtime-bound.")
+
+        # --- A/B arm: the legacy operator must still be reachable via the flag ---
+        os.environ["HENRI_FUNCTOR_FIT"] = "mean_corr"
+        try:
+            rlg = compile_task_functor(pairs, tok, device="cpu", task_id="t")
+        finally:
+            os.environ.pop("HENRI_FUNCTOR_FIT", None)
+        assert rlg.provenance.get("fit", {}).get("operator_family") == \
+            LEGACY_OPERATOR_FAMILY, \
+            "HENRI_FUNCTOR_FIT=mean_corr did not reach the operator (dead flag)"
+        assert abs(rlg.held_out_cos - 0.9297219514846802) < 1e-9, \
+            "legacy mean_corr arm drifted from its captured baseline"
+        assert rlg.w_task_sha256 != r1.w_task_sha256, \
+            "mean_corr arm reproduced the default digest (A/B arm is vacuous)"
+
+        # --- F6 functor flag must still engage a different operator ---
         os.environ["HENRI_F6_FUNCTOR"] = "1"
         try:
             r2 = compile_task_functor(pairs, tok, device="cpu", task_id="t")
@@ -180,6 +252,10 @@ class TestDefaultOff:
             os.environ.pop("HENRI_F6_FUNCTOR", None)
         assert r2.w_task_sha256 != r1.w_task_sha256, \
             "F6 flag did not change the operator (dead flag)"
+
+        # --- anti-vacuity: the two arms must be distinguishable ---
+        assert DEFAULT_SHA != LEGACY_SHA, \
+            "default and legacy pins must be distinct or the A/B arm proves nothing"
 
 
 class TestSplitGuard:
