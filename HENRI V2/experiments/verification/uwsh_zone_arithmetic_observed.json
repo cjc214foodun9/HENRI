@@ -1,0 +1,112 @@
+{
+ "schema": "henri.uwsh.zone-arithmetic.v1",
+ "utc": "2026-09-16T00:01:06Z",
+ "evidence_class": "DERIVED",
+ "source": {
+  "directive_sha256": "1ea527bd87c352839ee2aba0b88080b1aed9033c4268b5681cda6313e7a7b2ef"
+ },
+ "live_dims": {
+  "num_blocks": 8192,
+  "block_slots_complex": 4,
+  "modulus_S": 32,
+  "N_flat_complex": 32768,
+  "D_real_if_dense": 65536,
+  "M_demos": 3
+ },
+ "claim_A_zone_a_bytes": {
+  "table": [
+   {
+    "k": 4,
+    "bytes_float32": 16,
+    "is_64_bytes": false
+   },
+   {
+    "k": 8,
+    "bytes_float32": 32,
+    "is_64_bytes": false
+   },
+   {
+    "k": 16,
+    "bytes_float32": 64,
+    "is_64_bytes": true
+   },
+   {
+    "k": 32,
+    "bytes_float32": 128,
+    "is_64_bytes": false
+   }
+  ],
+  "64_bytes_requires_k": 16,
+  "directive_k_variants": {
+   "k<=4..8": [
+    16,
+    32
+   ],
+   "U_k in R^{D x 4}": 16,
+   "16-element": 64
+  },
+  "consistent": true
+ },
+ "basis_footprint": {
+  "k": 16,
+  "dtype": "float32",
+  "elements": 1048576,
+  "bytes": 4194304,
+  "MiB": 4.0,
+  "L2_resident_at": "k=16 -> 4.0 MiB"
+ },
+ "claim_B_zone_c_budget": {
+  "monitored_channels": [
+   "sagnac_stress",
+   "topo_charge_drift",
+   "stiefel_orthogonality",
+   "free_energy_dissipation"
+  ],
+  "bytes_per_channel": 9,
+  "actuators": [
+   "sagnac_veto_sensitivity",
+   "langevin_microheater_dissipation",
+   "staticity_threshold"
+  ],
+  "bytes_per_actuator": 4,
+  "controller_state_bytes": 16,
+  "total_bytes_floor": 64,
+  "under_1KB": true
+ },
+ "claim_C_gamma": {
+  "directive_formula": "gamma = M*S/D",
+  "directive_baseline_value": 0.0003662109375,
+  "value_on_live_flat_dim": 0.000732421875,
+  "per_slot_obs_per_complex_slot": 3.0,
+  "baseline_describes_incumbent": false,
+  "note": "1e-4 treats W as one dense 65536-parameter operator; diag_ls is per-slot, so its own gamma is 3.0. Endpoints are not comparable.",
+  "uwsh_formula": "gamma = (M * N_active) / k",
+  "N_active_undefined_in_directive": true,
+  "candidates_near_42_4": [
+   {
+    "k": 1,
+    "N_active": 16,
+    "N_active_label": "H*W=16",
+    "gamma": 48.0
+   },
+   {
+    "k": 8,
+    "N_active": 128,
+    "N_active_label": "BLOCK_SPAN",
+    "gamma": 48.0
+   },
+   {
+    "k": 2,
+    "N_active": 16,
+    "N_active_label": "H*W=16",
+    "gamma": 24.0
+   },
+   {
+    "k": 16,
+    "N_active": 128,
+    "N_active_label": "BLOCK_SPAN",
+    "gamma": 24.0
+   }
+  ]
+ }
+}

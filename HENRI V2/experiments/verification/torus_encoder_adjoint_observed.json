@@ -1,0 +1,206 @@
+{
+ "schema": "henri.arc.torus-adjoint-eval.v1",
+ "utc": "2026-09-15T23:56:42Z",
+ "evidence_class": "OBSERVED",
+ "device_kind": "cpu",
+ "torch": "2.13.0+cpu",
+ "n_blocks": 8192,
+ "modulus_S": 32,
+ "seed": 20260914,
+ "directive": {
+  "doc_sha256": "1ea527bd87c352839ee2aba0b88080b1aed9033c4268b5681cda6313e7a7b2ef",
+  "set_member_sha256_suffix1": "615d6f63b5329098",
+  "claim_tested": "spec 4.1: adjoint == 2D IDFT over an S x S lattice; value channel is an 8-blade Clifford multivector"
+ },
+ "verification": [
+  {
+   "grid": "2x2",
+   "max_abs_err": 1.5810132026672363e-05
+  },
+  {
+   "grid": "3x3",
+   "max_abs_err": 3.1739473342895508e-06
+  },
+  {
+   "grid": "4x4",
+   "max_abs_err": 8.493661880493164e-06
+  }
+ ],
+ "verification_max_err": 1.5810132026672363e-05,
+ "frequency_census": {
+  "modulus_S": 32,
+  "num_blocks": 8192,
+  "slots_per_block": 4,
+  "total_frequency_samples": 32768,
+  "distinct_pairs_total": 962,
+  "distinct_pairs_nonzero": 961,
+  "dc_samples": 8192,
+  "kx_value_range": [
+   1,
+   31
+  ],
+  "nonzero_samples": 24576,
+  "full_lattice_S_x_S": 1024,
+  "full_lattice_1_to_Sminus1": 961,
+  "dc_weight": 6.103515625e-05,
+  "dc_slots": 1,
+  "sampling_density_vs_961": 25.573361082206034
+ },
+ "rank_pre_normalisation": {
+  "4x4xV3": {
+   "operator_shape": [
+    32768,
+    48
+   ],
+   "equations": 32768,
+   "unknowns": 48,
+   "rank": 48,
+   "rank_deficient_by": 0,
+   "full_column_rank": true,
+   "largest_sv": 167.77459716796875,
+   "smallest_sv": 138.05267333984375,
+   "cond": 1.2152941226959229
+  },
+  "6x6xV4": {
+   "operator_shape": [
+    32768,
+    144
+   ],
+   "equations": 32768,
+   "unknowns": 144,
+   "rank": 144,
+   "rank_deficient_by": 0,
+   "full_column_rank": true,
+   "largest_sv": 174.30450439453125,
+   "smallest_sv": 123.90951538085938,
+   "cond": 1.406708002090454
+  },
+  "8x8xV4": {
+   "operator_shape": [
+    32768,
+    256
+   ],
+   "equations": 32768,
+   "unknowns": 256,
+   "rank": 256,
+   "rank_deficient_by": 0,
+   "full_column_rank": true,
+   "largest_sv": 179.91534423828125,
+   "smallest_sv": 111.91519927978516,
+   "cond": 1.6076041460037231
+  }
+ },
+ "mp_roundtrip_pre_norm": [
+  {
+   "grid": "3x3",
+   "exact": false,
+   "max_abs_err": 2.6226475711155217e-06,
+   "grid_exact": true,
+   "cell_accuracy": 1.0
+  },
+  {
+   "grid": "2x2",
+   "exact": false,
+   "max_abs_err": 1.3114458852214739e-06,
+   "grid_exact": true,
+   "cell_accuracy": 1.0
+  }
+ ],
+ "decode_from_stored_wave": [
+  {
+   "case": "synthetic3x3",
+   "H": 3,
+   "W": 3,
+   "V": 4,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.9994086027145386,
+   "min_block_cos": 0.9922264814376831,
+   "secs": 1.27
+  },
+  {
+   "case": "synthetic4x4",
+   "H": 4,
+   "W": 4,
+   "V": 4,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.9851517677307129,
+   "min_block_cos": 0.11733168363571167,
+   "secs": 0.44
+  },
+  {
+   "case": "007bbfb7.json#0",
+   "H": 3,
+   "W": 3,
+   "V": 8,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.9994659423828125,
+   "min_block_cos": 0.9762436747550964,
+   "secs": 0.47
+  },
+  {
+   "case": "00d62c1b.json#0",
+   "H": 6,
+   "W": 6,
+   "V": 4,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.9988974332809448,
+   "min_block_cos": 0.9283182621002197,
+   "secs": 0.51
+  },
+  {
+   "case": "017c7c7b.json#0",
+   "H": 6,
+   "W": 3,
+   "V": 2,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.9994809627532959,
+   "min_block_cos": 0.9854240417480469,
+   "secs": 0.45
+  },
+  {
+   "case": "0520fde7.json#0",
+   "H": 3,
+   "W": 7,
+   "V": 6,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.9991042017936707,
+   "min_block_cos": 0.9800596237182617,
+   "secs": 0.5
+  },
+  {
+   "case": "05269061.json#0",
+   "H": 7,
+   "W": 7,
+   "V": 9,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.9988739490509033,
+   "min_block_cos": 0.9331818222999573,
+   "secs": 0.69
+  },
+  {
+   "case": "08ed6ac7.json#0",
+   "H": 9,
+   "W": 9,
+   "V": 6,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.9988135099411011,
+   "min_block_cos": 0.8874629139900208,
+   "secs": 0.77
+  }
+ ],
+ "decode_summary": {
+  "n_cases": 8,
+  "n_exact": 8,
+  "exact_rate": 1.0,
+  "mean_cell_accuracy": 1.0
+ },
+ "elapsed_secs": 5.4
+}

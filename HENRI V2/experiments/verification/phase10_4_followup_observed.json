@@ -1,0 +1,128 @@
+{
+ "schema": "henri.phase10_4.followup.v1",
+ "utc": "2026-09-16T00:02:07Z",
+ "evidence_class": "OBSERVED",
+ "device_kind": "cpu",
+ "torch": "2.13.0+cpu",
+ "n_blocks": 8192,
+ "D_flat_complex": 32768,
+ "baseline": {
+  "diag_ls_held": 0.42150651891715823,
+  "diag_ls_ceiling": 0.753553180727694
+ },
+ "oracle_rank_available": 60,
+ "eval_w_variance": {
+  "top1": 0.8668367862701416,
+  "top8": 0.9974417686462402,
+  "top16": 0.9987813830375671,
+  "top32": 0.9995753765106201,
+  "top56": 0.999982476234436
+ },
+ "oracle_w_abs": {
+  "median": 0.7467247843742371,
+  "p99": 3.6581735610961914,
+  "max": 7652.23681640625
+ },
+ "oracle_rank_sweep": {
+  "16": {
+   "held_out_mean": 0.4011200200688715,
+   "in_sample_ceiling_mean": 0.5117793425814144,
+   "gap": 0.11065932251254296,
+   "secs": 0.1
+  },
+  "24": {
+   "held_out_mean": 0.4079078589954103,
+   "in_sample_ceiling_mean": 0.5755833478023609,
+   "gap": 0.16767548880695055,
+   "secs": 0.3
+  },
+  "32": {
+   "held_out_mean": 0.42074701147309196,
+   "in_sample_ceiling_mean": 0.6334872519804371,
+   "gap": 0.21274024050734514,
+   "secs": 0.3
+  },
+  "40": {
+   "held_out_mean": 0.42045529244157176,
+   "in_sample_ceiling_mean": 0.6714206575519508,
+   "gap": 0.25096536511037904,
+   "secs": 0.4
+  },
+  "48": {
+   "held_out_mean": 0.41414033895513663,
+   "in_sample_ceiling_mean": 0.6996335574322277,
+   "gap": 0.285493218477091,
+   "secs": 0.3
+  },
+  "56": {
+   "held_out_mean": 0.4085830524253348,
+   "in_sample_ceiling_mean": 0.7175293820599716,
+   "gap": 0.3089463296346368,
+   "secs": 0.7
+  }
+ },
+ "required_rank": {
+  "incumbent_ceiling": 0.753553180727694,
+  "best_oracle_ceiling_achieved": 0.7175293820599716,
+  "ks_reaching_95pct_of_incumbent_ceiling": [
+   56
+  ],
+  "first_k_at_95pct": 56,
+  "max_constructible_rank": 60,
+  "recovered_within_available_rank": true,
+  "note": "oracle is an UPPER BOUND (fits on the scored tasks). If it cannot recover the ceiling, no transferred subspace can. Rank ceiling here is bounded by the 60 reference tasks, not by ARC."
+ },
+ "decoder_scale": [
+  {
+   "S": 8,
+   "V": 4,
+   "unknowns": 256,
+   "equations": 65536,
+   "exact": false,
+   "cell_accuracy": 0.9375,
+   "mean_block_cos": 0.9141119122505188,
+   "min_block_cos": -0.49794015288352966,
+   "secs": 1.65
+  },
+  {
+   "S": 16,
+   "V": 4,
+   "unknowns": 1024,
+   "equations": 65536,
+   "exact": false,
+   "cell_accuracy": 0.96875,
+   "mean_block_cos": 0.9096454381942749,
+   "min_block_cos": -0.6520259976387024,
+   "secs": 3.27
+  },
+  {
+   "S": 24,
+   "V": 4,
+   "unknowns": 2304,
+   "equations": 65536,
+   "exact": false,
+   "cell_accuracy": 0.7951388955116272,
+   "mean_block_cos": 0.8668172359466553,
+   "min_block_cos": -0.8931993842124939,
+   "secs": 8.13
+  },
+  {
+   "S": 32,
+   "V": 4,
+   "unknowns": 4096,
+   "equations": 65536,
+   "exact": false,
+   "cell_accuracy": 0.8037109375,
+   "mean_block_cos": 0.8447554111480713,
+   "min_block_cos": -0.8615232110023499,
+   "secs": 14.22
+  }
+ ],
+ "decoder_summary": {
+  "n_sizes": 4,
+  "n_exact": 0,
+  "all_exact": false,
+  "min_block_cos": -0.8931993842124939
+ },
+ "elapsed_secs": 33.2
+}

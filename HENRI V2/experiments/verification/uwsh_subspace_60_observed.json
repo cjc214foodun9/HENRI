@@ -1,0 +1,283 @@
+{
+ "schema": "henri.arc.uwsh-subspace-eval.v3",
+ "utc": "2026-09-16T00:08:19Z",
+ "evidence_class": "OBSERVED",
+ "device_kind": "cpu",
+ "torch": "2.13.0+cpu",
+ "n_blocks": 8192,
+ "D_flat_complex": 32768,
+ "dims_real": 65536,
+ "encoder": {
+  "modulus": 32,
+  "dc_slots": 1,
+  "dc_weight": 6.103515625e-05
+ },
+ "lambda": 0.001,
+ "ks": [
+  1,
+  2,
+  4,
+  8,
+  16
+ ],
+ "n_fit_tasks": 100,
+ "n_eval_tasks": 60,
+ "canonical_config": true,
+ "doc": {
+  "directive_sha256": "1ea527bd87c352839ee2aba0b88080b1aed9033c4268b5681cda6313e7a7b2ef",
+  "directive_set_member_suffix1": "615d6f63b5329098",
+  "paper_sha256": "d41574928118f26653df30e162527fef89a5ebe423214da865caa6ddef316b80",
+  "paper_scope": "shared spectral subspaces across NN weight matrices (1100+ models); NOT VSA wave operators -> analogy, tested not imported"
+ },
+ "baseline_to_reproduce": {
+  "diag_ls": 0.4215,
+  "identity": 0.4033,
+  "ceiling": 0.7536
+ },
+ "defect_ledger": {
+  "V2-SHAPE": "flat_y returned [NB,4] instead of flat [2N], so every Y was mis-shaped and 100/100 fits raised a broadcast error. Fixed by co(enc.encode(g)).reshape(-1) plus explicit shape asserts.",
+  "V2-RECEIPT": "a 5-task smoke run wrote the canonical `_60_` receipt. Canonical name now guarded by CANONICAL_CONFIG.",
+  "V2-OUTLIER": "raw W* is dominated by low-|x| slots because _to_real normalises per BLOCK, not per slot. `top-8 cum=1.0000` was the signature. Whitened variant added; ORACLE added as the construction-independent bound."
+ },
+ "self_test": {
+  "max_abs_err": 2.7939677238464355e-09,
+  "pass": true
+ },
+ "fit": {
+  "n_fit_used": 100,
+  "n_fit_failed": 0,
+  "explained_variance_raw": [
+   0.9120662212371826,
+   0.0754743218421936,
+   0.00790239218622446,
+   0.0025888518430292606,
+   0.0008446255815215409,
+   0.00035678825224749744,
+   0.00017973668582271785,
+   0.00011000167432939634,
+   9.212917211698368e-05,
+   6.725343700964004e-05,
+   3.445408583502285e-05,
+   2.5721577912918292e-05,
+   2.384418621659279e-05,
+   1.6719568520784378e-05,
+   1.494010393798817e-05,
+   1.1499994798214175e-05
+  ],
+  "explained_variance_whitened": [
+   0.857784628868103,
+   0.05747273191809654,
+   0.016856329515576363,
+   0.013692785985767841,
+   0.009751355275511742,
+   0.005833982024341822,
+   0.004881937522441149,
+   0.004660538863390684,
+   0.0044489274732768536,
+   0.004148917738348246,
+   0.0027849357575178146,
+   0.002457698341459036,
+   0.0014531094348058105,
+   0.0011110056657344103,
+   0.0009592066635377705,
+   0.0008735075243748724
+  ],
+  "abs_w_median": 0.7898092269897461,
+  "abs_w_p99": 4.080418109893799,
+  "abs_w_max": 17896.47265625
+ },
+ "n_tasks_scored": {
+  "identity": 60,
+  "diag_ls": 60,
+  "mean_only": 60,
+  "uwsh@1": 60,
+  "uwsh@2": 60,
+  "uwsh@4": 60,
+  "uwsh@8": 60,
+  "uwsh@16": 60,
+  "oracle@1": 60,
+  "oracle@2": 60,
+  "oracle@4": 60,
+  "oracle@8": 60,
+  "oracle@16": 60,
+  "random@1": 60,
+  "random@2": 60,
+  "random@4": 60,
+  "random@8": 60,
+  "random@16": 60
+ },
+ "n_common": 60,
+ "n_errors": 0,
+ "errors": [],
+ "arms_common": {
+  "identity": {
+   "held_out_mean": 0.4032921709896376,
+   "in_sample_ceiling_mean": 0.4032921709896376,
+   "gap": 0.0,
+   "beats_identity_rate": 0.0,
+   "n": 60
+  },
+  "diag_ls": {
+   "held_out_mean": 0.42150651891715823,
+   "in_sample_ceiling_mean": 0.7535531807276937,
+   "gap": 0.3320466618105355,
+   "beats_identity_rate": 0.45,
+   "n": 60
+  },
+  "mean_only": {
+   "held_out_mean": 0.3583509655514111,
+   "in_sample_ceiling_mean": 0.36980971711131533,
+   "gap": 0.011458751559904223,
+   "beats_identity_rate": 0.16666666666666666,
+   "n": 60
+  },
+  "uwsh@1": {
+   "held_out_mean": 0.029283451657587042,
+   "in_sample_ceiling_mean": 0.026531937342952,
+   "gap": -0.0027515143146350438,
+   "beats_identity_rate": 0.11666666666666667,
+   "n": 60
+  },
+  "uwsh@2": {
+   "held_out_mean": 0.008139561805486058,
+   "in_sample_ceiling_mean": 0.010925567096758942,
+   "gap": 0.0027860052912728837,
+   "beats_identity_rate": 0.11666666666666667,
+   "n": 60
+  },
+  "uwsh@4": {
+   "held_out_mean": 0.20586693524965086,
+   "in_sample_ceiling_mean": 0.22205521493451666,
+   "gap": 0.016188279684865803,
+   "beats_identity_rate": 0.1,
+   "n": 60
+  },
+  "uwsh@8": {
+   "held_out_mean": 0.23876796049298718,
+   "in_sample_ceiling_mean": 0.2582935535032043,
+   "gap": 0.01952559301021714,
+   "beats_identity_rate": 0.08333333333333333,
+   "n": 60
+  },
+  "uwsh@16": {
+   "held_out_mean": 0.380762991598264,
+   "in_sample_ceiling_mean": 0.40677849293958085,
+   "gap": 0.02601550134131686,
+   "beats_identity_rate": 0.15,
+   "n": 60
+  },
+  "oracle@1": {
+   "held_out_mean": 0.08081357201638942,
+   "in_sample_ceiling_mean": 0.0995192990956841,
+   "gap": 0.018705727079294687,
+   "beats_identity_rate": 0.08333333333333333,
+   "n": 60
+  },
+  "oracle@2": {
+   "held_out_mean": 0.09688085975164237,
+   "in_sample_ceiling_mean": 0.12684404993714352,
+   "gap": 0.029963190185501143,
+   "beats_identity_rate": 0.1,
+   "n": 60
+  },
+  "oracle@4": {
+   "held_out_mean": 0.21439266920594188,
+   "in_sample_ceiling_mean": 0.261894583984718,
+   "gap": 0.047501914778776105,
+   "beats_identity_rate": 0.08333333333333333,
+   "n": 60
+  },
+  "oracle@8": {
+   "held_out_mean": 0.2865848420187831,
+   "in_sample_ceiling_mean": 0.3518694892525673,
+   "gap": 0.06528464723378419,
+   "beats_identity_rate": 0.1,
+   "n": 60
+  },
+  "oracle@16": {
+   "held_out_mean": 0.4011200200688715,
+   "in_sample_ceiling_mean": 0.5117793425814146,
+   "gap": 0.11065932251254307,
+   "beats_identity_rate": 0.3333333333333333,
+   "n": 60
+  },
+  "random@1": {
+   "held_out_mean": 0.0016376074558744828,
+   "in_sample_ceiling_mean": 0.002902121029587255,
+   "gap": 0.0012645135737127723,
+   "beats_identity_rate": 0.06666666666666667,
+   "n": 60
+  },
+  "random@2": {
+   "held_out_mean": 0.0012728651500462243,
+   "in_sample_ceiling_mean": 0.0037200389501069572,
+   "gap": 0.002447173800060733,
+   "beats_identity_rate": 0.1,
+   "n": 60
+  },
+  "random@4": {
+   "held_out_mean": 0.003379247874060335,
+   "in_sample_ceiling_mean": 0.006836526456107902,
+   "gap": 0.003457278582047567,
+   "beats_identity_rate": 0.1,
+   "n": 60
+  },
+  "random@8": {
+   "held_out_mean": 0.006907391285252137,
+   "in_sample_ceiling_mean": 0.011197424495670323,
+   "gap": 0.004290033210418187,
+   "beats_identity_rate": 0.11666666666666667,
+   "n": 60
+  },
+  "random@16": {
+   "held_out_mean": 0.008757267884599665,
+   "in_sample_ceiling_mean": 0.01411621605641105,
+   "gap": 0.005358948171811385,
+   "beats_identity_rate": 0.1,
+   "n": 60
+  }
+ },
+ "g_condition": {
+  "n_solves": 900,
+  "cond_median": 382.6741943359375,
+  "cond_max": 2684.818603515625
+ },
+ "verdict": {
+  "incumbent_diag_ls": 0.42150651891715823,
+  "identity": 0.4032921709896376,
+  "incumbent_ceiling": 0.7535531807276937,
+  "reproduces_sealed_baseline_diag_ls": true,
+  "reproduces_sealed_baseline_identity": true,
+  "oracle_ceiling_by_k": {
+   "1": 0.0995192990956841,
+   "2": 0.12684404993714352,
+   "4": 0.261894583984718,
+   "8": 0.3518694892525673,
+   "16": 0.5117793425814146
+  },
+  "oracle_held_by_k": {
+   "1": 0.08081357201638942,
+   "2": 0.09688085975164237,
+   "4": 0.21439266920594188,
+   "8": 0.2865848420187831,
+   "16": 0.4011200200688715
+  },
+  "oracle_recovers_ceiling": false,
+  "uwsh_minus_random_held": {
+   "k=1": 0.02764584420171256,
+   "k=2": 0.006866696655439834,
+   "k=4": 0.20248768737559053,
+   "k=8": 0.23186056920773504,
+   "k=16": 0.3720057237136643
+  },
+  "best_transferred": "uwsh@16",
+  "best_transferred_held": 0.380762991598264,
+  "best_transferred_ceiling": 0.40677849293958085,
+  "uwsh_beats_incumbent": false,
+  "ACCEPT_UWSH": false,
+  "criteria": "accept iff some k has uwsh_norm@k > diag_ls AND > random@k + 0.01; oracle separates 'k is binding' from 'transfer is binding'",
+  "interpretation": "ORACLE_COLLAPSES => the rank-k restriction itself destroys expressivity"
+ },
+ "baseline_replica_reproduces": true,
+ "elapsed_secs": 12.7
+}

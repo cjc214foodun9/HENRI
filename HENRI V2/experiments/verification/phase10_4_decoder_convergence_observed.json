@@ -1,0 +1,140 @@
+{
+ "schema": "henri.phase10_4.decoder-convergence.v1",
+ "utc": "2026-09-16T00:02:55Z",
+ "evidence_class": "OBSERVED",
+ "torch": "2.13.0+cpu",
+ "question": "is >9x9 decode error an optimization-budget effect or an information limit?",
+ "effort_sweep": [
+  {
+   "S": 8,
+   "V": 4,
+   "steps": 400,
+   "lr": 0.1,
+   "exact": false,
+   "cell_accuracy": 0.9375,
+   "mean_block_cos": 0.9141119122505188,
+   "min_block_cos": -0.49794015288352966,
+   "secs": 1.43
+  },
+  {
+   "S": 8,
+   "V": 4,
+   "steps": 1500,
+   "lr": 0.1,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.9885005950927734,
+   "min_block_cos": 0.47771304845809937,
+   "secs": 2.81
+  },
+  {
+   "S": 8,
+   "V": 4,
+   "steps": 4000,
+   "lr": 0.1,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.9978612065315247,
+   "min_block_cos": 0.9320827722549438,
+   "secs": 7.76
+  },
+  {
+   "S": 8,
+   "V": 4,
+   "steps": 4000,
+   "lr": 0.05,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.9954012632369995,
+   "min_block_cos": 0.8514764904975891,
+   "secs": 7.56
+  },
+  {
+   "S": 16,
+   "V": 4,
+   "steps": 400,
+   "lr": 0.1,
+   "exact": false,
+   "cell_accuracy": 0.96875,
+   "mean_block_cos": 0.9096454381942749,
+   "min_block_cos": -0.6520259976387024,
+   "secs": 3.06
+  },
+  {
+   "S": 16,
+   "V": 4,
+   "steps": 1500,
+   "lr": 0.1,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.9874300360679626,
+   "min_block_cos": -0.12140125781297684,
+   "secs": 11.15
+  },
+  {
+   "S": 16,
+   "V": 4,
+   "steps": 4000,
+   "lr": 0.1,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.9962418079376221,
+   "min_block_cos": 0.46198949217796326,
+   "secs": 29.98
+  },
+  {
+   "S": 16,
+   "V": 4,
+   "steps": 4000,
+   "lr": 0.05,
+   "exact": true,
+   "cell_accuracy": 1.0,
+   "mean_block_cos": 0.990902304649353,
+   "min_block_cos": -0.12982046604156494,
+   "secs": 30.04
+  }
+ ],
+ "exact_algebraic": [
+  {
+   "S": 8,
+   "V": 4,
+   "unknowns": 256,
+   "grid_exact": true,
+   "cell_accuracy": 1.0,
+   "max_indicator_err": 5.841509391757427e-06
+  },
+  {
+   "S": 16,
+   "V": 4,
+   "unknowns": 1024,
+   "grid_exact": true,
+   "cell_accuracy": 1.0,
+   "max_indicator_err": 4.292030553187942e-06
+  }
+ ],
+ "summary": {
+  "n_effort_runs": 8,
+  "n_exact": 6,
+  "exact_at_highest_effort": {
+   "8x8": true,
+   "16x16": true
+  },
+  "cosines_by_size": {
+   "8x8": [
+    0.9141119122505188,
+    0.9885005950927734,
+    0.9978612065315247,
+    0.9954012632369995
+   ],
+   "16x16": [
+    0.9096454381942749,
+    0.9874300360679626,
+    0.9962418079376221,
+    0.990902304649353
+   ]
+  },
+  "algebraic_exact_all": true,
+  "worst_nonconverged_cos": 0.9096454381942749
+ },
+ "elapsed_secs": 94.8
+}

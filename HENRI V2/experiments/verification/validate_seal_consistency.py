@@ -49,11 +49,68 @@ PAIRS = [
      VERIF / "evaluate_60_task_koopman_gap_observed.json"),
     (REPO / "references" / "henri_phase10_3_staticity_partition.md",
      VERIF / "evaluate_60_task_static_partition_observed.json"),
+    # Phase 10.4 -- ONE doc, FOUR receipts. The UWSH receipt carries the ARM TABLE (so
+    # rules 1/2 apply); the other three are MEASUREMENT tables whose declared scalars
+    # must appear verbatim in the same doc. A sealed claim covered by no rule is not
+    # sealed, so every load-bearing number in that doc is bound to a receipt here.
+    (REPO / "references" / "henri_phase10_4_uwsh_and_adjoint.md",
+     VERIF / "uwsh_subspace_60_observed.json"),
+    (REPO / "references" / "henri_phase10_4_uwsh_and_adjoint.md",
+     VERIF / "torus_encoder_adjoint_observed.json"),
+    (REPO / "references" / "henri_phase10_4_uwsh_and_adjoint.md",
+     VERIF / "phase10_4_followup_observed.json"),
+    (REPO / "references" / "henri_phase10_4_uwsh_and_adjoint.md",
+     VERIF / "uwsh_zone_arithmetic_observed.json"),
 ]
+
+# Receipts with no arm table are still SEALABLE, if they declare which of their scalars
+# must appear in the doc. Without this the generator of the doc and the checker of the
+# doc are the only agreement, which is precisely the Phase 10.1 failure (a doc that reads
+# fine while contradicting its own receipt). Keyed by receipt FILENAME.
+SCALAR_SPECS = {
+    "torus_encoder_adjoint_observed.json": [
+        ("encoder-vs-explicit-algebra max abs err", "verification_max_err", ".3e"),
+        ("decode cases", "decode_summary.n_cases", "d"),
+        ("decode exact count", "decode_summary.n_exact", "d"),
+        ("decode exact rate", "decode_summary.exact_rate", ".4f"),
+        ("decode mean cell accuracy", "decode_summary.mean_cell_accuracy", ".4f"),
+        ("distinct nonzero (kx,ky) pairs", "frequency_census.distinct_pairs_nonzero", "d"),
+        ("complete lattice size (S-1)^2", "frequency_census.full_lattice_1_to_Sminus1", "d"),
+    ],
+    "phase10_4_followup_observed.json": [
+        ("oracle rank available", "oracle_rank_available", "d"),
+        ("best oracle ceiling at max constructible rank",
+         "required_rank.best_oracle_ceiling_achieved", "+.4f"),
+        ("incumbent diag_ls ceiling", "required_rank.incumbent_ceiling", "+.4f"),
+        ("first k reaching 95pct of incumbent ceiling",
+         "required_rank.first_k_at_95pct", "d"),
+    ],
+    "uwsh_zone_arithmetic_observed.json": [
+        ("k required for 64 bytes", "claim_A_zone_a_bytes.64_bytes_requires_k", "d"),
+        ("basis bytes at k=16", "basis_footprint.bytes", "d"),
+        ("Zone C data floor bytes", "claim_B_zone_c_budget.total_bytes_floor", "d"),
+        ("basis MiB at k=16", "basis_footprint.MiB", ".1f"),
+        ("incumbent obs per complex slot",
+         "claim_C_gamma.per_slot_obs_per_complex_slot", ".1f"),
+        ("directive baseline gamma", "claim_C_gamma.directive_baseline_value", ".3e"),
+    ],
+}
+
+
+def dig(rc: dict, path: str):
+    """Resolve a dotted path in a receipt; None if absent."""
+    cur = rc
+    for part in path.split("."):
+        if isinstance(cur, dict) and part in cur:
+            cur = cur[part]
+        else:
+            return None
+    return cur
 
 # Measured arm citations carry a lambda: `koopman_diagonly@0.01`. A prose mention
 # of a DELETED arm (no lambda) is legitimate and must not trip the gate.
-_ARM_NAME = r"(?:legacy|mean_corr|diag_ls|identity|wave_[a-z0-9_]+|grid_[a-z0-9_]+|sp_[a-z0-9_]+|koopman_[a-z0-9_]+)"
+_ARM_NAME = (r"(?:legacy|mean_corr|diag_ls|identity|mean_only|wave_[a-z0-9_]+|"
+               r"grid_[a-z0-9_]+|sp_[a-z0-9_]+|koopman_[a-z0-9_]+|uwsh|oracle|random)")
 ARM_RE = re.compile(r"`(" + _ARM_NAME + r"(?:@[0-9.]+)?)`")
 
 
@@ -84,9 +141,11 @@ def check(doc_p: Path, receipt_p: Path) -> dict:
     rc = json.loads(receipt_p.read_text(encoding="utf-8"))
 
     arm_map, schema = extract_arms(rc)
-    notes.append(f"schema {schema}")
-    if not arm_map:
-        problems.append("receipt exposes no arm table (neither 'arms' nor 'arms_common')")
+    scal = SCALAR_SPECS.get(receipt_p.name, [])
+    notes.append(f"schema {schema}" + (f" + {len(scal)} declared scalar(s)" if scal else ""))
+    if not arm_map and not scal:
+        problems.append("receipt exposes no arm table (neither 'arms' nor 'arms_common') "
+                        "and declares no sealed scalars in SCALAR_SPECS")
         arm_map = {}
     receipt_arms = set(arm_map)
     receipt_at = {a for a in receipt_arms if "@" in a}
@@ -94,33 +153,45 @@ def check(doc_p: Path, receipt_p: Path) -> dict:
     doc_arms = set(ARM_RE.findall(doc))
     doc_at = {a for a in doc_arms if "@" in a}
 
-    # ---- 1. lambda-bearing (measured) arms must match in BOTH directions --
-    only_doc = sorted(doc_at - receipt_at)
-    only_receipt = sorted(receipt_at - doc_at)
-    if only_doc:
-        problems.append(f"doc cites measured arms ABSENT from receipt: {only_doc}")
-    if only_receipt:
-        problems.append(f"receipt has arms ABSENT from doc: {only_receipt}")
-    notes.append(f"doc_at_arms={len(doc_at)} receipt_at_arms={len(receipt_at)}")
+    # ---- ARM RULES APPLY ONLY TO AN ARM-BEARING RECEIPT ------------------
+    # A doc may bind several receipts (Phase 10.4 binds four). Measurement receipts
+    # legitimately have NO arm table, so demanding that they attest the doc's arms would
+    # fail on a correct doc. Each receipt is therefore checked for what it CAN attest:
+    # the arm table by the receipt that has one, declared scalars by each measurement
+    # receipt. Coverage grows (scalars are new checks); nothing is weakened, because the
+    # doc's arms are still fully covered by the arm-bearing receipt.
+    if not arm_map:
+        notes.append(f"no arm table in this receipt -> arm rules 1/1b/2/5 SKIPPED "
+                     f"(attested by the arm-bearing receipt in this doc); "
+                     f"{len(scal)} scalar rule(s) apply instead")
+    else:
+        # ---- 1. lambda-bearing (measured) arms must match in BOTH directions --
+        only_doc = sorted(doc_at - receipt_at)
+        only_receipt = sorted(receipt_at - doc_at)
+        if only_doc:
+            problems.append(f"doc cites measured arms ABSENT from receipt: {only_doc}")
+        if only_receipt:
+            problems.append(f"receipt has arms ABSENT from doc: {only_receipt}")
+        notes.append(f"doc_at_arms={len(doc_at)} receipt_at_arms={len(receipt_at)}")
 
-    # ---- 1b. non-parameterised arms must at least be mentioned ------------
-    for plain in sorted(receipt_arms - receipt_at):
-        if plain in doc:
-            notes.append(f"baseline arm `{plain}` mentioned")
-        else:
-            problems.append(f"receipt arm `{plain}` NEVER mentioned in doc")
+        # ---- 1b. non-parameterised arms must at least be mentioned ------------
+        for plain in sorted(receipt_arms - receipt_at):
+            if plain in doc:
+                notes.append(f"baseline arm `{plain}` mentioned")
+            else:
+                problems.append(f"receipt arm `{plain}` NEVER mentioned in doc")
 
-    # ---- 2. per-arm held-out figure must appear verbatim (sign, 4 dp) -----
-    for name, a in arm_map.items():
-        hv = a.get("held_out_mean")
-        if hv is None:
-            problems.append(f"arm `{name}` has no held_out_mean in receipt")
-            continue
-        held = format(hv, "+.4f")
-        if held in doc:
-            notes.append(f"arm {name} held={held} present")
-        else:
-            problems.append(f"arm `{name}`: receipt held={held} NOT found in doc")
+        # ---- 2. per-arm held-out figure must appear verbatim (sign, 4 dp) -----
+        for name, a in arm_map.items():
+            hv = a.get("held_out_mean")
+            if hv is None:
+                problems.append(f"arm `{name}` has no held_out_mean in receipt")
+                continue
+            held = format(hv, "+.4f")
+            if held in doc:
+                notes.append(f"arm {name} held={held} present")
+            else:
+                problems.append(f"arm `{name}`: receipt held={held} NOT found in doc")
 
     # ---- 3. a scalar identity baseline, if the schema exposes one ---------
     idm = rc.get("identity_mean")
@@ -143,17 +214,23 @@ def check(doc_p: Path, receipt_p: Path) -> dict:
         else:
             problems.append(f"receipt {label}={s} NOT found in doc")
 
-    # ---- 5. no @-form arm in the doc may be absent from the receipt ------
-    for stale in sorted(doc_at):
-        if stale not in receipt_arms:
-            problems.append(f"doc cites stale measured arm `{stale}` (absent from receipt)")
+    # ---- 5. no @-form arm in the doc may be absent from the ARM TABLE -----
+    # Scoped to arm-bearing receipts for the same reason as rule 1: a measurement receipt
+    # cannot attest arms it does not contain.
+    if arm_map:
+        for stale in sorted(doc_at):
+            if stale not in receipt_arms:
+                problems.append(f"doc cites stale measured arm `{stale}` (absent from receipt)")
 
     # ---- 6. a VOID run must not be described as valid --------------------
     brr = rc.get("baseline_replica_reproduces")
     if brr is None:
         brr = (rc.get("baseline_replica_over_60") or {}).get("reproduces_recorded_baseline")
     if brr is None:
-        problems.append("receipt lacks a baseline-replica flag")
+        # A measurement receipt (adjoint / rank sweep / arithmetic) has no baseline to
+        # replicate; its claims are covered by SCALAR_SPECS instead.
+        if arm_map:
+            problems.append("receipt lacks a baseline-replica flag")
     elif not brr:
         problems.append("baseline replica does not reproduce -> run VOID")
 
@@ -168,6 +245,22 @@ def check(doc_p: Path, receipt_p: Path) -> dict:
         if "common subset" not in doc.lower() and "common_subset" not in doc.lower():
             problems.append("receipt scored arms on unequal task sets but the doc does "
                             "not disclose the common-subset comparison")
+
+    # ---- 9. declared scalars must appear verbatim in the doc --------------
+    for label, path, fmt in scal:
+        val = dig(rc, path)
+        if val is None:
+            problems.append(f"declared scalar `{label}` ({path}) MISSING from receipt")
+            continue
+        try:
+            s = format(val, fmt)
+        except (TypeError, ValueError):
+            problems.append(f"declared scalar `{label}`={val!r} unformattable with {fmt!r}")
+            continue
+        if s in doc:
+            notes.append(f"scalar {label}={s} present")
+        else:
+            problems.append(f"receipt scalar `{label}`={s} NOT found in doc")
 
     return {"doc": str(doc_p), "receipt": str(receipt_p),
             "schema": schema,
