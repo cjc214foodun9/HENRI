@@ -374,17 +374,33 @@ class HenriSwarmOrchestrator(nn.Module):
             self.attach_zone_c(dsn=self._segment_cache_dsn)
         return self._segment_cache
 
-    def checkpoint_wave(self, wave: torch.Tensor, domain: str, sagnac_stress: float):
-        """Persist the current wave as a Zone C engram checkpoint."""
-        return self.segment_cache.checkpoint(wave, domain, sagnac_stress)
+    def checkpoint_wave(self, wave: torch.Tensor, domain: str, sagnac_stress: float,
+                        run_id: str = None, arm_id: str = None,
+                        commit_sha: str = None, domain_family: str = None):
+        """Persist the current wave as a Zone C engram checkpoint.
 
-    def recall_conditioning_wave(self, query_wave: torch.Tensor):
+        CLASS49 Gate 1: the attribution kwargs are FORWARDED to the store, never
+        swallowed at this boundary. Port note (measured 2026-09-16): ef0ef49 and
+        the accuracy/aaiv41-backbone tip both wired run_id/arm_id/commit_sha/
+        domain_family into production_arc_run.py's checkpoint_wave call sites
+        while leaving THIS wrapper at three arguments, so the live call raised
+        TypeError. Completing the wrapper is the fix; removing the caller kwarg
+        would have papered over the missing feature.
+        """
+        return self.segment_cache.checkpoint(wave, domain, sagnac_stress,
+                                             run_id, arm_id, commit_sha,
+                                             domain_family)
+
+    def recall_conditioning_wave(self, query_wave: torch.Tensor,
+                                 domain_family: str = None):
         """
         GRM retrieval from Zone C: returns a gate-weighted conditioning wave
         fused from the most relevant past engrams, or None if memory is empty.
         Used to anchor the syncytium's relaxation with long-term context.
+        CLASS49 Gate 4: domain_family restricts the candidate pool.
         """
-        return self.segment_cache.retrieve(query_wave)["conditioning_wave"]
+        return self.segment_cache.retrieve(
+            query_wave, domain_family=domain_family)["conditioning_wave"]
 
     def candidate_action_waves(self, top_k: int = 4, allowed_actions=None):
         """

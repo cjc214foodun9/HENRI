@@ -577,6 +577,12 @@ def run():
     HENRI_ARC_PUBLIC_INGRESS_MANIFEST = os.environ.get(
         "HENRI_ARC_PUBLIC_INGRESS_MANIFEST", ""
     ).strip()
+    # CLASS49 attribution provenance (Gate 1). Fail-closed at the write site:
+    # an unfrozen engram write without these raises ATTRIBUTION_VIOLATION.
+    # Distinct from the informational HENRI_ARC_RUN_ID/TAG pair.
+    attr_run_id = os.environ.get("HENRI_RUN_ID", "")
+    attr_arm_id = os.environ.get("HENRI_ARM_ID", "")
+    attr_commit_sha = os.environ.get("HENRI_COMMIT_SHA", "")
     db_logger = None
     if dsn != "offline://surrogate":
         try:
@@ -1346,13 +1352,15 @@ def run():
             if goal_wave is None and not HENRI_LATENT_EXPLORE:
                 try:
                     if zonec_bridge is not None:
-                        _hits = zonec_bridge.retrieve(init_wave.cpu(), top_k=4)
+                        _hits = zonec_bridge.retrieve(init_wave.cpu(), top_k=4,
+                                                      domain_family="action")
                         if _hits and _hits[0][1] > 0.7:
                             goal_wave = _hits[0][0].to(DEVICE)
                             goal_status = "GOAL_ZONE_C_BRIDGE"
                             print(f"  [goal] Zone C bridge — top_sim={_hits[0][1]:.3f}")
                     else:
-                        res = orch.segment_cache.retrieve(init_wave.cpu())
+                        res = orch.segment_cache.retrieve(init_wave.cpu(),
+                                                          domain_family="action")
                         if res["hits"] > 0 and res.get("top_similarity", 0) > 0.7:
                             # Retrieved wave is a similar past state — use as goal
                             goal_wave = res["conditioning_wave"]
@@ -1736,14 +1744,16 @@ def run():
             recall_info = {"hits": 0}
             if step % RECALL_EVERY == 0:
                 if zonec_bridge is not None:
-                    _hits = zonec_bridge.retrieve(state_wave.cpu(), top_k=4)
+                    _hits = zonec_bridge.retrieve(state_wave.cpu(), top_k=4,
+                                                  domain_family="action")
                     recall_info = {"hits": len(_hits),
                                    "top_sim": _hits[0][1] if _hits else 0.0,
                                    "gates": []}
                     if _hits:
                         recalled = _hits[0][0].to(DEVICE)
                 else:
-                    res = orch.segment_cache.retrieve(state_wave.cpu())
+                    res = orch.segment_cache.retrieve(state_wave.cpu(),
+                                                      domain_family="action")
                     recalled = res["conditioning_wave"]
                     recall_info = {"hits": res["hits"],
                                    "top_sim": res.get("top_similarity", 0.0),
@@ -2915,7 +2925,10 @@ def run():
             # frozen eval.
             if step % CHECKPOINT_EVERY == 0 and not learning_frozen():
                 orch.checkpoint_wave(state_wave.cpu(), domain=f"arc3/{env_name}",
-                                      sagnac_stress=sagnac_delta)
+                                      sagnac_stress=sagnac_delta,
+                                      run_id=attr_run_id, arm_id=attr_arm_id,
+                                      commit_sha=attr_commit_sha,
+                                      domain_family="action")
 
             print(f"  step {step:3d} | delta {sagnac_delta:.4f} | F {free_energy:.4f} "
                   f"| r {order_param:.3f} | EFE {efe_table[0]['efe']:+.3f} "
@@ -2982,7 +2995,10 @@ def run():
             try:
                 orch.checkpoint_wave(edmd_buffer[-1][2].cpu(),
                                     domain=f"arc3/{env_name}/field_channel_consolidated",
-                                    sagnac_stress=L3_loss)
+                                    sagnac_stress=L3_loss,
+                                    run_id=attr_run_id, arm_id=attr_arm_id,
+                                    commit_sha=attr_commit_sha,
+                                    domain_family="action")
             except Exception as e:
                 print(f"  [edmd-L3] Zone C marker failed ({e}); artifact kept")
             print(f"  [edmd-L3] episode consolidation: {len(edmd_buffer)} triples, "

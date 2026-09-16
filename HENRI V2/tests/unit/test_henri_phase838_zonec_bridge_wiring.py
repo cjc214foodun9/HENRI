@@ -58,12 +58,13 @@ def test_goal_layer_consumer_wired():
     # GOAL_ZONE_C_ANALOGICAL.
     assert "GOAL_ZONE_C_BRIDGE" in src
     assert "GOAL_ZONE_C_ANALOGICAL" in src
-    assert "zonec_bridge.retrieve(init_wave.cpu(), top_k=4)" in src
+    assert "zonec_bridge.retrieve(init_wave.cpu(), top_k=4" in src
 
 
 def test_state_recall_consumer_wired():
     src = _runner_src()
-    assert "zonec_bridge.retrieve(state_wave.cpu(), top_k=4)" in src
+    assert "zonec_bridge.retrieve(state_wave.cpu(), top_k=4" in src
+    assert "domain_family=\"action\"" in src  # CLASS49 Gate 4: action-family recall
     assert "if zonec_bridge is not None:" in src
     assert "else:" in src  # legacy SegmentCache branch retained
 
@@ -78,8 +79,8 @@ def test_bridge_path_fail_closed_no_surrogate():
 def test_legacy_default_path_preserved():
     src = _runner_src()
     # Default path (bridge off) still calls the SegmentCache retrieve at both
-    # consumer sites.
-    assert "res = orch.segment_cache.retrieve(init_wave.cpu())" in src
-    assert "res = orch.segment_cache.retrieve(state_wave.cpu())" in src
+    # consumer sites (CLASS49 Gate 4: with domain_family filter).
+    assert "res = orch.segment_cache.retrieve(init_wave.cpu()" in src
+    assert "res = orch.segment_cache.retrieve(state_wave.cpu()" in src
     # Blend math untouched.
     assert "state_wave = 0.7 * state_wave + 0.3 * recalled" in src

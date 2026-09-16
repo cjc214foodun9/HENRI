@@ -50,6 +50,10 @@ class ThermodynamicTelemetryLogger:
             
             phase_delta REAL NOT NULL,
             sagnac_clearance BOOLEAN NOT NULL,
+            run_id VARCHAR(64),
+            arm_id VARCHAR(16),
+            commit_sha VARCHAR(40),
+            domain_family VARCHAR(16) DEFAULT 'general',
             PRIMARY KEY (id, recorded_at)
         );
 
@@ -64,10 +68,12 @@ class ThermodynamicTelemetryLogger:
                 cur.execute(schema_sql)
             conn.commit()
 
-    def log_trajectory(self, domain: str, subdomain: str, concept_key: str, predicted_wave: torch.Tensor, phase_delta: float, is_valid: bool):
+    def log_trajectory(self, domain: str, subdomain: str, concept_key: str, predicted_wave: torch.Tensor, phase_delta: float, is_valid: bool,
+                       run_id: str = None, arm_id: str = None, commit_sha: str = None, domain_family: str = "general"):
         """
         Exposed method for the main orchestrator to offload phase states.
         Extracts Real and Imaginary components from the complex tensor structure.
+        CLASS49: attribution fields (run_id/arm_id/commit_sha) + domain_family.
         """
         if predicted_wave.is_complex():
             real_phases = predicted_wave.real.detach().cpu().numpy().tolist()
@@ -86,7 +92,11 @@ class ThermodynamicTelemetryLogger:
             real_phases,
             imag_phases,
             phase_delta,
-            is_valid
+            is_valid,
+            run_id or os.environ.get("HENRI_RUN_ID"),
+            arm_id or os.environ.get("HENRI_ARM_ID"),
+            commit_sha or os.environ.get("HENRI_COMMIT_SHA"),
+            domain_family,
         )
         
         try:
@@ -129,7 +139,7 @@ class ThermodynamicTelemetryLogger:
                 assert_zone_c_env(conn, expected)
                 with conn.cursor() as cur:
                     with cur.copy(
-                        "COPY zone_c_resonant_hypersphere (id, domain, subdomain, concept_key, recorded_at, real_phases, imag_phases, phase_delta, sagnac_clearance) FROM STDIN"
+                        "COPY zone_c_resonant_hypersphere (id, domain, subdomain, concept_key, recorded_at, real_phases, imag_phases, phase_delta, sagnac_clearance, run_id, arm_id, commit_sha, domain_family) FROM STDIN"
                     ) as copy:
                         for record in batch:
                             copy.write_row(record)
