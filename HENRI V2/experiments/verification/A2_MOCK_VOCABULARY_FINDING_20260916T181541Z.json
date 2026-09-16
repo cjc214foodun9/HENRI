@@ -1,0 +1,59 @@
+{
+  "schema": "henri.a2-mock-vocabulary-finding.v1",
+  "ts_utc": "20260916T181541Z",
+  "commit_base": "d42b7d26eb9fb00ba8cddd7e093c73e7d68421a4",
+  "source_file": "HENRI V2/scripts/training/train_henri_decoder.py",
+  "source_sha256": "337ebab11df440c06cd7474a8626705455c5ef00a7114b5aaf125f7f99cafa39",
+  "source_line_rule": [
+    "target_id = hash(text_target) % vocab_size"
+  ],
+  "declared_vocab_size": 32000,
+  "tokens_text_entries": 35,
+  "distinct_training_classes": 35,
+  "coverage_ratio": 0.00109375,
+  "tokens_sample": [
+    "def",
+    "return",
+    "import",
+    "math",
+    "List",
+    "float",
+    "int",
+    "str",
+    "bool",
+    "for"
+  ],
+  "hash_ids_default_env_3_runs": [
+    "5074",
+    "22029",
+    "7895"
+  ],
+  "hash_ids_stable_across_processes": false,
+  "id_set_default_runA_size": 35,
+  "id_set_default_runB_size": 35,
+  "id_set_reproducible": false,
+  "id_set_overlap": 0,
+  "id_set_hashseed0_size": 35,
+  "checkpoint_path": "C:\\Users\\chan\\henri-worktrees\\aaii-v43\\HENRI V2\\models\\henri_decoder_checkpoint.pt",
+  "checkpoint_bytes": 799034119,
+  "checkpoint_sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+  "checkpoint_keys": [
+    "down_proj.weight",
+    "layer_norm.bias",
+    "layer_norm.weight",
+    "lm_head.weight"
+  ],
+  "recoverable_from_checkpoint": false,
+  "head_lm_shape": [
+    32000,
+    2048
+  ],
+  "distinct_top1_live": 7,
+  "entropy_mean_nats": 9.985342352730887,
+  "verdict": "MOCK_TARGET_VOCABULARY_CONFIRMED",
+  "tests": {
+    "T1_small_class_list": true,
+    "T2_process_salted": true,
+    "T3_unrecoverable": true
+  }
+}
