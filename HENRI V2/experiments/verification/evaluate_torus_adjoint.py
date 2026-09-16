@@ -30,11 +30,16 @@ from o_vsa_torus_encoder import TorusIngressEncoder          # noqa: E402
 import torus_encoder_adjoint as TEA                          # noqa: E402
 
 ARC_ROOT = os.environ.get("ARC_CORPUS", "C:/Users/chan/henri_data/ARC-AGI/data")
-OUT = os.path.join(ROOT, "torus_encoder_adjoint_observed.json")
+# Receipt path. `ADJ_OUT` exists so TESTS can redirect the write into tmp_path: the
+# canonical path is SEALED and bound to the doc by validate_seal_consistency.PAIRS,
+# so no test may write it.
+OUT = os.environ.get("ADJ_OUT") or os.path.join(
+    ROOT, "torus_encoder_adjoint_observed.json")
 N_BLOCKS = int(os.environ.get("ARC_NB", 8192))
 VOCAB = 256
 MODULUS = 32
 SEED = 20260914
+TOL_VERIFY = float(os.environ.get("ADJ_TOL", 1e-3))   # enforced section-0 bound
 
 
 def load_arc(root, n):
@@ -94,6 +99,23 @@ def main():
         print(f"  {H}x{W}: max|mine - enc.encode| = {err:.3e}")
     out["verification"] = ver
     out["verification_max_err"] = max(v["max_abs_err"] for v in ver)
+    # ---- ENFORCED GATE (defect V4-NOGATE, found by audit) ------------------------
+    # Section 0 previously COMPUTED and RECORDED this error but never CHECKED it, so
+    # "verification-first" was a claim without a mechanism -- and adj1.log shows the
+    # consequence: the pre-fix adjoint died on a tensor-SHAPE RuntimeError, not on a
+    # verification failure, so the safeguard was never actually exercised.
+    #     ERROR-PATH ONLY: the sealed run measures 1.581e-05 against this 1e-3 bound
+    # (63x margin), so no emitted key or value changes and the scored content is
+    # unaffected. Deliberately NOT added to `out`: an emitted key would change the
+    # receipt schema. Firing is proven by tests/contract/test_torus_adjoint_gate.py.
+    # (Note: the receipt FILE cannot reproduce byte-identically on a re-run because its
+    #  `utc` and `elapsed_secs` fields always differ. The claim is unchanged CONTENT.)
+    if not (out["verification_max_err"] < TOL_VERIFY):
+        raise RuntimeError(
+            f"operator verification FAILED: max err {out['verification_max_err']:.3e} "
+            f">= tol {TOL_VERIFY:.0e}. The explicit algebra does NOT reproduce "
+            f"enc.encode, so every downstream rank/decode number would be meaningless. "
+            f"Refusing to continue (no receipt written).")
 
     # ---- 1. frequency census --------------------------------------------------
     print("\n=== 1. frequency census (does the S x S lattice exist?) ===")
