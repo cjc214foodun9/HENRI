@@ -1,0 +1,28 @@
+{
+  "_aaiv43_weight": 0.1,
+  "_grader": "code execution against published unit tests (pass@1); locally reproducible, no private grader required",
+  "_note": "Raw dataset bytes are gitignored (*.jsonl, HENRI V2/data/). This receipt carries the immutable revision plus per-file sha256/byte/row counts so a fresh clone can re-fetch and verify independently. No benchmark task text is stored, printed, or ingested into Zone C or any model store.",
+  "_staged_local_path": "HENRI V2/data/official_benchmarks/scicode/ (gitignored)",
+  "api_response_sha256": "8f0f3e4063401bd0d5c2a72bd0b20a852b71c51454a2297aa870b83619edc530",
+  "dataset": "SciCode1/SciCode",
+  "files": [
+    {
+      "bytes": 279558,
+      "name": "problems_dev.jsonl",
+      "rows": 15,
+      "sha256": "193968aff23b7ed931c8f6d196b611e2f6694adb49e6cc085444a60ad2fc4f7b",
+      "url": "https://huggingface.co/datasets/SciCode1/SciCode/resolve/4510f6a6aa27c43fad7b43da2c59602a86e88480/problems_dev.jsonl"
+    },
+    {
+      "bytes": 933500,
+      "name": "problems_test.jsonl",
+      "rows": 65,
+      "sha256": "38797fef78f434720be6d053b4f3a86839d6f8ea5fb9115450677cd3a6edf81d",
+      "url": "https://huggingface.co/datasets/SciCode1/SciCode/resolve/4510f6a6aa27c43fad7b43da2c59602a86e88480/problems_test.jsonl"
+    }
+  ],
+  "gated": false,
+  "license": "Apache-2.0",
+  "revision": "4510f6a6aa27c43fad7b43da2c59602a86e88480",
+  "source": "https://huggingface.co/datasets/SciCode1/SciCode"
+}
