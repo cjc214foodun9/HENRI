@@ -1,0 +1,433 @@
+{
+  "schema": "henri.m2-part-i-evidence-bundle.v1",
+  "ts_utc": "20260916T183902Z",
+  "repo": "cjc214foodun9/HENRI",
+  "branch": "carrier/aaii-v43",
+  "purpose": "Substantiate the M2 gate clause 'file_output_written: True' with a committed manifest (sha256 + bytes per artifact) instead of by citing generated files that MAX_PATH kept out of git, or that a defective cleanup script deleted.",
+  "gate_clauses_under_evidence": {
+    "attempted_16": true,
+    "passed_16": true,
+    "failed_0": true,
+    "execution_errors_0": true,
+    "turn_rows_48": true,
+    "outcome_rows_16": true,
+    "tool_call_count_32": true,
+    "accounting_valid": true,
+    "file_outputs_non_empty": true
+  },
+  "evidence_class": "OBSERVED",
+  "control_type": "INSTRUMENT_CONTROL",
+  "not_a_capability_claim": true,
+  "scripted_policy": true,
+  "runs": [
+    {
+      "run_dir": "experiments/verification/m2-agent-loop-scaffold-v2__f3fecfe44c5b__20260916T183437Z-dd2d728e",
+      "exists": true,
+      "file_count": 35,
+      "output_json_count": 32,
+      "ledger_count": 2,
+      "empty_file_count": 0,
+      "receipt_sha256": "1e0306cb09a64fcf0eca9a4d0357b421cde0ce36158db3f28553cea778cd2505",
+      "receipt_bytes": 5475,
+      "files": [
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/items.jsonl",
+          "bytes": 7357,
+          "sha256": "ba052f902c1fbb2f0663ef2bbc5de14ede27e62cb2b9f4c37fab91dc04d4f1d8"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-00/export.json",
+          "bytes": 163,
+          "sha256": "7712a0d2d7c2f9c39bfe9cfde017b7f3f6a87db46055ae897d29c60a02b3417e"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-00/summary.json",
+          "bytes": 122,
+          "sha256": "6c8958eaa649dfadc99f42722ebea9f702cbd9c962f04c5b1ae880897da0a624"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-01/export.json",
+          "bytes": 216,
+          "sha256": "0ba30a43552f6c4cb7bff9602501f7c6c4249d58de9b701651c72367d51ce63c"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-01/summary.json",
+          "bytes": 122,
+          "sha256": "18c32d3f946342001af56a698e2ad3f43ad0f8bf2bccb0deffd08eafbb494ee9"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-02/export.json",
+          "bytes": 271,
+          "sha256": "56a203c3de3c4489022318028aeea02f6a67a9b936726f0e3a2df230754009a8"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-02/summary.json",
+          "bytes": 122,
+          "sha256": "4dd648be3e96a4de5b81128237a02a9a6014adb58d47718cb1a760d67855ab94"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-03/export.json",
+          "bytes": 324,
+          "sha256": "310e6bbbebf04f533ff2413d29631753ec90ec91f0b771174ea06e505b504d6d"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-03/summary.json",
+          "bytes": 122,
+          "sha256": "9b08d47fb7a9a4c4bc175c18ce66854433c6f8fe9b3e44cb93a520e9546d3fa9"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-04/export.json",
+          "bytes": 163,
+          "sha256": "cc42559d056524704fe1fb76699a1234f6b1d15738a863e31f5d7f5a7328938b"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-04/summary.json",
+          "bytes": 122,
+          "sha256": "1693125122edef77e6e31dc3b5d0f60887b4721ff98f2e260d5dc36c0bbba393"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-05/export.json",
+          "bytes": 216,
+          "sha256": "4b91a7c4747d1ded0ee75feb78b8cd2739cf2a3a99097dacc07587db6b66e521"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-05/summary.json",
+          "bytes": 122,
+          "sha256": "4d59101533567d362de220cdf55887f1ada1ef8fb1d6c3052c282952a11a7fc3"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-06/export.json",
+          "bytes": 271,
+          "sha256": "5ee8201b005d47fe6762b9240f9e205bc67d9ff4f5bf07e3ea276f0a913d81c4"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-06/summary.json",
+          "bytes": 122,
+          "sha256": "77645d0deec1208f0d3590b3ee9b522e288836f2600777bd3868a28da60c3329"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-07/export.json",
+          "bytes": 324,
+          "sha256": "198535dba90193a5a02d0d4a89f2c5c795aa0a527735a4a05ccccac2ac9e22d7"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-07/summary.json",
+          "bytes": 122,
+          "sha256": "af0ed76d6cdf377f86bdfeba5e0b540bada364bdc1bf130c3f7ec3c6e7fefba6"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-08/export.json",
+          "bytes": 163,
+          "sha256": "212a51654804b5b676761bfb4878ffe48a5f28da64a2fad3b839b365638a0c5b"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-08/summary.json",
+          "bytes": 122,
+          "sha256": "f35e13cd029bf949fc48386db329362e41e9d935813b5e7c4f9777913ef41679"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-09/export.json",
+          "bytes": 216,
+          "sha256": "d5e666e61341d2306f675fd95217b966e71b737012e4af3c01f50e2bbd4d24c6"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-09/summary.json",
+          "bytes": 122,
+          "sha256": "144b6bd8c3feaccf0a90b5d309a3cf25e54243e44efcc50cad297afeea1b951d"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-10/export.json",
+          "bytes": 271,
+          "sha256": "623d7dbc7cafadff4eb597a3996014147a3bcf273ce5aa7c73bff49eb09f6394"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-10/summary.json",
+          "bytes": 122,
+          "sha256": "b6e283637335c45590e3c931f82987f7cc694a6e54fd36394ed6ea3946a4ad0d"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-11/export.json",
+          "bytes": 324,
+          "sha256": "b2744acebd4ffea0af6608eb2b385f4c9e455b1627ddede9ccd16e14fa22cd4f"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-11/summary.json",
+          "bytes": 122,
+          "sha256": "c85a377c64126bf4decfae99e1c0ba04516103b4c9be910298a1aea67af2d70d"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-12/export.json",
+          "bytes": 163,
+          "sha256": "ed750fe22acedbdea891fce4053e66eff903c811b8b7af042ff0b5501d4b6c98"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-12/summary.json",
+          "bytes": 122,
+          "sha256": "358e964aa2ad2ffabd454d3dfcaa32dbeaaab8b12419e0652432a7e8cd6766e8"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-13/export.json",
+          "bytes": 216,
+          "sha256": "92b5d6b2cf6b9523dfa15b2a8cb90549cbd11d8f4307e77c3c161e5bcaf024ff"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-13/summary.json",
+          "bytes": 122,
+          "sha256": "c417dca68dc27a93b4502fd0f163746b76a879fb4aeec258988ad742e2995810"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-14/export.json",
+          "bytes": 271,
+          "sha256": "a92a2e0adb86c80565f431e47f1a96e3c2f9c9ee2bf679060bc29afaced15b75"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-14/summary.json",
+          "bytes": 122,
+          "sha256": "4226cf10ece80f663efd1390474775e917f9acbb20895170301f5de1d81a97eb"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-15/export.json",
+          "bytes": 324,
+          "sha256": "145530e1e174c828acbb9be1721265b559c411f7025b478376ae1f51940b2934"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/tasks/scaffold-task-15/summary.json",
+          "bytes": 122,
+          "sha256": "5cbd22efa90892349dac5412249266149f6acd504cf888bdeb046747c1ba9dc8"
+        },
+        {
+          "path": "automationbench-aa-scaffold__f3fecfe44c5b__20260916T183437Z-dd2d728e/turns.jsonl",
+          "bytes": 41360,
+          "sha256": "71dfea20802c60af8d2f5e1e5a15eca05ed48b2c147d300ebc591c48301552a2"
+        },
+        {
+          "path": "receipt.json",
+          "bytes": 5475,
+          "sha256": "1e0306cb09a64fcf0eca9a4d0357b421cde0ce36158db3f28553cea778cd2505"
+        }
+      ]
+    },
+    {
+      "run_dir": "experiments/verification/runs/automationbench-aa-scaffold__c5731755a377__20260916T183657Z-31b049d1",
+      "exists": true,
+      "file_count": 35,
+      "output_json_count": 32,
+      "ledger_count": 2,
+      "empty_file_count": 0,
+      "receipt_sha256": null,
+      "receipt_bytes": null,
+      "files": [
+        {
+          "path": "EVIDENCE_MANIFEST.json",
+          "bytes": 6745,
+          "sha256": "95f3f0118612095ddbb1ee2e188a9d57c097b68c761894647e88a55558e6d21b"
+        },
+        {
+          "path": "items.jsonl",
+          "bytes": 7356,
+          "sha256": "bbb0f7c9f17f27a50676a17f5987b76640f76cc0c286662d916011c88f66d57e"
+        },
+        {
+          "path": "tasks/scaffold-task-00/export.json",
+          "bytes": 163,
+          "sha256": "7712a0d2d7c2f9c39bfe9cfde017b7f3f6a87db46055ae897d29c60a02b3417e"
+        },
+        {
+          "path": "tasks/scaffold-task-00/summary.json",
+          "bytes": 122,
+          "sha256": "6c8958eaa649dfadc99f42722ebea9f702cbd9c962f04c5b1ae880897da0a624"
+        },
+        {
+          "path": "tasks/scaffold-task-01/export.json",
+          "bytes": 216,
+          "sha256": "0ba30a43552f6c4cb7bff9602501f7c6c4249d58de9b701651c72367d51ce63c"
+        },
+        {
+          "path": "tasks/scaffold-task-01/summary.json",
+          "bytes": 122,
+          "sha256": "18c32d3f946342001af56a698e2ad3f43ad0f8bf2bccb0deffd08eafbb494ee9"
+        },
+        {
+          "path": "tasks/scaffold-task-02/export.json",
+          "bytes": 271,
+          "sha256": "56a203c3de3c4489022318028aeea02f6a67a9b936726f0e3a2df230754009a8"
+        },
+        {
+          "path": "tasks/scaffold-task-02/summary.json",
+          "bytes": 122,
+          "sha256": "4dd648be3e96a4de5b81128237a02a9a6014adb58d47718cb1a760d67855ab94"
+        },
+        {
+          "path": "tasks/scaffold-task-03/export.json",
+          "bytes": 324,
+          "sha256": "310e6bbbebf04f533ff2413d29631753ec90ec91f0b771174ea06e505b504d6d"
+        },
+        {
+          "path": "tasks/scaffold-task-03/summary.json",
+          "bytes": 122,
+          "sha256": "9b08d47fb7a9a4c4bc175c18ce66854433c6f8fe9b3e44cb93a520e9546d3fa9"
+        },
+        {
+          "path": "tasks/scaffold-task-04/export.json",
+          "bytes": 163,
+          "sha256": "cc42559d056524704fe1fb76699a1234f6b1d15738a863e31f5d7f5a7328938b"
+        },
+        {
+          "path": "tasks/scaffold-task-04/summary.json",
+          "bytes": 122,
+          "sha256": "1693125122edef77e6e31dc3b5d0f60887b4721ff98f2e260d5dc36c0bbba393"
+        },
+        {
+          "path": "tasks/scaffold-task-05/export.json",
+          "bytes": 216,
+          "sha256": "4b91a7c4747d1ded0ee75feb78b8cd2739cf2a3a99097dacc07587db6b66e521"
+        },
+        {
+          "path": "tasks/scaffold-task-05/summary.json",
+          "bytes": 122,
+          "sha256": "4d59101533567d362de220cdf55887f1ada1ef8fb1d6c3052c282952a11a7fc3"
+        },
+        {
+          "path": "tasks/scaffold-task-06/export.json",
+          "bytes": 271,
+          "sha256": "5ee8201b005d47fe6762b9240f9e205bc67d9ff4f5bf07e3ea276f0a913d81c4"
+        },
+        {
+          "path": "tasks/scaffold-task-06/summary.json",
+          "bytes": 122,
+          "sha256": "77645d0deec1208f0d3590b3ee9b522e288836f2600777bd3868a28da60c3329"
+        },
+        {
+          "path": "tasks/scaffold-task-07/export.json",
+          "bytes": 324,
+          "sha256": "198535dba90193a5a02d0d4a89f2c5c795aa0a527735a4a05ccccac2ac9e22d7"
+        },
+        {
+          "path": "tasks/scaffold-task-07/summary.json",
+          "bytes": 122,
+          "sha256": "af0ed76d6cdf377f86bdfeba5e0b540bada364bdc1bf130c3f7ec3c6e7fefba6"
+        },
+        {
+          "path": "tasks/scaffold-task-08/export.json",
+          "bytes": 163,
+          "sha256": "212a51654804b5b676761bfb4878ffe48a5f28da64a2fad3b839b365638a0c5b"
+        },
+        {
+          "path": "tasks/scaffold-task-08/summary.json",
+          "bytes": 122,
+          "sha256": "f35e13cd029bf949fc48386db329362e41e9d935813b5e7c4f9777913ef41679"
+        },
+        {
+          "path": "tasks/scaffold-task-09/export.json",
+          "bytes": 216,
+          "sha256": "d5e666e61341d2306f675fd95217b966e71b737012e4af3c01f50e2bbd4d24c6"
+        },
+        {
+          "path": "tasks/scaffold-task-09/summary.json",
+          "bytes": 122,
+          "sha256": "144b6bd8c3feaccf0a90b5d309a3cf25e54243e44efcc50cad297afeea1b951d"
+        },
+        {
+          "path": "tasks/scaffold-task-10/export.json",
+          "bytes": 271,
+          "sha256": "623d7dbc7cafadff4eb597a3996014147a3bcf273ce5aa7c73bff49eb09f6394"
+        },
+        {
+          "path": "tasks/scaffold-task-10/summary.json",
+          "bytes": 122,
+          "sha256": "b6e283637335c45590e3c931f82987f7cc694a6e54fd36394ed6ea3946a4ad0d"
+        },
+        {
+          "path": "tasks/scaffold-task-11/export.json",
+          "bytes": 324,
+          "sha256": "b2744acebd4ffea0af6608eb2b385f4c9e455b1627ddede9ccd16e14fa22cd4f"
+        },
+        {
+          "path": "tasks/scaffold-task-11/summary.json",
+          "bytes": 122,
+          "sha256": "c85a377c64126bf4decfae99e1c0ba04516103b4c9be910298a1aea67af2d70d"
+        },
+        {
+          "path": "tasks/scaffold-task-12/export.json",
+          "bytes": 163,
+          "sha256": "ed750fe22acedbdea891fce4053e66eff903c811b8b7af042ff0b5501d4b6c98"
+        },
+        {
+          "path": "tasks/scaffold-task-12/summary.json",
+          "bytes": 122,
+          "sha256": "358e964aa2ad2ffabd454d3dfcaa32dbeaaab8b12419e0652432a7e8cd6766e8"
+        },
+        {
+          "path": "tasks/scaffold-task-13/export.json",
+          "bytes": 216,
+          "sha256": "92b5d6b2cf6b9523dfa15b2a8cb90549cbd11d8f4307e77c3c161e5bcaf024ff"
+        },
+        {
+          "path": "tasks/scaffold-task-13/summary.json",
+          "bytes": 122,
+          "sha256": "c417dca68dc27a93b4502fd0f163746b76a879fb4aeec258988ad742e2995810"
+        },
+        {
+          "path": "tasks/scaffold-task-14/export.json",
+          "bytes": 271,
+          "sha256": "a92a2e0adb86c80565f431e47f1a96e3c2f9c9ee2bf679060bc29afaced15b75"
+        },
+        {
+          "path": "tasks/scaffold-task-14/summary.json",
+          "bytes": 122,
+          "sha256": "4226cf10ece80f663efd1390474775e917f9acbb20895170301f5de1d81a97eb"
+        },
+        {
+          "path": "tasks/scaffold-task-15/export.json",
+          "bytes": 324,
+          "sha256": "145530e1e174c828acbb9be1721265b559c411f7025b478376ae1f51940b2934"
+        },
+        {
+          "path": "tasks/scaffold-task-15/summary.json",
+          "bytes": 122,
+          "sha256": "5cbd22efa90892349dac5412249266149f6acd504cf888bdeb046747c1ba9dc8"
+        },
+        {
+          "path": "turns.jsonl",
+          "bytes": 39376,
+          "sha256": "1f0f7070abce1e8e8a3bbf784bd22a576239db8e0fc6a563caa9ea3be8c1a43a"
+        }
+      ]
+    }
+  ],
+  "destroyed_by_my_script": {
+    "run_dir": "experiments/verification/m2-agent-loop-gate-v3__f3fecfe44c5b__20260916T183512Z-d5875c5f",
+    "cause": "fixpath.sh ran `rm -rf t` inside a `for inner in */` loop; on iteration 2 the glob re-expanded to the 't' just created, so it deleted the directory holding the 32 output files, then `mv t t` no-op'd.",
+    "survivors": "receipt.json only (1910 B)",
+    "disclosure": "experiments/verification/DISCLOSURE_EVIDENCE_DELETION_20260916.md"
+  },
+  "committed_by_this_commit": [
+    {
+      "path": "experiments/verification/DISCLOSURE_EVIDENCE_DELETION_20260916.md",
+      "bytes": 4231,
+      "sha256": "a83c24913bd0e5b4e6cbbce7b570e377b5b4cc29828febb247d70a9b9ea6bd13"
+    },
+    {
+      "path": "experiments/verification/M2_AGENT_LOOP_RESOLUTION_20260916.md",
+      "bytes": 6078,
+      "sha256": "fc2f3d147dbcb0ba2be04484b37435171578d476be7edf8d8fed9ff37c47e6aa"
+    },
+    {
+      "path": "experiments/verification/M2_PART_I_EVIDENCE_POINTER.json",
+      "bytes": 760,
+      "sha256": "98d2c7c0dbb82400736d164f6a0a70845dfddda74b5f2a9999154e17d460833f"
+    },
+    {
+      "path": "experiments/verification/m2_part_i_evidence_recovery_probe.py",
+      "bytes": 7656,
+      "sha256": "1e19f0247d44ea288230adfd249f6cba92fb8d504702dafa35dcd413aed9d68c"
+    }
+  ],
+  "totals": {
+    "runs_surveyed": 2,
+    "files_hashed": 70,
+    "outputs_hashed": 64,
+    "ledgers_hashed": 4,
+    "empty_files": 0
+  }
+}

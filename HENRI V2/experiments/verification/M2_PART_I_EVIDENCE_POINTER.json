@@ -1,0 +1,10 @@
+{
+  "schema": "henri.m2-evidence-pointer.v1",
+  "ts_utc": "20260916T183656Z",
+  "authoritative_run_dir": "experiments\\verification\\runs\\automationbench-aa-scaffold__c5731755a377__20260916T183657Z-31b049d1",
+  "run_id": "20260916T183657Z-31b049d1",
+  "commit_sha": "c5731755a377ba6b7f5fdf0d8f3a2303e818f5d8",
+  "manifest": "experiments\\verification\\runs\\automationbench-aa-scaffold__c5731755a377__20260916T183657Z-31b049d1\\EVIDENCE_MANIFEST.json",
+  "supersedes_run_dir": "experiments/verification/m2-agent-loop-gate-v3__f3fecfe44c5b__20260916T183512Z-d5875c5f (artifacts destroyed by my fixpath.sh)",
+  "note": "Deep paths exceeded Windows MAX_PATH; run_output_dir nested twice. This run uses a short root so every task/*/export.json stages."
+}

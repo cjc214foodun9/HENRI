@@ -33,3 +33,15 @@ HENRI_telemetry_exports/
 *.tmp
 *.bak
 *.swp
+
+# HENRI run-evidence: generated scaffold output (manifest is the evidence)
+# Regenerable per-task files; M2_PART_I_EVIDENCE_BUNDLE.json records sha256+bytes
+# for each. Ignoring them keeps generated output out of the repository AND avoids
+# Windows MAX_PATH staging failures on the nested tasks/<task>/(export|summary).json
+# paths -- a silent `git add` warning that once dropped 34 of 35 files.
+# NOTE: rule placement matters. A parent-level negation cannot override the
+# lower-level HENRI V2/.gitignore '*.jsonl' rule, so these must live here.
+experiments/verification/scicode-instrument-control*/
+experiments/verification/m2-agent-loop-*/
+experiments/verification/m2-rest-end-to-end*/
+experiments/verification/runs/
