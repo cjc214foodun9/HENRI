@@ -1,0 +1,90 @@
+{
+  "preregistration": {
+    "n_train": 120,
+    "n_test": 120,
+    "C1_margin": 0.05,
+    "control_tol": 0.1,
+    "pr_ratio_max": 2.0,
+    "seed": 20260916,
+    "metric": "AUC",
+    "chance": 0.5,
+    "emb_dim": 64,
+    "slots": [
+      [
+        "move",
+        "push"
+      ],
+      [
+        "move",
+        "pull"
+      ],
+      [
+        "push",
+        "pull"
+      ],
+      [
+        "grasp",
+        "place"
+      ]
+    ],
+    "train_templates": [
+      "move the {a} block to the {b} tray",
+      "grasp the {a} cube and place it on the {b} shelf",
+      "push the {a} cylinder into the {b} hole",
+      "rotate the {a} peg until it aligns with the {b} slot",
+      "lift the {a} object and lower it near the {b} bin",
+      "verify that the {a} state matches the {b} target"
+    ],
+    "test_templates": [
+      "predict the next {a} phase from the {b} observation",
+      "encode the {a} scene into a {b} wave representation",
+      "measure the {a} amplitude and compare with the {b} bound",
+      "plan a {a} path toward the {b} goal",
+      "remove the {a} part from the {b} assembly",
+      "align the {a} gripper with the {b} object"
+    ],
+    "mechanism": "difference-of-means in difference space",
+    "v1_void": "bal acc at train-calibrated midpoint; shuffled control beat the treatment (0.6917 > 0.6792), and a substantive claim was printed from a void test",
+    "v2_void": "threshold-free AUC; random-direction control 0.6654 revealed positive-class degeneracy (pos eff_dirs 8.7/120 vs neg 32.2/120) because only 5 synonym pairs existed"
+  },
+  "arms": {
+    "wave": {
+      "compiled": 0.6659027777777777,
+      "shuffled": 0.6311111111111111,
+      "random": 0.6629166666666667,
+      "spread_pos": {
+        "n": 120,
+        "mean_pairwise_cosine": 0.07762959508669427,
+        "participation_ratio": 9.806347839858676
+      },
+      "spread_neg": {
+        "n": 120,
+        "mean_pairwise_cosine": 0.02793541155612825,
+        "participation_ratio": 22.853515640163277
+      },
+      "pr_ratio": 2.3304818484281533,
+      "diversity_ok": false
+    },
+    "byte": {
+      "compiled": 0.5411111111111111,
+      "shuffled": 0.5976388888888889,
+      "random": 0.4623611111111111,
+      "spread_pos": {
+        "n": 120,
+        "mean_pairwise_cosine": 0.038851920882899765,
+        "participation_ratio": 5.742982333587468
+      },
+      "spread_neg": {
+        "n": 120,
+        "mean_pairwise_cosine": 0.05413835440001942,
+        "participation_ratio": 8.592538889037732
+      },
+      "pr_ratio": 1.4961806235733675,
+      "diversity_ok": true
+    }
+  },
+  "wave_minus_byte": 0.12479166666666663,
+  "integrity_ok": false,
+  "controls_ok": false,
+  "verdict": "VOID_DIVERSITY_UNMATCHED"
+}
