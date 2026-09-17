@@ -1,0 +1,136 @@
+{
+  "schema": "henri.egress-manifest-pin.v1",
+  "created_utc": "20260917T213733Z",
+  "canonical_path": "HENRI V2/data/vocab/henri_egress_manifest_v1.txt",
+  "canonical_is_authoritative": true,
+  "derived_artifact": true,
+  "regenerate_with": "python HENRI V2/scripts/build_egress_manifest.py",
+  "commit_policy": "The manifest itself is DERIVED data and is deliberately NOT committed (repo policy keeps reference data out of Git; HENRI V2/data/ is gitignored). The builder script and this pin ARE committed, so the manifest is regenerable and its digest checkable from a clean clone. A consumer MUST fail closed when the file is absent.",
+  "file_encoding_warning": "Binary mode required. 24 tokens contain U+000D; a CRLF translation would change the digest.",
+  "manifest_sha256": "0f97b4337921e6e7e9b4620fc73338ee570aecd3c16038bc23870a887e995045",
+  "token_count": 32000,
+  "encoding": "utf-8",
+  "separator_repr": "'\\n'",
+  "separator_codepoint": "U+000A",
+  "separator_finding": {
+    "manifestseal_default_separator": "\\n (LF)",
+    "default_lf_is_injective": true,
+    "tokens_containing_lf": 0,
+    "first_ids_containing_lf": [],
+    "tokens_containing_cr": 24,
+    "first_ids_containing_cr": [
+      2104,
+      3238,
+      3336,
+      4970,
+      6075,
+      6756,
+      8117,
+      8443
+    ],
+    "chosen_separator_repr": "'\\n'",
+    "chosen_separator_codepoint": "U+000A",
+    "reason": "LF is injective here: 0 of 32000 tokens contain U+000A, so sep.join(tokens) splits back exactly. The default is kept.",
+    "crlf_hazard": "24 tokens contain a literal CARRIAGE RETURN (U+000D). The file MUST be written in BINARY mode: a CRLF translation would silently rewrite those bytes, change the digest, and break the seal. The digest is therefore also the detector for a bad checkout (autocrlf).",
+    "fallback_if_no_separator": "If no control codepoint were absent, the seal would have to be length-prefixed (8-byte big-endian length per token) instead."
+  },
+  "order_sensitive": true,
+  "selection_rule": "ids 0..31999 of the source vocabulary; the 16 appended specials at ids >= 32000 are excluded so the manifest width matches the 32000-wide lm_head",
+  "excluded_specials": [
+    {
+      "id": 32000,
+      "token": "\u2581<SU"
+    },
+    {
+      "id": 32001,
+      "token": "\u2581<SUF"
+    },
+    {
+      "id": 32002,
+      "token": "\u2581<PRE"
+    },
+    {
+      "id": 32003,
+      "token": "\u2581<M"
+    },
+    {
+      "id": 32004,
+      "token": "\u2581<MID"
+    },
+    {
+      "id": 32005,
+      "token": "\u2581<E"
+    },
+    {
+      "id": 32006,
+      "token": "\u2581<EOT"
+    },
+    {
+      "id": 32007,
+      "token": "\u2581<PRE>"
+    },
+    {
+      "id": 32008,
+      "token": "\u2581<SUF>"
+    },
+    {
+      "id": 32009,
+      "token": "\u2581<MID>"
+    },
+    {
+      "id": 32010,
+      "token": "\u2581<EOT>"
+    },
+    {
+      "id": 32011,
+      "token": "\u2581<EOT><EOT>"
+    },
+    {
+      "id": 32012,
+      "token": "\u2581<EOT><EOT><EOT>"
+    },
+    {
+      "id": 32013,
+      "token": "\u2581<EOT><EOT><EOT><EOT>"
+    },
+    {
+      "id": 32014,
+      "token": "\u2581<EOT><EOT><EOT><EOT><EOT>"
+    },
+    {
+      "id": 32015,
+      "token": "\u2581<EOT><EOT><EOT><EOT><EOT><EOT>"
+    }
+  ],
+  "source": {
+    "kind": "lexical_prior_static_token_table",
+    "not_pretrained_capability": true,
+    "repo": "EleutherAI/llemma_7b",
+    "repo_dir": "models--EleutherAI--llemma_7b",
+    "snapshot": "e223eee41c53449e6ea6548c9b71c50865e4a85c",
+    "file": "tokenizer.json",
+    "bytes": 1843427,
+    "sha256": "dcb4337ba92f948b322e080f8b59a2a21cfe65dc2aa7ecf7df080ae8aa63c157",
+    "vocab_size": 32016,
+    "uri": "https://huggingface.co/EleutherAI/llemma_7b",
+    "license_note": "Llama-class open weights; the tokenizer is a public artifact"
+  },
+  "cross_check": {
+    "HoloVLAConfig_vocab_size_V": 32000,
+    "manifest_length_equals_config": true,
+    "source_vocab_size": 32016,
+    "excluded_count": 16
+  },
+  "verification": {
+    "canonical_file_sha256_equals_seal": true,
+    "canonical_file_splits_back_to_manifest": true,
+    "permutation_changes_digest": true,
+    "seal_verifies_own_manifest": true
+  },
+  "non_claims": [
+    "This is a STATIC TOKEN STRING TABLE (a lexical prior) sourced from a public tokenizer. It is NOT learned capability and NOT pretrained weights.",
+    "Pinning the manifest makes the id->string binding REPRODUCIBLE. It does NOT make any existing checkpoint's predictions meaningful.",
+    "Defect A2 remains RETRAIN_REQUIRED for generation: the 799 MB pretrained lm_head was trained against process-salted hash ids and is not recoverable.",
+    "No benchmark score, no capability claim, and no AAII-index claim is made here."
+  ]
+}

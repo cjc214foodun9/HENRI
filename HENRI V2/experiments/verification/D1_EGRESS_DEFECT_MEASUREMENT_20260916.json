@@ -1,0 +1,91 @@
+{
+  "block_c_vocab": {
+    "tokenizer_vocab_size": 32016,
+    "cfg_vocab_size_V": 32000,
+    "extra_ids": [
+      {
+        "id": 32000,
+        "token": "\u2581<SU"
+      },
+      {
+        "id": 32001,
+        "token": "\u2581<SUF"
+      },
+      {
+        "id": 32002,
+        "token": "\u2581<PRE"
+      },
+      {
+        "id": 32003,
+        "token": "\u2581<M"
+      },
+      {
+        "id": 32004,
+        "token": "\u2581<MID"
+      },
+      {
+        "id": 32005,
+        "token": "\u2581<E"
+      },
+      {
+        "id": 32006,
+        "token": "\u2581<EOT"
+      },
+      {
+        "id": 32007,
+        "token": "\u2581<PRE>"
+      },
+      {
+        "id": 32008,
+        "token": "\u2581<SUF>"
+      },
+      {
+        "id": 32009,
+        "token": "\u2581<MID>"
+      },
+      {
+        "id": 32010,
+        "token": "\u2581<EOT>"
+      },
+      {
+        "id": 32011,
+        "token": "\u2581<EOT><EOT>"
+      },
+      {
+        "id": 32012,
+        "token": "\u2581<EOT><EOT><EOT>"
+      },
+      {
+        "id": 32013,
+        "token": "\u2581<EOT><EOT><EOT><EOT>"
+      },
+      {
+        "id": 32014,
+        "token": "\u2581<EOT><EOT><EOT><EOT><EOT>"
+      },
+      {
+        "id": 32015,
+        "token": "\u2581<EOT><EOT><EOT><EOT><EOT><EOT>"
+      }
+    ],
+    "rule": "use ids 0..31999; exclude appended specials"
+  },
+  "block_a_phase": {
+    "blueprint_abs_delta": 0.0,
+    "blueprint_phase_blind": true,
+    "repaired_delta": 32768.0,
+    "repaired_phase_carrying": true,
+    "repaired_exact_negation": true
+  },
+  "block_b_codebook": {
+    "K": 64,
+    "chance": 0.015625,
+    "derived_recovery": 1.0,
+    "randn_recovery": 0.0,
+    "defect_confirmed": true
+  },
+  "block_d_seal": {
+    "order_sensitive": true,
+    "sha256": "bc3e68daf76e9073b0f7e574bd20f982b8048279e3953d5ccb89e129ead3a72e"
+  }
+}
