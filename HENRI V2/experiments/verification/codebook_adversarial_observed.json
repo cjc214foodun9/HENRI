@@ -1,9 +1,15 @@
 {
-  "schema": "henri.codebook-adversarial.v1",
-  "utc": "2026-09-18T07:13:46.476062+00:00",
+  "schema": "henri.codebook-adversarial.v2",
+  "supersedes": "henri.codebook-adversarial.v1 (INCONCLUSIVE, wrong encoder)",
+  "utc": "2026-09-18T07:21:20.746213+00:00",
   "evidence_class": "OBSERVED",
-  "evidence_class_note": "OBSERVED: the per-grid encoder outputs are produced by the live production encoder. The margins are DERIVED from those outputs by the cosine statistic stated in this file.",
-  "why_this_control": "Same-basis encode/decode CANNOT discriminate a random codebook from a structured one (measured earlier: R2 max pairwise overlap 7.35e-3 versus chance 3.9e-3, i.e. random bound states are near-orthogonal and decode fine). A same-codebook test measures the channel, not the representation. This control instead asks whether the ENCODER's geometry orders transformation-related grids above unrelated ones.",
+  "evidence_class_note": "OBSERVED: per-grid vectors come from the live encoder. Margins are DERIVED from them by the cosine statistic stated here.",
+  "encoder_identity": {
+    "calibration_encoder": "HENRIVisionEncoder",
+    "source": "run_calibration_eval.py",
+    "first_version_defect": "The first version of this control used O_VSA_IngressTokenizer, which is NOT the encoder behind the 78.33% receipt. Corrected here."
+  },
+  "why_this_control": "Same-basis encode/decode cannot discriminate a random codebook from a structured one (R2: random bound states are near-orthogonal and decode fine), so that test measures the channel, not the representation.",
   "design": {
     "n_tasks": 40,
     "task_ids": [
@@ -48,27 +54,40 @@
       "2013d3e2",
       "2204b7a8"
     ],
-    "d_model": 65536,
-    "related_pairs": "grid vs rot90/rot180/rot270 of itself",
+    "related_pairs": "grid vs its own rot90/rot180/rot270",
     "foreign_pairs": "grid vs a different task's grid",
     "statistic": "cosine similarity in encoder output space",
     "control": "seeded random projection of the raw grid to the same d_model",
-    "seed": 20260918
+    "d_model": 65536
   },
   "arms": [
     {
-      "arm": "tokenizer_derived",
+      "arm": "HENRIVisionEncoder (receipt encoder)",
+      "dim": 65536,
       "status": "OK",
       "n_related": 120,
       "n_foreign": 80,
-      "sim_related_mean": 0.65672339485803,
-      "sim_foreign_mean": 0.38480171608534874,
-      "margin": 0.27192167877268125,
-      "related_sd": 0.2379690675785666,
-      "foreign_sd": 0.261188120310241
+      "sim_related_mean": 0.25064111656565163,
+      "sim_foreign_mean": 0.010384499978764351,
+      "margin": 0.2402566165868873,
+      "related_sd": 0.3204943548408417,
+      "foreign_sd": 0.03826441511359011
+    },
+    {
+      "arm": "O_VSA_IngressTokenizer",
+      "dim": 65536,
+      "status": "OK",
+      "n_related": 120,
+      "n_foreign": 80,
+      "sim_related_mean": 0.6617733988394086,
+      "sim_foreign_mean": 0.3889638461316796,
+      "margin": 0.27280955270772894,
+      "related_sd": 0.236624235699415,
+      "foreign_sd": 0.2632255005809662
     },
     {
       "arm": "random_projection_1",
+      "dim": 65536,
       "status": "OK",
       "n_related": 116,
       "n_foreign": 76,
@@ -80,6 +99,7 @@
     },
     {
       "arm": "random_projection_2",
+      "dim": 65536,
       "status": "OK",
       "n_related": 116,
       "n_foreign": 76,
@@ -91,6 +111,7 @@
     },
     {
       "arm": "random_projection_3",
+      "dim": 65536,
       "status": "OK",
       "n_related": 116,
       "n_foreign": 76,
@@ -101,16 +122,54 @@
       "foreign_sd": 0.14614035039422124
     }
   ],
+  "control_margin_max": 0.23454152631200428,
   "pre_registered": {
-    "P1_real_margin_positive": true,
-    "P2_control_does_not_reproduce_margin": false,
-    "P3_real_margin_not_positive": false
+    "HENRIVisionEncoder (receipt encoder)": {
+      "margin": 0.2402566165868873,
+      "P1_margin_positive": true,
+      "P2_confounded_by_random_projection": true,
+      "P3_margin_not_positive": false,
+      "verdict": "INCONCLUSIVE - random projection reproduces a comparable margin; the statistic is confounded and cannot attribute the accuracy to wave-manifold structure"
+    },
+    "O_VSA_IngressTokenizer": {
+      "margin": 0.27280955270772894,
+      "P1_margin_positive": true,
+      "P2_confounded_by_random_projection": true,
+      "P3_margin_not_positive": false,
+      "verdict": "INCONCLUSIVE - random projection reproduces a comparable margin; the statistic is confounded and cannot attribute the accuracy to wave-manifold structure"
+    }
   },
-  "verdict": "INCONCLUSIVE \u2014 real margin positive but the random control also shows a comparable margin: the metric measures grid statistics, NOT the wave manifold",
+  "sealed_arms_control": {
+    "arm_functor": {
+      "accuracy": 0.7833333333333333,
+      "bss": 0.12205969716963505,
+      "ece": 0.48218903044859573
+    },
+    "arm_identity": {
+      "accuracy": 0.7333333333333333,
+      "bss": 0.1337088180506636,
+      "ece": 0.42489821712176
+    },
+    "arm_random": {
+      "accuracy": 0.3,
+      "bss": -6.987768205890532e-05,
+      "ece": 0.04874853193759915
+    },
+    "n_tasks": 60,
+    "n_options": 4,
+    "chance_level": 0.25,
+    "readout_identical_across_arms": true,
+    "random_operator_acc_excess_over_chance": 0.04999999999999999,
+    "readout_projection_explains_accuracy": false,
+    "encoder_only_acc_no_operator_fit": 0.7333333333333333,
+    "operator_gain_over_encoding_alone": 0.050000000000000044,
+    "verdict": "The readout-projection hypothesis is FALSIFIED: with the SAME readout and the same candidate set, a random operator scores 0.3000 (chance 0.2500) while the fitted operator scores 0.7833. The readout therefore does not manufacture the discrimination. NOTE what remains open: encoding ALONE, with no operator fit, already reaches 0.7333, so the fitted operator adds only 0.0500. Most of the discrimination is attributable to the ENCODER + candidate construction, not to the learned operator."
+  },
   "limits": [
-    "Tests a NECESSARY condition of the manifold claim, not the accuracy claim.",
-    "Rotation structure is one structural family; other relations untested.",
+    "Tests a NECESSARY condition of the manifold claim, not accuracy.",
+    "Rotation is one structural family; other relations are untested.",
     "Encoder refusals are skipped, so n varies per arm.",
-    "No task score is produced by this file."
+    "No task score is produced by this file.",
+    "CUDA unavailable (Vast 50797414 EXITED); CPU only."
   ]
 }
