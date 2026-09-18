@@ -51,7 +51,7 @@ used alone.
 ## Pillar 1 — Closed-loop causal agency: `DEMONSTRATED` (channel + coupling)
 
 Harness: `experiments/verification/run_closed_loop_microharness.py`
-Receipt: `closed_loop_microharness_observed.json` (sha `44b9127d6c92`)
+Receipt: `closed_loop_microharness_observed.json` (canonical sha256 `3878a8111d9b`)
 
 The prior commit left the carrier written but with **zero live score**. This
 harness closes the loop on 12 real ARC tasks × 4 steps, CPU, using the production
@@ -101,7 +101,7 @@ applies a **signed** bias, which can flip an argmax.
 ## Pillar 2 — Non-linear program synthesis: `REFUTED` (replacement not justified)
 
 Runner: `experiments/verification/run_resonator_vs_linear.py`
-Receipt: `resonator_vs_linear_observed.json` (sha `52f25436691d`)
+Receipt: `resonator_vs_linear_observed.json` (canonical sha256 `c5170092378b`)
 
 **Finding 1 — the resonator already exists.** `arc_tripartite_resonator.py` (87 KB)
 is in the tree, with `scene_real_arc`, its own status constants
@@ -131,6 +131,16 @@ diagonal ridge LS. **There is no linear circular-correlation path left to replac
 **treatment − diag_ls = −0.251037. Beats diag_ls on 0/16 tasks. Beats identity on
 5/16.** This reproduces the module's own single-task selfcheck (0.2686 vs 0.6608)
 on a broader sample.
+
+**Finding 4 — the fit is nearly insensitive to the pairing (the mechanism).** The
+deranged-pair control (`control_shuffled`, the *same* operator fitted on mismatched
+demo pairs) scores **+0.117170** against the treatment's **+0.144086** — a gap of only
+**+0.026916** — and it beats the treatment on **7 of 16** tasks. Pre-registered N4
+technically holds (7/16 is not a majority), but this is a borderline result, not a
+clean one. The honest reading: the resonator is not merely losing to a simpler
+operator, it is **barely using the demonstration pairing at all**. It captures
+input-grid statistics rather than the task transform. That is *why* the swap fails,
+which is stronger evidence than the fact that it fails.
 
 **Verdict: `PILLAR_2_REPLACEMENT_NOT_JUSTIFIED`.** The incumbent linear operator
 matches or beats the tripartite resonator on a **majority** of real ARC tasks. The
@@ -180,7 +190,7 @@ wiring note confirms the manifest does **not** make generation work (A2 stays
 ## Pillar 4 — OOD generalization under embargo: `PARTIAL`, with the scope corrected
 
 Runner: `experiments/verification/run_embargo_ood.py`
-Receipt: `embargo_ood_observed.json` (sha `bbcb0b309408`)
+Receipt: `embargo_ood_observed.json` (canonical sha256 `59edb5ac286e`)
 
 **Scope correction (stated, not glossed).** ARC tasks carry **no timestamp**, so
 there is no time axis to embargo. This harness implements **task-disjoint OOD**:
@@ -208,7 +218,7 @@ capability claim.
 ## Pillar 5 — Substrate thermodynamic advantage: `BLOCKED`
 
 Runner: `experiments/verification/run_substrate_thermodynamic.py`
-Receipt: `substrate_thermodynamic_observed.json` (sha `e3940d33b73a`)
+Receipt: `substrate_thermodynamic_observed.json` (canonical sha256 `949bd2c5034d`)
 
 Inventory (`OBSERVED`): `torch 2.11.0+cu128`, `cuda_available = False`,
 `cuda_device_count = 0`, `directml_available = False`, `mps = False`, `cpu_count = 16`,
@@ -261,3 +271,92 @@ HENRI holds a verified engine on a dyno and still lacks the transmission.
    carry Δ = 0.
 4. **Pillar 3 is intact but unrehearsed in CI.** The manifest is derived, so a clean
    clone must regenerate it before any check; that ordering belongs in CI.
+
+
+---
+
+## Digest canonicalization (defect found and fixed in this register)
+
+**The four receipt digests originally published in this document were worktree
+variants, not repository digests.** They are replaced above. This section records
+why, so the defect cannot return silently.
+
+### Mechanism (`OBSERVED`, my own probes)
+
+`core.autocrlf=true` and no `.gitattributes` rule for
+`HENRI V2/experiments/verification/**` means Python text-mode writes emit `CRLF`
+on disk while git stores `LF` in the blob. Measured across this repository:
+
+```
+tracked *.json receipts        : 78
+  has CRLF on disk             : 78
+  disk == committed blob       : 2     <-- blob itself holds CRLF; portable as-is
+  canonical (LF) == blob       : 76     <-- the digest a reviewer can reproduce
+  real content drift           : 0
+control: check-attr eol on a receipt  -> "unspecified"
+control: the 2 pinned K3 files        -> eol: lf, reproducible = True
+```
+
+So the rule is **"pinned => reproducible", and almost nothing was pinned**. The
+content was never wrong; the *published digest* was platform-dependent.
+
+### Why it matters
+
+A digest is evidence only if a third party can recompute it. A reviewer on Linux,
+or on any clone with `core.autocrlf=false`, computes a different number for the
+same artifact and must conclude tampering. Every cited digest must therefore be the
+**canonical** digest: `sha256(LF-normalized bytes)`, which equals
+`sha256(git cat-file blob HEAD:<path>)`.
+
+### Canonical digest table (recomputed, each asserted equal to its committed blob)
+
+| receipt | canonical sha256 |
+|---|---|
+| `calibration_eval_observed.json` | `244883d9ccc6b98fad38b3c5c1f4a44df8cf14343c29dcfb78f8dbf3921502b6` |
+| `temperature_scaling_observed.json` | `aaa953899c4d59d2b4730ed8870da4811f77342f80d25149a7599a1c6126e1b6` |
+| `closed_loop_microharness_observed.json` | `3878a8111d9baff04f2e6e3195ec3520c07ae2d075d781c3a73f991360dc4310` |
+| `resonator_vs_linear_observed.json` | `c5170092378b2b242e1eeadb4a1dd6831aed0f4cebfd6df10459405541656a96` |
+| `embargo_ood_observed.json` | `59edb5ac286e890cfe848ddc5c0d7c4c1846c2ad97ee4050481743575520bfe8` |
+| `substrate_thermodynamic_observed.json` | `949bd2c5034d52355a203a48915a334fa1841c30431084a7794688ad1eb6142e` |
+
+Also canonical: the 32k egress manifest pin `0f97b4337921e6e7e9b4620fc73338ee570aecd3c16038bc23870a887e995045`
+(**unaffected by this defect** -- its 24 `CRLF` pairs are token *content*: ids 2104,
+3238, 3336, 4970, 6075, 6756 end in a literal `\r`; the file is gitignored and the
+builder writes it binary via `open(path, "wb")`, so no EOL translation can occur).
+
+Historical note: the commit message of `7cc2c74` carries the worktree-variant short
+digests, because git history cannot be rewritten here. This table supersedes them.
+
+### Pre-existing defect, `BLOCKED` for approval
+
+`M2_PART_I_EVIDENCE_BUNDLE.json` line 418 pins
+`98d2c7c0dbb82400736d164f6a0a70845dfddda74b5f2a9999154e17d460833f`, which is the
+**CRLF variant** of `M2_PART_I_EVIDENCE_POINTER.json` (whose canonical digest is
+`b868a75b607451bb6df93feecc84304052475d53ca23bca79168e58b1446ce20`). This is a
+pre-existing sealed artifact, so it is reported, not edited. It is also the single
+reason the repo-wide fix below is not yet safe.
+
+### Repo-wide fix, not applied (`BLOCKED` for approval)
+
+Adding `"HENRI V2/experiments/verification/**" text eol=lf` plus a worktree
+normalization would make every receipt reproducible. Measured precondition: exactly
+**1** of 167 distinct cited digests is a CRLF variant -- the M2 pin above -- so the
+flip becomes safe once that pin is corrected or dual-recorded. Until then it is
+withheld, because touching 78 tracked artifacts plus a sealed bundle is a governance
+action, not a maintenance one.
+
+### Caveat the measurement REJECTED
+
+A proposed caveat was that the reference gate's `epsilon_used = 0.8958` "inflates all
+arms' cosines", making cross-receipt cosine comparison invalid. That is `FALSIFIED` by
+direct measurement: perturbing only `epsilon_used` (x 0.1) left **every** arm cosine
+bit-identical and left the verdict unchanged (`VOID_CONTROL_NOT_SEPARATED` in both).
+The gate decides a pass/fail label; it does not enter the arm scoring. No such caveat
+is added, because it would be false.
+
+### What this defect was NOT
+
+Not a content error: `real content drift = 0`. Every aggregate, per-task row and
+verdict in the six receipts is unchanged and reproducible (`per_task` and `aggregate`
+both compared identical to their committed blobs). The published digest was wrong; the
+science was not.
