@@ -52,8 +52,14 @@ class EgressDecodeResult:
     action_logits: torch.Tensor  # [N] action-legal logits
     action_probs: torch.Tensor   # [N] softmax over action-legal logits
     top3: List[Tuple[str, float]]
-    entropy_bits: float          # action-legal logit entropy
-    token_entropy_bits: float    # full-vocab logit entropy (diagnostic)
+    entropy_bits: float          # NORMALIZED in [0, 1] (action-legal)
+    token_entropy_bits: float    # RAW bits (full vocab / full distribution)
+    # top1 - top2 probability gap. Defaulted so every existing construction stays
+    # valid; populated by both decoders so a consumer can gate on decisiveness.
+    # Measured need: the sealed readout is near-uniform on arbitrary waves (mean
+    # normalized entropy 0.97466, mean margin 0.05015 over 200 waves), so a
+    # consumer that acts on it without checking the margin acts near-randomly.
+    top1_margin: float = 0.0
 
 
 class ActionEgressVocabulary:
@@ -157,6 +163,11 @@ def decode_action_egress(
     k = min(3, vocab.n_actions)
     top_idx = torch.topk(action_logits, k=k).indices.tolist()
     top3 = [(vocab.id_to_action[i].name, float(probs[i])) for i in top_idx]
+    # top1-top2 gap, in probability units. Same field and same scale as the sealed
+    # path so a consumer gating on decisiveness is not misled by a decoder that
+    # silently reports 0.0.
+    _t2 = torch.topk(probs, k=min(2, vocab.n_actions)).values
+    _margin = float(_t2[0] - _t2[1]) if _t2.numel() > 1 else 1.0
     return EgressDecodeResult(
         action=action,
         action_index=idx,
@@ -166,6 +177,7 @@ def decode_action_egress(
         top3=top3,
         entropy_bits=entropy_bits,
         token_entropy_bits=_full_vocab_entropy(logits[0]),
+        top1_margin=_margin,
     )
 
 
@@ -783,3 +795,214 @@ def state_snapshot_id_of(wave: torch.Tensor) -> str:
 
     flat = wave.detach().to(torch.float32).reshape(-1).cpu().numpy()
     return hashlib.sha256(flat.tobytes()).hexdigest()[:16]
+
+
+# ---------------------------------------------------------------------------
+# Sealed action egress (checkpoint-free): the Zone A typed-egress readout
+# ---------------------------------------------------------------------------
+#
+# WHY THIS EXISTS
+#   `decode_action_egress` above requires a LOADED HENRIUnifiedEgressTransducer,
+#   and henri_decoder constructs that with checkpoint_policy="required". When no
+#   checkpoint is present the trained token head fails closed, so the ARC egress
+#   had NO checkpoint-free decoder at all. henri_vla_tokenizer.HoloEgressCodebook
+#   is a Modern Hopfield snap over a SEALED manifest whose codebook is DERIVED as
+#   M_k = encode_text(manifest[k]) -- it needs no trained weights. This section
+#   builds that same snap over the ACTION-legal vocabulary, giving the egress a
+#   legal, fail-closed readout with zero checkpoint dependence.
+#
+#   This is NOT a second implementation of the snap: it composes the existing
+#   HoloEgressCodebook and ActionEgressVocabulary unchanged.
+#
+# BOUNDARY MAPPING (the only one allowed; deterministic, never lossy-by-accident)
+#   The planner's chosen wave is REAL [num_blocks, 8] with num_blocks * 8 equal to
+#   d_model. HoloEgressCodebook consumes COMPLEX [B, D] and views it as real
+#   [B, 2D]. The single permitted mapping is therefore the tree's existing
+#   phase-space convention: the first half of the flattened real wave is the
+#   cosine channel and the second half is the sine channel, giving complex
+#   [d_model // 2]. Every one of the d_model numbers is carried through -- no
+#   dimension is dropped and no projection is inserted. ambient_dim_D must equal
+#   d_model // 2; any other shape or an odd d_model raises.
+
+
+class SealedEgressError(EgressFailClosedError):
+    """Raised when the sealed codebook egress cannot legally produce an action."""
+
+
+_SEALED_CODEBOOK_CACHE: Dict[Tuple, object] = {}
+
+
+def real_to_phase_wave(wave: torch.Tensor, d_model: int) -> torch.Tensor:
+    """Deterministic real [num_blocks, 8] -> complex [1, d_model // 2].
+
+    The ONLY boundary mapping for the sealed path. Requires num_blocks * 8 ==
+    d_model and d_model even, so the (cos, sin) halves are equal length.
+    """
+    if wave.dim() != 2 or wave.shape[-1] != 8:
+        raise SealedEgressError(
+            f"expected [num_blocks, 8] UWE, got {tuple(wave.shape)}"
+        )
+    flat = wave.reshape(-1).to(torch.float32)
+    if flat.numel() != d_model:
+        raise SealedEgressError(
+            f"flat numel {flat.numel()} != d_model {d_model}"
+        )
+    if d_model % 2 != 0:
+        raise SealedEgressError(
+            f"d_model {d_model} must be even to split (cos, sin) halves"
+        )
+    half = d_model // 2
+    return torch.complex(
+        flat[:half].contiguous(), flat[half:].contiguous()
+    ).unsqueeze(0)
+
+
+def build_sealed_action_codebook(
+    vocab: ActionEgressVocabulary,
+    d_model: int,
+    feat_dim: int = 256,
+    inverse_temp: float = 8.0,
+    seed: int = 42,
+    expected_manifest_sha256: Optional[str] = None,
+):
+    """Build (and cache) the sealed codebook over the ACTION-legal vocabulary.
+
+    Checkpoint-free: the codebook is M_k = encode_text(manifest[k]). Cached by
+    (d_model, feat_dim, inverse_temp, seed, manifest) because a build costs about
+    10 ms and the action set is per-environment, so an uncached per-step build
+    would dominate the step loop.
+    """
+    manifest = [a.name for a in vocab.actions]
+    if len(manifest) != vocab.n_actions:
+        raise SealedEgressError("vocab/actions length mismatch")
+    if len(set(manifest)) != len(manifest):
+        raise SealedEgressError("duplicate action names in sealed manifest")
+    if d_model % 16 != 0:
+        raise SealedEgressError(
+            f"d_model {d_model} must be divisible by 16: the phase-space "
+            "convention splits it into equal (cos, sin) halves of d_model//2 "
+            "and HoloVLAConfig requires ambient_dim_D == num_blocks * 8"
+        )
+    # HoloVLAConfig enforces ambient_dim_D == num_blocks * block_slots, so
+    # num_blocks is DERIVED from the latent width, NOT taken from the wave's own
+    # block count. Sizing it from the wave (d_model // 8) trips the invariant:
+    # at d_model=512 that gives 64*8=512 != ambient_dim_D 256. (Caught by
+    # test_build_and_identity_round_trip; all 13 first-run failures shared this
+    # single root cause.) Corollary at production scale: a 65536-wide real wave
+    # becomes a 32768-wide complex latent, i.e. num_blocks=4096 -- the 8192
+    # in the stride ledger describes the REAL wave, not this complex view.
+    latent = d_model // 2
+    num_blocks = latent // 8
+
+    key = (int(d_model), int(feat_dim), float(inverse_temp), int(seed),
+           tuple(manifest))
+    cached = _SEALED_CODEBOOK_CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    try:
+        from henri_vla_tokenizer import (  # noqa: PLC0415
+            HoloEgressCodebook,
+            HoloVLAConfig,
+            HoloVLATokenizer,
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise SealedEgressError(
+            f"sealed codebook import failed: {type(exc).__name__}: {exc}"
+        ) from exc
+
+    cfg = HoloVLAConfig(
+        ambient_dim_D=latent,
+        num_blocks=num_blocks,
+        vocab_size_V=len(manifest),
+        feat_dim=feat_dim,
+        hopfield_inverse_temp=float(inverse_temp),
+        seed=int(seed),
+    )
+    tokenizer = HoloVLATokenizer(cfg)
+    codebook = HoloEgressCodebook(cfg, tokenizer, manifest)
+
+    if expected_manifest_sha256 is not None:
+        got = getattr(getattr(codebook, "seal", None), "sha256", None)
+        if got is None:
+            got = getattr(codebook, "seal_sha256", None)
+        if got != expected_manifest_sha256:
+            raise SealedEgressError(
+                "sealed action manifest digest mismatch: "
+                f"{got} != {expected_manifest_sha256}"
+            )
+
+    _SEALED_CODEBOOK_CACHE[key] = codebook
+    return codebook
+
+
+def decode_action_egress_sealed(
+    predicted_wave: torch.Tensor,
+    vocab: ActionEgressVocabulary,
+    codebook: object,
+    d_model: int,
+    min_margin: float = 0.0,
+) -> EgressDecodeResult:
+    """Fail-closed action decode through the SEALED codebook (no checkpoint).
+
+    Returns the same EgressDecodeResult contract as `decode_action_egress`, so a
+    caller's telemetry and error handling are unchanged -- INCLUDING the entropy
+    scales, which differ between the two fields and are easy to get wrong:
+
+        entropy_bits       normalized in [0, 1] via entropy_bits_of()   (action)
+        token_entropy_bits RAW bits                                     (full vocab)
+
+    A first version of this function emitted RAW bits in `entropy_bits`, which
+    would have made the same field name mean two different scales depending on
+    which decoder ran -- incomparable across the checkpoint and sealed paths.
+    Caught by test_logits_finite_entropy_convention_matches_existing_contract.
+    The sealed path has no code-token positions (the vocabulary IS the action
+    set), so `token_entropy_bits` is the raw entropy of that same distribution:
+    equal in VALUE to the raw action entropy, but reported on the raw-bits scale
+    its name implies, never as a copy of the normalized field.
+    """
+    if not hasattr(codebook, "logits"):
+        raise SealedEgressError("codebook has no logits()")
+    phase = real_to_phase_wave(predicted_wave, d_model)
+    with torch.no_grad():
+        logits = codebook.logits(phase).reshape(-1).to(torch.float32)
+    if logits.numel() != vocab.n_actions:
+        raise SealedEgressError(
+            f"codebook logits {logits.numel()} != n_actions {vocab.n_actions}"
+        )
+    if not bool(torch.isfinite(logits).all()):
+        raise SealedEgressError("sealed logits contain non-finite values")
+
+    probs = torch.softmax(logits, dim=-1)
+    idx = int(torch.argmax(logits).item())
+    action = vocab.id_to_action[idx]
+    ent_bits = entropy_bits_of(probs)                 # normalized in [0, 1]
+    raw_bits = float(-(probs * torch.log2(probs + 1e-12)).sum().item())
+    _t2 = torch.topk(probs, k=min(2, vocab.n_actions)).values
+    margin = float(_t2[0] - _t2[1]) if _t2.numel() > 1 else 1.0
+    if min_margin > 0.0 and margin < min_margin:
+        # Fail CLOSED rather than inject a near-random action. Measured basis:
+        # 200 arbitrary waves gave mean margin 0.05015 and p05 0.00246, so a
+        # near-uniform readout is the common case, not an edge case. A consumer
+        # must decide the floor explicitly; 0.0 leaves the pre-guard behaviour.
+        raise SealedEgressError(
+            f"sealed readout not decisive: margin {margin:.6f} < floor "
+            f"{min_margin:.6f} (normalized entropy {ent_bits:.6f}); refusing to "
+            "act on a near-uniform distribution"
+        )
+    order = torch.argsort(probs, descending=True)[:min(3, vocab.n_actions)].tolist()
+    top3 = [
+        (vocab.id_to_action[int(i)].name, float(probs[int(i)]))
+        for i in order
+    ]
+    return EgressDecodeResult(
+        action=action,
+        action_index=idx,
+        action_name=action.name,
+        action_logits=logits,
+        action_probs=probs,
+        top3=top3,
+        entropy_bits=ent_bits,
+        token_entropy_bits=raw_bits,
+        top1_margin=margin,
+    )

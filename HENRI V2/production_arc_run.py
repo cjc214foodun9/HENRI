@@ -191,6 +191,53 @@ USE_OBJECT_SAGNAC_MCTS = os.environ.get("USE_OBJECT_SAGNAC_MCTS", "0") == "1"
 HENRI_WAVE_PACKET_SEARCH = os.environ.get("HENRI_WAVE_PACKET_SEARCH", "0") == "1"
 HENRI_SEMANTIC_EGRESS = os.environ.get("HENRI_SEMANTIC_EGRESS", "0") == "1"
 
+# Sealed action egress (checkpoint-free). Default OFF, so the default path stays
+# byte-identical when the flag is unset. When ON, the chosen candidate wave is
+# decoded through the SEALED Modern Hopfield snap over the ACTION-legal
+# vocabulary (arc_egress_contract.decode_action_egress_sealed), whose codebook is
+# DERIVED as M_k = encode_text(action_name) and therefore needs NO trained
+# checkpoint. This exists because the Phase 6 transducer is constructed with
+# checkpoint_policy="required" and models/ is absent, so without this flag the
+# ARC egress has no decoder at all on a checkpoint-free host. Imported lazily so
+# an OFF flag costs nothing. NOTE: HENRI_SEMANTIC_EGRESS above is currently a DEAD
+# STORE -- it is read nowhere -- and is deliberately NOT repurposed here, because
+# its documented target is the 32k code-token decoder (defect A2), a DIFFERENT
+# vocabulary from the 8-action set this path decodes.
+HENRI_SEALED_ACTION_EGRESS = (
+    os.environ.get("HENRI_SEALED_ACTION_EGRESS", "0") == "1")
+# Decisiveness floor for the sealed readout, in top1-top2 probability units.
+# 0.0 = no guard (identical to pre-guard behaviour). The floor exists because the
+# sealed readout was MEASURED near-uniform on arbitrary waves (mean normalized
+# entropy 0.97466, mean margin 0.05015, p05 margin 0.00246 over 200 waves): without
+# a floor this path would replace EFE-selected actions with near-random ones. An
+# unparseable value falls back to 0.0 and the EFFECTIVE value is emitted in
+# telemetry on every decode, so a silent misconfiguration is visible in the run
+# log rather than inferred. Source -> consumer is traceable: this constant ->
+# _decode_action_egress_sealed(min_margin=...) -> telemetry "sealed_min_margin".
+try:
+    HENRI_SEALED_EGRESS_MIN_MARGIN = float(
+        os.environ.get("HENRI_SEALED_EGRESS_MIN_MARGIN", "0.0") or 0.0)
+except ValueError:
+    HENRI_SEALED_EGRESS_MIN_MARGIN = 0.0
+if HENRI_SEALED_ACTION_EGRESS:
+    from arc_egress_contract import (  # noqa: E402
+        build_sealed_action_codebook as _build_sealed_action_codebook,
+        decode_action_egress_sealed as _decode_action_egress_sealed,
+    )
+    if HENRI_SEALED_EGRESS_MIN_MARGIN <= 0.0:
+        # LOUD, not silent. The sealed readout was measured near-uniform on
+        # arbitrary waves, and its margin distribution on LIVE encoder waves is
+        # UNMEASURED, so this code refuses to invent a floor. With no floor the
+        # path will act on near-random selections; the operator must set
+        # HENRI_SEALED_EGRESS_MIN_MARGIN from the live top1_margin telemetry.
+        print(
+            "[init] WARNING: HENRI_SEALED_ACTION_EGRESS=1 with "
+            "HENRI_SEALED_EGRESS_MIN_MARGIN=0.0 -> no decisiveness floor. The "
+            "sealed readout is near-uniform by measurement (mean normalized "
+            "entropy 0.975 on random waves), so decoded actions may be near-random. "
+            "Read the top1_margin telemetry, then set a floor."
+        )
+
 # P0.5: task-weighted discriminative EIG (Aletheia postmortem).  Evidence
 # updates to the Beta posterior are weighted by sigmoid(gamma * z_score)
 # of the observed grid displacement vs running jitter statistics.
@@ -2359,6 +2406,53 @@ def run():
                         "reason": str(_ef_exc),
                     })
                     print(f"  [egress] fail-closed: {_ef_exc}")
+            # Sealed action egress (checkpoint-free), default-OFF.
+            # WHY: the Phase 6 branch above needs a LOADED
+            # HENRIUnifiedEgressTransducer, which henri_decoder builds with
+            # checkpoint_policy="required"; with models/ absent that path cannot
+            # run at all. decode_action_egress_sealed reads the contract-tested
+            # sealed Hopfield snap over the ACTION vocabulary and needs no
+            # checkpoint. PRECEDENCE: the checkpoint path WINS when it is
+            # available -- this is an alternative, never a silent override.
+            # Fail-closed is inherited: setting env_step_error is what clears
+            # macro_actions below, so a sealed decode failure cannot fall back to
+            # stepping the original EFE enum action.
+            if (HENRI_SEALED_ACTION_EGRESS
+                    and not (HENRI_ARC_EGRESS and egress_transducer is not None)
+                    and policy_mode() != "action1" and not psg_engaged):
+                try:
+                    _svocab = ActionEgressVocabulary(GameAction, allowed_actions)
+                    _scb = _build_sealed_action_codebook(_svocab, SCALE["d_model"])
+                    egress_result = _decode_action_egress_sealed(
+                        chosen["predicted_wave"], _svocab, _scb, SCALE["d_model"],
+                        min_margin=HENRI_SEALED_EGRESS_MIN_MARGIN)
+                    action = egress_result.action
+                    tele.emit({
+                        "env": env_name, "step": step,
+                        "event_type": "EGRESS_DECODE",
+                        "action_source": "SEALED_CODEBOOK",
+                        "action": egress_result.action_name,
+                        "action_index": egress_result.action_index,
+                        "entropy_bits": round(egress_result.entropy_bits, 6),
+                        "token_entropy_bits": round(egress_result.token_entropy_bits, 6),
+                        "top1_margin": round(egress_result.top1_margin, 6),
+                        "sealed_min_margin": HENRI_SEALED_EGRESS_MIN_MARGIN,
+                        "top3": egress_result.top3,
+                        "sealed_manifest_sha256": getattr(
+                            getattr(_scb, "seal", None), "sha256", None),
+                    })
+                    print(f"  [egress] sealed-codebook decoded "
+                          f"{egress_result.action_name} (entropy "
+                          f"{egress_result.entropy_bits:.3f} normalized bits)")
+                except EgressFailClosedError as _se_exc:
+                    env_step_error = f"SEALED_EGRESS_FAIL_CLOSED: {_se_exc}"
+                    tele.emit({
+                        "env": env_name, "step": step,
+                        "event_type": "EGRESS_FAIL_CLOSED",
+                        "action_source": "SEALED_CODEBOOK",
+                        "reason": str(_se_exc),
+                    })
+                    print(f"  [egress] sealed fail-closed: {_se_exc}")
             # CEGIS Program AST Macro Execution:
             # Construct candidate AST macro sequence (1-4 composite action sequence)
             macro_actions = [action if isinstance(action, GameAction) else GameAction.ACTION1]
