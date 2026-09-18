@@ -20,12 +20,25 @@ FLAG SEMANTICS (explicit, so the default cannot be misread)
   output.
 
 WHY THE GUARD SITS IN THE CONSTRUCTORS
-  The discrete egress surfaces are reached through 16 live construction sites in
-  14 files (AST-measured, receipt e6_d2_ast_sites.json sha 6e4356bfda9bc12c;
-  supersedes the earlier and incorrect "8 sites" claim). Guarding the four class
-  constructors covers all 16 sites now and every future site, with four bounded
-  edits instead of sixteen. The guard is imported lazily inside each constructor
-  so no import-time behaviour changes.
+  The discrete egress surfaces are reached through 27 non-test construction
+  sites in 16 files (AST-measured; 44 sites / 20 files including tests).
+  Receipt: experiments/verification/e6_d2_ast_sites.json, regenerable with
+  gen_e6_d2_ast_sites_receipt.py. No sha is cited here on purpose: the receipt
+  records a UTC timestamp, so a hard-coded hash would dangle on the next
+  regeneration -- the same defect class this repair closes. The load-bearing
+  numbers are the two counts above, and the receipt carries the raw site list.
+  Guarding the four class constructors covers every site now and every future
+  site, with four bounded edits instead of twenty-seven. The guard is imported
+  lazily inside each constructor so no import-time behaviour changes.
+
+  GOVERNANCE REPAIR (2026-09-17). This docstring previously cited
+  "16 live construction sites in 14 files (AST-measured, receipt
+  e6_d2_ast_sites.json sha 6e4356bfda9bc12c)". That receipt did NOT exist in the
+  tree, no commit ever touched it, and `git check-ignore` returned rc=1 (not a
+  gitignored overlay). It was a dangling citation: a governance flag asserting a
+  measured count against evidence that was never committed. The receipt now
+  exists, and the counts above are its MEASURED output -- not the prior claim.
+  Per-file counts and the raw site list are in the receipt.
 
 NO DELETION. The classes and weights stay in the tree; only live construction is
   gated. Deleting them would break importers that are not on the live path.

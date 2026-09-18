@@ -1,0 +1,315 @@
+{
+ "schema": "henri.arc.e6-d2-ast-sites.v1",
+ "utc": "2026-09-18T05:08:45Z",
+ "evidence_class": "OBSERVED",
+ "platform": "Windows-11-10.0.26200-SP0",
+ "python": "3.14.0",
+ "method": "ast.Call walk over REPO/**/*.py, excluding dev/data dirs",
+ "guarded_surfaces": [
+  "HENRINeuralEgressUnbinder",
+  "PhaseRingCodebookDecoder",
+  "HENRIUnifiedEgressTransducer",
+  "HENRIASTGrammarMask"
+ ],
+ "excluded_dirs": [
+  ".git",
+  ".pytest_cache",
+  ".venv",
+  ".worktrees",
+  "Drive_Research_Vault",
+  "Obsidian_Vault",
+  "__pycache__",
+  "_archive",
+  "node_modules",
+  "venv"
+ ],
+ "files_scanned": 541,
+ "parse_failures": [
+  "Drive_Inbox\\HENRI_V3_Relativistic_Attention_Engine.py: SyntaxError"
+ ],
+ "n_sites": 44,
+ "n_files": 20,
+ "by_surface": {
+  "HENRIUnifiedEgressTransducer": 23,
+  "HENRINeuralEgressUnbinder": 9,
+  "PhaseRingCodebookDecoder": 4,
+  "HENRIASTGrammarMask": 8
+ },
+ "by_file": {
+  "arc_curriculum_replay.py": 1,
+  "e6_d2_differential.py": 8,
+  "efe_planner.py": 1,
+  "execute_authentic_coding_benchmark.py": 1,
+  "experiments/verification/g4_armu_unbinder_diag.py": 1,
+  "experiments/verification/probe_deep_egress_identity.py": 1,
+  "experiments/verification/smoke_unified_vla_cuda.py": 1,
+  "experiments/verification/verify_egress_closed_loop.py": 2,
+  "henri_api_bridge.py": 1,
+  "henri_decoder.py": 3,
+  "henri_fused_triton_cuda_graph_runner.py": 2,
+  "humaneval_wave_ast_runner.py": 1,
+  "production_arc_run.py": 1,
+  "sagnac_mcts_planner.py": 1,
+  "scripts/training/train_henri_decoder.py": 1,
+  "scripts/training/train_sgld_500_runner.py": 1,
+  "tests/contract/test_arc_integrity_p1.py": 2,
+  "tests/contract/test_benchmark_registry.py": 7,
+  "tests/contract/test_discrete_egress_strip.py": 5,
+  "tests/unit/test_ast_grammar_mask_all_masked.py": 3
+ },
+ "sites": [
+  {
+   "file": "arc_curriculum_replay.py",
+   "line": 972,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "e6_d2_differential.py",
+   "line": 56,
+   "surface": "HENRINeuralEgressUnbinder"
+  },
+  {
+   "file": "e6_d2_differential.py",
+   "line": 67,
+   "surface": "PhaseRingCodebookDecoder"
+  },
+  {
+   "file": "e6_d2_differential.py",
+   "line": 80,
+   "surface": "HENRIASTGrammarMask"
+  },
+  {
+   "file": "e6_d2_differential.py",
+   "line": 89,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "e6_d2_differential.py",
+   "line": 116,
+   "surface": "HENRINeuralEgressUnbinder"
+  },
+  {
+   "file": "e6_d2_differential.py",
+   "line": 118,
+   "surface": "PhaseRingCodebookDecoder"
+  },
+  {
+   "file": "e6_d2_differential.py",
+   "line": 119,
+   "surface": "HENRIASTGrammarMask"
+  },
+  {
+   "file": "e6_d2_differential.py",
+   "line": 121,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "efe_planner.py",
+   "line": 366,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "execute_authentic_coding_benchmark.py",
+   "line": 66,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "experiments/verification/g4_armu_unbinder_diag.py",
+   "line": 65,
+   "surface": "HENRINeuralEgressUnbinder"
+  },
+  {
+   "file": "experiments/verification/probe_deep_egress_identity.py",
+   "line": 36,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "experiments/verification/smoke_unified_vla_cuda.py",
+   "line": 35,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "experiments/verification/verify_egress_closed_loop.py",
+   "line": 174,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "experiments/verification/verify_egress_closed_loop.py",
+   "line": 182,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "henri_api_bridge.py",
+   "line": 41,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "henri_decoder.py",
+   "line": 406,
+   "surface": "HENRIASTGrammarMask"
+  },
+  {
+   "file": "henri_decoder.py",
+   "line": 485,
+   "surface": "HENRINeuralEgressUnbinder"
+  },
+  {
+   "file": "henri_decoder.py",
+   "line": 491,
+   "surface": "PhaseRingCodebookDecoder"
+  },
+  {
+   "file": "henri_fused_triton_cuda_graph_runner.py",
+   "line": 39,
+   "surface": "HENRIASTGrammarMask"
+  },
+  {
+   "file": "henri_fused_triton_cuda_graph_runner.py",
+   "line": 98,
+   "surface": "HENRINeuralEgressUnbinder"
+  },
+  {
+   "file": "humaneval_wave_ast_runner.py",
+   "line": 142,
+   "surface": "HENRINeuralEgressUnbinder"
+  },
+  {
+   "file": "production_arc_run.py",
+   "line": 794,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "sagnac_mcts_planner.py",
+   "line": 115,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "scripts/training/train_henri_decoder.py",
+   "line": 83,
+   "surface": "HENRINeuralEgressUnbinder"
+  },
+  {
+   "file": "scripts/training/train_sgld_500_runner.py",
+   "line": 67,
+   "surface": "HENRINeuralEgressUnbinder"
+  },
+  {
+   "file": "tests/contract/test_arc_integrity_p1.py",
+   "line": 40,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "tests/contract/test_arc_integrity_p1.py",
+   "line": 53,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "tests/contract/test_benchmark_registry.py",
+   "line": 124,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "tests/contract/test_benchmark_registry.py",
+   "line": 129,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "tests/contract/test_benchmark_registry.py",
+   "line": 142,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "tests/contract/test_benchmark_registry.py",
+   "line": 153,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "tests/contract/test_benchmark_registry.py",
+   "line": 168,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "tests/contract/test_benchmark_registry.py",
+   "line": 159,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "tests/contract/test_benchmark_registry.py",
+   "line": 182,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "tests/contract/test_discrete_egress_strip.py",
+   "line": 148,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "tests/contract/test_discrete_egress_strip.py",
+   "line": 94,
+   "surface": "HENRINeuralEgressUnbinder"
+  },
+  {
+   "file": "tests/contract/test_discrete_egress_strip.py",
+   "line": 96,
+   "surface": "PhaseRingCodebookDecoder"
+  },
+  {
+   "file": "tests/contract/test_discrete_egress_strip.py",
+   "line": 98,
+   "surface": "HENRIASTGrammarMask"
+  },
+  {
+   "file": "tests/contract/test_discrete_egress_strip.py",
+   "line": 99,
+   "surface": "HENRIUnifiedEgressTransducer"
+  },
+  {
+   "file": "tests/unit/test_ast_grammar_mask_all_masked.py",
+   "line": 12,
+   "surface": "HENRIASTGrammarMask"
+  },
+  {
+   "file": "tests/unit/test_ast_grammar_mask_all_masked.py",
+   "line": 22,
+   "surface": "HENRIASTGrammarMask"
+  },
+  {
+   "file": "tests/unit/test_ast_grammar_mask_all_masked.py",
+   "line": 29,
+   "surface": "HENRIASTGrammarMask"
+  }
+ ],
+ "n_guard_points": 6,
+ "guard_points": [
+  {
+   "file": "henri_ast_grammar_mask.py",
+   "line": 28
+  },
+  {
+   "file": "henri_decoder.py",
+   "line": 69
+  },
+  {
+   "file": "henri_decoder.py",
+   "line": 357
+  },
+  {
+   "file": "henri_decoder.py",
+   "line": 479
+  },
+  {
+   "file": "tests/contract/test_discrete_egress_strip.py",
+   "line": 51
+  },
+  {
+   "file": "tests/contract/test_discrete_egress_strip.py",
+   "line": 79
+  }
+ ],
+ "claimed_in_docstring": {
+  "n_sites": 16,
+  "n_files": 14,
+  "prior_incorrect_claim": "8 sites"
+ },
+ "elapsed_secs": 2.9
+}

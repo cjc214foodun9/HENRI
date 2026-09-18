@@ -29,7 +29,8 @@ Contracts (per Phase 6 task packet and henri-agent-integration):
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
 import torch
@@ -241,3 +242,374 @@ def entropy_bits_of(probs: torch.Tensor) -> float:
         return 0.0
     h = float(-(probs * torch.log2(probs + 1e-12)).sum().item())
     return h / math.log2(probs.numel()) if probs.numel() > 1 else h
+
+
+# ===========================================================================
+# Typed Probe Contract — Zone A typed epistemic probe boundary
+#
+# DEFAULT-OFF. When HENRI_TYPED_PROBE_CONTRACT is unset this section is
+# unreachable from the shipped decode path: it ADDS symbols and changes no
+# existing function, so decode_action_egress / adapt_sgld_from_demos keep their
+# byte-identical behaviour (contracts A1/R4, asserted by test).
+#
+# WHY THIS EXISTS (measured 2026-09-17, references/zone_a_typed_probe_contract.md)
+#   A typed answer cannot enter the wave core as a SCALAR rotor e^{i*theta}.
+#   The precise statement differs per representation, and both were measured:
+#     - COMPLEX unit-modulus qFHRR family: a global phase is UNOBSERVABLE. The
+#       phase-invariant overlap |<psi',psi>|/(|psi'|*|psi|) = 0.999999940 while
+#       the raw vector moves by ||psi'-psi|| ~ 64. Naive instrumentation reads
+#       that as a large update when the state carried no information.
+#     - REAL [cos,sin] representation: a global phase IS observable, as a real
+#       overlap of exactly cos(theta), but a SINGLE scalar still cannot select
+#       one of K answers.
+#   Either way the conclusion is identical: an answer must be bound
+#   per-dimension into all D dimensions (key (x) value phase sum) before it can
+#   change a decision.
+#
+#   Consequence encoded here: the scalar-rotor path is rejected at runtime, so
+#   a mock feedback loop cannot be mistaken for learning.
+#
+# TERMINOLOGY: HENRI names are `choice` / `graded` / `truth`. These are the
+#   semantics of TypeSafe's Choice / Score / Noul; the vendor labels are not
+#   imported into the architecture.
+# ===========================================================================
+
+PROBE_CONTRACT_FLAG = "HENRI_TYPED_PROBE_CONTRACT"
+K_PHASE = 256            # Z_256 phase ring, matches qfhrr_kernels.K_PHASE
+
+QW_CHOICE = "choice"
+QW_GRADED = "graded"
+QW_TRUTH = "truth"
+QUESTION_WORDS = (QW_CHOICE, QW_GRADED, QW_TRUTH)
+
+ST_OK = "OK"
+ST_ABSTAIN_LOW_CONF = "ABSTAIN_LOW_CONF"
+ST_ABSTAIN_NO_ORDER = "ABSTAIN_NO_ORDER"
+ST_ABSTAIN_INVALID = "ABSTAIN_INVALID"
+PROBE_STATUSES = (ST_OK, ST_ABSTAIN_LOW_CONF, ST_ABSTAIN_NO_ORDER, ST_ABSTAIN_INVALID)
+
+PROB_SUM_TOL = 1e-6
+
+
+class ProbeContractViolation(EgressFailClosedError):
+    """Raised when a ProbeEnvelope or its feedback path violates the contract."""
+
+
+class ScalarRotorRejected(ProbeContractViolation):
+    """Raised when feedback applies a scalar (gauge) rotor to a D-dim wave."""
+
+
+def probe_contract_enabled(env: Optional[Dict[str, str]] = None) -> bool:
+    """True only when the typed-probe contract flag is explicitly enabled."""
+    src = os.environ if env is None else env
+    return str(src.get(PROBE_CONTRACT_FLAG, "0")).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def confidence_from_probabilities(probs: Sequence[float]) -> float:
+    """THE single confidence definition site. Recalibrate here, not at call sites.
+
+    Definition: confidence = 1 - H(p)/log(K), clamped to [0, 1].
+    A point mass -> 1.0. A uniform distribution -> 0.0.
+
+    This is monotone in concentration (R1): moving probability mass onto the
+    modal option can only raise it. It is a DIFFERENT statistic from any model's
+    internal score, and it is not a guarantee of correctness. Whether a
+    confidence of c corresponds to an accuracy of c is a question for
+    `henri_probe_calibration.evaluate_calibration` and is NOT answered here.
+    """
+    vals = [float(p) for p in probs]
+    if not vals:
+        raise ProbeContractViolation("confidence_from_probabilities: empty distribution")
+    if len(vals) == 1:
+        return 1.0
+    total = sum(vals)
+    if total <= 0.0:
+        raise ProbeContractViolation("confidence_from_probabilities: non-positive mass")
+    norm = [v / total for v in vals]
+    h = -sum(p * math.log(p + 1e-12) for p in norm if p > 0.0)
+    h_max = math.log(len(norm))
+    if h_max <= 0.0:
+        return 1.0
+    return max(0.0, min(1.0, 1.0 - h / h_max))
+
+
+def _phase_codes(ids: Sequence[int], latent_dim: int, seed: int) -> torch.Tensor:
+    """Deterministic Z_256 phase codes per id. Same id -> same code, always."""
+    out = torch.empty(len(ids), latent_dim, dtype=torch.int64)
+    for row, i in enumerate(ids):
+        gen = torch.Generator().manual_seed(int(seed) + 1000 * int(i))
+        out[row] = torch.randint(
+            0, K_PHASE, (latent_dim,), generator=gen, dtype=torch.int64
+        )
+    return out
+
+
+def bind_key_value_wave(
+    key_id: int,
+    value_id: int,
+    num_blocks: int = 8192,
+    block_dim: int = 8,
+    key_seed: int = 101,
+    value_seed: int = 202,
+) -> torch.Tensor:
+    """Bind (key (x) value) into a REAL [num_blocks, block_dim] wave.
+
+    Binding is modular phase addition on the Z_256 ring -- the same algebra as
+    `qfhrr_kernels.fhrr_bind` -- so the result is a valid member of the
+    production UWE family and can be consumed by the existing egress path.
+
+    This is the ONLY supported feedback channel: the rotation is per-dimension,
+    never scalar. A scalar rotor raises ScalarRotorRejected (see
+    `apply_wave_binding`).
+    """
+    if num_blocks < 2 or block_dim != 8:
+        raise ProbeContractViolation(
+            f"bind_key_value_wave: unsupported geometry [{num_blocks}, {block_dim}]"
+        )
+    d_model = num_blocks * block_dim
+    latent = d_model // 2
+    kc = _phase_codes([key_id], latent, key_seed)[0]
+    vc = _phase_codes([value_id], latent, value_seed)[0]
+    codes = (kc + vc) % K_PHASE
+    theta = codes.to(torch.float32) * (2.0 * math.pi / K_PHASE)
+    real = torch.cat([torch.cos(theta), torch.sin(theta)], dim=-1)
+    return real.view(num_blocks, block_dim)
+
+
+def retrieve_value_from_binding(
+    wave: torch.Tensor,
+    key_id: int,
+    value_ids: Sequence[int],
+    key_seed: int = 101,
+    value_seed: int = 202,
+) -> Tuple[int, float]:
+    """Decode which value is bound to `key_id` in `wave`.
+
+    Returns (index_into_value_ids, best_ring_cosine). Fails closed if the wave
+    geometry is illegal. This is the readout used to prove that per-dimension
+    binding carries answer identity. An identity codebook recovers its own
+    binding partly BY CONSTRUCTION; that is not calibration evidence and not a
+    generalisation claim.
+    """
+    if not value_ids:
+        raise ProbeContractViolation("retrieve_value_from_binding: no candidate values")
+    flat = wave.reshape(-1).to(torch.float32)
+    d_model = flat.numel()
+    if d_model % 2 != 0 or d_model < 16:
+        raise ProbeContractViolation(
+            f"retrieve_value_from_binding: illegal wave length {d_model}"
+        )
+    latent = d_model // 2
+    cos_part, sin_part = flat[:latent], flat[latent:]
+    theta = torch.atan2(sin_part, cos_part)
+    codes = torch.round(theta * (K_PHASE / (2.0 * math.pi))).to(torch.int64) % K_PHASE
+    kc = _phase_codes([key_id], latent, key_seed)[0]
+    residual = (codes - kc) % K_PHASE
+    candidates = _phase_codes(list(value_ids), latent, value_seed)
+    delta = (residual.unsqueeze(0) - candidates) % K_PHASE
+    ring_cos = torch.cos(delta.to(torch.float32) * (2.0 * math.pi / K_PHASE)).mean(dim=1)
+    best = int(torch.argmax(ring_cos).item())
+    return best, float(ring_cos[best].item())
+
+
+def reject_scalar_rotor(rotor: torch.Tensor, d_model: int) -> None:
+    """Fail closed when feedback would broadcast a scalar rotor over D dims.
+
+    A numel-1 rotor is a global phase: a gauge transformation that cannot change
+    the state. Rejecting it here is what stops a mock 'incessant learning' loop
+    from being mistaken for a real update (contract A3).
+    """
+    n = int(rotor.numel())
+    if n == 1:
+        raise ScalarRotorRejected(
+            "scalar rotor e^{i*theta} is a U(1) gauge transformation: it cannot "
+            "change the wave state (measured normalized overlap 0.999999940). "
+            "Bind the answer per-dimension with bind_key_value_wave instead."
+        )
+    if n != d_model:
+        raise ScalarRotorRejected(
+            f"rotor numel {n} != wave dim {d_model}; feedback must be elementwise"
+        )
+
+
+def apply_wave_binding(
+    wave: torch.Tensor,
+    rotor: torch.Tensor,
+) -> torch.Tensor:
+    """Apply elementwise phase feedback to a real wave. Scalar rotors rejected.
+
+    The wave is split into its (cos, sin) halves; the rotor is a PHASE-SPACE
+    vector of length latent = d_model // 2, one phase offset per latent
+    dimension. A scalar (numel 1) rotor is rejected as a gauge no-op, and a
+    d_model-sized vector is rejected as a misuse of the phase geometry.
+    The unit-normalized real wave is returned in the SAME geometry.
+    """
+    flat = wave.reshape(-1).to(torch.float32)
+    d_model = flat.numel()
+    latent = d_model // 2
+    reject_scalar_rotor(rotor, latent)
+    cos_part, sin_part = flat[:latent], flat[latent:]
+    theta = torch.atan2(sin_part, cos_part)
+    r = rotor.reshape(-1).to(torch.float32)
+    theta_new = theta + r[:latent]
+    out = torch.cat([torch.cos(theta_new), torch.sin(theta_new)], dim=-1)
+    return torch.nn.functional.normalize(out, p=2.0, dim=-1).view(wave.shape)
+
+
+@dataclass(frozen=True)
+class ProbeEnvelope:
+    """One typed Zone A crossing. No `str` reaches a machine consumer.
+
+    `status != OK` means the answer is NOT consumable: an abstention is a valid
+    terminal result, never a fallback to a guessed answer (contract R3).
+    Metadata is free-form and carried for provenance, not for judgement.
+    """
+
+    probe_id: int
+    question_word: str
+    state_snapshot_id: str
+    probabilities: Tuple[float, ...]
+    answer: object
+    status: str = ST_OK
+    option_ids: Tuple[int, ...] = ()
+    wave_binding: Optional[torch.Tensor] = None
+    confidence: float = 0.0
+    metadata: Dict[str, object] = field(default_factory=dict)
+    question_type: str = ""
+
+    def __post_init__(self) -> None:
+        if self.question_type and not self.question_word:
+            object.__setattr__(self, "question_word", self.question_type)
+        if self.question_word not in QUESTION_WORDS:
+            raise ProbeContractViolation(
+                f"question_word must be one of {QUESTION_WORDS}, got {self.question_word!r}"
+            )
+        if self.status not in PROBE_STATUSES:
+            raise ProbeContractViolation(
+                f"status must be one of {PROBE_STATUSES}, got {self.status!r}"
+            )
+        if not self.state_snapshot_id:
+            raise ProbeContractViolation(
+                "state_snapshot_id is mandatory: parallel probes on a rotating "
+                "state are mutually incoherent without a pinned snapshot"
+            )
+        if self.status != ST_OK:
+            return
+        probs = tuple(float(p) for p in self.probabilities)
+        if not probs:
+            raise ProbeContractViolation("status OK requires a non-empty distribution")
+        total = sum(probs)
+        if abs(total - 1.0) > PROB_SUM_TOL:
+            raise ProbeContractViolation(
+                f"probabilities sum to {total!r}, expected 1 +/- {PROB_SUM_TOL}"
+            )
+        if any(p < 0.0 for p in probs):
+            raise ProbeContractViolation("probabilities must be non-negative")
+        expected = max(range(len(probs)), key=lambda i: probs[i])
+        if isinstance(self.answer, int) and self.answer != expected:
+            raise ProbeContractViolation(
+                f"answer {self.answer} is not argmax {expected} of the distribution"
+            )
+        if self.option_ids and len(self.option_ids) != len(probs):
+            raise ProbeContractViolation(
+                f"option_ids length {len(self.option_ids)} != probabilities {len(probs)}"
+            )
+        if self.wave_binding is None:
+            raise ProbeContractViolation(
+                "status OK requires wave_binding: it is the sole feedback channel"
+            )
+        if self.question_word == QW_CHOICE and not self.option_ids:
+            raise ProbeContractViolation("a choice probe requires a bounded option set")
+
+    @property
+    def is_ok(self) -> bool:
+        return self.status == ST_OK
+
+    @property
+    def is_consumable(self) -> bool:
+        """Only an OK probe may influence a decision (contract R3)."""
+        return self.status == ST_OK
+
+    def to_dict(self) -> dict:
+        return {
+            "probe_id": self.probe_id,
+            "question_word": self.question_word,
+            "state_snapshot_id": self.state_snapshot_id,
+            "option_ids": list(self.option_ids),
+            "probabilities": list(self.probabilities),
+            "answer": self.answer,
+            "status": self.status,
+            "confidence": self.confidence,
+            "has_wave_binding": self.wave_binding is not None,
+            "metadata": dict(self.metadata),
+        }
+
+
+def consume_probe(envelope: ProbeEnvelope) -> ProbeEnvelope:
+    """Gate a probe before a consumer acts on it. Raises when not consumable."""
+    if not envelope.is_consumable:
+        raise ProbeContractViolation(
+            f"probe {envelope.probe_id} has status {envelope.status!r}: not consumable"
+        )
+    return envelope
+
+
+def probe_from_logits(
+    action_logits: torch.Tensor,
+    option_ids: Sequence[int],
+    state_snapshot_id: str,
+    probe_id: int = 0,
+    wave_binding: Optional[torch.Tensor] = None,
+    metadata: Optional[Dict[str, object]] = None,
+    low_confidence_floor: Optional[float] = None,
+) -> ProbeEnvelope:
+    """Adapt the EXISTING action-legal logits into a typed probe envelope.
+
+    This is the wiring bridge: it reuses the decode path already in this module
+    rather than adding a parallel head. When `low_confidence_floor` is set and
+    the derived confidence is below it, the result abstains instead of guessing.
+    """
+    logits = action_logits.reshape(-1).to(torch.float32)
+    if logits.numel() != len(option_ids):
+        raise ProbeContractViolation(
+            f"logits {logits.numel()} != option_ids {len(option_ids)}"
+        )
+    probs = torch.softmax(logits, dim=-1)
+    plist = tuple(float(p) for p in probs.tolist())
+    conf = confidence_from_probabilities(plist)
+    status = ST_OK
+    if low_confidence_floor is not None and conf < low_confidence_floor:
+        status = ST_ABSTAIN_LOW_CONF
+    if status != ST_OK or wave_binding is None:
+        return ProbeEnvelope(
+            probe_id=probe_id,
+            question_word=QW_CHOICE,
+            state_snapshot_id=state_snapshot_id,
+            probabilities=plist,
+            answer=int(torch.argmax(logits).item()),
+            status=status,
+            option_ids=tuple(int(o) for o in option_ids),
+            wave_binding=None,
+            confidence=conf,
+            metadata=dict(metadata or {}),
+        )
+    return ProbeEnvelope(
+        probe_id=probe_id,
+        question_word=QW_CHOICE,
+        state_snapshot_id=state_snapshot_id,
+        probabilities=plist,
+        answer=int(torch.argmax(logits).item()),
+        status=ST_OK,
+        option_ids=tuple(int(o) for o in option_ids),
+        wave_binding=wave_binding,
+        confidence=conf,
+        metadata=dict(metadata or {}),
+    )
+
+
+def state_snapshot_id_of(wave: torch.Tensor) -> str:
+    """Content hash of a pinned wave state. Cheap, deterministic, collision-shy."""
+    import hashlib
+
+    flat = wave.detach().to(torch.float32).reshape(-1).cpu().numpy()
+    return hashlib.sha256(flat.tobytes()).hexdigest()[:16]

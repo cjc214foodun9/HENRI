@@ -1,0 +1,250 @@
+{
+ "schema": "henri.arc.phase-map-basis-eval.v1",
+ "utc": "2026-09-18T05:08:31Z",
+ "evidence_class": "OBSERVED",
+ "device_kind": "cpu",
+ "torch": "2.11.0+cu128",
+ "platform": "Windows-11-10.0.26200-SP0",
+ "d_model": 65536,
+ "k_blocks": 8192,
+ "grid_dim": 4,
+ "color": 5,
+ "seed": 20260917,
+ "resolver_default": {
+  "spatial_basis_kind": "incommensurate",
+  "bg_mask": true
+ },
+ "per_basis": {
+  "default": {
+   "bg_mask": false,
+   "same_sum_cos": 1.0000015497207642,
+   "diff_sum_cos": 0.9490401148796082,
+   "verify_status": "BLOCKED_PHASE_MAP_NONINVERTIBLE",
+   "verify_reason": "x/y spatial ramps collinear: same-sum waves cos=1.000002 (threshold 0.9); (1,2) == (2,1) in wave space; fractional unbinding cannot recover (x,y)"
+  },
+  "incommensurate": {
+   "bg_mask": true,
+   "same_sum_cos": -0.001852929824963212,
+   "diff_sum_cos": 3.055663546547294e-05,
+   "verify_status": "PHASE_MAP_INVERTIBLE",
+   "verify_reason": "basis separates same-sum positions: cos=-0.001853, diff-sum cos=0.000031"
+  },
+  "random": {
+   "bg_mask": true,
+   "same_sum_cos": -0.005976017098873854,
+   "diff_sum_cos": 3.055832348763943e-05,
+   "verify_status": "PHASE_MAP_INVERTIBLE",
+   "verify_reason": "basis separates same-sum positions: cos=-0.005976, diff-sum cos=0.000031"
+  }
+ },
+ "recovery_incommensurate": {
+  "basis_kind": "incommensurate",
+  "bg_mask": true,
+  "n_cases": 16,
+  "n_exact": 16,
+  "exact_rate": 1.0,
+  "trials": [
+   {
+    "true": [
+     0,
+     0
+    ],
+    "decoded": [
+     0,
+     0
+    ],
+    "response_cos": 0.9999989867210388,
+    "exact": true
+   },
+   {
+    "true": [
+     0,
+     1
+    ],
+    "decoded": [
+     0,
+     1
+    ],
+    "response_cos": 0.9999966025352478,
+    "exact": true
+   },
+   {
+    "true": [
+     0,
+     2
+    ],
+    "decoded": [
+     0,
+     2
+    ],
+    "response_cos": 0.999996542930603,
+    "exact": true
+   },
+   {
+    "true": [
+     0,
+     3
+    ],
+    "decoded": [
+     0,
+     3
+    ],
+    "response_cos": 0.9999966621398926,
+    "exact": true
+   },
+   {
+    "true": [
+     1,
+     0
+    ],
+    "decoded": [
+     1,
+     0
+    ],
+    "response_cos": 0.9999969005584717,
+    "exact": true
+   },
+   {
+    "true": [
+     1,
+     1
+    ],
+    "decoded": [
+     1,
+     1
+    ],
+    "response_cos": 0.9999967217445374,
+    "exact": true
+   },
+   {
+    "true": [
+     1,
+     2
+    ],
+    "decoded": [
+     1,
+     2
+    ],
+    "response_cos": 0.9999967813491821,
+    "exact": true
+   },
+   {
+    "true": [
+     1,
+     3
+    ],
+    "decoded": [
+     1,
+     3
+    ],
+    "response_cos": 0.9999966621398926,
+    "exact": true
+   },
+   {
+    "true": [
+     2,
+     0
+    ],
+    "decoded": [
+     2,
+     0
+    ],
+    "response_cos": 0.9999967217445374,
+    "exact": true
+   },
+   {
+    "true": [
+     2,
+     1
+    ],
+    "decoded": [
+     2,
+     1
+    ],
+    "response_cos": 0.9999969005584717,
+    "exact": true
+   },
+   {
+    "true": [
+     2,
+     2
+    ],
+    "decoded": [
+     2,
+     2
+    ],
+    "response_cos": 0.9999966621398926,
+    "exact": true
+   },
+   {
+    "true": [
+     2,
+     3
+    ],
+    "decoded": [
+     2,
+     3
+    ],
+    "response_cos": 0.9999969005584717,
+    "exact": true
+   },
+   {
+    "true": [
+     3,
+     0
+    ],
+    "decoded": [
+     3,
+     0
+    ],
+    "response_cos": 0.9999967813491821,
+    "exact": true
+   },
+   {
+    "true": [
+     3,
+     1
+    ],
+    "decoded": [
+     3,
+     1
+    ],
+    "response_cos": 0.9999966621398926,
+    "exact": true
+   },
+   {
+    "true": [
+     3,
+     2
+    ],
+    "decoded": [
+     3,
+     2
+    ],
+    "response_cos": 0.9999964833259583,
+    "exact": true
+   },
+   {
+    "true": [
+     3,
+     3
+    ],
+    "decoded": [
+     3,
+     3
+    ],
+    "response_cos": 0.9999967217445374,
+    "exact": true
+   }
+  ]
+ },
+ "recovery_default": {
+  "basis_kind": "default",
+  "n_cases": 16,
+  "n_exact": -1,
+  "note": "raises: degenerate or undersized spatial basis (collinear ramps)"
+ },
+ "legacy_byte_identical": true,
+ "claim": "The production default encoder basis (incommensurate ramp + CC-OS background mask) is invertible for 2D localization; the legacy collinear basis is rank-deficient and remains BLOCKED_PHASE_MAP_NONINVERTIBLE.",
+ "elapsed_secs": 0.39
+}
