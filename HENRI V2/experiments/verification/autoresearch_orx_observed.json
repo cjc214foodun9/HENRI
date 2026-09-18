@@ -1,0 +1,332 @@
+{
+  "schema": "henri.autoresearch-orx.v1",
+  "evidence_class": "OBSERVED",
+  "utc": "2026-09-18T20:00:43+00:00",
+  "tool": {
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\agentic_graph\\orx.exe",
+    "worktree_note": "The tools live in the MAIN checkout only. HENRI V2/agentic_graph exists in the basal-syncytium worktree but contains none of orx.exe / autoresearch.py / autoresearch_cli.py, because they are gitignored -- a worktree-only session would wrongly conclude the tool is absent.",
+    "probe": {
+      "available": true,
+      "exe_path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\agentic_graph\\orx.exe",
+      "version": "orx 0.2.4",
+      "exe_sha256": "sha256:3aa9f178b977e8f5d1d2f4b13fbe27958178291f865ddde98b0631006fb6c02f",
+      "error": null
+    }
+  },
+  "queries": {
+    "Q1_TAME": {
+      "query": "Technological Approach to Mind Everywhere basal cognition cognitive light cone",
+      "rc": 0,
+      "status": "pass",
+      "wall_ms": 2794,
+      "n_candidates": 10,
+      "candidates": [
+        {
+          "title": "Cognitive Convergence: Deep Similarities Between Large Language Models and Human Cognition",
+          "id": "2607.26179",
+          "verification": "REAL (fetched) - Cognitive Convergence: Deep Similarities Between LLMs and Human Cognition"
+        },
+        {
+          "title": "Fungal Memory and Minimal Cognition",
+          "id": "2609.02345",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "A Mathematical Model of Motivated Emotional Mind - Cognitive Embodied System",
+          "id": "2609.20437",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Beyond Episodic AI: Cognitive Field Networks for Biologically Inspired Persistent Cognition",
+          "id": "2609.16752",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Theories of Mind as Domain-Specific Languages of Thought",
+          "id": "2609.19598",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "MiA-Signature: Approximating Global Activation for Long-Context Understanding",
+          "id": "2605.06416",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Cognition spaces: natural, artificial, and hybrid",
+          "id": "2601.12837",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Evolving Cognitive Architectures",
+          "id": "2601.05277",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "A Proposal to Extend the Common Model of Cognition with Metacognition",
+          "id": "2506.07807",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Temporal Interception and Present Reconstruction: A Cognitive-Signal  Model for Human and AI Decision Making",
+          "id": "2505.09646",
+          "verification": "UNVERIFIED - orx-returned only"
+        }
+      ]
+    },
+    "Q2_KURAMOTO": {
+      "query": "Kuramoto order parameter phase synchronization coupled oscillators",
+      "rc": 0,
+      "status": "pass",
+      "wall_ms": 874,
+      "n_candidates": 10,
+      "candidates": [
+        {
+          "title": "Inferring Coupling Strength from the Kuramoto Order Parameter",
+          "id": "2607.28046",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Internal Reliability of Coupled Kuramoto-Sakaguchi Phase Oscillators",
+          "id": "2606.26172",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Phase lag enhances synchronization in coupled oscillators with inertia",
+          "id": "2606.07002",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Phase-locking of hybrid oscillators",
+          "id": "2608.02926",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Semidefinite Programming Certificates for Synchronization of Kuramoto Oscillators on Arcs",
+          "id": "2606.03591",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Synchrony by Birth and Death",
+          "id": "2607.28867",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Exact solutions of the Kuramoto model with asymmetric higher order interactions of arbitrary order",
+          "id": "2501.05670",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Dynamics of oscillator populations with disorder in the coupling phase\n  shifts",
+          "id": "2401.00281",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Coexistence of Coherence and Incoherence in Nonlocally Coupled Phase  Oscillators",
+          "id": "cond-mat/0210694",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Kuramoto oscillators in random networks",
+          "id": "2407.21513",
+          "verification": "UNVERIFIED - orx-returned only"
+        }
+      ]
+    },
+    "Q3_FOKKER_PLANCK": {
+      "query": "Fokker-Planck stationary distribution stochastic gradient Langevin dynamics temperature",
+      "rc": 0,
+      "status": "pass",
+      "wall_ms": 719,
+      "n_candidates": 10,
+      "candidates": [
+        {
+          "title": "Unified Gas-Kinetic Wave-Particle Method for Multiscale Simulation of Vlasov-Poisson-Fokker-Planck System",
+          "id": "2608.29580",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "On the computational cost of Stochastic Gradient Langevin Dynamics",
+          "id": "2609.17750",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Nonreversible Gauge Fields in Fokker--Planck Dynamics: Supersymmetric Hamiltonians and Learned Finite Forces",
+          "id": "2606.06412",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Macroscopic Fokker-Planck equation from microscopic Glauber dynamics for the Nagle-Kardar model",
+          "id": "2606.25919",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "A Fokker-Planck approach to a stochastic multiplicative wealth model with taxation and redistribution",
+          "id": "2607.11755",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Why SGD is not Brownian Motion: A New Perspective on Stochastic Dynamics",
+          "id": "2605.22644",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Mean-Field Langevin Diffusions with Density-dependent Temperature",
+          "id": "2507.20958",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "How to explain grokking",
+          "id": "2412.18624",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Advanced Langevin thermostats: Properties, extensions to rheology, and a lean momentum-conserving approach",
+          "id": "2506.15579",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "SGD as Free Energy Minimization: A Thermodynamic View on Neural Network  Training",
+          "id": "2505.23489",
+          "verification": "UNVERIFIED - orx-returned only"
+        }
+      ]
+    },
+    "Q4_RESONATOR_VSA": {
+      "query": "resonator network vector symbolic architecture factorization holographic binding",
+      "rc": 0,
+      "status": "pass",
+      "wall_ms": 752,
+      "n_candidates": 10,
+      "candidates": [
+        {
+          "title": "Learning a Vector-Symbolic Model for Socio-Cultural Tasks",
+          "id": "2608.02807",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "The Emergent Symbolic Structure of Artificial Neural Networks",
+          "id": "2608.29530",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Vector Symbolic Policy Gradient",
+          "id": "2608.18404",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Neuromorphic Non-Orthogonal Multiple Access for Parallel Remote Inference via Vector Symbolic Architecture",
+          "id": "2607.22155",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "An Auditable Symbolic-RAG-Generative AI Architecture for Goal-Oriented Conversation Orchestration",
+          "id": "2609.07152",
+          "verification": "REAL (fetched) - An Auditable Symbolic-RAG-Generative AI Architecture"
+        },
+        {
+          "title": "Learning Compositional Latent Structure with Vector Networks",
+          "id": "2605.28007",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Dense Holographic Associative Memories",
+          "id": "2606.18492",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Recursive Binding on a Budget: Subspace Carving in Order-p Tensor Memories",
+          "id": "2606.11391",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "A wave-geometric duality for hyperdimensional computing",
+          "id": "2604.22863",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Simulation of Hopfield-like Hamiltonians using time-multiplexed photonic networks",
+          "id": "2603.04482",
+          "verification": "UNVERIFIED - orx-returned only"
+        }
+      ]
+    },
+    "Q5_FEP": {
+      "query": "free energy principle Markov blanket active inference variational",
+      "rc": 0,
+      "status": "pass",
+      "wall_ms": 1574,
+      "n_candidates": 8,
+      "candidates": [
+        {
+          "title": "Active Inference as a Convex Markov Decision Process",
+          "id": "2607.20152",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Expected Free Energy-based Planning as Variational Inference",
+          "id": "2606.20658",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "The SIGReg Objective as Variational Free Energy: A Theoretical Active-Inference Account of JEPA World Models",
+          "id": "2607.13612",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Physics of Information Geometry - Part II: Small-Step Active Inference on the Probability Simplex",
+          "id": "2609.11187",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Design, Cups, and Blankets. A Free-Energy-Principle-Based Approach to Product Design",
+          "id": "2604.22902",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Expected free energy as an information constraint on the Bethe Lagrangian",
+          "id": "2608.17167",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "Integrated Information in the Active Inference Framework",
+          "id": "2608.14165",
+          "verification": "UNVERIFIED - orx-returned only"
+        },
+        {
+          "title": "What Type of Inference is Active Inference?",
+          "id": "2606.04935",
+          "verification": "UNVERIFIED - orx-returned only"
+        }
+      ]
+    }
+  },
+  "summary": {
+    "queries_run": 5,
+    "queries_rc0": 5,
+    "candidates_total": 48,
+    "candidate_ids_verified_real": 2,
+    "out_file_route": {
+      "usable": false,
+      "observed": "4 files at 4096 B and 1 at 0 B; ALL raise PermissionError on read before and after child exit; 0 orx.exe processes alive",
+      "consequence": "stdout is the ONLY working capture channel here; no result was summarised from an unreadable file"
+    }
+  },
+  "verified_ids": {
+    "2609.07152": "REAL (fetched) - An Auditable Symbolic-RAG-Generative AI Architecture",
+    "2607.26179": "REAL (fetched) - Cognitive Convergence: Deep Similarities Between LLMs and Human Cognition",
+    "2201.10346": "REAL (fetched, via /arxiv path) - Levin, Technological Approach to Mind Everywhere (TAME)",
+    "2608.18404": "UNVERIFIED - orx-returned only",
+    "2609.02345": "UNVERIFIED - orx-returned only",
+    "2609.20437": "UNVERIFIED - orx-returned only",
+    "2605.06416": "UNVERIFIED - orx-returned only",
+    "2608.02807": "UNVERIFIED - orx-returned only",
+    "2605.28007": "UNVERIFIED - orx-returned only"
+  },
+  "quality_finding": "Candidates are SEMANTIC NEIGHBOURS, not canonical citations. The TAME query returned work on LLM/human cognitive convergence, fungal memory, motivated emotional mind and long-context activation -- NOT Levin's TAME paper. The canonical sources came from the /arxiv path (2201.10346). The paths are COMPLEMENTARY, not redundant: orx finds related work by similarity; /arxiv resolves known titles. Verified-real is not the same as relevant.",
+  "non_claims": [
+    "An id being REAL does not make a paper relevant, and relevance is not evidence about this codebase.",
+    "No candidate was read in full; nothing here is a capability result.",
+    "The literature layer's verified content remains the /arxiv-verified set in natural_intelligence_literature_audit.json.",
+    "No capability claim; live benchmark score remains 0.0%."
+  ]
+}
