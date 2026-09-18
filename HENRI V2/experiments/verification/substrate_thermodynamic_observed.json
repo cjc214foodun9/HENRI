@@ -1,0 +1,57 @@
+{
+  "schema": "henri.substrate-thermodynamic.v1",
+  "utc": "2026-09-18T15:56:46.269523+00:00",
+  "evidence_class": "OBSERVED",
+  "evidence_class_note": "OBSERVED: the substrate inventory and the timing proxy are measured on this host. The energy term is NOT measured, so no ratio is computed.",
+  "pillar": "5 \u2014 physical substrate thermodynamic advantage",
+  "definition_required_for_falsifiability": "energy_per_correct_answer = joules / correct_answers, measured against a NAMED baseline on the SAME task. A datasheet wattage or a runtime estimate is not a measurement and must not be substituted.",
+  "substrate_inventory": {
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.14.0",
+    "cpu_count": 16,
+    "torch": "2.11.0+cu128",
+    "cuda_available": false,
+    "cuda_device_count": 0,
+    "mps_available": false,
+    "directml_available": false,
+    "directml_device_count": 0,
+    "ssh_client_present": true,
+    "nvidia_smi_present": true
+  },
+  "energy_probe": {
+    "measured": false,
+    "source": null,
+    "reason": "nvidia-smi rc=4; no portable CPU power sensor API available on this host"
+  },
+  "cpu_proxy_timing": {
+    "status": "OK",
+    "device": "cpu",
+    "workload": "600 x (512x512 matmul)",
+    "seconds": 0.38688679999904707,
+    "flops_approx": 161061273600.0,
+    "note": "TIME only. Not energy. A joule figure requires a power sensor; dividing this by an assumed wattage would fabricate a result."
+  },
+  "advantage": null,
+  "pre_registered": {
+    "S1_substrate_inventory_recorded": true,
+    "S1_any_accelerator_visible": false,
+    "S2_energy_measurable": false,
+    "S3_advantage_fails_closed": true
+  },
+  "verdict": "BLOCKED \u2014 no measurable power sensor on this host, so the energy denominator of energy-per-correct-answer cannot be measured. No thermodynamic advantage is claimed, and none is denied. This pillar is unmet and is recorded as unmet.",
+  "protocol_to_run_when_a_sensor_exists": [
+    "1. Fix the task and the baseline (same candidate set, same readout).",
+    "2. Record joules over the run with a real sensor (nvidia-smi power.draw sampled, or a wall meter).",
+    "3. Record correct_answers for the SAME run.",
+    "4. Compute joules / correct_answers for both substrates.",
+    "5. Report the ratio WITH its sensor, sample interval and run length.",
+    "6. If the ratio is >= 1.0 or the baseline is absent, claim nothing."
+  ],
+  "limits": [
+    "CPU only; torch.cuda.is_available() is False on this host.",
+    "Vast instance 50797414 is EXITED with zero credit; Zone C :10100 closed.",
+    "Time is measured; energy is not. They are not interchangeable.",
+    "The 9070XT is not exposed to torch on this host (no DirectML/ROCm path)."
+  ]
+}

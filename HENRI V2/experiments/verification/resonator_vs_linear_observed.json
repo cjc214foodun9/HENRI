@@ -1,0 +1,365 @@
+{
+  "schema": "henri.resonator-vs-linear.v1",
+  "utc": "2026-09-18T15:57:08.471462+00:00",
+  "evidence_class": "OBSERVED",
+  "evidence_class_note": "OBSERVED: every arm score comes from arc_tripartite_resonator.evaluate_arms, which takes the module's real held-out pair per task. Aggregates are DERIVED across tasks. No arm is reimplemented here.",
+  "pillar": "2 \u2014 non-linear program synthesis (operator algebra)",
+  "prior_single_task_evidence": "The module's own --selfcheck reports, on its single real-ARC scene: treatment 0.268577 vs control_diag_ls 0.660781, converged False, verdict VOID_CONTROL_NOT_SEPARATED. This runner tests whether that single-task result generalizes.",
+  "design": {
+    "n_tasks": 16,
+    "corpus": "C:\\Users\\chan\\henri_data\\ARC-AGI\\data",
+    "min_demos": 4,
+    "max_grid": 30,
+    "canvas": {
+      "num_blocks": 8192,
+      "modulus": 32
+    },
+    "gate_epsilon_used": 0.8957775559425354,
+    "readout": "normalized complex inner product against the held-out target",
+    "arms": [
+      "treatment",
+      "control_diag_ls",
+      "control_identity",
+      "control_shuffled",
+      "control_random_direction"
+    ]
+  },
+  "aggregate": {
+    "n_tasks": 16,
+    "mean_treatment": 0.14408629059119654,
+    "mean_control_diag_ls": 0.39512341170269266,
+    "mean_control_identity": 0.22654107058710993,
+    "mean_control_shuffled": 0.11717011752893408,
+    "mean_control_random_direction": 0.0001547628470002112,
+    "n_treatment_beats_diag_ls": 0,
+    "n_treatment_beats_identity": 5,
+    "n_shuffled_beats_treatment": 7,
+    "majority_beats_diag_ls": false,
+    "majority_beats_identity": false,
+    "shuffled_majority_beats_treatment": false,
+    "treatment_minus_diag_ls": -0.2510371211114961,
+    "treatment_minus_identity": -0.08245477999591339
+  },
+  "per_task": [
+    {
+      "task_id": "007bbfb7",
+      "n_demos": 5,
+      "treatment": 0.268577376260349,
+      "control_diag_ls": 0.6607805134441167,
+      "control_identity": 0.4307453779792598,
+      "control_shuffled": 0.0045920357078060685,
+      "control_random_direction": 0.002191262627518397,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": false,
+      "shuffled_beats_treatment": false,
+      "closest_control": "control_diag_ls"
+    },
+    {
+      "task_id": "00d62c1b",
+      "n_demos": 5,
+      "treatment": 0.4208978019323343,
+      "control_diag_ls": 0.7654616121088923,
+      "control_identity": 0.789424386819277,
+      "control_shuffled": 0.33853493109444316,
+      "control_random_direction": 0.0012710876033788507,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": false,
+      "shuffled_beats_treatment": false,
+      "closest_control": "control_identity"
+    },
+    {
+      "task_id": "09629e4f",
+      "n_demos": 4,
+      "treatment": 0.2507784663835915,
+      "control_diag_ls": 0.30765971733204633,
+      "control_identity": 0.3037624165081081,
+      "control_shuffled": 0.2621242416636362,
+      "control_random_direction": -0.0013219346744795875,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": false,
+      "shuffled_beats_treatment": true,
+      "closest_control": "control_diag_ls"
+    },
+    {
+      "task_id": "0a938d79",
+      "n_demos": 4,
+      "treatment": 0.11954630575481763,
+      "control_diag_ls": 0.15260001035765958,
+      "control_identity": 0.2445951187885466,
+      "control_shuffled": -0.003634985910670515,
+      "control_random_direction": -0.001709077798587346,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": false,
+      "shuffled_beats_treatment": false,
+      "closest_control": "control_identity"
+    },
+    {
+      "task_id": "0d3d703e",
+      "n_demos": 4,
+      "treatment": 0.2565106755533575,
+      "control_diag_ls": 0.4266548280443081,
+      "control_identity": 0.41199345806784715,
+      "control_shuffled": 0.2742157076281913,
+      "control_random_direction": -0.00898860425721363,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": false,
+      "shuffled_beats_treatment": true,
+      "closest_control": "control_diag_ls"
+    },
+    {
+      "task_id": "10fcaaa3",
+      "n_demos": 4,
+      "treatment": 0.11494941657846036,
+      "control_diag_ls": 0.2702193280453919,
+      "control_identity": 0.26793027841219574,
+      "control_shuffled": 0.11213673440466003,
+      "control_random_direction": 0.0029523699623600786,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": false,
+      "shuffled_beats_treatment": false,
+      "closest_control": "control_diag_ls"
+    },
+    {
+      "task_id": "1b2d62fb",
+      "n_demos": 5,
+      "treatment": 0.00953984276712284,
+      "control_diag_ls": 0.5464724191691067,
+      "control_identity": -0.09476718630915702,
+      "control_shuffled": -0.006461073429490534,
+      "control_random_direction": -0.0016781986334158028,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": true,
+      "shuffled_beats_treatment": false,
+      "closest_control": "control_diag_ls"
+    },
+    {
+      "task_id": "1f0c79e5",
+      "n_demos": 4,
+      "treatment": 0.11103626166538166,
+      "control_diag_ls": 0.20760763179572,
+      "control_identity": 0.0583834791835536,
+      "control_shuffled": 0.024838928442025638,
+      "control_random_direction": -0.0012294544560701294,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": true,
+      "shuffled_beats_treatment": false,
+      "closest_control": "control_diag_ls"
+    },
+    {
+      "task_id": "234bbc79",
+      "n_demos": 4,
+      "treatment": 0.1560527586707354,
+      "control_diag_ls": 0.21021191704424896,
+      "control_identity": 0.2665129991202151,
+      "control_shuffled": 0.14294614101913972,
+      "control_random_direction": -0.0004245682066343656,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": false,
+      "shuffled_beats_treatment": false,
+      "closest_control": "control_identity"
+    },
+    {
+      "task_id": "239be575",
+      "n_demos": 6,
+      "treatment": 0.015652721486890758,
+      "control_diag_ls": 0.5645063299918336,
+      "control_identity": 0.008194184211229638,
+      "control_shuffled": 0.02088032682277817,
+      "control_random_direction": 0.0019983347258009303,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": true,
+      "shuffled_beats_treatment": true,
+      "closest_control": "control_diag_ls"
+    },
+    {
+      "task_id": "23b5c85d",
+      "n_demos": 5,
+      "treatment": -0.002011533591950136,
+      "control_diag_ls": 0.01883544658467137,
+      "control_identity": 0.004497810420865476,
+      "control_shuffled": -0.003684642681167827,
+      "control_random_direction": 0.0004856314210670307,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": false,
+      "shuffled_beats_treatment": false,
+      "closest_control": "control_diag_ls"
+    },
+    {
+      "task_id": "253bf280",
+      "n_demos": 8,
+      "treatment": 0.34626681797784914,
+      "control_diag_ls": 0.6565333596336487,
+      "control_identity": 0.6035871712336391,
+      "control_shuffled": 0.25791791964243954,
+      "control_random_direction": 0.0020324663023449994,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": false,
+      "shuffled_beats_treatment": false,
+      "closest_control": "control_diag_ls"
+    },
+    {
+      "task_id": "25d8a9c8",
+      "n_demos": 4,
+      "treatment": 0.1317989871315264,
+      "control_diag_ls": 0.2385820793093184,
+      "control_identity": 0.24293401178760515,
+      "control_shuffled": 0.18284587974422137,
+      "control_random_direction": 0.005718067018458551,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": false,
+      "shuffled_beats_treatment": true,
+      "closest_control": "control_identity"
+    },
+    {
+      "task_id": "25ff71a9",
+      "n_demos": 4,
+      "treatment": 0.09592810909219025,
+      "control_diag_ls": 0.999976480494911,
+      "control_identity": 0.13068330735243255,
+      "control_shuffled": 0.24086807002549238,
+      "control_random_direction": -0.002989550223456504,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": false,
+      "shuffled_beats_treatment": true,
+      "closest_control": "control_diag_ls"
+    },
+    {
+      "task_id": "27a28665",
+      "n_demos": 7,
+      "treatment": -0.004325970988881151,
+      "control_diag_ls": 0.05908490673216999,
+      "control_identity": -0.05535370395000908,
+      "control_shuffled": 0.012419038602909598,
+      "control_random_direction": -0.002362708641994489,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": true,
+      "shuffled_beats_treatment": true,
+      "closest_control": "control_diag_ls"
+    },
+    {
+      "task_id": "28e73c20",
+      "n_demos": 5,
+      "treatment": 0.014182612785369282,
+      "control_diag_ls": 0.2367880071550387,
+      "control_identity": 0.011534019768149974,
+      "control_shuffled": 0.014182627686530986,
+      "control_random_direction": 0.006531082782926395,
+      "verdict": "VOID_CONTROL_NOT_SEPARATED",
+      "beats_diag_ls": false,
+      "beats_identity": true,
+      "shuffled_beats_treatment": true,
+      "closest_control": "control_diag_ls"
+    }
+  ],
+  "skipped_scenes": [
+    {
+      "task": "017c7c7b",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "025d127b",
+      "reason": "only 2 demos"
+    },
+    {
+      "task": "045e512c",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "0520fde7",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "05269061",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "05f2a901",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "06df4c85",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "08ed6ac7",
+      "reason": "only 2 demos"
+    },
+    {
+      "task": "0962bcdd",
+      "reason": "only 2 demos"
+    },
+    {
+      "task": "0b148d64",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "0ca9ddb6",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "0dfd9992",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "0e206a2e",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "11852cab",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "1190e5a7",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "137eaa0f",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "150deff5",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "178fcbfb",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "1a07d186",
+      "reason": "only 3 demos"
+    },
+    {
+      "task": "1b60fb0c",
+      "reason": "only 3 demos"
+    }
+  ],
+  "errors": [],
+  "pre_registered": {
+    "N1_beats_incumbent_linear_majority": false,
+    "N2_beats_identity_majority": false,
+    "N3_convergence_reported": true,
+    "N4_shuffled_does_not_beat_treatment": true
+  },
+  "verdict": "PILLAR_2_REPLACEMENT_NOT_JUSTIFIED \u2014 the incumbent linear operator matches or beats the tripartite resonator on a majority of real ARC tasks. The proposed swap is REFUTED for this data and must not ship as an improvement. The claim that 'a linear operator cannot compute relational logic' is not supported by this measurement; it remains an untested hypothesis about a DIFFERENT operator family.",
+  "limits": [
+    "One held-out demonstration pair per task; not a benchmark score.",
+    "Measures OPERATOR QUALITY on real ARC waves, not ARC task solving.",
+    "The resonator's own synthetic scenarios are excluded (solvable by construction and prove nothing).",
+    "CPU only; no CUDA (Vast 50797414 EXITED, credit 0)."
+  ]
+}
