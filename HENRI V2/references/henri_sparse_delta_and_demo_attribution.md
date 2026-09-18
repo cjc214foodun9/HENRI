@@ -75,12 +75,45 @@ Baseline for comparison: `acc_without_bias` = **0.75** (no feedback at all).
 
 ### What this establishes
 
-**The zero-delta broadcast is a production defect, not a neutral default.** At equal
-delivery rate, CONFLATE drives accuracy **below the no-feedback baseline** (0.6250 and
-0.5833 against 0.75), while ABSTAIN stays clearly above it (0.7917 and 0.7708). The
+**Within this harness, treating an undelivered verdict as `delta = 0` is harmful.** At
+equal delivery rate, CONFLATE drives accuracy **below the no-feedback baseline** (0.6250
+and 0.5833 against 0.75), while ABSTAIN stays clearly above it (0.7917 and 0.7708). The
 mechanism is visible in the flip counts: CONFLATE produces **8 and 10 right→wrong**
-flips against ABSTAIN's **0 and 0**. Reading silence as failure actively corrupts the
-loop; it is worse than doing nothing.
+flips against ABSTAIN's **0 and 0**.
+
+**SCOPE CORRECTION — my own overclaim, caught by my own probe.** An earlier version of
+this register read "the zero-delta broadcast is a production defect, not a neutral
+default." That is **FALSE** and is retracted here. The conflation is an artefact of the
+HARNESS's composite encoding:
+
+```
+bind_val = chosen * 2 + int(delta_signal)      # the composite lives HERE
+signed   = 2 * r_ds - 1.0                      # so delta=0 -> -1 -> suppression
+```
+
+Production has **no composite and no signed bias** on this path.
+`production_arc_run.py:2751-2761` (gated by `HENRI_TYPED_PROBE_CONTRACT`, **default
+OFF**) only writes a phase ramp:
+
+```
+_ds = float(task_progressed)                   # a BOOLEAN -> 0.0 or 1.0
+_new_wave, _pinfo = transduce_external_outcome(_ref, _aid, _ds, ...)
+```
+
+Measured read-only, no production change: `transduce_external_outcome(ref, aid, 0.0)`
+recovers `0.00000429` at `|err| = 4.295e-06`, i.e. the transducer is **faithful** at
+zero delta.
+
+**And the written wave has no decision consumer.** `probe_belief_wave` has exactly three
+production sites: `984` (`= None`), `2755` (read as `_ref`, its own next input), `2761`
+(`= _new_wave`). The recovered value appears **only** in telemetry (`2766`
+`"recovered_delta"`). A write with no decision consumer cannot suppress a decision —
+flag-gated or not.
+
+`SPARSE_CONFLATION_HARMFUL` therefore stands **as a result about the harness encoding**.
+What it justifies is conditional: *if* a signed-bias channel is ever wired into
+production, it must abstain on a missing verdict rather than broadcast zero. It does
+**not** justify patching production today, because no such channel exists.
 
 **Second, E3 fails by design and is reported as such.** `change_rate` *rises* with
 sparsity because CONFLATE applies a bias at **every** step — a miss suppresses. That
@@ -98,6 +131,14 @@ E4/E4b/E5 carry the verdict.
 - `p ≤ 0.1` delivered 4–6 signals, below the pre-registered `MIN_DELIVERIES = 8`;
   those levels are **excluded** from E4/E5 (`interpretable_p_levels = ['0.5', '0.3']`).
   They are reported, not silently dropped.
+- **Production scope (corrected):** the measured conflation is a property of this
+  harness's composite encoding. Production's zero-delta write is faithful
+  (`|err| = 4.295e-06`), flag-gated OFF, and has no decision consumer. The finding is
+  a harness-encoding result, not evidence of a live production defect.
+- The `probe_zero_delta.py` check that "a zero delta changes the wave" is
+  **confounded** and its verdict is discarded: `cos ≈ 0` for *every* delta including
+  `0.0`, because the action-key rotation applies regardless of delta. That probe cannot
+  isolate delta and must not be cited.
 - The E-metrics were **recomputed from the raw arms** in the receipt and agreed with
   the stated verdicts (`RECEIPT SELF-CONSISTENT: True`).
 
