@@ -214,6 +214,10 @@ HENRI_SEALED_ACTION_EGRESS = (
 # telemetry on every decode, so a silent misconfiguration is visible in the run
 # log rather than inferred. Source -> consumer is traceable: this constant ->
 # _decode_action_egress_sealed(min_margin=...) -> telemetry "sealed_min_margin".
+# LIVE measurement exists (was previously recorded here as UNMEASURED; corrected
+# once the receipt landed): mean margin 0.023355, norm-entropy 0.980811, n=1026
+# encoder waves -- worse than the random-wave control. Default stays 0.0 and the
+# flag stays OFF; the measurement is evidence AGAINST enabling, not for a floor.
 try:
     HENRI_SEALED_EGRESS_MIN_MARGIN = float(
         os.environ.get("HENRI_SEALED_EGRESS_MIN_MARGIN", "0.0") or 0.0)
@@ -225,17 +229,25 @@ if HENRI_SEALED_ACTION_EGRESS:
         decode_action_egress_sealed as _decode_action_egress_sealed,
     )
     if HENRI_SEALED_EGRESS_MIN_MARGIN <= 0.0:
-        # LOUD, not silent. The sealed readout was measured near-uniform on
-        # arbitrary waves, and its margin distribution on LIVE encoder waves is
-        # UNMEASURED, so this code refuses to invent a floor. With no floor the
-        # path will act on near-random selections; the operator must set
-        # HENRI_SEALED_EGRESS_MIN_MARGIN from the live top1_margin telemetry.
+        # LOUD, not silent. The sealed readout is near-uniform by MEASUREMENT, on
+        # both arbitrary and LIVE encoder waves:
+        #   random waves : mean norm-entropy 0.974660, mean margin 0.050150
+        #   LIVE waves   : mean norm-entropy 0.980811, mean margin 0.023355
+        #                (p05 0.000865, p10 0.001432; n=1026 real ARC grids)
+        # The live margin is LOWER than the random-wave margin
+        # (live - random = -0.026795) while entropy is HIGHER, i.e. the real
+        # ingress produces a less decisive readout than noise does. So no floor is
+        # inferred here and none is recommended: a floor chosen from these
+        # percentiles controls ABSTENTION rate, not accuracy. The flag stays OFF.
+        # See experiments/verification/sealed_margin_live_observed.json.
         print(
             "[init] WARNING: HENRI_SEALED_ACTION_EGRESS=1 with "
             "HENRI_SEALED_EGRESS_MIN_MARGIN=0.0 -> no decisiveness floor. The "
-            "sealed readout is near-uniform by measurement (mean normalized "
-            "entropy 0.975 on random waves), so decoded actions may be near-random. "
-            "Read the top1_margin telemetry, then set a floor."
+            "sealed readout measured WORSE THAN NOISE on live encoder waves "
+            "(mean margin 0.023 vs 0.050 random; norm-entropy 0.981 vs 0.975), so "
+            "decoded actions may be near-random. The live measurement does NOT "
+            "justify enabling this path; leave the flag OFF unless a future "
+            "measurement reverses this result."
         )
 
 # P0.5: task-weighted discriminative EIG (Aletheia postmortem).  Evidence
