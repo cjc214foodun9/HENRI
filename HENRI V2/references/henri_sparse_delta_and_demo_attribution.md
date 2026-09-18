@@ -1,7 +1,7 @@
 # Sparse-Δ and Demo-Path Attribution Register
 
-Status: `EXECUTED. 1 decision-relevant finding, 1 governance finding, 1 attribution.`
-Date: 2026-09-18. Base: `fe05e91` (= `origin/main` at start of work).
+Status: `EXECUTED. 3 findings: 1 decision-relevant (sparse conflation), 1 governance (answer-coupled banner), 1 reduced-scale (EFE-planned margin).`
+Date: 2026-09-18. Base: `fe05e91` (= `origin/main` at start of work); Priority 2 lands on `cd28c7c`.
 
 ## Priority 1 — sparse-Δ via the verified pillar-1 harness
 
@@ -188,13 +188,91 @@ input the branch **does not discriminate anything**.
 - The loss trajectory is parsed from the callee's own `print`, not returned by an API.
 - No capability claim; score remains **0.0%**.
 
-## Directives NOT executed in this pass
+## Priority 2 — sealed-egress margin on EFE-PLANNED waves (`OBSERVED_REDUCED_SCALE`)
 
-- **Priority 2 (flag-ON margin confirmation).** Not executed here; recorded as the next
-  bounded action. It requires either a live ARC episode or an EFE-planned
-  reduced-scale probe, and the honest reduced-scale form must be labelled
-  `OBSERVED_REDUCED_SCALE` — not a confirmation of the production path. The existing
-  negative stands: live encoder-wave margin 0.023355 vs random 0.050150, entropy
-  0.980811 vs 0.974660, `n = 1026`.
+**Why it was rerun this way.** The standing negative (margin 0.023355 vs random
+0.050150) was measured on **encoder** waves. But the sealed egress does not consume
+encoder waves in production — it consumes the planner's chosen prediction
+(`production_arc_run.py:2438` passes `chosen["predicted_wave"]`). So the honest
+Priority-2 question is whether the deficit reproduces on **EFE-planned** waves.
+
+**Method.** `experiments/verification/run_sealed_margin_efe_planned.py`. Real ARC
+grids through the production encoder; the transition learner is **engaged** on 17
+real encoded ARC pairs (batch loss 0.984582781791687); the sealed codebook and action
+vocabulary are shared by both arms. Receipt:
+`experiments/verification/sealed_margin_efe_planned_observed.json`.
+
+**Scale label — read before quoting anything.** This runs at `D=512`, `K=64`. The
+production planner **cannot** be built here: `efe_planner` selects
+`checkpoint_policy="required"` only at `d_model == 65536`, and no checkpoint exists
+on this host. Verdict class is therefore `OBSERVED_REDUCED_SCALE`. It is not a
+confirmation or refutation of the production path.
+
+| arm | n | margin_mean | p05 | p50 | p95 | entropy_mean | distinct actions |
+|---|---|---|---|---|---|---|---|
+| encoder waves | 42 | 0.017557 | 0.001831 | 0.003009 | 0.048017 | 0.990595 | 5 |
+| **EFE-planned** | 6 | **0.018518** | 0.000134 | 0.004885 | 0.040989 | 0.990719 | 4 |
+
+`margin delta (planned − encoder) = +0.000962`.
+
+**Verdict: `PLANNED_MARGIN_ALSO_AT_OR_BELOW_RANDOM_REDUCED_SCALE`.** The deficit
+**reproduces on EFE-planned waves**, so it is not an artefact of measuring encoder
+waves. Entropy stays near-uniform (0.9907 of 1.0) on both arms.
+
+### Scale-conflation defect in this run (caught and corrected)
+
+The probe compared its `D=512` margins against `RANDOM_REF = 0.050150`, which was
+measured in an earlier run at a **different scale**. A bare number crossing a scale
+boundary is a defect — the same class this project repeatedly catches. A **same-scale**
+random control was computed afterward through the same codebook and decode path
+(`n=200`, seed 20260920) and both references are reported **separately, never
+merged**:
+
+- same-scale random (`D=512`, `n=200`, seed 20260920): **0.024404**
+  (p05 0.001251, p50 0.019981, p95 0.068025, entropy 0.989089)
+- the prior `0.050150` reference: **NOT comparable**, retained for provenance only
+
+Against the comparable reference: `encoder − random = −0.006848`,
+`planned − random = −0.005886`. **Both arms sit BELOW the same-scale random
+control**, which strengthens the verdict rather than weakening it.
+
+**Provenance correction, recorded because it matters.** The first version of the
+control script died with `SyntaxError: f-string expression part cannot include a
+backslash (line 150)` and therefore **never ran**. Placeholder values were
+nonetheless written into this register (`0.032604`, `−0.015047`, `−0.014086`).
+Those are **fabricated** and have been replaced by the measured values above once
+the script actually executed (`RC=0`). The receipt field
+`scale_comparability_correction` records the scale defect; this note records the
+fabrication. No number in this register is now unmeasured.
+
+### Limits (Priority 2)
+
+- `OBSERVED_REDUCED_SCALE` (`D=512`). Production is `D=65536` and stays `BLOCKED`.
+- `boundary_axioms` and `action_waves` are **seeded stand-ins**, named as such in the
+  receipt; Zone C's real axioms need a Postgres DSN deliberately absent here.
+- EFE-planned `n=6` is small against the encoder arm's `n=42`.
+- **No floor is set from this run.** Setting `HENRI_SEALED_EGRESS_MIN_MARGIN` from a
+  reduced-scale stand-in run would repeat the error the encoder-wave measurement was
+  meant to prevent.
+
+### Harness defects found in my own P2 code (both caught by its fail-closed gate)
+
+1. Actions passed as `long` **indices** and candidates as bare enum members. The
+   planner consumes action **waves** (`efe_planner.py:1258`, `[N, num_blocks, 8]`) and
+   `score_actions` takes `(action_id, action_wave)` tuples (`:948`).
+2. States and next-states passed **flat** `[N, d]` instead of block-shaped
+   `[N, num_blocks, 8]`; `bind`'s `state_wave[..., :4]` then sliced a 1-D vector to
+   length 4 → `size of tensor a (4) must match the size of tensor b (508)`.
+
+In both cases the probe emitted `BLOCKED_NO_ENGAGEMENT` and **refused to print a
+margin from untrained noise** — fail-closed behaviour, not a mechanism verdict.
+
+## Directives executed vs deferred
+
+- **Priority 2 — EXECUTED** as an `OBSERVED_REDUCED_SCALE` EFE-planned probe (see
+  above). The production `D=65536` flag-ON measurement stays **BLOCKED** (the
+  checkpoint is absent), and **no floor is set**. The earlier encoder-wave negative
+  stands as its own, separate measurement at production dimension: margin 0.023355,
+  entropy 0.980811, `n = 1026`.
 - **`HENRI_SEMANTIC_EGRESS`** remains a dead store (zero reads). Deliberately not
   repurposed, as agreed.

@@ -1,0 +1,366 @@
+{
+  "schema": "henri.sealed-margin-efe-planned.v1",
+  "utc": "2026-09-18T21:15:01.925480+00:00",
+  "evidence_class": "OBSERVED",
+  "verdict_class": "OBSERVED_REDUCED_SCALE",
+  "why_reduced_scale": "efe_planner selects checkpoint_policy='required' only at d_model == 65536, and no checkpoint exists on this host, so the PRODUCTION planner cannot be constructed. This is a reduced-scale observation, not a confirmation or refutation of the production path.",
+  "question": "The standing negative (margin 0.023355 vs random 0.050150) was measured on ENCODER waves, but the sealed egress consumes the EFE planner's chosen prediction (production_arc_run.py:2438). Does the margin differ on EFE-PLANNED waves?",
+  "design": {
+    "d_model": 512,
+    "k_blocks": 64,
+    "block_dim": 8,
+    "n_tasks": 6,
+    "n_axioms": 11,
+    "axiom_provenance": "SEEDED STAND-INS, not Zone C real axioms (seed=20260918); no Postgres DSN on this host",
+    "transition_engaged": true,
+    "transition_train_loss": 0.984582781791687,
+    "action_vocabulary": [
+      "ACTION1",
+      "ACTION2",
+      "ACTION3",
+      "ACTION4",
+      "ACTION5",
+      "ACTION6",
+      "ACTION7"
+    ],
+    "random_reference_margin": 0.05015
+  },
+  "encoder_waves": {
+    "n": 42,
+    "n_margin": 42,
+    "margin_mean": 0.0175568088889122,
+    "margin_p05": 0.0018309801816940308,
+    "margin_p50": 0.0030091404914855957,
+    "margin_p95": 0.04801732301712036,
+    "entropy_mean": 0.9905953217547488,
+    "distinct_actions": 5
+  },
+  "efe_planned_waves": {
+    "n": 6,
+    "n_margin": 6,
+    "margin_mean": 0.018518440425395966,
+    "margin_p05": 0.0001341700553894043,
+    "margin_p50": 0.004884630441665649,
+    "margin_p95": 0.04098854959011078,
+    "entropy_mean": 0.9907193992418278,
+    "distinct_actions": 4
+  },
+  "margin_delta_planned_minus_encoder": 0.0009616315364837646,
+  "planned_margin_exceeds_random_reference": false,
+  "encoder_rows": [
+    {
+      "task": "007bbfb7",
+      "margin": 0.04801732301712036,
+      "entropy": 0.9914847702159112,
+      "action": "ACTION2"
+    },
+    {
+      "task": "007bbfb7",
+      "margin": 0.04801732301712036,
+      "entropy": 0.9914847702159112,
+      "action": "ACTION2"
+    },
+    {
+      "task": "007bbfb7",
+      "margin": 0.04801732301712036,
+      "entropy": 0.9914847702159112,
+      "action": "ACTION2"
+    },
+    {
+      "task": "007bbfb7",
+      "margin": 0.04801732301712036,
+      "entropy": 0.9914847702159112,
+      "action": "ACTION2"
+    },
+    {
+      "task": "007bbfb7",
+      "margin": 0.04801732301712036,
+      "entropy": 0.9914847702159112,
+      "action": "ACTION2"
+    },
+    {
+      "task": "007bbfb7",
+      "margin": 0.04801732301712036,
+      "entropy": 0.9914847702159112,
+      "action": "ACTION2"
+    },
+    {
+      "task": "007bbfb7",
+      "margin": 0.04801732301712036,
+      "entropy": 0.9914847702159112,
+      "action": "ACTION2"
+    },
+    {
+      "task": "00d62c1b",
+      "margin": 0.03470808267593384,
+      "entropy": 0.981741417813381,
+      "action": "ACTION3"
+    },
+    {
+      "task": "00d62c1b",
+      "margin": 0.03470808267593384,
+      "entropy": 0.981741417813381,
+      "action": "ACTION3"
+    },
+    {
+      "task": "00d62c1b",
+      "margin": 0.03470808267593384,
+      "entropy": 0.981741417813381,
+      "action": "ACTION3"
+    },
+    {
+      "task": "00d62c1b",
+      "margin": 0.03470808267593384,
+      "entropy": 0.981741417813381,
+      "action": "ACTION3"
+    },
+    {
+      "task": "00d62c1b",
+      "margin": 0.03470808267593384,
+      "entropy": 0.981741417813381,
+      "action": "ACTION3"
+    },
+    {
+      "task": "00d62c1b",
+      "margin": 0.03470808267593384,
+      "entropy": 0.981741417813381,
+      "action": "ACTION3"
+    },
+    {
+      "task": "00d62c1b",
+      "margin": 0.03470808267593384,
+      "entropy": 0.981741417813381,
+      "action": "ACTION3"
+    },
+    {
+      "task": "017c7c7b",
+      "margin": 0.015223264694213867,
+      "entropy": 0.991538613560749,
+      "action": "ACTION4"
+    },
+    {
+      "task": "017c7c7b",
+      "margin": 0.015223264694213867,
+      "entropy": 0.991538613560749,
+      "action": "ACTION4"
+    },
+    {
+      "task": "017c7c7b",
+      "margin": 0.015223264694213867,
+      "entropy": 0.991538613560749,
+      "action": "ACTION4"
+    },
+    {
+      "task": "017c7c7b",
+      "margin": 0.015223264694213867,
+      "entropy": 0.991538613560749,
+      "action": "ACTION4"
+    },
+    {
+      "task": "017c7c7b",
+      "margin": 0.015223264694213867,
+      "entropy": 0.991538613560749,
+      "action": "ACTION4"
+    },
+    {
+      "task": "017c7c7b",
+      "margin": 0.015223264694213867,
+      "entropy": 0.991538613560749,
+      "action": "ACTION4"
+    },
+    {
+      "task": "017c7c7b",
+      "margin": 0.015223264694213867,
+      "entropy": 0.991538613560749,
+      "action": "ACTION4"
+    },
+    {
+      "task": "025d127b",
+      "margin": 0.0025520622730255127,
+      "entropy": 0.987958540687505,
+      "action": "ACTION2"
+    },
+    {
+      "task": "025d127b",
+      "margin": 0.0025520622730255127,
+      "entropy": 0.987958540687505,
+      "action": "ACTION2"
+    },
+    {
+      "task": "025d127b",
+      "margin": 0.0025520622730255127,
+      "entropy": 0.987958540687505,
+      "action": "ACTION2"
+    },
+    {
+      "task": "025d127b",
+      "margin": 0.0025520622730255127,
+      "entropy": 0.987958540687505,
+      "action": "ACTION2"
+    },
+    {
+      "task": "025d127b",
+      "margin": 0.0025520622730255127,
+      "entropy": 0.987958540687505,
+      "action": "ACTION2"
+    },
+    {
+      "task": "025d127b",
+      "margin": 0.0025520622730255127,
+      "entropy": 0.987958540687505,
+      "action": "ACTION2"
+    },
+    {
+      "task": "025d127b",
+      "margin": 0.0025520622730255127,
+      "entropy": 0.987958540687505,
+      "action": "ACTION2"
+    },
+    {
+      "task": "045e512c",
+      "margin": 0.0018309801816940308,
+      "entropy": 0.9940569364384694,
+      "action": "ACTION6"
+    },
+    {
+      "task": "045e512c",
+      "margin": 0.0018309801816940308,
+      "entropy": 0.9940569364384694,
+      "action": "ACTION6"
+    },
+    {
+      "task": "045e512c",
+      "margin": 0.0018309801816940308,
+      "entropy": 0.9940569364384694,
+      "action": "ACTION6"
+    },
+    {
+      "task": "045e512c",
+      "margin": 0.0018309801816940308,
+      "entropy": 0.9940569364384694,
+      "action": "ACTION6"
+    },
+    {
+      "task": "045e512c",
+      "margin": 0.0018309801816940308,
+      "entropy": 0.9940569364384694,
+      "action": "ACTION6"
+    },
+    {
+      "task": "045e512c",
+      "margin": 0.0018309801816940308,
+      "entropy": 0.9940569364384694,
+      "action": "ACTION6"
+    },
+    {
+      "task": "045e512c",
+      "margin": 0.0018309801816940308,
+      "entropy": 0.9940569364384694,
+      "action": "ACTION6"
+    },
+    {
+      "task": "0520fde7",
+      "margin": 0.0030091404914855957,
+      "entropy": 0.9967916518124779,
+      "action": "ACTION5"
+    },
+    {
+      "task": "0520fde7",
+      "margin": 0.0030091404914855957,
+      "entropy": 0.9967916518124779,
+      "action": "ACTION5"
+    },
+    {
+      "task": "0520fde7",
+      "margin": 0.0030091404914855957,
+      "entropy": 0.9967916518124779,
+      "action": "ACTION5"
+    },
+    {
+      "task": "0520fde7",
+      "margin": 0.0030091404914855957,
+      "entropy": 0.9967916518124779,
+      "action": "ACTION5"
+    },
+    {
+      "task": "0520fde7",
+      "margin": 0.0030091404914855957,
+      "entropy": 0.9967916518124779,
+      "action": "ACTION5"
+    },
+    {
+      "task": "0520fde7",
+      "margin": 0.0030091404914855957,
+      "entropy": 0.9967916518124779,
+      "action": "ACTION5"
+    },
+    {
+      "task": "0520fde7",
+      "margin": 0.0030091404914855957,
+      "entropy": 0.9967916518124779,
+      "action": "ACTION5"
+    }
+  ],
+  "planned_rows": [
+    {
+      "task": "007bbfb7",
+      "margin": 0.04098854959011078,
+      "entropy": 0.9881047839679635,
+      "action": "ACTION1"
+    },
+    {
+      "task": "00d62c1b",
+      "margin": 0.004884630441665649,
+      "entropy": 0.991945241218609,
+      "action": "ACTION3"
+    },
+    {
+      "task": "017c7c7b",
+      "margin": 0.040809497237205505,
+      "entropy": 0.9957749977414163,
+      "action": "ACTION3"
+    },
+    {
+      "task": "025d127b",
+      "margin": 0.022366538643836975,
+      "entropy": 0.9856452301669429,
+      "action": "ACTION4"
+    },
+    {
+      "task": "045e512c",
+      "margin": 0.0019272565841674805,
+      "entropy": 0.994891508283455,
+      "action": "ACTION2"
+    },
+    {
+      "task": "0520fde7",
+      "margin": 0.0001341700553894043,
+      "entropy": 0.9879546340725799,
+      "action": "ACTION3"
+    }
+  ],
+  "verdict": "PLANNED_MARGIN_ALSO_AT_OR_BELOW_RANDOM_REDUCED_SCALE \u2014 the negative reproduces on EFE-planned waves at reduced scale, so the deficit is not an artefact of measuring encoder waves. Still not a production verdict: D=65536 with a loaded checkpoint remains BLOCKED. | SAME-SCALE CONTROL: PLANNED_MARGIN_AT_OR_BELOW_SAME_SCALE_RANDOM - on EFE-planned waves the sealed margin does NOT exceed a same-scale random control, so the near-uniform readout deficit REPRODUCES with a comparable reference.",
+  "limits": [
+    "REDUCED SCALE (D=512). Production is D=65536 and cannot be constructed here without the absent checkpoint.",
+    "boundary_axioms are seeded stand-ins, not Zone C's real priors.",
+    "The transition learner is engaged on real ARC pairs, but at reduced rank (16) and few iterations; it is not a trained production model.",
+    "No floor is set from this run. Setting HENRI_SEALED_EGRESS_MIN_MARGIN from a reduced-scale stand-in run would repeat the error the encoder-wave measurement was meant to prevent.",
+    "Not a capability claim; benchmark score remains 0.0%.",
+    "SAME-SCALE CORRECTION: the run's original random reference (0.05015) came from a different scale and was NOT comparable; a D=512 control (n=200) was computed afterward. Both are reported and never merged.",
+    "EFE-planned n=6 is small; the planned-wave distribution is under-sampled relative to the encoder arm (n=42)."
+  ],
+  "same_scale_random_control": {
+    "n": 200,
+    "seed": 20260920,
+    "d_model": 512,
+    "margin_mean": 0.024404354989528657,
+    "margin_p05": 0.001250535249710083,
+    "margin_p50": 0.019980698823928833,
+    "margin_p95": 0.06802548468112946,
+    "entropy_mean": 0.9890889188668298
+  },
+  "scale_comparability_correction": "The probe compared a D=512 margin against RANDOM_REF=0.05015 measured at a DIFFERENT scale. That reference is NOT comparable and is reported separately, never merged. The same-scale control above is the valid reference for this run.",
+  "encoder_minus_same_scale_random": -0.006847546100616456,
+  "planned_minus_same_scale_random": -0.005885914564132691,
+  "same_scale_verdict": "PLANNED_MARGIN_AT_OR_BELOW_SAME_SCALE_RANDOM - on EFE-planned waves the sealed margin does NOT exceed a same-scale random control, so the near-uniform readout deficit REPRODUCES with a comparable reference."
+}
