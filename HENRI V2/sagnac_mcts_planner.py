@@ -216,7 +216,23 @@ class SagnacMCTSPlanner:
 
             zero_shot_delta = 1.0 - self.vision_encoder.compute_sagnac_similarity(goal_wave_pred, target_wave)
             if zero_shot_delta <= self.tau_veto:
-                print(f"[Phase C Zero-Shot Success] Goal wave retrieved in O(1) single pass! Sagnac Delta: {zero_shot_delta:.6f}")
+                # UNSUPPORTED SUCCESS LABEL REMOVED (2026-09-18).
+                # This branch used to print "[Phase C Zero-Shot Success] Goal wave
+                # retrieved in O(1) single pass!". That print is deleted because
+                # the criterion is ANSWER-COUPLED: it compares the prediction
+                # against the caller-supplied target_wave (line above), i.e. the
+                # held-out output it claims to predict. Measured control
+                # (experiments/verification/demo_path_sgld_attribution.json,
+                # verdict BANNER_IS_ANSWER_COUPLED): the SAME banner fired for a
+                # row-shuffled UNRELATED target, with byte-identical SGLD loss
+                # trajectories and delta 0.0 -- so the label carried no
+                # information about retrieval quality.
+                # Retention boundary: the early return is KEPT unchanged. It is
+                # reachable only when a caller passes a target grid, which the
+                # production runner does not do (it fail-closes with
+                # EVALUATION_BLOCKED / OBSERVED_TEST_TARGET_UNAVAILABLE). Removing
+                # the control flow is a separate, un-approved change; any
+                # replacement criterion must use pre-prediction information only.
                 return SpelkeDSLNode(op_name="Identity"), float(zero_shot_delta)
 
         root_ast = SpelkeDSLNode(op_name="Identity")
