@@ -324,6 +324,28 @@ def test_probe_from_logits_length_mismatch_fails_closed():
         probe_from_logits(torch.zeros(3), option_ids=(0, 1), state_snapshot_id="s")
 
 
+def test_no_binding_abstains_rather_than_claiming_ok():
+    """A confident row with no wave_binding must ABSTAIN, not claim OK.
+
+    Regression: the first version set status=OK and wave_binding=None, which
+    __post_init__ rejects -- so the function RAISED instead of abstaining. A
+    caller that omits a binding deserves an abstention with a reason.
+    """
+    from arc_egress_contract import ST_ABSTAIN_NO_BINDING
+
+    env = probe_from_logits(
+        torch.tensor([5.0, 0.0, 0.0, 0.0]),
+        option_ids=(0, 1, 2, 3),
+        state_snapshot_id="s1",
+        wave_binding=None,
+    )
+    assert env.status == ST_ABSTAIN_NO_BINDING
+    assert not env.is_consumable
+    # the distribution is still reported: calibration must be able to read it
+    assert len(env.probabilities) == 4
+    assert abs(sum(env.probabilities) - 1.0) < 1e-6
+
+
 # --------------------------------------------------------------- snapshot ---
 
 def test_state_snapshot_id_is_deterministic_and_sensitive():

@@ -286,7 +286,12 @@ ST_OK = "OK"
 ST_ABSTAIN_LOW_CONF = "ABSTAIN_LOW_CONF"
 ST_ABSTAIN_NO_ORDER = "ABSTAIN_NO_ORDER"
 ST_ABSTAIN_INVALID = "ABSTAIN_INVALID"
-PROBE_STATUSES = (ST_OK, ST_ABSTAIN_LOW_CONF, ST_ABSTAIN_NO_ORDER, ST_ABSTAIN_INVALID)
+# A probe with no wave_binding cannot be OK: the binding is the sole feedback
+# channel. This status exists so probe_from_logits ABSTAINS with a reason
+# instead of constructing an OK envelope that __post_init__ would reject.
+ST_ABSTAIN_NO_BINDING = "ABSTAIN_NO_BINDING"
+PROBE_STATUSES = (ST_OK, ST_ABSTAIN_LOW_CONF, ST_ABSTAIN_NO_ORDER,
+                  ST_ABSTAIN_INVALID, ST_ABSTAIN_NO_BINDING)
 
 PROB_SUM_TOL = 1e-6
 
@@ -580,7 +585,13 @@ def probe_from_logits(
     status = ST_OK
     if low_confidence_floor is not None and conf < low_confidence_floor:
         status = ST_ABSTAIN_LOW_CONF
-    if status != ST_OK or wave_binding is None:
+    if wave_binding is None and status == ST_OK:
+        # No feedback channel => the probe cannot be consumable. Abstain with an
+        # explicit reason. The first version returned status=ST_OK with
+        # wave_binding=None, which __post_init__ rejects -- so the function
+        # RAISED instead of abstaining. Caught by test_no_binding_abstains.
+        status = ST_ABSTAIN_NO_BINDING
+    if status != ST_OK:
         return ProbeEnvelope(
             probe_id=probe_id,
             question_word=QW_CHOICE,

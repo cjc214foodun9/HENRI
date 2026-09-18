@@ -348,3 +348,113 @@ NO_MEASUREMENT_YET = (
     "HYPOTHESIS: no calibration number has been produced for this head. "
     'The word "calibrated" is UNVERIFIED until evaluate_calibration returns a report.'
 )
+
+
+# ---------------------------------------------------------------------------
+# 4. Companion metrics (S1.1)
+#
+# WHY ECE ALONE IS NOT ENOUGH
+#   ECE is a magnitude. A predictor that states uniform 0.25 on a set where it
+#   is correct 25% of the time scores ECE 0.0 while being useless. So a receipt
+#   that reports ECE alone can be satisfied by an uninformative model. These
+#   three companions close that hole:
+#     skew      -- the SIGNED decomposition. Magnitude-only ECE cannot say
+#                  whether a model is systematically over- or under-confident.
+#     sharpness -- how decisive the model is (mean/max peak probability).
+#     peaks     -- the full peak-height histogram, so a reader can see whether
+#                  confidence is spread (diffuse) or concentrated (decisive)
+#                  without trusting a single summary number.
+#   They are REPORTING aids. They do not replace calibration-against-outcomes,
+#   and sharpness alone is not quality: a sharply wrong model is worse.
+# ---------------------------------------------------------------------------
+
+
+def calibration_skew(
+    confidences: Sequence[float],
+    correct: Sequence[bool],
+    n_bins: int = 10,
+    bins: Optional[List[dict]] = None,
+) -> float:
+    """Signed ECE decomposition: sum_b (n_b/N) * (accuracy_b - mean_confidence_b).
+
+    > 0  UNDERCONFIDENT: stated confidence is LOWER than observed accuracy.
+    < 0  OVERCONFIDENT:  stated confidence is HIGHER than observed accuracy.
+    == 0 no systematic direction (which is NOT the same as well calibrated:
+         a model can be over-confident in one bin and under-confident in
+         another and still net to zero).
+
+    This is the quantity that distinguishes "miscalibrated because it brags"
+    from "miscalibrated because it hedges". Magnitude-only ECE conflates them.
+    """
+    n = len(confidences)
+    if n == 0:
+        raise ValueError("calibration_skew: empty input")
+    bs = bins if bins is not None else reliability_bins(confidences, correct, n_bins)
+    return sum((b["count"] / n) * (b["accuracy"] - b["mean_confidence"]) for b in bs)
+
+
+def peak_histogram(
+    confidences: Sequence[float],
+    n_bins: int = 10,
+) -> List[dict]:
+    """Histogram of per-sample peak probability (the model's decisiveness).
+
+    Each entry: {bin, low, high, count}. A model whose peaks cluster near 1/K is
+    effectively saying "I do not know" on every sample; a model whose peaks
+    cluster near 1.0 is committing. Both can achieve low ECE, so the shape is
+    reported rather than summarised.
+    """
+    if n_bins < 1:
+        raise ValueError("peak_histogram: n_bins must be >= 1")
+    edges = [i / n_bins for i in range(n_bins + 1)]
+    counts = [0] * n_bins
+    for c in confidences:
+        c = float(c)
+        if not (0.0 <= c <= 1.0):
+            raise ValueError(f"peak_histogram: peak {c} outside [0,1]")
+        counts[min(int(c * n_bins), n_bins - 1)] += 1
+    return [
+        {"bin": b, "low": edges[b], "high": edges[b + 1], "count": counts[b]}
+        for b in range(n_bins)
+    ]
+
+
+def sharpness(confidences: Sequence[float]) -> Tuple[float, float]:
+    """(mean peak, max peak) over samples. Decisiveness, not correctness."""
+    if not confidences:
+        raise ValueError("sharpness: empty input")
+    vals = [float(c) for c in confidences]
+    return sum(vals) / len(vals), max(vals)
+
+
+def build_calibration_receipt(
+    probabilities: Sequence[Sequence[float]],
+    correct_indices: Sequence[int],
+    n_bins: int = 10,
+    extra: Optional[dict] = None,
+) -> dict:
+    """Full S1 receipt dict: ECE + Brier + skill + skew + sharpness + peaks.
+
+    This is the receipt body only. A caller adds provenance (utc, device,
+    config, per-task rows) around it. `is_well_calibrated` is reported exactly
+    as computed -- never adjusted to a desired outcome.
+    """
+    rep = evaluate_calibration(probabilities, correct_indices, n_bins=n_bins)
+    confs, _ = top1_confidence_and_correct(probabilities, correct_indices)
+    mean_peak, max_peak = sharpness(confs)
+    body = rep.to_dict()
+    body.update({
+        "calibration_skew": calibration_skew(confs, rep_bools(correct_indices, probabilities), n_bins, bins=rep.bins),
+        "sharpness_mean_peak": mean_peak,
+        "sharpness_max_peak": max_peak,
+        "peak_histogram": peak_histogram(confs, n_bins),
+    })
+    if extra:
+        body.update(extra)
+    return body
+
+
+def rep_bools(correct_indices: Sequence[int], probabilities: Sequence[Sequence[float]]) -> List[bool]:
+    """Top-1 correctness flags, recomputed here so skew and ECE share one basis."""
+    _, correct = top1_confidence_and_correct(probabilities, correct_indices)
+    return correct
