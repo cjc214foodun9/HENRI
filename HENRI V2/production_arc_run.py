@@ -245,6 +245,20 @@ HENRI_OFFLINE_DIAG = os.environ.get("HENRI_OFFLINE_DIAG", "0") == "1"
 HENRI_SINGLE_ENV = os.environ.get("HENRI_SINGLE_ENV", "").strip()
 HENRI_SEED = os.environ.get("HENRI_SEED", "").strip()
 
+# Directive 4 / Action 3: Zone A typed-probe contract transduction. Default OFF,
+# so the production path stays byte-identical when the flag is unset. When ON,
+# the externally OBSERVED progress delta is transduced into a carried probe wave
+# through the per-dimension key x value phase binding, and the round trip is
+# measured live. Imported lazily so an OFF flag costs nothing.
+HENRI_TYPED_PROBE_CONTRACT = (
+    os.environ.get("HENRI_TYPED_PROBE_CONTRACT", "0") == "1")
+if HENRI_TYPED_PROBE_CONTRACT:
+    from arc_egress_contract import (  # noqa: E402
+        ScalarRotorRejected as _ScalarRotorRejected,
+        recover_delta_from_wave as _recover_delta_from_wave,
+        transduce_external_outcome as _transduce_external_outcome,
+    )
+
 
 def retroactive_update(orch, trajectory_buffer: list, valence_nu: float, dampening_alpha: float = 0.05, gamma_credit: float = 0.95) -> float:
     """
@@ -903,6 +917,12 @@ def run():
         ext_beta_start = [1.0] * len(orch.planner.external_beta)
         # Phase 7.5 D3: last observed scorecard levels-completed count per env.
         scorecard_levels_prev = 0
+        # Action 3: the carried probe wave. DELIBERATELY SEPARATE from
+        # state_wave -- state_wave feeds train_ctx, so binding an
+        # outcome-derived delta into it would let a FUTURE observation justify
+        # the PRIOR action's state (causal leakage). This carrier exists only
+        # for the probe channel and its telemetry.
+        probe_belief_wave = None
         # Phase 8: PSG plan status per env (None until the loop runs).
         psg_status = None
 
@@ -2614,6 +2634,48 @@ def run():
                     orch.observe_vla_outcome(
                         game_action, delta_nu=float(task_progressed)
                     )
+                # Action 3 / Directive 4: transduce the externally OBSERVED
+                # delta into the carried probe wave. Operator is the MEASURED
+                # and contract-tested per-dimension phase rotation, NOT the
+                # blueprint's additive bundling + sphere projection. Delta S is
+                # the externally verified progress flag (frame change is never
+                # used as a score proxy). The encode is falsified by its own
+                # decode on every step: a large round-trip error is recorded,
+                # never hidden.
+                if HENRI_TYPED_PROBE_CONTRACT:
+                    try:
+                        _ds = float(task_progressed)
+                        _aid = int(action_idx) if action_idx >= 0 else 0
+                        _ref = (probe_belief_wave if probe_belief_wave is not None
+                                else state_wave.detach())
+                        _new_wave, _pinfo = _transduce_external_outcome(
+                            _ref, _aid, _ds, return_info=True)
+                        _rec = _recover_delta_from_wave(
+                            _new_wave, _aid, reference=_ref)
+                        probe_belief_wave = _new_wave.detach()
+                        _pinfo.update({
+                            "env": env_name,
+                            "step": step,
+                            "delta_s": _ds,
+                            "recovered_delta": float(_rec),
+                            "delta_roundtrip_abs_err": abs(float(_rec) - _ds),
+                            "probe_wave_is_scalar_rotor": False,
+                        })
+                        tele.emit({"env": env_name, "step": step,
+                                   "event_type": "TYPED_PROBE_TRANSDUCTION",
+                                   **_pinfo})
+                    except _ScalarRotorRejected as _sr_exc:
+                        # Fail-closed: a scalar rotor must never travel this
+                        # path. Raising here is the whole point of the guard.
+                        raise SystemExit(
+                            "BLOCKED: ScalarRotorRejected on the typed-probe "
+                            f"path: {_sr_exc}") from _sr_exc
+                    except Exception as _probe_exc:
+                        tele.emit({
+                            "env": env_name, "step": step,
+                            "event_type": "TYPED_PROBE_TRANSDUCTION_ERROR",
+                            "error": f"{type(_probe_exc).__name__}: {_probe_exc}",
+                        })
                 # Phase 8.20 C1: online Lie generator update + C3 thermostat
                 # observe from the observed SU(3) field transition (default OFF).
                 p820_update_info = None

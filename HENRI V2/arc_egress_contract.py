@@ -417,6 +417,152 @@ def retrieve_value_from_binding(
     return best, float(ring_cos[best].item())
 
 
+# ---------------------------------------------------------------------------
+# External-outcome transduction (calibration-physics blueprint, Action 3)
+# ---------------------------------------------------------------------------
+# THE PROBLEM WITH THE BLUEPRINT'S FORMULA
+#   The blueprint writes  Psi_{t+1} = Proj_{S^{D-1}}( Psi_t + K (x) V_obs(dS) ):
+#   additive bundling followed by sphere projection. What is MEASURED and
+#   contract-tested in this module is PER-DIMENSION PHASE ROTATION
+#   (`apply_wave_binding`, tested by contract A3/A4). Additive bundling is a
+#   different operator. The measured one is used here.
+#
+# THE SCALAR TRAP, AND WHY THE DELTA IS RAMPED
+#   A scorecard delta dS is a SCALAR. If it enters as a scalar rotor it is a U(1)
+#   gauge transformation (measured normalized overlap 0.999999940) and carries no
+#   information. If it is merely quantized into a small bucket set, magnitude is
+#   destroyed. So the delta is spread across the latent dims as a BOUNDED RAMP:
+#   dim i receives  scale * dS * (i+1)/latent, plus the action key's phase code.
+#   The result is elementwise (numel == latent, never 1), so `reject_scalar_rotor`
+#   cannot fire, and the ramp SLOPE recovers dS -- magnitude survives.
+#
+# WHAT THIS IS NOT
+#   It is not a task score and not a learning rule. It is a channel: it moves a
+#   measured external delta into the wave's phase geometry in a way that is
+#   invertible by construction. Round-trip decode is a CHANNEL test; it does not
+#   prove the representation encodes task structure. See the A4 note.
+
+
+DELTA_SCALE = 0.05  # radians per unit delta per dim at the ramp's top end
+
+
+def delta_ramp(
+    delta: float,
+    latent: int,
+    action_id: int,
+    key_seed: int = 101,
+    scale: float = DELTA_SCALE,
+) -> torch.Tensor:
+    """Encode a SCALAR external delta as a per-dimension phase ramp + key code.
+
+    Returns a float32 vector of length `latent` (phase offsets in radians). It is
+    never numel-1, so it is not a scalar rotor and cannot be applied as a gauge
+    transformation. The bound on each entry is +/- scale * |delta|.
+    """
+    if latent < 2:
+        raise ProbeContractViolation(f"delta_ramp: latent {latent} too small")
+    if not math.isfinite(float(delta)):
+        raise ProbeContractViolation(f"delta_ramp: non-finite delta {delta}")
+    kc = _phase_codes([int(action_id)], latent, key_seed)[0]
+    key_theta = kc.to(torch.float32) * (2.0 * math.pi / K_PHASE)
+    idx = torch.arange(1, latent + 1, dtype=torch.float32)
+    ramp = float(scale) * float(delta) * (idx / float(latent))
+    return key_theta + ramp
+
+
+def transduce_external_outcome(
+    wave: torch.Tensor,
+    action_id: int,
+    delta: float,
+    key_seed: int = 101,
+    scale: float = DELTA_SCALE,
+    return_info: bool = False,
+):
+    """Move an observed external delta into the wave. Returns the new wave.
+
+    Fail-closed: the scalar-rotor guard is exercised on this exact path, so a
+    scalar application cannot silently succeed. `return_info=True` also returns a
+    dict carrying the ramp length, the max |phase| applied and the action id --
+    telemetry for the receipt, never a decision input.
+    """
+    flat = wave.reshape(-1).to(torch.float32)
+    d_model = flat.numel()
+    if d_model % 2 != 0:
+        raise ProbeContractViolation(
+            f"transduce_external_outcome: odd wave length {d_model}"
+        )
+    latent = d_model // 2
+    rotor = delta_ramp(delta, latent, action_id, key_seed=key_seed, scale=scale)
+    # The guard runs inside apply_wave_binding; calling it here on an explicit
+    # numel-1 tensor is the falsification hook for contract A3.
+    reject_scalar_rotor(rotor, latent)
+    new_wave = apply_wave_binding(wave, rotor)
+    if not return_info:
+        return new_wave
+    return new_wave, {
+        "action_id": int(action_id),
+        "delta": float(delta),
+        "ramp_len": int(rotor.numel()),
+        "max_abs_phase": float(rotor.abs().max().item()),
+        "is_scalar_rotor": False,
+        "operator": "per_dimension_phase_rotation",
+    }
+
+
+def recover_delta_from_wave(
+    wave: torch.Tensor,
+    action_id: int,
+    reference: Optional[torch.Tensor] = None,
+    key_seed: int = 101,
+    scale: float = DELTA_SCALE,
+) -> float:
+    """Recover the scalar delta from the CHANGE in phase between two waves.
+
+    WHY A REFERENCE IS REQUIRED (measured: an earlier version of this function
+    returned 0.3816 for a true delta of 0.0 -- a real defect, not a tolerance
+    issue). The absolute phase of a wave contains its OWN pre-existing structure,
+    which the transducer cannot know. So a single post-transduction wave does not
+    determine the delta. The delta is exactly the phase INCREMENT
+
+        theta_after - theta_before = key_theta + ramp(delta)
+
+    so `reference` = the same wave before transduction is needed to isolate the
+    ramp. Passing reference=None therefore returns a delta only when the input
+    wave genuinely carries zero phase; that path is CONDITIONAL and is not the
+    supported one. `scale` must match the encoder's scale.
+
+    Returns the least-squares slope of the residual ramp divided by `scale`.
+    """
+    flat = wave.reshape(-1).to(torch.float32)
+    d_model = flat.numel()
+    if d_model % 2 != 0:
+        raise ProbeContractViolation(
+            f"recover_delta_from_wave: odd wave length {d_model}"
+        )
+    latent = d_model // 2
+    theta = torch.atan2(flat[latent:], flat[:latent])
+    if reference is not None:
+        rflat = reference.reshape(-1).to(torch.float32)
+        if rflat.numel() != d_model:
+            raise ProbeContractViolation(
+                f"recover_delta_from_wave: reference numel {rflat.numel()} "
+                f"!= wave numel {d_model}"
+            )
+        theta_ref = torch.atan2(rflat[latent:], rflat[:latent])
+        delta_theta = theta - theta_ref
+    else:
+        delta_theta = theta
+    kc = _phase_codes([int(action_id)], latent, key_seed)[0]
+    key_theta = kc.to(torch.float32) * (2.0 * math.pi / K_PHASE)
+    residual = delta_theta - key_theta
+    residual = torch.remainder(residual + math.pi, 2.0 * math.pi) - math.pi
+    idx = torch.arange(1, latent + 1, dtype=torch.float32) / float(latent)
+    # least-squares slope through the origin: slope = <x, r> / <x, x>
+    denom = float((idx * idx).sum().item())
+    slope = float((idx * residual).sum().item()) / denom if denom > 0.0 else 0.0
+    return slope / float(scale)
+
+
 def reject_scalar_rotor(rotor: torch.Tensor, d_model: int) -> None:
     """Fail closed when feedback would broadcast a scalar rotor over D dims.
 
@@ -567,19 +713,32 @@ def probe_from_logits(
     wave_binding: Optional[torch.Tensor] = None,
     metadata: Optional[Dict[str, object]] = None,
     low_confidence_floor: Optional[float] = None,
+    readout_temperature: float = 1.0,
 ) -> ProbeEnvelope:
     """Adapt the EXISTING action-legal logits into a typed probe envelope.
 
     This is the wiring bridge: it reuses the decode path already in this module
     rather than adding a parallel head. When `low_confidence_floor` is set and
     the derived confidence is below it, the result abstains instead of guessing.
+
+    `readout_temperature` is the single monotone scalar that fixes an
+    underconfident readout: probabilities become softmax(logits / T). For every
+    T > 0 the argmax is unchanged, so temperature moves CALIBRATION only and
+    never invents accuracy or Brier skill. Default 1.0 leaves this function
+    byte-identical to its pre-temperature behaviour. Fit T by minimising NLL with
+    `henri_probe_calibration.fit_temperature_nll`; never hard-code a temperature
+    from a sweep that was not held out.
     """
+    if readout_temperature <= 0.0:
+        raise ProbeContractViolation(
+            f"readout_temperature must be > 0, got {readout_temperature}"
+        )
     logits = action_logits.reshape(-1).to(torch.float32)
     if logits.numel() != len(option_ids):
         raise ProbeContractViolation(
             f"logits {logits.numel()} != option_ids {len(option_ids)}"
         )
-    probs = torch.softmax(logits, dim=-1)
+    probs = torch.softmax(logits / float(readout_temperature), dim=-1)
     plist = tuple(float(p) for p in probs.tolist())
     conf = confidence_from_probabilities(plist)
     status = ST_OK

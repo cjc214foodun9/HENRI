@@ -458,3 +458,268 @@ def rep_bools(correct_indices: Sequence[int], probabilities: Sequence[Sequence[f
     """Top-1 correctness flags, recomputed here so skew and ECE share one basis."""
     _, correct = top1_confidence_and_correct(probabilities, correct_indices)
     return correct
+
+
+# ---------------------------------------------------------------------------
+# 5. Temperature scaling (calibration-physics blueprint, Action 2)
+# ---------------------------------------------------------------------------
+# WHY THIS EXISTS
+#   The measured defect on 60 ARC tasks is UNDERCONFIDENCE: accuracy 0.7833,
+#   mean peak confidence 0.3011. softmax(z/T) is a single monotone scalar
+#   transform of the scores. For every T > 0 it preserves argmax, so it changes
+#   CALIBRATION while leaving ACCURACY and the Brier skill score untouched. No
+#   wave operator is retrained.
+#
+# WHAT IS FITTED, AND WHY NOT ECE
+#   T* is fitted by minimising NLL: a strictly proper scoring rule with a smooth
+#   objective. ECE is deliberately NOT the fit objective, because it is a binned
+#   statistic -- an argmin-ECE temperature overfits the bin edges of whatever set
+#   it was fitted on. Report ECE at T*; never fit under ECE.
+#
+# THE CIRCULARITY GUARD
+#   Fitting T on all 60 tasks and reporting that same 60-task ECE as the result is
+#   circular validation -- the same defect class as an identity codebook
+#   "proving" a representation. `split_temperature_report` fits on one part and
+#   reports the HELD-OUT part as the headline. Both numbers are returned so the
+#   gap between them is visible rather than hidden.
+#
+# SCOPE
+#   This measures a READOUT property. It is not a task score, not a benchmark
+#   score, and it does not convert an underconfident readout into capability.
+
+
+TEMPERATURE_GRID_SIZE = 400
+
+
+def temperature_grid(
+    t_min: float = 0.002,
+    t_max: float = 4.0,
+    n: int = TEMPERATURE_GRID_SIZE,
+) -> List[float]:
+    """Log-spaced candidate temperatures. T < 1 sharpens; T > 1 flattens."""
+    if not (0.0 < t_min < t_max) or n < 2:
+        raise ValueError("temperature_grid: need 0 < t_min < t_max and n >= 2")
+    a, b = math.log(t_min), math.log(t_max)
+    return [math.exp(a + (b - a) * i / (n - 1)) for i in range(n)]
+
+
+def scaled_probabilities(scores: Sequence[float], temperature: float) -> List[float]:
+    """softmax(scores / temperature), computed in the log domain for stability."""
+    if not scores:
+        raise ValueError("scaled_probabilities: empty scores")
+    if temperature <= 0.0:
+        raise ValueError(
+            f"scaled_probabilities: temperature must be > 0, got {temperature}"
+        )
+    z = [float(s) / float(temperature) for s in scores]
+    m = max(z)
+    e = [math.exp(v - m) for v in z]
+    total = sum(e)
+    if total <= 0.0:
+        raise ValueError("scaled_probabilities: non-positive total mass")
+    return [v / total for v in e]
+
+
+def scale_score_rows(
+    scores_rows: Sequence[Sequence[float]], temperature: float
+) -> List[List[float]]:
+    """Apply one temperature to every row. Shape-preserving."""
+    return [scaled_probabilities(row, temperature) for row in scores_rows]
+
+
+def mean_nll(
+    scores_rows: Sequence[Sequence[float]],
+    correct_indices: Sequence[int],
+    temperature: float,
+) -> float:
+    """Mean negative log-likelihood of the TRUE index under softmax(scores/T)."""
+    if len(scores_rows) != len(correct_indices):
+        raise ValueError("mean_nll: scores and labels disagree in length")
+    if not scores_rows:
+        raise ValueError("mean_nll: empty input")
+    acc = 0.0
+    for row, y in zip(scores_rows, correct_indices):
+        p = scaled_probabilities(row, temperature)
+        i = int(y)
+        if not (0 <= i < len(p)):
+            raise ValueError(f"mean_nll: label {i} outside row of length {len(p)}")
+        acc += math.log(max(p[i], 1e-12))
+    return -acc / len(scores_rows)
+
+
+def brier_skill_score(
+    probabilities: Sequence[Sequence[float]],
+    correct_indices: Sequence[int],
+    n_classes: Optional[int] = None,
+) -> float:
+    """1 - Brier / uniform_floor. > 0 means better than an uninformative guess.
+
+    TEMPERATURE CORRECTION (measured, 60 ARC tasks, 2026-09-18). An earlier
+    version of this docstring claimed BSS was INVARIANT under temperature scaling.
+    That claim was WRONG and is recorded here as falsified: BSS moved from
+    +0.1221 at T=1.0 to +0.6301 at T=0.04 on the same data.
+
+    Why: the multiclass Brier sum contains the *magnitudes* p_k, not only the
+    argmax, so a positive rescaling of the logits changes it. What IS invariant
+    under temperature scaling is the ARGMAX, and therefore the 0/1 accuracy and
+    any rank-based statistic.
+
+    Brier is a strictly proper scoring rule, so it rewards a correction that
+    makes stated probabilities match observed frequencies. BSS therefore usually
+    IMPROVES when a fitted T repairs miscalibration. That improvement is a real
+    measured gain, not a manufactured one -- but it is a different quantity from
+    ECE, and it must never be reported as though accuracy had risen.
+    """
+    b = brier_score_multiclass(probabilities, correct_indices)
+    k = n_classes if n_classes is not None else len(probabilities[0])
+    floor = uniform_brier_floor(k)
+    if floor <= 0.0:
+        raise ValueError("brier_skill_score: non-positive uniform floor")
+    return 1.0 - b / floor
+
+
+def fit_temperature_nll(
+    scores_rows: Sequence[Sequence[float]],
+    correct_indices: Sequence[int],
+    grid: Optional[Sequence[float]] = None,
+) -> Tuple[float, float]:
+    """Return (T*, mean NLL at T*) fitted by the proper scoring rule.
+
+    Ties resolve to the SMALLER temperature so the result is deterministic.
+    """
+    g = list(grid) if grid is not None else temperature_grid()
+    if not g:
+        raise ValueError("fit_temperature_nll: empty grid")
+    best_t: Optional[float] = None
+    best_v = float("inf")
+    for t in g:
+        v = mean_nll(scores_rows, correct_indices, t)
+        if v < best_v - 1e-15:
+            best_v, best_t = v, float(t)
+    if best_t is None:
+        raise ValueError("fit_temperature_nll: no candidate evaluated")
+    return best_t, best_v
+
+
+def temperature_floor(
+    scores_rows: Sequence[Sequence[float]],
+    correct_indices: Sequence[int],
+    n_bins: int = 10,
+    grid: Optional[Sequence[float]] = None,
+) -> Tuple[float, float]:
+    """(minimum reachable ECE, T at that minimum) over the grid.
+
+    Reported because a monotone scalar transform cannot reach every ECE target.
+    A floor above the gate FALSIFIES the gate; it is not a tuning failure, and it
+    must not be reported as one.
+    """
+    g = list(grid) if grid is not None else temperature_grid()
+    best_e, best_t = float("inf"), float(g[0])
+    for t in g:
+        rep = evaluate_calibration(
+            scale_score_rows(scores_rows, t), correct_indices, n_bins=n_bins
+        )
+        if rep.ece < best_e - 1e-15:
+            best_e, best_t = float(rep.ece), float(t)
+    return best_e, best_t
+
+
+def split_temperature_report(
+    scores_rows: Sequence[Sequence[float]],
+    correct_indices: Sequence[int],
+    n_bins: int = 10,
+    holdout_fraction: float = 0.5,
+    split_seed: int = 0,
+    grid: Optional[Sequence[float]] = None,
+    n_random_splits: int = 0,
+) -> dict:
+    """Fit T on a train part; report the HELD-OUT part as the headline number.
+
+    A T fitted and scored on the same rows is in-sample. An in-sample ECE is
+    always at least as good as the held-out ECE, so reporting it alone overstates
+    the readout. Both are returned, plus the frozen split indices, so the gap is
+    auditable.
+    """
+    import random as _random
+
+    if len(scores_rows) != len(correct_indices):
+        raise ValueError("split_temperature_report: scores and labels disagree")
+    n = len(scores_rows)
+    if n < 4:
+        raise ValueError("split_temperature_report: need at least 4 samples")
+    g = list(grid) if grid is not None else temperature_grid()
+    order = list(range(n))
+    _random.Random(split_seed).shuffle(order)
+    n_hold = max(1, int(round(n * holdout_fraction)))
+    hold_idx, train_idx = order[:n_hold], order[n_hold:]
+    tr_rows = [scores_rows[i] for i in train_idx]
+    tr_y = [int(correct_indices[i]) for i in train_idx]
+    ho_rows = [scores_rows[i] for i in hold_idx]
+    ho_y = [int(correct_indices[i]) for i in hold_idx]
+    t_star, nll_star = fit_temperature_nll(tr_rows, tr_y, grid=g)
+    out: dict = {
+        "n_total": n,
+        "n_train": len(train_idx),
+        "n_holdout": len(hold_idx),
+        "temperature_star": t_star,
+        "beta_star": 1.0 / t_star,
+        "nll_at_star_train": nll_star,
+        "n_bins": n_bins,
+        "split_seed": split_seed,
+        "holdout_fraction": holdout_fraction,
+        "train_indices": train_idx,
+        "holdout_indices": hold_idx,
+        "grid_size": len(g),
+    }
+    for part, rows, ys in (("train", tr_rows, tr_y), ("holdout", ho_rows, ho_y)):
+        for tname, t in (("T_star", t_star), ("T_1p0", 1.0)):
+            probs = scale_score_rows(rows, t)
+            rep = evaluate_calibration(probs, ys, n_bins=n_bins)
+            out[f"{part}_ece_{tname}"] = float(rep.ece)
+            out[f"{part}_accuracy_{tname}"] = float(rep.accuracy)
+            out[f"{part}_brier_{tname}"] = float(rep.brier)
+            out[f"{part}_bss_{tname}"] = float(brier_skill_score(probs, ys))
+            out[f"{part}_mean_peak_{tname}"] = float(rep.mean_confidence)
+            out[f"{part}_nll_{tname}"] = mean_nll(rows, ys, t)
+    out["holdout_passes_joint_gate"] = bool(
+        out["holdout_ece_T_star"] <= 0.05 and out["holdout_bss_T_star"] > 0.0
+    )
+    out["ece_improved_holdout"] = bool(
+        out["holdout_ece_T_star"] < out["holdout_ece_T_1p0"]
+    )
+    out["accuracy_invariant_holdout"] = bool(
+        abs(out["holdout_accuracy_T_star"] - out["holdout_accuracy_T_1p0"]) < 1e-12
+    )
+    # NOT invariant: Brier/BSS contain probability MAGNITUDES, so temperature
+    # changes them. Only argmax-derived (0/1) statistics are invariant in T.
+    out["bss_improved_holdout"] = bool(
+        out["holdout_bss_T_star"] > out["holdout_bss_T_1p0"]
+    )
+    out["brier_improved_holdout"] = bool(
+        out["holdout_brier_T_star"] < out["holdout_brier_T_1p0"]
+    )
+    if n_random_splits > 0:
+        eces, tstars, passes = [], [], 0
+        for k in range(n_random_splits):
+            r = split_temperature_report(
+                scores_rows, correct_indices, n_bins=n_bins,
+                holdout_fraction=holdout_fraction, split_seed=split_seed + 1 + k,
+                grid=g, n_random_splits=0,
+            )
+            eces.append(r["holdout_ece_T_star"])
+            tstars.append(r["temperature_star"])
+            passes += 1 if r["holdout_passes_joint_gate"] else 0
+        eces_s = sorted(eces)
+        tstars_s = sorted(tstars)
+        out["multi_split"] = {
+            "n_splits": n_random_splits,
+            "holdout_ece_mean": sum(eces) / len(eces),
+            "holdout_ece_min": eces_s[0],
+            "holdout_ece_max": eces_s[-1],
+            "holdout_ece_median": eces_s[len(eces_s) // 2],
+            "temperature_star_min": tstars_s[0],
+            "temperature_star_max": tstars_s[-1],
+            "temperature_star_median": tstars_s[len(tstars_s) // 2],
+            "splits_passing_joint_gate": passes,
+        }
+    return out
