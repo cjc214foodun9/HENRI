@@ -1,0 +1,154 @@
+{
+  "schema": "henri.hardware-substrate-blocked.v1",
+  "utc": "2026-09-18T17:15:32.302915+00:00",
+  "evidence_class": "OBSERVED",
+  "evidence_class_note": "OBSERVED applies to the inventory, the sensor probe and the CPU timings only. Every map figure is carried with an explicit BLOCKED status and is never emitted as a measurement.",
+  "purpose": "preserve the architecture map's hardware chapter in the repository without inheriting a single unmeasured digit",
+  "host_inventory": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.14.0",
+    "cpu_count": 16,
+    "torch": "2.11.0+cu128",
+    "cuda_available": false,
+    "cuda_device_count": 0,
+    "mps_available": false,
+    "nvidia_smi_present": true,
+    "ssh_present": true,
+    "directml_available": false
+  },
+  "sensor_probe": {
+    "joules_measurable": false,
+    "source": null,
+    "reason": "nvidia-smi rc=4 (no driver-visible GPU); no portable CPU/SoC power counter API is exposed on this host",
+    "value_watts": null
+  },
+  "measured_cpu_timings": {
+    "dispatch_200_elementwise_ms": 0.8289000106742606,
+    "dispatch_per_call_us": 4.144500053371303,
+    "unitary_rot_D65536_ms": 0.7181199995102361,
+    "sagnac_similarity_D65536_ms": 0.08473999914713204,
+    "hopfield_gemv_32k_x_2048_ms": 7.290800000191666,
+    "hopfield_codebook_bytes": 262144000,
+    "note": "CPU timings at the document's own widths. NOT a hardware rating; the map's figures describe other substrates and are not comparable."
+  },
+  "energy_per_step": null,
+  "energy_per_step_note": "None by construction. joules/correct_answer needs a real sensor; no sensor is reachable, so no energy figure is produced and none is denied.",
+  "claimed_substrate_figures": [
+    {
+      "id": "H-1",
+      "substrate": "Rust native runtime (henri-transceiver, henri-memory-plane)",
+      "claim": "C-ABI dispatch < 0.45 us",
+      "unit": "us",
+      "value": 0.45,
+      "status": "BLOCKED_NO_SUBSTRATE",
+      "reason": "no Rust workspace or crate exists in the tree; CPython is the only runtime available, and its measured dispatch cost is recorded below"
+    },
+    {
+      "id": "H-2",
+      "substrate": "NVIDIA GB202 Blackwell (sm_120)",
+      "claim": "total turnaround 129 us -> 7.75 kHz",
+      "unit": "us",
+      "value": 129.0,
+      "status": "BLOCKED_NO_SUBSTRATE",
+      "reason": "torch.cuda.is_available() is False on this host; no CUDA device"
+    },
+    {
+      "id": "H-3",
+      "substrate": "GB202 L2 cache",
+      "claim": "4.19 MB tripartite basis pinned resident in 128 MB L2",
+      "unit": "MB",
+      "value": 4.19,
+      "status": "BLOCKED_NO_SUBSTRATE",
+      "reason": "no GPU L2 to pin into; no residency measurement possible"
+    },
+    {
+      "id": "H-4",
+      "substrate": "BaTiO3 photonic PIC",
+      "claim": "optical propagation delay < 0.1 ns",
+      "unit": "ns",
+      "value": 0.1,
+      "status": "BLOCKED_NO_SUBSTRATE",
+      "reason": "no photonic hardware present or reachable"
+    },
+    {
+      "id": "H-5",
+      "substrate": "BaTiO3 photonic PIC",
+      "claim": "< 6.67 nJ per inference step",
+      "unit": "nJ",
+      "value": 6.67,
+      "status": "BLOCKED_NO_SENSOR",
+      "reason": "no joule-measuring sensor is reachable on this host; an energy figure cannot be produced without one (see energy_probe below)"
+    },
+    {
+      "id": "H-6",
+      "substrate": "BaTiO3 photonic PIC",
+      "claim": "625 kHz / 1.6 us total",
+      "unit": "us",
+      "value": 1.6,
+      "status": "BLOCKED_NO_SUBSTRATE",
+      "reason": "no photonic hardware"
+    },
+    {
+      "id": "H-7",
+      "substrate": "PCIe 5.0 / CXL 3.0 Type 2",
+      "claim": "zero-copy unified virtual addressing DMA",
+      "unit": "n/a",
+      "value": null,
+      "status": "BLOCKED_NO_SUBSTRATE",
+      "reason": "no CXL device enumerated; no disaggregated fabric"
+    },
+    {
+      "id": "H-8",
+      "substrate": "TimescaleDB + pgvector hypertable",
+      "claim": "sub-millisecond HNSW cosine search over Zone C axioms",
+      "unit": "ms",
+      "value": 1.0,
+      "status": "BLOCKED_NOT_CONFIGURED",
+      "reason": "no timeseries/vector store is configured or running in this tree"
+    },
+    {
+      "id": "H-9",
+      "substrate": "Sagnac photonic dark-port",
+      "claim": "destructive annihilation in < 0.1 ns",
+      "unit": "ns",
+      "value": 0.1,
+      "status": "BLOCKED_NO_SUBSTRATE",
+      "reason": "the Sagnac veto EXISTS in software (arc_sagnac_veto.py) and is measured below; the OPTICAL timing is a different quantity with no substrate to measure it on"
+    },
+    {
+      "id": "H-10",
+      "substrate": "Hopfield lexical snap (optics)",
+      "claim": "28.10 us over a 32k codebook, 131 MB HBM3e streaming",
+      "unit": "us",
+      "value": 28.1,
+      "status": "BLOCKED_NO_SUBSTRATE",
+      "reason": "the software snap is measured below; the HBM3e figure needs the GPU"
+    },
+    {
+      "id": "H-11",
+      "substrate": "Analog reflex loop",
+      "claim": "20 kHz reflex / 100 Hz tactical / 1-5 Hz strategic",
+      "unit": "Hz",
+      "value": null,
+      "status": "BLOCKED_NO_SUBSTRATE",
+      "reason": "loop topology is now wired and timed on CPU (see trilevel_loop_observed.json); the ABSOLUTE rates depend on fused kernels that do not exist on this host"
+    }
+  ],
+  "summary": {
+    "claims": 11,
+    "measured_here": 0,
+    "blocked": 11
+  },
+  "checks": {
+    "H1_no_substrate_number_emitted_as_observed": true,
+    "H2_energy_is_null_without_a_sensor": true,
+    "H3_cpu_timings_labelled_separately": true
+  },
+  "verdict": "HARDWARE_CHAPTER_BLOCKED \u2014 every substrate figure in the map is recorded with a BLOCKED status and a reason. The loop topology and the Sagnac/Hopfield SOFTWARE paths are measured elsewhere on this host; the HARDWARE rates are not measurable here and are not claimed.",
+  "non_claims": [
+    "NOT a benchmark or hardware rating.",
+    "CPU timings are a placement aid, NOT comparable to the map's substrate rows.",
+    "No photonic, CXL, Rust-dispatch or L2-residency claim is made or implied.",
+    "energy_per_step is None: absence of measurement is not a result either way."
+  ]
+}

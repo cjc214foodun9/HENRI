@@ -1,0 +1,59 @@
+{
+  "schema": "henri.egress-snap.v1",
+  "utc": "2026-09-18T17:11:57.884301+00:00",
+  "evidence_class": "OBSERVED",
+  "evidence_class_note": "OBSERVED: every number is produced by executing henri_vla_tokenizer on this host against the canonical manifest. No value is transcribed from the vision document.",
+  "purpose": "verify the EXISTING sealed Modern Hopfield egress codebook against the REAL 32k manifest, and control it against the random codebook the vision document proposes",
+  "scale": {
+    "ambient_dim_D": 1024,
+    "num_blocks": 128,
+    "grid_size_S": 4,
+    "vocab_size_V": 32000,
+    "feat_dim": 256,
+    "seed": 42,
+    "production_D": 65536,
+    "production_blocks": 8192
+  },
+  "scale_justification": "the internal encode_text(self.manifest) call allocates [32000, 65536] complex64 = 16.78 GB at production defaults, infeasible on this CPU host. The SEALED 32000-token manifest is kept (it carries the A2 claim); only D is reduced. This measures binding, not capacity.",
+  "manifest": {
+    "canonical_path": "HENRI V2/data/vocab/henri_egress_manifest_v1.txt",
+    "pin_sha256": "0f97b4337921e6e7e9b4620fc73338ee570aecd3c16038bc23870a887e995045",
+    "disk_sha256": "0f97b4337921e6e7e9b4620fc73338ee570aecd3c16038bc23870a887e995045",
+    "seal_verified": true,
+    "token_count": 32000,
+    "separator": "U+000A",
+    "derived_and_gitignored": true
+  },
+  "P2_identity_round_trip": {
+    "correct": 32000,
+    "total": 32000,
+    "rate": 1.0,
+    "duplicate_manifest_entries": 0
+  },
+  "P3_random_codebook_control": {
+    "vocab": 32000,
+    "correct": 0,
+    "rate": 0.0,
+    "chance": 3.125e-05,
+    "construction": "torch.randn(V, feat_dim, seed=42), L2-normalized",
+    "note": "this is the vision document's own proposed codebook construction"
+  },
+  "P4_phase_sensitivity": {
+    "max_logit_delta_under_pi_rotation": 16.0
+  },
+  "checks": {
+    "F1_identity_round_trip_is_1p0": true,
+    "F2_random_control_fails": true,
+    "F3_phase_is_not_discarded": true,
+    "P5_vocab_matches_manifest": true,
+    "P5_seal_verified": true
+  },
+  "verdict": "SEALED_CODEBOOK_VERIFIED \u2014 the shipped, tokenizer-derived codebook round-trips the full sealed 32k manifest exactly, the document's random codebook fails the same test, and phase reaches the logits. THIS IS A BINDING RESULT, NOT A CAPABILITY RESULT.",
+  "non_claims": [
+    "NOT an accuracy or task score. No ARC task was attempted.",
+    "Measures BINDING (can the sealed envelope be snapped back), not capacity.",
+    "Reduced D=1024 vs production 65536: capacity scaling is unmeasured here.",
+    "The 131 MB HBM footprint and 28 us snap latency in the vision map are hardware figures and remain BLOCKED (no CUDA on this host).",
+    "HoloEgressCodebook has ZERO references in production_arc_run.py: the remaining work is WIRING, which is not done by this receipt."
+  ]
+}
