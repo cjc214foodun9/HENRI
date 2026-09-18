@@ -1,0 +1,67 @@
+name: egress-manifest
+
+# WHY THIS WORKFLOW EXISTS
+#   The sealed 32k egress manifest is DERIVED data and deliberately NOT committed
+#   (HENRI V2/data/ is gitignored). Its pin states plainly: "A consumer MUST fail
+#   closed when the file is absent." That is correct governance, and it has a
+#   mechanical consequence that bit this project on a clean clone:
+#
+#       `build_egress_manifest.py --check` returns CHECK_FAIL on a HEALTHY tree,
+#       because the derived file has not been generated yet.
+#
+#   So the ordering is load-bearing: REGENERATE, then CHECK. This workflow encodes
+#   that order explicitly instead of relying on a human to remember it.
+#
+# HONEST LIMITATION (do not read a green run as proof of the manifest)
+#   Regeneration needs the SOURCE tokenizer artifact (a Llama-class tokenizer.json
+#   from the local HF cache). A CI runner without that artifact cannot regenerate,
+#   so step 1 is written to FAIL LOUDLY with a BLOCKED marker rather than pass
+#   silently. A run where step 1 is BLOCKED proves NOTHING about the manifest; only
+#   a run where step 1 succeeds and step 2 passes verifies the pin.
+
+# TRIGGER: manual dispatch only, deliberately.
+#   A push-triggered version would run on every commit and FAIL on any runner that
+#   lacks the source tokenizer.json -- painting `main` red for an ENVIRONMENTAL
+#   reason, which is a worse signal than no gate at all. Regeneration genuinely
+#   cannot be faked: without the source artifact there is nothing to verify against
+#   the pin. So this is an explicit, runnable gate rather than an automatic one, and
+#   the ORDER it encodes is pinned by tests/contract/test_ci_manifest_ordering.py.
+#   To automate it, provide the tokenizer artifact to the runner and add a `push:`
+#   trigger with the cache/restore step.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  manifest-ordering:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: STEP 1 (must precede --check) -- REGENERATE the derived manifest
+        run: |
+          set -o pipefail
+          python "HENRI V2/scripts/build_egress_manifest.py" 2>&1 | tee /tmp/gen.log
+          if grep -q "^BLOCKED" /tmp/gen.log; then
+            echo "::error::BLOCKED: the source tokenizer artifact is absent on this \
+          runner, so the derived manifest could NOT be regenerated. The --check step \
+          below will be meaningless. This is NOT a pass."
+            exit 1
+          fi
+
+      - name: STEP 2 -- VERIFY the regenerated manifest against the committed pin
+        run: python "HENRI V2/scripts/build_egress_manifest.py" --check
+
+      - name: Report the pin identity on success
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          pin = pathlib.Path("HENRI V2/experiments/verification/EGRESS_MANIFEST_PIN_20260916.json")
+          d = json.loads(pin.read_bytes())
+          print("manifest_sha256 =", d["manifest_sha256"])
+          print("token_count     =", d["token_count"])
+          PY

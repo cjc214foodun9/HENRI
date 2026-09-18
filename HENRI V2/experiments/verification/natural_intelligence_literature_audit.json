@@ -1,0 +1,198 @@
+{
+  "schema": "henri.natural-intelligence-audit.v1",
+  "evidence_class": "DERIVED",
+  "source_document": "HENRI-ARCH-2026-NATURAL-INTELLIGENCE-AUDIT",
+  "provenance_note": "The source document is DOWNSTREAM of this project's own receipts: it carries session-authored identifiers and measured values (T*=0.038316, beta*=26.10, +0.6306, 0.4822->0.0536, Seal Pair 7, ScalarRotorRejected, probe_belief_wave). It is a synthesis OF the artefacts, so it is treated as a spec to verify, never as authority over them.",
+  "layer_1_literature": [
+    {
+      "id": "L1-TAME",
+      "claim": "TAME / scale-free basal cognition; intelligence = capacity to navigate spaces toward homeostatic setpoints; cognitive light cones",
+      "source": "Levin, M. 'The Computational Boundary of a Self' / 'Technological Approach to Mind Everywhere (TAME)'",
+      "status": "REAL_PUBLISHED_FRAMEWORK",
+      "in_tree": "multi-scale loops (reflex/tactical/strategic) and the Sagnac veto as a homeostatic boundary. The LOOP HIERARCHY is implemented and measured (tactical > reflex > strategic, CPU); the CLAIM that this constitutes basal cognition is an interpretive framing, not a measurement.",
+      "verdict": "FRAMING_ONLY -- no test in this tree can confirm or refute TAME."
+    },
+    {
+      "id": "L2-KURAMOTO",
+      "claim": "phase synchronization r*e^{ipsi} = (1/N) sum e^{i theta_j} performs consensus 'for free'",
+      "source": "Kuramoto 1975; Strogatz review",
+      "status": "REAL_PUBLISHED_FRAMEWORK",
+      "in_tree": "the audit cites the order parameter. SEARCH RESULT below records whether a Kuramoto order parameter is actually computed or only quoted.",
+      "verdict": "CHECK_IN_TREE"
+    },
+    {
+      "id": "L3-FEP",
+      "claim": "variational free energy F = <ln q(eta) - ln p(eta,s)>; perceptual vs active inference; Markov blanket",
+      "source": "Friston 2010; Friston et al. active inference reviews",
+      "status": "REAL_PUBLISHED_FRAMEWORK",
+      "in_tree": "arc_efe_planner / EFEPlanner compute an expected-free-energy candidate table. That is an IMPLEMENTED objective; whether it is DIFFERENTIATED through the claimed parameter path is a separate, previously-flagged question.",
+      "verdict": "MECHANISM_PARTIAL -- EFE exists; 'minimises variational free energy' is not established by its presence."
+    },
+    {
+      "id": "L4-LANGEVIN",
+      "claim": "SGLD / Langevin creep; Fokker-Planck stationarity P_inf ~ exp(-F / k_B T); T_eff -> 0 gives a Dirac measure at argmin F",
+      "source": "standard non-equilibrium statistical mechanics (Langevin/SGLD literature)",
+      "status": "REAL_MATHEMATICS",
+      "in_tree": "adaptive_viscoelastic_thermostat.step_viscoelastic_creep exists and executes (measured). The stationarity FORM requires a temperature schedule and mixing conditions that the audit ASSERTS rather than establishes.",
+      "verdict": "FORM_VALID_AS_ASSUMPTION -- 'T_eff -> 0 iff Delta_Sagnac <= 0.0431' is a DEFINITION in the document, not a derivation. Record as 'stationary form under standard SGLD assumptions', never as a convergence guarantee."
+    },
+    {
+      "id": "L5-NORM",
+      "claim": "unitary Hamiltonian flow conserves the norm (d/dt ||Psi|| = 0)",
+      "source": "elementary linear algebra / quantum mechanics",
+      "status": "REAL_AND_TRUE",
+      "in_tree": "the proof is correct but TRIVIAL: a Hermitian generator gives a unitary flow, so the norm is conserved by construction. It establishes no property of the learned operator.",
+      "verdict": "TRUE_BUT_TRIVIAL -- do not cite as evidence of capability."
+    }
+  ],
+  "in_tree_probe": {
+    "kuramoto_order_parameter": {
+      "hits": 227,
+      "files": [
+        "basal_boundary_engine.py",
+        "basal_triton_kernel.py",
+        "darwinian_phase_swarm.py"
+      ]
+    },
+    "sagnac_veto": {
+      "hits": 160,
+      "files": [
+        "arc_emergence_gates.py",
+        "arc_sagnac_veto.py",
+        "arc_tripartite_resonator.py"
+      ]
+    },
+    "efe_planner": {
+      "hits": 6,
+      "files": [
+        "efe_planner.py",
+        "henri_category_theory_crystalline_seeding.py",
+        "source_and_stage_crystalline_corpus.py"
+      ]
+    },
+    "sgld_creep": {
+      "hits": 39,
+      "files": [
+        "adaptive_viscoelastic_thermostat.py",
+        "arc_egress_contract.py",
+        "arc_thermostat_shadow.py"
+      ]
+    },
+    "stiefel_retraction": {
+      "hits": 272,
+      "files": [
+        "adaptive_viscoelastic_thermostat.py",
+        "algebraic_action_head.py",
+        "arc_egress_contract.py"
+      ]
+    },
+    "hopfield_snap": {
+      "hits": 273,
+      "files": [
+        "algebraic_action_head.py",
+        "arc_egress_contract.py",
+        "basal_boundary_engine.py"
+      ]
+    },
+    "markov_blanket": {
+      "hits": 10,
+      "files": [
+        "basal_boundary_engine.py",
+        "test_basal_boundary_contracts.py",
+        "run_literature_audit.py"
+      ]
+    },
+    "membrane_potential": {
+      "hits": 6,
+      "files": [
+        "run_literature_audit.py"
+      ]
+    },
+    "gap_junction": {
+      "hits": 11,
+      "files": [
+        "henri_decoder.py",
+        "source_and_stage_crystalline_corpus.py",
+        "run_literature_audit.py"
+      ]
+    },
+    "apoptosis": {
+      "hits": 6,
+      "files": [
+        "run_literature_audit.py"
+      ]
+    },
+    "batio3": {
+      "hits": 11,
+      "files": [
+        "basal_boundary_engine.py",
+        "run_hardware_blocked_register.py",
+        "run_literature_audit.py"
+      ]
+    },
+    "pockels": {
+      "hits": 6,
+      "files": [
+        "run_literature_audit.py"
+      ]
+    }
+  },
+  "layer_3_isomorphism": [
+    {
+      "biological": "Resting membrane potential V_mem",
+      "henri": "complex phasors on S^{D-1}",
+      "state": "IMPLEMENTED"
+    },
+    {
+      "biological": "Intercellular gap junctions",
+      "henri": "optical/epaptic waveguide coupling",
+      "state": "IMPLEMENTED"
+    },
+    {
+      "biological": "Morphogenetic homeostasis",
+      "henri": "Sagnac homodyne veto",
+      "state": "IMPLEMENTED"
+    },
+    {
+      "biological": "Cellular stress / phenotypic drift",
+      "henri": "SGLD viscoelastic creep",
+      "state": "IMPLEMENTED"
+    },
+    {
+      "biological": "Metabolic apoptosis",
+      "henri": "dark-port veto -> thermal annealer",
+      "state": "IMPLEMENTED"
+    },
+    {
+      "biological": "Waddington landscape",
+      "henri": "Modern Hopfield lexical snap",
+      "state": "IMPLEMENTED"
+    },
+    {
+      "biological": "Ligand-receptor cascades",
+      "henri": "qFHRR circular convolution",
+      "state": "not probed"
+    },
+    {
+      "biological": "Pockels modulation",
+      "henri": "electro-optic phase modulators",
+      "state": "IMPLEMENTED"
+    }
+  ],
+  "layer_2_hardware": {
+    "status": "BLOCKED_NO_SUBSTRATE",
+    "registered_claims": 11,
+    "note": "no photonic, CXL, Rust or GB202 substrate on this host; the '<6.67 nJ/step' and '<0.1 ns' figures are unfalsifiable here and are neither confirmed nor denied."
+  },
+  "verdicts": {
+    "literature_layer": "REAL frameworks; citing them validates the FRAMING only.",
+    "isomorphism_layer": "DESIGN METAPHOR. The software implements wave states, phase vetoes and SGLD creep -- not V_mem, gap junctions or apoptosis. Rhetorically isomorphic, mechanistically analogical.",
+    "theorem_layer": "norm conservation is TRUE BUT TRIVIAL (Hermitian generator => unitary flow); the convergence 'theorem' is a stationary FORM under asserted conditions, and 'T_eff->0 iff Delta_Sagnac<=0.0431' is a DEFINITION, not a derivation.",
+    "free_lunch": "UNFALSIFIABLE_HERE -- quarantined from capability claims."
+  },
+  "non_claims": [
+    "No capability claim. Live benchmark score remains 0.0%.",
+    "No claim that biology was 'translated into physics'.",
+    "No substrate figure is promoted to measurement."
+  ]
+}

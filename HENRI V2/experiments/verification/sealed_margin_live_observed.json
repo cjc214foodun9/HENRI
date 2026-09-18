@@ -1,0 +1,112 @@
+{
+  "schema": "henri.sealed-margin-live.v1",
+  "evidence_class": "OBSERVED",
+  "utc": "2026-09-18T19:49:45+00:00",
+  "source": {
+    "arc_root": "C:\\Users\\chan\\henri_data\\ARC-AGI\\data\\training",
+    "tasks": 120,
+    "encoder": "HENRIVisionEncoder(d_model=512, k_blocks=64)",
+    "grid": 8,
+    "action_alphabet": [
+      "RESET",
+      "ACTION1",
+      "ACTION2",
+      "ACTION3",
+      "ACTION4",
+      "ACTION5",
+      "ACTION6",
+      "ACTION7"
+    ]
+  },
+  "waves_decoded": 1026,
+  "encode_decode_failures": 0,
+  "margin": {
+    "mean": 0.023354843694564194,
+    "std": 0.04265301004811337,
+    "min": 1.163780689239502e-05,
+    "max": 0.3164312541484833,
+    "p1": 0.00013522058725357056,
+    "p5": 0.0008645504713058472,
+    "p10": 0.0014315173029899597,
+    "p25": 0.003974515944719315,
+    "p50": 0.010197915136814117,
+    "p75": 0.02350066602230072,
+    "p90": 0.04969232529401779,
+    "p95": 0.08372412994503975,
+    "p99": 0.259114608168602
+  },
+  "normalized_entropy": {
+    "mean": 0.9808110196223269,
+    "min": 0.8594288031260172,
+    "max": 0.9995067914326986
+  },
+  "top1": {
+    "mean": 0.18307977734718173
+  },
+  "distinct_actions": [
+    "ACTION1",
+    "ACTION2",
+    "ACTION3",
+    "ACTION4",
+    "ACTION5",
+    "ACTION6",
+    "ACTION7",
+    "RESET"
+  ],
+  "action_histogram": {
+    "ACTION6": 203,
+    "RESET": 124,
+    "ACTION7": 348,
+    "ACTION4": 299,
+    "ACTION5": 17,
+    "ACTION2": 10,
+    "ACTION3": 19,
+    "ACTION1": 6
+  },
+  "floor_behaviour": {
+    "0.0": {
+      "abstain_pct": 0.0,
+      "surviving": 1026
+    },
+    "0.005": {
+      "abstain_pct": 31.384015594541907,
+      "surviving": 704
+    },
+    "0.01": {
+      "abstain_pct": 49.61013645224172,
+      "surviving": 517
+    },
+    "0.02": {
+      "abstain_pct": 70.37037037037037,
+      "surviving": 304
+    },
+    "0.05": {
+      "abstain_pct": 90.05847953216374,
+      "surviving": 102
+    },
+    "0.1": {
+      "abstain_pct": 95.51656920077973,
+      "surviving": 46
+    },
+    "0.2": {
+      "abstain_pct": 97.56335282651072,
+      "surviving": 25
+    }
+  },
+  "contrast_random_waves": {
+    "random_mean_margin": 0.05015,
+    "random_mean_norm_entropy": 0.97466,
+    "live_minus_random_margin": -0.026795156305435806,
+    "note": "the random-wave figures were explicitly NOT evidence of policy value"
+  },
+  "recommended_floor_from_live": {
+    "p05": 0.0008645504713058472,
+    "p10": 0.0014315173029899597
+  },
+  "non_claims": [
+    "ENCODER waves, NOT EFE-planned candidate waves; a planner-selected wave is a transformed wave and its margin distribution may differ.",
+    "No task was attempted or solved. No ground-truth action exists for an arbitrary ARC grid, so correctness is NOT measured.",
+    "A floor chosen here controls ABSTENTION rate, not accuracy.",
+    "The live benchmark score remains 0.0%."
+  ]
+}

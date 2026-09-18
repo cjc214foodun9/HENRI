@@ -45,6 +45,7 @@ PRE-REGISTERED
 import hashlib
 import json
 import math
+import os
 import pathlib
 import sys
 from datetime import datetime, timezone
@@ -60,7 +61,15 @@ from henri_vla_tokenizer import (  # noqa: E402
 
 MAN = R / "data" / "vocab" / "henri_egress_manifest_v1.txt"
 PIN = R / "experiments" / "verification" / "EGRESS_MANIFEST_PIN_20260916.json"
-OUT = R / "experiments" / "verification" / "egress_snap_observed.json"
+# Receipt path. The committed location remains the DEFAULT, so a clean clone still
+# reproduces this receipt in place; --out or HENRI_RECEIPT_DIR aims an experimental
+# or background run elsewhere so it CANNOT clobber the ledger-cited artifact. A bad
+# override raises rather than falling back to the committed path (see receipt_path).
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from receipt_path import is_redirected, resolve_receipt_path  # noqa: E402
+
+DEFAULT_OUT = R / "experiments" / "verification" / "egress_snap_observed.json"
+OUT = resolve_receipt_path(DEFAULT_OUT)
 
 SEP = "\n"                      # pin: separator_codepoint U+000A
 SCALE = dict(ambient_dim_D=1024, num_blocks=128, grid_size_S=4,
@@ -221,6 +230,9 @@ def main() -> int:
         print(f"   {k:<34} {v}")
     print(f"\nVERDICT: {verdict}")
     print(f"\nwrote {OUT}")
+    if is_redirected(DEFAULT_OUT, OUT):
+        print(f"   NOTICE: REDIRECTED away from the committed receipt "
+              f"({DEFAULT_OUT}); the committed artifact was NOT touched.")
     print(f"receipt canonical sha256 = {sha256_bytes(OUT.read_bytes())}")
     return 0 if all(checks.values()) else 1
 

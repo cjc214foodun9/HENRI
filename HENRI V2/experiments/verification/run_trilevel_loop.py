@@ -39,6 +39,7 @@ SCOPE
     executability and cost on CPU only.
 """
 import json
+import os
 import platform
 import statistics
 import sys
@@ -57,7 +58,14 @@ from arc_sagnac_veto import VETO_OK, evaluate_veto  # noqa: E402
 from arc_task_functor import compute_optimal_task_functor  # noqa: E402
 from henri_vision_encoder import HENRIVisionEncoder  # noqa: E402
 
-OUT = R / "experiments" / "verification" / "trilevel_loop_observed.json"
+# Receipt path. Committed location stays the DEFAULT; --out / HENRI_RECEIPT_DIR
+# redirects an experimental or background run so it cannot clobber the ledger-cited
+# artifact. A bad override raises instead of falling back to the committed path.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from receipt_path import is_redirected, resolve_receipt_path  # noqa: E402
+
+DEFAULT_OUT = R / "experiments" / "verification" / "trilevel_loop_observed.json"
+OUT = resolve_receipt_path(DEFAULT_OUT)
 
 D_MODEL = 512
 K_BLOCKS = 64
@@ -402,6 +410,9 @@ def main() -> int:
     for k, v in checks.items():
         print(f"   {k:<42} {v}")
     print(f"\nwrote {OUT}")
+    if is_redirected(DEFAULT_OUT, OUT):
+        print(f"   NOTICE: REDIRECTED away from the committed receipt "
+              f"({DEFAULT_OUT}); the committed artifact was NOT touched.")
     return 0
 
 

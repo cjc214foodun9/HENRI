@@ -45,7 +45,14 @@ from pathlib import Path
 import torch
 
 R = Path(r"C:\Users\chan\Desktop\HENRI 7B SWARM\.worktrees\basal-syncytium\HENRI V2")
-OUT = R / "experiments" / "verification" / "hardware_substrate_blocked.json"
+# Receipt path. Committed location stays the DEFAULT; --out / HENRI_RECEIPT_DIR
+# redirects an experimental or background run so it cannot clobber the ledger-cited
+# artifact. A bad override raises instead of falling back to the committed path.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from receipt_path import is_redirected, resolve_receipt_path  # noqa: E402
+
+DEFAULT_OUT = R / "experiments" / "verification" / "hardware_substrate_blocked.json"
+OUT = resolve_receipt_path(DEFAULT_OUT)
 
 # Every substrate figure the map asserts, with the reason it cannot be checked here.
 CLAIMS = [
@@ -258,6 +265,9 @@ def main() -> int:
     for k, v in checks.items():
         print(f"   {k:<44} {v}")
     print(f"\nwrote {OUT}")
+    if is_redirected(DEFAULT_OUT, OUT):
+        print(f"   NOTICE: REDIRECTED away from the committed receipt "
+              f"({DEFAULT_OUT}); the committed artifact was NOT touched.")
     print(f"canonical sha256 = {hashlib.sha256(OUT.read_bytes()).hexdigest()}")
     return 0
 

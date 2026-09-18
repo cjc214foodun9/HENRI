@@ -1,0 +1,128 @@
+{
+  "schema": "henri.sparse-delta-closed-loop.v2",
+  "evidence_class": "OBSERVED",
+  "utc": "2026-09-18T19:51:53+00:00",
+  "source": "HENRI-ARCH-2026-NATURAL-INTELLIGENCE-AUDIT + pillar-1 follow-up",
+  "config": {
+    "tasks": 60,
+    "options": 4,
+    "d_model": 512,
+    "accuracy_target": 0.75,
+    "seed": 12345,
+    "bias_scale": 0.35,
+    "bias_target": "incumbent_only (makes P3 falsifiable)"
+  },
+  "dense_baseline_prior_receipt": {
+    "change_rate": 0.1944,
+    "accuracy": 0.8125,
+    "gain": 0.0625
+  },
+  "sparsity_sweep": {
+    "1.0": {
+      "change_rate": 0.0,
+      "accuracy": 0.6833333333333333,
+      "base_accuracy": 0.6833333333333333,
+      "good_flips": 0,
+      "bad_flips": 0,
+      "delta_hits": 240,
+      "steps": 240,
+      "retrieved_positive_frac": 1.0
+    },
+    "0.5": {
+      "change_rate": 0.0,
+      "accuracy": 0.6833333333333333,
+      "base_accuracy": 0.6833333333333333,
+      "good_flips": 0,
+      "bad_flips": 0,
+      "delta_hits": 136,
+      "steps": 240,
+      "retrieved_positive_frac": 1.0
+    },
+    "0.25": {
+      "change_rate": 0.0,
+      "accuracy": 0.6833333333333333,
+      "base_accuracy": 0.6833333333333333,
+      "good_flips": 0,
+      "bad_flips": 0,
+      "delta_hits": 66,
+      "steps": 240,
+      "retrieved_positive_frac": 1.0
+    },
+    "0.1": {
+      "change_rate": 0.0,
+      "accuracy": 0.6833333333333333,
+      "base_accuracy": 0.6833333333333333,
+      "good_flips": 0,
+      "bad_flips": 0,
+      "delta_hits": 23,
+      "steps": 240,
+      "retrieved_positive_frac": 1.0
+    },
+    "0.05": {
+      "change_rate": 0.0,
+      "accuracy": 0.6833333333333333,
+      "base_accuracy": 0.6833333333333333,
+      "good_flips": 0,
+      "bad_flips": 0,
+      "delta_hits": 11,
+      "steps": 240,
+      "retrieved_positive_frac": 1.0
+    }
+  },
+  "sign_controls": {
+    "signed": {
+      "change_rate": 0.0,
+      "accuracy": 0.6833333333333333,
+      "base_accuracy": 0.6833333333333333,
+      "good_flips": 0,
+      "bad_flips": 0,
+      "delta_hits": 240,
+      "steps": 240,
+      "retrieved_positive_frac": 1.0
+    },
+    "positive_only": {
+      "change_rate": 0.0,
+      "accuracy": 0.6833333333333333,
+      "base_accuracy": 0.6833333333333333,
+      "good_flips": 0,
+      "bad_flips": 0,
+      "delta_hits": 240,
+      "steps": 240,
+      "retrieved_positive_frac": 1.0
+    },
+    "negative": {
+      "change_rate": 0.7166666666666667,
+      "accuracy": 0.42083333333333334,
+      "base_accuracy": 0.5375,
+      "good_flips": 54,
+      "bad_flips": 82,
+      "delta_hits": 240,
+      "steps": 240,
+      "retrieved_positive_frac": 1.0
+    }
+  },
+  "pre_registered": {
+    "admissible": false,
+    "verdict": "VOID_DOES_NOT_REPRODUCE_DENSE_BASELINE",
+    "P1_change_rate_lower_than_dense": true,
+    "P2_gain_lower_than_dense": true,
+    "P3_positive_only_is_exactly_zero": true,
+    "P4_wrong_sign_still_harms": true,
+    "P1_P2_status": "VACUOUS -- satisfied only because the channel did not fire; must not be reported as passing"
+  },
+  "validity_gate": {
+    "V1_dense_baseline_reproduced": false,
+    "V1_got_change_rate": 0.0,
+    "V1_got_accuracy": 0.6833333333333333,
+    "V2_sign_non_degenerate": false,
+    "V2_retrieved_positive_frac": 1.0,
+    "verdict": "VOID_DOES_NOT_REPRODUCE_DENSE_BASELINE"
+  },
+  "non_claims": [
+    "Simulated candidate batch, NOT a live episode. No ARC task attempted.",
+    "Sparsity is a MODELLED distribution (nonzero with probability p); the live scorecard distribution is unmeasured here.",
+    "The dense 0.1944 is an upper bound; the live rate is expected to be lower.",
+    "No task score, no capability claim, no SOTA claim.",
+    "THIS RUN FAILED ITS OWN VALIDITY GATE: it does not reproduce the dense pillar-1 baseline and/or the retrieved sign is constant, so the sparsity sweep carries no conclusion. Only the wrong-sign control is informative."
+  ]
+}
