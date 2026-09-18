@@ -1,0 +1,116 @@
+{
+  "schema": "henri.demo-path-sgld-attribution.v1",
+  "utc": "2026-09-18T21:03:09.489533+00:00",
+  "evidence_class": "OBSERVED",
+  "governance_label": "BLOCKED_TARGET_LEAKAGE_PROBE",
+  "why_this_is_permitted": "The held-out target is passed DELIBERATELY, under this label, to prove the criterion reads it. This is a leakage probe, not an evaluation: no task score is computed, no capability is claimed, and nothing is persisted keyed to this split.",
+  "source_lines": {
+    "file": "sagnac_mcts_planner.py",
+    "177": "target_wave = self.vision_encoder.encode_grid(target_grid)",
+    "217": "zero_shot_delta = 1.0 - compute_sagnac_similarity(goal_wave_pred, target_wave)",
+    "218": "if zero_shot_delta <= self.tau_veto:",
+    "219": "print(\"[Phase C Zero-Shot Success] Goal wave retrieved in O(1) single pass! ...\")"
+  },
+  "control": "row-shuffled copy of the real target: same shape, dtype and colour distribution, unrelated to the input",
+  "arms": {
+    "real_target": [
+      {
+        "repeat": 0,
+        "seed": 4242,
+        "seconds": 57.24812090001069,
+        "banner_zero_shot_success": true,
+        "program": "<sagnac_mcts_planner.SpelkeDSLNode object at 0x000002737477ABA0>",
+        "delta": 0.0,
+        "loss_first": 10.422401,
+        "loss_last": 10.460514,
+        "loss_rose": true,
+        "error": null,
+        "stdout_lines": 2
+      },
+      {
+        "repeat": 1,
+        "seed": 4243,
+        "seconds": 56.85360430000583,
+        "banner_zero_shot_success": true,
+        "program": "<sagnac_mcts_planner.SpelkeDSLNode object at 0x000002736F8C6990>",
+        "delta": 0.0,
+        "loss_first": 10.420721,
+        "loss_last": 10.468952,
+        "loss_rose": true,
+        "error": null,
+        "stdout_lines": 2
+      }
+    ],
+    "shuffled_target": [
+      {
+        "repeat": 0,
+        "seed": 4242,
+        "seconds": 57.56223840000166,
+        "banner_zero_shot_success": true,
+        "program": "<sagnac_mcts_planner.SpelkeDSLNode object at 0x00000273748D0F50>",
+        "delta": 0.0,
+        "loss_first": 10.422401,
+        "loss_last": 10.460514,
+        "loss_rose": true,
+        "error": null,
+        "stdout_lines": 2
+      },
+      {
+        "repeat": 1,
+        "seed": 4243,
+        "seconds": 57.11490899999626,
+        "banner_zero_shot_success": true,
+        "program": "<sagnac_mcts_planner.SpelkeDSLNode object at 0x00000273747DD350>",
+        "delta": 0.0,
+        "loss_first": 10.420721,
+        "loss_last": 10.468952,
+        "loss_rose": true,
+        "error": null,
+        "stdout_lines": 2
+      }
+    ]
+  },
+  "loss_observations": [
+    {
+      "arm": "real_target",
+      "rep": 0,
+      "first": 10.422401,
+      "last": 10.460514,
+      "rose": true
+    },
+    {
+      "arm": "real_target",
+      "rep": 1,
+      "first": 10.420721,
+      "last": 10.468952,
+      "rose": true
+    },
+    {
+      "arm": "shuffled_target",
+      "rep": 0,
+      "first": 10.422401,
+      "last": 10.460514,
+      "rose": true
+    },
+    {
+      "arm": "shuffled_target",
+      "rep": 1,
+      "first": 10.420721,
+      "last": 10.468952,
+      "rose": true
+    }
+  ],
+  "pre_registered": {
+    "C1_banner_fired_on_real_target": true,
+    "C2_banner_silent_on_shuffled_target": false,
+    "C3_banner_is_answer_coupled": true
+  },
+  "verdict": "BANNER_IS_ANSWER_COUPLED \u2014 the banner fired for the REAL target AND for an UNRELATED shuffled target. The success criterion therefore carries no information about retrieval quality: it is answer-coupled by construction (BLOCKED_TARGET_LEAKAGE). Any capability reading of this banner is invalid.",
+  "limits": [
+    "Diagnostic only: no production behaviour changed by this script.",
+    "Reduced scale D=512 (the checkpoint gate binds only at d_model=65536).",
+    "N is small and each demo call costs ~60 s; direction is a per-run observation, not a distribution.",
+    "The loss trajectory is captured from the callee's own print, not returned by an API.",
+    "No capability claim; benchmark score remains 0.0%."
+  ]
+}
