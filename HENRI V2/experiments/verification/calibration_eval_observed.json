@@ -1,16 +1,17 @@
 {
- "schema": "henri.probe-calibration-receipt.v1",
- "blueprint_schema_alias": "henri.calibration-receipt.v1",
- "utc": "2026-09-18T06:00:38Z",
+ "schema": "henri.calibration-receipt.v1",
+ "schema_internal": "henri.probe-calibration-receipt.v1",
+ "utc": "2026-09-18T06:31:05Z",
  "evidence_class": "DERIVED",
- "evidence_note": "DERIVED from OBSERVED inputs: wave cosines measured on the live encoder over the local ARC corpus, combined with ARC ground truth by the stated rule (softmax over cosine scores, via arc_egress_contract.probe_from_logits).",
+ "evidence_class_note": "Receipt-level class is DERIVED: the headline numbers (ECE, Brier, skill, skew, sharpness) are COMPUTED from the observed per-task wave cosines by the stated rule (softmax over cosine scores -> top-1 -> confidence bins). The per_task rows are OBSERVED measurements from the live encoder, retained in full so the arithmetic is independently recomputable. Both classes are stated and neither is generalised. An earlier revision set this field to OBSERVED citing a spec section 8.4; that section does not exist in the attached document, so the field is DERIVED per the project's own definitions.",
+ "evidence_note": "Wave cosines are measured (OBSERVED); the calibration aggregates are derived from them by a shown rule (DERIVED). Ground truth is the ARC corpus. The schema string is chosen by this runner: the attached document orders a Brier + ECE receipt but names no schema, and its text contains no occurrence of any schema string.",
  "device_kind": "cpu",
  "torch": "2.11.0+cu128",
  "config": {
   "arc_root": "C:/Users/chan/henri_data/ARC-AGI/data",
   "n_tasks_requested": 60,
-  "n_tasks_rowed": 54,
-  "n_tasks_skipped": 6,
+  "n_tasks_rowed": 60,
+  "n_tasks_skipped": 0,
   "n_tasks_errored": 0,
   "k_options": 4,
   "chance_accuracy": 0.25,
@@ -31,7 +32,7 @@
   "bg_mask": true,
   "shuffle_seed_base": 20260918,
   "random_arm_seed": 424242,
-  "candidate_pool": [
+  "primary_pool": [
    "rot90",
    "rot180",
    "rot270",
@@ -40,66 +41,52 @@
    "color_shift1",
    "color_shift2",
    "transpose"
+  ],
+  "fallback_pool": [
+   "unrelabel1",
+   "unrelabel2",
+   "unrelabel3"
   ]
  },
  "status": "OK",
  "counts": {
-  "rowed": 54,
-  "skipped": 6,
+  "rowed": 60,
+  "skipped": 0,
   "errored": 0
  },
- "skipped": [
-  {
-   "task": "1190e5a7",
-   "reason": "degenerate candidates: only 2 distinct candidates from 8 transforms (grid 5x3)"
-  },
-  {
-   "task": "239be575",
-   "reason": "encoder refused: empty foreground: bg_mask excluded every cell; superposition would produce a zero wave (fail-closed)"
-  },
-  {
-   "task": "23b5c85d",
-   "reason": "degenerate candidates: only 1 distinct candidates from 8 transforms (grid 3x3)"
-  },
-  {
-   "task": "25d8a9c8",
-   "reason": "degenerate candidates: only 2 distinct candidates from 8 transforms (grid 3x3)"
-  },
-  {
-   "task": "27a28665",
-   "reason": "degenerate candidates: only 1 distinct candidates from 8 transforms (grid 1x1)"
-  },
-  {
-   "task": "28e73c20",
-   "reason": "encoder refused: empty foreground: bg_mask excluded every cell; superposition would produce a zero wave (fail-closed)"
-  }
+ "bg_mask_fallback_tasks": [
+  "239be575",
+  "28e73c20"
  ],
+ "bg_mask_fallback_note": "Tasks where the production masked encoder refused an all-background grid (zero-wave fail-closed) and the unmasked twin was used instead. Disclosed because it is a per-task representation change.",
+ "skipped": [],
  "errors": [],
  "codebook_kind": "per-task demo-fit operator (W), NOT a frozen or trained codebook. The distractor set is a deterministic transform pool. An identity codebook recovers its own binding by construction, so this receipt is NOT evidence of representation generalisation.",
  "anti_circularity": "probabilities <- demonstration-fit W; truth <- held-out ARC test output. Scored against each other, never against the fit signal.",
  "ground_truth_source": {
   "chosen": "local ARC-AGI corpus",
   "corpus_root": "C:/Users/chan/henri_data/ARC-AGI/data",
-  "blueprint_proposed": "the sealed 60-task receipts themselves",
-  "blueprint_premise_verdict": "FALSIFIED",
+  "directive_text": "The attached directive (HENRI-ARCH-2026-ZONE-A-TRANSDUCTION-SYNTHESIS, section 4.2 item 3) orders evaluate_calibration against '60 canonical ARC tasks'. It names no data source.",
+  "why_not_the_receipts": "NO_PER_TASK_ROWS_EXIST",
   "probe_date": "2026-09-18",
-  "probe_evidence": "All 21 experiments/verification/*_observed.json receipts store AGGREGATE statistics only (arms -> held_out_mean / gap / frac_tasks_beating_identity; n_solves; per-arm scored-set sizes). ZERO receipts expose per-task rows, and the sealed 60-task runner derives ground truth at runtime without persisting per-task probabilities or logits. A runner consuming (state, options, truth) from the receipts would fail its own fail-closed gate at step 1.",
-  "consequence": "ECE is measured against corpus ground truth. THIS runner emits per_task rows so the calibration dataset is rebuildable from a local corpus at zero API cost."
+  "probe_evidence": "All 21 experiments/verification/*_observed.json receipts store AGGREGATE statistics only (arms -> held_out_mean / gap / frac_tasks_beating_identity; n_solves; per-arm scored-set sizes). ZERO receipts expose per-task rows, and the sealed 60-task runner derives ground truth at runtime without persisting per-task probabilities or logits. There is therefore no per-task dataset in the tree to calibrate against.",
+  "correction": "An earlier revision of this receipt attributed the receipts-as-ground-truth proposal to 'blueprint section 5.3'. The attached document has no such section; the citation was phantom and is removed.",
+  "consequence": "ECE is measured against corpus ground truth. THIS runner emits per_task rows, so a calibration dataset now exists where none did before."
  },
  "arm_functor": {
   "schema": "henri.probe-calibration.v1",
   "evidence_class": "OBSERVED",
-  "n_samples": 54,
+  "n_samples": 60,
   "n_classes": 4,
   "n_bins": 10,
-  "brier": 0.649793711850791,
+  "brier": 0.6584552271227737,
   "brier_uniform_floor": 0.75,
-  "brier_skill_score": 0.13360838419894527,
-  "ece": 0.5092081422055209,
-  "mean_confidence": 0.3056066726092939,
-  "accuracy": 0.8148148148148148,
+  "brier_skill_score": 0.12205969716963505,
+  "ece": 0.48218903044859573,
+  "mean_confidence": 0.30114430288473765,
+  "accuracy": 0.7833333333333333,
   "is_well_calibrated": false,
-  "source_hash": "05779cf1cb4b043468ad111bd60b3883022e29dbd64f984384ada7a763165d06",
+  "source_hash": "59e3b25d95cc60d5c98abe2e0403cacd4b87893ed6f38189e64fd2b95e90f1ed",
   "bins": [
    {
     "bin": 0,
@@ -123,10 +110,10 @@
     "bin": 2,
     "low": 0.2,
     "high": 0.3,
-    "count": 28,
-    "mean_confidence": 0.2665386902434485,
-    "accuracy": 0.6428571428571429,
-    "gap": 0.3763184526136944
+    "count": 34,
+    "mean_confidence": 0.26555826997055726,
+    "accuracy": 0.6176470588235294,
+    "gap": 0.3520887888529722
    },
    {
     "bin": 3,
@@ -192,8 +179,8 @@
     "gap": 0.0
    }
   ],
-  "calibration_skew": 0.5092081422055209,
-  "sharpness_mean_peak": 0.3056066726092939,
+  "calibration_skew": 0.48218903044859573,
+  "sharpness_mean_peak": 0.30114430288473765,
   "sharpness_max_peak": 0.42797181010246277,
   "peak_histogram": [
    {
@@ -212,7 +199,7 @@
     "bin": 2,
     "low": 0.2,
     "high": 0.3,
-    "count": 28
+    "count": 34
    },
    {
     "bin": 3,
@@ -261,17 +248,17 @@
  "arm_identity": {
   "schema": "henri.probe-calibration.v1",
   "evidence_class": "OBSERVED",
-  "n_samples": 54,
+  "n_samples": 60,
   "n_classes": 4,
   "n_bins": 10,
-  "brier": 0.6383970031560776,
+  "brier": 0.6497183864620023,
   "brier_uniform_floor": 0.75,
-  "brier_skill_score": 0.14880399579189652,
-  "ece": 0.4644325154799002,
-  "mean_confidence": 0.31334526229787757,
-  "accuracy": 0.7777777777777778,
+  "brier_skill_score": 0.1337088180506636,
+  "ece": 0.42489821712176,
+  "mean_confidence": 0.30843511621157327,
+  "accuracy": 0.7333333333333333,
   "is_well_calibrated": false,
-  "source_hash": "5075214d16eaf55a5448c634abc779360f379926411f18953c4f4003322e4435",
+  "source_hash": "a54b12aed88bf79a2ec4973b16fd8ba3a3563552a5e30d7f2884521d2611488f",
   "bins": [
    {
     "bin": 0,
@@ -295,10 +282,10 @@
     "bin": 2,
     "low": 0.2,
     "high": 0.3,
-    "count": 28,
-    "mean_confidence": 0.2674452077065195,
-    "accuracy": 0.5714285714285714,
-    "gap": 0.30398336372205187
+    "count": 34,
+    "mean_confidence": 0.26688025365857515,
+    "accuracy": 0.5294117647058824,
+    "gap": 0.2625315110473072
    },
    {
     "bin": 3,
@@ -364,8 +351,8 @@
     "gap": 0.0
    }
   ],
-  "calibration_skew": 0.4644325154799002,
-  "sharpness_mean_peak": 0.31334526229787757,
+  "calibration_skew": 0.42489821712176,
+  "sharpness_mean_peak": 0.30843511621157327,
   "sharpness_max_peak": 0.44507741928100586,
   "peak_histogram": [
    {
@@ -384,7 +371,7 @@
     "bin": 2,
     "low": 0.2,
     "high": 0.3,
-    "count": 28
+    "count": 34
    },
    {
     "bin": 3,
@@ -433,17 +420,17 @@
  "arm_random": {
   "schema": "henri.probe-calibration.v1",
   "evidence_class": "OBSERVED",
-  "n_samples": 54,
+  "n_samples": 60,
   "n_classes": 4,
   "n_bins": 10,
-  "brier": 0.7501473193799012,
+  "brier": 0.7500524082615442,
   "brier_uniform_floor": 0.75,
-  "brier_skill_score": -0.0001964258398683416,
-  "ece": 0.10059619612163967,
-  "mean_confidence": 0.2512556557302122,
-  "accuracy": 0.35185185185185186,
+  "brier_skill_score": -6.987768205890532e-05,
+  "ece": 0.04874853193759915,
+  "mean_confidence": 0.25125146806240084,
+  "accuracy": 0.3,
   "is_well_calibrated": false,
-  "source_hash": "9bce561c20cbbba0cee27dabbedb5d43979108c221335d154ac20eb4d05c09bf",
+  "source_hash": "7345ae4a9fea7e8d0fb9e57047729b720888f6c46c19a54ffb8754226f0bcbcf",
   "bins": [
    {
     "bin": 0,
@@ -467,10 +454,10 @@
     "bin": 2,
     "low": 0.2,
     "high": 0.3,
-    "count": 54,
-    "mean_confidence": 0.2512556557302122,
-    "accuracy": 0.35185185185185186,
-    "gap": 0.10059619612163967
+    "count": 60,
+    "mean_confidence": 0.25125146806240084,
+    "accuracy": 0.3,
+    "gap": 0.04874853193759915
    },
    {
     "bin": 3,
@@ -536,9 +523,9 @@
     "gap": 0.0
    }
   ],
-  "calibration_skew": 0.10059619612163967,
-  "sharpness_mean_peak": 0.2512556557302122,
-  "sharpness_max_peak": 0.25858137011528015,
+  "calibration_skew": 0.04874853193759915,
+  "sharpness_mean_peak": 0.25125146806240084,
+  "sharpness_max_peak": 0.2553502023220062,
   "peak_histogram": [
    {
     "bin": 0,
@@ -556,7 +543,7 @@
     "bin": 2,
     "low": 0.2,
     "high": 0.3,
-    "count": 54
+    "count": 60
    },
    {
     "bin": 3,
@@ -602,20 +589,28 @@
    }
   ]
  },
+ "ece_resolution": {
+  "n_bins": 10,
+  "n_samples": 60,
+  "occupied_bins": 3,
+  "max_bin_count": 34,
+  "degenerate_to_accuracy_minus_confidence": false,
+  "note": "Few occupied bins mean ECE carries little distributional shape and is effectively |accuracy - mean_confidence|. The peak_histogram is reported for the same reason."
+ },
  "control_null_shuffled_truth": {
   "schema": "henri.probe-calibration.v1",
   "evidence_class": "OBSERVED",
-  "n_samples": 54,
+  "n_samples": 60,
   "n_classes": 4,
   "n_bins": 10,
-  "brier": 0.7632512955696211,
+  "brier": 0.7348383936346273,
   "brier_uniform_floor": 0.75,
-  "brier_skill_score": -0.017668394092828166,
-  "ece": 0.08338445038707167,
-  "mean_confidence": 0.3056066726092939,
-  "accuracy": 0.2222222222222222,
+  "brier_skill_score": 0.020215475153830265,
+  "ece": 0.06648840308189391,
+  "mean_confidence": 0.30114430288473765,
+  "accuracy": 0.3333333333333333,
   "is_well_calibrated": false,
-  "source_hash": "05779cf1cb4b043468ad111bd60b3883022e29dbd64f984384ada7a763165d06",
+  "source_hash": "59e3b25d95cc60d5c98abe2e0403cacd4b87893ed6f38189e64fd2b95e90f1ed",
   "bins": [
    {
     "bin": 0,
@@ -639,10 +634,10 @@
     "bin": 2,
     "low": 0.2,
     "high": 0.3,
-    "count": 28,
-    "mean_confidence": 0.2665386902434485,
-    "accuracy": 0.21428571428571427,
-    "gap": 0.05225297595773423
+    "count": 34,
+    "mean_confidence": 0.26555826997055726,
+    "accuracy": 0.23529411764705882,
+    "gap": 0.03026415232349844
    },
    {
     "bin": 3,
@@ -650,8 +645,8 @@
     "high": 0.4,
     "count": 24,
     "mean_confidence": 0.34135934710502625,
-    "accuracy": 0.25,
-    "gap": 0.09135934710502625
+    "accuracy": 0.4583333333333333,
+    "gap": 0.11697398622830707
    },
    {
     "bin": 4,
@@ -659,8 +654,8 @@
     "high": 0.5,
     "count": 2,
     "mean_confidence": 0.423526331782341,
-    "accuracy": 0.0,
-    "gap": 0.423526331782341
+    "accuracy": 0.5,
+    "gap": 0.076473668217659
    },
    {
     "bin": 5,
@@ -708,8 +703,8 @@
     "gap": 0.0
    }
   ],
-  "calibration_skew": -0.08338445038707167,
-  "sharpness_mean_peak": 0.3056066726092939,
+  "calibration_skew": 0.03218903044859569,
+  "sharpness_mean_peak": 0.30114430288473765,
   "sharpness_max_peak": 0.42797181010246277,
   "peak_histogram": [
    {
@@ -728,7 +723,7 @@
     "bin": 2,
     "low": 0.2,
     "high": 0.3,
-    "count": 28
+    "count": 34
    },
    {
     "bin": 3,
@@ -781,52 +776,52 @@
  "temperature_sweep": [
   {
    "temperature": 0.25,
-   "ece": 0.33014925202739687,
-   "brier": 0.4221371457312867,
-   "accuracy": 0.8148148148148148,
-   "brier_skill_score": 0.4371504723582844,
-   "sharpness_mean_peak": 0.484665562787418,
-   "calibration_skew": 0.33014925202739687,
+   "ece": 0.31757675903107696,
+   "brier": 0.44978687021890046,
+   "accuracy": 0.7833333333333333,
+   "brier_skill_score": 0.400284173041466,
+   "sharpness_mean_peak": 0.46575657430225637,
+   "calibration_skew": 0.31757675903107696,
    "is_well_calibrated": false
   },
   {
    "temperature": 0.5,
-   "ece": 0.4471992529241719,
-   "brier": 0.5556262868187445,
-   "accuracy": 0.8148148148148148,
-   "brier_skill_score": 0.2591649509083407,
-   "sharpness_mean_peak": 0.3676155618906429,
-   "calibration_skew": 0.4471992529241719,
+   "ece": 0.42524967280352494,
+   "brier": 0.5723873420906351,
+   "accuracy": 0.7833333333333333,
+   "brier_skill_score": 0.23681687721248645,
+   "sharpness_mean_peak": 0.35808366052980833,
+   "calibration_skew": 0.42524967280352494,
    "is_well_calibrated": false
   },
   {
    "temperature": 1.0,
-   "ece": 0.509208143538739,
-   "brier": 0.6497937132032106,
-   "accuracy": 0.8148148148148148,
-   "brier_skill_score": 0.13360838239571926,
-   "sharpness_mean_peak": 0.30560667127607594,
-   "calibration_skew": 0.509208143538739,
+   "ece": 0.4821890315394569,
+   "brier": 0.658455228506323,
+   "accuracy": 0.7833333333333333,
+   "brier_skill_score": 0.12205969532490268,
+   "sharpness_mean_peak": 0.30114430179387647,
+   "calibration_skew": 0.4821890315394569,
    "is_well_calibrated": false
   },
   {
    "temperature": 2.0,
-   "ece": 0.5381723480048166,
-   "brier": 0.7001300468711553,
-   "accuracy": 0.8148148148148148,
-   "brier_skill_score": 0.06649327083845957,
-   "sharpness_mean_peak": 0.2766424668099981,
-   "calibration_skew": 0.5381723480048166,
+   "ece": 0.508810595140112,
+   "brier": 0.7044331268712388,
+   "accuracy": 0.7833333333333333,
+   "brier_skill_score": 0.060755830838348235,
+   "sharpness_mean_peak": 0.27452273819322137,
+   "calibration_skew": 0.508810595140112,
    "is_well_calibrated": false
   },
   {
    "temperature": 4.0,
-   "ece": 0.55181495316307,
-   "brier": 0.7252454588141165,
-   "accuracy": 0.8148148148148148,
-   "brier_skill_score": 0.03300605491451136,
-   "sharpness_mean_peak": 0.26299986165174477,
-   "calibration_skew": 0.55181495316307,
+   "ece": 0.5213624154702643,
+   "brier": 0.7273779816329136,
+   "accuracy": 0.7833333333333333,
+   "brier_skill_score": 0.03016269115611525,
+   "sharpness_mean_peak": 0.261970917863069,
+   "calibration_skew": 0.5213624154702643,
    "is_well_calibrated": false
   }
  ],
@@ -2070,6 +2065,68 @@
     0.006968633737415075
    ],
    "random_correct": 1
+  },
+  {
+   "task_id": "1190e5a7",
+   "truth_index": 0,
+   "shuffle_seed": 20339135,
+   "option_kinds": [
+    "TRUE",
+    "unrelabel2",
+    "rot90",
+    "unrelabel1"
+   ],
+   "snapshot": "004e3f3563c744d6",
+   "grid_in": [
+    22,
+    22
+   ],
+   "grid_out": [
+    5,
+    3
+   ],
+   "functor_probs": [
+    0.2582210600376129,
+    0.24505358934402466,
+    0.2556909918785095,
+    0.24103425443172455
+   ],
+   "functor_status": "OK",
+   "functor_scores": [
+    0.0670868381857872,
+    0.01474773045629263,
+    0.05724048987030983,
+    -0.0017901083920150995
+   ],
+   "functor_correct": 1,
+   "identity_probs": [
+    0.26942306756973267,
+    0.23315651714801788,
+    0.2631083130836487,
+    0.23431207239627838
+   ],
+   "identity_status": "OK",
+   "identity_scores": [
+    0.14092297852039337,
+    -0.0036499397829174995,
+    0.11720588803291321,
+    0.0012939514126628637
+   ],
+   "identity_correct": 1,
+   "random_probs": [
+    0.24913015961647034,
+    0.2553502023220062,
+    0.24977520108222961,
+    0.24574443697929382
+   ],
+   "random_status": "OK",
+   "random_scores": [
+    -0.016383735463023186,
+    0.008276717737317085,
+    -0.013797923922538757,
+    -0.030067065730690956
+   ],
+   "random_correct": 0
   },
   {
    "task_id": "137eaa0f",
@@ -3684,6 +3741,130 @@
    "random_correct": 1
   },
   {
+   "task_id": "239be575",
+   "truth_index": 1,
+   "shuffle_seed": 20309079,
+   "option_kinds": [
+    "unrelabel3",
+    "TRUE",
+    "unrelabel1",
+    "unrelabel2"
+   ],
+   "snapshot": "0167e40bf310f3b2",
+   "grid_in": [
+    8,
+    6
+   ],
+   "grid_out": [
+    1,
+    1
+   ],
+   "functor_probs": [
+    0.2473495453596115,
+    0.25921866297721863,
+    0.24704228341579437,
+    0.2463895082473755
+   ],
+   "functor_status": "OK",
+   "functor_scores": [
+    0.00043865517363883555,
+    0.04730813950300217,
+    -0.0008043294656090438,
+    -0.003450181568041444
+   ],
+   "functor_correct": 1,
+   "identity_probs": [
+    0.23688161373138428,
+    0.23692038655281067,
+    0.23687024414539337,
+    0.2893277108669281
+   ],
+   "identity_status": "OK",
+   "identity_scores": [
+    -2.2339512725011446e-05,
+    0.00014127287431620061,
+    -7.044682570267469e-05,
+    0.1999770998954773
+   ],
+   "identity_correct": 0,
+   "random_probs": [
+    0.25017672777175903,
+    0.24888427555561066,
+    0.24997341632843018,
+    0.2509656548500061
+   ],
+   "random_status": "OK",
+   "random_scores": [
+    0.0006663196254521608,
+    -0.004513239488005638,
+    -0.00014665303751826286,
+    0.0038148504681885242
+   ],
+   "random_correct": 0
+  },
+  {
+   "task_id": "23b5c85d",
+   "truth_index": 3,
+   "shuffle_seed": 20299761,
+   "option_kinds": [
+    "unrelabel1",
+    "unrelabel3",
+    "unrelabel2",
+    "TRUE"
+   ],
+   "snapshot": "67464825dc8daade",
+   "grid_in": [
+    18,
+    18
+   ],
+   "grid_out": [
+    3,
+    3
+   ],
+   "functor_probs": [
+    0.26240259408950806,
+    0.25208261609077454,
+    0.24455192685127258,
+    0.2409629225730896
+   ],
+   "functor_status": "OK",
+   "functor_scores": [
+    0.06349098682403564,
+    0.023367930203676224,
+    -0.006961282342672348,
+    -0.021745912730693817
+   ],
+   "functor_correct": 0,
+   "identity_probs": [
+    0.25542232394218445,
+    0.2485000640153885,
+    0.2482874095439911,
+    0.24779018759727478
+   ],
+   "identity_status": "OK",
+   "identity_scores": [
+    0.02728452906012535,
+    -0.0001906825345940888,
+    -0.0010468189138919115,
+    -0.003051451174542308
+   ],
+   "identity_correct": 0,
+   "random_probs": [
+    0.24775275588035583,
+    0.2522941827774048,
+    0.24771088361740112,
+    0.25224223732948303
+   ],
+   "random_status": "OK",
+   "random_scores": [
+    -0.010144015774130821,
+    0.008020509034395218,
+    -0.01031302660703659,
+    0.007814537733793259
+   ],
+   "random_correct": 0
+  },
+  {
    "task_id": "253bf280",
    "truth_index": 1,
    "shuffle_seed": 20285229,
@@ -3731,19 +3912,19 @@
    ],
    "identity_correct": 1,
    "random_probs": [
-    0.24869906902313232,
-    0.2517276108264923,
-    0.2501458525657654,
-    0.24942748248577118
+    0.25151968002319336,
+    0.24900920689105988,
+    0.24899128079414368,
+    0.2504798173904419
    ],
    "random_status": "OK",
    "random_scores": [
-    -0.006385608110576868,
-    0.005718382075428963,
-    -0.0005850126035511494,
-    -0.003460991196334362
+    0.002708897925913334,
+    -0.007322479039430618,
+    -0.007394473999738693,
+    -0.0014340458437800407
    ],
-   "random_correct": 1
+   "random_correct": 0
   },
   {
    "task_id": "25d487eb",
@@ -3793,17 +3974,79 @@
    ],
    "identity_correct": 1,
    "random_probs": [
-    0.25115638971328735,
-    0.24642105400562286,
-    0.25319814682006836,
-    0.24922436475753784
+    0.2493133544921875,
+    0.24810457229614258,
+    0.2527303993701935,
+    0.24985164403915405
    ],
    "random_status": "OK",
    "random_scores": [
-    0.008461464196443558,
-    -0.010572707280516624,
-    0.01655798777937889,
-    0.0007391404360532761
+    -0.006002004258334637,
+    -0.0108621995896101,
+    0.0076107908971607685,
+    -0.0038452097214758396
+   ],
+   "random_correct": 0
+  },
+  {
+   "task_id": "25d8a9c8",
+   "truth_index": 2,
+   "shuffle_seed": 20270884,
+   "option_kinds": [
+    "unrelabel1",
+    "rot90",
+    "TRUE",
+    "unrelabel2"
+   ],
+   "snapshot": "deb86752779e0f9d",
+   "grid_in": [
+    3,
+    3
+   ],
+   "grid_out": [
+    3,
+    3
+   ],
+   "functor_probs": [
+    0.23467689752578735,
+    0.2619583308696747,
+    0.2832649052143097,
+    0.22009985148906708
+   ],
+   "functor_status": "OK",
+   "functor_scores": [
+    0.047827862203121185,
+    0.15780365467071533,
+    0.23600071668624878,
+    -0.01630045846104622
+   ],
+   "functor_correct": 1,
+   "identity_probs": [
+    0.24288688600063324,
+    0.24290204048156738,
+    0.2429250180721283,
+    0.2712860405445099
+   ],
+   "identity_status": "OK",
+   "identity_scores": [
+    -0.00013899803161621094,
+    -7.654167711734772e-05,
+    1.8077422282658517e-05,
+    0.11043897271156311
+   ],
+   "identity_correct": 0,
+   "random_probs": [
+    0.2505841851234436,
+    0.25013378262519836,
+    0.2498190701007843,
+    0.24946299195289612
+   ],
+   "random_status": "OK",
+   "random_scores": [
+    0.008221590891480446,
+    0.006422579754143953,
+    0.005163600668311119,
+    0.0037372203078120947
    ],
    "random_correct": 0
   },
@@ -3855,17 +4098,17 @@
    ],
    "identity_correct": 1,
    "random_probs": [
-    0.24989968538284302,
-    0.24928657710552216,
-    0.2509525716304779,
-    0.24986116588115692
+    0.25008782744407654,
+    0.24931305646896362,
+    0.24983246624469757,
+    0.2507666349411011
    ],
    "random_status": "OK",
    "random_scores": [
-    -0.0018117243889719248,
-    -0.004268137738108635,
-    0.0023926810827106237,
-    -0.0019658366218209267
+    0.00033843517303466797,
+    -0.0027643386274576187,
+    -0.0006830957718193531,
+    0.0030490749049931765
    ],
    "random_correct": 0
   },
@@ -3917,17 +4160,17 @@
    ],
    "identity_correct": 1,
    "random_probs": [
-    0.24275365471839905,
-    0.25858137011528015,
-    0.25365889072418213,
-    0.24500609934329987
+    0.24393737316131592,
+    0.25526905059814453,
+    0.253930926322937,
+    0.24686260521411896
    ],
    "random_status": "OK",
    "random_scores": [
-    0.0607491061091423,
-    0.12391237169504166,
-    0.10469239205121994,
-    0.06998501718044281
+    -0.013655401766300201,
+    0.031751133501529694,
+    0.026495346799492836,
+    -0.0017350241541862488
    ],
    "random_correct": 0
   },
@@ -3979,19 +4222,81 @@
    ],
    "identity_correct": 1,
    "random_probs": [
-    0.2485823780298233,
-    0.2494509369134903,
-    0.2511345148086548,
-    0.2508321702480316
+    0.24686898291110992,
+    0.24948334693908691,
+    0.2528645098209381,
+    0.250783234834671
    ],
    "random_status": "OK",
    "random_scores": [
-    -0.0030110985971987247,
-    0.000476776622235775,
-    0.007203279994428158,
-    0.0059986412525177
+    -0.03332262486219406,
+    -0.022788258269429207,
+    -0.009326573461294174,
+    -0.017591428011655807
    ],
    "random_correct": 1
+  },
+  {
+   "task_id": "27a28665",
+   "truth_index": 0,
+   "shuffle_seed": 20272899,
+   "option_kinds": [
+    "TRUE",
+    "unrelabel3",
+    "unrelabel2",
+    "unrelabel1"
+   ],
+   "snapshot": "9c01f13d0d368b13",
+   "grid_in": [
+    3,
+    3
+   ],
+   "grid_out": [
+    1,
+    1
+   ],
+   "functor_probs": [
+    0.24995321035385132,
+    0.25187304615974426,
+    0.2461593598127365,
+    0.25201430916786194
+   ],
+   "functor_status": "OK",
+   "functor_scores": [
+    -0.006589620374143124,
+    0.001061732298694551,
+    -0.021884221583604813,
+    0.001622458454221487
+   ],
+   "functor_correct": 0,
+   "identity_probs": [
+    0.24999822676181793,
+    0.2500007450580597,
+    0.2500002384185791,
+    0.2500007152557373
+   ],
+   "identity_status": "OK",
+   "identity_scores": [
+    -5.206728383200243e-05,
+    -4.198971146252006e-05,
+    -4.399472527438775e-05,
+    -4.2044546717079356e-05
+   ],
+   "identity_correct": 0,
+   "random_probs": [
+    0.2498845010995865,
+    0.25125768780708313,
+    0.24915483593940735,
+    0.24970300495624542
+   ],
+   "random_status": "OK",
+   "random_scores": [
+    -0.0029426519758999348,
+    0.002537605818361044,
+    -0.005866960622370243,
+    -0.0036692374851554632
+   ],
+   "random_correct": 0
   },
   {
    "task_id": "28bf18c6",
@@ -4041,19 +4346,81 @@
    ],
    "identity_correct": 0,
    "random_probs": [
-    0.2493111491203308,
-    0.24997764825820923,
-    0.25008833408355713,
-    0.25062280893325806
+    0.2489529699087143,
+    0.25030431151390076,
+    0.2494218647480011,
+    0.25132089853286743
    ],
    "random_status": "OK",
    "random_scores": [
-    -0.0029389229603111744,
-    -0.0002691505942493677,
-    0.00017354637384414673,
-    0.002308398485183716
+    -0.010246684774756432,
+    -0.0048332372680306435,
+    -0.008364965207874775,
+    -0.0007800527382642031
    ],
    "random_correct": 1
+  },
+  {
+   "task_id": "28e73c20",
+   "truth_index": 2,
+   "shuffle_seed": 20352115,
+   "option_kinds": [
+    "rot180",
+    "rot90",
+    "TRUE",
+    "rot270"
+   ],
+   "snapshot": "144060e47d844c16",
+   "grid_in": [
+    18,
+    18
+   ],
+   "grid_out": [
+    18,
+    18
+   ],
+   "functor_probs": [
+    0.249659463763237,
+    0.2507763206958771,
+    0.2506482005119324,
+    0.24891610443592072
+   ],
+   "functor_status": "OK",
+   "functor_scores": [
+    0.5528020858764648,
+    0.5572656393051147,
+    0.5567545890808105,
+    0.5498201251029968
+   ],
+   "functor_correct": 0,
+   "identity_probs": [
+    0.24999764561653137,
+    0.24999959766864777,
+    0.250002920627594,
+    0.24999983608722687
+   ],
+   "identity_status": "OK",
+   "identity_scores": [
+    -0.0043212794698774815,
+    -0.004313469864428043,
+    -0.004300153814256191,
+    -0.004312494769692421
+   ],
+   "identity_correct": 1,
+   "random_probs": [
+    0.25002631545066833,
+    0.24996596574783325,
+    0.2500206232070923,
+    0.2499871402978897
+   ],
+   "random_status": "OK",
+   "random_scores": [
+    0.02204226329922676,
+    0.021800849586725235,
+    0.022019512951374054,
+    0.02188555896282196
+   ],
+   "random_correct": 0
   },
   {
    "task_id": "29623171",
@@ -4103,17 +4470,17 @@
    ],
    "identity_correct": 1,
    "random_probs": [
-    0.24995090067386627,
-    0.25117844343185425,
-    0.24939924478530884,
-    0.2494714856147766
+    0.25072765350341797,
+    0.2503320872783661,
+    0.24954485893249512,
+    0.24939537048339844
    ],
    "random_status": "OK",
    "random_scores": [
-    0.0030670263804495335,
-    0.007966160774230957,
-    0.0008575506508350372,
-    0.0011471393518149853
+    0.010038211941719055,
+    0.008459299802780151,
+    0.005309595726430416,
+    0.004710351582616568
    ],
    "random_correct": 0
   },
@@ -4165,17 +4532,17 @@
    ],
    "identity_correct": 1,
    "random_probs": [
-    0.24852623045444489,
-    0.2503545582294464,
-    0.24963128566741943,
-    0.25148794054985046
+    0.2502176761627197,
+    0.2494358867406845,
+    0.24985744059085846,
+    0.2504890263080597
    ],
    "random_status": "OK",
    "random_scores": [
-    -0.0055244071409106255,
-    0.0018054008251056075,
-    -0.001087866723537445,
-    0.006322212517261505
+    -3.6878976970911026e-05,
+    -0.0031662024557590485,
+    -0.0014775516465306282,
+    0.001047010300680995
    ],
    "random_correct": 1
   }
@@ -4187,7 +4554,9 @@
   "The 'calibrated' label is reported as computed, never adjusted.",
   "ECE depends on the stated temperature; see temperature_sweep.",
   "Distractors are deterministic transforms of the true output; a",
-  "different distractor policy would change difficulty and the numbers."
+  "different distractor policy would change difficulty and the numbers.",
+  "status OK requires every requested task to be rowed.",
+  "n=60 limits ECE resolution; see ece_resolution.occupied_bins."
  ],
- "elapsed_secs": 6.95
+ "elapsed_secs": 6.93
 }

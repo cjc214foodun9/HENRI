@@ -351,7 +351,7 @@ NO_MEASUREMENT_YET = (
 
 
 # ---------------------------------------------------------------------------
-# 4. Companion metrics (S1.1)
+# 4. Companion metrics — added because ECE ALONE IS GAMEABLE
 #
 # WHY ECE ALONE IS NOT ENOUGH
 #   ECE is a magnitude. A predictor that states uniform 0.25 on a set where it

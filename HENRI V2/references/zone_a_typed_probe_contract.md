@@ -16,16 +16,24 @@ Evidence labels: `OBSERVED` · `DERIVED` · `INFERRED` · `HYPOTHESIS` · `FALSI
 | `ProbeEnvelope` + `confidence_from_probabilities` + `key⊗value` binding | `IMPLEMENTED` in `arc_egress_contract.py`, default-OFF behind `HENRI_TYPED_PROBE_CONTRACT` |
 | Contract tests | `IMPLEMENTED` — `tests/contract/test_typed_probe_contract.py`, **24 passed** |
 | Scalar-rotor rejection (A3) | `IMPLEMENTED` + tested; raises `ScalarRotorRejected` |
-| Calibration measurement layer | `IMPLEMENTED` — `henri_probe_calibration.py`, **23 tests passed** |
-| Calibration NUMBER | **still `HYPOTHESIS`** — no ECE/Brier has been computed against real outcomes |
+| Calibration measurement layer | `IMPLEMENTED` — `henri_probe_calibration.py`; skew / sharpness / peak-histogram companions added on THIS project's own finding that ECE alone is gameable by a uniform predictor (the attached document orders only a Brier + ECE receipt) |
+| Calibration NUMBER | **MEASURED** — first empirical receipt: `experiments/verification/calibration_eval_observed.json`, 60/60 ARC tasks, schema `henri.calibration-receipt.v1`, `evidence_class: OBSERVED`, `status: OK` |
+| Is the head calibrated? | **NO** — functor arm acc 0.7833 vs mean peak 0.3011, ECE **0.4822**, skew **+0.4822** (positive = UNDERCONFIDENT), `is_well_calibrated: False` |
+| Uniform-predictor trap, live | the `random` arm scores ECE 0.0487 (LOWER) with `brier_skill_score` −0.0001 (negative) — exactly why the joint gate is used instead of ECE alone |
 | Encoder-basis receipt (approval 3) | `IMPLEMENTED` — `phase_map_basis_observed.json` + doc, registered as seal pair 7 |
 | Phantom-receipt defect (§9.0) | **CLOSED** — receipt generated; docstring counts corrected 16/14 → 27/16 |
 | CUDA verification | `BLOCKED` — Vast SSH refused, instance EXITED, credit 0 |
 | VLA SOTA on AAII v4.3 | `BLOCKED` — no harness, no compute; see §10 |
 
-**The word "calibrated" remains `UNVERIFIED`.** Nothing in this revision produces a
-calibration number. The measurement layer exists so that the number can be produced
-honestly later; it does not itself make any claim.
+**The word "calibrated" is now `FALSIFIED` for this head, not merely unverified.** The
+number exists and it is bad: the readout is *underconfident* (it is more accurate than it
+says it is), and the joint gate `ECE <= 0.05 AND brier_skill_score > 0` rejects it.
+A falsified label is a stronger and more useful result than an open `HYPOTHESIS`, and it
+was produced by measurement, not assertion.
+
+The receipt's `evidence_class` is `OBSERVED` at the receipt level: per-task wave cosines
+are measured on the live encoder, and all 60 input rows are retained in `per_task` so the
+aggregates are independently recomputable.
 
 ---
 

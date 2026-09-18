@@ -7,20 +7,22 @@ WHAT THIS MEASURES
 
 THE TASK (a K-way choice, K=4, chance = 0.25)
     For each ARC task: fit a per-slot diagonal ridge least-squares operator W on
-    the task's demonstration pairs (the same operator family as the sealed
-    60-task harness, in the real UWE domain). Ask the wave readout which of 4
-    candidates is the true test output:
+    the task's demonstration pairs (same operator family as the sealed 60-task
+    harness, in the real UWE domain). Ask the wave readout which of 4 candidates
+    is the true test output:
         scores_k = cos(W . X_test, C_k)
-    Candidates are the true test output plus 3 deterministic, mostly
-    shape-preserving transforms of it (rotations, flips, colour cycles). The
-    true option is NOT privileged in the scoring, and option ORDER is shuffled
-    under a per-task seed, so there is no position bias. Truth is ARC corpus
-    ground truth.
+    Candidates are the true test output plus 3 deterministic distractors drawn
+    from PRIMARY_POOL (shape-preserving rotations/flips/colour cycles first, so
+    the choice is rarely decidable by output shape alone), with FALLBACK_POOL
+    (uniform relabels) only when the primary pool cannot supply 3 distinct
+    distractors. The true option is NOT privileged; option ORDER is shuffled
+    under a per-task seed, so there is no position bias. Truth is ARC ground
+    truth.
 
 WHY THIS IS NOT CIRCULAR
     Probabilities come from the DEMO-fit operator; truth is the HELD-OUT test
-    output. That is a generalisation question, not the system scoring itself.
-    A null control (truth labels shuffled) is included: it must fall to chance.
+    output. A null control (truth labels shuffled) is included and must fall to
+    chance.
 
 WHAT IT DOES NOT ESTABLISH
     - NOT a task score and NOT a benchmark score.
@@ -28,22 +30,38 @@ WHAT IT DOES NOT ESTABLISH
     - NOT that HENRI "is calibrated": the label is reported exactly as
       `is_well_calibrated` computes it, never threshold-shopped.
     - The measured head is the wave readout over a choice task, not the planner.
-    - ECE is a function of the stated temperature; a T sweep is reported so the
-      number cannot be read as temperature-independent.
+    - ECE depends on the stated temperature; a 5-point sweep is reported.
+    - Distractors are deterministic transforms. A different distractor policy
+      changes difficulty, so these numbers are comparable only to runs of THIS
+      runner with the same pools.
 
-GROUND TRUTH SOURCE (and why it is not the receipts)
-    The blueprint proposed taking (state, options, truth) triples from the
-    sealed 60-task receipts. Probing all 21 receipts 2026-09-18 showed they
-    store AGGREGATE statistics only (arms -> held_out_mean / gap /
-    frac_tasks_beating_identity); NONE contains per-task rows, and the sealed
-    runner derives truth at runtime without persisting it. So truth is taken
-    from the local ARC corpus and THIS runner emits per-task rows, so the
-    calibration dataset can be rebuilt from a local corpus at zero API cost.
+GROUND TRUTH SOURCE (and why the corpus, not the receipts)
+    The attached directive orders the measurement against "60 canonical ARC
+    tasks" but specifies NO data source. Probed 2026-09-18: all 21
+    experiments/verification/*_observed.json receipts store AGGREGATE statistics
+    only (arms -> held_out_mean / gap / frac_tasks_beating_identity; n_solves;
+    per-arm scored-set sizes). ZERO expose per-task rows, and the sealed 60-task
+    runner derives truth at runtime without persisting it. So there is no
+    per-task (state, options, truth) dataset in the tree to calibrate against.
+    Truth is therefore taken from the local ARC corpus, and THIS runner emits
+    per_task rows so a calibration dataset now exists where none did.
+    (An earlier revision of this docstring attributed the receipts-as-truth
+    idea to a "blueprint section 5.3". The attached document has no such
+    section; that citation was phantom and is removed.)
 
-FAIL-CLOSED
-    A task is either ROWED, SKIPPED for a typed reason (degenerate candidate
-    set / encoder refusal), or ERRORED. Nothing is silently dropped and no row
-    is fabricated. Status is OK only when there are no errors at all.
+COVERAGE AND FAIL-CLOSED STATUS
+    Every task is either rowed, or recorded in `skipped` with a typed reason, or
+    recorded in `errors`. Nothing is dropped silently and no row is fabricated.
+      OK       -- zero errors AND every requested task rowed
+      PARTIAL  -- zero errors but at least one typed skip, or any error present
+      BLOCKED  -- no task could be rowed
+    An earlier version returned OK while 6/60 tasks were skipped. That was an
+    overclaim and is fixed: OK now requires full coverage.
+
+    Two encoders are held: the production masked encoder, and an unmasked twin
+    used ONLY when the masked encoder fails closed on an all-background grid
+    (zero-wave refusal). Any such task is recorded in `bg_mask_fallback_tasks`,
+    so the representation change is disclosed rather than hidden.
 
 Usage:
     python experiments/verification/run_calibration_eval.py
@@ -82,6 +100,15 @@ BLOCK_DIM = 8
 SHUFFLE_SEED = 20260918
 RANDOM_ARM_SEED = 424242
 
+# The blueprint's directive 3 (section 4.2) orders an "empirical Brier score and
+# ECE receipt"; it does NOT name a schema. The public schema string is therefore
+# chosen HERE, and the module's own internal name is emitted alongside so a
+# consumer can match on either. No section number is cited because the document
+# I extracted contains no schema section -- citing one would be a phantom
+# citation of exactly the class this receipt's governance exists to catch.
+SCHEMA = "henri.calibration-receipt.v1"
+SCHEMA_INTERNAL = "henri.probe-calibration-receipt.v1"
+
 OUT = VERIF / "calibration_eval_observed.json"
 
 
@@ -90,15 +117,11 @@ class CandidateError(RuntimeError):
 
 
 class EncoderRefused(RuntimeError):
-    """The encoder legitimately refused a grid (fail-closed). Not a bug."""
+    """Both encoders refused a grid. Not silently converted into a row."""
 
 
 def load_arc(root: str, n: int):
-    """VERBATIM replica of the sealed 60-task loader. Do not alter.
-
-    Same split order, same sort, same filters, so the task set is identical to
-    the one in evaluate_60_task_koopman_gap_observed.json.
-    """
+    """VERBATIM replica of the sealed 60-task loader. Do not alter."""
     out = []
     for split in ("training", "evaluation"):
         d = os.path.join(root, split)
@@ -118,8 +141,6 @@ def load_arc(root: str, n: int):
 
 
 # ---- deterministic candidate transforms ------------------------------------
-# Shape-preserving transforms come FIRST so the choice is rarely decidable by
-# output shape alone; transpose (potentially shape-changing) comes last.
 
 def _t_rot(g, k):
     return np.rot90(np.asarray(g), k).tolist()
@@ -138,7 +159,7 @@ def _t_transpose(g):
 
 
 def _t_color_cycle(g, shift=1):
-    """Cyclically remap the non-zero colours. None when <2 colours exist."""
+    """Cycle the non-zero colours bijectively. None when <2 colours exist."""
     arr = np.asarray(g)
     vals = sorted({int(v) for v in arr.flatten() if int(v) != 0})
     if len(vals) < 2:
@@ -150,7 +171,23 @@ def _t_color_cycle(g, shift=1):
     return out.tolist()
 
 
-POOL = [
+def _t_uniform_relabel(g, k=0):
+    """Uniform grid of a colour ABSENT from g. Fallback for degenerate grids.
+
+    Only reached when the primary pool cannot supply 3 distinct distractors
+    (collinear 1x1 / 1xN grids, or single-colour grids where rotations and
+    flips coincide). A uniform distractor is easier to reject than a
+    structure-preserving one, so its per-task use is recorded in option_kinds.
+    """
+    arr = np.asarray(g)
+    present = {int(v) for v in arr.flatten()}
+    absent = [c for c in range(1, 16) if c not in present]
+    if not absent:
+        return None
+    return np.full(arr.shape, absent[k % len(absent)], dtype=arr.dtype).tolist()
+
+
+PRIMARY_POOL = [
     ("rot90", lambda g: _t_rot(g, 1)),
     ("rot180", lambda g: _t_rot(g, 2)),
     ("rot270", lambda g: _t_rot(g, 3)),
@@ -160,18 +197,19 @@ POOL = [
     ("color_shift2", lambda g: _t_color_cycle(g, 2)),
     ("transpose", _t_transpose),
 ]
+FALLBACK_POOL = [
+    ("unrelabel1", lambda g: _t_uniform_relabel(g, 0)),
+    ("unrelabel2", lambda g: _t_uniform_relabel(g, 1)),
+    ("unrelabel3", lambda g: _t_uniform_relabel(g, 2)),
+]
 
 
 def build_candidates(y_true, task_id: str):
-    """(candidates, truth_index, seed, kinds). Raises CandidateError if short.
-
-    The true output is index 0 before shuffling, so truth_index is recovered
-    from the permutation rather than hard-coded.
-    """
+    """(candidates, truth_index, seed, kinds). Raises CandidateError if short."""
     base = [list(r) for r in y_true]
     cands = [base]
     kinds = ["TRUE"]
-    for name, fn in POOL:
+    for name, fn in list(PRIMARY_POOL) + list(FALLBACK_POOL):
         if len(cands) >= K_OPTIONS:
             break
         try:
@@ -186,8 +224,8 @@ def build_candidates(y_true, task_id: str):
         kinds.append(name)
     if len(cands) < K_OPTIONS:
         raise CandidateError(
-            f"only {len(cands)} distinct candidates from {len(POOL)} transforms "
-            f"(grid {len(base)}x{len(base[0])})"
+            f"only {len(cands)} distinct candidates from "
+            f"{len(PRIMARY_POOL) + len(FALLBACK_POOL)} transforms"
         )
     seed = SHUFFLE_SEED + (int(hashlib.sha256(task_id.encode()).hexdigest(), 16)
                            % 100000)
@@ -221,17 +259,30 @@ def main() -> int:
         print("BLOCKED_NO_CORPUS")
         return 1
 
-    enc = HENRIVisionEncoder(d_model=D_MODEL, k_blocks=N_BLOCKS, block_dim=BLOCK_DIM,
-                             device="cpu", spatial_basis_kind=resolve_kind,
-                             bg_mask=bg_mask)
+    enc_masked = HENRIVisionEncoder(d_model=D_MODEL, k_blocks=N_BLOCKS,
+                                    block_dim=BLOCK_DIM, device="cpu",
+                                    spatial_basis_kind=resolve_kind,
+                                    bg_mask=bg_mask)
+    enc_unmasked = HENRIVisionEncoder(d_model=D_MODEL, k_blocks=N_BLOCKS,
+                                      block_dim=BLOCK_DIM, device="cpu",
+                                      spatial_basis_kind=resolve_kind,
+                                      bg_mask=False)
+    bg_fallback_tasks: set = set()
 
-    def encode(grid):
+    def encode(grid, tid):
+        """Masked encoder; unmasked twin ONLY on the zero-wave refusal."""
         try:
             with torch.no_grad():
-                w = enc.encode_spatial_grid(grid)
+                w = enc_masked.encode_spatial_grid(grid)
             return w.squeeze(0).reshape(-1).to(torch.float32)
-        except ValueError as exc:
-            raise EncoderRefused(str(exc)[:140])
+        except ValueError:
+            try:
+                with torch.no_grad():
+                    w = enc_unmasked.encode_spatial_grid(grid)
+            except ValueError as exc:
+                raise EncoderRefused(str(exc)[:140])
+            bg_fallback_tasks.add(tid)
+            return w.squeeze(0).reshape(-1).to(torch.float32)
 
     def cos(a, b):
         return float(F.cosine_similarity(a.flatten(), b.flatten(), dim=0).item())
@@ -243,18 +294,18 @@ def main() -> int:
         try:
             train = t["train"][:3]
             te = t["test"][0]
-            Xtr = torch.stack([encode(p["input"]) for p in train])
-            Ytr = torch.stack([encode(p["output"]) for p in train])
+            Xtr = torch.stack([encode(p["input"], tid) for p in train])
+            Ytr = torch.stack([encode(p["output"], tid) for p in train])
 
             # per-slot diagonal ridge LS in the real UWE domain (diag_ls family)
             W = (Xtr * Ytr).sum(0) / ((Xtr * Xtr).sum(0) + RIDGE_EPS)
 
-            x_te = encode(te["input"])
+            x_te = encode(te["input"], tid)
             W_rand = torch.randn(x_te.numel(), generator=gen)
 
             cands, truth_index, shuf_seed, kinds = build_candidates(
                 te["output"], tid)
-            cw = torch.stack([encode(c) for c in cands])
+            cw = torch.stack([encode(c, tid) for c in cands])
 
             arms = {
                 "functor": (W * x_te),
@@ -298,19 +349,37 @@ def main() -> int:
                   f"{len(skipped)} skipped, {time.time() - t0:.1f}s")
 
     n_valid, n_skip, n_err = len(per_task), len(skipped), len(errors)
-    status = "BLOCKED" if n_valid == 0 else ("PARTIAL" if n_err else "OK")
+    # OK requires FULL COVERAGE. Skips are legitimate but they are not OK.
+    if n_valid == 0:
+        status = "BLOCKED"
+    elif n_err or n_valid < len(tasks):
+        status = "PARTIAL"
+    else:
+        status = "OK"
     print(f"rowed={n_valid} skipped={n_skip} errors={n_err} status={status}")
 
     receipt = {
-        "schema": "henri.probe-calibration-receipt.v1",
-        "blueprint_schema_alias": "henri.calibration-receipt.v1",
+        "schema": SCHEMA,
+        "schema_internal": SCHEMA_INTERNAL,
         "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "evidence_class": "DERIVED",
+        "evidence_class_note": (
+            "Receipt-level class is DERIVED: the headline numbers (ECE, Brier, "
+            "skill, skew, sharpness) are COMPUTED from the observed per-task wave "
+            "cosines by the stated rule (softmax over cosine scores -> top-1 -> "
+            "confidence bins). The per_task rows are OBSERVED measurements from "
+            "the live encoder, retained in full so the arithmetic is "
+            "independently recomputable. Both classes are stated and neither is "
+            "generalised. An earlier revision set this field to OBSERVED citing "
+            "a spec section 8.4; that section does not exist in the attached "
+            "document, so the field is DERIVED per the project's own definitions."
+        ),
         "evidence_note": (
-            "DERIVED from OBSERVED inputs: wave cosines measured on the live "
-            "encoder over the local ARC corpus, combined with ARC ground truth "
-            "by the stated rule (softmax over cosine scores, via "
-            "arc_egress_contract.probe_from_logits)."
+            "Wave cosines are measured (OBSERVED); the calibration aggregates are "
+            "derived from them by a shown rule (DERIVED). Ground truth is the ARC "
+            "corpus. The schema string is chosen by this runner: the attached "
+            "document orders a Brier + ECE receipt but names no schema, and its "
+            "text contains no occurrence of any schema string."
         ),
         "device_kind": "cpu",
         "torch": torch.__version__,
@@ -333,10 +402,17 @@ def main() -> int:
             "bg_mask": bg_mask,
             "shuffle_seed_base": SHUFFLE_SEED,
             "random_arm_seed": RANDOM_ARM_SEED,
-            "candidate_pool": [n for n, _ in POOL],
+            "primary_pool": [n for n, _ in PRIMARY_POOL],
+            "fallback_pool": [n for n, _ in FALLBACK_POOL],
         },
         "status": status,
         "counts": {"rowed": n_valid, "skipped": n_skip, "errored": n_err},
+        "bg_mask_fallback_tasks": sorted(bg_fallback_tasks),
+        "bg_mask_fallback_note": (
+            "Tasks where the production masked encoder refused an all-background "
+            "grid (zero-wave fail-closed) and the unmasked twin was used instead. "
+            "Disclosed because it is a per-task representation change."
+        ),
         "skipped": skipped,
         "errors": errors,
         "codebook_kind": (
@@ -352,8 +428,12 @@ def main() -> int:
         "ground_truth_source": {
             "chosen": "local ARC-AGI corpus",
             "corpus_root": ARC_ROOT,
-            "blueprint_proposed": "the sealed 60-task receipts themselves",
-            "blueprint_premise_verdict": "FALSIFIED",
+            "directive_text": (
+                "The attached directive (HENRI-ARCH-2026-ZONE-A-TRANSDUCTION-"
+                "SYNTHESIS, section 4.2 item 3) orders evaluate_calibration "
+                "against '60 canonical ARC tasks'. It names no data source."
+            ),
+            "why_not_the_receipts": "NO_PER_TASK_ROWS_EXIST",
             "probe_date": "2026-09-18",
             "probe_evidence": (
                 "All 21 experiments/verification/*_observed.json receipts store "
@@ -361,14 +441,19 @@ def main() -> int:
                 "frac_tasks_beating_identity; n_solves; per-arm scored-set "
                 "sizes). ZERO receipts expose per-task rows, and the sealed "
                 "60-task runner derives ground truth at runtime without "
-                "persisting per-task probabilities or logits. A runner consuming "
-                "(state, options, truth) from the receipts would fail its own "
-                "fail-closed gate at step 1."
+                "persisting per-task probabilities or logits. There is therefore "
+                "no per-task dataset in the tree to calibrate against."
+            ),
+            "correction": (
+                "An earlier revision of this receipt attributed the "
+                "receipts-as-ground-truth proposal to 'blueprint section 5.3'. "
+                "The attached document has no such section; the citation was "
+                "phantom and is removed."
             ),
             "consequence": (
                 "ECE is measured against corpus ground truth. THIS runner emits "
-                "per_task rows so the calibration dataset is rebuildable from a "
-                "local corpus at zero API cost."
+                "per_task rows, so a calibration dataset now exists where none "
+                "did before."
             ),
         },
     }
@@ -381,6 +466,27 @@ def main() -> int:
                 n_bins=10,
             )
 
+    # ECE RESOLUTION: with n=60 and confidences clustered, ECE can collapse to
+    # |accuracy - mean_confidence| over a single occupied bin. Record the
+    # occupancy so a reader can judge how much shape the number actually
+    # resolves. This is a resolution limit of the sample size, not a defect,
+    # and hiding it would let a single-bin number masquerade as a curve.
+    if per_task:
+        occ = [b["count"] for b in receipt["arm_functor"]["bins"]]
+        occupied = sum(1 for c in occ if c > 0)
+        receipt["ece_resolution"] = {
+            "n_bins": 10,
+            "n_samples": n_valid,
+            "occupied_bins": occupied,
+            "max_bin_count": max(occ) if occ else 0,
+            "degenerate_to_accuracy_minus_confidence": bool(occupied <= 1),
+            "note": (
+                "Few occupied bins mean ECE carries little distributional "
+                "shape and is effectively |accuracy - mean_confidence|. The "
+                "peak_histogram is reported for the same reason."
+            ),
+        }
+
     # control: shuffle the truth labels on the primary arm -> must fall to chance
     if per_task:
         perm = np.random.default_rng(SHUFFLE_SEED).permutation(n_valid)
@@ -390,8 +496,7 @@ def main() -> int:
             n_bins=10,
         )
 
-    # self-check: the torch softmax path (probe_from_logits) must agree with the
-    # numpy twin used for the sweep, at T = TEMPERATURE.
+    # self-check: the torch softmax path must agree with the numpy twin at T=1.
     if per_task:
         twin = softmax_rows([r["functor_scores"] for r in per_task], TEMPERATURE)
         worst = max(
@@ -431,6 +536,8 @@ def main() -> int:
         "ECE depends on the stated temperature; see temperature_sweep.",
         "Distractors are deterministic transforms of the true output; a",
         "different distractor policy would change difficulty and the numbers.",
+        "status OK requires every requested task to be rowed.",
+        "n=60 limits ECE resolution; see ece_resolution.occupied_bins.",
     ]
     receipt["elapsed_secs"] = round(time.time() - t0, 2)
 
@@ -451,7 +558,9 @@ def main() -> int:
         print(f"  null      acc={nul['accuracy']:.4f} ECE={nul['ece']:.4f}")
     sc = receipt.get("self_check")
     if sc:
-        print(f"  self_check torch-vs-numpy maxdiff={sc['torch_vs_numpy_max_abs_diff']:.3e}")
+        print(f"  self_check torch-vs-numpy maxdiff="
+              f"{sc['torch_vs_numpy_max_abs_diff']:.3e}")
+    print(f"  bg_mask fallbacks: {receipt['bg_mask_fallback_tasks']}")
     print(f"elapsed {receipt['elapsed_secs']}s")
     return 0 if status == "OK" else (3 if status == "PARTIAL" else 1)
 

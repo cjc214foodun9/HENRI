@@ -15,13 +15,17 @@ from henri_probe_calibration import (
     NO_MEASUREMENT_YET,
     ORACLE_API_KEY_ENV,
     brier_score_multiclass,
+    build_calibration_receipt,
     build_oracle_request,
+    calibration_skew,
     evaluate_calibration,
     expected_calibration_error,
     oracle_leg_status,
     parse_oracle_choice,
+    peak_histogram,
     reliability_bins,
     sha256_of_rows,
+    sharpness,
     top1_confidence_and_correct,
     uniform_brier_floor,
 )
@@ -186,6 +190,114 @@ def test_well_calibrated_boundary_is_exclusive():
 def test_ragged_rows_fail_closed():
     with pytest.raises(ValueError):
         evaluate_calibration([[0.5, 0.5], [0.3, 0.3, 0.4]], [0, 0])
+
+
+# ---------------- companion metrics (added: ECE alone is gameable) ----------
+
+def test_skew_sign_detects_overconfidence():
+    """Overconfident (states 0.9, right half the time) must give NEGATIVE skew."""
+    probs = [[0.9, 0.1]] * 10
+    correct = [0, 1] * 5
+    confs, corr = top1_confidence_and_correct(probs, correct)
+    s = calibration_skew(confs, corr, n_bins=10)
+    assert s < 0, f"overconfidence must give negative skew, got {s}"
+    assert abs(s - (-0.4)) < 1e-9
+
+
+def test_skew_sign_detects_underconfidence():
+    """Underconfident (states 0.3, always right) must give POSITIVE skew."""
+    probs = [[0.3, 0.3, 0.3, 0.1]] * 10
+    correct = [0] * 10
+    confs, corr = top1_confidence_and_correct(probs, correct)
+    s = calibration_skew(confs, corr, n_bins=10)
+    assert s > 0, f"underconfidence must give positive skew, got {s}"
+    assert abs(s - 0.7) < 1e-9
+
+
+def test_skew_can_cancel_while_ece_stays_large():
+    """Why skew is a COMPANION and not a fix.
+
+    Half the samples are confidently wrong (gap -0.9), half are diffidently
+    right (gap +0.9). The signed gaps cancel so skew is ~0 while ECE is large.
+    Neither statistic alone is sufficient, so both are reported.
+    """
+    over = [[0.9] + [0.1 / 9] * 9] * 5      # peak 0.9, never correct
+    under = [[0.1] * 10] * 5                # peak 0.1, always correct
+    probs = over + under
+    correct = [1] * 5 + [0] * 5
+    confs, corr = top1_confidence_and_correct(probs, correct)
+    s = calibration_skew(confs, corr, n_bins=10)
+    ece = expected_calibration_error(confs, corr, n_bins=10)
+    assert abs(s) < 1e-9, f"skew should cancel to ~0, got {s}"
+    assert ece > 0.5, f"ECE should remain large, got {ece}"
+
+
+def test_sharpness_of_uniform_is_one_over_k():
+    probs = [[0.25] * 4] * 6
+    confs, _ = top1_confidence_and_correct(probs, [0] * 6)
+    mean_peak, max_peak = sharpness(confs)
+    assert abs(mean_peak - 0.25) < 1e-12
+    assert abs(max_peak - 0.25) < 1e-12
+
+
+def test_peak_histogram_counts_sum_to_n():
+    probs = [[0.7, 0.3]] * 3 + [[0.2, 0.8]] * 5
+    confs, _ = top1_confidence_and_correct(probs, [0] * 8)
+    h = peak_histogram(confs, n_bins=10)
+    assert len(h) == 10
+    assert sum(b["count"] for b in h) == 8
+    assert h[7]["count"] == 3          # peak 0.7
+    assert h[8]["count"] == 5          # peak 0.8
+
+
+def test_peak_and_skew_fail_closed():
+    with pytest.raises(ValueError):
+        peak_histogram([0.5], n_bins=0)
+    with pytest.raises(ValueError):
+        peak_histogram([1.5], n_bins=10)
+    with pytest.raises(ValueError):
+        calibration_skew([], [])
+    with pytest.raises(ValueError):
+        sharpness([])
+
+
+def test_uniform_predictor_scores_zero_ece_but_has_no_skill():
+    """The blueprint's central S1.1 justification, executed.
+
+    A uniform (0.25 x 4) predictor on a BALANCED 4-way set achieves ECE exactly
+    0.0 -- indistinguishable from a perfect model by ECE alone -- while its
+    Brier skill score is exactly 0.0 (it IS the uniform floor). The joint gate
+    must reject it, which is why is_well_calibrated requires BOTH
+    ECE <= 0.05 AND brier_skill_score > 0.
+    """
+    probs = [[0.25] * 4] * 40
+    correct = [i % 4 for i in range(40)]           # balanced
+    rep = evaluate_calibration(probs, correct)
+    assert abs(rep.ece) < 1e-9, f"uniform ECE should be 0, got {rep.ece}"
+    assert abs(rep.brier_skill_score) < 1e-9, (
+        f"uniform skill should be 0, got {rep.brier_skill_score}")
+    assert rep.is_well_calibrated is False
+    confs, _ = top1_confidence_and_correct(probs, correct)
+    mean_peak, _ = sharpness(confs)
+    assert abs(mean_peak - 0.25) < 1e-12
+
+
+def test_build_calibration_receipt_has_the_required_fields():
+    """Blueprint 8.4 field list must all be present."""
+    probs = [[0.9, 0.1]] * 10
+    correct = [1] + [0] * 9
+    rec = build_calibration_receipt(probs, correct, n_bins=10)
+    for key in ("schema", "n_samples", "n_classes", "source_hash", "brier",
+                "ece", "bins", "mean_confidence", "accuracy",
+                "is_well_calibrated", "brier_skill_score",
+                "calibration_skew", "sharpness_mean_peak",
+                "sharpness_max_peak", "peak_histogram"):
+        assert key in rec, f"receipt missing required field {key!r}"
+    assert rec["n_samples"] == 10
+    assert rec["n_classes"] == 2
+    assert len(rec["source_hash"]) == 64
+    assert sum(b["count"] for b in rec["peak_histogram"]) == 10
+    assert rec["schema"] == "henri.probe-calibration.v1"
 
 
 # ------------------------------------------------------------ oracle leg ----
