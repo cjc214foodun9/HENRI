@@ -1,0 +1,355 @@
+{
+  "schema": "henri.amendment-carriers.v1",
+  "utc": "2026-09-19T21:33:23.307556+00:00",
+  "evidence_class": "OBSERVED",
+  "amendment_sources": [
+    "HENRI-SPEC-2026-09-ONTOLOGICAL-GROUNDING-VLA",
+    "HENRI-ARCH-2026-11-COMPUTE-ATTENTION-DYNAMICS"
+  ],
+  "part1_codec": {
+    "dim": 4096,
+    "seed": 20260918,
+    "gates": {
+      "gap_min": 0.05,
+      "recovery_min": 0.9
+    },
+    "arms": {
+      "random_control": {
+        "arm": "random_control",
+        "n_shared_pairs": 11,
+        "n_disjoint_pairs": 4,
+        "mean_shared": 0.0017671237742020326,
+        "mean_disjoint": -0.002644280204549432,
+        "null_abs_expected": 0.013847295710199343,
+        "semantic_gap": 0.004411403978751465
+      },
+      "literal_convolution": {
+        "arm": "literal_convolution",
+        "n_shared_pairs": 11,
+        "n_disjoint_pairs": 4,
+        "mean_shared": -0.005139120446983725,
+        "mean_disjoint": -0.0009455506806261837,
+        "null_abs_expected": 0.013847295710199343,
+        "semantic_gap": -0.004193569766357541
+      },
+      "role_filler_bundle": {
+        "arm": "role_filler_bundle",
+        "n_shared_pairs": 11,
+        "n_disjoint_pairs": 4,
+        "mean_shared": 0.3822185451334173,
+        "mean_disjoint": -0.002798980160150677,
+        "null_abs_expected": 0.013847295710199343,
+        "semantic_gap": 0.385017525293568
+      }
+    },
+    "unbinding_recovery_rate": 1.0,
+    "unbinding_recovery_detail": [
+      {
+        "concept": "cat",
+        "role": "habitat",
+        "want": "domestic",
+        "got": "domestic",
+        "ok": true
+      },
+      {
+        "concept": "cat",
+        "role": "morph",
+        "want": "quadruped",
+        "got": "quadruped",
+        "ok": true
+      },
+      {
+        "concept": "cat",
+        "role": "scale",
+        "want": "small",
+        "got": "small",
+        "ok": true
+      },
+      {
+        "concept": "cat",
+        "role": "taxa",
+        "want": "mammal",
+        "got": "mammal",
+        "ok": true
+      },
+      {
+        "concept": "cat",
+        "role": "trophic",
+        "want": "carnivore",
+        "got": "carnivore",
+        "ok": true
+      },
+      {
+        "concept": "cat",
+        "role": "valence",
+        "want": "neutral",
+        "got": "neutral",
+        "ok": true
+      },
+      {
+        "concept": "dog",
+        "role": "habitat",
+        "want": "domestic",
+        "got": "domestic",
+        "ok": true
+      },
+      {
+        "concept": "dog",
+        "role": "morph",
+        "want": "quadruped",
+        "got": "quadruped",
+        "ok": true
+      },
+      {
+        "concept": "dog",
+        "role": "scale",
+        "want": "medium",
+        "got": "medium",
+        "ok": true
+      },
+      {
+        "concept": "dog",
+        "role": "taxa",
+        "want": "mammal",
+        "got": "mammal",
+        "ok": true
+      },
+      {
+        "concept": "dog",
+        "role": "trophic",
+        "want": "omnivore",
+        "got": "omnivore",
+        "ok": true
+      },
+      {
+        "concept": "dog",
+        "role": "valence",
+        "want": "neutral",
+        "got": "neutral",
+        "ok": true
+      },
+      {
+        "concept": "feline",
+        "role": "habitat",
+        "want": "jungle",
+        "got": "jungle",
+        "ok": true
+      },
+      {
+        "concept": "feline",
+        "role": "morph",
+        "want": "quadruped",
+        "got": "quadruped",
+        "ok": true
+      },
+      {
+        "concept": "feline",
+        "role": "scale",
+        "want": "medium",
+        "got": "medium",
+        "ok": true
+      },
+      {
+        "concept": "feline",
+        "role": "taxa",
+        "want": "mammal",
+        "got": "mammal",
+        "ok": true
+      },
+      {
+        "concept": "feline",
+        "role": "trophic",
+        "want": "carnivore",
+        "got": "carnivore",
+        "ok": true
+      },
+      {
+        "concept": "feline",
+        "role": "valence",
+        "want": "threat",
+        "got": "threat",
+        "ok": true
+      },
+      {
+        "concept": "lion",
+        "role": "habitat",
+        "want": "savanna",
+        "got": "savanna",
+        "ok": true
+      },
+      {
+        "concept": "lion",
+        "role": "morph",
+        "want": "quadruped",
+        "got": "quadruped",
+        "ok": true
+      },
+      {
+        "concept": "lion",
+        "role": "scale",
+        "want": "large",
+        "got": "large",
+        "ok": true
+      },
+      {
+        "concept": "lion",
+        "role": "taxa",
+        "want": "mammal",
+        "got": "mammal",
+        "ok": true
+      },
+      {
+        "concept": "lion",
+        "role": "trophic",
+        "want": "carnivore",
+        "got": "carnivore",
+        "ok": true
+      },
+      {
+        "concept": "lion",
+        "role": "valence",
+        "want": "apex_threat",
+        "got": "apex_threat",
+        "ok": true
+      },
+      {
+        "concept": "quantum",
+        "role": "habitat",
+        "want": "vacuum",
+        "got": "vacuum",
+        "ok": true
+      },
+      {
+        "concept": "quantum",
+        "role": "morph",
+        "want": "field",
+        "got": "field",
+        "ok": true
+      },
+      {
+        "concept": "quantum",
+        "role": "scale",
+        "want": "tiny",
+        "got": "tiny",
+        "ok": true
+      },
+      {
+        "concept": "quantum",
+        "role": "taxa",
+        "want": "abstract",
+        "got": "abstract",
+        "ok": true
+      },
+      {
+        "concept": "quantum",
+        "role": "trophic",
+        "want": "none",
+        "got": "none",
+        "ok": true
+      },
+      {
+        "concept": "quantum",
+        "role": "valence",
+        "want": "neutral",
+        "got": "neutral",
+        "ok": true
+      },
+      {
+        "concept": "teaspoon",
+        "role": "habitat",
+        "want": "kitchen",
+        "got": "kitchen",
+        "ok": true
+      },
+      {
+        "concept": "teaspoon",
+        "role": "morph",
+        "want": "rod",
+        "got": "rod",
+        "ok": true
+      },
+      {
+        "concept": "teaspoon",
+        "role": "scale",
+        "want": "small",
+        "got": "small",
+        "ok": true
+      },
+      {
+        "concept": "teaspoon",
+        "role": "taxa",
+        "want": "artifact",
+        "got": "artifact",
+        "ok": true
+      },
+      {
+        "concept": "teaspoon",
+        "role": "trophic",
+        "want": "none",
+        "got": "none",
+        "ok": true
+      },
+      {
+        "concept": "teaspoon",
+        "role": "valence",
+        "want": "neutral",
+        "got": "neutral",
+        "ok": true
+      }
+    ],
+    "pre_registered": {
+      "C1_random_has_no_gap": true,
+      "C2_literal_convolve_has_no_gap": true,
+      "C3_role_filler_has_gap": true,
+      "C4_role_filler_beats_literal": true,
+      "C5_unbinding_recovers": true
+    },
+    "verdict": "CORRECTED_CONSTRUCTION_REQUIRED -- role-filler bundling creates the semantic gap and supports exact unbinding, while the document's literal convolution chain (and the live random init) do not. The remedy is real; the mechanism in the document is not the one that provides it."
+  },
+  "part2_attention": {
+    "dim": 4096,
+    "tile": 64,
+    "null_r_mean": 0.10991370677947998,
+    "null_r_q99": 0.27383914589881897,
+    "null_analytic_1_over_sqrt_tile": 0.125,
+    "doc_threshold": 0.707,
+    "doc_threshold_result": {
+      "enabled": true,
+      "occupancy": 0.0,
+      "threshold": 0.707,
+      "threshold_source": "asserted_literal",
+      "fail_closed": true,
+      "reason": "MASK_EMPTY_WOULD_DIVIDE_BY_ZERO",
+      "null_r_mean": 0.10883437842130661,
+      "z_raw_norm": 67.59208679199219
+    },
+    "calibrated_result": {
+      "enabled": true,
+      "occupancy": 0.015625,
+      "threshold": 0.25499287247657776,
+      "threshold_source": "calibrated_null_q0.99",
+      "fail_closed": false,
+      "snr_db": -36.599822998046875,
+      "retrieved_index": 114,
+      "max_weight": 0.9989466071128845,
+      "z_raw_norm": 67.59208679199219
+    },
+    "dead_input_result": {
+      "enabled": true,
+      "occupancy": null,
+      "threshold": null,
+      "fail_closed": true,
+      "reason": "ZERO_FIELD_VACUOUS_COHERENCE",
+      "input_power": 0.0,
+      "note": "a null field has angle==0 everywhere, so coherence is 1.0 and the mask would pass everything"
+    },
+    "dead_input_control_passed": true
+  },
+  "limits": [
+    "Reduced dimension D=4096 on CPU; the constructions are dimension-independent and the 1/sqrt(D) null is reported for rescaling.",
+    "Encoder-level property only: this measures whether a CONSTRUCTION creates semantic neighbourhood structure. It is a necessary-not-sufficient property and is NOT a capability or benchmark claim.",
+    "The ontology is a hand-authored six-attribute set; the shared/disjoint split follows from it, not from data.",
+    "No production path is modified: both carriers are importable modules, and the attention sidecar is disabled unless a caller enables it.",
+    "The document's literal r_threshold is measured, not replaced."
+  ]
+}
