@@ -1,0 +1,50 @@
+{
+  "frame_present": true,
+  "frame_type": "list",
+  "frame_attr_keys": null,
+  "model_dump_excludes_frame": true,
+  "grids_before_step": [
+    [
+      "frame[0]",
+      "(64, 64)",
+      "int8",
+      "0",
+      "10",
+      "4082"
+    ]
+  ],
+  "grids_after_step": [
+    [
+      "frame[0]",
+      "(64, 64)",
+      "int8",
+      "0",
+      "10",
+      "4082"
+    ]
+  ],
+  "available_actions": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "rendering_public": [
+    "Any",
+    "COLOR_MAP",
+    "FrameDataRaw",
+    "HAS_MATPLOTLIB",
+    "Optional",
+    "Tuple",
+    "animation",
+    "frame_to_rgb_array",
+    "hex_to_rgb",
+    "ndarray",
+    "plt",
+    "render_frames",
+    "render_frames_terminal",
+    "rgb_to_ansi",
+    "sys",
+    "time"
+  ]
+}

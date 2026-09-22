@@ -1,0 +1,36 @@
+{
+  "module": "arc_lattice_tau",
+  "evidence_class": "OBSERVED",
+  "source_spec": "measured by arc_runtime_smoke.py (64x64, values 0..10)",
+  "n_slots": 4096,
+  "n_values": 11,
+  "trials": 200000,
+  "rows": [
+    {
+      "alpha": 0.05,
+      "q_matched": 403,
+      "tau": 0.901611328125,
+      "min_match_rate_to_pass": 0.098388671875,
+      "max_cells_wrong_to_pass": 3693
+    },
+    {
+      "alpha": 0.01,
+      "q_matched": 416,
+      "tau": 0.8984375,
+      "min_match_rate_to_pass": 0.1015625,
+      "max_cells_wrong_to_pass": 3680
+    },
+    {
+      "alpha": 0.001,
+      "q_matched": 430,
+      "tau": 0.89501953125,
+      "min_match_rate_to_pass": 0.10498046875,
+      "max_cells_wrong_to_pass": 3666
+    }
+  ],
+  "mc_q01_stress": 0.8984375,
+  "mc_agrees_with_exact_at_alpha0.01": true,
+  "tau_deployment_alpha0.01": 0.8984375,
+  "inherited_0.35_would_require_match_rate": 0.65,
+  "note": "The observational veto is a STRICT gate at this lattice size: it rejects only candidates no better than random. Ranking among partially-correct candidates is the waveform cosine's role."
+}

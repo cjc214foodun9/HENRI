@@ -1,0 +1,92 @@
+{
+  "module": "sagnac_epsilon_mode",
+  "evidence_class": "OBSERVED",
+  "dim": 1024,
+  "summary": {
+    "fixed_adaptive": {
+      "veto_rate_by_alignment": {
+        "1.0": 0.0,
+        "0.9": 0.0,
+        "0.75": 0.0,
+        "0.5": 0.0,
+        "0.25": 0.0,
+        "0.0": 0.0
+      },
+      "delta_by_alignment": {
+        "1.0": 0.0,
+        "0.9": 0.0501,
+        "0.75": 0.1255,
+        "0.5": 0.2512,
+        "0.25": 0.3766,
+        "0.0": 0.5016
+      },
+      "classification": "NEVER_FIRES"
+    },
+    "fixed_explicit": {
+      "veto_rate_by_alignment": {
+        "1.0": 0.0,
+        "0.9": 0.0,
+        "0.75": 0.0,
+        "0.5": 0.0,
+        "0.25": 1.0,
+        "0.0": 1.0
+      },
+      "delta_by_alignment": {
+        "1.0": 0.0,
+        "0.9": 0.0501,
+        "0.75": 0.1255,
+        "0.5": 0.2512,
+        "0.25": 0.3766,
+        "0.0": 0.5016
+      },
+      "classification": "SELECTIVE"
+    },
+    "legacy_adaptive": {
+      "veto_rate_by_alignment": {
+        "1.0": 1.0,
+        "0.9": 1.0,
+        "0.75": 1.0,
+        "0.5": 1.0,
+        "0.25": 1.0,
+        "0.0": 1.0
+      },
+      "delta_by_alignment": {
+        "1.0": 0.999,
+        "0.9": 0.9991,
+        "0.75": 0.9993,
+        "0.5": 0.9995,
+        "0.25": 0.9998,
+        "0.0": 1.0
+      },
+      "classification": "ALWAYS_FIRES"
+    },
+    "legacy_explicit": {
+      "veto_rate_by_alignment": {
+        "1.0": 1.0,
+        "0.9": 1.0,
+        "0.75": 1.0,
+        "0.5": 1.0,
+        "0.25": 1.0,
+        "0.0": 1.0
+      },
+      "delta_by_alignment": {
+        "1.0": 0.999,
+        "0.9": 0.9991,
+        "0.75": 0.9993,
+        "0.5": 0.9995,
+        "0.25": 0.9998,
+        "0.0": 1.0
+      },
+      "classification": "ALWAYS_FIRES"
+    }
+  },
+  "findings": {
+    "production_arm_legacy_adaptive": "ALWAYS_FIRES",
+    "production_arm_fixed_adaptive": "NEVER_FIRES",
+    "planner_arm_legacy_explicit": "ALWAYS_FIRES",
+    "planner_arm_fixed_explicit": "SELECTIVE"
+  },
+  "gate_failures": [],
+  "verdict": "PASS",
+  "claim": "The hard veto's behaviour depends on WHICH epsilon_hard path the caller takes. search() passes an explicit 0.35 (selective after the scale fix); production_arc_run.py:2279 passes none, activating an adaptive threshold that expands up to 2x tau_veto when the candidate is worst. Under the legacy scale that arm always fired; after the fix it may never fire. The flag therefore changed meaning even though it is default-OFF."
+}

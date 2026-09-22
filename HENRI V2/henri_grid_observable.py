@@ -68,16 +68,45 @@ def derive_tau(n_slots: int, n_values: int = DEFAULT_N_VALUES,
     if not 0.0 < alpha < 1.0:
         raise ValueError("alpha must be in (0, 1)")
     p = 1.0 / n_values
-    pmf = [comb(n_slots, k) * (p ** k) * ((1 - p) ** (n_slots - k))
-           for k in range(n_slots + 1)]
-    s = sum(pmf)
-    pmf = [x / s for x in pmf] if s > 0 else pmf
+    # LOG-SPACE pmf over a WINDOWED support.
+    #
+    # An earlier version computed `comb(n, k) * p**k * (1-p)**(n-k)` directly and
+    # raised, at the MEASURED deployment lattice (n_slots = 4096, from the live
+    # ARC-AGI-3 frame of 64x64):
+    #     OverflowError: int too large to convert to float
+    # math.comb(4096, 2048) is an integer with ~1230 digits. So tau COULD NOT BE
+    # DERIVED at the size that actually matters -- the function was only ever
+    # exercised at n_slots <= 900. This is the same class of defect as the ones it is
+    # meant to guard against: a threshold that works on the test case and fails where
+    # it is used.
+    #
+    # The pmf is now built in log space (lgamma) over +/- 12 standard deviations.
+    #   * 12 sigma excludes mass ~1e-33 while staying float-exact where it matters
+    #   * the window makes cost O(sd) rather than O(n)
+    #   * the pmf is renormalized over the window, so the tail truncation introduces
+    #     no bias at the quantiles we ask for (alpha >= 0.001)
+    from math import exp, lgamma, log
+    mu = n_slots * p
+    sd = math.sqrt(n_slots * p * (1.0 - p))
+    if sd <= 0.0:
+        sd = 1.0
+    lo = max(0, int(mu - 12.0 * sd))
+    hi = min(n_slots, int(mu + 12.0 * sd))
+    logp = log(p)
+    logq = log(1.0 - p)
+    logs = [lgamma(n_slots + 1) - lgamma(k + 1) - lgamma(n_slots - k + 1)
+            + k * logp + (n_slots - k) * logq
+            for k in range(lo, hi + 1)]
+    mx = max(logs)
+    raw = [exp(x - mx) for x in logs]
+    s = sum(raw)
+    pmf_window = [x / s for x in raw] if s > 0 else raw
     cum = 0.0
-    q = n_slots
-    for k in range(n_slots + 1):
-        cum += pmf[k]
+    q = hi
+    for i, val in enumerate(pmf_window):
+        cum += val
         if cum >= 1.0 - alpha:
-            q = k
+            q = lo + i
             break
     return {
         "n_slots": n_slots, "n_values": n_values, "alpha": alpha,

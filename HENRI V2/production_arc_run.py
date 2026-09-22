@@ -2277,7 +2277,20 @@ def run():
                             _world_ref = state_wave.detach().reshape(-1)
                             _d_ax, _d_ep, _hard = (
                                 sagnac_planner.dual_channel_sagnac_veto(
-                                    _psi_macro, _axiom_ref, _world_ref))
+                                    _psi_macro, _axiom_ref, _world_ref,
+                                    # EXPLICIT epsilon, matching what the planner's
+                                    # own child expansion passes. Omitting it takes the
+                                    # ADAPTIVE branch, which raises the threshold when
+                                    # the candidate is WORST and was MEASURED to
+                                    # NEVER_FIRES on L2-normalized waves
+                                    # (experiments/verification/sidecar_selectivity_observed.json,
+                                    # arm A: veto rate 0.00 at every alignment, so
+                                    # `not _hard_vetoed` was always True and this gate
+                                    # could not suppress anything). With an explicit
+                                    # tau_veto the arm is SELECTIVE (arm B), so an
+                                    # engagement is decided by the candidate rather
+                                    # than always allowed.
+                                    epsilon_hard=sagnac_planner.tau_veto))
                             _veto = {
                                 "delta_axiom": round(_d_ax, 6),
                                 "delta_epistemic": round(_d_ep, 6),

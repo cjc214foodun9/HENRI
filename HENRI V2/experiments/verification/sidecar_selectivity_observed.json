@@ -1,0 +1,124 @@
+{
+  "module": "sidecar_selectivity",
+  "evidence_class": "OBSERVED",
+  "dim": 1024,
+  "alignments": [
+    1.0,
+    0.9,
+    0.75,
+    0.5,
+    0.25,
+    0.0
+  ],
+  "summary": {
+    "DEFAULT_EPSILON_HARD": 0.35
+  },
+  "arms": {
+    "A_planner_adaptive_prod2279": {
+      "veto_rate_by_alignment": {
+        "1.0": 0.0,
+        "0.9": 0.0,
+        "0.75": 0.0,
+        "0.5": 0.0,
+        "0.25": 0.0,
+        "0.0": 0.0
+      },
+      "delta_by_alignment": {
+        "1.0": 0.0,
+        "0.9": 0.0501,
+        "0.75": 0.1255,
+        "0.5": 0.2512,
+        "0.25": 0.3766,
+        "0.0": 0.5016
+      },
+      "classification": "NEVER_FIRES"
+    },
+    "B_planner_explicit_search": {
+      "veto_rate_by_alignment": {
+        "1.0": 0.0,
+        "0.9": 0.0,
+        "0.75": 0.0,
+        "0.5": 0.0,
+        "0.25": 1.0,
+        "0.0": 1.0
+      },
+      "delta_by_alignment": {
+        "1.0": 0.0,
+        "0.9": 0.0501,
+        "0.75": 0.1255,
+        "0.5": 0.2512,
+        "0.25": 0.3766,
+        "0.0": 0.5016
+      },
+      "classification": "SELECTIVE"
+    },
+    "C_sidecar_real_prod2315": {
+      "veto_rate_by_alignment": {
+        "1.0": 0.0,
+        "0.9": 0.0,
+        "0.75": 0.0,
+        "0.5": 0.0,
+        "0.25": 1.0,
+        "0.0": 1.0
+      },
+      "delta_by_alignment": {
+        "1.0": 0.0,
+        "0.9": 0.0501,
+        "0.75": 0.1255,
+        "0.5": 0.2512,
+        "0.25": 0.3766,
+        "0.0": 0.5016
+      },
+      "classification": "SELECTIVE"
+    },
+    "D_sidecar_true_unitmodulus_complex": {
+      "veto_rate_by_alignment": {
+        "1.0": 0.0,
+        "0.9": 0.0,
+        "0.75": 0.0,
+        "0.5": 1.0,
+        "0.25": 1.0,
+        "0.0": 1.0
+      },
+      "delta_by_alignment": {
+        "1.0": 0.0,
+        "0.9": 0.102,
+        "0.75": 0.253,
+        "0.5": 0.5037,
+        "0.25": 0.7536,
+        "0.0": 0.9774
+      },
+      "classification": "SELECTIVE"
+    },
+    "E_sidecar_L2complex_HAZARD": {
+      "veto_rate_by_alignment": {
+        "1.0": 1.0,
+        "0.9": 1.0,
+        "0.75": 1.0,
+        "0.5": 1.0,
+        "0.25": 1.0,
+        "0.0": 1.0
+      },
+      "delta_by_alignment": {
+        "1.0": 0.999,
+        "0.9": 0.9991,
+        "0.75": 0.9993,
+        "0.5": 0.9995,
+        "0.25": 0.9998,
+        "0.0": 1.0
+      },
+      "classification": "ALWAYS_FIRES"
+    }
+  },
+  "findings": {
+    "A_planner_adaptive_prod2279": "NEVER_FIRES",
+    "B_planner_explicit_search": "SELECTIVE",
+    "C_sidecar_real_prod2315": "SELECTIVE",
+    "D_sidecar_true_unitmodulus_complex": "SELECTIVE",
+    "E_sidecar_L2complex_HAZARD": "ALWAYS_FIRES"
+  },
+  "gate_failures": [],
+  "verdict": "PASS",
+  "record_correction": "My earlier statement that HENRI_ARC_SAGNAC_VETO=1 'is currently a non-gate: it cannot veto anything' was OVERSTATED. production_arc_run.py has TWO consumers. Line 2279 feeds OPINE engagement through the planner's ADAPTIVE epsilon (always-suppress under legacy; never-suppress fixed). Line 2315-2330 re-ranks EFE candidates through arc_sagnac_veto.evaluate_veto, which uses a FIXED 0.35 and the CANONICAL norm-consistent similarity and was never affected by the scale bug. Measured here: the sidecar IS selective, so the flag does gate the EFE re-rank path.",
+  "conditionality": "The sidecar's complex branch, S = |mean(a.conj()*b)|, is the correct inner product ONLY for UNIT-MODULUS waves. For L2-normalized waves it is the inner product divided by D -- the exact defect the planner had. The sidecar is correct by its stated 'UWE family' contract, but correctness is CONDITIONAL on the caller honoring that convention."
+}

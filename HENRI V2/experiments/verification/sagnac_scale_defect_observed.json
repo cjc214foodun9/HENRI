@@ -83,6 +83,26 @@
         "text": "rand_stress.append(planner.dual_channel_sagnac_veto(p, ax, p)[0])"
       },
       {
+        "file": "experiments\\verification\\sagnac_epsilon_mode.py",
+        "line": 75,
+        "text": "d_ax, d_ep, hard = p.dual_channel_sagnac_veto(c, ax, w, epsilon_hard={eps})"
+      },
+      {
+        "file": "experiments\\verification\\sagnac_flag_ab.py",
+        "line": 8,
+        "text": "_d_ax, _d_ep, _hard = sagnac_planner.dual_channel_sagnac_veto("
+      },
+      {
+        "file": "experiments\\verification\\sagnac_flag_ab.py",
+        "line": 29,
+        "text": "This exercises `dual_channel_sagnac_veto` -- the exact function the production"
+      },
+      {
+        "file": "experiments\\verification\\sagnac_flag_ab.py",
+        "line": 93,
+        "text": "d_ax, d_ep, hard = p.dual_channel_sagnac_veto(c, ax, w)"
+      },
+      {
         "file": "experiments\\verification\\sagnac_scale_defect.py",
         "line": 9,
         "text": "The measurement says something worse. `dual_channel_sagnac_veto` computes"
@@ -141,6 +161,21 @@
         "file": "experiments\\verification\\sagnac_three_way_agreement.py",
         "line": 104,
         "text": "d_legacy, _, _ = planner.dual_channel_sagnac_veto(a, b, b)"
+      },
+      {
+        "file": "experiments\\verification\\sidecar_selectivity.py",
+        "line": 11,
+        "text": "sagnac_planner.dual_channel_sagnac_veto(_psi_macro, _axiom, _world)"
+      },
+      {
+        "file": "experiments\\verification\\sidecar_selectivity.py",
+        "line": 145,
+        "text": "d_ax, _, hard = planner.dual_channel_sagnac_veto(c, ax, w)  # no epsilon"
+      },
+      {
+        "file": "experiments\\verification\\sidecar_selectivity.py",
+        "line": 151,
+        "text": "d_ax, _, hard = planner.dual_channel_sagnac_veto(c, ax, w,"
       },
       {
         "file": "tests\\contract\\test_phase823_target_grounding.py",
@@ -203,7 +238,7 @@
         "text": "d, _, _ = planner.dual_channel_sagnac_veto(z, ref, ref)"
       }
     ],
-    "S5_caller_count": 34,
+    "S5_caller_count": 41,
     "DEFECT_CONFIRMED": true
   },
   "claim": "dual_channel_sagnac_veto computes 1 - |<a,b>|/D instead of 1 - |<a,b>|/(||a|| ||b||), so every stress is pinned near 1.0 and the hard veto fires on 100% of candidates. This is the live 'un-passable by construction' defect, and it is a DIVISION BY D, not the random-axiom construction the spec blamed.",

@@ -1,0 +1,55 @@
+{
+  "module": "arc_runtime_smoke",
+  "evidence_class": "OBSERVED",
+  "python": "3.12.10",
+  "game": "tr87-cd924810",
+  "operation_mode": "offline",
+  "api_key_used": false,
+  "results": {
+    "R0_environments_found": [
+      "tr87-cd924810"
+    ],
+    "R1_reset_ok": true,
+    "R1_state": "NOT_FINISHED",
+    "R1_levels_completed": 0,
+    "R1_win_levels": 6,
+    "R1_frame_keys": [],
+    "R2_action_space_size": 4,
+    "R2_action_space_sample": [
+      "GameAction.ACTION1",
+      "GameAction.ACTION2",
+      "GameAction.ACTION3",
+      "GameAction.ACTION4"
+    ],
+    "R3_steps_executed": 60,
+    "R3_step_error": null,
+    "R3_actions_used": [
+      "GameAction.ACTION1",
+      "GameAction.ACTION2",
+      "GameAction.ACTION3",
+      "GameAction.ACTION4"
+    ],
+    "R3_rewards_seen": [],
+    "R5_final_state": "GameState.NOT_FINISHED",
+    "R5_final_levels_completed": 0,
+    "R4_distinct_grid_shapes": [
+      [
+        64,
+        64
+      ]
+    ],
+    "R4_value_ranges": [
+      [
+        0,
+        10
+      ]
+    ],
+    "R4_non_empty_frames": 60,
+    "R4_frame_live": true,
+    "R4_distinct_frame_sums": 45,
+    "R4_tau_error": "ModuleNotFoundError: No module named 'henri_grid_observable'"
+  },
+  "gate_failures": [],
+  "verdict": "PASS",
+  "scope_note": "Only ONE ARC-AGI-3 game exists locally (tr87, 6 win_levels). henri_data/ARC-AGI/data/evaluation holds 400 ARC-AGI-1/2 STATIC tasks -- a different benchmark. A score from this smoke is a TRANSPORT result, not a benchmark result."
+}
