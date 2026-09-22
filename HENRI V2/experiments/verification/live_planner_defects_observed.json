@@ -1,0 +1,28 @@
+{
+  "module": "live_planner_defects",
+  "evidence_class": "OBSERVED",
+  "results": {
+    "D1_epistemic_self_reference": 0.9990234373835847,
+    "D1_epistemic_other_reference": 0.9999838776493561,
+    "D1_axiom_channel": 0.9999838776493561,
+    "D1_epistemic_over_5_candidates": [
+      0.9990234373835847,
+      0.9990234375,
+      0.9990234375,
+      0.9990234375582077,
+      0.9990234375
+    ],
+    "D1_epistemic_is_constant": false,
+    "D2_root_conflates_channels": true,
+    "D2_psi_world_is_candidate": true,
+    "D3_axiom_varies_with_reference": false,
+    "D3_random_axiom_stress_mean": 0.999978069457196,
+    "D3_random_axiom_stress_min": 0.9999258921961882,
+    "D3_random_axiom_pass_rate_at_tau0.35": 0.0
+  },
+  "gate_failures": [
+    "D1: with psi_world=psi_candidate the epistemic channel returned 9.990e-01, expected exactly 0. The self-comparison claim does not reproduce, so it must be re-derived."
+  ],
+  "verdict": "FAIL",
+  "self_correction": "evaluate_test_time_plan with random zone_c_axioms is SPEC code, not repository code. The live planner uses the demonstration-induced goal as its axiom reference. The live defects are the self-referenced epistemic channel and the absence of any decode step."
+}

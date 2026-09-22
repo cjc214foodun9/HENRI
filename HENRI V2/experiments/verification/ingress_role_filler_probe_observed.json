@@ -1,0 +1,64 @@
+{
+  "module": "ingress_role_filler_probe",
+  "evidence_class": "OBSERVED",
+  "vocab_size": 256,
+  "num_blocks": 1024,
+  "results": {
+    "I1b_rfss_block_row_norm_mean": 32.0,
+    "I1b_random_block_row_norm_mean": 32.0,
+    "I1b_expected_block_row_norm_sqrt_nb": 32.0,
+    "I1_rfss_norm_min": 0.9999987483024597,
+    "I1_rfss_norm_max": 1.0000008344650269,
+    "I1_random_norm_min": 0.9999997019767761,
+    "I1_random_norm_max": 1.000000238418579,
+    "I2_random_offdiag_mean": 0.008729517644166457,
+    "I2_random_offdiag_std": 0.006620670538092793,
+    "I2_random_offdiag_p99": 0.02819087643796136,
+    "I3_rfss_shared_vs_cosine_pearson": 0.9986714773581608,
+    "I3_rfss_cosine_mean": 0.23563740740639802,
+    "I3_rfss_shared_mean": 0.9401960784313725,
+    "I3_random_shared_vs_cosine_pearson": 0.058287924211931484,
+    "I4_pairs": {
+      "'a' vs 'b'": {
+        "shared_roles": 2,
+        "rfss_cos": 0.499910384940118,
+        "random_cos": 0.007527508548442598
+      },
+      "'a' vs 'c'": {
+        "shared_roles": 3,
+        "rfss_cos": 0.754062442671173,
+        "random_cos": 0.01583285589093375
+      },
+      "'0' vs '1'": {
+        "shared_roles": 2,
+        "rfss_cos": 0.490054781622808,
+        "random_cos": 0.006830942438766627
+      },
+      "'a' vs 'Z'": {
+        "shared_roles": 0,
+        "rfss_cos": 0.00856661578942754,
+        "random_cos": 0.008649652120087285
+      },
+      "'0' vs 'A'": {
+        "shared_roles": 0,
+        "rfss_cos": 0.015948550505693326,
+        "random_cos": 0.004913323499646395
+      },
+      "' ' vs 'a'": {
+        "shared_roles": 0,
+        "rfss_cos": 0.0003989106109799687,
+        "random_cos": 0.015249008382705983
+      }
+    },
+    "I4_sibling_ab": 0.499910384940118,
+    "I4_distant_aZ": 0.00856661578942754,
+    "I4_sibling_minus_distant": 0.4913437691506905,
+    "I5_unbound_class_index": 2,
+    "I5_expected_class_index": 2,
+    "I5_unbinding_ok": true,
+    "I6_deterministic": true
+  },
+  "gate_failures": [],
+  "verdict": "PASS",
+  "claim": "The live random-phasor ingress is metrically flat; RFSS makes similarity track shared role structure, so byte tokens acquire a usable metric."
+}

@@ -6,6 +6,7 @@ Sagnac-Guided Branch Pruning (Q -> -inf when Delta_Sagnac > tau_veto), and TDV (
 """
 
 import math
+import os
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -124,6 +125,60 @@ class SagnacMCTSPlanner:
             "FlipHorizontal", "FlipVertical", "ColorPermute", "ContourFill", "GravityDrop"
         ]
 
+    # ------------------------------------------------------------------ scale
+    # SAGNAC SCALE DEFECT -- FIXED 2026-10-12.
+    #
+    # This method used `torch.mean(w_cand.conj() * w_ref)`, which is only a valid
+    # inner product when the waves are qFHRR-style UNIT-MODULUS (each |w_n| = 1, so
+    # ||w||_2 = sqrt(D)). For L2-NORMALIZED waves (||w||_2 = 1, each |w_n| = 1/sqrt(D))
+    # the mean is the inner product DIVIDED BY D:
+    #
+    #     delta = 1 - |<a,b>| / D          ->  1 - O(1/D) for EVERY input
+    #
+    # MEASURED at D = 1024 (experiments/verification/sagnac_scale_defect.py):
+    #     identical pair   delta 0.999023   (should be 0.0)
+    #     orthogonal pair  delta 0.999982
+    #     random pair      delta 0.999954
+    #     range across those cases 9.59e-04   <- flat, carries no information
+    #
+    # CONSEQUENCE, measured: `hard_veto_triggered = delta_axiom > epsilon_hard` with
+    # epsilon_hard = 0.35 fired on 9/9 root children (prune rate 1.000), so the MCTS
+    # could not expand. Meanwhile the ROOT is scored by
+    # HENRIVisionEncoder.compute_sagnac_similarity, which uses the CORRECT real
+    # convention, so the root looked healthy (0.497) while every child looked
+    # catastrophic (~0.999). Net effect: search() always returned the Identity
+    # program. Two incompatible conventions in one file was the bug.
+    #
+    # This defect is ALREADY DOCUMENTED in this repository and is NOT a new
+    # discovery: arc_sagnac_veto.py records it as "FALSIFIED ... (OBSERVED
+    # 2026-08-12, worktree fdb7fd3)" and henri_dual_speed_harness.py re-confirmed it
+    # 2026-08-18. The canonical norm-consistent similarity already exists there as
+    # `_sagnac_similarity`. This patch applies that canonical form here, with
+    # explicit normalization so BOTH wave conventions are handled by one formula.
+    #
+    # To reproduce the legacy scale for A/B, set HENRI_SAGNAC_LEGACY_SCALE=1. The
+    # legacy branch is kept deliberately so the defect stays reproducible as
+    # evidence, exactly as the random-axiom measure is kept in henri_wave_readout.
+    def _norm_consistent_similarity(self, a: torch.Tensor, b: torch.Tensor) -> float:
+        """Sagnac homodyne similarity S in [0, 1], scale-consistent. Identical -> 1.
+
+        Real waves:      S = 0.5 * (1 + <a,b> / (||a|| ||b||)), so S = 1 at identity.
+        Complex waves:   S = |<a,b>| / (||a|| ||b||), so S = 1 at identity.
+
+        The explicit norm division is the fix: it makes the formula correct for
+        L2-normalized waves as well as for unit-modulus qFHRR waves, instead of
+        silently depending on which convention the caller used.
+        """
+        na = float(a.norm().item())
+        nb = float(b.norm().item())
+        if na < 1e-12 or nb < 1e-12:
+            return 0.0                      # fail closed on a zero-energy wave
+        if a.is_complex() or b.is_complex():
+            val = torch.abs((a.conj() * b).sum()).item() / (na * nb)
+            return float(min(max(val, 0.0), 1.0))
+        val = (a * b).sum().item() / (na * nb)
+        return float(min(max(0.5 * (1.0 + val), 0.0), 1.0))
+
     def dual_channel_sagnac_veto(
         self,
         psi_candidate: torch.Tensor,
@@ -136,17 +191,29 @@ class SagnacMCTSPlanner:
         1. Hard Axiom Channel (delta_axiom): Evaluates strict physical/algebraic invariants.
         2. Soft Epistemic Channel (delta_epistemic): Measures environmental transition uncertainty.
         Connects epsilon_hard dynamically to TAME Gap-Junction Conductance G_ij(t) to adapt veto tolerance.
+
+        Both channels now use the scale-consistent similarity (see
+        _norm_consistent_similarity). With HENRI_SAGNAC_LEGACY_SCALE=1 the original
+        `1 - |mean(...)|` scale is restored for A/B comparison and for reproducing
+        the recorded defect.
         """
         w_cand = psi_candidate.flatten()
         w_ax = psi_axiom.flatten()
         w_wrld = psi_world.flatten()
 
-        if w_cand.is_complex():
-            inner_axiom = torch.abs(torch.mean(w_cand.conj() * w_ax))
-            inner_world = torch.abs(torch.mean(w_cand.conj() * w_wrld))
+        if os.environ.get("HENRI_SAGNAC_LEGACY_SCALE", "0") == "1":
+            # LEGACY (DEFECTIVE for L2-normalized waves; kept as evidence).
+            if w_cand.is_complex():
+                inner_axiom = torch.abs(torch.mean(w_cand.conj() * w_ax))
+                inner_world = torch.abs(torch.mean(w_cand.conj() * w_wrld))
+            else:
+                inner_axiom = torch.abs(torch.mean(w_cand * w_ax))
+                inner_world = torch.abs(torch.mean(w_cand * w_wrld))
         else:
-            inner_axiom = torch.abs(torch.mean(w_cand * w_ax))
-            inner_world = torch.abs(torch.mean(w_cand * w_wrld))
+            inner_axiom = torch.tensor(
+                self._norm_consistent_similarity(w_cand, w_ax))
+            inner_world = torch.tensor(
+                self._norm_consistent_similarity(w_cand, w_wrld))
 
         delta_axiom = float(1.0 - inner_axiom.item())
         delta_epistemic = float(1.0 - inner_world.item())

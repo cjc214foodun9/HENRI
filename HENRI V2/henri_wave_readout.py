@@ -1,18 +1,34 @@
 #!/usr/bin/env python3
 """HENRI wave -> observable READOUT. Closes the missing decode direction.
 
-THE DEFECT THIS RESOLVES
-    The engine encodes observables into phase space (Zone A) but never decodes
-    back. `L_JEPA = 1 - cos(pred, target)` is computed entirely in latent phase
-    space, and `evaluate_test_time_plan` derives its Sagnac stress by comparing a
-    proposed wavefront against `zone_c_axioms` -- RANDOM unit phasors. For random
-    axioms the best achievable agreement is O(sqrt(2 ln K / D)), so the stress is
-    ~1.0 for every proposal and the veto can never pass. That is "un-passable by
-    construction": not a calibration error, a MISSING DIRECTION.
+WHERE THE DEFECT ACTUALLY LIVES  (CORRECTED 2026-10-12)
+    An earlier version of this docstring said the live planner "derives its Sagnac
+    stress by comparing a proposed wavefront against `zone_c_axioms` -- RANDOM unit
+    phasors". That is WRONG, and the correction matters:
 
-    Consequence: every mechanism that reads Delta_Sagnac -- the grounding ratchet,
-    the memory write policy, the tau_0-VLA compute-depth controller -- is fed a
-    near-constant. The readout is upstream of all of them.
+      * `evaluate_test_time_plan` does NOT exist in the repository. It is the
+        reference snippet inside the attached roadmap spec.
+      * The live `sagnac_mcts_planner.search()` builds its reference from the
+        demonstration-induced goal (`w_task @ encode(X_test)`, lines ~251-257).
+        That is legitimate pre-prediction information and Milestone 1 preserved it.
+
+    So the un-passable random-axiom veto is a defect OF THE SPECIFICATION, not of
+    the live planner. It is kept reproducible below as evidence, because the spec
+    will be implemented by someone eventually.
+
+THE LIVE DEFECTS, MEASURED (experiments/verification/live_planner_defect_probe.py)
+    D1  `psi_world=pred_wave` makes the epistemic channel compare the candidate
+        against ITSELF, so `delta_epistemic = 1 - |<pred, pred>| = 0` for EVERY
+        candidate. A channel that is identically constant cannot inform selection.
+    D2  the root sets `delta_epistemic = sagnac_delta`, conflating the two channels.
+    D3  THERE IS NO DECODE. `delta_axiom = 1 - |<encode(P(X)), reference_wave>|` is a
+        real-valued waveform cosine. Nothing decodes the candidate's OUTPUT to an
+        observable and compares it to an expected observable. So a candidate that
+        produces the correct grid can still be penalised by encoding noise, and no
+        per-slot observable error is available for gating.
+
+    D3 is the defect this module fixes, and it is the load-bearing one: it is the
+    missing direction, and it is upstream of every consumer of Delta_Sagnac.
 
 ALGEBRA (why the decode is cheap)
     Psi = (1/sqrt(M)) sum_m R_m (*) F_m            (RFSS superposition, additive)
