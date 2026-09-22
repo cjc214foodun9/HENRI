@@ -1,0 +1,78 @@
+{
+ "checks": {
+  "A1_class_defined": true,
+  "A1_derives_runtimeerror": true,
+  "A2_width_guard": true,
+  "A2_compares_numel": true,
+  "A2_raises_named": true,
+  "A2_legacy_branch_retained": true,
+  "A3_isinstance_match": true,
+  "A3_name_comparison": false,
+  "A3_records_gate_status": true,
+  "A3_unavailable_label": true,
+  "A4_explicit_epsilon_call": true,
+  "A3_unavailable_branch_omits_hard_vetoed": true,
+  "B_except_marks": [
+   [
+    2300,
+    24
+   ],
+   [
+    2401,
+    16
+   ]
+  ],
+  "B_opine_marks": [
+   [
+    2337,
+    20
+   ],
+   [
+    2350,
+    20
+   ]
+  ],
+  "B_if_marks": [
+   [
+    2274,
+    20
+   ]
+  ],
+  "B_opine_scope": [
+   {
+    "line": 2337,
+    "indent": 20,
+    "inside_except": false,
+    "except_line": null,
+    "except_indent": null
+   },
+   {
+    "line": 2350,
+    "indent": 20,
+    "inside_except": false,
+    "except_line": null,
+    "except_indent": null
+   }
+  ],
+  "B_n_opine_assignments": 2,
+  "B_any_inside_except": false,
+  "B_defined_after_handler": false,
+  "C_mismatch_raises_named": true,
+  "C_raise_msg_head": "width mismatch: candidate=65536 (torch.complex64), axiom=512 (torch.float32), world=512 (torch.float32). The Sagnac veto cannot evaluate waves of unequal width;",
+  "D_pass_tuple": true,
+  "D_pass_hard": false,
+  "D_veto_hard": true,
+  "D_pass_delta_axiom": 0.0,
+  "D_veto_delta_axiom": 1.0,
+  "D_both_values_reachable": true,
+  "E_mixed_dtype_ok": true,
+  "E_mixed_delta_axiom": 0.994473,
+  "E2_pooled_self_sim": 0.062387,
+  "E2_pooled_cross_sim": 0.015531,
+  "E2_pooled_separation": 0.046856
+ },
+ "errors": [
+  "B: opine_info is not assigned after the try/except"
+ ],
+ "verdict": "FAIL"
+}

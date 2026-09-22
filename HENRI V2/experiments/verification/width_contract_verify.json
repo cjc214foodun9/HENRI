@@ -1,0 +1,24 @@
+{
+  "checks": {
+    "V1_class_exists": true,
+    "V1_is_runtimeerror": true,
+    "V2_raised_named": "SagnacGateUnavailable",
+    "V2_message": "width mismatch: candidate=65536 (torch.complex64), axiom=512 (torch.float32), world=512 (torch.float32). The Sagnac veto cannot evaluate waves of unequal width; this gate DID NOT RUN.",
+    "V3_matched_returns_tuple": true,
+    "V3_matched_delta_axiom": 0.0,
+    "V3_matched_hard": false,
+    "V4_try_lineno": 2224,
+    "V4_try_body_assigns_opine_info": true,
+    "V4_handler_top_assigns_opine_info": true,
+    "V4_handler_lineno": 2347,
+    "V5_records_gate_status": false,
+    "V5_records_error": true,
+    "V5_checks_class_name": false,
+    "V6_unavailable_branch_has_hard_vetoed": false
+  },
+  "errors": [
+    "V5: handler does not record gate_status",
+    "V5: handler does not match SagnacGateUnavailable"
+  ],
+  "verdict": "FAIL"
+}

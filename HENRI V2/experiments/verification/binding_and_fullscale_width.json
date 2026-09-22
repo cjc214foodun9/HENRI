@@ -1,0 +1,83 @@
+{
+ "checks": {
+  "P1_importfrom_sites": {
+   "module_level": [
+    {
+     "line": 51,
+     "names": [
+      "SagnacMCTSPlanner"
+     ]
+    }
+   ],
+   "nested": [
+    {
+     "line": 776,
+     "names": [
+      "SagnacMCTSPlanner"
+     ]
+    },
+    {
+     "line": 795,
+     "names": [
+      "SpelkeDSLNode"
+     ]
+    },
+    {
+     "line": 2092,
+     "names": [
+      "compute_rt_information_gain"
+     ]
+    },
+    {
+     "line": 2226,
+     "names": [
+      "compute_rt_information_gain"
+     ]
+    }
+   ]
+  },
+  "P1_names_bound": [
+   "SagnacMCTSPlanner",
+   "SpelkeDSLNode",
+   "compute_rt_information_gain"
+  ],
+  "P1_gate_unavailable_imported": false,
+  "P2_usage_sites": [
+   {
+    "line": 2327,
+    "col": 53
+   }
+  ],
+  "P2_usage_count": 1,
+  "P3_runtime_bound": false,
+  "P4_state_wave_widths": {
+   "num_blocks_64": {
+    "state_wave_numel": 512,
+    "shape": [
+     1,
+     64,
+     8
+    ],
+    "dtype": "torch.float32"
+   },
+   "num_blocks_8192": {
+    "state_wave_numel": 65536,
+    "shape": [
+     1,
+     8192,
+     8
+    ],
+    "dtype": "torch.float32"
+   }
+  },
+  "P4_follows_num_blocks": true,
+  "P4_predicted_full_scale": "MATCH_AT_65536",
+  "efe_planner_total_lines": 1762,
+  "su3_scan_in_efe_planner": []
+ },
+ "errors": [
+  "P0 BINDING DEFECT: SagnacGateUnavailable used at [2327] but bound by NO import. The handler will raise NameError the moment the veto raises. Bound names are ['SagnacMCTSPlanner', 'SpelkeDSLNode', 'compute_rt_information_gain'].",
+  "P3: runtime confirms SagnacGateUnavailable is NOT bound"
+ ],
+ "verdict": "FAIL"
+}

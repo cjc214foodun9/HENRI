@@ -18,6 +18,31 @@ from henri_decoder import HENRIUnifiedEgressTransducer
 from efe_planner import INTACTIsomorphicConjugacyHead
 
 
+class SagnacGateUnavailable(RuntimeError):
+    """The Sagnac veto could not RUN, as distinct from having PASSED or VETOED.
+
+    WHY THIS TYPE EXISTS (measured defect, 2026-10-12)
+        `dual_channel_sagnac_veto` computes an elementwise product of two waves, which
+        requires equal element counts. Production violated that: the SU(3) transducer's
+        `field_to_wave` emits a FIXED 65536-wide complex wave, while `boundary_batch`
+        and `state_wave` are `d_model`-wide (512 at the run's reduced scale). MEASURED
+        from a wrapped run:
+
+            FIRST CALL SHAPES: ((65536,), (512,), (512,), complex64, float32, 0.35)
+            RuntimeError: The size of tensor a (65536) must match the size of tensor b (512)
+
+        Both the LEGACY expression (`torch.abs(torch.mean(w_cand.conj() * w_ax))`) and
+        the current one raise on that pair, so this is PRE-EXISTING, not introduced by
+        the similarity refactor. The caller's broad `except` swallowed it while leaving
+        `_hard_vetoed` at its initialised False, so `engaged` was decided by
+        `g_macro >= g_single` alone and an UNAVAILABLE gate was indistinguishable from
+        a PERMISSIVE one.
+
+        A mismatched-width comparison is neither a match nor a mismatch. Giving it a
+        distinct type lets every caller record "the gate did not run" honestly.
+    """
+
+
 class SpelkeDSLNode:
     """Node in Spelke DSL Program AST Tree."""
 
@@ -296,6 +321,69 @@ class SagnacMCTSPlanner:
         w_cand = psi_candidate.flatten()
         w_ax = psi_axiom.flatten()
         w_wrld = psi_world.flatten()
+
+        # ----------------------------------------------------------- WIDTH CONTRACT
+        # The three waves MUST have equal element counts: the similarity is an
+        # elementwise product, so unequal widths cannot broadcast. Production violated
+        # this (measured 2026-10-12, wrapped run from this worktree):
+        #
+        #     FIRST CALL SHAPES: ((65536,), (512,), (512,), complex64, float32, 0.35)
+        #     RuntimeError: The size of tensor a (65536) must match the size of
+        #                   tensor b (512) at non-singleton dimension 0
+        #
+        # i.e. the SU(3) transducer's `field_to_wave` emits a 65536-wide wave while
+        # `boundary_batch[0]` and `state_wave` are d_model-wide (512 at the reduced
+        # scale this gauntlet runs at). 64/64 veto calls raised. Both the LEGACY
+        # expression and the norm-consistent replacement raise on that pair, so this
+        # is PRE-EXISTING.
+        #
+        # Why a DISTINCT TYPE rather than a bare RuntimeError: a width mismatch is
+        # neither a match nor a mismatch, but the caller's broad `except` recorded
+        # only the type name and left `hard_vetoed` at its initialised False, making an
+        # UNAVAILABLE gate indistinguishable from a PERMISSIVE one. Raising a named
+        # type lets every caller record "the gate did not run" honestly.
+        #
+        # Deliberately NOT silently projecting 65536 -> 512 or 512 -> 65536: choosing a
+        # comparison space changes what the veto MEANS, and that is a design decision,
+        # not a repair.
+        _bridge = None
+        if not (w_cand.numel() == w_ax.numel() == w_wrld.numel()):
+            # ---------------------------------------------------- DIAGNOSTIC BRIDGE
+            # DEFAULT OFF: HENRI_SAGNAC_WIDTH_BRIDGE=1.
+            #
+            # The mismatch arises by comparing ACROSS REPRESENTATION FAMILIES: the
+            # candidate is the SU(3) transducer's complex flat [D] field wave, while
+            # both references are real [num_blocks, 8] grid waves. MEASURED: at
+            # d_model=512 the candidate is 65536-wide and the references 512-wide
+            # (128x); at full scale (num_blocks=8192) the references are 65536-wide, so
+            # the widths MATCH and no bridge is needed.
+            #
+            # The bridge mean-pools the wider operand DOWN to the narrower width so the
+            # gate is COMPUTABLE at reduced scale. It is a DIAGNOSTIC, not a semantic
+            # repair: pooling a field wave into a grid wave's width does not make the
+            # two comparable, so any verdict obtained through the bridge is plumbing
+            # evidence only. Default OFF keeps production semantics byte-unchanged.
+            _on = os.environ.get("HENRI_SAGNAC_WIDTH_BRIDGE", "0") == "1"
+            _fits = (w_ax.numel() == w_wrld.numel() and w_ax.numel() > 0
+                     and w_cand.numel() > w_ax.numel()
+                     and w_cand.numel() % w_ax.numel() == 0)
+            if _on and _fits:
+                _f = int(w_cand.numel() // w_ax.numel())
+                w_cand = w_cand.reshape(-1, _f).mean(dim=-1)
+                _bridge = {"mode": "mean_pool_candidate_to_ref_width",
+                           "pool_factor": _f,
+                           "diagnostic_only": True,
+                           "ref_width": int(w_ax.numel())}
+            else:
+                raise SagnacGateUnavailable(
+                    f"width mismatch: candidate={w_cand.numel()} "
+                    f"({w_cand.dtype}), axiom={w_ax.numel()} ({w_ax.dtype}), "
+                    f"world={w_wrld.numel()} ({w_wrld.dtype}). The Sagnac veto cannot "
+                    f"evaluate waves of unequal width; this gate DID NOT RUN.")
+        # Exposed for telemetry; None when no bridge was applied. Stored on the
+        # instance rather than added to the return tuple, so every existing caller
+        # keeps its exact 3-tuple contract.
+        self.last_sagnac_bridge = _bridge
 
         if os.environ.get("HENRI_SAGNAC_LEGACY_SCALE", "0") == "1":
             # LEGACY (DEFECTIVE for L2-normalized waves; kept as evidence).

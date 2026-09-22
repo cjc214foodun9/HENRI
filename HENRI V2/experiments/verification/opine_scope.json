@@ -1,0 +1,60 @@
+{
+ "try_blocks_with_veto": [
+  {
+   "try_lineno": 2224,
+   "n_handlers": 1,
+   "opine_info_in_try_body": true,
+   "opine_info_in_handler": true,
+   "body_has": [
+    "_hard_vetoed",
+    "_veto",
+    "opine_info"
+   ],
+   "handler_has": [
+    "opine_info"
+   ]
+  },
+  {
+   "try_lineno": 2275,
+   "n_handlers": 1,
+   "opine_info_in_try_body": false,
+   "opine_info_in_handler": false,
+   "body_has": [
+    "_hard_vetoed",
+    "_veto"
+   ],
+   "handler_has": [
+    "_msg",
+    "_name",
+    "_veto"
+   ]
+  }
+ ],
+ "n_try_blocks_with_veto": 2,
+ "opine_info_raw": [
+  {
+   "line": 2335,
+   "indent": 20
+  },
+  {
+   "line": 2348,
+   "indent": 20
+  }
+ ],
+ "except_raw": [
+  {
+   "line": 2300,
+   "indent": 24
+  },
+  {
+   "line": 2399,
+   "indent": 16
+  }
+ ],
+ "if_sagnac_raw": [
+  {
+   "line": 2274,
+   "indent": 20
+  }
+ ]
+}

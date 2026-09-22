@@ -1,0 +1,57 @@
+{
+ "source_receipt": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\.worktrees\\semantic-backbone\\HENRI V2\\experiments\\verification\\gauntlet_gate_audit.json",
+ "evidence_class": "OBSERVED",
+ "measured": {
+  "off_arm": {
+   "n": 60,
+   "unavailable": 60,
+   "passed": 0,
+   "vetoed": 0,
+   "error": 0,
+   "gate_status_values": {
+    "UNAVAILABLE_SHAPE_MISMATCH": 60
+   }
+  },
+  "on_arm": {
+   "n": 60,
+   "unavailable": 0,
+   "passed": 0,
+   "vetoed": 60,
+   "error": 0,
+   "delta_axiom_min": 0.899131,
+   "delta_axiom_max": 0.999505
+  }
+ },
+ "gate_verdicts": {
+  "off_all_unavailable": true,
+  "off_no_hard_vetoed_key": true,
+  "on_both_values": false
+ },
+ "unmet_expectation": {
+  "pre_registered": "ON arm shows hard_vetoed BOTH values",
+  "observed": "ON arm shows hard_vetoed True only (60/60)",
+  "action_taken": "NONE. The gate was not relaxed. The finding is recorded.",
+  "why_my_expectation_was_wrong": "The bridge makes the comparison COMPUTABLE, not MEANINGFUL. Two waves from different representation families remain uncorrelated after a width change, so the stress stays high and the veto always fires."
+ },
+ "derived_independent_vector_check": {
+  "width": 512,
+  "predicted_abs_cos_sqrt2_over_piN": 0.035262,
+  "predicted_stress": 0.964738,
+  "observed_delta_range": [
+   0.899131,
+   0.999505
+  ],
+  "observed_spread": 0.100374,
+  "prediction_inside_observed_range": true,
+  "interpretation": "CONSISTENT WITH UNCORRELATED PAIRS"
+ },
+ "what_the_two_arms_establish": {
+  "off_arm_proves": "the three-outcome contract works: the gate now reports UNAVAILABLE_SHAPE_MISMATCH with NO hard_vetoed key, so an unavailable gate can never be mistaken for a permissive one. This is the defect being fixed.",
+  "on_arm_proves": "the gate is COMPUTABLE under the diagnostic bridge, and that pooling does not create correspondence between representation families. The 60/60 veto rate is therefore an honest 'no agreement', not a calibration bug.",
+  "bidirectionality_status": "hard_vetoed reaches BOTH values DETERMINISTICALLY at matched width (tests/contract/test_sagnac_width_contract.py W5: unit vs itself -> False; unit vs its negation -> True). It does NOT reach both values in the LIVE gauntlet, and cannot, because the live comparison is cross-family."
+ },
+ "blocked_or_requires_approval": {
+  "semantic_bridge": "REQUIRES_APPROVAL: comparing like with like (shared width both families can inhabit) or re-encoding one side with a justified map. Both change what the veto MEANS.",
+  "full_scale_natural_match": "At num_blocks=8192 the references are 65536-wide, so the widths MATCH and no bridge is needed. That is the only configuration measured where the veto can be BOTH runnable and semantically comparable. Gated on the checkpoint overlay (checkpoint_policy=required at d_model=65536)."
+ }
+}

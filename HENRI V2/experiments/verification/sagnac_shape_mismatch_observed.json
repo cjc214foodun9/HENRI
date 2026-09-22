@@ -1,0 +1,37 @@
+{
+  "module": "sagnac_shape_mismatch",
+  "evidence_class": "OBSERVED",
+  "results": {
+    "production_shapes": {
+      "psi_macro": [
+        65536
+      ],
+      "axiom_ref": [
+        512
+      ],
+      "world_ref": [
+        512
+      ],
+      "psi_dtype": "torch.complex64",
+      "ref_dtype": "torch.float32",
+      "dimension_ratio": 128
+    },
+    "legacy_raises_on_production_shapes": true,
+    "legacy_exception": "RuntimeError: The size of tensor a (65536) must match the size of tensor b (512) at non-singleton dimension 0",
+    "new_form_raises_on_production_shapes": true,
+    "new_exception": "RuntimeError: The size of tensor a (65536) must match the size of tensor b (512) at non-singleton dimension 0",
+    "matched_shapes_work": true,
+    "impact": {
+      "hard_vetoed_stays": false,
+      "engaged_reduces_to": "g_macro >= g_single",
+      "observed_g_single": 0.0,
+      "observed_g_macro": 0.1139,
+      "observed_engaged": true,
+      "conclusion": "the Sagnac veto never ran, so no veto outcome influenced the run; `engaged` was decided by the gain comparison alone"
+    }
+  },
+  "gate_failures": [],
+  "verdict": "PASS",
+  "claim": "The production Sagnac veto call passes waves of 65536 and 512 elements. Both the LEGACY and the current similarity expressions raise RuntimeError on that mismatch, so the veto has NEVER executed in production; the handler swallowed it and the engagement gate silently failed open. This is PRE-EXISTING, not introduced by the scale or epsilon fixes.",
+  "consequence": "The observed 0.0% ARC score cannot be attributed to the scale defect or to the adaptive-epsilon quirk, because the veto never ran. The epsilon fix is necessary but not sufficient: it cannot change behaviour while the call still raises."
+}

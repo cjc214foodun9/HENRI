@@ -1,0 +1,54 @@
+{
+  "source_context": [
+    [
+      867,
+      "egress_transducer = HENRIUnifiedEgressTransducer("
+    ],
+    [
+      1105,
+      "# goal_wave = angle(field_to_wave(W_task @ U_test)) -> real"
+    ],
+    [
+      1119,
+      "w_goal = trans.field_to_wave(u_transformed.unsqueeze(0))"
+    ],
+    [
+      2231,
+      "_trans = orch.planner._su3_transducer"
+    ],
+    [
+      2234,
+      "_psi_t = _trans.field_to_wave("
+    ],
+    [
+      2245,
+      "_trans.field_to_wave(_u_single.unsqueeze(0)).squeeze(0)))"
+    ],
+    [
+      2264,
+      "_psi_macro = _trans.field_to_wave("
+    ]
+  ],
+  "field_to_wave_definition": null,
+  "at_512": {
+    "scale_d_model": 512,
+    "num_blocks": 64,
+    "state_wave_numel": 512,
+    "state_wave_dtype": "torch.float32",
+    "import_error": "ModuleNotFoundError: No module named 'arc_agi'"
+  },
+  "at_65536": {
+    "scale_d_model": 65536,
+    "num_blocks": 64,
+    "state_wave_numel": 65536,
+    "state_wave_dtype": "torch.float32",
+    "import_error": "ModuleNotFoundError: No module named 'arc_agi'"
+  },
+  "state_wave_numel_by_scale": {
+    "512": 512,
+    "65536": 65536
+  },
+  "state_side_follows_scale": true,
+  "verdict": "SCALE_DEPENDENT",
+  "interpretation": "If the state/boundary side follows d_model while the macro wave is fixed at 65536, the veto executes normally at full scale and only fails at the REDUCED scale this gauntlet uses. That would scope the defect to reduced-scale runs."
+}

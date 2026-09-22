@@ -48,7 +48,7 @@ from henri_vision_encoder import HENRIVisionEncoder
 from henri_r2_mi_estimator import stratum_id
 from o_vsa_ingress_tokenizer import O_VSA_IngressTokenizer
 from connected_component_segmenter import ConnectedComponentSegmenter
-from sagnac_mcts_planner import SagnacMCTSPlanner
+from sagnac_mcts_planner import SagnacMCTSPlanner, SagnacGateUnavailable
 from thermodynamic_telemetry_logger import ThermodynamicTelemetryLogger
 from universal_data_transducer import UniversalDataTransducer
 from zone_c_env import resolve_zone_c_dsn
@@ -2298,7 +2298,42 @@ def run():
                             }
                             _hard_vetoed = bool(_hard)
                         except Exception as _veto_exc:
-                            _veto = {"error": f"{type(_veto_exc).__name__}"}
+                            # THREE OUTCOMES, KEPT DISTINCT. The original handler
+                            # recorded only `{"error": f"{type(_veto_exc).__name__}"}`,
+                            # so a gauntlet run wrote `{"error": "RuntimeError"}` on
+                            # 89/89 and 60/60 steps and the CAUSE was invisible: the
+                            # veto had raised on EVERY step, `_hard_vetoed` stayed at
+                            # its initialised False, and `engaged` was always True --
+                            # a fail-open artifact that looked like a permissive gate.
+                            # MEASURED in experiments/verification/_gauntlet_audit.sh.
+                            #
+                            #   gate PASSED          -> _veto has delta_* and
+                            #                           hard_vetoed=False
+                            #   gate VETOED          -> _veto has delta_* and
+                            #                           hard_vetoed=True
+                            #   gate UNAVAILABLE     -> _veto has gate_status and NO
+                            #                           hard_vetoed key at all, so a
+                            #                           reader cannot mistake
+                            #                           availability for permission
+                            #   gate ERROR (real bug) -> _veto has error
+                            #
+                            # SagnacGateUnavailable is imported at module scope from
+                            # sagnac_mcts_planner (line ~51), so isinstance is used
+                            # rather than a string comparison of the class name. A
+                            # name comparison would silently stop matching if the class
+                            # were renamed, which is precisely the kind of quiet drift
+                            # this handler exists to prevent.
+                            _msg = f"{type(_veto_exc).__name__}: {_veto_exc}"
+                            if isinstance(_veto_exc, SagnacGateUnavailable):
+                                _veto = {
+                                    "gate_status": "UNAVAILABLE_SHAPE_MISMATCH",
+                                    "detail": _msg,
+                                }
+                            else:
+                                if os.environ.get("HENRI_ARC_VETO_DEBUG", "0") == "1":
+                                    import traceback as _tb
+                                    _tb.print_exc()
+                                _veto = {"error": _msg}
                     opine_info = {
                         "engaged": bool(_g_macro >= _g_single and not _hard_vetoed),
                         "gain_single": round(_g_single, 6),

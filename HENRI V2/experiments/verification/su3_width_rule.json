@@ -1,0 +1,25 @@
+{
+ "checks": {
+  "class_definitions": [],
+  "field_to_wave_definitions": [
+   {
+    "file": "universal_data_transducer.py",
+    "lineno": 117
+   }
+  ],
+  "field_to_wave_source": {},
+  "observed_call_shapes": {
+   "candidate": "(65536,) complex64  <- _trans.field_to_wave output",
+   "axiom": "(512,) float32          <- boundary_batch[0]",
+   "world": "(512,) float32          <- state_wave",
+   "candidate_family": "complex flat [D]",
+   "ref_family": "real flattened [num_blocks, 8]",
+   "same_family": false
+  },
+  "family_split_note": "The three inputs are NOT one representation family: the candidate is the complex flat [D] SU(3) field wave, while both references are real [num_blocks, 8] grid waves flattened. A width mismatch is the predictable CONSEQUENCE of comparing across families. That makes Action 2 a representation-boundary decision, not a shape typo, and it is why silently projecting would change what the veto MEANS."
+ },
+ "errors": [
+  "could not read field_to_wave source; rule UNKNOWN"
+ ],
+ "verdict": "FAIL"
+}

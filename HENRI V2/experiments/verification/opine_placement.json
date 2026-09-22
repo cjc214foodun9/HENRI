@@ -1,0 +1,40 @@
+{
+  "marks": {
+    "if_sagnac": [
+      2274,
+      20
+    ],
+    "try": [
+      221,
+      0
+    ],
+    "except": [
+      2300,
+      24
+    ],
+    "opine_info": [
+      [
+        2335,
+        20
+      ],
+      [
+        2348,
+        20
+      ]
+    ],
+    "veto_error_assign": [
+      2334,
+      32
+    ],
+    "print_opine": [
+      2346,
+      26
+    ]
+  },
+  "placements": [
+    "OTHER(ind=20,if_ind=20,ex_ind=24)",
+    "OTHER(ind=20,if_ind=20,ex_ind=24)"
+  ],
+  "n_opine_info_assignments": 2,
+  "verdict": "BOTH_PATHS"
+}

@@ -183,6 +183,36 @@
         "text": "assert \"dual_channel_sagnac_veto(\" in src, \"veto consumer missing\""
       },
       {
+        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
+        "line": 8,
+        "text": "sagnac_planner.dual_channel_sagnac_veto(_psi_macro, _axiom, _world)"
+      },
+      {
+        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
+        "line": 80,
+        "text": "hits = _calls_by_name(_prod_tree(), \"dual_channel_sagnac_veto\")"
+      },
+      {
+        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
+        "line": 81,
+        "text": "assert hits, \"no dual_channel_sagnac_veto call in production_arc_run.py\""
+      },
+      {
+        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
+        "line": 131,
+        "text": "_, _, hard = planner.dual_channel_sagnac_veto(c, ax, ax,"
+      },
+      {
+        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
+        "line": 139,
+        "text": "_, _, hard = planner.dual_channel_sagnac_veto(c, ax, ax,"
+      },
+      {
+        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
+        "line": 152,
+        "text": "_, _, hard = planner.dual_channel_sagnac_veto(c, ax, ax)   # no epsilon"
+      },
+      {
         "file": "tests\\contract\\test_sagnac_scale_consistency.py",
         "line": 4,
         "text": "`SagnacMCTSPlanner.dual_channel_sagnac_veto` used `torch.mean(w.conj() * w_ref)`"
@@ -238,7 +268,7 @@
         "text": "d, _, _ = planner.dual_channel_sagnac_veto(z, ref, ref)"
       }
     ],
-    "S5_caller_count": 41,
+    "S5_caller_count": 47,
     "DEFECT_CONFIRMED": true
   },
   "claim": "dual_channel_sagnac_veto computes 1 - |<a,b>|/D instead of 1 - |<a,b>|/(||a|| ||b||), so every stress is pinned near 1.0 and the hard veto fires on 100% of candidates. This is the live 'un-passable by construction' defect, and it is a DIVISION BY D, not the random-axiom construction the spec blamed.",
