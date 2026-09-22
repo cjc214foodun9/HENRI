@@ -1,0 +1,135 @@
+{
+  "module": "rfss_capacity_sweep",
+  "evidence_class": "OBSERVED",
+  "dim": 65536,
+  "seed": 0,
+  "platform": "Windows-10-10.0.26200-SP0",
+  "torch": "2.13.0+cpu",
+  "instrument_selfcheck": {
+    "binding_norm_err_float64": 0.002987949389914757,
+    "corr_peak_over_mean": 286.31584101137946,
+    "instrument_ok": true
+  },
+  "rows": [
+    {
+      "M": 4,
+      "raw_abs_cos_mean": 0.4470078110284192,
+      "prediction_1_over_sqrtM": 0.5,
+      "cleanup_exact_recovery_rate": 1.0,
+      "margin_to_best_other_mean": 0.4426440512179397,
+      "crosstalk_norm_mean": 0.8945253044366837,
+      "spec_crosstalk_sqrt((M-1)/D)": 0.0067658234670659265,
+      "competing_crosstalk_sqrt(M-1)": 1.7320508075688772,
+      "nonmember_abs_cos": 0.005374945990747691,
+      "seconds": 0.008
+    },
+    {
+      "M": 8,
+      "raw_abs_cos_mean": 0.33363793553032917,
+      "prediction_1_over_sqrtM": 0.35355339059327373,
+      "cleanup_exact_recovery_rate": 1.0,
+      "margin_to_best_other_mean": 0.3276249274495058,
+      "crosstalk_norm_mean": 0.9426998496055603,
+      "spec_crosstalk_sqrt((M-1)/D)": 0.010334966058846057,
+      "competing_crosstalk_sqrt(M-1)": 2.6457513110645907,
+      "nonmember_abs_cos": 0.0040914212767697395,
+      "seconds": 0.012
+    },
+    {
+      "M": 16,
+      "raw_abs_cos_mean": 0.24255964551632353,
+      "prediction_1_over_sqrtM": 0.25,
+      "cleanup_exact_recovery_rate": 1.0,
+      "margin_to_best_other_mean": 0.23543426085961983,
+      "crosstalk_norm_mean": 0.9701331816613674,
+      "spec_crosstalk_sqrt((M-1)/D)": 0.015128841196122723,
+      "competing_crosstalk_sqrt(M-1)": 3.872983346207417,
+      "nonmember_abs_cos": 0.0006985377047615831,
+      "seconds": 0.023
+    },
+    {
+      "M": 32,
+      "raw_abs_cos_mean": 0.17385690386916144,
+      "prediction_1_over_sqrtM": 0.17677669529663687,
+      "cleanup_exact_recovery_rate": 1.0,
+      "margin_to_best_other_mean": 0.16584249226434622,
+      "crosstalk_norm_mean": 0.9847679641097784,
+      "spec_crosstalk_sqrt((M-1)/D)": 0.02174907954230477,
+      "competing_crosstalk_sqrt(M-1)": 5.5677643628300215,
+      "nonmember_abs_cos": 0.0011317764080453296,
+      "seconds": 0.05
+    },
+    {
+      "M": 64,
+      "raw_abs_cos_mean": 0.12409703460926604,
+      "prediction_1_over_sqrtM": 0.125,
+      "cleanup_exact_recovery_rate": 1.0,
+      "margin_to_best_other_mean": 0.11566631145251449,
+      "crosstalk_norm_mean": 0.9922663308680058,
+      "spec_crosstalk_sqrt((M-1)/D)": 0.031004898176538172,
+      "competing_crosstalk_sqrt(M-1)": 7.937253933193772,
+      "nonmember_abs_cos": 0.004800688834406277,
+      "seconds": 0.126
+    },
+    {
+      "M": 109,
+      "raw_abs_cos_mean": 0.09527174372097118,
+      "prediction_1_over_sqrtM": 0.09578262852211514,
+      "cleanup_exact_recovery_rate": 1.0,
+      "margin_to_best_other_mean": 0.08643664177848932,
+      "crosstalk_norm_mean": 0.9954469110987602,
+      "spec_crosstalk_sqrt((M-1)/D)": 0.04059494080239556,
+      "competing_crosstalk_sqrt(M-1)": 10.392304845413264,
+      "nonmember_abs_cos": 0.0033172407918969243,
+      "seconds": 0.264
+    },
+    {
+      "M": 128,
+      "raw_abs_cos_mean": 0.08804366176815591,
+      "prediction_1_over_sqrtM": 0.08838834764831843,
+      "cleanup_exact_recovery_rate": 1.0,
+      "margin_to_best_other_mean": 0.0789635291803279,
+      "crosstalk_norm_mean": 0.9961124029941857,
+      "spec_crosstalk_sqrt((M-1)/D)": 0.044021201834315016,
+      "competing_crosstalk_sqrt(M-1)": 11.269427669584644,
+      "nonmember_abs_cos": 0.004212863779856417,
+      "seconds": 0.331
+    },
+    {
+      "M": 180,
+      "raw_abs_cos_mean": 0.07434914706045574,
+      "prediction_1_over_sqrtM": 0.07453559924999299,
+      "cleanup_exact_recovery_rate": 1.0,
+      "margin_to_best_other_mean": 0.06484896016772837,
+      "crosstalk_norm_mean": 0.9972282022237777,
+      "spec_crosstalk_sqrt((M-1)/D)": 0.052262063126014266,
+      "competing_crosstalk_sqrt(M-1)": 13.379088160259652,
+      "nonmember_abs_cos": 0.0061874236016372704,
+      "seconds": 0.571
+    },
+    {
+      "M": 256,
+      "raw_abs_cos_mean": 0.06242371330668071,
+      "prediction_1_over_sqrtM": 0.0625,
+      "cleanup_exact_recovery_rate": 1.0,
+      "margin_to_best_other_mean": 0.05271404571431049,
+      "crosstalk_norm_mean": 0.9980459723155946,
+      "spec_crosstalk_sqrt((M-1)/D)": 0.06237781024480981,
+      "competing_crosstalk_sqrt(M-1)": 15.968719422671311,
+      "nonmember_abs_cos": 0.005284916143885321,
+      "seconds": 1.108
+    }
+  ],
+  "verdicts": {
+    "spec_gate2_raw_cos_at_M32": 0.17385690386916144,
+    "spec_gate2_raw_0.92_reachable": false,
+    "cleanup_exact_at_M32": 1.0,
+    "max_M_with_exact_cleanup_recovery": 256,
+    "max_M_with_raw_cos_ge_0.92": null,
+    "worst_rel_err_vs_1_over_sqrtM": 0.10598437794316162,
+    "crosstalk_law_worst_rel_err_vs_SPEC_(M-1)/D": 0.5125481753134513,
+    "crosstalk_law_worst_rel_err_vs_competing_sqrt(M-1)": 0.9374999368516278,
+    "crosstalk_law_verdict": "NOT_SETTLED_BY_THIS_PROBE. The ||xi|| column is degenerate: it equals sqrt(1-cos^2) by construction because z is unit-norm and the subtracted signal is its own projection. An earlier draft reported a winning law from it; that was an artifact. The valid evidence here is raw_abs_cos ~ 1/sqrt(M) and nonmember_abs_cos staying near 0. To settle the crosstalk law independently, correlate an unbound wave against a member filler ABSENT from the bundle, and against a cross-correlated role/filler pair."
+  },
+  "interpretation": "Raw unbinding cosine follows 1/sqrt(M) and does not depend on D. Codebook cleanup (argmax) still recovers exactly far beyond that, because the crosstalk aligns with no single codebook member. Spec Gate 2 must therefore measure EXACT RECOVERY, not a raw cosine."
+}

@@ -143,14 +143,24 @@ class TriLevelLoop:
     # ---------------------------------------------------------------- LOOP 3
     def strategic(self, inp: np.ndarray, tgt: np.ndarray, sims: int = 8,
                   demo_pairs=None):
-        """Sagnac-guided MCTS over compiled programs."""
+        """Sagnac-guided MCTS over compiled programs.
+
+        MILESTONE 1 (2026-10-12): search() no longer accepts the held-out target.
+        `tgt` is used ONLY for the offline score below, after the program exists.
+        """
         if self._planner is None:
             from sagnac_mcts_planner import SagnacMCTSPlanner
             self._planner = SagnacMCTSPlanner(d_model=D_MODEL, k_blocks=K_BLOCKS,
                                               device="cpu")
-        ast, delta = self._planner.search(inp, tgt, num_simulations=sims,
+        ast, delta = self._planner.search(inp, num_simulations=sims,
                                           demo_pairs=demo_pairs)
+        offline = None
+        try:
+            offline = float(self._planner.score(ast, inp, tgt))
+        except Exception:  # noqa: BLE001
+            offline = None
         return {"best_delta": float(delta),
+                "offline_score_vs_target": offline,
                 "program": getattr(ast, "op_name", type(ast).__name__)}
 
 

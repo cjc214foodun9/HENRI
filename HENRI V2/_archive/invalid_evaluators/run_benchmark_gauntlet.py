@@ -118,8 +118,14 @@ def run_vla_gauntlet(api_port: int = 8090) -> dict:
     tgt_grid = np.array([[3, 1], [4, 2]])
     demo_pairs = [(in_grid, tgt_grid)]
 
+    # MILESTONE 1 UPDATE (2026-10-12): search() no longer accepts a target grid.
+    # The held-out target reaches only the OFFLINE scorer, score(). This harness was
+    # quarantined under _archive/invalid_evaluators partly for answer-coupling, so
+    # the decoupled call is the correct form here too. It is archived, not deleted,
+    # so the historical record stays reproducible.
     t0 = time.time()
-    best_ast, sagnac_delta = planner.search(in_grid, tgt_grid, num_simulations=10, demo_pairs=demo_pairs)
+    best_ast, sagnac_delta = planner.search(in_grid, num_simulations=10,
+                                           demo_pairs=demo_pairs)
     grid_duration_ms = (time.time() - t0) * 1000.0
 
     grid_success = sagnac_delta <= 0.35

@@ -165,32 +165,71 @@ class SagnacMCTSPlanner:
     def search(
         self,
         input_grid: np.ndarray,
-        target_grid: np.ndarray,
         num_simulations: int = 50,
-        demo_pairs: Optional[List[Tuple[np.ndarray, np.ndarray]]] = None
+        demo_pairs: Optional[List[Tuple[np.ndarray, np.ndarray]]] = None,
+        *,
+        goal_wave: Optional[torch.Tensor] = None,
     ) -> Tuple[SpelkeDSLNode, float]:
         """
         Executes Dual-Channel Sagnac-Guided EFE MCTS tree search with Hard Axiom Pruning (Q -> -inf),
         In-Context SGLD Unbinder Adaptation, and zero-shot W_task Moore-Penrose Functor Compilation.
+
+        ANSWER-COUPLING REMOVED (2026-10-12, Milestone 1).
+            This method previously took `target_grid` -- the held-out output the
+            search claims to predict -- and built its scoring reference from it:
+
+                target_wave = self.vision_encoder.encode_grid(target_grid)
+                ...
+                if zero_shot_delta <= self.tau_veto:
+                    return SpelkeDSLNode(op_name="Identity"), float(zero_shot_delta)
+
+            Both the early return AND every expansion score in the tree compared
+            a candidate against `target_wave`. The search therefore could not run
+            without the answer, and its "success" label was measured to fire on a
+            row-shuffled UNRELATED target with byte-identical SGLD trajectories
+            (experiments/verification/demo_path_sgld_attribution.json, verdict
+            BANNER_IS_ANSWER_COUPLED). `target_grid` is no longer a parameter, so
+            answer coupling is now structurally impossible rather than merely
+            policed.
+
+        REPLACEMENT CRITERION (pre-prediction information only).
+            The scoring reference is the INDUCED GOAL, compiled from the
+            demonstration pairs (X_i, Y_i) alone:
+
+                W_task      = compile_functor({(encode(X_i), encode(Y_i))})
+                goal_wave   = normalize(decode(W_task @ encode(X_test)))
+
+            A candidate program P is scored by how well it reproduces that
+            induced goal:
+
+                delta_axiom = 1 - Sagnac(encode(P(X_test)), goal_wave)
+
+            Every term is available before any prediction about the held-out
+            output is made. When no demonstrations are supplied, the caller must
+            pass `goal_wave` explicitly (a stated objective), otherwise the call
+            raises -- the search never invents an objective and never accepts a
+            target grid.
+
         Returns: (best_ast_program, best_sagnac_delta)
         """
-        target_wave = self.vision_encoder.encode_grid(target_grid)
+        # --- Build the scoring reference from demonstrations ONLY -------------
+        reference_wave: Optional[torch.Tensor] = None
 
-        # In-Context SGLD Unbinder Adaptation & Zero-shot W_task Functor Compilation
         if demo_pairs:
             demo_waves = [self.vision_encoder.encode_grid(x) for x, y in demo_pairs]
-            target_waves = [self.vision_encoder.encode_grid(y) for x, y in demo_pairs]
-            
-            # Execute online test-time SGLD parameter adaptation (C2 corrected
-            # protocol: full softmax target distributions + Sagnac phase
-            # alignment + scheduled temperature + unit-normalized Langevin
-            # noise). The all-zero argmax-label CE-only variant was measured
-            # INERT (MBPP run4); this variant demonstrated real internal
-            # learning (MBPP run6: isolation 0.888, loss descent, sagnac
-            # distance halved).
+            demo_target_waves = [self.vision_encoder.encode_grid(y) for x, y in demo_pairs]
+
+            # Online test-time SGLD parameter adaptation (C2 corrected protocol:
+            # full softmax target distributions + Sagnac phase alignment +
+            # scheduled temperature + unit-normalized Langevin noise). The
+            # all-zero argmax-label CE-only variant was measured INERT (MBPP
+            # run4); this variant demonstrated real internal learning (MBPP
+            # run6: isolation 0.888, loss descent, sagnac distance halved).
+            # NOTE: the targets here are DEMONSTRATION outputs Y_i, which are
+            # given by the task; this is not answer coupling.
             adapt_telemetry = self.decoder.unbinder.adapt_in_context_sgld_wave(
                 active_waves=torch.stack(demo_waves),
-                target_waves=torch.stack(target_waves),
+                target_waves=torch.stack(demo_target_waves),
                 steps=500,
                 seed=0,
             )
@@ -201,7 +240,7 @@ class SagnacMCTSPlanner:
             )
 
             encoded_demos = []
-            for w_in, w_out in zip(demo_waves, target_waves):
+            for w_in, w_out in zip(demo_waves, demo_target_waves):
                 phase_in = ((torch.clamp(w_in, -1.0, 1.0) + 1.0) / 2.0 * (self.codec.k_bins - 1)).to(torch.uint8)
                 phase_out = ((torch.clamp(w_out, -1.0, 1.0) + 1.0) / 2.0 * (self.codec.k_bins - 1)).to(torch.uint8)
                 encoded_demos.append((phase_in, phase_out))
@@ -209,31 +248,31 @@ class SagnacMCTSPlanner:
             w_task = self.task_compiler.compile_functor(encoded_demos)
             test_in_wave = self.vision_encoder.encode_grid(input_grid)
             phase_test_in = ((torch.clamp(test_in_wave, -1.0, 1.0) + 1.0) / 2.0 * (self.codec.k_bins - 1)).to(torch.uint8)
-            
-            # Single-pass associative retrieval
-            phase_goal_pred = self.task_compiler.single_pass_associative_retrieval(w_task, phase_test_in)
-            goal_wave_pred = (phase_goal_pred.to(torch.float32) / (self.codec.k_bins - 1) * 2.0 - 1.0).to(self.device)
 
-            zero_shot_delta = 1.0 - self.vision_encoder.compute_sagnac_similarity(goal_wave_pred, target_wave)
-            if zero_shot_delta <= self.tau_veto:
-                # UNSUPPORTED SUCCESS LABEL REMOVED (2026-09-18).
-                # This branch used to print "[Phase C Zero-Shot Success] Goal wave
-                # retrieved in O(1) single pass!". That print is deleted because
-                # the criterion is ANSWER-COUPLED: it compares the prediction
-                # against the caller-supplied target_wave (line above), i.e. the
-                # held-out output it claims to predict. Measured control
-                # (experiments/verification/demo_path_sgld_attribution.json,
-                # verdict BANNER_IS_ANSWER_COUPLED): the SAME banner fired for a
-                # row-shuffled UNRELATED target, with byte-identical SGLD loss
-                # trajectories and delta 0.0 -- so the label carried no
-                # information about retrieval quality.
-                # Retention boundary: the early return is KEPT unchanged. It is
-                # reachable only when a caller passes a target grid, which the
-                # production runner does not do (it fail-closes with
-                # EVALUATION_BLOCKED / OBSERVED_TEST_TARGET_UNAVAILABLE). Removing
-                # the control flow is a separate, un-approved change; any
-                # replacement criterion must use pre-prediction information only.
-                return SpelkeDSLNode(op_name="Identity"), float(zero_shot_delta)
+            # Single-pass associative retrieval of the INDUCED goal. The target
+            # grid is never consulted.
+            phase_goal_pred = self.task_compiler.single_pass_associative_retrieval(
+                w_task, phase_test_in)
+            goal_wave_pred = (phase_goal_pred.to(torch.float32) / (self.codec.k_bins - 1) * 2.0 - 1.0).to(self.device)
+            reference_wave = F.normalize(goal_wave_pred.reshape(-1), p=2, dim=0)
+
+        if reference_wave is None and goal_wave is not None:
+            reference_wave = F.normalize(goal_wave.reshape(-1).to(self.device),
+                                         p=2, dim=0)
+
+        if reference_wave is None:
+            raise ValueError(
+                "search() needs a scoring reference that is available BEFORE any "
+                "prediction: supply demo_pairs (to compile W_task from the "
+                "demonstrations) or an explicit goal_wave. A held-out target grid "
+                "is deliberately not accepted -- accepting one is what made the "
+                "former target_grid parameter an answer-coupling leak."
+            )
+
+        # In-context adaptation reported its own convergence; the tree now runs
+        # unconditionally. There is no demonstration-match shortcut: the search
+        # must expand autonomously even when the demonstrations contain a solved
+        # case, which is the property Milestone 1 exists to guarantee.
 
         root_ast = SpelkeDSLNode(op_name="Identity")
         root = SagnacMCTSNode(ast_node=root_ast)
@@ -241,7 +280,8 @@ class SagnacMCTSPlanner:
         # Initial root evaluation
         root_grid = root_ast.execute(input_grid)
         root_wave = self.vision_encoder.encode_grid(root_grid)
-        root.sagnac_delta = 1.0 - self.vision_encoder.compute_sagnac_similarity(root_wave, target_wave)
+        root.sagnac_delta = 1.0 - self.vision_encoder.compute_sagnac_similarity(
+            root_wave, reference_wave)
         root.delta_axiom = root.sagnac_delta
         root.delta_epistemic = root.sagnac_delta
 
@@ -287,10 +327,11 @@ class SagnacMCTSPlanner:
                     pred_grid = child_ast.execute(node.ast_node.execute(input_grid))
                     pred_wave = self.vision_encoder.encode_grid(pred_grid)
 
-                    # Dual-Channel Sagnac Veto Evaluation
+                    # Dual-Channel Sagnac Veto Evaluation. The hard-axiom
+                    # reference is the INDUCED GOAL, not the held-out target.
                     delta_axiom, delta_epistemic, hard_veto_triggered = self.dual_channel_sagnac_veto(
                         psi_candidate=pred_wave,
-                        psi_axiom=target_wave,  # Hard physical invariant/target boundary
+                        psi_axiom=reference_wave,  # induced goal (pre-prediction)
                         psi_world=pred_wave,    # Active environmental transition state
                         epsilon_hard=self.tau_veto
                     )
@@ -309,8 +350,10 @@ class SagnacMCTSPlanner:
                         best_node = child_node
 
                     if delta_axiom < 1e-5:
-                        # Exact match solved
-                        print(f"[SagnacMCTS Success] Exact Grid Match Solved at Simulation {sim + 1}!")
+                        # Candidate reproduces the induced goal. This is a
+                        # convergence test against a DEMONSTRATION-DERIVED
+                        # reference, not an answer match.
+                        print(f"[SagnacMCTS Converged] Induced goal reached at Simulation {sim + 1}!")
                         return child_node.ast_node, 0.0
 
             # 3. Backpropagation
@@ -324,6 +367,28 @@ class SagnacMCTSPlanner:
                 curr = curr.parent
 
         return best_node.ast_node, best_delta
+
+    def score(
+        self,
+        program: SpelkeDSLNode,
+        input_grid: np.ndarray,
+        target_grid: np.ndarray,
+    ) -> float:
+        """OFFLINE scorer. Returns the Sagnac delta of a program against a target.
+
+        This is the ONLY method that accepts a target grid. It is deliberately
+        separate from `search()` so that the held-out output can never influence
+        planning: a caller can score a finished program, but it cannot search
+        against the answer. Keep this separation -- merging the two re-creates
+        the answer-coupling leak that Milestone 1 removed.
+        """
+        pred_grid = program.execute(input_grid)
+        pred_wave = self.vision_encoder.encode_grid(pred_grid)
+        target_wave = self.vision_encoder.encode_grid(target_grid)
+        return float(1.0 - self.vision_encoder.compute_sagnac_similarity(
+            pred_wave, target_wave))
+
+
 
     def synthesize_code_program(
         self,
@@ -483,18 +548,50 @@ def _verify_rt_entropy() -> int:
 
 if __name__ == "__main__":
     import argparse
+    import inspect
 
     _ap = argparse.ArgumentParser()
     _ap.add_argument("--mode", default=None)
     _args = _ap.parse_args()
     if _args.mode == "verify_rt_entropy":
         raise SystemExit(_verify_rt_entropy())
-    planner = SagnacMCTSPlanner(d_model=65536, k_blocks=8192, tau_veto=0.35, device="cpu")
+
+    # ---- Milestone 1 self-test: the planner must run WITHOUT the answer -----
+    sig = inspect.signature(SagnacMCTSPlanner.search)
+    assert "target_grid" not in sig.parameters, (
+        f"search() must not accept a target grid; signature is {sig}")
+    print(f"[milestone1] search() signature verified: {list(sig.parameters)}")
+
+    planner = SagnacMCTSPlanner(d_model=8192, k_blocks=1024, tau_veto=0.35, device="cpu")
 
     in_grid = np.array([[1, 2], [3, 4]])
-    tgt_grid = np.array([[3, 1], [4, 2]])
+    demos = [(np.array([[1, 2], [3, 4]]), np.array([[1, 2], [3, 4]])),
+             (np.array([[5, 6], [7, 8]]), np.array([[5, 6], [7, 8]]))]
 
-    best_prog, best_delta = planner.search(in_grid, tgt_grid, num_simulations=30)
+    best_prog, best_delta = planner.search(in_grid, num_simulations=4,
+                                            demo_pairs=demos)
     print(f"Spelke DSL MCTS Search Completed. Best Sagnac Delta: {best_delta:.6f}")
     assert best_prog is not None
-    print("SagnacMCTSPlanner with Spelke DSL Program Trees & TDV Motion Vectors successfully verified.")
+
+    # Anti-coupling proof: the plan must be identical no matter what the
+    # held-out answer is, because the answer is never an input.
+    tgt_a = np.array([[3, 1], [4, 2]])
+    tgt_b = np.rot90(tgt_a)
+    prog_a, delta_a = planner.search(in_grid, num_simulations=4, demo_pairs=demos)
+    delta_score_a = planner.score(prog_a, in_grid, tgt_a)
+    delta_score_b = planner.score(prog_a, in_grid, tgt_b)
+    print(f"[milestone1] plan is target-independent; offline score vs target A "
+          f"= {delta_score_a:.6f}, vs target B = {delta_score_b:.6f}")
+    assert delta_score_a != delta_score_b, (
+        "the offline scorer is not sensitive to the target, so this control "
+        "cannot distinguish coupling from its absence")
+
+    # Fails closed when no pre-prediction reference is available.
+    try:
+        planner.search(in_grid, num_simulations=2)
+    except ValueError as exc:
+        print(f"[milestone1] fail-closed without a reference: {exc}")
+    else:
+        raise AssertionError("search() must refuse to run with no reference")
+
+    print("SagnacMCTSPlanner Milestone-1 verification: answer coupling removed.")

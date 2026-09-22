@@ -95,7 +95,14 @@ def main():
     print(f"real == shuffled target : {np.array_equal(real_target, shuffled)}")
     print()
 
+    # MILESTONE 1 UPDATE (2026-10-12). search() no longer accepts a target grid,
+    # so this experiment can no longer vary the target as a SEARCH input. That is
+    # the point. The arms now demonstrate DECOUPLING directly: planning runs twice
+    # with identical inputs, and the resulting programs must be identical even
+    # though the available held-out targets differ. Scoring against a target
+    # happens only AFTER the plan exists, via the separate offline scorer.
     arms = {}
+    plans = []
     for arm, tgt in (("real_target", real_target), ("shuffled_target", shuffled)):
         for rep in range(N_REPEATS):
             seed = 4242 + rep
@@ -108,7 +115,8 @@ def main():
             res = None
             try:
                 with contextlib.redirect_stdout(buf):
-                    res = planner.search(in_grid, tgt, num_simulations=2,
+                    # No target grid is passed. Planning cannot see the answer.
+                    res = planner.search(in_grid, num_simulations=2,
                                          demo_pairs=demo_pairs)
             except Exception as exc:  # noqa: BLE001
                 err = f"{type(exc).__name__}: {exc}"
@@ -116,12 +124,21 @@ def main():
             text = buf.getvalue()
             banner = "Zero-Shot Success" in text
             prog, delta = (res if isinstance(res, tuple) else (res, None))
+            # Offline score against the target that is available to THIS arm.
+            off_score = None
+            if prog is not None:
+                try:
+                    off_score = float(planner.score(prog, in_grid, tgt))
+                except Exception:  # noqa: BLE001
+                    off_score = None
             lp = _loss_pair(text)
+            plans.append(None if prog is None else str(prog))
             arms.setdefault(arm, []).append({
                 "repeat": rep, "seed": seed, "seconds": dt,
                 "banner_zero_shot_success": banner,
                 "program": (None if prog is None else str(prog)),
                 "delta": (None if delta is None else float(delta)),
+                "offline_score_vs_arm_target": off_score,
                 "loss_first": (None if lp is None else lp[0]),
                 "loss_last": (None if lp is None else lp[1]),
                 "loss_rose": (None if lp is None else bool(lp[1] > lp[0])),
@@ -130,6 +147,10 @@ def main():
             })
             print(f"  {arm:<16} rep={rep} {dt:6.2f}s banner={banner!s:<5} "
                   f"prog={prog} delta={delta} loss={lp} err={err}")
+
+    # DECOUPLING CHECK: the program sequence must be identical across arms.
+    n_half = len(plans) // 2
+    decoupled = plans[:n_half] == plans[n_half:]
 
     real_banners = [r["banner_zero_shot_success"] for r in arms.get("real_target", [])]
     shuf_banners = [r["banner_zero_shot_success"] for r in arms.get("shuffled_target", [])]

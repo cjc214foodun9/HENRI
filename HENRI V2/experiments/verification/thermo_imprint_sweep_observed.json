@@ -1,0 +1,93 @@
+{
+  "schema": "henri.thermo-imprint-sweep.v1",
+  "hypothesis": "D2_SCALE_DEFECT",
+  "thermal_sigma": 0.22360679774997896,
+  "correlation_monotone_in_amplitude": true,
+  "rows": [
+    {
+      "noise_amp": 2.0,
+      "corr_t0": 0.15573552809655666,
+      "corr_tE": 0.06370937917381525,
+      "amplitude_rms_t0": 0.21823646128177643,
+      "loss_first": 24.38817024230957,
+      "loss_last": 23.700669288635254,
+      "relative_drop": 0.028189935810830628,
+      "overlap_trained": 0.2649297934646408,
+      "overlap_null": 0.264144370953242,
+      "overlap_gain": 0.0007854225113987923
+    },
+    {
+      "noise_amp": 6.0,
+      "corr_t0": 0.4636281058192253,
+      "corr_tE": 0.08715315163135529,
+      "amplitude_rms_t0": 0.23392027616500854,
+      "loss_first": 24.520071029663086,
+      "loss_last": 23.79903221130371,
+      "relative_drop": 0.029406065646673713,
+      "overlap_trained": 0.2663663225248456,
+      "overlap_null": 0.264144370953242,
+      "overlap_gain": 0.0022219515716035976
+    },
+    {
+      "noise_amp": 12.0,
+      "corr_t0": 0.7161574959754944,
+      "corr_tE": 0.1219897111877799,
+      "amplitude_rms_t0": 0.2761133015155792,
+      "loss_first": 25.001848220825195,
+      "loss_last": 24.232243537902832,
+      "relative_drop": 0.030781911646088785,
+      "overlap_trained": 0.268602032524844,
+      "overlap_null": 0.264144370953242,
+      "overlap_gain": 0.00445766157160199
+    },
+    {
+      "noise_amp": 20.0,
+      "corr_t0": 0.847028836607933,
+      "corr_tE": 0.16703472658991814,
+      "amplitude_rms_t0": 0.33603814244270325,
+      "loss_first": 26.135713577270508,
+      "loss_last": 25.266101837158203,
+      "relative_drop": 0.033272928919322924,
+      "overlap_trained": 0.27167326398193836,
+      "overlap_null": 0.264144370953242,
+      "overlap_gain": 0.00752889302869636
+    },
+    {
+      "noise_amp": 30.0,
+      "corr_t0": 0.9056210368871689,
+      "corr_tE": 0.22002303879708052,
+      "amplitude_rms_t0": 0.40540292859077454,
+      "loss_first": 28.291616439819336,
+      "loss_last": 27.162302017211914,
+      "relative_drop": 0.03991692821828152,
+      "overlap_trained": 0.2756493082270026,
+      "overlap_null": 0.264144370953242,
+      "overlap_gain": 0.011504937273760618
+    },
+    {
+      "noise_amp": 45.0,
+      "corr_t0": 0.934154249727726,
+      "corr_tE": 0.2914598463103175,
+      "amplitude_rms_t0": 0.4997810125350952,
+      "loss_first": 32.993635177612305,
+      "loss_last": 31.03134536743164,
+      "relative_drop": 0.05947479868820783,
+      "overlap_trained": 0.2819679876168569,
+      "overlap_null": 0.264144370953242,
+      "overlap_gain": 0.017823616663614872
+    }
+  ],
+  "best": {
+    "noise_amp": 45.0,
+    "corr_t0": 0.934154249727726,
+    "corr_tE": 0.2914598463103175,
+    "amplitude_rms_t0": 0.4997810125350952,
+    "loss_first": 32.993635177612305,
+    "loss_last": 31.03134536743164,
+    "relative_drop": 0.05947479868820783,
+    "overlap_trained": 0.2819679876168569,
+    "overlap_null": 0.264144370953242,
+    "overlap_gain": 0.017823616663614872
+  },
+  "verdict": "D2_NOT_SUPPORTED -- amplitude does not recover learnability; the defect is elsewhere and the rule must not be promoted."
+}

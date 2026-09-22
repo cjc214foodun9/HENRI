@@ -1,0 +1,118 @@
+{
+  "module": "spec_constant_audit",
+  "evidence_class": "DERIVED",
+  "spec": "HENRI-SPEC-2026-THERMO-VLA-V1",
+  "trailing_note": "Monte Carlo entries are OBSERVED; algebraic entries are DERIVED from the spec's own stated formulas.",
+  "checks": [
+    {
+      "id": "C1",
+      "claim": "spec: r* = E[r|N=14] + 3*sigma = 0.2682",
+      "E_r": 0.23685410871273366,
+      "sigma_per_spec_formula": 0.12380913784720407,
+      "three_sigma_bound": 0.6082815222543458,
+      "spec_value": 0.2682,
+      "verdict": "FALSIFIED",
+      "note": "The spec's own sigma formula gives 0.1238, so its stated 3-sigma bound is 0.6083, not 0.2682. 0.2682 is exactly sqrt(-ln(0.01)/64): the N=64 tile quantile from the earlier roadmap, transplanted into an N=14 derivation."
+    },
+    {
+      "id": "C2",
+      "claim": "consequence of using 0.2682 at N = 14",
+      "fpr_N14_at_0.2682": 0.36529962928677095,
+      "verdict": "UNSAFE",
+      "note": "Passes uncoordinated noise roughly one call in three."
+    },
+    {
+      "id": "C3",
+      "claim": "correct alpha=0.01 thresholds",
+      "r_star_N14": 0.5735335452879613,
+      "r_star_N64": 0.2682457532861684,
+      "verdict": "OK",
+      "note": "N=14 -> 0.5735, N=64 -> 0.2682. The LIVE phase-lock code uses tiles of N=64, for which 0.2682 is CORRECT. There is no defect in the running code; the defect is in the spec's justification."
+    },
+    {
+      "id": "C4",
+      "claim": "finite-sample Rayleigh null, Monte Carlo",
+      "N64": {
+        "n": 64,
+        "trials": 200000,
+        "mean_r": 0.11072023212909698,
+        "predicted_mean_0.5_sqrt_pi_over_n": 0.11077836568159474,
+        "empirical_q99": 0.26766079664230347,
+        "analytic_q99": 0.2682457532861684,
+        "empirical_fpr_at_0.2682": 0.009870000183582306,
+        "analytic_fpr_at_0.2682": 0.010015720603814888
+      },
+      "N14": {
+        "n": 14,
+        "trials": 200000,
+        "mean_r": 0.23788267374038696,
+        "predicted_mean_0.5_sqrt_pi_over_n": 0.23685410871273366,
+        "empirical_q99": 0.5596597194671631,
+        "analytic_q99": 0.5735335452879613,
+        "empirical_fpr_at_0.2682": 0.37214499711990356,
+        "analytic_fpr_at_0.2682": 0.36529962928677095
+      },
+      "verdict": "OK",
+      "note": "Confirms the analytic null used by the live gate. Validates the KURAMOTO STABILITY CONTRACT: signal must exceed the quantile."
+    },
+    {
+      "id": "C5",
+      "claim": "spec: SNR >= 256 for M <= 256 (D = 65536)",
+      "table": [
+        {
+          "M": 8,
+          "snr_spec_formula": 1170.2857142857142,
+          "meets_256": true
+        },
+        {
+          "M": 16,
+          "snr_spec_formula": 273.06666666666666,
+          "meets_256": true
+        },
+        {
+          "M": 17,
+          "snr_spec_formula": 240.94117647058823,
+          "meets_256": false
+        },
+        {
+          "M": 32,
+          "snr_spec_formula": 66.06451612903226,
+          "meets_256": false
+        },
+        {
+          "M": 64,
+          "snr_spec_formula": 16.253968253968253,
+          "meets_256": false
+        },
+        {
+          "M": 128,
+          "snr_spec_formula": 4.031496062992126,
+          "meets_256": false
+        },
+        {
+          "M": 256,
+          "snr_spec_formula": 1.003921568627451,
+          "meets_256": false
+        }
+      ],
+      "first_M_failing_256": 17,
+      "verdict": "FALSIFIED",
+      "note": "Under the spec's OWN formula SNR falls below 256 at M = 17 and reaches 1.0 at M = 256. Measured raw fidelity is worse still: 1/sqrt(M), independent of D. See rfss_capacity_sweep.py."
+    },
+    {
+      "id": "C6",
+      "claim": "spec Gate 3: delta loss >= 40% within K <= 5 steps",
+      "measured_overlap_gain_previous_session": 0.0178,
+      "gate_required_relative_reduction": 0.4,
+      "verdict": "UNREACHABLE_AT_MEASURED_SCALE",
+      "note": "The previous session measured +0.0178 overlap gain over the null arm at the strongest imprint. A 40% relative reduction is ~22x that scale. As written this gate will produce a meaningless FALSIFIED. Re-register as a z-score of gain over the null arm across seeds, and document the re-registration as such."
+    }
+  ],
+  "falsified_ids": [
+    "C1",
+    "C2",
+    "C5",
+    "C6"
+  ],
+  "action": "Do NOT wire 0.2682 at N=14. Do NOT wire Gate 2 raw. Do NOT wire Gate 3 as a 40% relative reduction. The live N=64 tile gate is correct and must keep its provenance comment."
+}

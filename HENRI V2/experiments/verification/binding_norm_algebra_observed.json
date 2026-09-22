@@ -1,0 +1,53 @@
+{
+  "module": "binding_norm_algebra",
+  "evidence_class": "OBSERVED",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "torch": "2.13.0+cpu",
+  "rows": [
+    {
+      "dim": 1024,
+      "trials": 512,
+      "mean_ratio": 0.9994856666020299,
+      "dev_mean": -0.0005143333979700571,
+      "dev_std": 0.016328557670250394,
+      "predicted_dev_std_sqrt(3/(4D))": 0.027063293868263706,
+      "dev_std_times_sqrtD": 0.5225138454480126
+    },
+    {
+      "dim": 4096,
+      "trials": 512,
+      "mean_ratio": 1.000045607056702,
+      "dev_mean": 4.5607056702194615e-05,
+      "dev_std": 0.007849302664170322,
+      "predicted_dev_std_sqrt(3/(4D))": 0.013531646934131853,
+      "dev_std_times_sqrtD": 0.5023553705069006
+    },
+    {
+      "dim": 16384,
+      "trials": 512,
+      "mean_ratio": 1.0000841503449407,
+      "dev_mean": 8.415034494076135e-05,
+      "dev_std": 0.0038537842408458752,
+      "predicted_dev_std_sqrt(3/(4D))": 0.0067658234670659265,
+      "dev_std_times_sqrtD": 0.49328438282827203
+    },
+    {
+      "dim": 65536,
+      "trials": 512,
+      "mean_ratio": 0.99998699855651,
+      "dev_mean": -1.3001443490058811e-05,
+      "dev_std": 0.0018875957071179225,
+      "predicted_dev_std_sqrt(3/(4D))": 0.0033829117335329633,
+      "dev_std_times_sqrtD": 0.48322450102218817
+    }
+  ],
+  "verdicts": {
+    "L1_exact_norm_preservation": "FALSIFIED",
+    "L2_inverse_sqrt_D_deviation": "NOT_CONFIRMED",
+    "dev_std_sqrtD_mean": 0.5003445249513434,
+    "theory_sqrt3_over_2": 0.8660254037844386,
+    "constancy_spread": 1.081306606644973,
+    "dev_std_at_D65536": 0.0018875957071179225
+  },
+  "action": "The instrument self-check must validate SCALING IN D, not compare against a hard-coded 1e-10 tolerance. Any invariant of the form | ||Psi (*) a|| - 1 | <= 1e-6 cannot hold for L2-normalized phasors at D=65536; the achievable bound is ~3.4e-3."
+}
