@@ -1,0 +1,68 @@
+{
+ "checks": {
+  "source_file": "universal_data_transducer.py",
+  "source_total_lines": 149,
+  "class_and_def_lines": [
+   {
+    "line": 28,
+    "text": "def __init__("
+   },
+   {
+    "line": 93,
+    "text": "class SU3FieldWaveTransducer(torch.nn.Module):"
+   },
+   {
+    "line": 106,
+    "text": "def __init__(self, gell_mann_basis: torch.Tensor):"
+   },
+   {
+    "line": 117,
+    "text": "def field_to_wave(self, su3_field: torch.Tensor) -> torch.Tensor:"
+   }
+  ],
+  "field_to_wave_body": [
+   "117:     def field_to_wave(self, su3_field: torch.Tensor) -> torch.Tensor:",
+   "118:         \"\"\"su3_field: [B, N, 3, 3] complex SU(3). Returns [B, N*8] complex",
+   "119:         unit-modulus wave hypervector on S^(D-1).\"\"\"",
+   "120:         B, N, _, _ = su3_field.shape",
+   "121:         log_u = self._matrix_log(su3_field)                  # [B, N, 3, 3]",
+   "122:         algebra = (-1j * log_u).to(self.basis.dtype)         # su(3) Hermitian, c64",
+   "123:         theta = 0.5 * torch.real(",
+   "124:             torch.einsum(\"aij,bnji->bna\", self.basis, algebra)",
+   "125:         )                                                    # [B, N, 8]",
+   "126:         return torch.exp(1j * theta.reshape(B, N * 8)).to(self.basis.dtype)",
+   "127: "
+  ],
+  "A1_class_imported": true,
+  "A1_ctor_signature": "(self, gell_mann_basis: torch.Tensor)",
+  "S3_ctor_d_model_65536_error": "TypeError: SU3FieldWaveTransducer.__init__() got an unexpected keyword argument 'd_model'",
+  "S3_ctor_default_error": "TypeError: SU3FieldWaveTransducer.__init__() missing 1 required positional argument: 'gell_mann_basis'",
+  "S3_ctor_seconds": 0.0,
+  "S3_field_to_wave_outputs": {},
+  "S2_encoder_widths": {
+   "num_blocks_64": {
+    "numel": 512,
+    "shape": [
+     512
+    ],
+    "dtype": "torch.float32"
+   },
+   "num_blocks_8192": {
+    "numel": 65536,
+    "shape": [
+     65536
+    ],
+    "dtype": "torch.float32"
+   }
+  },
+  "V_ref_width_at_8192": 65536,
+  "V_candidate_width_at_65536_input": null,
+  "V_widths_match_at_full_scale": false,
+  "elapsed_s": 0.04
+ },
+ "errors": [],
+ "notes": [
+  "NOT CONFIRMED: reference=65536 candidate=None. If these differ at full scale, the scale setting is not the cause and the cross-family boundary is. Recorded, not assumed."
+ ],
+ "verdict": "PASS"
+}

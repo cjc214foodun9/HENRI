@@ -1,0 +1,273 @@
+{
+ "checks": {
+  "H_line_hits": {
+   "except_veto": [
+    2300,
+    2401
+   ],
+   "isinstance_match": [
+    2327
+   ],
+   "name_cmp": [],
+   "name_assign": [],
+   "gate_status": [
+    2314,
+    2329
+   ],
+   "unavailable_label": [
+    2329
+   ],
+   "hard_vetoed": [
+    2273,
+    2288,
+    2297,
+    2299,
+    2305,
+    2311,
+    2313,
+    2315,
+    2338
+   ],
+   "opine_info_assign": [
+    2337,
+    2350
+   ],
+   "candidate_elems": [],
+   "veto_stage": [],
+   "shape_candidate": []
+  },
+  "H_total_lines": 3486,
+  "H_n_except_sites": 2,
+  "H_n_isinstance": 1,
+  "H_n_name_cmp": 0,
+  "H_extra_fields_present": false,
+  "H_verdict": "ISINSTANCE_FORM_CONFIRMED (reference renderings are stale)",
+  "H_handler_dump": [
+   "2300:                         except Exception as _veto_exc:",
+   "2301:                             # THREE OUTCOMES, KEPT DISTINCT. The original handler",
+   "2302:                             # recorded only `{\"error\": f\"{type(_veto_exc).__name__}\"}`,",
+   "2303:                             # so a gauntlet run wrote `{\"error\": \"RuntimeError\"}` on",
+   "2304:                             # 89/89 and 60/60 steps and the CAUSE was invisible: the",
+   "2305:                             # veto had raised on EVERY step, `_hard_vetoed` stayed at",
+   "2306:                             # its initialised False, and `engaged` was always True --",
+   "2307:                             # a fail-open artifact that looked like a permissive gate.",
+   "2308:                             # MEASURED in experiments/verification/_gauntlet_audit.sh.",
+   "2309:                             #",
+   "2310:                             #   gate PASSED          -> _veto has delta_* and",
+   "2311:                             #                           hard_vetoed=False",
+   "2312:                             #   gate VETOED          -> _veto has delta_* and",
+   "2313:                             #                           hard_vetoed=True",
+   "2314:                             #   gate UNAVAILABLE     -> _veto has gate_status and NO",
+   "2315:                             #                           hard_vetoed key at all, so a",
+   "2316:                             #                           reader cannot mistake",
+   "2317:                             #                           availability for permission",
+   "2318:                             #   gate ERROR (real bug) -> _veto has error",
+   "2319:                             #",
+   "2320:                             # SagnacGateUnavailable is imported at module scope from",
+   "2321:                             # sagnac_mcts_planner (line ~51), so isinstance is used",
+   "2322:                             # rather than a string comparison of the class name. A",
+   "2323:                             # name comparison would silently stop matching if the class",
+   "2324:                             # were renamed, which is precisely the kind of quiet drift",
+   "2325:                             # this handler exists to prevent.",
+   "2326:                             _msg = f\"{type(_veto_exc).__name__}: {_veto_exc}\"",
+   "2401:                 except Exception as _veto_exc:",
+   "2402:                     veto_info = {",
+   "2403:                         \"veto_error\": f\"{type(_veto_exc).__name__}: {_veto_exc}\",",
+   "2404:                     }",
+   "2405:                     print(f\"  [veto] advisory sidecar unavailable: {_veto_exc}\")",
+   "2406: ",
+   "2407:             # Epistemic novelty: record the chosen action's predicted outcome so",
+   "2408:             # repeating it later is discounted (breaks RESET-spam loops).",
+   "2409:             # Freeze-closure (audit deleg_a003e770): the novelty memory must",
+   "2410:             # not mutate during frozen eval.",
+   "2411:             if policy_mode() != \"action1\" and not learning_frozen():",
+   "2412:                 orch.planner.remember_outcome(chosen[\"predicted_wave\"])",
+   "2413: ",
+   "2414:             # Fail-closed step-loop guard state (initialized BEFORE the egress",
+   "2415:             # decode so a decode failure can suppress the macro step loop).",
+   "2416:             env_step_error = None",
+   "2417: ",
+   "2418:             # Phase 6: fail-closed egress decode of the chosen candidate wave.",
+   "2419:             # HENRI_ARC_EGRESS=1 routes the selected wave through the trained",
+   "2420:             # HENRIUnifiedEgressTransducer to produce a legal (GameAction, data)",
+   "2421:             # action. Decode failure ends the episode with typed evidence; there",
+   "2422:             # is NO silent fallback to a bare enum.",
+   "2423:             if (HENRI_ARC_EGRESS and egress_transducer is not None",
+   "2424:                     and policy_mode() != \"action1\" and not psg_engaged):",
+   "2425:                 try:",
+   "2426:                     _vocab = ActionEgressVocabulary(GameAction, allowed_actions)",
+   "2427:                     _head_active = bool("
+  ],
+  "W_class_and_def_sites": [
+   {
+    "file": "universal_data_transducer.py",
+    "line": 93,
+    "kind": "class",
+    "text": "class SU3FieldWaveTransducer(torch.nn.Module):"
+   },
+   {
+    "file": "universal_data_transducer.py",
+    "line": 117,
+    "kind": "def",
+    "text": "def field_to_wave(self, su3_field: torch.Tensor) -> torch.Tensor:"
+   }
+  ],
+  "W_su3_construction_sites": [
+   {
+    "file": "efe_planner.py",
+    "line": 975,
+    "text": "self._su3_transducer = SU3FieldWaveTransducer("
+   },
+   {
+    "file": "efe_planner.py",
+    "line": 1653,
+    "text": "trans = SU3FieldWaveTransducer(GELL_MANN_BASIS).to(device)"
+   },
+   {
+    "file": "phase818_transducer_cuda_check.py",
+    "line": 62,
+    "text": "trans = SU3FieldWaveTransducer(gell_mann_basis()).to(DEVICE)"
+   },
+   {
+    "file": "opine_object_mcts.py",
+    "line": 164,
+    "text": "trans = SU3FieldWaveTransducer(GELL_MANN_BASIS).to(device)"
+   },
+   {
+    "file": "opine_object_mcts.py",
+    "line": 227,
+    "text": "trans = SU3FieldWaveTransducer(GELL_MANN_BASIS).to(device)"
+   },
+   {
+    "file": "production_arc_run.py",
+    "line": 1112,
+    "text": "trans = SU3FieldWaveTransducer(GELL_MANN_BASIS).to(DEVICE)"
+   },
+   {
+    "file": "production_arc_run.py",
+    "line": 2229,
+    "text": "orch.planner._su3_transducer = SU3FieldWaveTransducer("
+   },
+   {
+    "file": "test_phase818_transducer.py",
+    "line": 51,
+    "text": "return SU3FieldWaveTransducer(gell_mann_basis())"
+   },
+   {
+    "file": "test_phase820_action_grounding.py",
+    "line": 148,
+    "text": "trans = SU3FieldWaveTransducer(basis).to(device)"
+   }
+  ],
+  "W_field_to_wave_bodies": [
+   [
+    "117:     def field_to_wave(self, su3_field: torch.Tensor) -> torch.Tensor:",
+    "118:         \"\"\"su3_field: [B, N, 3, 3] complex SU(3). Returns [B, N*8] complex",
+    "119:         unit-modulus wave hypervector on S^(D-1).\"\"\"",
+    "120:         B, N, _, _ = su3_field.shape",
+    "121:         log_u = self._matrix_log(su3_field)                  # [B, N, 3, 3]",
+    "122:         algebra = (-1j * log_u).to(self.basis.dtype)         # su(3) Hermitian, c64",
+    "123:         theta = 0.5 * torch.real(",
+    "124:             torch.einsum(\"aij,bnji->bna\", self.basis, algebra)",
+    "125:         )                                                    # [B, N, 8]",
+    "126:         return torch.exp(1j * theta.reshape(B, N * 8)).to(self.basis.dtype)",
+    "127: ",
+    "128:     def wave_to_field(self, wave_vector: torch.Tensor) -> torch.Tensor:",
+    "129:         \"\"\"wave_vector: [B, D] complex unit hypervector. Returns [B, D//8, 3, 3]",
+    "130:         complex SU(3) matrices.\"\"\"",
+    "131:         B, D = wave_vector.shape",
+    "132:         N = D // 8",
+    "133:         theta = torch.angle(wave_vector).reshape(B, N, 8)",
+    "134:         alg = (1j * torch.einsum(",
+    "135:             \"bna,aij->bnij\", theta.to(self.basis.dtype), self.basis",
+    "136:         )).to(self.basis.dtype)                               # [B, N, 3, 3] c64",
+    "137:         return torch.matrix_exp(alg)",
+    "138: ",
+    "139:     def round_trip_error(self, su3_field: torch.Tensor) -> torch.Tensor:",
+    "140:         \"\"\"Mean per-block round-trip ||U - Phi^-1(Phi(U))||_F (G1-8.18 metric).\"\"\"",
+    "141:         w = self.field_to_wave(su3_field)",
+    "142:         rec = self.wave_to_field(w)",
+    "143:         return (su3_field - rec).norm(dim=(-2, -1)).mean()",
+    "144: ",
+    "145: ",
+    "146: if __name__ == \"__main__\":",
+    "147:     udt = UniversalDataTransducer(d_model=65536)",
+    "148:     wave = udt.transduce_string(\"hello henri\")",
+    "149:     print(f\"Transduced string wave shape: {wave.shape}, dtype: {wave.dtype}\")"
+   ]
+  ],
+  "W_su3_class_body": [
+   "93: class SU3FieldWaveTransducer(torch.nn.Module):",
+   "94:     \"\"\"Bijective, gauge-invariant transducer connecting SU(3)^N Lie group fields",
+   "95:     to complex unit hypervectors on S^(D-1) (D = N*8).",
+   "96: ",
+   "97:     Spec: HENRI-SPEC-2026-08-PHASE8.18-TRANSDUCER (SHA 158c02c7...).",
+   "98:     Deviations applied (see experiments/sweeps/phase818_transducer_design.md):",
+   "99:     D19 eigendecomposition matrix log (torch.linalg.matrix_log absent on",
+   "100:     torch 2.12.0+cu130 \u2014 VERIFIED local + remote); D20 corrected projection",
+   "101:     einsum 'aij,bnji->bna' (spec 'abc,bncb->bna' has a b-index collision);",
+   "102:     D21 corrected reconstruction einsum 'bna,aij->bnij' (spec 'bna,abc->bnabc'",
+   "103:     never contracts the generator index).",
+   "104:     \"\"\"",
+   "105: ",
+   "106:     def __init__(self, gell_mann_basis: torch.Tensor):",
+   "107:         super().__init__()",
+   "108:         basis = gell_mann_basis.detach().clone()",
+   "109:         self.register_buffer(\"basis\", basis)  # [8, 3, 3] complex",
+   "110: ",
+   "111:     @staticmethod",
+   "112:     def _matrix_log(U: torch.Tensor) -> torch.Tensor:",
+   "113:         \"\"\"Matrix log for unitary U via eigendecomposition (D19).\"\"\"",
+   "114:         evals, evecs = torch.linalg.eig(U)",
+   "115:         return (evecs @ torch.diag_embed(torch.log(evals)) @ evecs.conj().transpose(-2, -1)).to(U.dtype)",
+   "116: ",
+   "117:     def field_to_wave(self, su3_field: torch.Tensor) -> torch.Tensor:",
+   "118:         \"\"\"su3_field: [B, N, 3, 3] complex SU(3). Returns [B, N*8] complex",
+   "119:         unit-modulus wave hypervector on S^(D-1).\"\"\"",
+   "120:         B, N, _, _ = su3_field.shape",
+   "121:         log_u = self._matrix_log(su3_field)                  # [B, N, 3, 3]",
+   "122:         algebra = (-1j * log_u).to(self.basis.dtype)         # su(3) Hermitian, c64",
+   "123:         theta = 0.5 * torch.real(",
+   "124:             torch.einsum(\"aij,bnji->bna\", self.basis, algebra)",
+   "125:         )                                                    # [B, N, 8]",
+   "126:         return torch.exp(1j * theta.reshape(B, N * 8)).to(self.basis.dtype)",
+   "127: ",
+   "128:     def wave_to_field(self, wave_vector: torch.Tensor) -> torch.Tensor:",
+   "129:         \"\"\"wave_vector: [B, D] complex unit hypervector. Returns [B, D//8, 3, 3]",
+   "130:         complex SU(3) matrices.\"\"\"",
+   "131:         B, D = wave_vector.shape",
+   "132:         N = D // 8",
+   "133:         theta = torch.angle(wave_vector).reshape(B, N, 8)",
+   "134:         alg = (1j * torch.einsum(",
+   "135:             \"bna,aij->bnij\", theta.to(self.basis.dtype), self.basis",
+   "136:         )).to(self.basis.dtype)                               # [B, N, 3, 3] c64",
+   "137:         return torch.matrix_exp(alg)",
+   "138: ",
+   "139:     def round_trip_error(self, su3_field: torch.Tensor) -> torch.Tensor:",
+   "140:         \"\"\"Mean per-block round-trip ||U - Phi^-1(Phi(U))||_F (G1-8.18 metric).\"\"\"",
+   "141:         w = self.field_to_wave(su3_field)",
+   "142:         rec = self.wave_to_field(w)",
+   "143:         return (su3_field - rec).norm(dim=(-2, -1)).mean()",
+   "144: ",
+   "145: ",
+   "146: if __name__ == \"__main__\":",
+   "147:     udt = UniversalDataTransducer(d_model=65536)",
+   "148:     wave = udt.transduce_string(\"hello henri\")",
+   "149:     print(f\"Transduced string wave shape: {wave.shape}, dtype: {wave.dtype}\")"
+  ],
+  "W_su3_init_mentions_d_model": true,
+  "W_su3_init_mentions_65536": true,
+  "W_su3_init_mentions_num_blocks": false,
+  "O_source_exists": true,
+  "O_source_bytes": 799034119,
+  "O_copied": true,
+  "O_dest_exists": true,
+  "O_dest_bytes": 799034119,
+  "O_src_sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+  "O_dst_sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+  "O_sha_match": true,
+  "O_gitignored": true
+ },
+ "errors": [],
+ "verdict": "PASS"
+}

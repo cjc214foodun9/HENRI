@@ -1,0 +1,105 @@
+{
+ "checks": {
+  "A_sites": [
+   2300,
+   2401
+  ],
+  "A_site_info": [
+   {
+    "site_line": 2300,
+    "guards_planner_veto": true,
+    "guards_sidecar_evaluate_veto": false,
+    "guards_advisory_rerank": false,
+    "body_head": [
+     "2275:                         try:",
+     "2276:                             _axiom_ref = boundary_batch[0].detach().reshape(-1)",
+     "2277:                             _world_ref = state_wave.detach().reshape(-1)",
+     "2278:                             _d_ax, _d_ep, _hard = (",
+     "2279:                                 sagnac_planner.dual_channel_sagnac_veto(",
+     "2280:                                     _psi_macro, _axiom_ref, _world_ref,"
+    ],
+    "has_gate_status_after": true,
+    "records_message": true
+   },
+   {
+    "site_line": 2401,
+    "guards_planner_veto": false,
+    "guards_sidecar_evaluate_veto": true,
+    "guards_advisory_rerank": true,
+    "body_head": [
+     "2361:                     and not psg_engaged):",
+     "2362:                 try:",
+     "2363:                     from arc_sagnac_veto import apply_advisory_rerank, evaluate_veto",
+     "2364:                     _axiom_ref = boundary_batch[0].detach()",
+     "2365:                     _world_ref = state_wave.detach()",
+     "2366:                     _flags = []"
+    ],
+    "has_gate_status_after": false,
+    "records_message": true
+   }
+  ],
+  "A_planner_sites_missing_gate_status": [],
+  "A_sidecar_sites": [
+   2401
+  ],
+  "B_basis_source": "constructed_standard_gell_mann",
+  "B_basis_shape": [
+   8,
+   3,
+   3
+  ],
+  "B_constructed": true,
+  "B_field_to_wave_widths": {
+   "64": {
+    "out_shape": [
+     1,
+     512
+    ],
+    "out_numel": 512,
+    "out_dtype": "torch.complex64",
+    "predicted_n_times_8": 512,
+    "matches_prediction": true
+   },
+   "512": {
+    "out_shape": [
+     1,
+     4096
+    ],
+    "out_numel": 4096,
+    "out_dtype": "torch.complex64",
+    "predicted_n_times_8": 4096,
+    "matches_prediction": true
+   },
+   "8192": {
+    "out_shape": [
+     1,
+     65536
+    ],
+    "out_numel": 65536,
+    "out_dtype": "torch.complex64",
+    "predicted_n_times_8": 65536,
+    "matches_prediction": true
+   }
+  },
+  "B_encoder_ref_widths": {
+   "64": 512,
+   "8192": 65536
+  },
+  "B_full_scale_ref": 65536,
+  "B_full_scale_cand": 65536,
+  "B_widths_match_at_full_scale": true,
+  "B_reduced_scale_ref": 512,
+  "B_reduced_scale_cand": 512,
+  "B_widths_match_at_reduced_scale": true,
+  "B_full_width_veto_runs": true,
+  "B_full_width_pass_hard": false,
+  "B_full_width_veto_hard": true,
+  "B_full_width_both_values": true,
+  "B_full_width_pass_delta": 0.0,
+  "B_full_width_veto_delta": 1.0,
+  "B_notes": "At full scale the reference is 65536-wide and an 8192-block SU3 field is also 65536-wide, so no bridge is needed."
+ },
+ "errors": [],
+ "notes": [],
+ "verdict": "PASS"
+}

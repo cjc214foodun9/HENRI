@@ -1,0 +1,265 @@
+{
+ "checks": {
+  "_u_macro_mentions": [
+   [
+    2250,
+    "_u_macro = _opine.construct_macro_option(_gens, device=DEVICE)"
+   ],
+   [
+    2261,
+    "_u_macro = _opine.synthesize_macro_option("
+   ],
+   [
+    2265,
+    "_u_macro.unsqueeze(0)).squeeze(0)"
+   ],
+   [
+    2343,
+    "_opine.unitarity_error(_u_macro), 10),"
+   ]
+  ],
+  "_u_macro_assignments": [
+   [
+    2250,
+    "_u_macro = _opine.construct_macro_option(_gens, device=DEVICE)"
+   ],
+   [
+    2261,
+    "_u_macro = _opine.synthesize_macro_option("
+   ]
+  ],
+  "_n_assignments": 2,
+  "num_blocks_mentions": [
+   [
+    90,
+    "SCALE = dict(num_experts=1024, d_model=65536, r_rank=16, num_blocks=8192)"
+   ],
+   [
+    92,
+    "SCALE = dict(num_experts=64, d_model=512, r_rank=8, num_blocks=64)"
+   ],
+   [
+    778,
+    "d_model=SCALE[\"d_model\"], k_blocks=SCALE[\"num_blocks\"],"
+   ],
+   [
+    797,
+    "d_model=SCALE[\"d_model\"], k_blocks=SCALE[\"num_blocks\"],"
+   ],
+   [
+    801,
+    "SCALE[\"num_blocks\"], 8),"
+   ],
+   [
+    861,
+    "dsn=dsn, num_blocks=SCALE[\"num_blocks\"])"
+   ],
+   [
+    895,
+    "d_model=SCALE[\"d_model\"], k_blocks=SCALE[\"num_blocks\"], device=DEVICE,"
+   ],
+   [
+    910,
+    "num_blocks=SCALE[\"num_blocks\"], block_dim=8,"
+   ],
+   [
+    1076,
+    "# SU(3) field domain to the real [num_blocks,8] planner wave domain"
+   ],
+   [
+    1106,
+    "# [num_blocks, 8] planner-domain wave. Default-OFF (flag)."
+   ],
+   [
+    2555,
+    "# state_wave ([num_blocks, 8] = flat.view(1, k, 8)); reshape(-1)"
+   ],
+   [
+    3201,
+    "# the Zone C engram store holds fixed [num_blocks, 8] wave"
+   ]
+  ],
+  "n_num_blocks_mentions": 12,
+  "opine_mentions": [
+   [
+    575,
+    "# EFE order byte-identical). Requires the OPINE option module + RT"
+   ],
+   [
+    586,
+    "# consumer (lambda_goal), instantiates SagnacMCTSPlanner + OPINE on the"
+   ],
+   [
+    587,
+    "# live path, and emits OPINE macro-option engagement telemetry (C2)."
+   ],
+   [
+    770,
+    "# (hard axiom channel + soft epistemic channel) gating the OPINE"
+   ],
+   [
+    772,
+    "# OPINE block skips veto gating and reports UNAVAILABLE."
+   ],
+   [
+    2214,
+    "# Phase 8.23 C2: OPINE macro-option live engagement telemetry"
+   ],
+   [
+    2225,
+    "from opine_object_mcts import OPINEObjectMCTS"
+   ],
+   [
+    2232,
+    "_opine = OPINEObjectMCTS("
+   ]
+  ],
+  "assignment_context": {
+   "2250": [
+    "2246:                     # 4-step macro-option branch over the generator store.",
+    "2247:                     _gens = [action_outcome_store.lie_element(",
+    "2248:                         a % action_outcome_store.num_actions, _p820_gm_basis)[0]",
+    "2249:                         for a in (_aid, _aid + 1, _aid + 2, _aid + 3)]",
+    "2250:                     _u_macro = _opine.construct_macro_option(_gens, device=DEVICE)",
+    "2251:                     # Phase 8.25: RT-guided deep rollouts to depth k=8",
+    "2252:                     # (default OFF via HENRI_ARC_SAGNAC_MCTS). Ranks",
+    "2253:                     # macro-option programs by RT information gain; the",
+    "2254:                     # best program's successor becomes the macro branch.",
+    "2255:                     if os.environ.get(\"HENRI_ARC_SAGNAC_MCTS\", \"0\") == \"1\":",
+    "2256:                         _rollout = _opine.rt_guided_rollout(",
+    "2257:                             su3_field, action_outcome_store, _p820_gm_basis,",
+    "2258:                             _trans, k=8, num_programs=4, seed=step,",
+    "2259:                             device=DEVICE)",
+    "2260:                         _best = _rollout[\"best_program\"]",
+    "2261:                         _u_macro = _opine.synthesize_macro_option(",
+    "2262:                             _best, action_outcome_store, _p820_gm_basis,"
+   ],
+   "2261": [
+    "2257:                             su3_field, action_outcome_store, _p820_gm_basis,",
+    "2258:                             _trans, k=8, num_programs=4, seed=step,",
+    "2259:                             device=DEVICE)",
+    "2260:                         _best = _rollout[\"best_program\"]",
+    "2261:                         _u_macro = _opine.synthesize_macro_option(",
+    "2262:                             _best, action_outcome_store, _p820_gm_basis,",
+    "2263:                             device=DEVICE)",
+    "2264:                     _psi_macro = _trans.field_to_wave(",
+    "2265:                         _u_macro.unsqueeze(0)).squeeze(0)",
+    "2266:                     _g_macro = float(compute_rt_information_gain(",
+    "2267:                         _psi_t, _psi_macro))",
+    "2268:                     # Live SagnacMCTSPlanner dual-channel veto (C2 consumer).",
+    "2269:                     # Hard axiom channel + soft epistemic channel over the",
+    "2270:                     # macro-option successor. A hard veto suppresses",
+    "2271:                     # engagement (fail-closed to the single-action branch).",
+    "2272:                     _veto = None",
+    "2273:                     _hard_vetoed = False"
+   ]
+  },
+  "assignment_exprs": "_u_macro = _opine.construct_macro_option(_gens, device=DEVICE)\n_u_macro = _opine.synthesize_macro_option(",
+  "verdict": "FIELD_IS_BUILT_WITHOUT_num_blocks -> either a different resolution by design, or a fixed 8192 leak; inspect the component named in assignment_context",
+  "opine_engine_classes": [
+   {
+    "file": "opine_object_mcts.py",
+    "line": 13,
+    "text": "class OPINEObjectMCTS(torch.nn.Module):"
+   },
+   {
+    "file": "progressive_semantic_grounding_engine.py",
+    "line": 162,
+    "text": "class MacroOption:"
+   }
+  ],
+  "ctor_body::opine_object_mcts.py": [
+   "13: class OPINEObjectMCTS(torch.nn.Module):",
+   "14:     \"\"\"Groups primitive action steps into temporal macro-options over",
+   "15:     su(3)^num_channels. Default-OFF additive component; never changes the",
+   "16:     production EFE control arm unless explicitly wired behind a flag.\"\"\"",
+   "17: ",
+   "18:     def __init__(self, num_channels: int = 8192, option_horizon: int = 4):",
+   "19:         super().__init__()",
+   "20:         self.num_channels = num_channels",
+   "21:         self.option_horizon = option_horizon",
+   "22: ",
+   "23:     def construct_macro_option(",
+   "24:         self, generator_sequence: list,",
+   "25:         device: str | None = None,",
+   "26:     ) -> torch.Tensor:",
+   "27:         \"\"\"Compose a sequence of [3,3] complex Lie generators into one",
+   "28:         [num_channels, 3, 3] unitary macro-operator.",
+   "29: ",
+   "30:         generator_sequence: list of [3,3] complex matrices (su(3) Lie",
+   "31:             elements, i.e. i * sum_k theta_k lambda_k). The same generator is",
+   "32:             applied to every channel (channel-homogeneous option); the",
+   "33:             composite is SU(3) in each channel when each exp(gen) is SU(3).",
+   "34:         Returns: [num_channels, 3, 3] composite unitary (det 1 per channel).",
+   "35:         \"\"\"",
+   "36:         dev = device or (",
+   "37:             generator_sequence[0].device if generator_sequence else \"cpu\")",
+   "38:         composite_u = torch.eye(",
+   "39:             3, dtype=torch.complex64, device=dev",
+   "40:         ).repeat(self.num_channels, 1, 1)",
+   "41:         for gen in generator_sequence:",
+   "42:             u_step = torch.matrix_exp(gen.to(dev)).unsqueeze(0)",
+   "43:             composite_u = torch.einsum(",
+   "44:                 \"nij,njk->nik\", composite_u, u_step.expand(",
+   "45:                     self.num_channels, 3, 3))",
+   "46:         return composite_u",
+   "47: ",
+   "48:     def unitarity_error(self, macro_option: torch.Tensor) -> float:",
+   "49:         \"\"\"Mean ||U U^dag - I||_F over channels (G1-8.22 metric).\"\"\"",
+   "50:         diff = (",
+   "51:             torch.einsum(\"nij,nkj->nik\", macro_option, macro_option.conj())",
+   "52:             - torch.eye(3, dtype=macro_option.dtype,",
+   "53:                         device=macro_option.device).unsqueeze(0)"
+  ],
+  "ctor_uses_num_blocks::opine_object_mcts.py": false,
+  "ctor_uses_d_model::opine_object_mcts.py": false,
+  "ctor_body::progressive_semantic_grounding_engine.py": [
+   "162: class MacroOption:",
+   "163:     \"\"\"Object-centric macro-option: Option(O_k, dx, dy[, rotation, color]).\"\"\"",
+   "164: ",
+   "165:     object_id: int",
+   "166:     kind: str  # 'translate' | 'rotate' | 'color'",
+   "167:     dx: int = 0",
+   "168:     dy: int = 0",
+   "169:     angle_deg: int = 0",
+   "170:     color_map: Optional[Dict[int, int]] = None",
+   "171:     bbox: Tuple[int, int, int, int] = (0, 0, 0, 0)  # (min_r, min_c, max_r, max_c)",
+   "172:     area: int = 0",
+   "173:     color: int = 0",
+   "174:     description: str = \"\"",
+   "175: ",
+   "176:     def to_payload(self, action_id: int = 6) -> Dict[str, Any]:",
+   "177:         \"\"\"Coordinate egress payload per Phase8.pdf section B.1 step 4.\"\"\"",
+   "178:         cx = int((self.bbox[1] + self.bbox[3]) / 2)",
+   "179:         cy = int((self.bbox[0] + self.bbox[2]) / 2)",
+   "180:         return {\"action\": int(action_id), \"x\": int(cx), \"y\": int(cy)}",
+   "181: ",
+   "182:     def to_dict(self) -> Dict[str, Any]:",
+   "183:         return {",
+   "184:             \"object_id\": self.object_id,",
+   "185:             \"kind\": self.kind,",
+   "186:             \"dx\": self.dx,",
+   "187:             \"dy\": self.dy,",
+   "188:             \"angle_deg\": self.angle_deg,",
+   "189:             \"color_map\": self.color_map,",
+   "190:             \"bbox\": list(self.bbox),",
+   "191:             \"area\": self.area,",
+   "192:             \"color\": self.color,",
+   "193:             \"description\": self.description,",
+   "194:         }",
+   "195: ",
+   "196:     @classmethod",
+   "197:     def from_dict(cls, d: Dict[str, Any]) -> \"MacroOption\":",
+   "198:         return cls(",
+   "199:             object_id=int(d.get(\"object_id\", 0)),",
+   "200:             kind=str(d.get(\"kind\", \"translate\")),",
+   "201:             dx=int(d.get(\"dx\", 0)),",
+   "202:             dy=int(d.get(\"dy\", 0)),"
+  ],
+  "ctor_uses_num_blocks::progressive_semantic_grounding_engine.py": false,
+  "ctor_uses_d_model::progressive_semantic_grounding_engine.py": false
+ },
+ "errors": [],
+ "notes": [],
+ "verdict": "PASS"
+}
