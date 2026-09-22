@@ -1,0 +1,127 @@
+{
+  "module": "observable_discrimination",
+  "evidence_class": "OBSERVED",
+  "dim": 1024,
+  "alpha": 0.01,
+  "grid": "8x8",
+  "rows": [
+    {
+      "variant": "identical",
+      "wave_cosine_stress": 0.0,
+      "bin_stress_k11": 0.0,
+      "bin_stress_k16": 0.0,
+      "bin_stress_k64": 0.0
+    },
+    {
+      "variant": "1_cell_changed",
+      "wave_cosine_stress": 0.001734,
+      "bin_stress_k11": 0.133789,
+      "bin_stress_k16": 0.00293,
+      "bin_stress_k64": 0.02832
+    },
+    {
+      "variant": "2_cells_changed",
+      "wave_cosine_stress": 0.003579,
+      "bin_stress_k11": 0.148438,
+      "bin_stress_k16": 0.0,
+      "bin_stress_k64": 0.035156
+    },
+    {
+      "variant": "4_cells_changed",
+      "wave_cosine_stress": 0.005023,
+      "bin_stress_k11": 0.195312,
+      "bin_stress_k16": 0.005859,
+      "bin_stress_k64": 0.06543
+    },
+    {
+      "variant": "8_cells_changed",
+      "wave_cosine_stress": 0.012085,
+      "bin_stress_k11": 0.178711,
+      "bin_stress_k16": 0.010742,
+      "bin_stress_k64": 0.102539
+    },
+    {
+      "variant": "unrelated_random",
+      "wave_cosine_stress": 0.397287,
+      "bin_stress_k11": 0.489258,
+      "bin_stress_k16": 0.082031,
+      "bin_stress_k64": 0.548828
+    }
+  ],
+  "nulls_and_derived_tau": {
+    "k11": {
+      "dim": 1024,
+      "null_p": 0.090909,
+      "null_expected_match_rate": 0.090909,
+      "q99_matched_bins": 115,
+      "tau_derived": 0.887695,
+      "inherited_0.35_requires_match_rate": 0.65
+    },
+    "k16": {
+      "dim": 1024,
+      "null_p": 0.0625,
+      "null_expected_match_rate": 0.0625,
+      "q99_matched_bins": 83,
+      "tau_derived": 0.918945,
+      "inherited_0.35_requires_match_rate": 0.65
+    },
+    "k64": {
+      "dim": 1024,
+      "null_p": 0.015625,
+      "null_expected_match_rate": 0.015625,
+      "q99_matched_bins": 26,
+      "tau_derived": 0.974609,
+      "inherited_0.35_requires_match_rate": 0.65
+    }
+  },
+  "separation": {
+    "wave_cosine_stress": {
+      "identical": 0.0,
+      "unrelated": 0.397287,
+      "separation": 0.397287
+    },
+    "bin_stress_k11": {
+      "identical": 0.0,
+      "unrelated": 0.489258,
+      "separation": 0.489258
+    },
+    "bin_stress_k16": {
+      "identical": 0.0,
+      "unrelated": 0.082031,
+      "separation": 0.082031
+    },
+    "bin_stress_k64": {
+      "identical": 0.0,
+      "unrelated": 0.548828,
+      "separation": 0.548828
+    }
+  },
+  "monotonicity": {
+    "wave_cosine_stress": {
+      "values": [
+        0.0,
+        0.001734,
+        0.003579,
+        0.005023,
+        0.012085,
+        0.397287
+      ],
+      "monotone_nondecreasing": true
+    },
+    "bin_stress_k16": {
+      "values": [
+        0.0,
+        0.00293,
+        0.0,
+        0.005859,
+        0.010742,
+        0.082031
+      ],
+      "monotone_nondecreasing": false
+    }
+  },
+  "best_bin_separation": 0.548828,
+  "wave_cosine_separation": 0.397287,
+  "observable_metric_more_discriminative": true,
+  "decision": "WIRE the observable veto"
+}

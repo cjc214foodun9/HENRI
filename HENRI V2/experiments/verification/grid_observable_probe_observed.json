@@ -1,0 +1,132 @@
+{
+  "module": "grid_observable_probe",
+  "evidence_class": "OBSERVED",
+  "dim": 1024,
+  "results": {
+    "G0_single_cell_roundtrip": true,
+    "G0_single_cell_quality": 0.7099090814590454,
+    "G0_delta_peak_over_mean": 34.0299186706543,
+    "G_tau_info": {
+      "n_slots": 64,
+      "n_values": 11,
+      "alpha": 0.01,
+      "null_match_rate": 0.09090909090909091,
+      "q_1_minus_alpha_matched": 12,
+      "tau_observational": 0.8125,
+      "inherited_0.35_requires_match_rate": 0.65
+    },
+    "tau": 0.8125,
+    "G4_mc_q01_stress": 0.8125,
+    "G4_mc_matches_exact_binomial": true,
+    "G1_roundtrip_exact": true,
+    "G1_min_cell_quality": 0.0626603439450264,
+    "G1_norm": 1.0000005960464478,
+    "G2_wrong_codebook_match_rate": 0.125,
+    "G2_fingerprints_differ": true,
+    "G3_cases": [
+      {
+        "case": "identical",
+        "observational_stress": 0.0,
+        "match_rate": 1.0,
+        "valid": true,
+        "direct_grid_stress": 0.0,
+        "passes_derived_tau": true,
+        "passes_inherited_0.35": true
+      },
+      {
+        "case": "1_cell",
+        "observational_stress": 0.015625,
+        "match_rate": 0.984375,
+        "valid": true,
+        "direct_grid_stress": 0.015625,
+        "passes_derived_tau": true,
+        "passes_inherited_0.35": true
+      },
+      {
+        "case": "4_cells",
+        "observational_stress": 0.0625,
+        "match_rate": 0.9375,
+        "valid": true,
+        "direct_grid_stress": 0.0625,
+        "passes_derived_tau": true,
+        "passes_inherited_0.35": true
+      },
+      {
+        "case": "8_cells",
+        "observational_stress": 0.125,
+        "match_rate": 0.875,
+        "valid": true,
+        "direct_grid_stress": 0.125,
+        "passes_derived_tau": true,
+        "passes_inherited_0.35": true
+      },
+      {
+        "case": "16_cells",
+        "observational_stress": 0.25,
+        "match_rate": 0.75,
+        "valid": true,
+        "direct_grid_stress": 0.234375,
+        "passes_derived_tau": true,
+        "passes_inherited_0.35": true
+      },
+      {
+        "case": "unrelated",
+        "observational_stress": 0.828125,
+        "match_rate": 0.171875,
+        "valid": true,
+        "direct_grid_stress": 0.828125,
+        "passes_derived_tau": false,
+        "passes_inherited_0.35": false
+      }
+    ],
+    "G3_separation": 0.828125,
+    "G3_monotone": true,
+    "G5_partial_correct_band": [
+      {
+        "intended_match_rate": 0.2,
+        "measured_match_rate": 0.2969,
+        "stress": 0.7031,
+        "passes_derived_tau": true,
+        "passes_inherited_0.35": false
+      },
+      {
+        "intended_match_rate": 0.4,
+        "measured_match_rate": 0.4844,
+        "stress": 0.5156,
+        "passes_derived_tau": true,
+        "passes_inherited_0.35": false
+      },
+      {
+        "intended_match_rate": 0.6,
+        "measured_match_rate": 0.6094,
+        "stress": 0.3906,
+        "passes_derived_tau": true,
+        "passes_inherited_0.35": false
+      },
+      {
+        "intended_match_rate": 0.7,
+        "measured_match_rate": 0.75,
+        "stress": 0.25,
+        "passes_derived_tau": true,
+        "passes_inherited_0.35": true
+      }
+    ],
+    "G5_trap_reproduced_count": 3,
+    "G5_trap_reproduced": true,
+    "G5_near_perfect_passes_both": true,
+    "G6_zero_energy_stress": 1.0,
+    "G6_zero_energy_valid": false,
+    "G6_nan_free": true,
+    "G7_literal_exact_when_equal": true,
+    "G7_literal_one_cell": true,
+    "G7_literal_shape_mismatch": true,
+    "G8_tau_4x4": 0.6875,
+    "G8_tau_8x8": 0.8125,
+    "G8_tau_16x16": 0.86328125,
+    "G8_note": "tau depends on n_slots (the observable lattice), NOT on the wave dim D. A 30x30 ARC output must use its own tau."
+  },
+  "gate_failures": [],
+  "verdict": "PASS",
+  "claim": "A role-filler grid readout round-trips exactly, separates cases, fails closed, and its veto threshold is derived from the match-rate null rather than inherited from the waveform metric.",
+  "dependency": "Decoding works only for waves THIS codebook encoded. Production reference_wave comes from a k_bins=256 phase algebra, so observable veto wiring is flag-gated until the RFSS ingress is enabled."
+}

@@ -1,0 +1,134 @@
+{
+  "module": "observational_wiring",
+  "evidence_class": "OBSERVED",
+  "results": {
+    "W1_os_bound": true,
+    "W1_has_observational_tau": true,
+    "W1_has_demo_stress": true,
+    "W5_tau_by_lattice": {
+      "16": 0.6875,
+      "64": 0.8125,
+      "256": 0.86328125,
+      "900": 0.8866666666666667
+    },
+    "W5_tau_not_0p35": true,
+    "W5_tau_increases_with_size": true,
+    "W2_search_has_no_target_grid": true,
+    "W2_demo_method_names": [
+      "Exception",
+      "List",
+      "Optional",
+      "Tuple",
+      "bool",
+      "child_ast",
+      "demo_pairs",
+      "float",
+      "int",
+      "len",
+      "n_slots",
+      "np",
+      "pred",
+      "self",
+      "stress",
+      "stresses",
+      "sum",
+      "tau",
+      "want",
+      "x_in",
+      "y_out"
+    ],
+    "W2_no_target_in_demo_method": true,
+    "W3_default_unset": {
+      "op": "ColorPermute",
+      "delta": 0.22932714223861694
+    },
+    "W3_flag_0": {
+      "op": "ColorPermute",
+      "delta": 0.22932714223861694
+    },
+    "W4_flag_1": {
+      "op": "Identity",
+      "delta": 0.2463199496269226
+    },
+    "W3_default_matches_flag_0": true,
+    "W6_no_demos_valid": false,
+    "W6_no_demos_stress": null,
+    "W7_shape_ok_stress": 0.0,
+    "W7_shape_ok_valid": true,
+    "W7_shape_mismatch_stress": 1.0,
+    "W7_shape_mismatch_valid": true,
+    "W8_channel_decisions": [
+      {
+        "op": "Identity",
+        "stress": 1.0,
+        "tau": 0.5,
+        "valid": true,
+        "vetoed": true
+      },
+      {
+        "op": "Rotate90",
+        "stress": 0.0,
+        "tau": 0.5,
+        "valid": true,
+        "vetoed": false
+      },
+      {
+        "op": "Rotate180",
+        "stress": 1.0,
+        "tau": 0.5,
+        "valid": true,
+        "vetoed": true
+      },
+      {
+        "op": "Rotate270",
+        "stress": 1.0,
+        "tau": 0.5,
+        "valid": true,
+        "vetoed": true
+      },
+      {
+        "op": "FlipHorizontal",
+        "stress": 0.5,
+        "tau": 0.5,
+        "valid": true,
+        "vetoed": false
+      },
+      {
+        "op": "FlipVertical",
+        "stress": 0.5,
+        "tau": 0.5,
+        "valid": true,
+        "vetoed": false
+      },
+      {
+        "op": "ColorPermute",
+        "stress": 1.0,
+        "tau": 0.5,
+        "valid": true,
+        "vetoed": true
+      },
+      {
+        "op": "ContourFill",
+        "stress": 1.0,
+        "tau": 0.5,
+        "valid": true,
+        "vetoed": true
+      },
+      {
+        "op": "GravityDrop",
+        "stress": 1.0,
+        "tau": 0.5,
+        "valid": true,
+        "vetoed": true
+      }
+    ],
+    "W8_n_valid": 9,
+    "W8_n_vetoed": 6,
+    "W8_n_admitted": 3,
+    "W8_channel_is_discriminative": true,
+    "W8_rotate90_admitted": true
+  },
+  "gate_failures": [],
+  "verdict": "PASS",
+  "note": "Names were verified by IMPORTING and CALLING, not by parsing: py_compile and ast.parse both pass on a module with unbound globals, which is how a missing `import os` survived earlier."
+}

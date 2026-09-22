@@ -1,0 +1,112 @@
+{
+  "module": "sagnac_three_way_agreement",
+  "evidence_class": "OBSERVED",
+  "dim": 1024,
+  "agreement": [
+    {
+      "case": "identical_a",
+      "sim_A_planner_patched": 1.0,
+      "sim_B_vision_encoder": 0.99999997,
+      "sim_C_arc_sidecar": 1.0,
+      "delta_A": 0.0,
+      "delta_B": 3e-08,
+      "delta_C": 0.0,
+      "A_minus_B": 2.9802e-08,
+      "A_minus_C": 0.0,
+      "B_minus_C": 2.9802e-08
+    },
+    {
+      "case": "orthogonal_ab",
+      "sim_A_planner_patched": 0.49084747,
+      "sim_B_vision_encoder": 0.490847469,
+      "sim_C_arc_sidecar": 0.490847468,
+      "delta_A": 0.509152532,
+      "delta_B": 0.509152531,
+      "delta_C": 0.509152532,
+      "A_minus_B": 3.86e-10,
+      "A_minus_C": 1.317e-09,
+      "B_minus_C": 9.31e-10
+    },
+    {
+      "case": "random_12",
+      "sim_A_planner_patched": 0.523673763,
+      "sim_B_vision_encoder": 0.523673765,
+      "sim_C_arc_sidecar": 0.523673773,
+      "delta_A": 0.476326227,
+      "delta_B": 0.476326235,
+      "delta_C": 0.476326227,
+      "A_minus_B": 1.863e-09,
+      "A_minus_C": 9.313e-09,
+      "B_minus_C": 7.451e-09
+    },
+    {
+      "case": "random_34",
+      "sim_A_planner_patched": 0.510245342,
+      "sim_B_vision_encoder": 0.51024534,
+      "sim_C_arc_sidecar": 0.510245323,
+      "delta_A": 0.489754677,
+      "delta_B": 0.48975466,
+      "delta_C": 0.489754677,
+      "A_minus_B": 1.863e-09,
+      "A_minus_C": 1.8626e-08,
+      "B_minus_C": 1.6764e-08
+    },
+    {
+      "case": "random_56",
+      "sim_A_planner_patched": 0.52045832,
+      "sim_B_vision_encoder": 0.520458318,
+      "sim_C_arc_sidecar": 0.520458341,
+      "delta_A": 0.479541659,
+      "delta_B": 0.479541682,
+      "delta_C": 0.479541659,
+      "A_minus_B": 1.863e-09,
+      "A_minus_C": 2.0489e-08,
+      "B_minus_C": 2.2352e-08
+    }
+  ],
+  "legacy_vs_correct": [
+    {
+      "case": "identical_a",
+      "legacy_delta": 0.999023438,
+      "correct_delta_A": 0.0,
+      "correct_delta_B": 3e-08,
+      "legacy_minus_correct_A": 0.999023438
+    },
+    {
+      "case": "orthogonal_ab",
+      "legacy_delta": 0.999982124,
+      "correct_delta_A": 0.50915253,
+      "correct_delta_B": 0.509152531,
+      "legacy_minus_correct_A": 0.490829594
+    },
+    {
+      "case": "random_12",
+      "legacy_delta": 0.999953762,
+      "correct_delta_A": 0.476326237,
+      "correct_delta_B": 0.476326235,
+      "legacy_minus_correct_A": 0.523627526
+    },
+    {
+      "case": "random_34",
+      "legacy_delta": 0.99997999,
+      "correct_delta_A": 0.489754658,
+      "correct_delta_B": 0.48975466,
+      "legacy_minus_correct_A": 0.510225331
+    },
+    {
+      "case": "random_56",
+      "legacy_delta": 0.999960042,
+      "correct_delta_A": 0.47954168,
+      "correct_delta_B": 0.479541682,
+      "legacy_minus_correct_A": 0.520418362
+    }
+  ],
+  "worst_abs_diff": {
+    "A_vs_B": 2.9802e-08,
+    "A_vs_C": 2.0489e-08,
+    "B_vs_C": 2.9802e-08
+  },
+  "worst_legacy_error_vs_correct": 0.999023438,
+  "three_way_agreement": false,
+  "claim": "After the patch, the planner (A), the vision encoder (B) and the canonical sidecar (C) all produce the SAME Sagnac similarity on the same inputs. Before the patch, A differed from B and C by ~D. This is the independent cross-check that the root and child scoring paths are now on one scale."
+}

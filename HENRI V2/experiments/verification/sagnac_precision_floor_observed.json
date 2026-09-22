@@ -1,0 +1,21 @@
+{
+  "module": "sagnac_precision_floor",
+  "evidence_class": "OBSERVED",
+  "dim": 1024,
+  "measured": {
+    "float32_eps": 1.1920928955078125e-07,
+    "float64_eps": 2.220446049250313e-16,
+    "identical_input_float32_selfsim_max_dev": 1.1920928955078125e-07,
+    "identical_input_float32_selfsim_min_dev": 0.0,
+    "identical_input_float64_selfsim_max_dev": 8.881784197001252e-16,
+    "observed_worst_abs_diff_A_vs_B": 2.98e-08,
+    "observed_worst_abs_diff_A_vs_C": 2.049e-08,
+    "legacy_error_vs_correct": 0.999023,
+    "derived_tolerance": 4.76837158203125e-07,
+    "agreement_within_float32": true,
+    "legacy_error_detected_at_this_tolerance": true
+  },
+  "conclusion": "The three implementations agree to within float32 machine precision (2.98e-08 <= 4*float32_eps = 4.77e-07, and equal in order to the measured float32 self-similarity deviation). The 1e-9 gate was a float64 tolerance applied to a float32 pipeline: an INSTRUMENT error, not an implementation error. The legacy defect (0.999) is 3+ orders of magnitude outside the corrected tolerance, so the tolerance does not hide the defect it exists to catch.",
+  "gate_corrected_to": 4.76837158203125e-07,
+  "verdict": "AGREE_WITHIN_FLOAT32"
+}

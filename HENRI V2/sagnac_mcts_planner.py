@@ -125,6 +125,102 @@ class SagnacMCTSPlanner:
             "FlipHorizontal", "FlipVertical", "ColorPermute", "ContourFill", "GravityDrop"
         ]
 
+        # Observational-veto threshold, DERIVED PER LATTICE (never inherited).
+        # The observational metric is a cell MATCH RATE whose null is
+        # Binomial(n_slots, 1/n_values): a random program matches ~1/11 of cells, so
+        # random stress is ~0.909. tau_veto = 0.35 belongs to the WAVEFORM-cosine
+        # metric and would demand a 65% exact match rate here, vetoing nearly every
+        # candidate -- the r = 0.707 / r = 0.2682 failure with a new constant. So tau
+        # is computed from the null at the ACTUAL lattice size and cached per size.
+        # Measured (experiments/verification/observational_tau_derivation_observed.json):
+        #   4x4 -> 0.6875, 8x8 -> 0.8125, 16x16 -> 0.8633, 30x30 -> 0.8867
+        self._obs_tau_cache: Dict[int, float] = {}
+        self.n_arc_values = 11          # ARC cells are {0..9} + PAD
+
+    # ------------------------------------------------------- observational tau
+    def observational_tau(self, n_slots: int, n_values: Optional[int] = None,
+                          alpha: float = 0.01) -> float:
+        """Exact finite-sample veto threshold for a match-rate metric.
+
+        tau = 1 - q_{1-alpha}(Binomial(n_slots, 1/n_values)) / n_slots.
+
+        A candidate PASSES unless it is significantly worse than a random program at
+        level alpha. `alpha` is stated explicitly rather than buried, because it is
+        the operating point of the gate.
+        """
+        nv = int(n_values if n_values is not None else self.n_arc_values)
+        key = (int(n_slots), nv, float(alpha))
+        if key not in self._obs_tau_cache:
+            from henri_grid_observable import derive_tau
+            self._obs_tau_cache[key] = float(
+                derive_tau(int(n_slots), nv, float(alpha))["tau_observational"])
+        return self._obs_tau_cache[key]
+
+    def _demo_observational_stress(
+        self,
+        child_ast: "SpelkeDSLNode",
+        demo_pairs: Optional[List[Tuple[np.ndarray, np.ndarray]]],
+        input_grid: np.ndarray,
+    ) -> Tuple[Optional[float], Optional[float], bool]:
+        """Observational stress of a candidate program, measured on DEMONSTRATIONS.
+
+        WHY THIS IS NOT ANSWER COUPLING
+            The demonstration pairs (X_i, Y_i) are pre-prediction information. This
+            method applies the candidate program to each DEMO INPUT and compares the
+            result to the DEMO OUTPUT. The held-out target grid is never consulted --
+            it is not a parameter of search() at all (Milestone 1). So this uses
+            strictly legitimate information.
+
+        WHY NO WAVE DECODE IS NEEDED
+            A candidate program already produces a LITERAL grid. Comparing grids
+            cell-by-cell is exact; decoding a wave when ground truth exists would add
+            a lossy step for nothing. Measured decode margin at dim=1024 is thin
+            (min cell quality 0.0627), so avoiding the decode here is a real accuracy
+            gain, not a stylistic preference.
+
+        RETURNS
+            (stress, tau_used, valid). stress is the MEAN cell-mismatch rate over the
+            demonstration pairs, in [0, 1]. valid is False whenever the measurement
+            cannot be made, in which case the caller must NOT veto -- this channel
+            only ever ADDS a veto, so an anomaly must leave behaviour unchanged.
+        """
+        if not demo_pairs:
+            return None, None, False
+        stresses: List[float] = []
+        n_slots: Optional[int] = None
+        try:
+            for x_in, y_out in demo_pairs:
+                pred = np.asarray(child_ast.execute(np.asarray(x_in)))
+                want = np.asarray(y_out)
+                # The REFERENCE lattice size governs tau, and it is known even when
+                # the candidate is wrong. Setting it from `want` (not from `pred`)
+                # fixes a real defect: an earlier version only set n_slots inside the
+                # shape-MATCHING branch, so a program that changed the lattice size
+                # left n_slots None and the method returned valid=False -- i.e. it
+                # FAILED OPEN on a clearly-wrong program, contradicting the stated
+                # intent that shape mismatch scores a total mismatch.
+                if want.size:
+                    n_slots = int(want.size)
+                if pred.shape != want.shape:
+                    # A program that changes the lattice size is wrong for this demo.
+                    stresses.append(1.0)
+                    continue
+                if want.size == 0:
+                    continue
+                stresses.append(float(1.0 - (pred.astype(np.int64)
+                                             == want.astype(np.int64)).mean()))
+        except Exception:
+            # fail-open: an UNMEASURABLE candidate must not be vetoed. This is
+            # deliberately narrower than the shape-mismatch case above: a raised
+            # exception means no information, whereas a shape mismatch is evidence
+            # of being wrong.
+            return None, None, False
+        if not stresses or not n_slots:
+            return None, None, False
+        stress = float(sum(stresses) / len(stresses))
+        tau = self.observational_tau(n_slots)
+        return stress, tau, True
+
     # ------------------------------------------------------------------ scale
     # SAGNAC SCALE DEFECT -- FIXED 2026-10-12.
     #
@@ -410,16 +506,74 @@ class SagnacMCTSPlanner:
                     if hard_veto_triggered:
                         child_node.is_pruned = True
 
+                    # ---------------------------------------------------------------
+                    # OBSERVATIONAL CHANNEL (default OFF: HENRI_SAGNAC_OBSERVATIONAL_VETO=1)
+                    #
+                    # TWO CHANNELS, TWO JOBS: the waveform cosine RANKS candidates
+                    # (continuous, sensitive) while the observational match rate VETOES
+                    # them (discrete, interpretable). Vetoing on a continuous latent
+                    # cosine is what the scale defect made impossible; vetoing on a cell
+                    # match rate is exact and cannot be fooled by encoding noise.
+                    #
+                    # WHERE THE OBSERVABLE COMES FROM -- and why this is NOT answer
+                    # coupling: the DEMONSTRATION PAIRS are grids. (X_i, Y_i) is
+                    # pre-prediction information, and Milestone 1 exists to keep the
+                    # held-out target out of planning. Scoring a candidate by applying
+                    # it to each DEMO INPUT and comparing to the DEMO OUTPUT uses only
+                    # demonstrations, so it is legitimate under the Milestone 1
+                    # contract and needs no decode of the induced-goal wave.
+                    #
+                    # tau IS DERIVED, NOT INHERITED (see henri_grid_observable.derive_tau).
+                    # tau_veto = 0.35 belongs to the WAVEFORM-cosine metric. The
+                    # observational metric is a MATCH RATE whose null is
+                    # Binomial(n_slots, 1/n_values): a random program matches 1/11 of
+                    # cells, so random stress is ~0.909. Inheriting 0.35 would demand a
+                    # 65% exact match rate and veto nearly every candidate -- the same
+                    # failure as r = 0.707/r = 0.2682, with a different constant.
+                    # MEASURED band this threshold decision controls
+                    # (experiments/verification/grid_observable_probe_observed.json):
+                    # candidates with match rate in [0.19, 0.65) pass the derived tau and
+                    # are vetoed by 0.35. Partial solvers live exactly there.
+                    #
+                    # FAIL-OPEN by design: this channel only ever ADDS a veto. Any
+                    # anomaly (no demos, shape mismatch, unavailable readout) leaves the
+                    # waveform behaviour byte-identical, so default-off runs are unchanged.
+                    _obs_stress = None
+                    _obs_tau = None
+                    _obs_valid = False
+                    if os.environ.get("HENRI_SAGNAC_OBSERVATIONAL_VETO", "0") == "1":
+                        _obs_stress, _obs_tau, _obs_valid = (
+                            self._demo_observational_stress(
+                                child_ast, demo_pairs, input_grid))
+                        if _obs_valid:
+                            child_node.delta_observational = _obs_stress
+                            if _obs_stress > _obs_tau:
+                                child_node.is_pruned = True
+
                     node.children.append(child_node)
 
-                    if delta_axiom < best_delta:
+                    # A PRUNED CHILD MUST NEVER BE COMMITTED AS THE BEST PLAN.
+                    #
+                    # `is_pruned = True` MARKS a node; it did not BIND the decision,
+                    # because this best-tracking block ignored the flag. MEASURED:
+                    # with the observational channel enabled, search() returned
+                    # `ColorPermute`, whose observational stress is 1.0 against a
+                    # derived tau of 0.5 -- i.e. it was explicitly vetoed and then
+                    # returned anyway. The same hole applied to the pre-existing hard
+                    # veto, since `hard_veto_triggered` sets the same flag.
+                    #
+                    # A gate that does not change the returned artifact is a phantom
+                    # gate, which is exactly the failure mode this project audits for.
+                    if not child_node.is_pruned and delta_axiom < best_delta:
                         best_delta = delta_axiom
                         best_node = child_node
 
-                    if delta_axiom < 1e-5:
+                    if not child_node.is_pruned and delta_axiom < 1e-5:
                         # Candidate reproduces the induced goal. This is a
                         # convergence test against a DEMONSTRATION-DERIVED
-                        # reference, not an answer match.
+                        # reference, not an answer match. A vetoed candidate may not
+                        # be returned here either: reproducing the induced goal is
+                        # necessary but not sufficient if the observable veto fired.
                         print(f"[SagnacMCTS Converged] Induced goal reached at Simulation {sim + 1}!")
                         return child_node.ast_node, 0.0
 

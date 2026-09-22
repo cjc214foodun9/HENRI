@@ -1,0 +1,80 @@
+{
+  "module": "observational_tau_derivation",
+  "evidence_class": "OBSERVED",
+  "alpha": 0.01,
+  "rows": [
+    {
+      "grid": "4x4",
+      "n_slots": 16,
+      "n_values": 11,
+      "null_stress_1_minus_1_over_n_values": 0.909091,
+      "binomial_quantile_k": 5,
+      "tau_observational_derived": 0.6875,
+      "mc_stress_q01": 0.6875,
+      "mc_stress_median": 0.9375,
+      "MC_agrees_with_binomial": true,
+      "legacy_0.35_required_match_rate": 0.65,
+      "legacy_0.35_would_veto_perfect_25pct_error": false
+    },
+    {
+      "grid": "8x8",
+      "n_slots": 64,
+      "n_values": 11,
+      "null_stress_1_minus_1_over_n_values": 0.909091,
+      "binomial_quantile_k": 12,
+      "tau_observational_derived": 0.8125,
+      "mc_stress_q01": 0.8125,
+      "mc_stress_median": 0.90625,
+      "MC_agrees_with_binomial": true,
+      "legacy_0.35_required_match_rate": 0.65,
+      "legacy_0.35_would_veto_perfect_25pct_error": false
+    },
+    {
+      "grid": "16x16",
+      "n_slots": 256,
+      "n_values": 11,
+      "null_stress_1_minus_1_over_n_values": 0.909091,
+      "binomial_quantile_k": 35,
+      "tau_observational_derived": 0.863281,
+      "mc_stress_q01": 0.863281,
+      "mc_stress_median": 0.910156,
+      "MC_agrees_with_binomial": true,
+      "legacy_0.35_required_match_rate": 0.65,
+      "legacy_0.35_would_veto_perfect_25pct_error": false
+    },
+    {
+      "grid": "30x30",
+      "n_slots": 900,
+      "n_values": 11,
+      "null_stress_1_minus_1_over_n_values": 0.909091,
+      "binomial_quantile_k": 102,
+      "tau_observational_derived": 0.886667,
+      "mc_stress_q01": 0.885556,
+      "mc_stress_median": 0.908889,
+      "MC_agrees_with_binomial": true,
+      "legacy_0.35_required_match_rate": 0.65,
+      "legacy_0.35_would_veto_perfect_25pct_error": false
+    },
+    {
+      "grid": "2x2",
+      "n_slots": 4,
+      "n_values": 11,
+      "null_stress_1_minus_1_over_n_values": 0.909091,
+      "binomial_quantile_k": 2,
+      "tau_observational_derived": 0.5,
+      "mc_stress_q01": 0.5,
+      "mc_stress_median": 1.0,
+      "MC_agrees_with_binomial": true,
+      "legacy_0.35_required_match_rate": 0.65,
+      "legacy_0.35_would_veto_perfect_25pct_error": false
+    }
+  ],
+  "trap": {
+    "metric": "observational match-rate stress",
+    "inherited_tau_0.35_requires_match_rate": 0.65,
+    "derived_tau_8x8": 0.8125,
+    "ratio": 2.321,
+    "consequence_of_inheriting_0.35": "A candidate would need 65% of cells exactly right to pass. Any candidate with more than ~35% of cells wrong is vetoed outright. This reproduces near-total pruning with a different constant."
+  },
+  "rule": "tau for the observational veto MUST be derived as 1 - q_{1-alpha}(Binomial(n_slots, 1/n_values)) / n_slots, where n_slots is the observable lattice size actually used. It is NOT 0.35 and it is NOT a constant of the module."
+}

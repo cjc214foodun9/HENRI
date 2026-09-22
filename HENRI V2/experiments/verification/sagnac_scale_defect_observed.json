@@ -54,12 +54,12 @@
       },
       {
         "file": "sagnac_mcts_planner.py",
-        "line": 182,
+        "line": 278,
         "text": "def dual_channel_sagnac_veto("
       },
       {
         "file": "sagnac_mcts_planner.py",
-        "line": 399,
+        "line": 495,
         "text": "delta_axiom, delta_epistemic, hard_veto_triggered = self.dual_channel_sagnac_veto("
       },
       {
@@ -128,6 +128,21 @@
         "text": "print(f\"  S5 callers of dual_channel_sagnac_veto: {res['S5_caller_count']}\")"
       },
       {
+        "file": "experiments\\verification\\sagnac_three_way_agreement.py",
+        "line": 11,
+        "text": "A  SagnacMCTSPlanner.dual_channel_sagnac_veto   (PATCHED 2026-10-12)"
+      },
+      {
+        "file": "experiments\\verification\\sagnac_three_way_agreement.py",
+        "line": 68,
+        "text": "delta_a, _, _ = planner.dual_channel_sagnac_veto(a, b, b)"
+      },
+      {
+        "file": "experiments\\verification\\sagnac_three_way_agreement.py",
+        "line": 104,
+        "text": "d_legacy, _, _ = planner.dual_channel_sagnac_veto(a, b, b)"
+      },
+      {
         "file": "tests\\contract\\test_phase823_target_grounding.py",
         "line": 106,
         "text": "assert \"dual_channel_sagnac_veto(\" in src, \"veto consumer missing\""
@@ -188,7 +203,7 @@
         "text": "d, _, _ = planner.dual_channel_sagnac_veto(z, ref, ref)"
       }
     ],
-    "S5_caller_count": 31,
+    "S5_caller_count": 34,
     "DEFECT_CONFIRMED": true
   },
   "claim": "dual_channel_sagnac_veto computes 1 - |<a,b>|/D instead of 1 - |<a,b>|/(||a|| ||b||), so every stress is pinned near 1.0 and the hard veto fires on 100% of candidates. This is the live 'un-passable by construction' defect, and it is a DIVISION BY D, not the random-axiom construction the spec blamed.",
