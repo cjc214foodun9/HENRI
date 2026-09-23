@@ -3114,6 +3114,7 @@ def run():
                                     recorded_transition_generators as _xrec,
                                     relative_displacement as _xrel,
                                     sampling_band as _xband,
+                                    pooled_domain_statistic as _xpool,
                                 )
                                 _xtau = float(_XTAU)
                                 _roles = _xnorm(
@@ -3163,6 +3164,15 @@ def run():
                                     _others = [v for k, v in _xall.items()
                                                if k != int(_aid)]
                                     _own = _xall.get(int(_aid))
+                                    # POOLED DOMAIN (UHR-03 domain fix).
+                                    # Scalar pooling over the cells the
+                                    # OBSERVATION moved. At one channel the
+                                    # admissible population is n <= 1 because
+                                    # per-action support is disjoint, so the
+                                    # single-channel C1/C2 are uncomputable.
+                                    _xpool_info = _xpool(
+                                        _roles, action_outcome_store,
+                                        _disp, _p820_gm_basis, int(_aid))
                                     p820_extero_info = {
                                         "status": "OK",
                                         "tau": _xtau,
@@ -3219,6 +3229,16 @@ def run():
                                                  - min(_xall.values()))
                                                 > _xband(_roles.shape[0]))),
                                         "channel": int(_xchan),
+                                        "pooled": _xpool_info,
+                                        "pooled_status": _xpool_info.get("status"),
+                                        "pooled_n_channels": _xpool_info.get("n_channels"),
+                                        "pooled_delta_all": _xpool_info.get("delta_pooled_all"),
+                                        "pooled_own": _xpool_info.get("delta_pooled_own"),
+                                        "pooled_invalid_min": _xpool_info.get("delta_pooled_invalid_min"),
+                                        "pooled_invalid_minus_own": _xpool_info.get("invalid_minus_own"),
+                                        "pooled_own_is_min": _xpool_info.get("own_is_min"),
+                                        "pooled_margin": _xpool_info.get("margin"),
+                                        "pooled_margin_above_band": _xpool_info.get("margin_above_band"),
                                         "delta_state": round(_xr.delta_state, 6),
                                         "delta_identity": round(_xr.delta_identity, 6),
                                         "relative_group_element": round(

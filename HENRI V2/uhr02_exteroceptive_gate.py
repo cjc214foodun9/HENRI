@@ -567,6 +567,106 @@ def relative_displacement(u_to: torch.Tensor, u_from: torch.Tensor) -> torch.Ten
     return torch.einsum("nij,nkj->nik", u_to, u_from.conj())
 
 
+def observed_change_channels(
+    disp: torch.Tensor, threshold: float = 1e-3
+) -> list:
+    """The channels whose transition actually MOVED, from the OBSERVATION.
+
+    DETECTOR CONTRACT (measured defect, UHR-03, 2026-09-23). An UNCHANGED cell has
+    `disp == I_3`, whose Frobenius norm is `sqrt(3) = 1.732051`, NOT zero. A
+    detector of the form `||disp_c|| > thr` therefore fires on EVERY channel and
+    reports the whole field as changed -- my first attempt did exactly that and
+    built a 256-channel "support" containing 248 identity cells. The correct
+    statistic is the DISTANCE FROM THE IDENTITY, `||disp_c - I_3||_F`, whose floor
+    is float32 noise (measured 7.4e-07).
+
+    This set comes from the environment (`disp`), never from `theta_a`, so it does
+    not read the store under test.
+    """
+    eye = torch.eye(3, dtype=disp.dtype, device=disp.device)
+    dev = (disp.detach() - eye).norm(dim=(-2, -1))
+    return [int(c) for c in (dev > threshold).nonzero().flatten().tolist()]
+
+
+def pooled_domain_statistic(
+    state_roles: torch.Tensor,
+    store,
+    truth_disp: torch.Tensor,
+    gell_mann_basis: torch.Tensor,
+    true_action: int,
+    change_threshold: float = 1e-3,
+) -> dict:
+    """C1/C2 in the POOLED domain -- the fix for the comparison's DOMAIN.
+
+    WHY A POOLED DOMAIN (measured, UHR-03, 2026-09-23). At ONE fixed channel the
+    admissible population is `n <= 1`: per-action learned support is
+    action-LOCALIZED and the supports are DISJOINT (8 actions, ~10 channels each,
+    0 shared), so `_others` is empty and C1/C2 are UNCOMPUTABLE. That is a DOMAIN
+    defect, not a threshold defect.
+
+    WHY SCALAR POOLING AND NOT TENSOR COMPOSITION. su(3) is NON-ABELIAN, and
+    `ad_of` composes its sequence as `A = A @ Ad(gen_c)`, i.e. it builds
+    `Ad(prod_c exp(H_c))`, which DEPENDS ON ITERATION ORDER and is not the log of
+    any per-channel product. Pooling the per-channel SCALAR residual is
+    well-defined. Measured: pooled margins +0.214264 (86.7x band) with isotropic
+    roles and +0.289318 (117.1x band) with clustered roles; the composition form
+    gave NEGATIVE margins (-0.0199 best case).
+
+    C1 is a MARGIN condition, never a spread condition: `spread > band` proves only
+    that the deltas are non-degenerate, whereas `delta_second_min - delta_min > band`
+    proves genuine discrimination. Run #3 emitted `argmin_hits_truth = True 15/15`
+    from a TIE (every delta exactly 0.0) and that is recorded as NOT a pass.
+
+    TAUTOLOGY CONTRACT. The candidate comes from `store.lie_element(a)` and the
+    truth from `truth_disp` (the observed group element), so the two operands are
+    DIFFERENT objects by construction. Pooling `cand == truth` was measured at
+    -2.173e-07 and is excluded here because no channel uses `lie_element(true_action)`
+    for the truth side.
+    """
+    if int(true_action) < 0:
+        return {"status": "UNAVAILABLE_NO_TRUE_ACTION"}
+    if store is None:
+        return {"status": "UNAVAILABLE_NO_STORE"}
+    channels = observed_change_channels(truth_disp, change_threshold)
+    if len(channels) < 2:
+        return {"status": "UNAVAILABLE_SUPPORT_TOO_SMALL",
+                "n_channels": len(channels), "channels": channels}
+
+    truth = {c: generators_from_displacement(truth_disp, channel=c) for c in channels}
+    n_act = int(store.num_actions)
+    pop = {}
+    for a in range(n_act):
+        tot = 0.0
+        for c in channels:
+            cand = store.lie_element(int(a), gell_mann_basis)[c]
+            tot += exteroceptive_residual_vs_recorded(
+                state_roles, [cand], truth[c], gell_mann_basis).delta_pred
+        pop[int(a)] = tot / len(channels)
+
+    order = sorted(pop.items(), key=lambda kv: kv[1])
+    own = pop.get(int(true_action))
+    others = {k: v for k, v in pop.items() if k != int(true_action)}
+    if own is None or not others:
+        return {"status": "UNAVAILABLE_POOLED_POPULATION",
+                "n_channels": len(channels)}
+    band = sampling_band(int(state_roles.shape[0]))
+    margin = (order[1][1] - order[0][1]) if len(order) > 1 else None
+    return {
+        "status": "OK",
+        "n_channels": len(channels),
+        "channels": channels,
+        "band": band,
+        "delta_pooled_all": {k: round(v, 6) for k, v in pop.items()},
+        "delta_pooled_own": round(own, 6),
+        "delta_pooled_invalid_min": round(min(others.values()), 6),
+        "invalid_minus_own": round(min(others.values()) - own, 6),
+        "own_is_min": bool(order[0][0] == int(true_action)),
+        "margin": None if margin is None else round(margin, 9),
+        "margin_above_band": bool(margin is not None and margin > band),
+        "spread": round(max(pop.values()) - min(pop.values()), 9),
+    }
+
+
 __all__ = [
     "AXIOM_BLOCK_NORM_TOL",
     "DOMAIN_VIOLATION",
@@ -588,6 +688,8 @@ __all__ = [
     "forge_edge",
     "measured_bands",
     "normalize_roles",
+    "pooled_domain_statistic",
+    "observed_change_channels",
     "predict_next",
     "recorded_transition_generators",
     "relative_group_element",
