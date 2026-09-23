@@ -358,3 +358,46 @@ explicit enumeration is authoritative. The buggy reading is left in the session 
 `52161444` (`henri-v2-fullscale`), `52289752`, `52301758` (`henri-v2-uhr03`).
 Burn = `180 GB * 0.2220 / 30 = $1.3320/day` against credit `$14.6292` (~11 days).
 Destruction is irreversible and is NOT performed without approval.
+
+**AMENDMENT 11 (2026-09-23). Independent recomputation of the live C1, and the
+single-channel vs pooled distinction.**
+
+The live C1 was previously read from the helper's own `own_is_min` field. It is now
+recomputed from the raw population `delta_pooled_all`, without trusting that flag:
+
+```
+run #5 RFSS: own < min(delta_pooled_all minus own)  ->  16/16 records
+run #6 RFSS: same                                    ->  16/16 records
+```
+
+Both runs agree. The subject is the strict argmin of the full 8-action population in
+every scored record.
+
+**The single-channel and pooled paths differ, and they must not be confused.**
+`phase820_extero_info.magnitude_only_risk` is `True` on some records while the pooled
+path still ranks correctly. That is expected and is not a contradiction:
+
+- `magnitude_only_risk` describes **FORM B at ONE channel** (`channel: 0`), i.e. one
+  grid cell. A single cell is frequently identity, so a candidate-vs-state comparison
+  there is magnitude-only.
+- The **pooled** statistic averages over the cells the observation moved
+  (`n_channels = 4` at `[4092..4095]`), where the transition is non-trivial.
+
+So a `True` on the single-channel flag is a statement about channel 0, not about the
+pooled verdict. Any future reader must not use `magnitude_only_risk` to impeach the
+pooled C1.
+
+**Role structure, measured not assumed.** The kill rule requires "a populated store
+AND real role structure". Measured `role_coherence` (the emitted statistic
+`float(roles.mean(dim=0).norm())`): run #5 `0.003661 .. 0.008903`, run #6
+`0.003661 .. 0.008722`. The isotropic baseline for THIS statistic, measured
+numerically at `K=8192, d=8`, is `0.011129` (and `1/sqrt(K) = 0.011049`). Observed
+values sit BELOW isotropic, i.e. the axiom roles are more evenly spread than random —
+a design property, not absence of content. Note `sqrt(2/(pi*K)) = 0.008815` is the
+baseline for a DIFFERENT statistic (mean pairwise |cos|, measured `0.291`) and must not
+be substituted here.
+
+**`|Tr(U_c^dag U_t)|`** measured in `{2.973726, 2.978709, 3.000001}`. The value
+`3.000001` is `|Tr(I)|`, so at least one record's reference is the identity — the
+`delta_extero = -0.0` family from run #3. The pooled path still ranks correctly there
+because it also reads the channels that did move.
