@@ -135,6 +135,78 @@ case "$SMOKE_OUT" in
   *)                     echo "SMOKE_FAIL"; exit 1 ;;
 esac
 
+echo
+echo "=== 0c. POOLED PATH CUDA PREFLIGHT (fail-closed, ~40 s) ==="
+# The pooled block (d02a9b8) has NEVER executed live. Three prior arm-pairs were
+# burned by CUDA-only defects CPU tests cannot see. Runs the SHIPPED helpers on
+# real CUDA tensors and STOPS the run unless status == OK. This is a LOCAL-side
+# block, so it is wrapped in the ssh array; the previous edit used a bare
+# `cat > "$RWT/..."` here, which would have written to a non-existent LOCAL path.
+POOL_OUT=$("${SSH[@]}" RWT="$RWT" WT="$WT" bash -s <<'REMOTE'
+set -u
+cat > "$RWT/_uhr03_pooled_preflight.py" <<'PYEOF'
+import os, sys
+sys.path.insert(0, os.environ.get("HENRI_CODE", "."))
+import numpy as np, torch
+import henri_external_outcome_refactor_module as M
+import uhr02_exteroceptive_gate as G
+from chromodynamic_grounding import GELL_MANN_BASIS, encode_su3_color_field
+
+dev = "cuda" if torch.cuda.is_available() else "cpu"
+print("  PREFLIGHT device:", dev, "torch:", torch.__version__)
+basis = GELL_MANN_BASIS.to(dev)
+NB = 8192
+
+def pad(f, nb=NB):
+    k = f.shape[0]
+    if k >= nb:
+        return f[:nb]
+    eye = torch.eye(3, dtype=f.dtype, device=f.device).unsqueeze(0)
+    return torch.cat([f, eye.repeat(nb - k, 1, 1)], dim=0)
+
+base = np.random.default_rng(7).integers(0, 4, size=(16, 16), dtype=np.int64)
+
+def grid(d):
+    x = base.copy()
+    for j in range(8):
+        x[4, j] = (x[4, j] + d) % 4
+    return torch.tensor(x, dtype=torch.int64, device=dev)
+
+enc = lambda g: pad(encode_su3_color_field(g.unsqueeze(0)).reshape(-1, 3, 3))
+
+store = M.ActionOutcomeGeneratorStore(num_actions=5, num_channels=NB, lr=0.1).to(dev)
+for k in range(16):
+    store.update_generator(enc(grid(1)), 2, enc(grid(2)), basis)   # true  delta +1
+    store.update_generator(enc(grid(1)), 3, enc(grid(3)), basis)   # HARD  same cells, +2
+    store.update_generator(enc(grid(1)), 1, enc(grid(2)), basis)   # other
+
+u_t, u_n = enc(grid(1)), enc(grid(2))
+disp = G.relative_displacement(u_n, u_t).detach()
+print("  disp device:", disp.device, "shape:", tuple(disp.shape))
+chs = G.observed_change_channels(disp)
+print("  observed_change_channels n=", len(chs), " sample:", chs[:6])
+roles = torch.nn.functional.normalize(torch.randn(8192, 8, device=dev), p=2, dim=-1)
+info = G.pooled_domain_statistic(roles, store, disp, basis, 2)
+print("  POOLED status=%s n=%s own=%s inv_min=%s margin=%s own_is_min=%s above_band=%s" % (
+    info.get("status"), info.get("n_channels"), info.get("delta_pooled_own"),
+    info.get("delta_pooled_invalid_min"), info.get("margin"),
+    info.get("own_is_min"), info.get("margin_above_band")))
+ok = (info.get("status") == "OK" and (info.get("n_channels") or 0) >= 2
+      and info.get("own_is_min") is True and info.get("margin_above_band") is True)
+print("  POOLED_PREFLIGHT_%s" % ("PASS" if ok else "FAIL"))
+
+PYEOF
+cd "$WT/HENRI V2" || { echo "POOLED_NO_WT"; exit 3; }
+HENRI_CODE="$WT/HENRI V2" HENRI_MACRO_NUM_CHANNELS=1 PYTHONPATH=. \
+    /usr/bin/python3 "$RWT/_uhr03_pooled_preflight.py" 2>&1
+REMOTE
+)
+echo "$POOL_OUT" | sed 's/^/    /'
+case "$POOL_OUT" in
+  *POOLED_PREFLIGHT_PASS*) echo "POOLED_PREFLIGHT_GATE_PASS" ;;
+  *) echo "POOLED_PREFLIGHT_GATE_FAIL"; exit 1 ;;
+esac
+
 for ARM in BASELINE RFSS; do
   case "$ARM" in BASELINE) FLAG=0 ;; RFSS) FLAG=1 ;; esac
   echo
