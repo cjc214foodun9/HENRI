@@ -3416,8 +3416,14 @@ def run():
                 "step_ms": round(step_ms, 1),
                 "phase820_var_efe": p820_var_efe,
                 "phase820_update_info": p820_update_info,
-                "phase820_guard_state": p820_guard_state,
-                "phase820_extero_info": p820_extero_info,
+                # CONDITIONAL keys: with both new flags OFF the record is
+                # byte-identical to the pre-patch baseline (C3 default-path
+                # identity). An unconditional key would change the default JSONL
+                # and could be misread as the flag being engaged.
+                **({"phase820_guard_state": p820_guard_state}
+                   if HENRI_TRACE_UPDATE_GATES else {}),
+                **({"phase820_extero_info": p820_extero_info}
+                   if HENRI_UHR02_EXTERO_GATE else {}),
                 "phase821_fiber_info": fiber_info,
                 "phase822_rt_info": rt_info,
                 "phase823_opine_info": opine_info,
