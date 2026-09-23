@@ -46,6 +46,24 @@ first. `HENRI_ARC_TARGET_GROUNDING` (500 / 634) is identical.
 
 ## 2. Preconditions (checked BEFORE the verdict; failure => BLOCKED_INFRASTRUCTURE)
 
+**AMENDMENT 1 (2026-09-23, recorded BEFORE any data exists).** The step count is
+raised `8 -> 16`. Reason: `--steps 8` produced only 8 records in UHR-01 and C1 is
+conditioned on `n_recorded >= 2`, so 8 steps leaves too little room for the store
+to accumulate more than one recorded transition. Criterion thresholds, tau, and
+the kill rule are UNCHANGED; only the sample size moves. No data from either arm
+of UHR-03 existed when this amendment was written (kill-run #1 died at
+initialisation, line 722, before the step loop).
+
+**AMENDMENT 2 (2026-09-23, before any data).** The common env block is carried
+INSIDE the remote heredoc rather than as an ssh argv string. Measured defect in
+kill-run #1: ssh joins its argv into one string which the remote shell re-splits,
+so `COMMON="$5"` captured only the FIRST token (`HENRI_ARC_SAGNAC_VETO=1`).
+`HENRI_OFFLINE_DIAG` therefore never reached the interpreter, `dsn` fell through
+to `resolve_zone_c_dsn()`, and both arms raised at line 722
+(`psycopg OperationalError ... 127.0.0.1:5434`). An env var that does not reach
+its consumer is a mechanism that does not exist. A new `ENV_GATE` asserts every
+flag inside the interpreter and fails closed before the arm starts.
+
 Both arms run with the SAME environment except the one experimental flag:
 
 ```text

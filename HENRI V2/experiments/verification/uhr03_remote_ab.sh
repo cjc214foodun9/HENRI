@@ -78,6 +78,30 @@ REMOTE
 fi
 
 echo
+echo "=== 2b. DEPS: arc_agi + arcade (idempotent, FAIL CLOSED) ==="
+"${SSH[@]}" bash -s <<'REMOTE'
+set -u
+# DEFECT FIXED HERE: uhr03_remote_ab.sh originally omitted this step, so BOTH arms
+# died in <1 s with `ModuleNotFoundError: No module named 'arc_agi'` at
+# production_arc_run.py:41. That is BLOCKED_INFRASTRUCTURE, not a scientific
+# verdict. The contract suites still passed because they need only torch/numpy/
+# pytest -- so the suites are NOT a substitute for this check.
+if /usr/bin/python3 -c 'import arc_agi, arcade' 2>/dev/null; then
+    echo "arc_agi=ALREADY"
+else
+    echo "installing arc-agi (the blinker RECORD conflict is known)"
+    /usr/bin/python3 -m pip install --no-input --disable-pip-version-check \
+        --ignore-installed blinker arc-agi 2>&1 | tail -3
+fi
+if ! /usr/bin/python3 -c 'import arc_agi' 2>/dev/null; then
+    echo "DEPS_FAIL: arc_agi still not importable -- aborting before any arm"
+    exit 1
+fi
+/usr/bin/python3 -c 'import arc_agi, arcade, torch; print("deps OK: arc_agi + arcade + torch", torch.__version__)'
+REMOTE
+[ $? -eq 0 ] || { echo "DEPS_GATE_FAIL"; exit 1; }
+
+echo
 echo "=== 3. CONTRACT SUITES ON CUDA ==="
 "${SSH[@]}" bash -s -- "$WT" <<'REMOTE'
 set -u

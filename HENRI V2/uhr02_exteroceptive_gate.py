@@ -205,13 +205,25 @@ def delta(a: torch.Tensor, b: torch.Tensor) -> float:
 
 def predict_next(state_roles: torch.Tensor, ad_c: torch.Tensor) -> torch.Tensor:
     """R_pred = n(Ad(U_c) R_state) in the real [K, 8] family."""
-    y = torch.einsum("ij,kj->ki", ad_c.to(state_roles.dtype), state_roles)
+    y = torch.einsum("ij,kj->ki", ad_c.to(state_roles.dtype).to(state_roles.device),
+                     state_roles)
     return _normalize_rows(y)
 
 
 def ad_of(generator_sequence: Sequence[torch.Tensor], gell_mann_basis: torch.Tensor) -> torch.Tensor:
-    """Ad(U) for a composed generator sequence, as an SO(8) matrix."""
-    A = torch.eye(DIM)
+    """Ad(U) for a composed generator sequence, as an SO(8) matrix.
+
+    DEVICE CONTRACT (measured live 2026-09-23, RFSS arm of UHR-03): the identity
+    accumulator MUST be created on the SAME device as the generators and the
+    basis. A CPU `torch.eye(DIM)` against a CUDA `adjoint_matrix` raises
+    `RuntimeError: Expected all tensors to be on the same device, but got mat2 is
+    on cuda:0, different from other tensors on cpu`. That is a CPU-only-invisible
+    fault: local contract tests pass on CPU because everything is CPU.
+    """
+    dev = gell_mann_basis.device
+    if generator_sequence:
+        dev = generator_sequence[0].device
+    A = torch.eye(DIM, device=dev)
     for gen in generator_sequence:
         A = A @ adjoint_matrix(gen, gell_mann_basis)
     return A
@@ -227,7 +239,10 @@ def relative_group_element(
     group-theoretic quantity it estimates. Both sequences must compose to SU(3).
     """
     def _U(gs):
-        U = torch.eye(3, dtype=torch.complex64)
+        # DEVICE CONTRACT: same fault as ad_of (measured live, UHR-03 RFSS arm).
+        # The identity must live on the generator's device.
+        dev = gs[0].device
+        U = torch.eye(3, dtype=torch.complex64, device=dev)
         for g in gs:
             U = U @ torch.matrix_exp(g.to(torch.complex64))
         return U
