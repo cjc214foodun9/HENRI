@@ -240,3 +240,35 @@ numerically over 20 draws at K=8192, d=8, is **0.011129** (min 0.007906, max
 (measured 0.291379 for unit rows, since pairwise |cos| scales as 1/sqrt(d), not
 1/sqrt(K)). Run #3's observed 0.0037..0.0086 sits AT or BELOW the low end of the
 isotropic band, so the roles are spread more evenly than random.
+
+**AMENDMENT 8 (2026-09-23, POST-HOC wrt run #3; governs run #4 onwards).**
+
+**A8.1 -- the baseplate requirement is WITHDRAWN.** Amendment 7's G6 reading was
+wrong: `magnitude_only_risk` reports TRIVIALITY OF THE RECORDED TRANSITION, not
+absent role content (see uhr03_verdict.md section 5; controls vary one variable at
+a time; the flag is invariant to role content and tracks transition triviality).
+FORM B separates with isotropic roles at 3.638e-01 = 147x band, measured by the
+module's own calibration harness `uhr02_domain_control.py`. **No content-bearing
+baseplate is required and none should be built.**
+
+**A8.2 -- replace the hardcoded triviality constant with the measured knee.**
+The runner's `nontrivial_transition` uses a fixed Frobenius `> 0.0707`. Measured,
+the flag's knee lies between 1e-03 and 1e-02 on the transition scale. Report BOTH
+`mag_only` (the gate's own signal) and the Frobenius magnitude; do not gate on the
+hardcoded constant alone.
+
+**A8.3 -- admissibility for run #4 (supersedes A7.3).** Before ANY criterion is
+read, the run must emit and the reducer must assert:
+`truth_operand_untouched is True`; `nontrivial_transition is True`;
+`magnitude_only_risk is False`; `n_recorded >= 2`; `channel != 0`;
+`role_coherence` at or above the measured isotropic baseline (0.011129 at K=8192).
+Any failure => `BLOCKED_INFRASTRUCTURE`, consuming NO kill budget.
+
+**A8.4 -- C1 is a MARGIN condition, not a spread condition.**
+`delta_spread > band` proves only that the deltas are non-degenerate. C1 must be
+`delta_second_min - delta_min > sampling_band`, i.e. genuine DISCRIMINATION.
+Run #3's `argmin_hits_truth = True 15/15` was a tie artifact and is NOT a C1 pass.
+
+**A8.5 -- the load-bearing item is the SUPPORT-POOLED domain (A7.1), not the
+baseplate.** Still UNIMPLEMENTED. A tautological attempt is recorded in
+uhr03_verdict.md section 5e so it is not repeated.

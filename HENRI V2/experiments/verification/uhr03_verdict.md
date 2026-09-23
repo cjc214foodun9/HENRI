@@ -215,3 +215,85 @@ Ordering receipt, measured: `update_generator` does NOT mutate its operands.
 `max |U_t_after - U_t_before| = 0.000e+00`; its only write is
 `self.theta_a[action].copy_(...)` at lines 81-84. So the fault is not mutation --
 it is that the reference is read too late to be "recorded" in the intended sense.
+
+## 5. CORRECTION (2026-09-23, same day, BEFORE any run #4 data) -- THE BASEPLATE
+   REQUEST IS RETRACTED
+
+Section 3c read `magnitude_only_risk = True` 16/16 as "the reference carries no
+content structure" and asked for a **content-bearing baseplate**. That reading is
+WRONG. The request is withdrawn. Both claims below are measured, at zero GPU cost,
+with the production `exteroceptive_residual_vs_recorded`.
+
+### 5a. What the flag actually measures
+
+Definition (uhr02_exteroceptive_gate.py:520):
+`magnitude_only_risk = bool(abs(delta_pred - delta_state) < band)`
+with `delta_pred = delta(n(Ad(U_c) R), n(Ad(U_t) R))` and
+`delta_state = delta(n(Ad(U_c) R), R)`.
+
+If the recorded transition is the IDENTITY then `Ad(U_t) R == R`, so
+`delta_pred == delta_state` **exactly**, the difference collapses to float noise,
+and the flag fires regardless of role content. That is an algebraic identity, not
+an empirical tendency.
+
+### 5b. Controls (one variable changed at a time)
+
+| transition | roles | delta_pred | delta_state | abs(dp-ds) | mag_only |
+|---|---|---:|---:|---:|---|
+| real | isotropic | 0.002016 | 0.180507 | 1.785e-01 | **False** |
+| real | clustered | 0.001580 | 0.152202 | 1.506e-01 | **False** |
+| identity | isotropic | 0.180507 | 0.180507 | 2.693e-08 | **True** |
+| identity | clustered | 0.152202 | 0.152202 | 2.980e-08 | **True** |
+| self-comparison (cand == ref) | isotropic | -2.700e-07 | - | - | False |
+
+- Flag INVARIANT to role content (identical for isotropic and clustered roles at
+  BOTH transitions): **True**.
+- Flag TRACKS transition triviality (real -> False, identity -> True): **True**.
+
+### 5c. Calibrated triviality threshold (replaces a hardcoded constant)
+
+Sweep at fixed isotropic roles, transition angle scaled:
+
+| scale | abs(Tr(U_c^dag U_t)) | delta_pred | abs(dp-ds) | mag_only |
+|---|---:|---:|---:|---|
+| 0 | 2.472475 | 0.180507 | 2.69e-08 | True |
+| 1e-06 | 2.472476 | 0.180507 | 2.71e-07 | True |
+| 1e-04 | 2.472566 | 0.180479 | 2.82e-05 | True |
+| 1e-03 | 2.473392 | 0.180223 | 2.84e-04 | True |
+| 1e-02 | 2.481618 | 0.177674 | 2.83e-03 | **False** |
+| 5e-02 | 2.517503 | 0.166456 | 1.41e-02 | False |
+| 2e-01 | 2.641893 | 0.126321 | 5.42e-02 | False |
+| 1e+00 | 2.994612 | 0.002016 | 1.78e-01 | False |
+
+So the flag is a TRIVIALITY detector with a measured knee between 1e-03 and 1e-02
+on the transition scale. The runner's hardcoded `0.0707` Frobenius constant should
+be replaced by this measured relation; `mag_only` itself is the ready-made signal.
+
+### 5d. FORM B does NOT need a content-bearing reference
+
+`experiments/verification/uhr02_domain_control.py`, run on this host:
+
+    ISOTROPIC  FORM A sep=1.348e-04 NO-SEP   FORM B sep=3.638e-01 SEP
+    STRUCTURED FORM A sep=1.565e-01 SEP      FORM B sep=4.657e-01 SEP
+    tau band = (0.004355, 0.352165)   blueprint 0.35 lies in band
+
+FORM B separates with **isotropic** roles at 147x the sampling band
+(2.4705e-03). The role CONTENT is not the binding constraint. Run #3's G6
+"failure" was the identity collapse (already measured: `relative_group_element =
+3.000001`, truth `||H|| = 9.75e-07`), i.e. **the same defect** as defect 1, seen
+through a second lens -- not a second defect.
+
+### 5e. What remains, and it is NOT the baseplate
+
+The binding constraint is the **DOMAIN** (section 4): at any single fixed channel
+the admissible population is `n <= 1`, so C1/C2 are uncomputable there. The
+repair is a SUPPORT-POOLED residual over the cells an action actually changed.
+That IS load-bearing and IS unimplemented.
+
+TRAP RECORDED so it is not walked into: a first attempt at the support-pooled
+residual was **tautological**. When the reference for `a2 == aid` is built from the
+same action's generators as the candidate, `U_c^dag U_t == I` by construction, so
+`delta_pred = -2.700e-14` and "argmin picks the truth" is true BY DEFINITION.
+Measured: `cand == field(AID)` elementwise = True, `|Tr| = 2.99998`. The pooled
+residual must compare a LEARNED candidate against the OBSERVED displacement (as
+the runner already does for `_truth`), never an action against itself.
