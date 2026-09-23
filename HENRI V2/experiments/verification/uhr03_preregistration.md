@@ -272,3 +272,45 @@ Run #3's `argmin_hits_truth = True 15/15` was a tie artifact and is NOT a C1 pas
 **A8.5 -- the load-bearing item is the SUPPORT-POOLED domain (A7.1), not the
 baseplate.** Still UNIMPLEMENTED. A tautological attempt is recorded in
 uhr03_verdict.md section 5e so it is not repeated.
+
+**AMENDMENT 9 (2026-09-23, recorded BEFORE kill-run #6 data). Reproducibility pass.**
+
+Sentinel for content-based idempotence (this file already contains an unrelated
+Amendment 8 that governs run #4, so a LABEL check is not a safe guard):
+RUN6_REPRODUCIBILITY_PREREG_SENTINEL
+
+Kill-run #5 returned C1 = 16/16 and C2 = 16/16 with `margin mean = +0.042074`
+(range `+0.041497 .. +0.042304`, i.e. 16.8x .. 17.1x band). That is one live pass:
+`N = 1`.
+
+The pre-registered kill rule requires two CONSECUTIVE failures. Symmetrically, a
+promotion claim requires a REPRODUCED pass. Run #6 is frozen here, before any of its
+data exists:
+
+- Same carrier, same pin (`HENRI_SINGLE_ENV=ft09`), same `STEPS=32`, same criteria.
+- Same two arms, differing ONLY in `HENRI_UHR02_EXTERO_GATE`.
+- Judged by the identical G1-G6 / C1-C3 criteria at the same `tau = 0.3500` and the
+  same `band = sampling_band(8192) = 2.470529e-03`.
+
+Outcomes and their meaning, fixed now so the interpretation cannot be chosen later:
+
+| run #6 result | interpretation |
+|---|---|
+| C1 and C2 both 100% | PASS REPRODUCED. Two independent live runs agree. |
+| C1 or C2 in [50%, 100%) | PASS REPRODUCED WEAKLY; margin not stable across runs. |
+| C1 or C2 below 50% | **Kill strike 1 of 2.** The run #5 pass was a draw artifact. |
+
+One comparability condition, also fixed now: run #6 must report the same
+**identity-only competitor set** (every invalid action sharing one value) for its C1/C2
+to be comparable with run #5. If run #6 produces a competitor set containing a
+non-identity value, report it separately as a CONTENT-OBSERVING run and do NOT pool it
+with run #5. Run #5's live competitor set was identity-only, so run #5 evidences action
+IDENTIFICATION, not content discrimination.
+
+**Provenance note (twice-repeated defect in my own tooling).** Two earlier attempts to
+record a run #6 pre-registration used LABEL guards — first `if "AMENDMENT 7" not in
+text`, then `if "AMENDMENT 8" not in text`. Both labels were already occupied by
+unrelated post-hoc notices governing run #4, so both guards did nothing, and each
+printed "already present": a FALSE claim, twice. This amendment is guarded by the
+content marker above and verified by substring search on the COMMITTED blob, not on the
+working tree. **Guard on content, never on a label that a later writer may reuse.**
