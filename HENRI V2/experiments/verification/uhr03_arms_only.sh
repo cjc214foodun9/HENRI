@@ -35,6 +35,9 @@ STEPS="${STEPS:-16}"
 KEY="$HOME/.ssh/id_ed25519"
 PUBURL="https://github.com/cjc214foodun9/HENRI.git"
 RWT="/workspace/henri-verify"; WT="$RWT/_uhr03"
+# The git CLONE is $RWT/repo; $WT is a LINKED WORKTREE of it. Fetch must run in
+# the clone, not in $RWT (measured: "fatal: not a git repository").
+REPO="$RWT/repo"
 SSH=(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes
      -o ConnectTimeout=25 -o ServerAliveInterval=15 -i "$KEY" -p "$PORT" "root@$HOST")
 
@@ -55,9 +58,9 @@ esac
 
 echo
 echo "=== 1. REFRESH WORKTREE TO THE CARRIER SHA (fetch from the public URL) ==="
-"${SSH[@]}" RWT="$RWT" WT="$WT" SHA="$SHA" PUBURL="$PUBURL" bash -s <<'REMOTE'
+"${SSH[@]}" RWT="$RWT" WT="$WT" REPO="$REPO" SHA="$SHA" PUBURL="$PUBURL" bash -s <<'REMOTE'
 set -u
-cd "$RWT" || { echo "RWT_MISSING $RWT"; exit 2; }
+cd "$REPO" || exit 2
 git fetch "$PUBURL" "carrier/uhr-01-homologous-representation:refs/remotes/pub/uhr01" 2>&1 | tail -2
 if [ -z "$SHA" ]; then SHA="$(git rev-parse refs/remotes/pub/uhr01)"; echo "SHA_DEFAULTED_TO=$SHA"; fi
 cd "$WT" || { echo "WT_MISSING $WT"; exit 2; }
@@ -71,6 +74,18 @@ echo "overlay_sha16=$(sha256sum "$O" 2>/dev/null | cut -c1-16 || echo NA)"
 echo "flag_reads=$(grep -c 'HENRI_UHR02_EXTERO_GATE' 'HENRI V2/production_arc_run.py')"
 echo "floor_1e-5=$(grep -c 'min_norm: float = 1e-5' 'HENRI V2/uhr02_exteroceptive_gate.py')"
 echo "device_fix=$(grep -c 'device=dev' 'HENRI V2/uhr02_exteroceptive_gate.py')"
+# FAIL-CLOSED PRECONDITION GATE. Measured defect (kill-run #2 attempt 1): the
+# refresh silently no-op'd on stale code and this block only PRINTED
+# `unexpected_sha=YES` / `floor_1e-5=0` / `device_fix=0`, then the arms ran
+# anyway and burned GPU for zero admissible evidence. A gate that prints but
+# does not stop is not a gate. This one EXITS.
+G=0
+[ "$(git rev-parse HEAD)" = "$SHA" ] || { echo "GATE_FAIL sha_mismatch"; G=1; }
+[ "$(grep -c 'min_norm: float = 1e-5' 'HENRI V2/uhr02_exteroceptive_gate.py')" = "1" ] || { echo "GATE_FAIL floor"; G=1; }
+[ "$(grep -c 'device=dev' 'HENRI V2/uhr02_exteroceptive_gate.py')" -ge "2" ] || { echo "GATE_FAIL device"; G=1; }
+[ "$(stat -c '%s' "$O" 2>/dev/null)" = "799034119" ] || { echo "GATE_FAIL overlay"; G=1; }
+if [ "$G" -ne 0 ]; then echo "PRECONDITION_GATE_FAIL: refusing to run arms on stale code"; exit 1; fi
+echo "PRECONDITION_GATE_PASS"
 REMOTE
 
 echo
@@ -135,6 +150,16 @@ echo "--- run: phase823_live_gauntlet steps=$STEPS env=ft09 ---"
     --envs 1 --steps "$STEPS" > "$D/run.log" 2>&1
 _rc=$?
 echo "ARM=$ARM exit=$_rc   (nonzero => BLOCKED_INFRASTRUCTURE, NO science claim)"
+# ENV-NOT-FOUND GUARD. If HENRI_SINGLE_ENV matches nothing the runner prints
+# "matched no environment; aborting" and RETURNS 0 with ZERO steps. That silent
+# no-op would look like a clean arm. Report it as BLOCKED, never as an arm.
+if [ "$_rc" -eq 0 ] && grep -q "matched no environment" "$D/run.log" 2>/dev/null; then
+  echo "ARM_BLOCKED_ENV_NOT_FOUND: HENRI_SINGLE_ENV matched no environment; 0 steps ran"
+  _rc=90
+fi
+if [ "$_rc" -eq 0 ] && [ ! -s "$D/run.log" ]; then
+  echo "ARM_BLOCKED_EMPTY_LOG: run.log is empty"; _rc=90
+fi
 if [ "$_rc" -ne 0 ]; then
   echo "--- run.log HEAD ---"; head -10 "$D/run.log"
   echo "--- run.log TAIL ---"; tail -20 "$D/run.log"
