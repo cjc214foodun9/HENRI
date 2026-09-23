@@ -122,3 +122,60 @@ Next, cheapest first:
    different content. This cannot be forced; it requires the environment to produce
    such a transition. Until then the live path evidences identification only.
 3. `origin/main` stays at `adcc24e`. Nothing promoted.
+
+---
+
+## ADDENDUM — kill-run #6 (robustness check) and the scope of the pass
+
+Carrier `7a3f74f`, instance `52301758`, env `ft09-0d8bbf25`, both arms `exit=0`,
+`EGRESS_VERIFIED` both, `CONFIRMED_STOPPED`, credit `14.6292`.
+
+### Result (OBSERVED)
+
+| gate / criterion | run #5 | run #6 |
+|---|---|---|
+| G1 `target_theta_norm` | `3.245417356491089` | identical |
+| G1b frame moved | 16/16 | 16/16 |
+| G2 guard `updated` | 16/16 | 16/16 |
+| G3 `status` / `n_channels` | `OK` / 4 | `OK` / 4 |
+| G4 both arms exit | 0 / 0 | 0 / 0 |
+| G5 flag-OFF identity | BASELINE 0 pooled keys | BASELINE 0 pooled keys |
+| C1 `own_is_min` | 16/16 (100%) | 16/16 (100%) |
+| C2 `margin_above_band` | 16/16 (100%) | 16/16 (100%) |
+| C2' `own < invalid_min` | 16/16 | 16/16 |
+| C3 distinct `own` | 16 | 16 |
+| margin mean | +0.042074 | +0.042085 |
+
+By Amendment 9's table this is `PASS REPRODUCED`. By measurement it is a **numerical
+robustness check**: identical env, identical action sequence, identical channel sets,
+identical `target_theta_norm`, no seed, 1/16 records bitwise identical. See Amendment 10.
+
+### What the pass establishes
+
+The live path identifies the taken action: `own_is_min = True` in 16/16 records in two
+runs, with `margin ~ 17x band`. The margin is not threshold-adjacent, so a ~4e-4 relative
+numerical perturbation cannot flip it.
+
+### What it does NOT establish
+
+1. **Content discrimination on the live path.** All seven invalid competitors share one
+   value per record (first record `{0:0.51188, 1:0.51188, 2:0.470383, 3:0.51188, ...}`),
+   i.e. the do-nothing baseline, because those actions changed different cells. The live
+   test is "true action vs do nothing". Content isolation is the local hard-comparator
+   result: `own=0.03769 < S_hard(same cells, +2)=0.509042 < untrained=0.532079`.
+2. **Generalisation beyond `ft09`.** One env, one policy.
+3. **Any external task outcome.** ARC levels completed = 0. This is a mechanism probe.
+
+### Kill budget
+
+**0 of 2 consumed.** FORM B did not fail to separate; it separated in both runs. The
+pre-registered kill requires two consecutive *failures with a populated store and real
+role structure*. Neither condition for a strike was met.
+
+### Next falsification
+
+1. Independent replication — a run that differs in **env id or action policy**, since
+   run #6 varied neither (~$0.11).
+2. A live content-isolating comparator, if the environment produces an action whose
+   support overlaps the true action's with different content. Cannot be forced.
+3. `origin/main` stays at `adcc24e`. Nothing promoted.

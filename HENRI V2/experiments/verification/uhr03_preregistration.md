@@ -314,3 +314,47 @@ unrelated post-hoc notices governing run #4, so both guards did nothing, and eac
 printed "already present": a FALSE claim, twice. This amendment is guarded by the
 content marker above and verified by substring search on the COMMITTED blob, not on the
 working tree. **Guard on content, never on a label that a later writer may reuse.**
+
+**AMENDMENT 10 (2026-09-23, POST-HOC characterisation of kill-run #6).**
+
+Run #6 satisfied Amendment 9's letter ("C1 and C2 both 100% -> PASS REPRODUCED") but
+**not its spirit**. Amendment 9's row assumed an independent sample. Measured, run #6
+is a *numerical robustness check on the same trajectory*:
+
+| quantity | run #5 | run #6 | same? |
+|---|---|---|---|
+| env | `ft09-0d8bbf25` | `ft09-0d8bbf25` | yes |
+| action sequence | `ACTION2/ACTION1` x16 | `ACTION2/ACTION1` x16 | yes |
+| `changed_cells` per step | 4 | 4 | yes |
+| `channels` per record | `[4092..4095]` | `[4092..4095]` | yes |
+| `target_theta_norm` | `3.245417356491089` | identical, all 38 records | yes |
+| seed | **none** (`_launch.sh` passes no seed) | none | n/a |
+
+Differences are float-level only: `own_min` `0.44926` vs `0.449444`; `margin_sum`
+`0.673191853` vs `0.673361203`; **1 of 16** records bitwise identical. The relative
+perturbation is ~4e-4, i.e. GPU kernel reduction-order noise.
+
+**What this does and does not buy.**
+
+- It DOES show the verdict is robust: a ~4e-4 relative perturbation does not move
+  `own_is_min` in any of 16 records, because the margin is ~17x band. The margin is
+  not sitting near a threshold.
+- It does NOT show the result replicates across independent draws. Same env, same
+  deterministic policy, same channel set means the trajectory is repeated, not resampled.
+
+**A future independent draw requires a different env or a different action policy**,
+neither of which run #6 varied. Governing rule from here: a run only counts as an
+independent replication if it differs in env id or action sequence; otherwise it is
+labelled a robustness check. This is recorded POST-HOC with respect to run #6, and
+governs run #7 onward.
+
+**Residual anomaly, recorded rather than deleted.** My first comparison of the two
+archives printed identical margin means (`0.042085`) for both, which would have implied
+one payload read twice. Explicit per-archive enumeration by filename + sha256 shows they
+differ (`7d3331db6c301878` vs `265fd9363da4d2d8`). The first comparison was buggy; the
+explicit enumeration is authoritative. The buggy reading is left in the session record.
+
+**Storage cost flag (needs human approval to act).** Three stopped disks hold 60 GB each:
+`52161444` (`henri-v2-fullscale`), `52289752`, `52301758` (`henri-v2-uhr03`).
+Burn = `180 GB * 0.2220 / 30 = $1.3320/day` against credit `$14.6292` (~11 days).
+Destruction is irreversible and is NOT performed without approval.
