@@ -145,3 +145,73 @@ as pre-registered:
 4. Re-run the SAME paired A/B. Kill unchanged: two consecutive runs satisfying
    G1-G6 that fail both C1 and C2 ⇒ `FALSIFIED`, and the repair is the
    content-bearing baseplate.
+
+## 4. THE DOMAIN IS THE PER-CELL FIELD, NOT ONE CHANNEL (measured locally, 2026-09-23)
+
+This is a FOURTH finding, and it is a DOMAIN defect, not a threshold defect. It
+was measured offline at zero GPU cost, so it is not a post-mortem.
+
+### 4a. Setup the finding rests on
+
+`chromodynamic_grounding.encode_su3_color_field` (lines 99-118) maps an ARC frame
+to `[B,H,W,3,3]` with `theta = one_hot(grid) @ projection` per cell: it is a
+LOCAL per-cell map. Therefore one channel IS one grid cell, and the
+channel-resolved `theta_a` carries one su(3) element per cell.
+
+### 4b. Measured per-action support
+
+Local rehearsal: `ActionOutcomeGeneratorStore(num_actions=4, num_channels=256,
+lr=0.1)`, 16 updates per action, action-localized edits, production
+`update_generator` / `lie_element` / `relative_displacement` calls only.
+
+| action | top channel | live channels (>1e-5) | live range |
+|---|---:|---:|---|
+| 0 | 47 | 10 / 256 | [2..47] |
+| 1 | 66 | 10 / 256 | [66..111] |
+| 2 | 159 | 10 / 256 | [130..175] |
+| 3 | 202 | 10 / 256 | [194..239] |
+
+Channels live for ALL four actions: **0**.
+
+Each action's learned transition lives ONLY in the cells that action changed. So
+at any single fixed channel the admissible population is `n <= 1`:
+
+| channel | n_admissible |
+|---|---:|
+| 0 | 0 |
+| 47 | 1 |
+| 66 | 1 |
+| 159 | 1 |
+| 202 | 1 |
+
+With `n = 1` there is no `_others`, so `argmin_hits_truth` (C1) and
+`invalid_minus_own` (C2) are UNCOMPUTABLE. The single-channel domain cannot
+support the pre-registered criteria, independent of how well the gate works.
+
+### 4c. The gate itself DOES discriminate when the domain is right
+
+Identity candidate versus a real recorded transition, at each action's own
+channel:
+
+| action | channel | delta_pred | magnitude_only_risk |
+|---|---:|---:|---|
+| 0 | 47 | 0.135347 | False |
+| 1 | 66 | 0.135347 | False |
+| 2 | 159 | 0.135347 | False |
+| 3 | 202 | 0.135347 | False |
+
+against `sampling_band(8192) = 2.4705e-03`. That is ~55x band, with the
+magnitude-only flag CLEAR. The mechanism separates; the domain does not.
+
+### 4d. The reference is also read too LATE
+
+The FORM B read (~line 3125) happens AFTER `update_generator` (~line 3069), and
+`update_generator` folds the CURRENT observed transition into `theta_a` with
+weight `lr` (`lr = 0.1`). The reference is therefore
+`0.9 * EMA_{t-1} + 0.1 * target_t`: the step under test contaminates 10% of the
+reference it is compared against.
+
+Ordering receipt, measured: `update_generator` does NOT mutate its operands.
+`max |U_t_after - U_t_before| = 0.000e+00`; its only write is
+`self.theta_a[action].copy_(...)` at lines 81-84. So the fault is not mutation --
+it is that the reference is read too late to be "recorded" in the intended sense.

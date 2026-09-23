@@ -3181,7 +3181,8 @@ def run():
                                         "truth_gen_frobenius": round(
                                             float(torch.linalg.matrix_norm(_truth[0])), 9),
                                         "cand_gen_frobenius": round(
-                                            float(torch.linalg.matrix_norm(_opt_gens[0])), 9),
+                                            float(torch.linalg.matrix_norm(
+                                                _cand[0] if _cand else _truth[0])), 9),
                                         "nontrivial_transition": bool(
                                             float(torch.linalg.matrix_norm(_truth[0])) > 0.0707),
                                         "delta_extero": round(_xr.delta_pred, 6),

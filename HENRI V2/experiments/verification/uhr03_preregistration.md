@@ -199,3 +199,44 @@ Role structure is MEASURED, not assumed.
   makes the run DIAGNOSTIC-ONLY and never score-eligible.
 - It cannot substitute for CUDA verification of the FORM B math; the CPU probes
   are `DERIVED`, and the live run is the `OBSERVED` layer.
+
+**AMENDMENT 7 (2026-09-23, POST-HOC with respect to kill-run #3; governs run #4
+onwards only).** Recorded BEFORE run #4 data exists. Three measured findings
+force a DOMAIN change -- not a threshold change.
+
+**A7.1 -- the comparison domain is the per-cell field, not one channel.**
+`encode_su3_color_field` is a LOCAL per-cell map, so channel == grid cell, and
+`theta_a` is one su(3) element per cell. Measured support (4 actions x 16
+updates, 256 cells): top channels 47 / 66 / 159 / 202, each with 10/256 live
+channels and DISJOINT ranges; channels live for ALL actions = 0. At any single
+fixed channel the admissible population is `n <= 1` (ch 0 -> 0; ch 47, 66, 159,
+202 -> 1), so `_others` is empty and C1/C2 are UNCOMPUTABLE. C1/C2 must be
+computed over the action's SUPPORT (a pooled per-cell residual), not at one
+channel.
+
+**A7.2 -- the reference must exclude the step under test.** The FORM B read
+(~line 3125) runs after `update_generator` (~line 3069), which folds the CURRENT
+transition into `theta_a` with weight `lr = 0.1`. The reference is therefore
+`0.9*EMA_{t-1} + 0.1*target_t`, i.e. contaminated by the step under test.
+Ordering receipt (measured): `update_generator` does not mutate its operands
+(`max|U_t_after - U_t_before| = 0.000e+00`); the fault is read TIMING, so the
+reference must come from a PRE-UPDATE snapshot of `theta_a`.
+
+**A7.3 -- admissibility preconditions for run #4.** Before any criterion is
+read, the run must report: `truth_operand_untouched` (not `None`),
+`nontrivial_transition = True`, `spread_above_band = True`, `n_recorded >= 2`,
+`channel != 0`, and role coherence at or above the isotropic baseline. Any
+failure is `BLOCKED_INFRASTRUCTURE` and consumes NO kill budget.
+
+**STATUS: A7.1 and A7.2 are LOAD-BEARING and are NOT implemented.** Run #4 must
+not be launched until they are. The pre-registered kill rule is unchanged and
+still holds 0 of 2 budget.
+
+**Baseline note (Q1, measured).** The live emit is
+`float(_roles.mean(dim=0).norm())` (line 3229). Its isotropic baseline, measured
+numerically over 20 draws at K=8192, d=8, is **0.011129** (min 0.007906, max
+0.017516), matching the analytic `1/sqrt(K) = 0.011049`. `sqrt(2/(pi*K)) =
+0.008815` is the baseline for mean PAIRWISE |cos|, a DIFFERENT statistic
+(measured 0.291379 for unit rows, since pairwise |cos| scales as 1/sqrt(d), not
+1/sqrt(K)). Run #3's observed 0.0037..0.0086 sits AT or BELOW the low end of the
+isotropic band, so the roles are spread more evenly than random.
