@@ -3117,6 +3117,24 @@ def run():
                                     p820_extero_info = {
                                         "status": "OK",
                                         "tau": _xtau,
+                                        # NON-TRIVIALITY WITNESS. FORM B is only
+                                        # distinguishable from FORM A when the
+                                        # RECORDED transition is non-trivial. The
+                                        # measured collapse boundary is
+                                        # ||theta|| ~ 0.05, i.e. ||H||_F ~ 0.071
+                                        # (||H||_F = sqrt(2)||theta|| for
+                                        # Tr(lambda_a lambda_b) = 2 delta_ab).
+                                        # Without these numbers the verdict cannot
+                                        # separate "the comparison domain is still
+                                        # wrong" from "the store had nothing to
+                                        # compare" -- the exact ambiguity that made
+                                        # UHR-01 undecidable.
+                                        "truth_gen_frobenius": round(
+                                            float(torch.linalg.matrix_norm(_truth[0])), 9),
+                                        "cand_gen_frobenius": round(
+                                            float(torch.linalg.matrix_norm(_opt_gens[0])), 9),
+                                        "nontrivial_transition": bool(
+                                            float(torch.linalg.matrix_norm(_truth[0])) > 0.0707),
                                         "delta_extero": round(_xr.delta_pred, 6),
                                         "n_recorded": len(_xall),
                                         "delta_extero_all": _xall,

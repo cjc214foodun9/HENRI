@@ -145,10 +145,37 @@ _env_rc=$?
 
 cd "$WT/HENRI V2" || { echo "CD_FAIL"; exit 1; }
 export PYTHONPATH="$PWD"
-echo "--- run: phase823_live_gauntlet steps=$STEPS env=ft09 ---"
+echo "--- run: phase823_live_gauntlet steps=$STEPS env=ft09 (DETACHED) ---"
+# DETACHED LAUNCH. Measured defect (kill-run #2, 2026-09-23): the RFSS arm
+# truncated at 7/38 records with "Connection to ssh2.vast.ai closed by remote
+# host". A FOREGROUND ssh child dies with the session, so a transient network
+# drop silently destroys a paid arm -- and the truncation is indistinguishable
+# from a real mechanism failure unless the launch is decoupled from SSH.
+# setsid + nohup + </dev/null detaches it; the exit code lands in a sentinel file
+# we POLL for, so the arm's fate stays decidable even if the session drops.
+export D WT STEPS
+cat > "$D/_launch.sh" <<'LAUNCH'
+#!/bin/bash
+cd "$WT/HENRI V2" || { echo 3 > "$D/exit_code"; exit 3; }
+export PYTHONPATH="$PWD"
 /usr/bin/python3 production_arc_run.py --mode phase823_live_gauntlet \
     --envs 1 --steps "$STEPS" > "$D/run.log" 2>&1
-_rc=$?
+echo $? > "$D/exit_code"
+LAUNCH
+rm -f "$D/exit_code"
+setsid nohup bash "$D/_launch.sh" >/dev/null 2>&1 </dev/null &
+for _i in $(seq 1 150); do
+  sleep 10
+  [ -f "$D/exit_code" ] && break
+done
+if [ -f "$D/exit_code" ]; then
+  _rc=$(cat "$D/exit_code")
+  echo "  detached arm finished after ~$((_i*10))s"
+else
+  echo "ARM_WATCHDOG_TIMEOUT: no exit_code after 1500s; killing runaway"
+  pkill -f 'production_arc_run.py' 2>/dev/null; sleep 3
+  _rc=91
+fi
 echo "ARM=$ARM exit=$_rc   (nonzero => BLOCKED_INFRASTRUCTURE, NO science claim)"
 # ENV-NOT-FOUND GUARD. If HENRI_SINGLE_ENV matches nothing the runner prints
 # "matched no environment; aborting" and RETURNS 0 with ZERO steps. That silent
@@ -219,6 +246,10 @@ if ex and ex[0].get("status") == "OK":
     print("   C3 delta_extero distinct:", sorted({e.get("delta_extero") for e in ok})[:8])
     print("   magnitude_only_risk:", sorted({e.get("magnitude_only_risk") for e in ok}))
     print("   role_coherence:", sorted({e.get("role_coherence") for e in ok})[:5])
+    print("   NON-TRIVIALITY: truth_gen_frobenius:", sorted({e.get("truth_gen_frobenius") for e in ok})[:5])
+    print("                   cand_gen_frobenius :", sorted({e.get("cand_gen_frobenius") for e in ok})[:5])
+    print("                   nontrivial_transition:", sorted({str(e.get("nontrivial_transition")) for e in ok}))
+    print("   delta_extero_all (per recorded action) sample:", (ok[0].get("delta_extero_all")))
 PYX
 REMOTE
 done

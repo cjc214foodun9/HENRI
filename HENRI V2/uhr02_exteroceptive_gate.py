@@ -195,8 +195,8 @@ def normalize_roles(roles: torch.Tensor, name: str = "roles") -> torch.Tensor:
 
 def delta(a: torch.Tensor, b: torch.Tensor) -> float:
     """The gate's own residual: 0.5 * (1 - cos), on the flattened real pair."""
-    x = a.flatten().to(torch.float32)
-    y = b.flatten().to(torch.float32)
+    x = a.detach().flatten().to(torch.float32)
+    y = b.detach().flatten().to(torch.float32)
     denom = float(x.norm()) * float(y.norm())
     if denom <= 0.0:
         raise ValueError("delta: a zero-norm operand makes the residual undefined")
@@ -225,6 +225,12 @@ def ad_of(generator_sequence: Sequence[torch.Tensor], gell_mann_basis: torch.Ten
         dev = generator_sequence[0].device
     A = torch.eye(DIM, device=dev)
     for gen in generator_sequence:
+        gshape = tuple(gen.shape)
+        if gshape != (3, 3):
+            raise ValueError(
+                "ad_of: generator must be [3,3] (one channel); got %s. A batched "
+                "[N,3,3] operand must first be reduced, e.g. "
+                "generators_from_displacement(disp, channel=0)." % (gshape,))
         A = A @ adjoint_matrix(gen, gell_mann_basis)
     return A
 
@@ -482,18 +488,45 @@ def exteroceptive_residual_vs_recorded(
     )
 
 
-def generators_from_displacement(disp: torch.Tensor) -> list:
-    """The anti-Hermitian generator H with exp(H) == `disp` (a group element).
+def generators_from_displacement(disp: torch.Tensor, channel: int = 0) -> list:
+    """The anti-Hermitian generator H with exp(H) == disp[channel] (a group element).
 
     Mirrors the production D31 path (`henri_external_outcome_refactor_module.
     _matrix_log_eig`): torch 2.12 has no `matrix_log`, and `disp` is unitary so
-    the eigendecomposition form is exact. Returns a one-element list, matching
-    the generator-sequence convention used by `ad_of` / `relative_group_element`.
+    the eigendecomposition form is exact.
+
+    SHAPE CONTRACT (measured defect, UHR-03 kill-run #2 RFSS arm, 2026-09-23).
+    `relative_displacement` returns the CHANNEL-BATCHED group element `[N,3,3]`.
+    Returning its log verbatim produced an `[N,3,3]` "generator", while `ad_of`
+    and `relative_group_element` require `[3,3]` -- the production convention is
+    ONE channel (`store.lie_element(action, basis)[0]`). The mismatch surfaced
+    only deep inside torch as
+        `RuntimeError: trace: expected a matrix, but got tensor with dim 3`
+    and was CPU-INVISIBLE, because the contract tests pass `[3,3]` operands on
+    BOTH sides and so never exercise the batched path. This function now SELECTS
+    one channel and ASSERTS `[3,3]` out; `ad_of` asserts `[3,3]` in. The fault now
+    fails loudly at the boundary with a named message instead of inside linalg.
     """
-    evals, evecs = torch.linalg.eig(disp.to(torch.complex64))
-    log_disp = (evecs @ torch.diag_embed(torch.log(evals))
-                @ evecs.conj().transpose(-2, -1))
-    return [log_disp]
+    if disp.dim() == 2:
+        single = disp
+    elif disp.dim() == 3:
+        if not 0 <= int(channel) < int(disp.shape[0]):
+            raise ValueError(
+                "generators_from_displacement: channel %r out of range for batch %d"
+                % (channel, int(disp.shape[0])))
+        single = disp[int(channel)]
+    else:
+        raise ValueError(
+            "generators_from_displacement: expected [3,3] or [N,3,3], got %s"
+            % (tuple(disp.shape),))
+    if tuple(single.shape) != (3, 3):
+        raise ValueError(
+            "generators_from_displacement: selected operand is %s, expected [3,3]"
+            % (tuple(single.shape),))
+    evals, evecs = torch.linalg.eig(single.to(torch.complex64))
+    log_single = (evecs @ torch.diag_embed(torch.log(evals))
+                  @ evecs.conj().transpose(-2, -1))
+    return [log_single]
 
 
 def relative_displacement(u_to: torch.Tensor, u_from: torch.Tensor) -> torch.Tensor:

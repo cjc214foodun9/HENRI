@@ -23,6 +23,24 @@ SSH=(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=
 mkdir -p "$DEST"
 ALL_OK=1
 
+echo "=== 0. WAIT FOR ARM SENTINELS (detached arms outlive this SSH session) ==="
+# FIXES THE RUN #2 FAILURE MODE. The RFSS arm was truncated at 7/38 records with
+# "Connection to ssh2.vast.ai closed by remote host", and egress then pulled a
+# PARTIAL jsonl -- a truncated arm is indistinguishable from a mechanism failure
+# unless complete telemetry is guaranteed. The arms now launch DETACHED and write
+# an `exit_code` sentinel; egress waits for both sentinels over FRESH SSH
+# connections, so a dropped session cannot cost a paid arm's data.
+for ARM in BASELINE RFSS; do
+  SENT="$RWT/telemetry_uhr03_$ARM/exit_code"
+  for i in $(seq 1 60); do
+    RCW=$("${SSH[@]}" "cat '$SENT' 2>/dev/null" 2>/dev/null | tr -d '\r\n')
+    if [ -n "$RCW" ]; then echo "  $ARM sentinel present: exit_code=$RCW"; break; fi
+    sleep 10
+  done
+  [ -n "${RCW:-}" ] || echo "  $ARM SENTINEL_MISSING after 600s (telemetry may be partial)"
+done
+
+echo
 echo "=== 1. EGRESS WITH SHA-256 GATE ==="
 for ARM in BASELINE RFSS; do
   RD="$RWT/telemetry_uhr03_$ARM"
