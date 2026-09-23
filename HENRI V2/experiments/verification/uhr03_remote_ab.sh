@@ -57,14 +57,24 @@ REMOTE_SHA=$("${SSH[@]}" "if [ -f '$WT/HENRI V2/models/henri_decoder_checkpoint.
 echo "remote overlay sha16 = $REMOTE_SHA"
 if [ "$REMOTE_SHA" != "75572389083455a3" ]; then
     echo "--- transferring the 799,034,119 B overlay ---"
-    mkdir -p "$LOCALAPPDATA/Temp/_uhr03_overlay/models"
+    # DEFECT FIXED HERE: scp to a remote path containing a SPACE ('HENRI V2')
+    # word-splits on the remote side. Stage into a no-space path, then mv
+    # remotely inside a heredoc block where the space is properly quoted.
     SRC="C:/Users/chan/Desktop/HENRI 7B SWARM/.worktrees/semantic-backbone/HENRI V2/models/henri_decoder_checkpoint.pt"
-    [ -f "$LOCALAPPDATA/Temp/_uhr03_overlay/models/henri_decoder_checkpoint.pt" ] || cp "$SRC" "$LOCALAPPDATA/Temp/_uhr03_overlay/models/"
+    [ -f "$SRC" ] || { echo "LOCAL_OVERLAY_MISSING: $SRC"; exit 1; }
+    echo "local: $(stat -c '%s bytes' "$SRC" 2>/dev/null || python -c "import os,sys;print(os.path.getsize(sys.argv[1]),'bytes')" "$SRC")"
     scp -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes \
-        -i "$KEY" -P "$PORT" \
-        "$LOCALAPPDATA/Temp/_uhr03_overlay/models/henri_decoder_checkpoint.pt" \
-        "root@$HOST:$WT/HENRI V2/models/henri_decoder_checkpoint.pt" || { echo "SCP_FAIL"; exit 1; }
-    "${SSH[@]}" "sha256sum '$WT/HENRI V2/models/henri_decoder_checkpoint.pt'; stat -c '%s bytes' '$WT/HENRI V2/models/henri_decoder_checkpoint.pt'"
+        -i "$KEY" -P "$PORT" "$SRC" "root@$HOST:$RWT/_ckpt_stage.pt" || { echo "SCP_FAIL"; exit 1; }
+    "${SSH[@]}" bash -s -- "$RWT" "$WT" <<'REMOTE'
+set -eu
+RWT="$1"; WT="$2"
+mkdir -p "$WT/HENRI V2/models"
+mv "$RWT/_ckpt_stage.pt" "$WT/HENRI V2/models/henri_decoder_checkpoint.pt"
+O="$WT/HENRI V2/models/henri_decoder_checkpoint.pt"
+sha256sum "$O"
+stat -c '%s bytes' "$O"
+echo "verify_prefix=$(sha256sum "$O" | cut -c1-10)"
+REMOTE
 fi
 
 echo
