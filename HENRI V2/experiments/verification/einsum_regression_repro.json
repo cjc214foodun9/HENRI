@@ -1,0 +1,78 @@
+{
+ "checks": {
+  "basis_source": "chromodynamic_grounding.GELL_MANN_BASIS",
+  "basis_shape": [
+   8,
+   3,
+   3
+  ],
+  "lie_element_uses_self_num_channels": false,
+  "lie_element_literals_8192": false,
+  "lie_element_source": [
+   "    def lie_element(self, action: int, gell_mann_basis: torch.Tensor) -> torch.Tensor:",
+   "        \"\"\"Materialize D_a = i * sum_k theta_a[k] * lambda_k as [N,3,3].\"\"\"",
+   "        theta = self.theta_a[action]",
+   "        basis = gell_mann_basis.to(theta.device)  # keep complex (im generators)",
+   "        return 1j * torch.einsum(\"na,aij->nij\", theta.to(basis.dtype), basis)"
+  ],
+  "chain_64": {
+   "num_channels": 64,
+   "store_ctor_ok": true,
+   "gens_shapes": [
+    [
+     3,
+     3
+    ],
+    [
+     3,
+     3
+    ],
+    [
+     3,
+     3
+    ],
+    [
+     3,
+     3
+    ]
+   ],
+   "macro_field_shape": [
+    64,
+    3,
+    3
+   ],
+   "chain_ok": true
+  },
+  "chain_8192": {
+   "num_channels": 8192,
+   "store_ctor_ok": true,
+   "gens_shapes": [
+    [
+     3,
+     3
+    ],
+    [
+     3,
+     3
+    ],
+    [
+     3,
+     3
+    ],
+    [
+     3,
+     3
+    ]
+   ],
+   "macro_field_shape": [
+    8192,
+    3,
+    3
+   ],
+   "chain_ok": true
+  }
+ },
+ "errors": [],
+ "traceback": null,
+ "verdict": "PASS"
+}

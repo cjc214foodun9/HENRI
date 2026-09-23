@@ -742,8 +742,38 @@ def run():
             StationarityDissipationThermostat)
         from chromodynamic_grounding import GELL_MANN_BASIS
         _num_actions = len(orch.decoder.id_to_action)
+        # MACRO-FIELD RESOLUTION vs THE RUN'S BLOCK COUNT (diagnosed 2026-10-12).
+        # `SU3FieldWaveTransducer.field_to_wave` emits N*8 for a [B,N,3,3] field
+        # (universal_data_transducer.py:117), and the Sagnac references are
+        # num_blocks*8 wide. So the veto is evaluable ONLY when this store's
+        # num_channels equals SCALE["num_blocks"]. MEASURED
+        # (experiments/verification/root_cause_num_channels.json):
+        #   num_channels 8192 (hardcoded) -> 65536-wide macro wave vs 512-wide refs at
+        #                                    num_blocks=64 -> the veto raises on EVERY
+        #                                    step and records UNAVAILABLE_SHAPE_MISMATCH
+        #   num_channels 64               -> 512-wide, MATCHES the refs, and the veto
+        #                                    then runs and reaches BOTH hard_vetoed
+        #                                    values with NO bridge
+        #
+        # WHY THIS IS FLAG-GATED RATHER THAN ALWAYS ON. Binding to SCALE removes the
+        # width mismatch in dual_channel_sagnac_veto, but a SECOND coupled 8192 remains
+        # downstream in the macro-option path: a `"nij,njk->nik"` einsum then pairs the
+        # 64-wide macro field with an 8192-wide operand and raises
+        #   RuntimeError: einsum(): subscript n has size 8192 for operand 1 which does
+        #   not broadcast with previously seen size 64        (64/64 steps, MEASURED)
+        # so enabling this alone MOVES the failure instead of removing it. Per the
+        # project rule that the existing default path is preserved unless an
+        # experiment explicitly changes it, the default below keeps the historical
+        # constant and the flag opts into the scale-bound form once that link is fixed.
+        #
+        # NOTE ON PRODUCTION: at GPU scale SCALE["num_blocks"] == 8192, so this flag is
+        # a NO-OP on CUDA either way. The defect and this fix are confined to the
+        # reduced-scale CPU path.
+        _num_channels = (int(SCALE["num_blocks"])
+                         if os.environ.get("HENRI_MACRO_NUM_CHANNELS", "0") == "1"
+                         else 8192)
         action_outcome_store = ActionOutcomeGeneratorStore(
-            num_actions=_num_actions, num_channels=8192, lr=0.1).to(DEVICE)
+            num_actions=_num_actions, num_channels=_num_channels, lr=0.1).to(DEVICE)
         stationarity_thermostat = StationarityDissipationThermostat(
             num_actions=_num_actions)
         _p820_gm_basis = GELL_MANN_BASIS.to(DEVICE)
@@ -757,7 +787,7 @@ def run():
                 pretrain_action_generators)
             _prior_info = pretrain_action_generators(
                 action_outcome_store, _p820_gm_basis, device=str(DEVICE),
-                num_channels=8192, seed=824)
+                num_channels=_num_channels, seed=824)
             print(f"[phase824] Meta-D_a prior armed: {_prior_info}")
         orch.planner._action_outcome_store = action_outcome_store
         print(f"[phase820] action-outcome store + thermostat armed "

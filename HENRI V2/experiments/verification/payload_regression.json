@@ -1,0 +1,68 @@
+{
+ "files": {
+  "pre_fix_bridge_off": {
+   "path": "C:\\Users\\chan\\HENRI_telemetry_exports\\production_run_1790116642.jsonl",
+   "exists": true,
+   "records": 69,
+   "mentions_opine_info": 60,
+   "mentions_sagnac": 361,
+   "mentions_sagnac_veto_key": 60,
+   "mentions_gate_status": 60,
+   "mentions_hard_vetoed": 0,
+   "mentions_delta_axiom": 0,
+   "mentions_macro_option": 0,
+   "sagnac_veto_payload_keys": {
+    "gate_status": 60,
+    "detail": 60
+   },
+   "opine_like_keys": {},
+   "veto_like_dict_keys": {
+    "gate_status": 60,
+    "detail": 60
+   }
+  },
+  "pre_fix_bridge_on": {
+   "path": "C:\\Users\\chan\\HENRI_telemetry_exports\\production_run_1790116691.jsonl",
+   "exists": true,
+   "records": 69,
+   "mentions_opine_info": 60,
+   "mentions_sagnac": 361,
+   "mentions_sagnac_veto_key": 60,
+   "mentions_gate_status": 0,
+   "mentions_hard_vetoed": 60,
+   "mentions_delta_axiom": 60,
+   "mentions_macro_option": 0,
+   "sagnac_veto_payload_keys": {
+    "delta_axiom": 60,
+    "delta_epistemic": 60,
+    "hard_vetoed": 60
+   },
+   "opine_like_keys": {},
+   "veto_like_dict_keys": {
+    "delta_axiom": 60,
+    "delta_epistemic": 60,
+    "hard_vetoed": 60
+   }
+  },
+  "post_fix_bridge_off": {
+   "path": "C:\\Users\\chan\\HENRI_telemetry_exports\\production_run_1790117826.jsonl",
+   "exists": true,
+   "records": 73,
+   "mentions_opine_info": 64,
+   "mentions_sagnac": 321,
+   "mentions_sagnac_veto_key": 0,
+   "mentions_gate_status": 0,
+   "mentions_hard_vetoed": 0,
+   "mentions_delta_axiom": 0,
+   "mentions_macro_option": 0,
+   "sagnac_veto_payload_keys": {},
+   "opine_like_keys": {},
+   "veto_like_dict_keys": {
+    "error": 64
+   }
+  }
+ },
+ "notes": [
+  "H1: opine_info IS present but WITHOUT a sagnac_veto key -> a different arm builds it (the fall-back-to-single-action branch). The macro-option branch is no longer taken."
+ ]
+}

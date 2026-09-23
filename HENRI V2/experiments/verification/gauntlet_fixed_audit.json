@@ -1,0 +1,52 @@
+{
+ "arms": {
+  "bridge_off": {
+   "path": "C:\\Users\\chan\\HENRI_telemetry_exports\\production_run_1790117826.jsonl",
+   "exists": true,
+   "records": 73,
+   "bad_lines": 0,
+   "n": 0,
+   "unavailable": 0,
+   "passed": 0,
+   "vetoed": 0,
+   "error": 0,
+   "other": 0,
+   "gate_status_values": {},
+   "error_msgs": {},
+   "hard_vetoed_true": 0,
+   "hard_vetoed_false": 0,
+   "delta_axiom_min": null,
+   "delta_axiom_max": null,
+   "both_values_present": false
+  },
+  "bridge_on": {
+   "path": "C:\\Users\\chan\\HENRI_telemetry_exports\\production_run_1790117826.jsonl",
+   "exists": true,
+   "records": 73,
+   "bad_lines": 0,
+   "n": 0,
+   "unavailable": 0,
+   "passed": 0,
+   "vetoed": 0,
+   "error": 0,
+   "other": 0,
+   "gate_status_values": {},
+   "error_msgs": {},
+   "hard_vetoed_true": 0,
+   "hard_vetoed_false": 0,
+   "delta_axiom_min": null,
+   "delta_axiom_max": null,
+   "both_values_present": false
+  }
+ },
+ "errors": [
+  "OFF arm: expected every payload UNAVAILABLE, got {'path': 'C:\\\\Users\\\\chan\\\\HENRI_telemetry_exports\\\\production_run_1790117826.jsonl', 'exists': True, 'records': 73, 'bad_lines': 0, 'n': 0, 'unavailable': 0, 'passed': 0, 'vetoed': 0, 'error': 0, 'other': 0, 'gate_status_values': {}, 'error_msgs': {}, 'hard_vetoed_true': 0, 'hard_vetoed_false': 0, 'delta_axiom_min': None, 'delta_axiom_max': None, 'both_values_present': False}",
+  "ON arm: hard_vetoed did not take both values -> gate not proven live. passed=0 vetoed=0 unavailable=0 error=0"
+ ],
+ "verdicts": {
+  "off_all_unavailable": false,
+  "off_no_hard_vetoed_key": true,
+  "on_both_values": false
+ },
+ "verdict": "FAIL"
+}

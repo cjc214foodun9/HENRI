@@ -1,0 +1,103 @@
+{
+ "trees": {
+  "worktree": {
+   "root": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\.worktrees\\semantic-backbone\\HENRI V2",
+   "exists": true,
+   "runner_exists": true,
+   "bytes": 197175,
+   "lines": 3486,
+   "crlf": 3486,
+   "sha256_16": "f115356141582768",
+   "needle_counts": {
+    "isinstance_form": 1,
+    "name_assign": 0,
+    "name_cmp": 0,
+    "candidate_elems": 0,
+    "veto_stage": 0,
+    "shape_candidate": 0,
+    "hint_field": 0,
+    "gate_status": 2,
+    "unavailable_label": 1,
+    "width_bridge": 0,
+    "veto_debug": 1,
+    "explicit_epsilon": 1
+   },
+   "opine_info_lines": [
+    2337,
+    2350
+   ],
+   "except_veto_lines": [
+    2300,
+    2401
+   ],
+   "isinstance_lines": [
+    2327
+   ],
+   "name_cmp_lines": [],
+   "contested_file": {
+    "exists": false
+   },
+   "efe_planner": {
+    "lines": 1762,
+    "def_field_to_wave_count": 0,
+    "mention_count": 5,
+    "def_lines": []
+   }
+  },
+  "main": {
+   "root": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2",
+   "exists": true,
+   "runner_exists": true,
+   "bytes": 182483,
+   "lines": 3266,
+   "crlf": 3266,
+   "sha256_16": "ae565f591c1a7615",
+   "needle_counts": {
+    "isinstance_form": 0,
+    "name_assign": 0,
+    "name_cmp": 0,
+    "candidate_elems": 0,
+    "veto_stage": 0,
+    "shape_candidate": 0,
+    "hint_field": 0,
+    "gate_status": 0,
+    "unavailable_label": 0,
+    "width_bridge": 0,
+    "veto_debug": 0,
+    "explicit_epsilon": 0
+   },
+   "opine_info_lines": [
+    2206,
+    2219
+   ],
+   "except_veto_lines": [
+    2204,
+    2270
+   ],
+   "isinstance_lines": [],
+   "name_cmp_lines": [],
+   "contested_file": {
+    "exists": false
+   },
+   "efe_planner": {
+    "lines": 1762,
+    "def_field_to_wave_count": 0,
+    "mention_count": 5,
+    "def_lines": []
+   }
+  }
+ },
+ "verdict": {
+  "handler_form": "ISINSTANCE",
+  "extra_fields_present": false,
+  "runner_lines": 3486,
+  "opine_info_lines": [
+   2337,
+   2350
+  ],
+  "efe_planner_defines_field_to_wave": 0,
+  "contested_file_exists": false
+ },
+ "rendering_supported": false,
+ "conclusion": "ADVISOR RENDERING IS NOT SUPPORTED by the bytes: my receipts are correct and the rendering is stale or fabricated"
+}

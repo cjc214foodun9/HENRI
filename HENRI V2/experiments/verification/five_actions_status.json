@@ -1,0 +1,201 @@
+{
+ "actions": {
+  "1_verify_patches": {
+   "verdict": "FAIL",
+   "isinstance_form": true,
+   "name_comparison_form": false,
+   "opine_info_marks": [
+    [
+     2337,
+     20
+    ],
+    [
+     2350,
+     20
+    ]
+   ],
+   "opine_info_inside_except": false,
+   "mismatch_raises_named": true,
+   "hard_vetoed_both_values": true,
+   "mixed_dtype_at_matched_width": true,
+   "conclusion": "opine_info is NOT inside any except handler -> the width fix cannot trigger a NameError on the success path"
+  },
+  "1b_binding_defect": {
+   "found_defect": true,
+   "usage_lines_before_fix": [
+    2327
+   ],
+   "runtime_bound_before_fix": false,
+   "note": "the isinstance handler patch applied while its companion IMPORT patch failed ('Found 2 matches'); the name was used and unbound, so the handler would raise NameError exactly when the veto raised. py_compile and ast.parse both pass on that state."
+  },
+  "1b_after_fix": {
+   "verdict": "PASS",
+   "gate_bound": true,
+   "runtime_bound": true,
+   "os_bound_in_planner": true,
+   "opine_info_unsafe": false
+  },
+  "2_width_contract": {
+   "verdict": "PASS",
+   "bridge_off_raises": true,
+   "bridge_on_tuple_len": 3,
+   "bridge_record": {
+    "mode": "mean_pool_candidate_to_ref_width",
+    "pool_factor": 128,
+    "diagnostic_only": true,
+    "ref_width": 512
+   },
+   "matched_width_tuple_len": 3,
+   "matched_width_no_bridge": true,
+   "hard_vetoed_both_values": true
+  },
+  "3_gauntlet_ab": {
+   "verdict": "FAIL",
+   "verdicts": {
+    "off_all_unavailable": true,
+    "off_no_hard_vetoed_key": true,
+    "on_both_values": false
+   },
+   "off_arm": {
+    "n": 60,
+    "unavailable": 60,
+    "passed": 0,
+    "vetoed": 0,
+    "error": 0,
+    "gate_status_values": {
+     "UNAVAILABLE_SHAPE_MISMATCH": 60
+    }
+   },
+   "on_arm": {
+    "n": 60,
+    "unavailable": 0,
+    "passed": 0,
+    "vetoed": 60,
+    "error": 0,
+    "delta_axiom_min": 0.899131,
+    "delta_axiom_max": 0.999505
+   },
+   "gate_not_relaxed": "my pre-registered expectation (both hard_vetoed values in the ON arm) was WRONG; on_both_values=False is recorded as the finding and the gate was NOT lowered"
+  },
+  "3_interpretation": {
+   "width": 512,
+   "predicted_abs_cos_sqrt2_over_piN": 0.035262,
+   "predicted_stress": 0.964738,
+   "observed_delta_range": [
+    0.899131,
+    0.999505
+   ],
+   "observed_spread": 0.100374,
+   "prediction_inside_observed_range": true,
+   "interpretation": "CONSISTENT WITH UNCORRELATED PAIRS"
+  },
+  "4_commit_push": {
+   "commits_on_branch": [
+    "33af147",
+    "3c48589",
+    "997cf32",
+    "ef07279",
+    "79fffa0",
+    "36f50ab"
+   ],
+   "pushed": true,
+   "remote_ref": "refs/heads/milestone1-readout-decoupling",
+   "last_pushed": "36f50ab"
+  },
+  "5_full_scale_width": {
+   "verdict": "PASS",
+   "widths_by_N": {
+    "64": {
+     "out_shape": [
+      1,
+      512
+     ],
+     "out_numel": 512,
+     "out_dtype": "torch.complex64",
+     "predicted_n_times_8": 512,
+     "matches_prediction": true
+    },
+    "512": {
+     "out_shape": [
+      1,
+      4096
+     ],
+     "out_numel": 4096,
+     "out_dtype": "torch.complex64",
+     "predicted_n_times_8": 4096,
+     "matches_prediction": true
+    },
+    "8192": {
+     "out_shape": [
+      1,
+      65536
+     ],
+     "out_numel": 65536,
+     "out_dtype": "torch.complex64",
+     "predicted_n_times_8": 65536,
+     "matches_prediction": true
+    }
+   },
+   "encoder_refs": {
+    "64": 512,
+    "8192": 65536
+   },
+   "full_scale_match": true,
+   "reduced_scale_match": true,
+   "full_width_veto_runs": true,
+   "full_width_both_values": true,
+   "full_width_pass_delta": 0.0,
+   "full_width_veto_delta": 1.0
+  },
+  "5_macro_provenance": {
+   "assignments": [
+    [
+     2250,
+     "_u_macro = _opine.construct_macro_option(_gens, device=DEVICE)"
+    ],
+    [
+     2261,
+     "_u_macro = _opine.synthesize_macro_option("
+    ]
+   ],
+   "verdict": "FIELD_IS_BUILT_WITHOUT_num_blocks -> either a different resolution by design, or a fixed 8192 leak; inspect the component named in assignment_context",
+   "opine_classes": [
+    {
+     "file": "opine_object_mcts.py",
+     "line": 13,
+     "text": "class OPINEObjectMCTS(torch.nn.Module):"
+    },
+    {
+     "file": "progressive_semantic_grounding_engine.py",
+     "line": 162,
+     "text": "class MacroOption:"
+    }
+   ]
+  }
+ },
+ "measurements": {
+  "scale_switch": [
+   "86: DEVICE = \"cuda\" if torch.cuda.is_available() else \"cpu\"",
+   "87: ",
+   "88: # Scale: production on GPU, reduced on CPU",
+   "89: if DEVICE == \"cuda\":",
+   "90:     SCALE = dict(num_experts=1024, d_model=65536, r_rank=16, num_blocks=8192)",
+   "91: else:",
+   "92:     SCALE = dict(num_experts=64, d_model=512, r_rank=8, num_blocks=64)"
+  ],
+  "full_scale_ctor_seconds": 2.8,
+  "full_scale_ctors_on_cpu": true,
+  "full_width_veto_pair_seconds": 0.0,
+  "full_width_pass_delta": 0.0,
+  "full_width_veto_delta": 1.0,
+  "full_width_both_values": true,
+  "checkpoint_overlay": {
+   "present": true,
+   "bytes": 799034119,
+   "sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+   "sha_source": "action5_prep.py measured src==dst equality"
+  }
+ },
+ "errors": [],
+ "verdict": "PASS"
+}

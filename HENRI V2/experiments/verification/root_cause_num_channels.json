@@ -1,0 +1,87 @@
+{
+ "checks": {
+  "R1_opine_ctor_sites": [
+   [
+    2232,
+    "_opine = OPINEObjectMCTS("
+   ]
+  ],
+  "R1_ctor_context": {
+   "2232": [
+    "2229:                         orch.planner._su3_transducer = SU3FieldWaveTransducer(",
+    "2230:                             _p820_gm_basis).to(DEVICE)",
+    "2231:                     _trans = orch.planner._su3_transducer",
+    "2232:                     _opine = OPINEObjectMCTS(",
+    "2233:                         num_channels=su3_field.shape[0], option_horizon=4)",
+    "2234:                     _psi_t = _trans.field_to_wave(",
+    "2235:                         su3_field.unsqueeze(0)).squeeze(0).detach()",
+    "2236:                     # Single-action branch (chosen action's generator). Use the",
+    "2237:                     # CURRENT step's EFE-chosen `action` \u2014 `game_action` is the",
+    "2238:                     # macro-loop variable bound later (UnboundLocalError on the"
+   ]
+  },
+  "R1_passes_num_channels": false,
+  "R1_passes_num_blocks": false,
+  "R2_construct_body": [
+   "23:     def construct_macro_option(",
+   "24:         self, generator_sequence: list,",
+   "25:         device: str | None = None,",
+   "26:     ) -> torch.Tensor:",
+   "27:         \"\"\"Compose a sequence of [3,3] complex Lie generators into one",
+   "28:         [num_channels, 3, 3] unitary macro-operator.",
+   "29: ",
+   "30:         generator_sequence: list of [3,3] complex matrices (su(3) Lie",
+   "31:             elements, i.e. i * sum_k theta_k lambda_k). The same generator is",
+   "32:             applied to every channel (channel-homogeneous option); the",
+   "33:             composite is SU(3) in each channel when each exp(gen) is SU(3).",
+   "34:         Returns: [num_channels, 3, 3] composite unitary (det 1 per channel).",
+   "35:         \"\"\"",
+   "36:         dev = device or (",
+   "37:             generator_sequence[0].device if generator_sequence else \"cpu\")",
+   "38:         composite_u = torch.eye(",
+   "39:             3, dtype=torch.complex64, device=dev",
+   "40:         ).repeat(self.num_channels, 1, 1)",
+   "41:         for gen in generator_sequence:",
+   "42:             u_step = torch.matrix_exp(gen.to(dev)).unsqueeze(0)",
+   "43:             composite_u = torch.einsum(",
+   "44:                 \"nij,njk->nik\", composite_u, u_step.expand(",
+   "45:                     self.num_channels, 3, 3))",
+   "46:         return composite_u",
+   "47: "
+  ],
+  "R2_uses_self_num_channels": true,
+  "R2_init_line": "18: def __init__(self, num_channels: int = 8192, option_horizon: int = 4):",
+  "R3_default_8192_field_shape": [
+   8192,
+   3,
+   3
+  ],
+  "R3_default_8192_wave_numel": 65536,
+  "R3_default_8192_effective_num_channels": 8192,
+  "R3_run_matched_64_field_shape": [
+   64,
+   3,
+   3
+  ],
+  "R3_run_matched_64_wave_numel": 512,
+  "R3_run_matched_64_effective_num_channels": 64,
+  "R3_widths": {
+   "default_8192": 65536,
+   "run_matched_64": 512
+  },
+  "R4_ref_width_num_blocks_64": 512,
+  "R4_default_matches_ref": false,
+  "R4_run_matched_matches_ref": true,
+  "R5_runs_at_reduced_scale_matched": true,
+  "R5_pass_hard": false,
+  "R5_veto_hard": true,
+  "R5_both_values": true,
+  "R5_pass_delta": 0.0,
+  "R5_veto_delta": 1.0
+ },
+ "errors": [],
+ "notes": [
+  "CONFIRMED: a num_channels=64 macro field produces a 512-wide wave that MATCHES a num_blocks=64 run's references, so the veto would run at reduced scale WITHOUT the diagnostic bridge."
+ ],
+ "verdict": "PASS"
+}
