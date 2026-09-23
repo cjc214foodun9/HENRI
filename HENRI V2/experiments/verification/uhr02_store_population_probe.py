@@ -58,6 +58,13 @@ from henri_external_outcome_refactor_module import (  # noqa: E402
 from uhr_rfss import project_option_to_boundary_family as project  # noqa: E402
 from uhr02_exteroceptive_gate import delta  # noqa: E402
 
+# Measurement probe, not a training script: autograd is off for the whole file.
+# This is also what silences the `requires_grad` float() warnings a committed
+# artifact should not emit -- the store's `theta_a` is an nn.Parameter, so any
+# tensor derived through `lie_element` carries grad_fn unless autograd is off.
+# (Warning site observed: `float((trA - trB).abs().max())`.)
+torch.set_grad_enabled(False)
+
 K = 2048
 ACTION = 3
 _s3 = math.sqrt(3.0)
