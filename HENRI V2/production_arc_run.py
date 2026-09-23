@@ -2170,6 +2170,10 @@ def run():
             # names WHICH conjunct decided the C1 update so a silent skip can
             # never be invisible again.
             _opt_gens = None
+            # UHR-03 channel contract: candidate and reference must be read at
+            # the SAME channel of the channel-resolved store.
+            _opt_channel = None
+            _opt_actions = None
             p820_extero_info = None
             p820_guard_state = None
             if HENRI_ARC_ACTION_EFE and efe_table:
@@ -2343,10 +2347,37 @@ def run():
                     _g_single = float(compute_rt_information_gain(
                         _psi_t,
                         _trans.field_to_wave(_u_single.unsqueeze(0)).squeeze(0)))
+                    # UHR-03 CHANNEL CONTRACT (measured defect, kill-run #3,
+                    # 2026-09-23). `theta_a` is CHANNEL-RESOLVED:
+                    # `encode_su3_color_field(...).reshape(-1,3,3)` maps grid cell
+                    # (r,c) -> channel side*r+c, so `lie_element(a)[0]` is ONE
+                    # cell. On the pinned ft09 grid channel 0 did not move, so the
+                    # candidate AND the reference were both the IDENTITY
+                    # (relative_group_element = 3.0 = |Tr(I)|) and every residual
+                    # was exactly 0.0 -- 16/16 records looked successful while the
+                    # comparison carried no information. Candidate, reference and
+                    # invalid population now read ONE channel: the store's
+                    # strongest-transition channel for this action, chosen
+                    # deterministically (argmax, ties by index). Falls back to 0
+                    # while the store is still empty (step 0).
+                    _opt_channel = 0
+                    if (HENRI_UHR02_EXTERO_GATE
+                            and action_outcome_store is not None):
+                        from uhr02_exteroceptive_gate import (
+                            transition_channel as _xtrans)
+                        _cc = _xtrans(action_outcome_store, int(_aid))
+                        if _cc is not None:
+                            _opt_channel = int(_cc)
+                    _opt_actions = [_aid, _aid + 1, _aid + 2, _aid + 3]
                     # 4-step macro-option branch over the generator store.
+                    # SEPARATION OF CONCERNS: the MACRO-OPTION stays at the legacy
+                    # channel 0. It feeds the Sagnac veto through
+                    # compute_rt_information_gain, so re-pointing it would silently
+                    # alter the pre-UHR-03 veto path and confound UHR-01. FORM B
+                    # reads its OWN channel-consistent candidate below instead.
                     _gens = [action_outcome_store.lie_element(
                         a % action_outcome_store.num_actions, _p820_gm_basis)[0]
-                        for a in (_aid, _aid + 1, _aid + 2, _aid + 3)]
+                        for a in _opt_actions]
                     _u_macro = _opine.construct_macro_option(_gens, device=DEVICE)
                     # UHR-01: the generator list that DEFINES the option the veto
                     # will judge. Kept beside `_u_macro` so the RT-gain path and the
@@ -2366,6 +2397,7 @@ def run():
                         _u_macro = _opine.synthesize_macro_option(
                             _best, action_outcome_store, _p820_gm_basis,
                             device=DEVICE)
+                        _opt_actions = list(_best)
                         _opt_gens = [action_outcome_store.lie_element(
                             a % action_outcome_store.num_actions,
                             _p820_gm_basis)[0] for a in _best]
@@ -3081,16 +3113,33 @@ def run():
                                     normalize_roles as _xnorm,
                                     recorded_transition_generators as _xrec,
                                     relative_displacement as _xrel,
+                                    sampling_band as _xband,
                                 )
                                 _xtau = float(_XTAU)
                                 _roles = _xnorm(
                                     boundary_batch[0].detach(), "axiom_roles")
-                                _truth = _xgens(_xrel(_u_next, su3_field).detach())
-                                if _opt_gens is None:
+                                # SAME channel as the candidate (UHR-03 channel
+                                # contract). `_truth` is the generator of the
+                                # transition just OBSERVED, at that channel.
+                                _xchan = int(_opt_channel or 0)
+                                _disp = _xrel(_u_next, su3_field).detach()
+                                _truth = _xgens(_disp, channel=_xchan)
+                                # FORM B reads its OWN candidate at the SAME
+                                # channel as the reference, so the comparison is
+                                # internally consistent WITHOUT touching the
+                                # macro-option that feeds the Sagnac veto.
+                                _cand = None
+                                if (_opt_actions is not None
+                                        and action_outcome_store is not None):
+                                    _cand = [action_outcome_store.lie_element(
+                                        int(a) % action_outcome_store.num_actions,
+                                        _p820_gm_basis)[_xchan]
+                                        for a in _opt_actions]
+                                if _cand is None:
                                     p820_extero_info = {
                                         "status": "UNAVAILABLE_NO_CANDIDATE_OPTION"}
                                 else:
-                                    _xr = _xres(_roles, _opt_gens, _truth,
+                                    _xr = _xres(_roles, _cand, _truth,
                                                 _p820_gm_basis)
                                     # INVALID POPULATION (the discriminating
                                     # control). The candidate is held FIXED and
@@ -3105,11 +3154,11 @@ def run():
                                             action_outcome_store.num_actions):
                                         _t2 = _xrec(
                                             action_outcome_store, int(_a2),
-                                            _p820_gm_basis)
+                                            _p820_gm_basis, channel=_xchan)
                                         if _t2 is None:
                                             continue
                                         _xall[int(_a2)] = round(_xres(
-                                            _roles, _opt_gens, _t2,
+                                            _roles, _cand, _t2,
                                             _p820_gm_basis).delta_pred, 6)
                                     _others = [v for k, v in _xall.items()
                                                if k != int(_aid)]
@@ -3147,6 +3196,28 @@ def run():
                                         "argmin_hits_truth": (
                                             None if not _others or _own is None
                                             else bool(_own == min(_xall.values()))),
+                                        # VACUITY GUARD (measured defect, UHR-03
+                                        # kill-run #3, 2026-09-23). With every
+                                        # candidate delta TIED, min() is a tie, so
+                                        # every candidate "argmins to truth" and
+                                        # argmin_hits_truth read True 15/15 while
+                                        # carrying NO information (the residuals
+                                        # were exactly 0.0 because BOTH operands
+                                        # were the identity). C1 is only
+                                        # informative when the candidate spread
+                                        # exceeds the sampling band. These two
+                                        # fields make the ambiguity visible in
+                                        # telemetry instead of in a post-mortem.
+                                        "delta_spread": (
+                                            None if len(_xall) < 2 else round(
+                                                max(_xall.values())
+                                                - min(_xall.values()), 9)),
+                                        "spread_above_band": (
+                                            None if len(_xall) < 2 else bool(
+                                                (max(_xall.values())
+                                                 - min(_xall.values()))
+                                                > _xband(_roles.shape[0]))),
+                                        "channel": int(_xchan),
                                         "delta_state": round(_xr.delta_state, 6),
                                         "delta_identity": round(_xr.delta_identity, 6),
                                         "relative_group_element": round(

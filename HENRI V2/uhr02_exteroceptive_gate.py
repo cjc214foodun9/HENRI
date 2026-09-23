@@ -415,15 +415,40 @@ def forge_edge(
 UNAVAILABLE_NO_RECORDED_TRANSITION = "UNAVAILABLE_NO_RECORDED_TRANSITION"
 
 
-def recorded_transition_generators(
-    store, action: int, gell_mann_basis: torch.Tensor, min_norm: float = 1e-5
-) -> list | None:
-    """The generators of the most recently LEARNED transition for `action`.
+def transition_channel(store, action: int, min_norm: float = 1e-5) -> int | None:
+    """The channel index whose LEARNED transition is strongest for `action`.
 
-    Returns None when the store has not accumulated any transition for that
-    action (theta_a == 0). A caller MUST map None to an explicit UNAVAILABLE
-    marker rather than to a residual: an undefined comparison is not evidence
-    that the gate failed.
+    CHANNEL-SEMANTICS CONTRACT (measured defect, UHR-03 kill-run #3, 2026-09-23).
+    `theta_a` is CHANNEL-RESOLVED: `encode_su3_color_field(...).reshape(-1,3,3)`
+    maps grid cell `(r,c)` to channel `side*r + c`, so channel 0 is ONE cell.
+    My first wiring guarded on the AGGREGATE `theta_a[action].norm()` (0.750022 on
+    the live store) but RETURNED `lie_element(action)[0]` -- channel 0 -- whose
+    norm was 3.7e-08. The guard tested one quantity, the consumer read another, and
+    16/16 telemetry records looked successful while comparing two IDENTITIES
+    (`relative_group_element = 3.0` is `|Tr(I)|`). That is the signature-proof
+    defect, not a mechanism failure.
+
+    Selecting the argmax-norm channel makes the guard and the consumer read the
+    SAME quantity. Ties break by index, so the choice is deterministic.
+    """
+    if store is None or action is None or int(action) < 0:
+        return None
+    with torch.no_grad():
+        th = store.theta_a[int(action)]
+        norms = th.norm(dim=-1) if th.dim() > 1 else th.norm().reshape(1)
+        c = int(torch.argmax(norms))
+        if float(norms[c]) <= min_norm:
+            return None
+        return c
+
+
+def recorded_transition_generators(
+    store, action: int, gell_mann_basis: torch.Tensor,
+    min_norm: float = 1e-5, channel: int | None = None,
+) -> list | None:
+    """The generator of the strongest LEARNED transition for `action`.
+
+    Returns None when no channel of `theta_a[action]` exceeds `min_norm`.
 
     `min_norm` CALIBRATION (measured, UHR-03 kill-run #1, 2026-09-23). The
     default was 1e-8, which sits BELOW the measurement's own noise floor: the
@@ -441,10 +466,18 @@ def recorded_transition_generators(
     if store is None or action is None or int(action) < 0:
         return None
     with torch.no_grad():
+        if channel is None:
+            channel = transition_channel(store, action, min_norm)
+            if channel is None:
+                return None
         th = store.theta_a[int(action)]
-        if float(th.norm()) <= min_norm:
+        if not 0 <= int(channel) < int(th.shape[0]):
+            raise ValueError(
+                "recorded_transition_generators: channel %r out of range for %d"
+                % (channel, int(th.shape[0])))
+        if float(th[int(channel)].norm()) <= min_norm:
             return None
-        return [store.lie_element(int(action), gell_mann_basis)[0]]
+        return [store.lie_element(int(action), gell_mann_basis)[int(channel)]]
 
 
 def exteroceptive_residual_vs_recorded(
@@ -559,4 +592,5 @@ __all__ = [
     "recorded_transition_generators",
     "relative_group_element",
     "sampling_band",
+    "transition_channel",
 ]

@@ -64,8 +64,51 @@ to `resolve_zone_c_dsn()`, and both arms raised at line 722
 its consumer is a mechanism that does not exist. A new `ENV_GATE` asserts every
 flag inside the interpreter and fails closed before the arm starts.
 
-**AMENDMENT 3 (2026-09-23, before any kill-run-#2 data).** Two changes, both
-forced by measurement in kill-run #1:
+**AMENDMENT 4 (2026-09-23, factual record — not a criterion change).** Record the
+ACTUAL step count used in each kill-run, and freeze it for #4.
+
+| run | steps | why |
+|---|---|---|
+| #1 | 8 | initial value (environment was static; irrelevant to the outcome) |
+| #2 | 32 | EMA convergence: `theta_a` is an EMA at `lr=0.1`, so ~20+ updates per action are needed to push `\|\|theta\|\|` clear of the measured FORM-B collapse boundary `0.05` |
+| #3 | 32 | identical to #2 by design (only the gate flag may differ) |
+| #4 | 32 | frozen here |
+
+Audit note: Amendment 1 wrote "8 -> 16" and the launchers then used 32. The
+verdict for each run must cite the step count that ACTUALLY ran, so the audit
+chain cannot carry an ambiguity of the same class this session was spent
+eliminating. `32` is the frozen value from #2 onward; #1's `8` is recorded as
+superseded and is not comparable.
+
+**ADMISSIBILITY NOTICE — read before citing Amendments 5 and 6.**
+
+Kill-run #3 was judged against the criteria frozen BEFORE it: Amendments 1-3
+(`tau = 0.3500`, `min_norm = 1e-5`, env pinned `ft09-0d8bbf25`, C1/C2/C3 as
+written in section 3, G1-G5). Run #3's result in `uhr03_verdict.md` cites ONLY
+those.
+
+Amendments 5 and 6 below were written AFTER run #3 was reduced. They CHANGE the
+mechanism (which channel is read) and the statistic (C1 gains a spread
+precondition). They are therefore **post-hoc with respect to run #3** and are
+declared here as a NEW PRE-REGISTRATION governing kill-run #4 ONLY. Run #3 is NOT
+re-judged under them. This distinction is recorded because the failure mode it
+prevents — moving the goalposts after seeing the data — is the same class of
+defect this session spent its time eliminating.
+
+**AMENDMENT 5 (2026-09-23, post-hoc; governs run #4 only).** The candidate,
+the reference, and the invalid population are read at ONE channel of the
+channel-resolved store: the strongest-transition channel for the acting action
+(`transition_channel`, argmax norm, ties by index). Reason: measured in run #3,
+`lie_element(a)[0]` is a SINGLE grid cell, and on the pinned `ft09` grid that
+cell did not move, so the candidate AND the reference were both the identity
+(`relative_group_element = 3.000000 = |Tr(I)|`) and every residual was exactly
+`0.0` while 16/16 records reported `status = "OK"`.
+
+**AMENDMENT 6 (2026-09-23, post-hoc; governs run #4 only).** C1 gains a vacuity
+precondition: a record counts toward C1 only when `spread_above_band == True`, i.e.
+`max(delta_extero_all) - min(delta_extero_all) > sampling_band(8192) = 2.4705e-03`.
+Run #3's `argmin_hits_truth = True 15/15` was a TIE artifact (all deltas `0.0`)
+and is recorded as NOT a C1 pass.
 
 (a) **The environment must be PINNED to a moving one.** The store is trained from
 the OBSERVED frame transition, not from demos, so kill-run #1 read an identity.
