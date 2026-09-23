@@ -45,6 +45,51 @@ class OPINEObjectMCTS(torch.nn.Module):
                     self.num_channels, 3, 3))
         return composite_u
 
+    def project_to_boundary_family(
+        self,
+        generator_sequence: list,
+        gell_mann_basis: torch.Tensor,
+        axiom_roles: torch.Tensor,
+        role_permutation: torch.Tensor | None = None,
+        device: str | None = None,
+    ) -> torch.Tensor:
+        """UHR-01: carry the boundary-axiom ROLES through THIS option's action.
+
+        This is the unification point: the object that COMPOSES the macro-option
+        also PROJECTS it, so the candidate the veto judges and the option the
+        planner ranks are the same object, in one representation family.
+
+        WHY THIS LIVES HERE
+        `construct_macro_option` builds a channel-homogeneous composite of su(3)
+        generators. Its natural adjoint action on the 8-dimensional su(3) algebra
+        is a real orthogonal map SO(8) -- and the Zone C boundary-axiom block is an
+        8-vector. The su(3) generator index and the axiom block index therefore
+        address the SAME 8 dimensions, which is the structural correspondence the
+        Sagnac veto needs. Before this projection the veto compared the SU(3)
+        transducer's complex flat wave against a real [num_blocks, 8] axiom wave:
+        MEASURED delta_axiom in [0.996498, 0.999966] with hard_vetoed True 8/8. The
+        gate ran and correctly reported that the two objects were unrelated.
+
+        Returns real float32 [num_blocks, 8], per-block L2 norm 1.0 +-
+        `uhr_rfss.BLOCK_NORM_TOL`, i.e. inside the family the loader already
+        verifies. The default-OFF flag (`HENRI_UHR01_RFSS`) is read by the CALLER;
+        this method is inert unless invoked.
+
+        NOT an algebra embedding: SU(3) is not representable in Cl(3,0) or Cl(1,3)
+        (no 2-dimensional irrep), and no such claim is made or used. This is a
+        role-filler VECTOR-SPACE binding built from the adjoint action.
+        """
+        # Lazy import: keeps this module importable without the UHR-01 sidecar on
+        # the default path, and avoids an import cycle at module load.
+        from uhr_rfss import project_option_to_boundary_family
+        return project_option_to_boundary_family(
+            generator_sequence,
+            gell_mann_basis,
+            axiom_roles,
+            role_permutation=role_permutation,
+            device=device,
+        )
+
     def unitarity_error(self, macro_option: torch.Tensor) -> float:
         """Mean ||U U^dag - I||_F over channels (G1-8.22 metric)."""
         diff = (

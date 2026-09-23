@@ -269,6 +269,15 @@ HENRI_ARC_SCORECARD_DELTA = os.environ.get("HENRI_ARC_SCORECARD_DELTA", "0") == 
 # re-rank, no deadlock.
 HENRI_ARC_SAGNAC_VETO = os.environ.get("HENRI_ARC_SAGNAC_VETO", "0") == "1"
 
+# UHR-01 (default OFF): place the macro-option CANDIDATE in the boundary-axiom
+# representation family before the Sagnac comparison. Measured defect this
+# removes: the unprojected candidate is the SU(3) transducer's complex flat
+# [65536] wave while the axiom is a real [num_blocks, 8] grid wave, so the
+# index-paired similarity returned delta_axiom in [0.9965, 0.99997] with
+# hard_vetoed True 8/8 -- the gate RAN and reported that the two objects were
+# unrelated. With the flag OFF the production path is byte-identical.
+HENRI_UHR01_RFSS = os.environ.get("HENRI_UHR01_RFSS", "0") == "1"
+
 # Phase 7.5 CONN Module B: read-only AdaptiveViscoelasticThermostat shadow.
 # When set, the production thermostat's scalar math (anisotropic friction /
 # effective LR) is evaluated on the live per-step signals and emitted as
@@ -2317,6 +2326,11 @@ def run():
                         a % action_outcome_store.num_actions, _p820_gm_basis)[0]
                         for a in (_aid, _aid + 1, _aid + 2, _aid + 3)]
                     _u_macro = _opine.construct_macro_option(_gens, device=DEVICE)
+                    # UHR-01: the generator list that DEFINES the option the veto
+                    # will judge. Kept beside `_u_macro` so the RT-gain path and the
+                    # RFSS projection read ONE option identity; the MCTS branch below
+                    # replaces the option, so it must update `_opt_gens` with it.
+                    _opt_gens = list(_gens)
                     # Phase 8.25: RT-guided deep rollouts to depth k=8
                     # (default OFF via HENRI_ARC_SAGNAC_MCTS). Ranks
                     # macro-option programs by RT information gain; the
@@ -2330,6 +2344,9 @@ def run():
                         _u_macro = _opine.synthesize_macro_option(
                             _best, action_outcome_store, _p820_gm_basis,
                             device=DEVICE)
+                        _opt_gens = [action_outcome_store.lie_element(
+                            a % action_outcome_store.num_actions,
+                            _p820_gm_basis)[0] for a in _best]
                     _psi_macro = _trans.field_to_wave(
                         _u_macro.unsqueeze(0)).squeeze(0)
                     _g_macro = float(compute_rt_information_gain(
@@ -2344,9 +2361,67 @@ def run():
                         try:
                             _axiom_ref = boundary_batch[0].detach().reshape(-1)
                             _world_ref = state_wave.detach().reshape(-1)
+                            # UHR-01 (default OFF): place the candidate INSIDE the
+                            # axiom's own representation family before comparing.
+                            # `boundary_batch[0]` is the real [num_blocks, 8] axiom
+                            # wave; the unprojected candidate is the SU(3) complex
+                            # flat wave from `field_to_wave`. Comparing across those
+                            # two families is what produced delta_axiom ~0.998 with
+                            # 8/8 hard vetoes (the gate ran and said the objects were
+                            # unrelated). The row width is asserted below, so a
+                            # future change of axiom family fails loudly here rather
+                            # than silently degrading the comparison again.
+                            _cand = _psi_macro
+                            _uhr_info = None
+                            if HENRI_UHR01_RFSS:
+                                # LAZY import, deliberately inside the flag branch:
+                                # an unconditional import would let a missing module
+                                # fail-close the ENTIRE OPINE telemetry block on the
+                                # default path (the block's broad except would catch
+                                # ImportError). With the flag OFF this module is never
+                                # imported and the default path is byte-identical.
+                                from uhr_rfss import (
+                                    BLOCK_NORM_TOL as _UHR_TOL,
+                                    block_norm_deviation as _uhr_block_norm_dev,
+                                )
+                                _axiom_roles = boundary_batch[0].detach().to(
+                                    torch.float32)
+                                # FAIL-LOUD FAMILY ASSERTION (non-vacuous): the
+                                # axiom operand must be a real [num_blocks, 8]
+                                # wave, and the projection must reproduce its
+                                # element count exactly. A vacuous comparison
+                                # (x != x) is deliberately NOT used here.
+                                if (int(_axiom_roles.dim()) != 2
+                                        or int(_axiom_roles.shape[-1]) != 8):
+                                    raise ValueError(
+                                        "UHR01: axiom family is not [num_blocks, 8]"
+                                        f" (got {tuple(_axiom_roles.shape)})")
+                                # The projection is reached THROUGH the option
+                                # object: one reader (OPINEObjectMCTS owns the
+                                # binding), and the runner is the single consumer.
+                                _proj = _opine.project_to_boundary_family(
+                                    _opt_gens, _p820_gm_basis, _axiom_roles,
+                                    device=DEVICE)
+                                _bnd = float(_uhr_block_norm_dev(_proj))
+                                if _bnd > _UHR_TOL:
+                                    raise ValueError(
+                                        "UHR01: projected candidate violates the "
+                                        f"loader block-norm contract ({_bnd:.3e})")
+                                if int(_proj.numel()) != int(_axiom_ref.numel()):
+                                    raise ValueError(
+                                        "UHR01: projected width "
+                                        f"{int(_proj.numel())} != axiom width "
+                                        f"{int(_axiom_ref.numel())}")
+                                _cand = _proj.reshape(-1)
+                                _uhr_info = {
+                                    "mode": "rfss_role_filler",
+                                    "n_blocks": int(_axiom_roles.shape[0]),
+                                    "block_norm_dev": round(_bnd, 10),
+                                    "n_generators": int(len(_opt_gens)),
+                                }
                             _d_ax, _d_ep, _hard = (
                                 sagnac_planner.dual_channel_sagnac_veto(
-                                    _psi_macro, _axiom_ref, _world_ref,
+                                    _cand, _axiom_ref, _world_ref,
                                     # EXPLICIT epsilon, matching what the planner's
                                     # own child expansion passes. Omitting it takes the
                                     # ADAPTIVE branch, which raises the threshold when
@@ -2365,6 +2440,8 @@ def run():
                                 "delta_epistemic": round(_d_ep, 6),
                                 "hard_vetoed": bool(_hard),
                             }
+                            if _uhr_info is not None:
+                                _veto["uhr01"] = _uhr_info
                             _hard_vetoed = bool(_hard)
                         except Exception as _veto_exc:
                             # THREE OUTCOMES, KEPT DISTINCT. The original handler
