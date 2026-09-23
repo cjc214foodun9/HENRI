@@ -113,7 +113,12 @@ echo "device_fix=$(grep -c 'device=dev' 'HENRI V2/uhr02_exteroceptive_gate.py')"
 # does not stop is not a gate. This one EXITS.
 G=0
 [ "$(git rev-parse HEAD)" = "$SHA" ] || { echo "GATE_FAIL sha_mismatch"; G=1; }
-[ "$(grep -c 'min_norm: float = 1e-5' 'HENRI V2/uhr02_exteroceptive_gate.py')" = "1" ] || { echo "GATE_FAIL floor"; G=1; }
+# DEFECT FIXED (kill-run #4): this gate demanded EXACTLY ONE 'min_norm: float = 1e-5'.
+# The channel-contract fix added a SECOND legitimate signature, so the gate went stale
+# and FALSE-NEGATIVED on correct code (measured: floor_1e-5=2 -> GATE_FAIL floor).
+# Assert presence + absence-of-the-stale-floor instead of an exact count.
+[ "$(grep -c 'min_norm: float = 1e-5' 'HENRI V2/uhr02_exteroceptive_gate.py')" -ge "1" ] || { echo "GATE_FAIL floor"; G=1; }
+[ "$(grep -c 'min_norm: float = 1e-8' 'HENRI V2/uhr02_exteroceptive_gate.py')" -eq "0" ] || { echo "GATE_FAIL floor_stale"; G=1; }
 [ "$(grep -c 'device=dev' 'HENRI V2/uhr02_exteroceptive_gate.py')" -ge "2" ] || { echo "GATE_FAIL device"; G=1; }
 [ "$(stat -c '%s' "$O" 2>/dev/null)" = "799034119" ] || { echo "GATE_FAIL overlay"; G=1; }
 if [ "$G" -ne 0 ]; then echo "PRECONDITION_GATE_FAIL: refusing to run arms on stale code"; exit 1; fi
@@ -152,10 +157,18 @@ import henri_external_outcome_refactor_module as M
 import uhr02_exteroceptive_gate as G
 from chromodynamic_grounding import GELL_MANN_BASIS, encode_su3_color_field
 
+# FIXTURE CONTRACT (defect fixed 2026-09-23, kill-run #4).
+# The previous preflight trained TWO actions on the SAME grid pair, so they learned
+# the IDENTICAL transition and `own == invalid_min` EXACTLY -> margin 0.0 -> FAIL.
+# A tie between two actions means the fixture is degenerate, not that the mechanism
+# is content-blind. This fixture gives each trained action a DISTINCT transition and
+# keeps the HARD comparator (same cells, different delta) that isolates content.
 dev = "cuda" if torch.cuda.is_available() else "cpu"
 print("  PREFLIGHT device:", dev, "torch:", torch.__version__)
 basis = GELL_MANN_BASIS.to(dev)
-NB = 8192
+NB, SIDE = 8192, 16
+TRUE_R, EASY_R = (4, 6), (10, 12)          # HARD shares TRUE_R -> same support
+AID, HARD, EASY = 2, 3, 4
 
 def pad(f, nb=NB):
     k = f.shape[0]
@@ -164,33 +177,45 @@ def pad(f, nb=NB):
     eye = torch.eye(3, dtype=f.dtype, device=f.device).unsqueeze(0)
     return torch.cat([f, eye.repeat(nb - k, 1, 1)], dim=0)
 
-base = np.random.default_rng(7).integers(0, 4, size=(16, 16), dtype=np.int64)
+base = np.random.default_rng(7).integers(0, 4, size=(SIDE, SIDE), dtype=np.int64)
+PK_T = list(np.random.default_rng(100).choice((TRUE_R[1]-TRUE_R[0])*SIDE, 8, replace=False))
+PK_E = list(np.random.default_rng(200).choice((EASY_R[1]-EASY_R[0])*SIDE, 8, replace=False))
 
-def grid(d):
-    x = base.copy()
-    for j in range(8):
-        x[4, j] = (x[4, j] + d) % 4
-    return torch.tensor(x, dtype=torch.int64, device=dev)
+def edit(g, rows, pick, d):
+    o = g.copy(); r0, r1 = rows
+    cells = [(i, j) for i in range(r0, r1) for j in range(SIDE)]
+    for p in pick:
+        i, j = cells[int(p) % len(cells)]
+        o[i, j] = (o[i, j] + d) % 4
+    return o
 
-enc = lambda g: pad(encode_su3_color_field(g.unsqueeze(0)).reshape(-1, 3, 3))
+g2 = lambda d: edit(base, TRUE_R, PK_T, d)
+g3 = lambda d: edit(base, EASY_R, PK_E, d)
+enc = lambda g: pad(encode_su3_color_field(
+    torch.tensor(g, dtype=torch.int64, device=dev).unsqueeze(0)).reshape(-1, 3, 3))
 
-store = M.ActionOutcomeGeneratorStore(num_actions=5, num_channels=NB, lr=0.1).to(dev)
+store = M.ActionOutcomeGeneratorStore(num_actions=6, num_channels=NB, lr=0.1).to(dev)
 for k in range(16):
-    store.update_generator(enc(grid(1)), 2, enc(grid(2)), basis)   # true  delta +1
-    store.update_generator(enc(grid(1)), 3, enc(grid(3)), basis)   # HARD  same cells, +2
-    store.update_generator(enc(grid(1)), 1, enc(grid(2)), basis)   # other
+    store.update_generator(enc(g2(1)), AID,  enc(g2(2)), basis)   # TRUE  delta +1, TRUE_R
+    store.update_generator(enc(g2(1)), HARD, enc(g2(3)), basis)   # HARD  delta +2, SAME cells
+    store.update_generator(enc(g3(1)), EASY, enc(g3(2)), basis)   # EASY  disjoint cells
 
-u_t, u_n = enc(grid(1)), enc(grid(2))
+u_t, u_n = enc(g2(1)), enc(g2(2))
 disp = G.relative_displacement(u_n, u_t).detach()
 print("  disp device:", disp.device, "shape:", tuple(disp.shape))
 chs = G.observed_change_channels(disp)
 print("  observed_change_channels n=", len(chs), " sample:", chs[:6])
 roles = torch.nn.functional.normalize(torch.randn(8192, 8, device=dev), p=2, dim=-1)
-info = G.pooled_domain_statistic(roles, store, disp, basis, 2)
+info = G.pooled_domain_statistic(roles, store, disp, basis, AID)
+allv = {str(k): v for k, v in (info.get("delta_pooled_all") or {}).items()}
+print("  pooled per-action:", allv)
 print("  POOLED status=%s n=%s own=%s inv_min=%s margin=%s own_is_min=%s above_band=%s" % (
     info.get("status"), info.get("n_channels"), info.get("delta_pooled_own"),
     info.get("delta_pooled_invalid_min"), info.get("margin"),
     info.get("own_is_min"), info.get("margin_above_band")))
+own = info.get("delta_pooled_own"); sh = allv.get(str(HARD)); ua = allv.get("0")
+print("  ANCHORS  own=%s  S_hard(same cells,+2)=%s  untrained=%s" % (own, sh, ua))
+print("  CONTENT TEST own < S_hard:", (None not in (own, sh) and own < sh))
 ok = (info.get("status") == "OK" and (info.get("n_channels") or 0) >= 2
       and info.get("own_is_min") is True and info.get("margin_above_band") is True)
 print("  POOLED_PREFLIGHT_%s" % ("PASS" if ok else "FAIL"))
