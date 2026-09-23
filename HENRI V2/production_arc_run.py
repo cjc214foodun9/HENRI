@@ -3162,6 +3162,22 @@ def run():
                         "updated": False,
                         "skipped_by": "outer_gate",
                     }
+                # Fallback receipt: if NEITHER branch ran, the ancestor flag
+                # itself is disabled. Without this, a dead-flag ancestor emits
+                # only `None` and the cause stays invisible -- the exact
+                # ambiguity that cost a GPU run in UHR-01.
+                if HENRI_TRACE_UPDATE_GATES and p820_guard_state is None:
+                    p820_guard_state = {
+                        "outer_flag": bool(HENRI_ARC_ACTION_EFE),
+                        "store_present": action_outcome_store is not None,
+                        "external_outcome_efe": bool(EXTERNAL_OUTCOME_EFE),
+                        "obs_next_present": obs_next is not None,
+                        "frame_present": bool(getattr(obs_next, "frame", None)),
+                        "su3_field_present": su3_field is not None,
+                        "learning_frozen": bool(learning_frozen()),
+                        "updated": False,
+                        "skipped_by": "external_outcome_efe_disabled",
+                    }
                 # Telemetry: expose the new P0 statistics.
                 _p0_extra = {}
                 if HENRI_ARC_SCORECARD_DELTA:
