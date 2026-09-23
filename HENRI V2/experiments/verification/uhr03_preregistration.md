@@ -261,7 +261,7 @@ hardcoded constant alone.
 read, the run must emit and the reducer must assert:
 `truth_operand_untouched is True`; `nontrivial_transition is True`;
 `magnitude_only_risk is False`; `n_recorded >= 2`; `channel != 0`;
-`role_coherence` at or above the measured isotropic baseline (0.011129 at K=8192).
+`role_coherence` **is not a valid precondition and is withdrawn**. Measured 2026-09-23: the emitted statistic is `float(roles.mean(dim=0).norm())` (path `/phase820_extero_info/role_coherence`); its isotropic baseline over 400 draws at K=8192, d=8 is **mean 0.010780, sd 0.002649**. Observed: run #5 mean 0.010221 (z = -0.84, n=16), run #6 mean 0.010162 (z = -0.93) -> **statistically indistinguishable from isotropic**. The former threshold (0.011129, near 1/sqrt(K)=0.011049) would have FAILED a working mechanism. This is consistent with the local domain control `formB_isotropic_sep = 3.638e-01` (147x band), which separates WITH isotropic roles. **Replacement precondition:** role structure is admissible when `n_admissible >= 2` and the pooled margin clears the band; role *content* is not required and must not be asserted as the blocker. POST-HOC with respect to kill-runs #5 and #6; governs run #7 onward.
 Any failure => `BLOCKED_INFRASTRUCTURE`, consuming NO kill budget.
 
 **A8.4 -- C1 is a MARGIN condition, not a spread condition.**
