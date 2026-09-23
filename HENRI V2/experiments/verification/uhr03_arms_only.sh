@@ -57,6 +57,38 @@ case "$DEP_OUT" in
 esac
 
 echo
+echo "=== 0b. DETACHED-LAUNCH MECHANISM PREFLIGHT (fail-closed, ~15 s) ==="
+# The arms below launch DETACHED (setsid nohup ... </dev/null) and report their
+# exit code through an `exit_code` sentinel file, because a FOREGROUND ssh child
+# dies with the session: measured in kill-run #2, the RFSS arm truncated at 7/38
+# records when SSH dropped, and egress then pulled a PARTIAL jsonl that is
+# indistinguishable from a mechanism failure. That mechanism is now UNTESTED on
+# this container, so test the MECHANISM ITSELF first: run a stub that exits 7,
+# detach it, and REQUIRE the sentinel to appear with the right value. A local
+# Windows smoke cannot cover this (setsid is Linux-only), so the test runs here.
+MECH_OUT=$("${SSH[@]}" bash -s -- "$RWT" <<'REMOTE'
+RWT="$1"
+T="$RWT/_mech"; rm -rf "$T"; mkdir -p "$T"
+printf '%s\n' "bash -c 'echo MECH_STUB_RAN; exit 7' > $T/out.log 2>&1" "echo \$? > $T/exit_code" > "$T/launch.sh"
+rm -f "$T/exit_code"
+setsid nohup bash "$T/launch.sh" >/dev/null 2>&1 </dev/null &
+for i in $(seq 1 15); do sleep 1; [ -f "$T/exit_code" ] && break; done
+if [ -f "$T/exit_code" ] && [ "$(cat "$T/exit_code")" = "7" ] && grep -q MECH_STUB_RAN "$T/out.log" 2>/dev/null; then
+  echo "MECHANISM_PREFLIGHT PASS sentinel=7"
+else
+  echo "MECHANISM_PREFLIGHT FAIL sentinel=$(cat "$T/exit_code" 2>/dev/null || echo ABSENT)"
+  echo "MECH_FAIL setsid=$(command -v setsid >/dev/null 2>&1 && echo YES || echo NO) nohup=$(command -v nohup >/dev/null 2>&1 && echo YES || echo NO)"
+fi
+REMOTE
+)
+echo "$MECH_OUT"
+case "$MECH_OUT" in
+  *"MECHANISM_PREFLIGHT PASS"*) echo "MECH_GATE_PASS" ;;
+  *) echo "MECH_GATE_FAIL: refusing to run arms whose telemetry cannot be guaranteed"
+     exit 1 ;;
+esac
+
+echo
 echo "=== 1. REFRESH WORKTREE TO THE CARRIER SHA (fetch from the public URL) ==="
 "${SSH[@]}" RWT="$RWT" WT="$WT" REPO="$REPO" SHA="$SHA" PUBURL="$PUBURL" bash -s <<'REMOTE'
 set -u
