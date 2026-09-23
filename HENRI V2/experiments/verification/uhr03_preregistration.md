@@ -64,6 +64,24 @@ to `resolve_zone_c_dsn()`, and both arms raised at line 722
 its consumer is a mechanism that does not exist. A new `ENV_GATE` asserts every
 flag inside the interpreter and fails closed before the arm starts.
 
+**AMENDMENT 3 (2026-09-23, before any kill-run-#2 data).** Two changes, both
+forced by measurement in kill-run #1:
+
+(a) **The environment must be PINNED to a moving one.** The store is trained from
+the OBSERVED frame transition, not from demos, so kill-run #1 read an identity.
+`HENRI_SINGLE_ENV=ft09` is added to the COMMON block (measured 8/8 moving in
+UHR-01); without it the API's first-listed env is used and it rotated to the
+static `lp85`.
+
+(b) **The admissibility floor is raised `1e-8 -> 1e-5`** in
+`recorded_transition_generators`. The old floor sat BELOW the measurement's own
+noise floor: `_matrix_log_eig` returns ~`3.2e-06` for `delta_U = U U^dag` on
+float32 and exactly `0.0` only for an exact identity, so `1e-8` admitted a pure
+identity's residue as a "recorded transition". `1e-5` is ~3x the noise floor and
+5 orders below the smallest genuinely learned transition (`||H||=1e-03 ->
+9.05e-02`). Below the new floor the gate returns UNAVAILABLE, which is `BLOCKED`,
+never a negative result.
+
 Both arms run with the SAME environment except the one experimental flag:
 
 ```text

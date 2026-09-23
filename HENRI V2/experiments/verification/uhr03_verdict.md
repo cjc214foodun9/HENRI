@@ -183,11 +183,29 @@ string makes an infrastructure failure look like a scientific arm.
 The blocker is **upstream of the store**: `BLOCKED_NO_DEMOS`, `demo_pair_count=0`,
 static frame. A moving environment is required before FORM B means anything.
 
-1. Supply demos so `demo_pair_count > 0` and the frame actually changes. The live
-   switch is `HENRI_ARC_PUBLIC_INGRESS=1` +
-   `HENRI_ARC_PUBLIC_INGRESS_MANIFEST=<manifest>` (line 707-712; exact task-ID →
-   corpus-path + sha256 mapping, no fuzzy fallback). Corpus root per
-   `henri-architecture`: `C:/Users/chan/henri_data/ARC-AGI/data`.
+1. **Pin a MOVING environment.** AMENDED after measurement: the store is trained
+   from the OBSERVED frame transition (`update_generator(su3_field, _aid, _u_next,
+   ...)` at line 3037, where `_u_next` encodes `obs_next.frame`), NOT from demo
+   pairs. So the precondition is a frame that MOVES, not demos. The environment is
+   auto-selected as `env_ids[:args.envs]` (line 1031) -- the FIRST env the API
+   returns -- and it rotated between runs. Movement, from my own telemetry
+   inventory:
+
+   | run | env | moved / probes |
+   |---|---|---|
+   | `on.jsonl`, `g8ab5_post.jsonl` | `ka59-38d34dbb` | 57/60, 59/60 |
+   | `production_run_1788892314` | `ka59-38d34dbb` | 59/60 |
+   | UHR-01 BASELINE / RFSS | `ft09-0d8bbf25` | 8/8, 8/8 |
+   | **UHR-03 BASELINE / RFSS** | `lp85-305b61c3` | **0/16, 0/16** |
+
+   Fix: pin with `HENRI_SINGLE_ENV=<prefix>` (lines 1025-1030 filter ALL available
+   environments by prefix, so API position does not matter). `ft09` measured moving.
+   Demos (`HENRI_ARC_PUBLIC_INGRESS=1` + manifest) are ORTHOGONAL: they gate the
+   in-context-align / target-grounding path (lines 1095-1129; loader `resolve_demos`
+   in `arc_public_ingress.py:134`), NOT the store update, so they are not required
+   for G1/G3. Corpus root: `C:/Users/chan/henri_data/ARC-AGI/data`.
+   NOTE: `load_demo_pairs` does NOT exist (0 sites in the committed blob); a symbol
+   by that name appeared only in a corrupted external extract.
 2. **Raise the admissibility floor** above the measured noise floor (`1e-8` →
    calibrated ≳ `1e-5`, justified against `3.2e-06`) so the gate separates
    "no transition" from "a transition" (§3a).

@@ -410,7 +410,7 @@ UNAVAILABLE_NO_RECORDED_TRANSITION = "UNAVAILABLE_NO_RECORDED_TRANSITION"
 
 
 def recorded_transition_generators(
-    store, action: int, gell_mann_basis: torch.Tensor, min_norm: float = 1e-8
+    store, action: int, gell_mann_basis: torch.Tensor, min_norm: float = 1e-5
 ) -> list | None:
     """The generators of the most recently LEARNED transition for `action`.
 
@@ -418,6 +418,19 @@ def recorded_transition_generators(
     action (theta_a == 0). A caller MUST map None to an explicit UNAVAILABLE
     marker rather than to a residual: an undefined comparison is not evidence
     that the gate failed.
+
+    `min_norm` CALIBRATION (measured, UHR-03 kill-run #1, 2026-09-23). The
+    default was 1e-8, which sits BELOW the measurement's own noise floor: the
+    store's log path (`henri_external_outcome_refactor_module._matrix_log_eig`)
+    returns a norm of ~3.2e-06 for `delta_U = U U^dag` on float32, and EXACTLY
+    0.0 only for an exact identity. A floor of 1e-8 therefore admits a pure
+    identity's numerical residue as a "recorded transition" -- it cannot
+    separate "no transition" from "a transition". Observed live: a static frame
+    gave `target_theta_norm = 1.8106915149473934e-06`, ABOVE the old floor, so
+    the gate would have compared against noise. 1e-5 is ~3x the measured floor
+    and 5 orders below the smallest genuinely learned transition
+    (`||H||=1e-03 -> 9.05e-02`). Raising it converts a spurious comparison into
+    an honest UNAVAILABLE, which is `BLOCKED`, never a negative result.
     """
     if store is None or action is None or int(action) < 0:
         return None

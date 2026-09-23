@@ -1,37 +1,47 @@
 #!/usr/bin/env bash
-# UHR-03 ARMS — kill-run #1 of 2. Instance already prepared (carrier a0a9e4e +
-# 799MB overlay verified sha256 7557238908...).
+# UHR-03 ARMS — kill-run #2 of 2. Instance 52289752 (restarted; disk + the 799 MB
+# overlay are preserved). The worktree is refreshed to the SHA given on argv.
 #
 # THE EXPERIMENTAL VARIABLE IS EXACTLY ONE FLAG: HENRI_UHR02_EXTERO_GATE (0 then 1).
 #
-# DEFECTS THIS VERSION FIXES (all measured, all mine):
-#  D1 (cost a full arm-pair) The common env block was passed as an ssh ARGV string.
-#     ssh joins argv into ONE line and the remote shell RE-SPLITS it, so `$5`
-#     captured only the first token. HENRI_OFFLINE_DIAG therefore never reached the
-#     interpreter -> `dsn` fell through to resolve_zone_c_dsn() -> both arms died at
-#     production_arc_run.py:722 with psycopg OperationalError 127.0.0.1:5434.
-#     Proof: line 720 `if dsn != "offline://surrogate":` guards 722, and line 533
-#     maps HENRI_OFFLINE_DIAG -> surrogate. A live DSN in the traceback PROVES the
-#     flag was absent. FIX: env is exported INSIDE the quoted heredoc; only
-#     space-free single tokens (RWT/WT/ARM/FLAG/STEPS) ride on argv. ENV_GATE now
-#     asserts every flag inside the interpreter and fails closed.
-#  D2 `if ! cmd 2>&1 | tail -1; then` -- `!` tested TAIL's status (always 0), so
-#     DEPS_FAIL was UNREACHABLE. A gate that cannot fail is not a gate. No pipe.
-#  D3 `PYTHONPATH=\\$PWD` in double quotes = literal backslash + a LOCALLY expanded
-#     path. Replaced with a heredoc where `$PWD` is remote.
-#  D4 Extraction used `"key": \{[^}]*\}` on NESTED json, which TRUNCATES at the
-#     first inner brace. Replaced with a real json parser (Python).
+# AMENDMENT 3 — both changes forced by kill-run #1 MEASUREMENT:
+#   (a) HENRI_SINGLE_ENV=ft09  PIN the environment. Kill-run #1 took the API's
+#       first-listed env (lp85-305b61c3) and the frame never moved (0/16 probes),
+#       so the store only ever saw an identity displacement. ft09 measured 8/8
+#       moving in UHR-01 (ft09-0d8bbf25). The env list rotates between runs, so
+#       an unpinned run is non-reproducible.
+#   (b) min_norm 1e-8 -> 1e-5 in recorded_transition_generators: the old floor sat
+#       BELOW the log path's own float32 noise floor (~3.2e-06 for U U^dag), so it
+#       admitted an identity's residue as a "recorded transition".
+#
+# DEFECTS ALREADY FIXED IN THIS FILE (all measured, all mine):
+#   D1  env passed as an ssh ARGV string was RE-SPLIT by the remote shell, so
+#       HENRI_OFFLINE_DIAG never reached the interpreter and dsn fell through to
+#       resolve_zone_c_dsn() -> both arms died at line 722 (psycopg 5434).
+#       Env now lives INSIDE the quoted heredoc, asserted by ENV_GATE in-process.
+#   D2  `if ! cmd | tail -1` tested TAIL's status (always 0): unreachable gate.
+#   D3  the dep gate demanded `import arcade` -> needs an X display (pyglet
+#       NoSuchDisplayException headless) and is required by NOTHING (0 hits).
+#   D4  nested-JSON regex truncated at the first inner brace -> real parser now.
+#
+# Usage: bash uhr03_arms_only.sh <host> <port> <sha>
 set -uo pipefail
 HOST="${1:?host}"; PORT="${2:?port}"
+# SHA optional: empty -> use the just-fetched public carrier ref ON THE HOST.
+# This keeps the driver (which passes only host+port) correct without a second
+# edit, and guarantees the remote worktree matches what I pushed.
+SHA="${3:-}"
 STEPS="${STEPS:-16}"
 KEY="$HOME/.ssh/id_ed25519"
+PUBURL="https://github.com/cjc214foodun9/HENRI.git"
 RWT="/workspace/henri-verify"; WT="$RWT/_uhr03"
 SSH=(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes
      -o ConnectTimeout=25 -o ServerAliveInterval=15 -i "$KEY" -p "$PORT" "root@$HOST")
 
-echo "STEPS=$STEPS"
+echo "SHA=$SHA STEPS=$STEPS"
+
 echo
-echo "=== 0. DEP GATE (arc_agi + torch) — no pipe, so it can actually fail ==="
+echo "=== 0. DEP GATE (arc_agi + torch; no pipe, so it can actually fail) ==="
 DEP_OUT=$("${SSH[@]}" bash -s <<'REMOTE'
 /usr/bin/python3 -c 'import arc_agi, torch; print("DEP_OK", torch.__version__)' 2>/dev/null
 echo "dep_rc=$?"
@@ -44,9 +54,29 @@ case "$DEP_OUT" in
 esac
 
 echo
-echo "=== 1. RUNNER SMOKE: module-level imports execute (line 41 = import arc_agi) ==="
+echo "=== 1. REFRESH WORKTREE TO THE CARRIER SHA (fetch from the public URL) ==="
+"${SSH[@]}" RWT="$RWT" WT="$WT" SHA="$SHA" PUBURL="$PUBURL" bash -s <<'REMOTE'
+set -u
+cd "$RWT" || { echo "RWT_MISSING $RWT"; exit 2; }
+git fetch "$PUBURL" "carrier/uhr-01-homologous-representation:refs/remotes/pub/uhr01" 2>&1 | tail -2
+if [ -z "$SHA" ]; then SHA="$(git rev-parse refs/remotes/pub/uhr01)"; echo "SHA_DEFAULTED_TO=$SHA"; fi
+cd "$WT" || { echo "WT_MISSING $WT"; exit 2; }
+git checkout -f --detach "$SHA" 2>&1 | tail -2
+echo "HEAD=$(git rev-parse HEAD)"
+echo "unexpected_sha=$([ "$(git rev-parse HEAD)" = "$SHA" ] && echo NO || echo YES)"
+echo "local_mods_lines=$(git status --porcelain=v1 -uall | wc -l)"
+O="HENRI V2/models/henri_decoder_checkpoint.pt"
+echo "overlay_bytes=$(stat -c '%s' "$O" 2>/dev/null || echo MISSING)"
+echo "overlay_sha16=$(sha256sum "$O" 2>/dev/null | cut -c1-16 || echo NA)"
+echo "flag_reads=$(grep -c 'HENRI_UHR02_EXTERO_GATE' 'HENRI V2/production_arc_run.py')"
+echo "floor_1e-5=$(grep -c 'min_norm: float = 1e-5' 'HENRI V2/uhr02_exteroceptive_gate.py')"
+echo "device_fix=$(grep -c 'device=dev' 'HENRI V2/uhr02_exteroceptive_gate.py')"
+REMOTE
+
+echo
+echo "=== 2. RUNNER SMOKE: module-level imports execute (line 41 = import arc_agi) ==="
 SMOKE_OUT=$("${SSH[@]}" RWT="$RWT" WT="$WT" bash -s <<'REMOTE'
-cd "$WT/HENRI V2" || { echo "CD_FAIL $WT"; exit 3; }
+cd "$WT/HENRI V2" || { echo "CD_FAIL"; exit 3; }
 export PYTHONPATH="$PWD"
 /usr/bin/python3 production_arc_run.py --help >/dev/null 2>&1
 echo "RUNNER_IMPORTS_rc=$?"
@@ -61,18 +91,19 @@ esac
 for ARM in BASELINE RFSS; do
   case "$ARM" in BASELINE) FLAG=0 ;; RFSS) FLAG=1 ;; esac
   echo
-  echo "=== 2. ARM=$ARM  HENRI_UHR02_EXTERO_GATE=$FLAG ==="
+  echo "=== 3. ARM=$ARM  HENRI_UHR02_EXTERO_GATE=$FLAG ==="
   "${SSH[@]}" RWT="$RWT" WT="$WT" ARM="$ARM" FLAG="$FLAG" STEPS="$STEPS" bash -s <<'REMOTE'
 set -u
 D="$RWT/telemetry_uhr03_$ARM"
 rm -rf "$D"; mkdir -p "$D"
-# --- env INSIDE the quoted heredoc: no local expansion, no remote re-split ---
+# ---- env INSIDE the quoted heredoc: no local expansion, no remote re-split ----
 export HENRI_ARC_SAGNAC_VETO=1
 export HENRI_UHR01_RFSS=1
 export HENRI_MACRO_NUM_CHANNELS=1
 export HENRI_OFFLINE_DIAG=1
 export EXTERNAL_OUTCOME_EFE=1
 export HENRI_TRACE_UPDATE_GATES=1
+export HENRI_SINGLE_ENV=ft09
 export HENRI_UHR02_EXTERO_GATE="$FLAG"
 export HENRI_TELEMETRY_DIR="$D"
 export EXPECT_FLAG="$FLAG"
@@ -87,6 +118,7 @@ want = {
     "HENRI_OFFLINE_DIAG": "1",
     "EXTERNAL_OUTCOME_EFE": "1",
     "HENRI_TRACE_UPDATE_GATES": "1",
+    "HENRI_SINGLE_ENV": "ft09",
     "HENRI_UHR02_EXTERO_GATE": os.environ.get("EXPECT_FLAG", "?"),
 }
 bad = {k: (os.environ.get(k), v) for k, v in want.items() if os.environ.get(k) != v}
@@ -98,15 +130,17 @@ _env_rc=$?
 
 cd "$WT/HENRI V2" || { echo "CD_FAIL"; exit 1; }
 export PYTHONPATH="$PWD"
-echo "--- run: phase823_live_gauntlet steps=$STEPS ---"
+echo "--- run: phase823_live_gauntlet steps=$STEPS env=ft09 ---"
 /usr/bin/python3 production_arc_run.py --mode phase823_live_gauntlet \
     --envs 1 --steps "$STEPS" > "$D/run.log" 2>&1
 _rc=$?
 echo "ARM=$ARM exit=$_rc   (nonzero => BLOCKED_INFRASTRUCTURE, NO science claim)"
 if [ "$_rc" -ne 0 ]; then
-  echo "--- run.log HEAD ---"; head -12 "$D/run.log"
-  echo "--- run.log TAIL ---"; tail -22 "$D/run.log"
+  echo "--- run.log HEAD ---"; head -10 "$D/run.log"
+  echo "--- run.log TAIL ---"; tail -20 "$D/run.log"
 fi
+echo "--- env + movement witnesses from run.log ---"
+grep -E "\[init\]|ingress|in-context|BLOCKED|ENV: " "$D/run.log" | head -8
 echo "--- files ---"; ls -l "$D"
 
 D="$D" /usr/bin/python3 - <<'PYX'
@@ -116,31 +150,59 @@ fs = sorted(glob.glob(os.path.join(D, "*.jsonl")))
 if not fs:
     print("NO_JSONL in", D); raise SystemExit(0)
 f = fs[0]
-raw = [l for l in open(f) if l.strip()]
-print("jsonl=%s lines=%d" % (os.path.basename(f), len(raw)))
 rows = []
-for l in raw:
-    try: rows.append(json.loads(l))
-    except Exception: pass
-print("parsed records:", len(rows))
-keys = set()
-for r in rows: keys |= set(r.keys())
-p8 = sorted(k for k in keys if k.startswith("phase820"))
-print("phase820_* keys:", p8)
-print("arbiter keys:", sorted(k for k in keys if "extero" in k or "guard" in k))
-for i, r in enumerate(rows):
-    p = {k: v for k, v in r.items() if k.startswith("phase820")}
-    print("-- step %d: %s" % (i, json.dumps(p, default=str)[:900]))
+for l in open(f):
+    if l.strip():
+        try: rows.append(json.loads(l))
+        except Exception: pass
+print("jsonl=%s lines=%d parsed=%d" % (os.path.basename(f), sum(1 for _ in open(f)), len(rows)))
+
+# --- THE PRECONDITION WITNESS: did the world move at all? ---
+fc = sum(1 for r in rows if (r.get("outcome_probe") or {}).get("frame_changed"))
+cc = sum(1 for r in rows if ((r.get("outcome_probe") or {}).get("changed_cells") or 0) > 0)
+print("MOVEMENT: frame_changed=%d/%d  changed_cells>0=%d/%d" % (fc, len(rows), cc, len(rows)))
+
+envs = sorted({str(r.get("env")) for r in rows if r.get("env")})
+print("envs:", envs)
+print("store sizes:", sorted({r.get("preference_store_size") for r in rows}))
+st = sorted({r.get("status") for r in rows if r.get("status")})
+print("statuses:", st)
+
+ui = [r["phase820_update_info"] for r in rows if r.get("phase820_update_info")]
+print("update_info n=%d" % len(ui))
+for k in ("target_theta_norm", "repeat_count", "stalled", "action", "temperature"):
+    print("   %-18s unique=%s" % (k, sorted({repr(u.get(k)) for u in ui})[:4]))
+
+gs = [r["phase820_guard_state"] for r in rows if r.get("phase820_guard_state")]
+print("guard_state n=%d" % len(gs))
+if gs:
+    print("   updated_true=%d" % sum(1 for g in gs if g.get("updated")))
+    print("   first=%s" % json.dumps(gs[0]))
+
+ex = [r["phase820_extero_info"] for r in rows if r.get("phase820_extero_info")]
+print("extero_info n=%d" % len(ex))
+print("   statuses:", sorted({str(e.get("status")) for e in ex}))
+for e in ex[:4]:
+    print("   ", json.dumps(e, default=str)[:420])
+if ex and ex[0].get("status") == "OK":
+    ok = [e for e in ex if e.get("status") == "OK"]
+    print("   C1 argmin_hits_truth: %d/%d" % (
+        sum(1 for e in ok if e.get("argmin_hits_truth")), len(ok)))
+    print("   C1 n_recorded values:", sorted({e.get("n_recorded") for e in ok}))
+    print("   C2 invalid_minus_own>0: %d/%d" % (
+        sum(1 for e in ok if (e.get("invalid_minus_own") or 0) > 0), len(ok)))
+    print("   C3 delta_extero distinct:", sorted({e.get("delta_extero") for e in ok})[:8])
+    print("   magnitude_only_risk:", sorted({e.get("magnitude_only_risk") for e in ok}))
+    print("   role_coherence:", sorted({e.get("role_coherence") for e in ok})[:5])
 PYX
 REMOTE
 done
 
 echo
-echo "=== 3. TELEMETRY TREE (remote) ==="
+echo "=== 4. TELEMETRY TREE (remote) ==="
 "${SSH[@]}" RWT="$RWT" bash -s <<'REMOTE'
 for a in BASELINE RFSS; do
-  echo "-- $a --"
-  ls -l "$RWT/telemetry_uhr03_$a" 2>/dev/null || echo "  ABSENT"
+  echo "-- $a --"; ls -l "$RWT/telemetry_uhr03_$a" 2>/dev/null || echo "  ABSENT"
 done
 REMOTE
 echo "UHR03_ARMS_DONE"
