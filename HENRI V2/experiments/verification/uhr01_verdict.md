@@ -69,22 +69,50 @@ The flag reached the process and the projection executed end-to-end.
 Δ_axiom = **exactly 0.0** for all 8 RFSS steps is a degeneracy signature, and I traced its cause:
 
 ```text
-preference_store_size = 0 at every step   ->  theta_a = 0
+theta_a never updated live (phase820_update_info = null at all 8 steps)
 lie_element:  1j * einsum(theta, basis)   ->  zero matrix
 construct_macro_option: matrix_exp(0)     ->  U = I
 Adjoint action: Ad(I)                     ->  I
 projection returns the axiom itself       ->  delta(cand, axiom) = 0.0
 ```
 
+**CORRECTION (caught in review, 2026-09-23).** An earlier draft of this section
+attributed the zeros to `preference_store_size = 0`. That was a **conflation of two
+different stores**, and it is wrong:
+
+| store | class | what it holds | telemetry field |
+|---|---|---|---|
+| pragmatic prior | `ContinuousHopfieldCleanup` (`efe_planner.py:323`) | waves from transitions with valence > 0 | `preference_store_size` |
+| action outcome generator | `ActionOutcomeGeneratorStore` (`henri_external_outcome_refactor_module.py:34`) | per-action su(3) angles `theta_a` | `phase820_update_info` |
+
+`lie_element` reads `self.theta_a`, i.e. the **generator** store. `preference_store_size`
+counts the **Hopfield** store. Both were zero/false in the run, but one is not the cause
+of the other. The measured cause is that `phase820_update_info` was `null` at every
+step, so `theta_a` was never written and stayed at its `torch.zeros(...)` initial value.
+
+The update call at `production_arc_run.py:3001` is real and reachable — it is guarded by
+`HENRI_ARC_ACTION_EFE and action_outcome_store is not None and obs_next is not None and
+obs_next.frame`, and mode `phase823_live_gauntlet` force-sets `HENRI_ARC_ACTION_EFE=1`
+(line 497). No `[phase820] update failed` line was emitted, so the inner guard
+(`_aid >= 0 and not learning_frozen() and su3_field is not None`) is where it stopped.
+Which of those three failed is **not yet measured** — it is the next probe, and it is
+distinct from the domain question below.
+
+The store-population probe (`uhr02_store_population_probe.py`) shows the production
+`update_generator` path works when driven: `theta_a[3]` norm `0.000000e+00` ->
+`9.902190e+01` over 8 observed transitions, receipt `hermiticity_residual 0.0`,
+`trace_residual 3e-08`, `projection_recon_error 0.1548`.
+
 Zero-generator control (local, measured): `delta = -2.28e-07` (cos `1.0000004`).
 Non-zero control at `theta ≈ 0.10`: `delta = 0.35076` — i.e. **at the tau boundary**.
 
 So the live gate flipped from *always-veto* (8/8) to *never-veto* (0/8). Both extremes are
-non-discriminative: with an empty outcome store the candidate carries no option content and
-**is** the axiom. UHR-01 made the veto *computable* and removed the false 8/8 rejection; it did
-**not** establish that the live gate discriminates candidate quality. Discriminating it requires a
-populated outcome store (real `D_a` from observed outcomes) — a separate, pre-registerable
-experiment with its own kill test.
+non-discriminative: with an un-updated generator the candidate carries no option content
+and **is** the axiom. UHR-01 made the veto *computable* and removed the false 8/8
+rejection; it did **not** establish that the live gate discriminates candidate quality.
+
+**And populating the store does not fix that** — see `uhr02_verdict` below: the collapse
+is a property of the comparison *domain*, not of the store's population.
 
 No algebra embedding is claimed: SU(3) is **not** representable in Cl(3,0) or Cl(1,3).
 
