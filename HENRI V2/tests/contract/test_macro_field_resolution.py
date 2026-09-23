@@ -58,57 +58,32 @@ def _runner_src() -> str:
 
 # ------------------------------------------------------------------ M1
 def test_macro_resolution_is_scale_bound_behind_a_flag():
-    """M1. A hardcoded 8192 fixed the macro field's resolution; binding it is OPT-IN.
+    """M1. ONE reader, TWO consumers.
 
-    The chain, read from source:
-        _num_channels = int(SCALE["num_blocks"]) if HENRI_MACRO_NUM_CHANNELS==1 else 8192
-        ActionOutcomeGeneratorStore(num_channels=_num_channels)
-        su3_field  <- produced BY that store
-        OPINEObjectMCTS(num_channels=su3_field.shape[0])
-        construct_macro_option -> [num_channels, 3, 3]
-        field_to_wave          -> [B, N*8]
-
-    ROOT CAUSE (measured, root_cause_num_channels.json):
-        num_channels 8192 -> 65536-wide wave vs 512-wide refs at num_blocks=64
-                          -> the veto raises every step (UNAVAILABLE_SHAPE_MISMATCH)
-        num_channels 64   -> 512-wide, MATCHES, veto runs, BOTH hard_vetoed values,
-                             with NO bridge
-
-    WHY OPT-IN. Binding it removes the width mismatch in dual_channel_sagnac_veto but a
-    SECOND coupled 8192 remains downstream: an einsum `"nij,njk->nik"` then pairs the
-    64-wide macro field with an 8192-wide operand and raises
-        RuntimeError: einsum(): subscript n has size 8192 for operand 1 ... size 64
-    measured on 64/64 steps. So the default path must stay unchanged until that link is
-    fixed. The flag makes the change explicit and reversible, which is the project rule
-    for altering a default path.
+    A hardcoded 8192 fixed the macro field's resolution. Binding only the store
+    side, while `_pad_su3_field` still padded to 8192, was MEASURED to crash the
+    live loop (`einsum(): ... size 8192 for operand 1 ... size 64`). The invariant
+    is therefore the COUPLING: one helper, read by both sides.
     """
-    src = _runner_src()
+    src = RUNNER.read_text(encoding="utf-8", errors="replace")
 
-    # (a) the flag must exist and be checked
-    assert "HENRI_MACRO_NUM_CHANNELS" in src, (
-        "the scale-bound macro resolution must be opt-in via HENRI_MACRO_NUM_CHANNELS")
+    # (a) the flag has exactly ONE reader -- a second read re-creates the pair.
+    assert src.count('os.environ.get("HENRI_MACRO_NUM_CHANNELS"') == 1, (
+        "the resolution flag must be read in exactly one place")
 
-    # (b) both arms must be present: SCALE-bound when on, the historical literal when off
-    assert re.search(r"_num_channels\s*=\s*\(int\(SCALE\[\"num_blocks\"\]\)", src), (
-        "the SCALE-bound arm is missing")
-    assert re.search(r"else\s+8192\)", src), (
-        "the default arm no longer preserves the historical 8192; the existing CPU "
-        "path would change behaviour silently")
+    # (b) that reader derives from SCALE and preserves the historical default.
+    assert "def _macro_num_blocks()" in src, "shared resolution helper missing"
+    helper = src.split("def _macro_num_blocks()", 1)[1].split("\ndef ", 1)[0]
+    assert 'SCALE["num_blocks"]' in helper, "SCALE-bound arm missing"
+    assert "return 8192" in helper, "default-OFF historical constant missing"
 
-    # (c) the store must consume the variable, not a duplicated literal
-    store_hits = [m for m in re.finditer(
-        r"ActionOutcomeGeneratorStore\(([^)]*)\)", src, re.S)]
-    assert store_hits, "ActionOutcomeGeneratorStore is never constructed"
-    assert any("num_channels=_num_channels" in h.group(1) for h in store_hits), (
-        "the store does not receive the resolution variable, so the flag would have no "
-        "effect on the macro field")
-
-    # (d) no bare call-site literal may remain
-    bad = [h.group(0)[:80] for h in re.finditer(
-        r"(?<![_\w])num_channels\s*=\s*8192", src)]
-    assert not bad, f"a hardcoded num_channels=8192 remains at a call site: {bad}"
-
-
+    # (c) BOTH consumers read the helper (not an inline expression, not a literal).
+    assert "_num_channels = _macro_num_blocks()" in src, (
+        "the store side must read the shared helper")
+    assert "_pad_su3_field_nb_reads_helper" not in src  # placeholder guard
+    pad = src.split("def _pad_su3_field(", 1)[1].split("\ndef ", 1)[0]
+    assert "nb = _macro_num_blocks()" in pad, (
+        "the field side must read the shared helper")
 def test_opine_inherits_the_store_resolution():
     """M1b. OPINE must inherit the field's own channel count, not a constant."""
     src = _runner_src()

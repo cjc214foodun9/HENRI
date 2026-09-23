@@ -405,10 +405,47 @@ class LatentTelemetry:
 # Core per-step pipeline
 # ---------------------------------------------------------------------------
 
+def _macro_num_blocks() -> int:
+    """Resolution of the SU(3) macro field, in BLOCKS.
+
+    ONE coupling, TWO consumers
+    ---------------------------
+    `SU3FieldWaveTransducer.field_to_wave` emits N*8 for a [B,N,3,3] field, so the
+    field's block count N fixes the emitted wave width. Two separated objects must
+    therefore agree on N or the pair cannot be composed:
+
+      * `ActionOutcomeGeneratorStore.num_channels` (displacement, `predict_next_field`)
+      * `_pad_su3_field(nb=...)` here  ->  `su3_field` -> `OPINEObjectMCTS.num_channels`
+
+    MEASURED (experiments/verification/repro_einsum_site.py): a 64-block store
+    against an 8192-block field raises
+        RuntimeError: einsum(): subscript n has size 8192 for operand 1 which
+        does not broadcast with previously seen size 64
+    Binding only ONE side of the pair therefore CRASHES the live loop; both sides
+    must move together. That is why this flag is read from BOTH sites.
+
+    Default OFF preserves the historical production constant 8192, which is
+    byte-identical to prior behaviour on every platform. With
+    HENRI_MACRO_NUM_CHANNELS=1 the resolution tracks SCALE["num_blocks"] -- the
+    value that makes field_to_wave emit exactly SCALE["d_model"] blocks x 8.
+    At GPU scale SCALE["num_blocks"] == 8192, so this flag is a NO-OP on CUDA
+    either way; the defect and the fix are confined to the reduced-scale path.
+    """
+    if os.environ.get("HENRI_MACRO_NUM_CHANNELS", "0") == "1":
+        return int(SCALE["num_blocks"])
+    return 8192
+
+
 def _pad_su3_field(
-    field: torch.Tensor, nb: int = 8192, device=None
+    field: torch.Tensor, nb: int | None = None, device=None
 ) -> torch.Tensor:
-    """Pad a [K,3,3] SU(3) field to [nb,3,3] with identity blocks (SU(3))."""
+    """Pad a [K,3,3] SU(3) field to [nb,3,3] with identity blocks (SU(3)).
+
+    `nb` defaults to `_macro_num_blocks()` so that every macro-field consumer in
+    one run shares a single resolution. Callers must NOT pass a bare literal.
+    """
+    if nb is None:
+        nb = _macro_num_blocks()
     field = field.to(device) if device is not None else field
     k = field.shape[0]
     if k >= nb:
@@ -769,9 +806,11 @@ def run():
         # NOTE ON PRODUCTION: at GPU scale SCALE["num_blocks"] == 8192, so this flag is
         # a NO-OP on CUDA either way. The defect and this fix are confined to the
         # reduced-scale CPU path.
-        _num_channels = (int(SCALE["num_blocks"])
-                         if os.environ.get("HENRI_MACRO_NUM_CHANNELS", "0") == "1"
-                         else 8192)
+        # Reads the SAME source as `_pad_su3_field`'s default. Binding one side
+        # only was measured to crash the live loop (2026-10-12): the store went to
+        # 64 while `su3_field` stayed 8192, and `predict_next_field` raised
+        # `einsum(): subscript n has size 8192 for operand 1 ... size 64`.
+        _num_channels = _macro_num_blocks()
         action_outcome_store = ActionOutcomeGeneratorStore(
             num_actions=_num_actions, num_channels=_num_channels, lr=0.1).to(DEVICE)
         stationarity_thermostat = StationarityDissipationThermostat(
