@@ -169,6 +169,30 @@ def _normalize_rows(t: torch.Tensor) -> torch.Tensor:
     return t / t.norm(dim=-1, keepdim=True).clamp_min(1e-12)
 
 
+def normalize_roles(roles: torch.Tensor, name: str = "roles") -> torch.Tensor:
+    """Project a real [K, 8] operand onto the UNIT block family, row by row.
+
+    The module's strict family contract (`assert_single_family`) requires unit
+    block norms. The LIVE reference `boundary_batch[0]` is the per-frame
+    prediction RESIDUAL when `USE_ZONE_C_AXIOMS=0`, whose block norms are not
+    unit. `delta` is a cosine, so normalizing each block is a benign,
+    documented normalization of the DOMAIN (directions on S^7), not a
+    threshold change. Shape/real-ness are still enforced here so a complex or
+    non-block operand still raises DOMAIN_VIOLATION.
+    """
+    if roles.is_complex():
+        raise ValueError(
+            "%s: %s complex operand %s is a domain violation"
+            % (DOMAIN_VIOLATION, name, tuple(roles.shape))
+        )
+    if roles.dim() != 2 or roles.shape[1] != DIM:
+        raise ValueError(
+            "%s: %s has shape %s, expected [K, %d]"
+            % (DOMAIN_VIOLATION, name, tuple(roles.shape), DIM)
+        )
+    return _normalize_rows(roles.to(torch.float32))
+
+
 def delta(a: torch.Tensor, b: torch.Tensor) -> float:
     """The gate's own residual: 0.5 * (1 - cos), on the flattened real pair."""
     x = a.flatten().to(torch.float32)
@@ -364,6 +388,91 @@ def forge_edge(
     )
 
 
+# ---------------------------------------------------------------------------
+# recorded-transition read path (the live-loop wiring, FORM B)
+# ---------------------------------------------------------------------------
+UNAVAILABLE_NO_RECORDED_TRANSITION = "UNAVAILABLE_NO_RECORDED_TRANSITION"
+
+
+def recorded_transition_generators(
+    store, action: int, gell_mann_basis: torch.Tensor, min_norm: float = 1e-8
+) -> list | None:
+    """The generators of the most recently LEARNED transition for `action`.
+
+    Returns None when the store has not accumulated any transition for that
+    action (theta_a == 0). A caller MUST map None to an explicit UNAVAILABLE
+    marker rather than to a residual: an undefined comparison is not evidence
+    that the gate failed.
+    """
+    if store is None or action is None or int(action) < 0:
+        return None
+    with torch.no_grad():
+        th = store.theta_a[int(action)]
+        if float(th.norm()) <= min_norm:
+            return None
+        return [store.lie_element(int(action), gell_mann_basis)[0]]
+
+
+def exteroceptive_residual_vs_recorded(
+    state_roles: torch.Tensor,
+    candidate_generators: Sequence[torch.Tensor],
+    truth_generators: Sequence[torch.Tensor],
+    gell_mann_basis: torch.Tensor,
+    tau: float = TAU_BLUEPRINT,
+) -> GateResult:
+    """FORM B against a RECORDED transition. Reads the RELATIVE group element.
+
+    Both operands are forward maps of the SAME real [K, 8] role vector, so the
+    residual is
+        cos -> (1/K) sum_k R_k^T A_c^T A_t R_k -> Tr(A_c^T A_t)/8
+    i.e. |Tr(U_c^dag U_t)|^2, the group-theoretic relative element. It never
+    reads a future observation: `truth_generators` come from a transition that
+    has already been observed and stored.
+    """
+    dev_s = assert_single_family(state_roles, "state_roles")
+    if not candidate_generators:
+        raise ValueError("exteroceptive_residual_vs_recorded: candidate is empty")
+    if not truth_generators:
+        raise ValueError(UNAVAILABLE_NO_RECORDED_TRANSITION)
+    A_c = ad_of(candidate_generators, gell_mann_basis)
+    A_t = ad_of(truth_generators, gell_mann_basis)
+    pred_c = predict_next(state_roles, A_c)
+    pred_t = predict_next(state_roles, A_t)
+    dp = delta(pred_c, pred_t)
+    rge = relative_group_element(candidate_generators, truth_generators)
+    band = sampling_band(state_roles.shape[0])
+    return GateResult(
+        delta_pred=dp,
+        delta_state=delta(pred_c, state_roles),
+        delta_identity=delta(state_roles, pred_t),
+        hard_vetoed=bool(dp > tau),
+        relative_group_element=rge,
+        n_blocks=int(state_roles.shape[0]),
+        block_norm_dev=dev_s,
+        reason=None,
+        magnitude_only_risk=bool(abs(dp - delta(pred_c, state_roles)) < band),
+    )
+
+
+def generators_from_displacement(disp: torch.Tensor) -> list:
+    """The anti-Hermitian generator H with exp(H) == `disp` (a group element).
+
+    Mirrors the production D31 path (`henri_external_outcome_refactor_module.
+    _matrix_log_eig`): torch 2.12 has no `matrix_log`, and `disp` is unitary so
+    the eigendecomposition form is exact. Returns a one-element list, matching
+    the generator-sequence convention used by `ad_of` / `relative_group_element`.
+    """
+    evals, evecs = torch.linalg.eig(disp.to(torch.complex64))
+    log_disp = (evecs @ torch.diag_embed(torch.log(evals))
+                @ evecs.conj().transpose(-2, -1))
+    return [log_disp]
+
+
+def relative_displacement(u_to: torch.Tensor, u_from: torch.Tensor) -> torch.Tensor:
+    """U_to @ U_from^dag -- the observed transition as a group element [N,3,3]."""
+    return torch.einsum("nij,nkj->nik", u_to, u_from.conj())
+
+
 __all__ = [
     "AXIOM_BLOCK_NORM_TOL",
     "DOMAIN_VIOLATION",
@@ -375,14 +484,18 @@ __all__ = [
     "SOLIPSISM_VETO",
     "TAU_BLUEPRINT",
     "TAU_VETO",
+    "UNAVAILABLE_NO_RECORDED_TRANSITION",
     "ad_of",
     "assert_single_family",
     "delta",
     "exteroceptive_gate",
+    "exteroceptive_residual_vs_recorded",
     "flag_enabled",
     "forge_edge",
     "measured_bands",
+    "normalize_roles",
     "predict_next",
+    "recorded_transition_generators",
     "relative_group_element",
     "sampling_band",
 ]

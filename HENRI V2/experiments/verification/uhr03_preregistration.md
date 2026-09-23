@@ -1,0 +1,122 @@
+# UHR-03 PRE-REGISTRATION — guard attribution + FORM B in the paired A/B
+
+Written BEFORE any GPU spend. Criteria are frozen here so the verdict cannot
+drift toward whatever the run happens to produce.
+
+Carrier branch: `carrier/uhr-01-homologous-representation`
+Blueprint: `HENRI-SPEC-2026-CAUSAL-REALITY-V1` section 3.2
+Evidence labels: OBSERVED / DERIVED / INFERRED / HYPOTHESIS / FALSIFIED / BLOCKED
+
+---
+
+## 1. Attribution (already DONE locally, before the run)
+
+The instruction asked which of three inner guards silently skipped
+`update_generator` at `production_arc_run.py:3001`:
+`_aid >= 0` / `not learning_frozen()` / `su3_field is not None`.
+
+**Result: NONE of the three.** The blocking conjunct is an OUTER ancestor,
+`if EXTERNAL_OUTCOME_EFE:` (originally line 2861; 2925 after the UHR-02
+patches), read ONCE at module scope:
+
+```text
+ 177| ind=0 | EXTERNAL_OUTCOME_EFE = os.environ.get("EXTERNAL_OUTCOME_EFE","0") == "1"
+2925| ind=12| if EXTERNAL_OUTCOME_EFE:                 <- ancestor of the whole block
+      os.environ["EXTERNAL_OUTCOME_EFE"] force-set sites in production_arc_run.py: 0
+```
+
+DERIVED (causal, from measured telemetry rather than a static read): inside the
+gate, line 3067 `if stationarity_thermostat is not None:` merges `_tinfo` into
+`p820_update_info` **unconditionally**, and `run.log` (both arms) prints
+`[phase820] action-outcome store + thermostat armed (actions=8)`. Therefore a
+`None` value at every step is possible ONLY if the gate never executed. Both
+arms emitted `phase820_update_info = None` at all 8 steps.
+
+OBSERVED rule-outs for the three NAMED guards:
+- `su3_field is not None` PASSES: the fiber block (gated on it) printed
+  `[fiber] un-collapsed 1 -> 2 admissible actions` 8 times per arm.
+- `not learning_frozen()` PASSES: `HENRI_FREEZE_LEARNING` appears **0 times** in
+  `uhr01_remote_ab.sh`; `learning_frozen()` returns `os.environ.get(...,"0")=="1"`.
+- `_aid >= 0` UNREACHABLE, so unfalsifiable as the cause.
+
+FALSIFIED hypothesis (recorded so it is not retried): "a module-level flag
+constant froze `HENRI_ARC_ACTION_EFE` before `run()` force-set it". AST scope
+puts both the force-set (488) and the read (613) inside `run()`, force-set
+first. `HENRI_ARC_TARGET_GROUNDING` (500 / 634) is identical.
+
+## 2. Preconditions (checked BEFORE the verdict; failure => BLOCKED_INFRASTRUCTURE)
+
+Both arms run with the SAME environment except the one experimental flag:
+
+```text
+  common : HENRI_ARC_SAGNAC_VETO=1, HENRI_MACRO_NUM_CHANNELS=1, HENRI_OFFLINE_DIAG=1,
+           EXTERNAL_OUTCOME_EFE=1, HENRI_TRACE_UPDATE_GATES=1,
+           --mode phase823_live_gauntlet --envs 1 --steps 8
+  arm A  : HENRI_UHR02_EXTERO_GATE=0
+  arm B  : HENRI_UHR02_EXTERO_GATE=1
+```
+
+`EXTERNAL_OUTCOME_EFE=1` is part of the COMMON block precisely because it is the
+attributed cause of the empty store. It is not the experimental variable.
+
+- **G1 store populated**: `sum(|theta_a|) > 0` by the final step, visible in
+  `phase820_update_info.target_theta_norm`. If false => `BLOCKED_INFRASTRUCTURE`,
+  NOT a negative result.
+- **G2 update engaged**: `phase820_guard_state.updated == True` on >= 1 step.
+  If false => `BLOCKED_INFRASTRUCTURE`.
+- **G3 FORM B defined**: `phase820_extero_info.status == "OK"` on >= 1 step.
+  `UNAVAILABLE_*` is `BLOCKED`, never "FORM B failed to separate".
+- **G4 both arms exit 0**. Any nonzero exit => `BLOCKED_INFRASTRUCTURE`.
+- **G5 C3 default-path identity**: with `HENRI_UHR02_EXTERO_GATE=0` and
+  `HENRI_TRACE_UPDATE_GATES` unset, the emitted record set must be
+  byte-identical to the pre-patch baseline except for the two added keys, which
+  must be `None`.
+
+## 3. The experimental criterion
+
+τ is FROZEN at the blueprint value `0.3500` (`TAU_BLUEPRINT`). It is NOT tuned.
+
+- **C1 (primary, content discrimination)**: with the candidate option HELD
+  FIXED and the reference varied over every RECORDED transition, the residual
+  minimum must fall on the action actually executed more often than chance:
+  `argmin_hits_truth == True` on >= 50% of steps where `n_recorded >= 2`.
+  Rationale: if FORM B were magnitude-only, all references would give the same
+  residual and the argmin would be arbitrary. This is the discriminating control
+  from `henri-co-scientist-rigor` (vary the reference, hold the operator fixed).
+- **C2 (population separation)**: over steps with `status == "OK"`,
+  `invalid_minus_own > 0` on >= 50% of steps (the true reference is not worse
+  than every alternative).
+- **C3 (domain still fixed)**: `delta_extero` must leave the degenerate
+  `{0.0}` set. A constant `delta_extero` reproduces the UHR-01 failure mode and
+  is `FALSIFIED` regardless of C1/C2.
+- **C4 (no fail-open on identity)**: `delta_identity`, the do-nothing candidate,
+  is reported. Descriptive only -- it is NOT a pass/fail gate.
+
+## 4. Kill criterion (pre-registered, user-specified)
+
+- **One failing run is not a kill.** Two CONSECUTIVE live runs that satisfy
+  every precondition G1-G5 and satisfy neither C1 nor C2 => `FALSIFIED`.
+- On `FALSIFIED`, the repair is a **content-bearing baseplate** -- real
+  role-filler assignments in the reference -- **not** a threshold change.
+  Recorded in the evolution-loop reject log so it is never retried blind.
+- A `BLOCKED_INFRASTRUCTURE` outcome consumes NO kill budget.
+
+## 5. Comparability constraint (carried from UHR-01)
+
+`USE_ZONE_C_AXIOMS` stays UNSET in both arms, so the reference is the per-frame
+residual -- the same object as in the UHR-01 run whose `delta_axiom` population
+was recorded (`0.997175 .. 0.999582`). A different reference would make the two
+experiments non-comparable.
+
+Consequence recorded honestly: `boundary_batch[0]` is NOT guaranteed unit-norm
+or structured. `phase820_extero_info.role_coherence` IS emitted so the kill
+verdict is decidable between "domain still wrong" and "reference is isotropic".
+Role structure is MEASURED, not assumed.
+
+## 6. What this run cannot establish
+
+- It cannot promote `main`. `origin/main` stays at `adcc24e` regardless.
+- It cannot establish task progress: `HENRI_OFFLINE_DIAG=1` (`offline://surrogate`)
+  makes the run DIAGNOSTIC-ONLY and never score-eligible.
+- It cannot substitute for CUDA verification of the FORM B math; the CPU probes
+  are `DERIVED`, and the live run is the `OBSERVED` layer.

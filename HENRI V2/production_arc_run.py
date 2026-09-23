@@ -626,6 +626,20 @@ def run():
     # grid source exists in the loop; otherwise emits fail-closed
     # SNAP_NO_GRID_SOURCE telemetry (no fabricated grid path).
     HENRI_ARC_CEGIS_SNAP = os.environ.get("HENRI_ARC_CEGIS_SNAP", "0") == "1"
+    # UHR-02: exteroceptive comparison domain (default OFF). Scored against the
+    # RECORDED transition rather than the option's own magnitude. Read at CALL
+    # TIME here (same place as every other flag in this function); a
+    # module-level constant would freeze the value before the mode handler
+    # above mutates the environment. Additive: the veto math is untouched.
+    HENRI_UHR02_EXTERO_GATE = os.environ.get(
+        "HENRI_UHR02_EXTERO_GATE", "0") == "1"
+    # UHR-03: guard-state receipt (default OFF). Emits the RAW value of every
+    # conjunct that can decide the Phase 8.20 C1 generator update, so a silent
+    # skip is answerable from telemetry. Without this, `p820_update_info = None`
+    # cannot distinguish "the block never ran" from "it ran and reported
+    # nothing" -- the exact ambiguity that cost a GPU run in UHR-01.
+    HENRI_TRACE_UPDATE_GATES = os.environ.get(
+        "HENRI_TRACE_UPDATE_GATES", "0") == "1"
     # Phase 8.23: in-context target grounding (default OFF). When ON, the
     # runner synthesizes the pragmatic goal wave from demonstration pairs
     # via synthesize_demonstration_goal_wave (C1), activates the goal
@@ -2150,6 +2164,14 @@ def run():
             # block below is nested in the post-observation path and may not
             # execute before the first emit; initialize at outer scope.
             p820_update_info = None
+            # UHR-02/03 outer-scope slots. `_opt_gens` is the generator list that
+            # DEFINES the candidate option (bound inside the OPINE block below);
+            # `p820_extero_info` carries the FORM B diagnostic; `p820_guard_state`
+            # names WHICH conjunct decided the C1 update so a silent skip can
+            # never be invisible again.
+            _opt_gens = None
+            p820_extero_info = None
+            p820_guard_state = None
             if HENRI_ARC_ACTION_EFE and efe_table:
                 _efes = [r["efe"] for r in efe_table if "efe" in r]
                 if len(_efes) >= 2:
@@ -2443,6 +2465,14 @@ def run():
                             if _uhr_info is not None:
                                 _veto["uhr01"] = _uhr_info
                             _hard_vetoed = bool(_hard)
+                            # NOTE: the FORM B (recorded-transition) diagnostic is
+                            # deliberately NOT placed here. At this site the only
+                            # transition in scope is the option's OWN generators, so
+                            # any comparison would be degenerate by construction.
+                            # The exteroceptive residual needs the OBSERVED
+                            # successor, which exists only after the environment
+                            # step -> see the HENRI_UHR02_EXTERO_GATE block at the
+                            # Phase 8.20 update site below.
                         except Exception as _veto_exc:
                             # THREE OUTCOMES, KEPT DISTINCT. The original handler
                             # recorded only `{"error": f"{type(_veto_exc).__name__}"}`,
@@ -2983,12 +3013,18 @@ def run():
                 # Phase 8.20 C1: online Lie generator update + C3 thermostat
                 # observe from the observed SU(3) field transition (default OFF).
                 p820_update_info = None
+                p820_extero_info = None
+                p820_guard_state = None
                 if HENRI_ARC_ACTION_EFE and action_outcome_store is not None \
                         and obs_next is not None and getattr(obs_next, "frame", None):
                     try:
                         from chromodynamic_grounding import encode_su3_color_field
                         _grid_next = np.array(obs_next.frame[0].tolist())
-                        if _grid_next.shape == np.array(grid).shape:
+                        _shape_ok = bool(_grid_next.shape == np.array(grid).shape)
+                        _p820_updated = False
+                        _u_next = None
+                        _aid = -1
+                        if _shape_ok:
                             _u_next = encode_su3_color_field(torch.tensor(
                                 _grid_next, dtype=torch.int64,
                                 device=DEVICE).unsqueeze(0)).reshape(-1, 3, 3)
@@ -3000,6 +3036,7 @@ def run():
                                     and su3_field is not None:
                                 p820_update_info = action_outcome_store.update_generator(
                                     su3_field, _aid, _u_next, _p820_gm_basis)
+                                _p820_updated = True
                             if stationarity_thermostat is not None:
                                 _prog = float(
                                     (_u_next - su3_field).norm(dim=(-2, -1)).mean()
@@ -3007,8 +3044,124 @@ def run():
                                 _tinfo = stationarity_thermostat.observe(_aid, _prog)
                                 p820_update_info = {
                                     **(p820_update_info or {}), **_tinfo}
+                        # UHR-03 (default OFF): guard-state receipt. Records the
+                        # RAW values of every conjunct that can decide the update,
+                        # so "the update silently never ran" is answerable from
+                        # telemetry instead of requiring a source read. Emitted on
+                        # the PRODUCTION path (not a probe replica) so a
+                        # self-confirming fixture cannot stand in for it.
+                        if HENRI_TRACE_UPDATE_GATES:
+                            p820_guard_state = {
+                                "outer_flag": bool(HENRI_ARC_ACTION_EFE),
+                                "store_present": action_outcome_store is not None,
+                                "external_outcome_efe": bool(EXTERNAL_OUTCOME_EFE),
+                                "shape_match": _shape_ok,
+                                "aid": int(_aid),
+                                "aid_ge_0": bool(_aid >= 0),
+                                "learning_frozen": bool(learning_frozen()),
+                                "su3_field_present": su3_field is not None,
+                                "updated": bool(_p820_updated),
+                            }
+                        # UHR-02 (default OFF): FORM B, the exteroceptive
+                        # comparison domain. Scores the CANDIDATE option against
+                        # the transition just OBSERVED to happen, so the residual
+                        # reads the RELATIVE group element |Tr(U_c^dag U_t)|
+                        # instead of the option's own magnitude. ADDITIVE: nothing
+                        # above is modified, so the flag-OFF path stays
+                        # byte-identical. CAUSAL TIMING: reachable only AFTER the
+                        # environment returned obs_next, so a future observation
+                        # can never score the action that preceded it.
+                        if (HENRI_UHR02_EXTERO_GATE and _u_next is not None
+                                and su3_field is not None):
+                            try:
+                                from uhr02_exteroceptive_gate import (
+                                    TAU_BLUEPRINT as _XTAU,
+                                    exteroceptive_residual_vs_recorded as _xres,
+                                    generators_from_displacement as _xgens,
+                                    normalize_roles as _xnorm,
+                                    recorded_transition_generators as _xrec,
+                                    relative_displacement as _xrel,
+                                )
+                                _xtau = float(_XTAU)
+                                _roles = _xnorm(
+                                    boundary_batch[0].detach(), "axiom_roles")
+                                _truth = _xgens(_xrel(_u_next, su3_field).detach())
+                                if _opt_gens is None:
+                                    p820_extero_info = {
+                                        "status": "UNAVAILABLE_NO_CANDIDATE_OPTION"}
+                                else:
+                                    _xr = _xres(_roles, _opt_gens, _truth,
+                                                _p820_gm_basis)
+                                    # INVALID POPULATION (the discriminating
+                                    # control). The candidate is held FIXED and
+                                    # the REFERENCE varies across every RECORDED
+                                    # transition. The truthful action must give
+                                    # the SMALLEST residual; otherwise FORM B is
+                                    # reading the option's own magnitude and the
+                                    # separation is an artifact. Non-tautological
+                                    # and decidable from ONE run.
+                                    _xall = {}
+                                    for _a2 in range(
+                                            action_outcome_store.num_actions):
+                                        _t2 = _xrec(
+                                            action_outcome_store, int(_a2),
+                                            _p820_gm_basis)
+                                        if _t2 is None:
+                                            continue
+                                        _xall[int(_a2)] = round(_xres(
+                                            _roles, _opt_gens, _t2,
+                                            _p820_gm_basis).delta_pred, 6)
+                                    _others = [v for k, v in _xall.items()
+                                               if k != int(_aid)]
+                                    _own = _xall.get(int(_aid))
+                                    p820_extero_info = {
+                                        "status": "OK",
+                                        "tau": _xtau,
+                                        "delta_extero": round(_xr.delta_pred, 6),
+                                        "n_recorded": len(_xall),
+                                        "delta_extero_all": _xall,
+                                        "delta_extero_invalid_min": (
+                                            None if not _others
+                                            else round(min(_others), 6)),
+                                        "invalid_minus_own": (
+                                            None if not _others or _own is None
+                                            else round(min(_others) - _own, 6)),
+                                        "argmin_hits_truth": (
+                                            None if not _others or _own is None
+                                            else bool(_own == min(_xall.values()))),
+                                        "delta_state": round(_xr.delta_state, 6),
+                                        "delta_identity": round(_xr.delta_identity, 6),
+                                        "relative_group_element": round(
+                                            float(_xr.relative_group_element), 6),
+                                        "hard_vetoed_formb": bool(_xr.hard_vetoed),
+                                        "identity_vetoed_formb": bool(
+                                            _xr.delta_identity > _xtau),
+                                        "n_blocks": int(_xr.n_blocks),
+                                        "role_coherence": round(
+                                            float(_roles.mean(dim=0).norm()), 6),
+                                        "magnitude_only_risk": bool(
+                                            _xr.magnitude_only_risk),
+                                    }
+                            except Exception as _x_exc:
+                                p820_extero_info = {
+                                    "status": f"ERROR:{type(_x_exc).__name__}",
+                                    "detail": str(_x_exc)[:140]}
                     except Exception as _p820u_exc:
                         print(f"  [phase820] update failed: {_p820u_exc}")
+                elif HENRI_TRACE_UPDATE_GATES:
+                    # The outer gate itself is the reason the update was skipped.
+                    p820_guard_state = {
+                        "outer_flag": bool(HENRI_ARC_ACTION_EFE),
+                        "store_present": action_outcome_store is not None,
+                        "external_outcome_efe": bool(EXTERNAL_OUTCOME_EFE),
+                        "obs_next_present": obs_next is not None,
+                        "frame_present": bool(getattr(obs_next, "frame", None)),
+                        "shape_match": None, "aid": None, "aid_ge_0": None,
+                        "learning_frozen": bool(learning_frozen()),
+                        "su3_field_present": su3_field is not None,
+                        "updated": False,
+                        "skipped_by": "outer_gate",
+                    }
                 # Telemetry: expose the new P0 statistics.
                 _p0_extra = {}
                 if HENRI_ARC_SCORECARD_DELTA:
@@ -3247,6 +3400,8 @@ def run():
                 "step_ms": round(step_ms, 1),
                 "phase820_var_efe": p820_var_efe,
                 "phase820_update_info": p820_update_info,
+                "phase820_guard_state": p820_guard_state,
+                "phase820_extero_info": p820_extero_info,
                 "phase821_fiber_info": fiber_info,
                 "phase822_rt_info": rt_info,
                 "phase823_opine_info": opine_info,
