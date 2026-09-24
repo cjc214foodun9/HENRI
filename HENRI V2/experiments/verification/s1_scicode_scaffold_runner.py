@@ -196,18 +196,75 @@ def _dataset_field(obj: dict, name: str):
     return obj[name]
 
 
-def _assert_no_reference_overlap(payload: str, reference: str, *, min_chars: int = 60) -> None:
-    """Contamination guard G2: no >= min_chars normalised overlap with reference."""
-    p = norm_ws(payload)
+#: G2 coverage threshold. MEASURED 2026-09-24 over all 50 dev sub-steps:
+#:   payload reproducing only the PRESCRIBED function header : max differential 0.0000
+#:   payload holding only the minimal def line               : max differential -0.0526
+#:   payload reproducing the reference BODY                  : min differential  0.3333
+#: Valid band is 0.00..0.30, so the midpoint is not a knife edge.
+G2_COVERAGE_TAU = 0.1667
+
+
+def _assert_no_reference_overlap(payload: str, reference: str, *, min_chars: int = 60,
+                                 given: str = "", coverage_tau: float = G2_COVERAGE_TAU) -> None:
+    """Contamination guard G2: the scored payload must not reproduce the reference.
+
+    WHY COVERAGE, NOT SUBSTRING. MEASURED 2026-09-24; the previous form was UNSATISFIABLE.
+
+    The reference text is ``deps + ground_truth_code[0..idx]``, and every
+    ``ground_truth_code`` necessarily REPEATS its sub-step's PRESCRIBED
+    ``function_header`` -- text the task GIVES the candidate. A stride-aligned 60-char
+    window landing wholly inside that signature is therefore present in ANY faithful
+    candidate. Measured with the previous substring form over all 50 dev sub-steps:
+
+        candidate reproducing only its prescribed header -> 50/50 TRIPPED
+        candidate reproducing only the minimal def line   -> 18/50 TRIPPED
+        candidate reproducing the reference BODY          -> 50/50 tripped (correct)
+        empty payload                                     ->  0/50 (correct)
+
+    The first two rows are false positives, so G2 could not be passed by a correct
+    candidate: an instrument that cannot return success. It stayed invisible because
+    ``NullCandidateSource`` emits "" and an empty payload cannot contain a window. It
+    surfaced on the first genuine run -- item SciCode-78-78.1 PASSED, then 78.2 raised
+    ``G2: ... shares a 60-char reference substring: 'nge_kutta_4th_order(f, state, t0, ...'``
+    where that chunk is a suffix of the PRESCRIBED header.
+
+    THE REPLACEMENT measures how much of the reference the payload covers BEYOND text the
+    task already gave:
+
+        cov  = fraction of reference windows present in the payload
+        base = fraction of reference windows present in ``given``
+        raise iff cov - base > coverage_tau
+
+    A faithful candidate reproduces given text, so cov ~= base and the differential is ~0.
+    A body-copying candidate covers windows that are NOT given, so the differential is
+    large. The differential is invariant to the length of the prescribed signature --
+    exactly the axis that made the substring form unsatisfiable.
+
+    ``given`` defaults to "" so the two guard-control calls keep their original meaning:
+    ``(ref_text, ref_text)`` still raises (cov 1.0, base 0.0), ``("", ref_text)`` still
+    returns.
+    """
     r = norm_ws(reference)
-    if len(r) < min_chars or len(p) < min_chars:
+    if len(r) < min_chars:
         return
-    for i in range(0, len(r) - min_chars + 1, 20):
-        chunk = r[i:i + min_chars]
-        if chunk and chunk in p:
-            raise ContaminationError(
-                "G2: scored-arm payload shares a "
-                f"{min_chars}-char reference substring: {chunk[:80]!r}")
+    windows = [r[i:i + min_chars] for i in range(0, len(r) - min_chars + 1, 20)]
+    if not windows:
+        return
+    p = norm_ws(payload)
+    if len(p) < min_chars:
+        # Empty/short payload cannot reproduce the reference; preserves the
+        # `G2_passes_empty_payload` control.
+        return
+    g = norm_ws(given)
+    cov = sum(1 for c in windows if c in p) / len(windows)
+    base = (sum(1 for c in windows if c in g) / len(windows)) if g else 0.0
+    diff = cov - base
+    if diff > coverage_tau:
+        culprit = next((c for c in windows if c in p and not (g and c in g)), "")
+        raise ContaminationError(
+            f"G2: scored-arm payload covers {cov:.1%} of the reference vs {base:.1%} of it "
+            f"given (differential {diff:.3f} > tau {coverage_tau:.4f}); "
+            f"window {culprit[:80]!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -786,13 +843,33 @@ def main() -> int:
         guard_selftest["G2_passes_empty_payload"] = {"raised": False}
     except ContaminationError as exc:
         guard_selftest["G2_passes_empty_payload"] = {"raised": True, "error": str(exc)[:160]}
+    # UHR-05 control: the PRESCRIBED header is text the task GIVES the candidate, so a
+    # payload that reproduces it is NOT contamination. Before the coverage fix this control
+    # would have RAISED for 50/50 dev sub-steps, i.e. G2 was unsatisfiable by a faithful
+    # candidate. This control is the regression guard for that defect.
+    try:
+        if sample:
+            _hdr0 = str((sample["sub_steps"][0] or {}).get("function_header") or "")
+            _deps0 = str(sample.get("required_dependencies") or "")
+            _assert_no_reference_overlap(_hdr0 + "\n    return None\n", ref_text,
+                                         given=_deps0 + "\n" + _hdr0)
+            guard_selftest["G2_passes_prescribed_header"] = {"raised": False}
+        else:
+            guard_selftest["G2_passes_prescribed_header"] = {"raised": None, "error": "no sample"}
+    except ContaminationError as exc:
+        guard_selftest["G2_passes_prescribed_header"] = {"raised": True, "error": str(exc)[:160]}
     report["contamination_guard_selftest"] = guard_selftest
     for k, v in guard_selftest.items():
         print(f"    {k:<36} raised={v['raised']}")
+    # UHR-05: `G2_passes_prescribed_header` is IN the gate, not just in the report. A
+    # control that only prints is a notice: it would have let the unsatisfiable-G2 defect
+    # recur silently. `is False` (not a falsy check) so a control that could not run
+    # (`raised=None`) fails closed rather than passing vacuously.
     guards_ok = (guard_selftest["G1_blocks_reference_read"]["raised"]
                  and not guard_selftest["G1_allows_read_in_reference_arm"]["raised"]
                  and guard_selftest["G2_catches_reference_overlap"]["raised"]
-                 and not guard_selftest["G2_passes_empty_payload"]["raised"])
+                 and not guard_selftest["G2_passes_empty_payload"]["raised"]
+                 and guard_selftest["G2_passes_prescribed_header"]["raised"] is False)
     report["contamination_guards_behaved"] = guards_ok
 
     # ---- (5) controls ------------------------------------------------------
@@ -810,7 +887,22 @@ def main() -> int:
     run_dir = ei.run_output_dir(OUT_ROOT, commit, BENCHMARK_ID, run_id)
     ledger = ItemLedger(run_dir / "items.jsonl")
     print(f"\n[6] RUN  ledger={ledger.path}")
-    source = NullCandidateSource()
+    # UHR-05: candidate source selection. DEFAULT STAYS NullCandidateSource, so the
+    # default path is byte-identical. Opt in with HENRI_SCICODE_CANDIDATE_SOURCE=backbone.
+    # FAIL-CLOSED: a source that cannot run (no weights, no generation stack, unknown
+    # name) must BLOCK through the same finish() path as any other precondition failure.
+    # It must NEVER fall back to the Null source -- that would score 0 and look like a
+    # measurement of HENRI rather than of an absent generator.
+    try:
+        from scicode_candidate_sources import select_source, CandidateSourceUnavailable
+        _selected = select_source(verbose=True)
+    except CandidateSourceUnavailable as _csu:
+        return finish(report, t_start, verdict="BLOCKED",
+                      reason=f"candidate source unavailable: {_csu}")
+    except Exception as _cse:  # an import defect is also a precondition failure
+        return finish(report, t_start, verdict="BLOCKED",
+                      reason=f"candidate source import failed: {type(_cse).__name__}: {_cse}")
+    source = _selected if _selected is not None else NullCandidateSource()
     report["candidate_source"] = {"name": source.name, "produces_code": source.produces_code,
                                   "description": source.description}
     print(f"  candidate source: {source.name} (produces_code={source.produces_code})")
@@ -841,7 +933,13 @@ def main() -> int:
         with reference_arm_active():
             ref_text_item = "\n".join(
                 _dataset_field(problem["sub_steps"][k], "ground_truth_code") for k in range(idx + 1))
-        _assert_no_reference_overlap(cand_code, ref_text_item)
+        # UHR-05: pass the GIVEN text (deps + the prescribed headers) so the coverage
+        # differential can separate "reproduced what the task handed over" from "copied the
+        # solution". `function_header` is not a reference-only field, so it is read directly.
+        given_text_item = ((problem.get("required_dependencies") or "") + "\n" + "\n".join(
+            str((problem["sub_steps"][k] or {}).get("function_header") or "")
+            for k in range(idx + 1)))
+        _assert_no_reference_overlap(cand_code, ref_text_item, given=given_text_item)
 
         ref_code = build_reference_code(problem, idx)
         ref_res = run_case(harness, ref_code, tests, f"ref-{wid}")
@@ -904,6 +1002,17 @@ def main() -> int:
     # ---- (7) aggregate by reading the ledger back (D21) --------------------
     persisted = list(ledger.rows())
     report["ledger_rows_written"] = rows_written
+    # UHR-05: attach the source provenance AFTER the run loop. MEASURED DEFECT: attaching it
+    # BEFORE the loop recorded `calls=0, emitted=0, device=None` on every run, because those
+    # counters only move while generating -- a dead snapshot inside a receipt whose entire
+    # purpose is attribution. Attaching here makes the model id, resolved snapshot, device,
+    # emitted / no_code_emitted / defines_expected counts and the
+    # BACKBONE_BASELINE_NOT_HENRI_CAPABILITY evidence class travel WITH the score.
+    if hasattr(source, "report"):
+        try:
+            report["candidate_source_report"] = source.report()
+        except Exception as _csr_exc:
+            report["candidate_source_report_error"] = f"{type(_csr_exc).__name__}: {_csr_exc}"
     report["ledger_rows_read"] = len(persisted)
     tax = collections.Counter(r["taxonomy"] for r in persisted)
     ref_tax = collections.Counter(r["reference_arm"]["taxonomy"] for r in persisted)
