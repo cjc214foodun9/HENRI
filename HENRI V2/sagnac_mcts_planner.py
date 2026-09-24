@@ -18,6 +18,12 @@ from henri_decoder import HENRIUnifiedEgressTransducer
 from efe_planner import INTACTIsomorphicConjugacyHead
 
 
+# UHR-04 Amendment 3 switch. Imported lazily inside the expansion so an OFF flag
+# costs nothing and cannot change import-time behaviour.
+HENRI_MCTS_OBSERVATIONAL_READOUT = (
+    os.environ.get("HENRI_MCTS_OBSERVATIONAL_READOUT", "0") == "1")
+
+
 class SagnacGateUnavailable(RuntimeError):
     """The Sagnac veto could not RUN, as distinct from having PASSED or VETOED.
 
@@ -107,6 +113,15 @@ class SagnacMCTSNode:
         self.delta_axiom = 1.0
         self.delta_epistemic = 1.0
         self.is_pruned = False  # Set to True when Hard Axiom Veto triggers (Q -> -inf)
+
+        # UHR-04 Amendment 3: observational-readout channel (default OFF).
+        # `delta_readout` is the bounded [0,2] recovery residual against the
+        # GOAL'S OWN FILLER; `readout_status` records whether the role supported
+        # an exact readout. Neither is used to veto or to admit a candidate -- the
+        # Sagnac veto still decides. They are ranking annotations.
+        self.delta_readout: Optional[float] = None
+        self.readout_cosine: Optional[float] = None
+        self.readout_status: Optional[str] = None
 
     @property
     def value(self) -> float:
@@ -538,6 +553,8 @@ class SagnacMCTSPlanner:
 
         best_node = root
         best_delta = root.sagnac_delta
+        best_readout_node = None
+        best_readout_delta = float("inf")
 
         for sim in range(num_simulations):
             node = root
@@ -593,6 +610,52 @@ class SagnacMCTSPlanner:
                     # Hard Axiom Branch Pruning Heuristic: Q -> -inf if Hard Axiom Veto Triggered
                     if hard_veto_triggered:
                         child_node.is_pruned = True
+
+                    # -----------------------------------------------------------
+                    # UHR-04 AMENDMENT 3: observational readout in expansion.
+                    #
+                    # The amendment asks that (Psi (x) R_s^dag) be wired INTO child
+                    # branch expansion. R_s is the scoring reference (the induced
+                    # goal); the readout recovers the candidate's FILLER and
+                    # compares it to the GOAL'S OWN FILLER:
+                    #
+                    #     ref_readout  = unbind(reference, reference)
+                    #     cand_readout = unbind(pred_wave, reference)
+                    #     delta_readout = 1 - cos(cand_readout, ref_readout)
+                    #
+                    # Different question from the waveform cosine: a candidate can
+                    # match the goal's wave while reading out a different filler.
+                    #
+                    # FAIL-OPEN and NON-VETOING: any anomaly (unavailable readout,
+                    # shape mismatch, non-phase-only role) leaves this child's
+                    # behaviour byte-identical to the flag-OFF path. It never sets
+                    # is_pruned and never admits a candidate.
+                    # -----------------------------------------------------------
+                    if HENRI_MCTS_OBSERVATIONAL_READOUT:
+                        try:
+                            from henri_mcts_observational_readout import (
+                                readout_delta as _rd_delta,
+                                circular_unbind as _rd_unbind,
+                            )
+                            _ref_flat = reference_wave.reshape(-1)
+                            _cand_flat = pred_wave.reshape(-1)
+                            _role = _ref_flat
+                            _ref_filler = _rd_unbind(
+                                _ref_flat.unsqueeze(0), _role.unsqueeze(0))[0]
+                            _cand_filler = _rd_unbind(
+                                _cand_flat.unsqueeze(0), _role.unsqueeze(0))[0]
+                            _r = _rd_delta(
+                                psi=_cand_filler.unsqueeze(0),
+                                role=_ref_filler.unsqueeze(0),
+                                value=_ref_filler.unsqueeze(0),
+                                allow_approximate=True,
+                                reduce="per_row_mean",
+                            )
+                            child_node.delta_readout = float(_r.delta)
+                            child_node.readout_cosine = float(_r.cosine)
+                            child_node.readout_status = str(_r.status)
+                        except Exception as _rd_exc:
+                            child_node.readout_status = f"UNAVAILABLE:{type(_rd_exc).__name__}"
 
                     # ---------------------------------------------------------------
                     # OBSERVATIONAL CHANNEL (default OFF: HENRI_SAGNAC_OBSERVATIONAL_VETO=1)
@@ -655,6 +718,17 @@ class SagnacMCTSPlanner:
                     if not child_node.is_pruned and delta_axiom < best_delta:
                         best_delta = delta_axiom
                         best_node = child_node
+                    # UHR-04: track the readout-best child SEPARATELY. It is a
+                    # diagnostic, not a selector -- `best_node` is still chosen by
+                    # delta_axiom alone, so the returned program is unchanged by
+                    # this channel. Recorded so a caller can compare the two
+                    # rankings without either influencing the other.
+                    if (HENRI_MCTS_OBSERVATIONAL_READOUT
+                            and child_node.delta_readout is not None
+                            and (best_readout_node is None
+                                 or child_node.delta_readout < best_readout_delta)):
+                        best_readout_delta = child_node.delta_readout
+                        best_readout_node = child_node
 
                     if not child_node.is_pruned and delta_axiom < 1e-5:
                         # Candidate reproduces the induced goal. This is a
@@ -675,6 +749,13 @@ class SagnacMCTSPlanner:
                     curr.value_sum += (1.0 - curr.sagnac_delta)
                 curr = curr.parent
 
+        # UHR-04 Amendment 3: expose the readout ranking as a SIDECAR attribute so
+        # callers can audit agreement between the two channels. The RETURN VALUE
+        # is unchanged: selection stays on delta_axiom (the Sagnac channel).
+        self.last_readout_best = (best_readout_node.action_taken
+                                  if best_readout_node is not None else None)
+        self.last_readout_delta = (best_readout_delta
+                                   if best_readout_node is not None else None)
         return best_node.ast_node, best_delta
 
     def score(
