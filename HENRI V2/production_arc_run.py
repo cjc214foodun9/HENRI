@@ -53,6 +53,14 @@ from thermodynamic_telemetry_logger import ThermodynamicTelemetryLogger
 from universal_data_transducer import UniversalDataTransducer
 from zone_c_env import resolve_zone_c_dsn
 from zone_c_retrieval_bridge import ZoneCRetrievalBridge, bridge_enabled_from_env
+# UHR-05 A2: Pearl intervention gate over Zone C writes (default OFF). Imported
+# unconditionally so a missing module is a STARTUP error, never a mid-run surprise.
+from zone_c_causal_gate_bridge import (
+    allow_zonec_write,
+    observe_zonec_causal_gate,
+    reset_zonec_causal_gate,
+    zonec_causal_gate_status,
+)
 from adaptive_viscoelastic_thermostat import AdaptiveViscoelasticThermostat
 from henri_decoder import HENRIUnifiedEgressTransducer
 from arc_egress_contract import (
@@ -1060,6 +1068,14 @@ def run():
         # boundary exempt from continuity, T0 contract).
         if temporal_ledger is not None:
             temporal_ledger.reset(env_name)
+        # UHR-05 A2: the gate's contrast statistic is I(change; action | step), so it
+        # pools over STEP INDICES and must clear whenever the ENVIRONMENT changes --
+        # otherwise the signature would differ because the env differs and the contrast
+        # would be FABRICATED. NOTE (measured): this runner takes ONE episode per env,
+        # so every step index carries exactly one action and the verdict is
+        # REFUSED_INSUFFICIENT. Strict "enforce" is therefore UNSATISFIABLE here; use
+        # "enforce_single_pass", or replay the same env with different action sequences.
+        reset_zonec_causal_gate(env_name)
         if EXTERNAL_OUTCOME_EFE:
             orch.planner.reset_external_outcomes()
         # P0 external evidence: per-step counters for the Beta-Bernoulli
@@ -2915,6 +2931,22 @@ def run():
                         raise SystemExit(f"BLOCKED: {exc}") from exc
                     raise
 
+            # UHR-05 A2 PRODUCER: feed the Pearl gate from the transition that was
+            # JUST observed -- pre-action `grid` -> post-action `obs_next.frame[0]`.
+            # Both ends come from the environment's own return; the planner's
+            # prediction is never used, which is what makes the verdict external.
+            # An absent post-frame is NOT recorded: a missing observation must not
+            # be counted as "the world moved".
+            _cg_post = None
+            if obs_next is not None and getattr(obs_next, "frame", None):
+                try:
+                    _cg_frame0 = obs_next.frame[0]
+                    _cg_post = (_cg_frame0.tolist() if hasattr(_cg_frame0, "tolist")
+                                else _cg_frame0)
+                except Exception:
+                    _cg_post = None
+            if _cg_post is not None:
+                observe_zonec_causal_gate(step, macro_actions[0], grid, _cg_post)
             # P0: observe the executed action's external outcome AFTER the
             # environment returns the next frame.  The Beta-Bernoulli
             # posterior uses only whether the returned frame changed; the
@@ -3087,6 +3119,7 @@ def run():
                                 "outer_flag": bool(HENRI_ARC_ACTION_EFE),
                                 "store_present": action_outcome_store is not None,
                                 "external_outcome_efe": bool(EXTERNAL_OUTCOME_EFE),
+                "zonec_causal_gate": zonec_causal_gate_status(),
                                 "shape_match": _shape_ok,
                                 "aid": int(_aid),
                                 "aid_ge_0": bool(_aid >= 0),
@@ -3264,6 +3297,7 @@ def run():
                         "outer_flag": bool(HENRI_ARC_ACTION_EFE),
                         "store_present": action_outcome_store is not None,
                         "external_outcome_efe": bool(EXTERNAL_OUTCOME_EFE),
+                "zonec_causal_gate": zonec_causal_gate_status(),
                         "obs_next_present": obs_next is not None,
                         "frame_present": bool(getattr(obs_next, "frame", None)),
                         "shape_match": None, "aid": None, "aid_ge_0": None,
@@ -3281,6 +3315,7 @@ def run():
                         "outer_flag": bool(HENRI_ARC_ACTION_EFE),
                         "store_present": action_outcome_store is not None,
                         "external_outcome_efe": bool(EXTERNAL_OUTCOME_EFE),
+                "zonec_causal_gate": zonec_causal_gate_status(),
                         "obs_next_present": obs_next is not None,
                         "frame_present": bool(getattr(obs_next, "frame", None)),
                         "su3_field_present": su3_field is not None,
@@ -3577,11 +3612,21 @@ def run():
             # deleg_a003e770): persistent engram writes are suppressed during
             # frozen eval.
             if step % CHECKPOINT_EVERY == 0 and not learning_frozen():
-                orch.checkpoint_wave(state_wave.cpu(), domain=f"arc3/{env_name}",
-                                      sagnac_stress=sagnac_delta,
-                                      run_id=attr_run_id, arm_id=attr_arm_id,
-                                      commit_sha=attr_commit_sha,
-                                      domain_family="action")
+                # UHR-05 A2: Amendment-2 Pearl intervention gate. Default OFF ->
+                # allow_zonec_write returns True, so this path is unchanged. In
+                # "enforce" mode a non-ratified episode SKIPS the write (fail closed)
+                # and says so in telemetry; the verdict comes from REAL pre/post
+                # frames observed at the frame-change site, never from a prediction.
+                _cg_ok, _cg_why = allow_zonec_write(step=step, tele=tele)
+                if _cg_ok:
+                    orch.checkpoint_wave(state_wave.cpu(), domain=f"arc3/{env_name}",
+                                         sagnac_stress=sagnac_delta,
+                                         run_id=attr_run_id, arm_id=attr_arm_id,
+                                         commit_sha=attr_commit_sha,
+                                         domain_family="action")
+                else:
+                    tele.emit({"zonec_causal_gate_refused_write": {
+                        "step": step, "reason": _cg_why, "domain": f"arc3/{env_name}"}})
 
             print(f"  step {step:3d} | delta {sagnac_delta:.4f} | F {free_energy:.4f} "
                   f"| r {order_param:.3f} | EFE {efe_table[0]['efe']:+.3f} "
@@ -3646,12 +3691,27 @@ def run():
                 "scale": SCALE,
             }, fc_path)
             try:
+                # UHR-05 A2: the same amendment-2 gate covers the episode-end
+                # consolidation write. Fail-closed in "enforce"; default OFF is
+                # byte-identical.
+                _cg_ok2, _cg_why2 = allow_zonec_write(step=None, tele=tele)
+                if not _cg_ok2:
+                    tele.emit({"zonec_causal_gate_refused_write": {
+                        "step": "episode_end", "reason": _cg_why2,
+                        "domain": f"arc3/{env_name}/field_channel_consolidated"}})
+                    raise RuntimeError("ZONEC_CAUSAL_GATE_REFUSED")
                 orch.checkpoint_wave(edmd_buffer[-1][2].cpu(),
-                                    domain=f"arc3/{env_name}/field_channel_consolidated",
-                                    sagnac_stress=L3_loss,
-                                    run_id=attr_run_id, arm_id=attr_arm_id,
-                                    commit_sha=attr_commit_sha,
-                                    domain_family="action")
+                                     domain=f"arc3/{env_name}/field_channel_consolidated",
+                                     sagnac_stress=L3_loss,
+                                     run_id=attr_run_id, arm_id=attr_arm_id,
+                                     commit_sha=attr_commit_sha,
+                                     domain_family="action")
+            except RuntimeError as _cg_re:
+                if "ZONEC_CAUSAL_GATE_REFUSED" in str(_cg_re):
+                    print(f"  [edmd-L3] Zone C write REFUSED by the A2 causal gate "
+                          f"({_cg_why2}); operator artifact kept")
+                else:
+                    raise
             except Exception as e:
                 print(f"  [edmd-L3] Zone C marker failed ({e}); artifact kept")
             print(f"  [edmd-L3] episode consolidation: {len(edmd_buffer)} triples, "
