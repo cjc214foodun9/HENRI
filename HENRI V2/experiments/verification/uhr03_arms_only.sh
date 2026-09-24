@@ -39,6 +39,13 @@ HOST="${1:?host}"; PORT="${2:?port}"
 # edit, and guarantees the remote worktree matches what I pushed.
 SHA="${3:-}"
 STEPS="${STEPS:-16}"
+# UHR-04 AMENDMENT 1: resolve the pinned environment ONCE, here, so the
+# retirement gate and every downstream consumer read the SAME bound value.
+# MEASURED DEFECT (kill-run #7 attempt 1): the gate ran BEFORE any arm and
+# aborted with "ENV_ID: unbound variable" under `set -u`, because ENV_ID was
+# only set inside the remote heredoc. The gate was right; its input was not
+# bound. Default ka59 = the action-conditioned migration target.
+ENV_ID="${ENV_ID:-ka59}"
 KEY="$HOME/.ssh/id_ed25519"
 PUBURL="https://github.com/cjc214foodun9/HENRI.git"
 RWT="/workspace/henri-verify"; WT="$RWT/_uhr03"
