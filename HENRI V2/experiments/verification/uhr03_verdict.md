@@ -179,3 +179,34 @@ role structure*. Neither condition for a strike was met.
 2. A live content-isolating comparator, if the environment produces an action whose
    support overlaps the true action's with different content. Cannot be forced.
 3. `origin/main` stays at `adcc24e`. Nothing promoted.
+
+---
+
+## Addendum E — metric correction and the structural limit (2026-09-23, post-hoc)
+
+**Retraction.** An intermediate scan of this phase printed `VERDICT: a hard competitor EXISTS
+somewhere`. That line was **not supported by the quantity it measured**: the spread was taken
+over *all* per-action scores, including the true action's own, so it is trivially positive.
+Recomputed on the **invalid-only** subset (all actions except the true one), deduped by content
+hash, parent hit only:
+
+```
+instrumented records ............ 32      invalid-set size per record ... 7
+INVALID-ONLY distinct histogram .. {1: 32}
+INVALID-ONLY spread > 1e-9 ....... 0 / 32
+own < min(invalid), recomputed ... 32 / 32
+```
+
+**Identity-only is confirmed; the earlier scope limit stands unchanged and is not upgraded.**
+
+**Structural reason, measured.** `ft09` action 1 → cells `{4032..4091}`, action 2 → cells
+`{4036..4095}`, as interleaved 4-cell blocks: `|aid1 ∩ aid2| = 0`. The pooled domain scores
+candidates at the **observed** action's cells, so any other action composes to the identity
+there by construction. Identity-only competitors are therefore a property of the comparison
+domain, not of the chosen environment.
+
+**Consequence for the next run.** Pinning a different environment (`ka59`) cannot produce a
+live content comparator unless two actions change overlapping cells with different deltas
+there. Run #7 would re-test **identification across environments**; it is admissible and cheap,
+but it **cannot close the content gap**. Content discrimination continues to rest on the local
+hard comparator (`own 0.03769 < S_hard(same cells, +2) 0.509042 < untrained 0.532079`).
