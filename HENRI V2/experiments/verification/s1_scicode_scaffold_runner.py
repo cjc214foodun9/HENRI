@@ -826,6 +826,39 @@ def dataset_control_rows(harness, dev: list[dict]) -> list[dict]:
 # 8. main
 # ---------------------------------------------------------------------------
 
+def _window_size(default: int = MAX_ITEMS) -> int:
+    """Scored-item window size. DEFAULT IS UNCHANGED, so the committed N=16 path is
+    byte-identical; widening is explicit.
+
+    WHY THIS EXISTS (measured, own calls): `MAX_ITEMS = 16` caps the DENOMINATOR at 16
+    of the 48 dev sub-steps that now resolve OFFICIAL targets (official_targets:
+    considered=48, targeted=48, refusals=0). The runner had NO argv parsing at all
+    (`add_argument` count = 0), so an earlier `--n-prompts 48` was silently ignored and
+    the window stayed 16 -- two thirds of the measurement power was unused while
+    appearing to be requested.
+
+    Precedence: `--window N` > HENRI_SCICODE_WINDOW > MAX_ITEMS. A MALFORMED value
+    RAISES; it never falls back to the default (a silent fallback would reproduce
+    exactly the defect this function repairs).
+    """
+    if "--window" in sys.argv:
+        i = sys.argv.index("--window")
+        if i + 1 >= len(sys.argv):
+            raise SystemExit("--window requires an integer argument")
+        raw = sys.argv[i + 1]
+    else:
+        raw = os.environ.get("HENRI_SCICODE_WINDOW", "")
+    if not raw:
+        return default
+    try:
+        n = int(raw)
+    except ValueError:
+        raise SystemExit(f"window size must be an integer, got {raw!r}")
+    if n < 1:
+        raise SystemExit(f"window size must be >= 1, got {n}")
+    return n
+
+
 def main() -> int:
     run_id = ei.run_id_new()
     commit = ei.current_commit(str(REPO))
@@ -890,7 +923,8 @@ def main() -> int:
 
     # ---- (3) dataset + window ---------------------------------------------
     dev = [json.loads(l) for l in DATASET.read_text(encoding="utf-8").splitlines() if l.strip()]
-    window = select_window(dev)
+    window_n = _window_size()
+    window = select_window(dev, n=window_n)
     win_ids = [item_id(r, i) for r, i in window]
     report["dataset_rows"] = len(dev)
     report["window"] = {
