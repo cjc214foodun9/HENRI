@@ -551,7 +551,10 @@ def build_reference_code(problem: dict, idx: int) -> str:
 
 def build_candidate_code(problem: dict, idx: int, prior_outputs: list[str]) -> str:
     deps = (problem.get("required_dependencies") or "").strip()
-    prior = "\n".join(p for p in prior_outputs if p)
+    # UHR-05: `prior` must EXCLUDE the current step, because `own` supplies it below.
+    # Without this slice, correcting the call site to range(idx + 1) would emit the
+    # current step TWICE (once inside `prior`, once as `own`).
+    prior = "\n".join(p for p in prior_outputs[:idx] if p)
     own = prior_outputs[idx] if idx < len(prior_outputs) else ""
     return deps + "\n" + (prior + "\n" if prior else "") + own
 
@@ -820,7 +823,18 @@ def main() -> int:
         deps = (problem.get("required_dependencies") or "")
         header = _dataset_field(case, "function_header") or ""
         step_prompt = _dataset_field(case, "step_description_prompt") or ""
-        prior_candidate = [source.produce((problem, k), []) for k in range(idx)]
+        # UHR-05 OFF-BY-ONE FIX. MEASURED DEFECT this repairs: this list was built with
+        # `range(idx)` (EXCLUSIVE) while the REFERENCE arm below uses `range(idx + 1)`
+        # (INCLUSIVE). `build_candidate_code` then read `prior_outputs[idx]`, which for a
+        # list of length `idx` is ALWAYS out of range, so it silently substituted "" and
+        # the CURRENT step's generated code never entered the payload -- `source.produce`
+        # was never even called for the current step (at idx=0, never at all). The
+        # published tests require that sub-step's OWN function, so every scored item died
+        # as `CANDIDATE_UNDEFINED_SYMBOL:<current function>`.
+        # THIS FIX CANNOT RAISE pass@1 BY ITSELF: with NullCandidateSource the payload is
+        # unchanged (`deps + "\n"`) and pass@1 stays 0.0. It removes a block on FUTURE
+        # measurement; it does not manufacture a result.
+        prior_candidate = [source.produce((problem, k), []) for k in range(idx + 1)]
         cand_code = build_candidate_code(problem, idx, prior_candidate)
 
         # G2 on the scored payload, before anything is executed.
