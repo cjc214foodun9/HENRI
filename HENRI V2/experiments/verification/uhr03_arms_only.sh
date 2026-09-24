@@ -5,7 +5,14 @@
 # THE EXPERIMENTAL VARIABLE IS EXACTLY ONE FLAG: HENRI_UHR02_EXTERO_GATE (0 then 1).
 #
 # AMENDMENT 3 — both changes forced by kill-run #1 MEASUREMENT:
-#   (a) HENRI_SINGLE_ENV=ft09  PIN the environment. Kill-run #1 took the API's
+#   (a) HENRI_SINGLE_ENV=<env>  PIN the environment. MIGRATED to ka59
+#       (UHR-04, Amendment 1): ft09 is RETIRED for causal evaluation. It
+#       measured 32/32 steps where every action moved exactly 4 cells in
+#       row 63 (channels 4032..4095) of a 64x64 grid with a bit-identical
+#       inter-frame diff (0.0009765625) -- a step-indexed PROGRESS CURSOR,
+#       not an action effect. Confident 16/16 there proves nothing causal.
+#       ka59 carries action-conditioned variation (per-action means
+#       15.73/17.34/18.60/11.17; six distinct changed-cell counts). Kill-run #1 took the API's
 #       first-listed env (lp85-305b61c3) and the frame never moved (0/16 probes),
 #       so the store only ever saw an identity displacement. ft09 measured 8/8
 #       moving in UHR-01 (ft09-0d8bbf25). The env list rotates between runs, so
@@ -57,6 +64,20 @@ case "$DEP_OUT" in
 esac
 
 echo
+echo
+echo "=== 0a. AMENDMENT-1 RETIREMENT GATE (fail-closed) ==="
+# ft09 is RETIRED for causal evaluation: measured 32/32 steps where every action
+# moved exactly 4 cells in row 63 (channels 4032..4095) of a 64x64 grid, with a
+# bit-identical inter-frame diff (0.0009765625). That is a step-indexed progress
+# cursor, not an action effect. A run on ft09 can produce a confident 16/16 that
+# proves nothing about causation. Refuse to spend on it.
+if [ "${ENV_ID:-ka59}" = "ft09" ]; then
+  echo "ENV_RETIRED: ft09 is retired for causal evaluation (cursor-band artifact)."
+  echo "ENV_RETIRED_DETAIL: every action changes exactly 4 cells in row 63; diff bit-identical."
+  exit 1
+fi
+echo "ENV_OK env=$ENV_ID (not a retired cursor-band environment)"
+
 echo "=== 0b. DETACHED-LAUNCH MECHANISM PREFLIGHT (fail-closed, ~15 s) ==="
 # The arms below launch DETACHED (setsid nohup ... </dev/null) and report their
 # exit code through an `exit_code` sentinel file, because a FOREGROUND ssh child
@@ -236,7 +257,7 @@ for ARM in BASELINE RFSS; do
   case "$ARM" in BASELINE) FLAG=0 ;; RFSS) FLAG=1 ;; esac
   echo
   echo "=== 3. ARM=$ARM  HENRI_UHR02_EXTERO_GATE=$FLAG ==="
-  "${SSH[@]}" RWT="$RWT" WT="$WT" ARM="$ARM" FLAG="$FLAG" STEPS="$STEPS" bash -s <<'REMOTE'
+  "${SSH[@]}" RWT="$RWT" WT="$WT" ARM="$ARM" FLAG="$FLAG" STEPS="$STEPS" ENV_ID="${ENV_ID:-ka59}" bash -s <<'REMOTE'
 set -u
 D="$RWT/telemetry_uhr03_$ARM"
 rm -rf "$D"; mkdir -p "$D"
@@ -247,7 +268,7 @@ export HENRI_MACRO_NUM_CHANNELS=1
 export HENRI_OFFLINE_DIAG=1
 export EXTERNAL_OUTCOME_EFE=1
 export HENRI_TRACE_UPDATE_GATES=1
-export HENRI_SINGLE_ENV=ft09
+export HENRI_SINGLE_ENV="$ENV_ID"
 export HENRI_UHR02_EXTERO_GATE="$FLAG"
 export HENRI_TELEMETRY_DIR="$D"
 export EXPECT_FLAG="$FLAG"
@@ -262,7 +283,7 @@ want = {
     "HENRI_OFFLINE_DIAG": "1",
     "EXTERNAL_OUTCOME_EFE": "1",
     "HENRI_TRACE_UPDATE_GATES": "1",
-    "HENRI_SINGLE_ENV": "ft09",
+    "HENRI_SINGLE_ENV": __import__("os").environ.get("ENV_ID", "ka59"),
     "HENRI_UHR02_EXTERO_GATE": os.environ.get("EXPECT_FLAG", "?"),
 }
 bad = {k: (os.environ.get(k), v) for k, v in want.items() if os.environ.get(k) != v}
@@ -274,7 +295,7 @@ _env_rc=$?
 
 cd "$WT/HENRI V2" || { echo "CD_FAIL"; exit 1; }
 export PYTHONPATH="$PWD"
-echo "--- run: phase823_live_gauntlet steps=$STEPS env=ft09 (DETACHED) ---"
+echo "--- run: phase823_live_gauntlet steps=$STEPS env=$ENV_ID (DETACHED) ---"
 # DETACHED LAUNCH. Measured defect (kill-run #2, 2026-09-23): the RFSS arm
 # truncated at 7/38 records with "Connection to ssh2.vast.ai closed by remote
 # host". A FOREGROUND ssh child dies with the session, so a transient network
