@@ -1240,10 +1240,32 @@ def finish(report: dict, t_start: float, *, verdict: str, reason: str,
     report["verdict"] = verdict
     report["blocking_reason" if verdict == "BLOCKED" else "verdict_reason"] = reason
     report["wall_seconds"] = round(time.time() - t_start, 2)
+    # UHR-05: `non_claims` must describe the run that HAPPENED. These three values are
+    # defined HERE because my first patch referenced them before definition -- a NameError
+    # that `py_compile` does NOT catch, since ast-level compilation does not resolve names.
+    # They are derived from the same `candidate_source` block the receipt publishes, so the
+    # claim and the provenance cannot drift apart.
+    _cs = report.get("candidate_source") or {}
+    _nc_produces = bool(_cs.get("produces_code"))
+    _nc_name = _cs.get("name") or "unknown"
+    _nc_absent = (
+        "No code generator is wired to SciCode; the only registered candidate source emits "
+        "the empty string. Any pass@1 here is the floor for an ABSENT generator."
+    )
     report["non_claims"] = [
         "INSTRUMENT VALIDATION AND BASELINE ONLY. This is NOT evidence of HENRI capability.",
-        "No code generator is wired to SciCode; the only registered candidate source emits the "
-        "empty string. Any pass@1 here is the floor for an ABSENT generator.",
+        # UHR-05 DEFECT REPAIRED (measured 2026-09-24, run 59e7c591): this slot used to
+        # assert unconditionally that "No code generator is wired to SciCode; the only
+        # registered candidate source emits the empty string. Any pass@1 here is the floor
+        # for an ABSENT generator." That became FALSE the moment the flag-gated
+        # `BackboneCandidateSource` existed: run 59e7c591 emitted 46 items with
+        # produces_code=True. A receipt that carries a false claim about itself is a
+        # defect, so the clause now states what actually ran.
+        _nc_absent if not _nc_produces else (
+            f"The candidate arm ran {_nc_name!r} (produces_code=True): a LOCAL PRETRAINED "
+            "BACKBONE BASELINE, not a HENRI capability. Any pass@1 here measures that "
+            "backbone plus this harness, never HENRI's own wave->text egress."
+        ),
         "Makes NO claim about the AAII index, its weights, or any constituent.",
         "No local grader, tolerance, or re-derived expected value was substituted for the "
         "published tests.",
