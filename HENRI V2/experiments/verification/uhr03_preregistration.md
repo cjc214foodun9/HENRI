@@ -239,7 +239,7 @@ numerically over 20 draws at K=8192, d=8, is **0.011129** (min 0.007906, max
 0.008815` is the baseline for mean PAIRWISE |cos|, a DIFFERENT statistic
 (measured 0.291379 for unit rows, since pairwise |cos| scales as 1/sqrt(d), not
 1/sqrt(K)). Run #3's observed 0.0037..0.0086 sits AT or BELOW the low end of the
-isotropic band, so the roles are spread more evenly than random.
+isotropic band. **RETRACTED 2026-09-23:** `role_coherence` is `float(roles.mean(dim=0).norm())`, whose isotropic baseline over 400 draws at K=8192, d=8 is mean 0.010780 sd 0.002649. Observed run #5 mean 0.010221 (z = -0.84) and run #6 mean 0.010162 (z = -0.93) at n=16 are STATISTICALLY INDISTINGUISHABLE from isotropic - the roles are NOT measurably spread, and this band was never a valid precondition (see the withdrawal note above: it would have failed a working mechanism).
 
 **AMENDMENT 8 (2026-09-23, POST-HOC wrt run #3; governs run #4 onwards).**
 
