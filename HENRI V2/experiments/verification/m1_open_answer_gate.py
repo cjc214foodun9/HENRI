@@ -15,7 +15,7 @@ verdict a function of FOUR arms, one of which is designed to falsify a naive pas
 
 PRE-REGISTERED (declared before measurement):
   P1 DETERMINISM   same prompt twice            -> identical top-1 for 100% of N
-  P2 DISTINCT      distinct_top1 / N            -> >= 0.50            [floor]
+  P2 DISTINCT      distinct_top1 / N            -> >= 0.50            [RETIRED]
   P3 ORDER         shuffled chars (SAME multiset) -> different top-1 for >= 0.50 of N
   P4 EQUIVALENCE   near view (whitespace-normalized) -> top-1 agrees for >= 0.50 of N
   P5 VACUITY       random waves through the SAME codebook must NOT satisfy P2,
@@ -24,6 +24,17 @@ PRE-REGISTERED (declared before measurement):
 FALSIFIER BUILT IN: if the RANDOM-WAVE arm also reaches the P2 floor, the gate is
 declared VACUOUS no matter how good the treatment looks. That is the exact defect
 that made the original 39-vs-37 comparison meaningless.
+
+P2 IS RETIRED FOR A MEASURED SCALE DEFECT, NOT FOR A CONFOUND (UHR-05, N=480 run).
+  `distinct_top1 / N` can never exceed `V / N`, because a top-1 id is one of V tokens.
+  At V = 156 the ceiling is min(1, V/N): 1.0000 at N=120, but 0.3250 at N=480 -- so the
+  0.50 floor is UNREACHABLE by construction once N > V/0.5 = 312, for ANY encoder,
+  content-bearing or not. The earlier "the random control scored ABOVE the floor"
+  rationale held only at the pre-registered N=120 (measured 0.5917 / 0.7000) and does
+  NOT replicate at N=480 (measured 0.2896 / 0.3063, BELOW the floor): both arms fall
+  with N, tracking the ceiling. The operative defect is a raw ratio threshold reused
+  across sample sizes without normalisation. Retiring P2 remains correct -- and is
+  now better justified.
 
 Runs BOTH position_binding modes, because that is the evidence for the open
 decision on the tokenizer default.
@@ -229,11 +240,13 @@ def gate_validity(code, prompts, rng):
 def verdict(a, control_valid=True):
     """UHR-05 AMENDMENT (measured, not tuned).
 
-    P2 `distinct_ratio` is RETIRED as an operative criterion: the RANDOM-wave control
-    scored 0.5917-0.7417 against a 0.50 floor in every measured arm, so the axis is
-    confounded (a structureless encoder wins it) and the old
-    `vacuous = rand >= floor` predicate could never be False, making M1_GATE_PASS
-    unreachable. It is kept as a REPORTED diagnostic only.
+    P2 `distinct_ratio` is RETIRED as an operative criterion, for a MEASURED SCALE
+    DEFECT (see the module docstring): `distinct_top1 / N <= V / N`, so at V=156 the
+    0.50 floor is unreachable by construction for N > 312, for any encoder. The first
+    rationale offered here ("the RANDOM-wave control scored above the floor in every
+    measured arm") was true at N=120 but FALSIFIED at N=480, where both arms fall below
+    the floor. Retiring P2 stays correct; the reason is now scale, not confound. P2 is
+    kept as a REPORTED diagnostic only.
     """
     p1 = a["determinism"] >= P1_DETERMINISM
     p3 = a["order_sensitivity"] >= P3_ORDER_FLOOR
@@ -258,20 +271,28 @@ def main(argv=None):
     _ap = argparse.ArgumentParser(add_help=True)
     _ap.add_argument("--receipt", default=None,
                      help="receipt path; else HENRI_RECEIPT_DIR; else the committed default")
+    # UHR-05: expose N so the SAME instrument can be re-run at a larger sample.
+    # Default is the pre-registered 120, and the receipt schema is untouched, so the
+    # default path is byte-identical (verified by git diff on the committed receipt).
+    _ap.add_argument("--n-prompts", type=int, default=N_PROMPTS,
+                     help=f"prompt count (default {N_PROMPTS}; pre-registered gate needs >=100)")
     args = _ap.parse_args(argv)
+    n_prompts = int(args.n_prompts)
+    if n_prompts < 100:
+        raise ValueError(f"pre-registered gate requires N >= 100; got {n_prompts}")
     rng = random.Random(SEED)
-    prompts = build_prompts(N_PROMPTS, rng)
-    assert len(set(prompts)) == N_PROMPTS, "prompts must be distinct"
+    prompts = build_prompts(n_prompts, rng)
+    assert len(set(prompts)) == n_prompts, "prompts must be distinct"
 
     print("PRE-REGISTERED CRITERIA")
-    print(f"  N_prompts          = {N_PROMPTS}  (gate requires >=100)")
+    print(f"  N_prompts          = {n_prompts}  (gate requires >=100)")
     print(f"  vocab (manifest)   = {len(VOCAB)} real words")
     print(f"  P1 determinism     >= {P1_DETERMINISM}")
     print(f"  P2 distinct top1   >= {P2_DISTINCT_FLOOR}")
     print(f"  P3 order-sensitive >= {P3_ORDER_FLOOR}")
     print(f"  P4 equivalence     >= {P4_EQUIV_FLOOR}")
-    print("  P2 distinct top1   RETIRED as operative (random control scored ABOVE the floor;")
-    print("                      the axis is confounded - reported only)")
+    print("  P2 distinct top1   RETIRED as operative: distinct/N <= V/N, so the 0.50 floor")
+    print("                      is unreachable for N > 312 at V=156 (scale defect, not confound)")
     print("  P5 gate validity   BOTH degenerate encoders (dead, hash) must FAIL P3/P4")
     print()
 
@@ -322,17 +343,20 @@ def main(argv=None):
         "gate_version": "uhr05-v2",
         "operative_criteria": ["P1_determinism>=1.0", "P3_order_sensitivity>=0.50",
                                "P4_equivalence>=0.50", "P5_control_valid==True"],
-        "retired_criteria": ["P2_distinct_ratio: CONFOUNDED - the RANDOM-wave control "
-                             "scored ABOVE its 0.50 floor in every measured arm, so the old "
-                             "'vacuous = rand >= floor' predicate could never be False and "
-                             "M1_GATE_PASS was unreachable by construction"],
+        "retired_criteria": ["P2_distinct_ratio: SCALE DEFECT - distinct_top1/N can never "
+                             "exceed V/N (V=156), so the 0.50 floor is unreachable by "
+                             "construction for N > 312, for any encoder. Measured: the "
+                             "random control read 0.5917/0.7000 at N=120 but 0.2896/0.3063 "
+                             "at N=480, BELOW the floor -- the earlier 'control scored above "
+                             "the floor' rationale does not replicate. A raw ratio floor "
+                             "reused across sample sizes is the dimension-blindness fallacy"],
         "control": "P5 requires BOTH shipped degenerate encoders (dead, hash) to FAIL the "
                    "(P3,P4) pair; a structureless encoder passing invalidates the pair",
         "floors_unchanged_from_preregistration": True,
     }
     dest.write_text(json.dumps(dict(
         predicate=_predicate,
-        preregistration=dict(N=N_PROMPTS, P1=P1_DETERMINISM,
+        preregistration=dict(N=n_prompts, P1=P1_DETERMINISM,
                              P2=P2_DISTINCT_FLOOR, P3=P3_ORDER_FLOOR,
                              P4=P4_EQUIV_FLOOR, seed=SEED),
         arms=out), indent=2), encoding="utf-8")

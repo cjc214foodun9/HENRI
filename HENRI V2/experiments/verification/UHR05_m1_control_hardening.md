@@ -8,8 +8,12 @@
 
 The committed M1 gate (`m1_open_answer_gate.py`, `uhr05-v2`) reports `M1_GATE_PASS` for
 both position-binding modes. Its operative criteria are P3 (order sensitivity) and P4
-(equivalence); P2 `distinct_ratio` was retired because the random-wave control scored
-ABOVE its floor in every arm. Two questions the committed gate could not answer:
+(equivalence). P2 `distinct_ratio` is retired — and this work **corrects the reason**: the
+original rationale ("the random-wave control scored ABOVE its floor in every arm") held
+only at the pre-registered `N = 120` and does NOT replicate at `N = 480`. The real defect
+is that `distinct_top1 / N` can never exceed `V / N`, so at `V = 156` the `0.50` floor is
+unreachable by construction for `N > 312`, for any encoder (see §"P2 ceiling" below).
+Two questions the committed gate could not answer:
 
 1. **Margin.** For `fractional_shift` the gate reads order-sensitivity `0.5083` against a
    pre-registered floor of `0.50` on `N = 120`. A proportion with `n = 120` has
@@ -144,6 +148,40 @@ chance. Neither arm has both criteria informative at once.
   untested.
 - The gate's receipt is unchanged by this work; this hardening is a separate artifact and
   does not silently amend the committed verdict.
+
+## Committed-instrument replication at N = 480
+
+The gate itself was re-run unmodified-in-logic (`--n-prompts 480`), so the finding does not
+depend on my parallel harness:
+
+```
+fractional_shift   order 238/480 = 0.4958   equivalence 0.7104   VERDICT = M1_GATE_FAIL:P3
+phasor_bind        order 479/480 = 0.9979   equivalence 0.8604   VERDICT = M1_GATE_PASS
+M1_GATE_CLOSED = False
+```
+
+The committed gate and my hardening harness **agree to 1e-9** on both arms at `N = 480`
+(`AGREE=True`), and the default `N = 120` path reproduces the committed receipt
+byte-identically (`BYTE_IDENTICAL_LF = True`) — so this is the same instrument, not a
+substitute.
+
+### P2 ceiling — why the retired criterion was scale-blind, not confounded
+
+`distinct_top1 / N` counts distinct top-1 ids among `V = 156` possible tokens, so it can
+never exceed `min(1, V/N)`: **1.0000 at N = 120**, but **0.3250 at N = 480**. The `0.50`
+floor is therefore unreachable for `N > V/0.5 = 312`, whatever the encoder does.
+
+| measured `distinct_ratio` | N=120 | N=480 |
+|---|---|---|
+| treatment `fractional_shift` | 0.2333 | 0.0854 |
+| random control `fractional_shift` | **0.5917** | **0.2896** |
+| treatment `phasor_bind` | 0.1167 | 0.0417 |
+| random control `phasor_bind` | **0.7000** | **0.3063** |
+
+Both arms fall with `N`, tracking the ceiling. The N=120 observation "random beats the
+floor" was a property of that sample, not of the metric — a raw ratio threshold reused
+across sample sizes without normalisation. Retiring P2 stays correct; the stated reason
+did not.
 
 ## Next falsification
 
