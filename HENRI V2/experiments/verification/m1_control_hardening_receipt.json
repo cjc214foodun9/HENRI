@@ -1,0 +1,467 @@
+{
+  "gate_version": "uhr05-hardening-v1",
+  "egress_center_env": false,
+  "instrument": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\.worktrees\\semantic-backbone\\HENRI V2\\experiments\\verification\\m1_open_answer_gate.py",
+  "floors": {
+    "P3_order": 0.5,
+    "P4_equiv": 0.5
+  },
+  "preregistration": {
+    "H1": "CP-95% lower bound of order_sensitivity must exceed 0.50",
+    "H2": "each same-construction control must FAIL (order<0.50 or equiv<0.50)",
+    "H3": "centering content-specific iff treatment_centered passes the pair and blockperm_centered does not",
+    "H4": "centering commutes with blockperm; blockperm preserves the mean"
+  },
+  "arms": {
+    "fractional_shift:small": {
+      "n": 120,
+      "mode": "fractional_shift",
+      "structure": {
+        "blockperm_preserves_common_mode_norm": true,
+        "centering_commutes_with_blockperm": true
+      },
+      "arms": {
+        "treatment": {
+          "order": 0.5083333333333333,
+          "equiv": 0.6666666666666666,
+          "order_k": 61,
+          "equiv_k": 80,
+          "n": 120,
+          "pair_pass": true,
+          "cp95": [
+            0.42959394991315514,
+            0.5867584483363235
+          ],
+          "binom_p": 0.46365751054494164
+        },
+        "treatment_centered": {
+          "order": 0.55,
+          "equiv": 0.9333333333333333,
+          "order_k": 66,
+          "equiv_k": 112,
+          "n": 120,
+          "pair_pass": true,
+          "cp95": [
+            0.4708346110642396,
+            0.6272791974215033
+          ],
+          "binom_p": 0.1576516504161289
+        },
+        "blockperm": {
+          "order": 0.38333333333333336,
+          "equiv": 0.058333333333333334,
+          "order_k": 46,
+          "equiv_k": 7,
+          "n": 120,
+          "pair_pass": false,
+          "cp95": [
+            0.30898310859385525,
+            0.46209112796930474
+          ],
+          "binom_p": 0.9960767034387801
+        },
+        "blockperm_centered": {
+          "order": 0.825,
+          "equiv": 0.8166666666666667,
+          "order_k": 99,
+          "equiv_k": 98,
+          "n": 120,
+          "pair_pass": true,
+          "cp95": [
+            0.7578660564077622,
+            0.8796362548392258
+          ],
+          "binom_p": 1.3308917480264674e-13
+        },
+        "signrand": {
+          "order": 0.5583333333333333,
+          "equiv": 0.825,
+          "order_k": 67,
+          "equiv_k": 99,
+          "n": 120,
+          "pair_pass": true,
+          "cp95": [
+            0.4791447786188727,
+            0.6353210770084508
+          ],
+          "binom_p": 0.11760168398626233
+        },
+        "dead": {
+          "order": 0.0,
+          "equiv": 1.0,
+          "order_k": 0,
+          "equiv_k": 120,
+          "n": 120,
+          "pair_pass": false,
+          "cp95": [
+            0.0,
+            0.024655401055656334
+          ],
+          "binom_p": 1.0
+        },
+        "hash": {
+          "order": 0.9916666666666667,
+          "equiv": 0.0,
+          "order_k": 119,
+          "equiv_k": 0,
+          "n": 120,
+          "pair_pass": false,
+          "cp95": [
+            0.9610791531398315,
+            0.9995726472213267
+          ],
+          "binom_p": 9.103028252767794e-35
+        }
+      }
+    },
+    "fractional_shift:large": {
+      "n": 480,
+      "mode": "fractional_shift",
+      "structure": {
+        "blockperm_preserves_common_mode_norm": true,
+        "centering_commutes_with_blockperm": true
+      },
+      "arms": {
+        "treatment": {
+          "order": 0.49583333333333335,
+          "equiv": 0.7104166666666667,
+          "order_k": 238,
+          "equiv_k": 341,
+          "n": 480,
+          "pair_pass": false,
+          "cp95": [
+            0.45735065438851263,
+            0.534354315543955
+          ],
+          "binom_p": 0.5902468673759462
+        },
+        "treatment_centered": {
+          "order": 0.6145833333333334,
+          "equiv": 0.9145833333333333,
+          "order_k": 295,
+          "equiv_k": 439,
+          "n": 480,
+          "pair_pass": true,
+          "cp95": [
+            0.5765479389638315,
+            0.6515644288941147
+          ],
+          "binom_p": 2.925753230427303e-07
+        },
+        "blockperm": {
+          "order": 0.42916666666666664,
+          "equiv": 0.058333333333333334,
+          "order_k": 206,
+          "equiv_k": 28,
+          "n": 480,
+          "pair_pass": false,
+          "cp95": [
+            0.39136626886283654,
+            0.46761844047395296
+          ],
+          "binom_p": 0.9991956301749846
+        },
+        "blockperm_centered": {
+          "order": 0.7854166666666667,
+          "equiv": 0.84375,
+          "order_k": 377,
+          "equiv_k": 405,
+          "n": 480,
+          "pair_pass": true,
+          "cp95": [
+            0.752279970601605,
+            0.8159105652281262
+          ],
+          "binom_p": 4.813511549614092e-38
+        },
+        "signrand": {
+          "order": 0.5583333333333333,
+          "equiv": 0.7520833333333333,
+          "order_k": 268,
+          "equiv_k": 361,
+          "n": 480,
+          "pair_pass": true,
+          "cp95": [
+            0.5198173144591487,
+            0.5963129841435904
+          ],
+          "binom_p": 0.005990283004496991
+        },
+        "dead": {
+          "order": 0.0,
+          "equiv": 1.0,
+          "order_k": 0,
+          "equiv_k": 480,
+          "n": 480,
+          "pair_pass": false,
+          "cp95": [
+            0.0,
+            0.006221673636624847
+          ],
+          "binom_p": 1.0
+        },
+        "hash": {
+          "order": 0.9854166666666667,
+          "equiv": 0.004166666666666667,
+          "order_k": 473,
+          "equiv_k": 2,
+          "n": 480,
+          "pair_pass": false,
+          "cp95": [
+            0.9727833450423451,
+            0.9931361250534307
+          ],
+          "binom_p": 3.6242728316034704e-130
+        }
+      }
+    },
+    "phasor_bind:small": {
+      "n": 120,
+      "mode": "phasor_bind",
+      "structure": {
+        "blockperm_preserves_common_mode_norm": true,
+        "centering_commutes_with_blockperm": true
+      },
+      "arms": {
+        "treatment": {
+          "order": 0.9916666666666667,
+          "equiv": 0.8166666666666667,
+          "order_k": 119,
+          "equiv_k": 98,
+          "n": 120,
+          "pair_pass": true,
+          "cp95": [
+            0.9610791531398315,
+            0.9995726472213267
+          ],
+          "binom_p": 9.103028252767794e-35
+        },
+        "treatment_centered": {
+          "order": 0.9916666666666667,
+          "equiv": 0.8333333333333334,
+          "order_k": 119,
+          "equiv_k": 100,
+          "n": 120,
+          "pair_pass": true,
+          "cp95": [
+            0.9610791531398315,
+            0.9995726472213267
+          ],
+          "binom_p": 9.103028252767794e-35
+        },
+        "blockperm": {
+          "order": 1.0,
+          "equiv": 0.008333333333333333,
+          "order_k": 120,
+          "equiv_k": 1,
+          "n": 120,
+          "pair_pass": false,
+          "cp95": [
+            0.9753445989443437,
+            1.0
+          ],
+          "binom_p": 7.52316384526264e-37
+        },
+        "blockperm_centered": {
+          "order": 0.9833333333333333,
+          "equiv": 0.0,
+          "order_k": 118,
+          "equiv_k": 0,
+          "n": 120,
+          "pair_pass": false,
+          "cp95": [
+            0.948466286313622,
+            0.9970306516560826
+          ],
+          "binom_p": 5.462569268045203e-33
+        },
+        "signrand": {
+          "order": 1.0,
+          "equiv": 0.4,
+          "order_k": 120,
+          "equiv_k": 48,
+          "n": 120,
+          "pair_pass": false,
+          "cp95": [
+            0.9753445989443437,
+            1.0
+          ],
+          "binom_p": 7.52316384526264e-37
+        },
+        "dead": {
+          "order": 0.0,
+          "equiv": 1.0,
+          "order_k": 0,
+          "equiv_k": 120,
+          "n": 120,
+          "pair_pass": false,
+          "cp95": [
+            0.0,
+            0.024655401055656334
+          ],
+          "binom_p": 1.0
+        },
+        "hash": {
+          "order": 1.0,
+          "equiv": 0.0,
+          "order_k": 120,
+          "equiv_k": 0,
+          "n": 120,
+          "pair_pass": false,
+          "cp95": [
+            0.9753445989443437,
+            1.0
+          ],
+          "binom_p": 7.52316384526264e-37
+        }
+      }
+    },
+    "phasor_bind:large": {
+      "n": 480,
+      "mode": "phasor_bind",
+      "structure": {
+        "blockperm_preserves_common_mode_norm": true,
+        "centering_commutes_with_blockperm": true
+      },
+      "arms": {
+        "treatment": {
+          "order": 0.9979166666666667,
+          "equiv": 0.8604166666666667,
+          "order_k": 479,
+          "equiv_k": 413,
+          "n": 480,
+          "pair_pass": true,
+          "cp95": [
+            0.9901554078531085,
+            0.9998931446794624
+          ],
+          "binom_p": 1.5408031500529145e-142
+        },
+        "treatment_centered": {
+          "order": 0.99375,
+          "equiv": 0.8520833333333333,
+          "order_k": 477,
+          "equiv_k": 409,
+          "n": 480,
+          "pair_pass": true,
+          "cp95": [
+            0.9839263800966376,
+            0.998294372985333
+          ],
+          "binom_p": 5.904511751317774e-138
+        },
+        "blockperm": {
+          "order": 0.9854166666666667,
+          "equiv": 0.0125,
+          "order_k": 473,
+          "equiv_k": 6,
+          "n": 480,
+          "pair_pass": false,
+          "cp95": [
+            0.9727833450423451,
+            0.9931361250534307
+          ],
+          "binom_p": 3.6242728316034704e-130
+        },
+        "blockperm_centered": {
+          "order": 0.9854166666666667,
+          "equiv": 0.0020833333333333333,
+          "order_k": 473,
+          "equiv_k": 1,
+          "n": 480,
+          "pair_pass": false,
+          "cp95": [
+            0.9727833450423451,
+            0.9931361250534307
+          ],
+          "binom_p": 3.6242728316034704e-130
+        },
+        "signrand": {
+          "order": 0.9895833333333334,
+          "equiv": 0.4,
+          "order_k": 475,
+          "equiv_k": 192,
+          "n": 480,
+          "pair_pass": false,
+          "cp95": [
+            0.9782234296588443,
+            0.9958868066689279
+          ],
+          "binom_p": 6.731735326848418e-134
+        },
+        "dead": {
+          "order": 0.0,
+          "equiv": 1.0,
+          "order_k": 0,
+          "equiv_k": 480,
+          "n": 480,
+          "pair_pass": false,
+          "cp95": [
+            0.0,
+            0.006221673636624847
+          ],
+          "binom_p": 1.0
+        },
+        "hash": {
+          "order": 0.9979166666666667,
+          "equiv": 0.010416666666666666,
+          "order_k": 479,
+          "equiv_k": 5,
+          "n": 480,
+          "pair_pass": false,
+          "cp95": [
+            0.9901554078531085,
+            0.9998931446794624
+          ],
+          "binom_p": 1.5408031500529145e-142
+        }
+      }
+    }
+  },
+  "faithfulness": {
+    "fractional_shift": {
+      "gate_order": 0.5083333333333333,
+      "mine_order": 0.5083333333333333,
+      "gate_equiv": 0.6666666666666666,
+      "mine_equiv": 0.6666666666666666,
+      "faithful": true
+    },
+    "phasor_bind": {
+      "gate_order": 0.9916666666666667,
+      "mine_order": 0.9916666666666667,
+      "gate_equiv": 0.8166666666666667,
+      "mine_equiv": 0.8166666666666667,
+      "faithful": true
+    }
+  },
+  "verdicts": {
+    "fractional_shift:large": {
+      "H1_margin_decisive": false,
+      "H1_point_estimate": 0.49583333333333335,
+      "H1_binom_p_ge_k_at_half": 0.5902468673759462,
+      "H2_blockperm_fails_pair": true,
+      "H2_signrand_fails_pair": false,
+      "H2_all_same_construction_fail": false,
+      "H3_centering_content_specific": false,
+      "H4_structure_ok": true
+    },
+    "phasor_bind:large": {
+      "H1_margin_decisive": true,
+      "H1_point_estimate": 0.9979166666666667,
+      "H1_binom_p_ge_k_at_half": 1.5408031500529145e-142,
+      "H2_blockperm_fails_pair": true,
+      "H2_signrand_fails_pair": true,
+      "H2_all_same_construction_fail": true,
+      "H3_centering_content_specific": true,
+      "H4_structure_ok": true
+    },
+    "_aggregate": {
+      "pair_is_content_specific_in": [
+        "phasor_bind"
+      ],
+      "pair_CONFOUNDED_in": [
+        "fractional_shift"
+      ]
+    }
+  }
+}
