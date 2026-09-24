@@ -54,6 +54,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import math
+import os
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import torch
@@ -430,6 +431,50 @@ class HoloVLATokenizer(nn.Module):
 
 
 # ------------------------------------------------------- phase-preserving egress
+# ---------------------------------------------------------------------------
+# UHR-05: EGRESS COMMON-MODE (DC) REMOVAL — flag-gated, default OFF.
+#
+# MEASURED (this session, local probe, 40 prompts):
+#   fractional_shift : mean |cos(w, mean_w)| = 0.8421  (71% of wave energy in ONE
+#                      shared direction); removing the query mean raised argmax
+#                      uniqueness 17/40 -> 30/40 and, in the pre-registered paired
+#                      test, equivalence 0.667 -> 0.933 and filler-invariance
+#                      0.608 -> 0.942.
+#   phasor_bind      : mean |cos(w, mean_w)| = 0.104; centering produced NO
+#                      improvement (verdict REJECT) - there is no shared component
+#                      to remove on that arm.
+#   RANDOM control   : distinct delta = +0.0000 (centering is not a diversity dial).
+#
+# SCOPE: this is a REPRESENTATION fix for a measured shared-component defect. It is
+# NOT a benchmark-score claim and it changes no default behaviour.
+# ---------------------------------------------------------------------------
+HENRI_EGRESS_CENTER = (os.environ.get("HENRI_EGRESS_CENTER", "0") == "1")
+
+
+def remove_common_mode(wave: torch.Tensor) -> torch.Tensor:
+    """Subtract the batch-mean direction. Rows are NOT renormalized.
+
+    Exact contract: the mean of the output along dim 0 is zero (to fp error), so
+    the batch common mode is removed by construction. Renormalizing per row would
+    break that (measured residual 1.25e-3 vs 1e-8 for pure subtraction) and buys
+    nothing here, because the cosine logits are scale-invariant.
+
+    Pure and side-effect free. A batch of IDENTICAL waves collapses to the exact
+    zero vector, so this can never MANUFACTURE diversity: the dead-input control
+    asserts that all-identical input still yields one identical top-1.
+    """
+    if wave.dim() != 2:
+        raise ValueError(
+            "remove_common_mode expects [B, D]; got shape %r" % (tuple(wave.shape),))
+    mu = wave.mean(dim=0, keepdim=True)
+    # NOTE (UHR-05, measured): do NOT renormalize here. Per-row rescaling by a
+    # different positive scalar reintroduces a nonzero batch mean (measured
+    # residual 1.25e-3), so the function's stated contract would be false. Row
+    # scale cannot affect the cosine logits: `_embed` normalizes downstream, and
+    # dividing a vector by a positive scalar does not change F.normalize(h @ proj).
+    return wave - mu
+
+
 class HoloEgressCodebook(nn.Module):
     """A2 resolution: a SEALED codebook DERIVED FROM THE TOKENIZER.
 
@@ -503,8 +548,17 @@ class HoloEgressCodebook(nn.Module):
         h = h.to(self.proj.dtype)
         return F.normalize(h @ self.proj, p=2.0, dim=-1)
 
-    def logits(self, wave: torch.Tensor) -> torch.Tensor:
-        """[B, D] complex -> [B, V] logits = beta * cos(h, codebook)."""
+    def logits(self, wave: torch.Tensor, *,
+               center: Optional[bool] = None) -> torch.Tensor:
+        """[B, D] complex -> [B, V] logits = beta * cos(h, codebook).
+
+        UHR-05: `center=True` removes the batch common mode from the query waves
+        first. Resolution order is explicit-argument, then `HENRI_EGRESS_CENTER`,
+        then OFF -- so the default path is byte-identical to the pre-UHR-05 code.
+        """
+        do_center = HENRI_EGRESS_CENTER if center is None else bool(center)
+        if do_center:
+            wave = remove_common_mode(wave)
         h = self._embed(wave)
         return (h @ self.codebook_M.t()) * self.cfg.hopfield_inverse_temp
 

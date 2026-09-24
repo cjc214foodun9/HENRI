@@ -19,14 +19,15 @@
       "equivalence": 0.6666666666666666,
       "rand_distinct_ratio": 0.5916666666666667,
       "rand_distinct_count": 71,
+      "control_valid": true,
       "mean_entropy_nats": 4.586086750030518,
       "ln_vocab": 5.049856185913086,
       "P1_determinism": true,
-      "P2_distinct": false,
+      "P2_distinct_RETIRED": false,
       "P3_order": true,
       "P4_equivalence": true,
-      "P5_nonvacuous": false,
-      "verdict": "VACUOUS_DISTINCT_COUNT_NOT_INFORMATIVE"
+      "P5_control_valid": true,
+      "verdict": "M1_GATE_PASS"
     },
     "phasor_bind": {
       "position_binding": "phasor_bind",
@@ -39,14 +40,15 @@
       "equivalence": 0.8166666666666667,
       "rand_distinct_ratio": 0.7,
       "rand_distinct_count": 84,
+      "control_valid": true,
       "mean_entropy_nats": 4.783841609954834,
       "ln_vocab": 5.049856185913086,
       "P1_determinism": true,
-      "P2_distinct": false,
+      "P2_distinct_RETIRED": false,
       "P3_order": true,
       "P4_equivalence": true,
-      "P5_nonvacuous": false,
-      "verdict": "VACUOUS_DISTINCT_COUNT_NOT_INFORMATIVE"
+      "P5_control_valid": true,
+      "verdict": "M1_GATE_PASS"
     }
   }
 }

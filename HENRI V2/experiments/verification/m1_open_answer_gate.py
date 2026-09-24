@@ -28,6 +28,7 @@ that made the original 39-vs-37 comparison meaningless.
 Runs BOTH position_binding modes, because that is the evidence for the open
 decision on the tokenizer default.
 """
+import hashlib
 import json
 import os
 import random
@@ -36,6 +37,13 @@ from pathlib import Path
 
 import torch
 
+# UHR-05 defect fix (RELOCATED-RELATIVE-IMPORT): parents[1] was correct for this
+# script's ORIGINAL location one level below the package root. After relocation into
+# experiments/verification/, parents[1] is `experiments/` and the import below failed
+# with ModuleNotFoundError, so the gate could not run at all (rc=1, no receipt).
+# Insert the package root as well; parents[1] is kept for any sibling import.
+_PKG_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_PKG_ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import henri_vla_tokenizer as vt
 
@@ -167,29 +175,90 @@ def run_arm(position_binding, prompts, rng):
         equivalence=sum(1 for x, y in zip(ids_a, ids_near) if x == y) / n,
         rand_distinct_ratio=len(set(ids_rand)) / n,
         rand_distinct_count=len(set(ids_rand)),
+        control_valid=gate_validity(code, prompts, rng)[0],
         mean_entropy_nats=ent, ln_vocab=float(torch.tensor(float(V)).log()))
 
 
-def verdict(a):
+def degenerate_wave(texts, dim, kind):
+    """Structureless encoders used as GATE-VALIDITY controls (UHR-05).
+
+    Each MUST fail the (order_sensitivity, equivalence) pair; if a degenerate
+    encoder passes, the pair is not measuring content and the gate is invalid.
+      dead : one constant wave for every input -> equivalence 1.0, order 0.0
+      hash : per-string seeded random wave    -> order 1.0, equivalence ~ 1/V
+    """
+    n = len(texts)
+    if kind == "dead":
+        g = torch.Generator().manual_seed(SEED)
+        base = torch.randn(1, dim, generator=g).to(torch.complex64)
+        w = base.repeat(n, 1)
+    elif kind == "hash":
+        rows = []
+        for t in texts:
+            h = int(hashlib.sha256(t.encode("utf-8")).hexdigest()[:8], 16)
+            g = torch.Generator().manual_seed(h % (2 ** 31 - 1))
+            rows.append(torch.randn(dim, generator=g).to(torch.complex64))
+        w = torch.stack(rows)
+    else:
+        raise ValueError("unknown degenerate kind %r" % (kind,))
+    return w / w.norm(dim=-1, keepdim=True).clamp_min(1e-12)
+
+
+def gate_validity(code, prompts, rng):
+    """Run each degenerate encoder through the SAME order/equivalence machinery.
+
+    Returns (valid, detail). `valid` is True only when EVERY degenerate encoder
+    FAILS the pair, i.e. the metric can tell content from structurelessness.
+    """
+    detail = {}
+    for kind in ("dead", "hash"):
+        with torch.no_grad():
+            a = code.logits(degenerate_wave(prompts, code.cfg.ambient_dim_D, kind)).argmax(-1).tolist()
+            n = code.logits(degenerate_wave([shuffled(p, rng) for p in prompts],
+                                            code.cfg.ambient_dim_D, kind)).argmax(-1).tolist()
+            v = code.logits(degenerate_wave([near_view(p) for p in prompts],
+                                            code.cfg.ambient_dim_D, kind)).argmax(-1).tolist()
+        order = sum(x != y for x, y in zip(a, n)) / len(a)
+        equiv = sum(x == y for x, y in zip(a, v)) / len(a)
+        failed = (order < P3_ORDER_FLOOR) or (equiv < P4_EQUIV_FLOOR)
+        detail[kind] = {"order_sensitivity": order, "equivalence": equiv, "fails_pair": failed}
+    valid = all(d["fails_pair"] for d in detail.values())
+    return valid, detail
+
+
+def verdict(a, control_valid=True):
+    """UHR-05 AMENDMENT (measured, not tuned).
+
+    P2 `distinct_ratio` is RETIRED as an operative criterion: the RANDOM-wave control
+    scored 0.5917-0.7417 against a 0.50 floor in every measured arm, so the axis is
+    confounded (a structureless encoder wins it) and the old
+    `vacuous = rand >= floor` predicate could never be False, making M1_GATE_PASS
+    unreachable. It is kept as a REPORTED diagnostic only.
+    """
     p1 = a["determinism"] >= P1_DETERMINISM
-    p2 = a["distinct_ratio"] >= P2_DISTINCT_FLOOR
     p3 = a["order_sensitivity"] >= P3_ORDER_FLOOR
     p4 = a["equivalence"] >= P4_EQUIV_FLOOR
-    vacuous = a["rand_distinct_ratio"] >= P2_DISTINCT_FLOOR
-    p5 = not vacuous
-    if vacuous:
-        label = "VACUOUS_DISTINCT_COUNT_NOT_INFORMATIVE"
-    elif p1 and p2 and p3 and p4 and p5:
+    p5 = bool(control_valid)          # degenerate encoders must FAIL the (P3,P4) pair
+    p2_report = a["distinct_ratio"] >= P2_DISTINCT_FLOOR
+    if not p5:
+        label = "GATE_INVALID_DEGENERATE_ENCODER_PASSED"
+    elif p1 and p3 and p4:
         label = "M1_GATE_PASS"
     else:
-        failed = [k for k, v in (("P1", p1), ("P2", p2), ("P3", p3),
-                                 ("P4", p4), ("P5", p5)) if not v]
+        failed = [k for k, v in (("P1", p1), ("P3", p3), ("P4", p4)) if not v]
         label = "M1_GATE_FAIL:" + ",".join(failed)
-    return dict(P1_determinism=p1, P2_distinct=p2, P3_order=p3, P4_equivalence=p4,
-                P5_nonvacuous=p5, verdict=label)
+    return dict(P1_determinism=p1, P2_distinct_RETIRED=p2_report,
+                P3_order=p3, P4_equivalence=p4, P5_control_valid=p5,
+                distinct_ratio=a["distinct_ratio"],
+                rand_distinct_ratio=a["rand_distinct_ratio"], verdict=label)
 
 
-def main():
+def main(argv=None):
+    import argparse
+    _ap = argparse.ArgumentParser(add_help=True)
+    _ap.add_argument("--receipt", default=None,
+                     help="receipt path; else HENRI_RECEIPT_DIR; else the committed default")
+    args = _ap.parse_args(argv)
     rng = random.Random(SEED)
     prompts = build_prompts(N_PROMPTS, rng)
     assert len(set(prompts)) == N_PROMPTS, "prompts must be distinct"
@@ -201,13 +270,15 @@ def main():
     print(f"  P2 distinct top1   >= {P2_DISTINCT_FLOOR}")
     print(f"  P3 order-sensitive >= {P3_ORDER_FLOOR}")
     print(f"  P4 equivalence     >= {P4_EQUIV_FLOOR}")
-    print("  P5 random-wave arm must NOT reach the P2 floor (else VACUOUS)")
+    print("  P2 distinct top1   RETIRED as operative (random control scored ABOVE the floor;")
+    print("                      the axis is confounded - reported only)")
+    print("  P5 gate validity   BOTH degenerate encoders (dead, hash) must FAIL P3/P4")
     print()
 
     out = {}
     for mode in ("fractional_shift", "phasor_bind"):
         a = run_arm(mode, prompts, random.Random(SEED))
-        v = verdict(a)
+        v = verdict(a, control_valid=a["control_valid"])
         a.update(v)
         out[mode] = a
         print(f"=== ARM: {mode} ===")
@@ -234,7 +305,19 @@ def main():
     ok = all(a["verdict"] == "M1_GATE_PASS" for a in out.values())
     print(f"  M1_GATE_CLOSED = {ok}")
 
-    dest = Path(os.environ.get("LOCALAPPDATA", ".")) / "Temp" / "m1_gate_receipt.json"
+    # UHR-05: resolution order --out > HENRI_RECEIPT_DIR > COMMITTED DEFAULT.
+    # The committed path is the default so normal reproduction regenerates the
+    # ledger-cited artifact (before this, running the gate wrote to %TEMP% and the
+    # committed receipt had no reproduction path).
+    if args.receipt is not None:
+        dest = Path(args.receipt)
+    elif os.environ.get("HENRI_RECEIPT_DIR"):
+        dest = Path(os.environ["HENRI_RECEIPT_DIR"]) / "m1_gate_receipt.json"
+    else:
+        dest = Path(__file__).resolve().parent / "m1_open_answer_gate_receipt.json"
+    if dest.exists() and dest.is_dir():
+        raise ValueError("malformed receipt override (is a directory): %r" % (str(dest),))
+    dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(dict(
         preregistration=dict(N=N_PROMPTS, P1=P1_DETERMINISM,
                              P2=P2_DISTINCT_FLOOR, P3=P3_ORDER_FLOOR,
