@@ -486,3 +486,37 @@ FALSIFIED still requires, as frozen: two consecutive runs that pass G1-G6 with a
 CONTENT-BEARING competitor set AND fail BOTH C1 and C2. An identity-only
 competitor set can never produce a kill, because it cannot produce a content
 claim in the first place.
+
+---
+
+## AMENDMENT 11 (2026-09-23, POST-HOC wrt run #7; governs run #8 onwards)
+
+A2b LEDGER-LEVEL NULL CONTROL. The run-#7 pre-registration refused ft09 at the
+LAUNCH HARNESS. That is a refusal at the door. The research brief's requirement is
+stronger and is now implemented: ft09 must be retained as a mandatory NULL CONTROL
+asserting **zero Zone-C ratifications at the LEDGER**.
+
+Why the ledger needed its own gate. `ZoneCCausalEngramDAG.forge_edge` gated on
+`float(ext_delta) == 0.0` (SOLIPSISM_VETO). That is a NONZERO-CHANGE test, and the
+ft09 cursor band moves on EVERY step (measured frame_diff_mean `0.0009765625`,
+bit-identical, 32/32), so `ext_delta > 0` there and the ledger would have RATIFIED
+the artifact. The nonzero-change predicate is NECESSARY BUT NOT SUFFICIENT.
+
+Implementation. `forge_edge` gains a keyword-only `contingency` argument
+(default None). When supplied it must be `RATIFIED` or the edge is refused with a
+NEW, DISTINCT reason `CONFOUNDED_VETO` -- distinct because conflating it with
+SOLIPSISM_VETO would erase the very distinction this amendment exists to make
+(SOLIPSISM = the world did not move; CONFOUNDED = the world moved, but not because
+of the action). The positional signature is unchanged, so every existing caller is
+byte-identical; verified by an explicit test.
+
+Acceptance tests (tests/contract/test_uhr04_amendments.py):
+  c12d  the ft09 pattern driven through the REAL DAG yields
+        `store_size() == 0` and refusal `CONFOUNDED_VETO` (not SOLIPSISM_VETO);
+        the ka59 control ratifies (verdict admissible, not refused by the gate).
+  c12e  omitting `contingency` reproduces the legacy SOLIPSISM_VETO path exactly.
+
+HONEST STATUS. The control is available and tested. It is wired in the contract
+tests. It is NOT yet fed by a production caller: `uhr02_zonec_dag_smoke.py` calls
+`forge_edge` without a verdict, so live runs do not consult it. Recorded as the
+next wiring step, not claimed as done.

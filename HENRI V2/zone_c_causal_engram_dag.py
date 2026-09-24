@@ -77,6 +77,11 @@ except Exception:  # pragma: no cover
 
 FLAG_ENV = "HENRI_ZONEC_CAUSAL_DAG"
 SOLIPSISM_VETO = "SOLIPSISM_VETO"
+#: UHR-04 Amendment 2b. A DISTINCT refusal from SOLIPSISM_VETO: the world DID move,
+#: but the change is not attributable to the action (the measured ft09 cursor band
+#: moved bit-identically on every step). A nonzero-change test cannot tell these
+#: apart, which is exactly why the contingency verdict is consulted.
+CONFOUNDED_VETO = "CONFOUNDED_VETO"
 ATTRIBUTION_VIOLATION = "ATTRIBUTION_VIOLATION"
 # 1 information unit = k_B * T * ln 2 at T = 300 K  ->  2.871e-21 J.  DERIVED,
 # and reported as a dimensionless unit count; never as measured heat.
@@ -261,13 +266,18 @@ class ZoneCCausalEngramDAG:
         gell_mann_basis: torch.Tensor,
         dst: Optional[str] = None,
         t_dst: Optional[int] = None,
+        *,
+        contingency: Optional[object] = None,
     ) -> ForgeOutcome:
         """Forge a directed edge from an ALREADY-OBSERVED transition.
 
         Conditions are checked in the spec's own order so the refusal reason is
         unambiguous:
-          1. temporal priority   -- denied if the successor is not later
-          2. exteroceptive gate  -- ext_delta == 0 => SOLIPSISM_VETO, nothing written
+          1. exteroceptive gate  -- ext_delta == 0 => SOLIPSISM_VETO, nothing written
+          1b. contingency gate   -- a supplied verdict that is not RATIFIED =>
+                                    CONFOUNDED_VETO, nothing written (the world moved
+                                    but not because of the action)
+          2. temporal priority   -- denied if the successor is not later
           3. statistical conjunction -- residual must pass tau
         """
         if src not in self._nodes:
@@ -295,6 +305,25 @@ class ZoneCCausalEngramDAG:
         #     environment did not move, no transition occurred at all.
         if float(ext_delta) == 0.0:
             return ForgeOutcome(False, SOLIPSISM_VETO, ext_delta=ext_delta)
+
+        # (1b) UHR-04 AMENDMENT 2b: action-CONTINGENCY, not merely change.
+        #
+        # The gate above is a NONZERO-CHANGE test and it is necessary but NOT
+        # sufficient: the measured ft09 cursor band moved on every single step
+        # (frame_diff_mean 0.0009765625, bit-identical, 32/32 records), so
+        # ext_delta > 0 there and the ledger would RATIFY the artifact. When a
+        # contingency verdict is supplied it must be RATIFIED, otherwise the edge
+        # is refused and NOTHING is written.
+        #
+        # Fail-OPEN when the argument is absent so every existing caller is
+        # byte-identical; the caller opts in by passing a verdict from
+        # `henri_causal_contingency.ratify_causal_link(...)`.
+        if contingency is not None:
+            _cstat = getattr(contingency, "status", None)
+            if _cstat is None and isinstance(contingency, dict):
+                _cstat = contingency.get("status")
+            if _cstat != "RATIFIED":
+                return ForgeOutcome(False, CONFOUNDED_VETO, ext_delta=ext_delta)
 
         # (2) temporal priority: a successor at or before the source time is not
         #     a transition. `last_verified_tick` is stamped when the node is
@@ -445,6 +474,7 @@ class ZoneCCausalEngramDAG:
 
 __all__ = [
     "ATTRIBUTION_VIOLATION",
+    "CONFOUNDED_VETO",
     "CausalEdge",
     "CausalEngramNode",
     "DEFAULT_PRUNE_FLOOR",

@@ -207,7 +207,7 @@ def test_c13b_real_valued_role_is_refused_unless_opted_in():
     """The module must NOT launder an approximate readout as exact."""
     import torch
     g = torch.Generator().manual_seed(3)
-    role = torch.randn(128, 8, generator=g)
+    role = torch.nn.functional.normalize(torch.randn(128, 8, generator=g), dim=-1)
     value = torch.randn(128, 8, generator=torch.Generator().manual_seed(4))
     psi = bind(value, role)
     r = readout_delta(psi, role, value)
@@ -329,3 +329,92 @@ def test_c12c_tau_veto_is_untouched():
     import pathlib
     src = pathlib.Path("sagnac_mcts_planner.py").read_text(encoding="utf-8")
     assert "tau_veto: float = 0.35" in src, "the sealed default tau_veto changed"
+
+
+# ------------------------------------- Amendment 2b: LEDGER-LEVEL null control
+def test_c12d_ft09_earns_zero_zone_c_ratifications():
+    """ft09 MUST produce ZERO Zone-C ratifications AT THE LEDGER.
+
+    Not merely a launch-harness refusal. The ledger's own nonzero-change gate
+    (ext_delta == 0 -> SOLIPSISM_VETO) CANNOT catch ft09, because the cursor band
+    moves bit-identically on every step (measured frame_diff_mean 0.0009765625).
+    This test drives the ft09 pattern through the REAL DAG and asserts that the
+    contingency gate refuses every forged edge.
+    """
+    import numpy as np
+    import torch
+    from zone_c_causal_engram_dag import (
+        CONFOUNDED_VETO, SOLIPSISM_VETO, ZoneCCausalEngramDAG,
+    )
+    from henri_causal_contingency import ratify_causal_link
+
+    # --- the measured ft09 signature: constant change, alternating schedule ---
+    recs = [{"action": ("GameAction.ACTION2" if t % 2 == 0 else "GameAction.ACTION1"),
+             "step": t,
+             "change_signature": (4032, 4033, 4034, 4035),   # CONSTANT, row 63
+             "change_magnitude": 0.0009765625}               # bit-identical
+            for t in range(40)]
+    verdict = ratify_causal_link(recs, magnitude_key="change_magnitude")
+    assert verdict.admissible is False, "ft09 must NOT be ratifiable"
+    assert verdict.status == "REFUSED_CONFOUNDED"
+    assert verdict.status != "REFUSED_STATIC", (
+        "the refusal must NOT be a static/zero-change veto: the band DID move")
+
+    # --- drive the REAL ledger with that verdict ---
+    dag = ZoneCCausalEngramDAG()
+    n, d = 128, 8
+    g = torch.Generator().manual_seed(0)
+    wave_prev = torch.nn.functional.normalize(torch.randn(n, d, generator=g), dim=-1)
+    wave_next = torch.nn.functional.normalize(torch.randn(n, d, generator=g), dim=-1)
+    gens = [torch.randn(3, 3, dtype=torch.complex64, generator=g)]
+    basis = torch.zeros(8, 3, 3, dtype=torch.complex64)
+    dag.add_node("s0", wave_prev, contract="ft09")
+
+    out = dag.forge_edge("s0", wave_next, action=0, ext_delta=0.0009765625,
+                         truth_generators=gens, gell_mann_basis=basis,
+                         contingency=verdict)
+    assert out.forged is False, (
+        "the ledger MUST refuse a confounded edge even though ext_delta > 0")
+    assert out.reason == CONFOUNDED_VETO, (
+        f"expected {CONFOUNDED_VETO}, got {out.reason}")
+    assert out.reason != SOLIPSISM_VETO, (
+        "the refusal must be distinguishable from the static-world veto")
+    assert dag.store_size() == 0, f"ZERO ratifications required; got {dag.store_size()}"
+
+    # --- the reactive control: ka59 DOES ratify at the ledger ---
+    rng = np.random.default_rng(7)
+    ka = []
+    for ep in range(6):
+        for t in range(30):
+            a = "GameAction.ACTION%d" % int(rng.integers(1, 5))
+            base = {"GameAction.ACTION1": 15, "GameAction.ACTION2": 17,
+                    "GameAction.ACTION3": 18, "GameAction.ACTION4": 11}[a]
+            ka.append({"action": a, "step": t,
+                       "change_signature": ("count", max(1, base + int(rng.integers(-1, 2)))),
+                       "change_magnitude": base / 1024.0})
+    kv = ratify_causal_link(ka, magnitude_key="change_magnitude")
+    assert kv.admissible is True, f"ka59 must ratify; got {kv.status} :: {kv.reasons}"
+
+    dag2 = ZoneCCausalEngramDAG()
+    dag2.add_node("s0", wave_prev, contract="ka59")
+    out2 = dag2.forge_edge("s0", wave_next, action=0, ext_delta=1.0 / 1024.0,
+                           truth_generators=gens, gell_mann_basis=basis,
+                           contingency=kv)
+    # the conjunction check may still refuse on tau, but the CONTINGENCY gate must pass
+    assert out2.reason != CONFOUNDED_VETO, (
+        "a RATIFIED verdict must not be refused by the contingency gate")
+
+
+def test_c12e_no_contingency_keeps_the_old_path_identical():
+    """Omitting `contingency` must leave the ledger's behaviour unchanged."""
+    import torch
+    from zone_c_causal_engram_dag import SOLIPSISM_VETO, ZoneCCausalEngramDAG
+    dag = ZoneCCausalEngramDAG()
+    g = torch.Generator().manual_seed(1)
+    dag.add_node("s0", torch.nn.functional.normalize(torch.randn(64, 8, generator=g), dim=-1), contract="c")
+    out = dag.forge_edge("s0", torch.nn.functional.normalize(torch.randn(64, 8, generator=g), dim=-1), action=0,
+                         ext_delta=0.0,
+                         truth_generators=[torch.randn(3, 3, dtype=torch.complex64, generator=g)],
+                         gell_mann_basis=torch.zeros(8, 3, 3, dtype=torch.complex64))
+    assert out.forged is False and out.reason == SOLIPSISM_VETO
+    assert dag.store_size() == 0
