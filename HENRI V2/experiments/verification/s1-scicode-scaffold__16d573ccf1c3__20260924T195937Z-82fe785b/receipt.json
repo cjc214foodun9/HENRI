@@ -1,0 +1,904 @@
+{
+  "schema_id": "henri.run-evidence.v1",
+  "run_id": "20260924T195937Z-82fe785b",
+  "commit_sha256": "16d573ccf1c371cb86f1a8718e5753c2cc250d4f",
+  "benchmark_id": "s1-scicode-scaffold",
+  "dataset_source": "hf://SciCode1/SciCode",
+  "dataset_sha256": "193968aff23b7ed931c8f6d196b611e2f6694adb49e6cc085444a60ad2fc4f7b",
+  "item_count": 16,
+  "attempted_count": 16,
+  "passed_count": 1,
+  "failed_count": 15,
+  "execution_error_count": 0,
+  "item_results_sha256": "95e270b4a4f98e1bdf32f6e6e72d9409ced787a840404b38f74b95a9ba2e0dc7",
+  "generated_at_utc": "2026-09-24T20:11:11Z",
+  "status": "OBSERVED",
+  "accounting": {
+    "valid": true,
+    "problems": []
+  },
+  "s1_scaffold": {
+    "schema_id": "henri.run-evidence.v1",
+    "run_id": "20260924T195937Z-82fe785b",
+    "commit_sha256": "16d573ccf1c371cb86f1a8718e5753c2cc250d4f",
+    "benchmark_id": "s1-scicode-scaffold",
+    "started_at_utc": "2026-09-24T19:59:37Z",
+    "dataset_pin": {
+      "pin_path": "experiments\\verification\\SCICODE_DATASET_PIN_20260916.json",
+      "dataset": "SciCode1/SciCode",
+      "revision": "4510f6a6aa27c43fad7b43da2c59602a86e88480",
+      "license": "Apache-2.0",
+      "gated": false,
+      "grader": "code execution against published unit tests (pass@1); locally reproducible, no private grader required",
+      "per_file": [
+        {
+          "file": "problems_dev.jsonl",
+          "present": true,
+          "expected_sha256": "193968aff23b7ed931c8f6d196b611e2f6694adb49e6cc085444a60ad2fc4f7b",
+          "actual_sha256": "193968aff23b7ed931c8f6d196b611e2f6694adb49e6cc085444a60ad2fc4f7b",
+          "sha_match": true,
+          "expected_bytes": 279558,
+          "actual_bytes": 279558,
+          "bytes_match": true,
+          "match": true
+        },
+        {
+          "file": "problems_test.jsonl",
+          "present": true,
+          "expected_sha256": "38797fef78f434720be6d053b4f3a86839d6f8ea5fb9115450677cd3a6edf81d",
+          "actual_sha256": "38797fef78f434720be6d053b4f3a86839d6f8ea5fb9115450677cd3a6edf81d",
+          "sha_match": true,
+          "expected_bytes": 933500,
+          "actual_bytes": 933500,
+          "bytes_match": true,
+          "match": true
+        }
+      ],
+      "all_match": true
+    },
+    "interpreter_probes": [
+      {
+        "declared_interpreter": "C:\\Users\\chan\\AppData\\Local\\Temp\\m3_bench_venv\\Scripts\\python.exe",
+        "probe_status": "PASSED",
+        "probe_returncode": 0,
+        "probe_used_status_constant": true,
+        "probe_stderr_tail": "",
+        "child_environment": {
+          "executable": "C:\\Users\\chan\\AppData\\Local\\Temp\\m3_bench_venv\\Scripts\\python.exe",
+          "prefix": "C:\\Users\\chan\\AppData\\Local\\Temp\\m3_bench_venv",
+          "version": "3.14.0 (tags/v3.14.0:ebf955d, Oct  7 2025, 10:15:03) [MSC v.1944 64 bit (AMD64)]",
+          "sys_path": [
+            "C:\\Python314\\python314.zip",
+            "C:\\Python314\\DLLs",
+            "C:\\Python314\\Lib",
+            "C:\\Python314",
+            "C:\\Users\\chan\\AppData\\Local\\Temp\\m3_bench_venv",
+            "C:\\Users\\chan\\AppData\\Local\\Temp\\m3_bench_venv\\Lib\\site-packages"
+          ],
+          "flags": {
+            "isolated": true,
+            "no_user_site": true
+          },
+          "modules": {
+            "numpy": {
+              "ok": false,
+              "version": "?",
+              "file": null,
+              "requires": [
+                "ndarray",
+                "array"
+              ],
+              "reason": "STUB_OR_EMPTY_NAMESPACE"
+            },
+            "scipy": {
+              "ok": false,
+              "version": "?",
+              "file": null,
+              "requires": [
+                "linalg"
+              ],
+              "reason": "STUB_OR_EMPTY_NAMESPACE"
+            },
+            "sympy": {
+              "ok": false,
+              "error": "ModuleNotFoundError: No module named 'sympy'"
+            }
+          }
+        },
+        "sandbox": {
+          "requested_mode": "auto",
+          "mode": "container-rlimit",
+          "isolated": false,
+          "surrogate": true,
+          "sanitizer": "henri_code_sanitizer.clean_generated_code"
+        },
+        "modules_importable_in_sandbox": [],
+        "meets_requirement": false
+      },
+      {
+        "declared_interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe",
+        "probe_status": "PASSED",
+        "probe_returncode": 0,
+        "probe_used_status_constant": true,
+        "probe_stderr_tail": "",
+        "child_environment": {
+          "executable": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe",
+          "prefix": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv",
+          "version": "3.11.15 (main, Jun 23 2026, 15:20:37) [MSC v.1944 64 bit (AMD64)]",
+          "sys_path": [
+            "C:\\Users\\chan\\AppData\\Roaming\\uv\\python\\cpython-3.11-windows-x86_64-none\\python311.zip",
+            "C:\\Users\\chan\\AppData\\Roaming\\uv\\python\\cpython-3.11-windows-x86_64-none\\DLLs",
+            "C:\\Users\\chan\\AppData\\Roaming\\uv\\python\\cpython-3.11-windows-x86_64-none\\Lib",
+            "C:\\Users\\chan\\AppData\\Roaming\\uv\\python\\cpython-3.11-windows-x86_64-none",
+            "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv",
+            "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Lib\\site-packages",
+            "__editable__.hermes_agent-0.21.0.finder.__path_hook__",
+            "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Lib\\site-packages\\win32",
+            "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Lib\\site-packages\\win32\\lib",
+            "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Lib\\site-packages\\Pythonwin"
+          ],
+          "flags": {
+            "isolated": true,
+            "no_user_site": true
+          },
+          "modules": {
+            "numpy": {
+              "ok": true,
+              "version": "2.4.3",
+              "file": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Lib\\site-packages\\numpy\\__init__.py",
+              "requires": [
+                "ndarray",
+                "array"
+              ],
+              "reason": null
+            },
+            "scipy": {
+              "ok": true,
+              "version": "1.17.1",
+              "file": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Lib\\site-packages\\scipy\\__init__.py",
+              "requires": [
+                "linalg"
+              ],
+              "reason": null
+            },
+            "sympy": {
+              "ok": true,
+              "version": "1.14.0",
+              "file": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Lib\\site-packages\\sympy\\__init__.py",
+              "requires": [
+                "symbols"
+              ],
+              "reason": null
+            }
+          }
+        },
+        "sandbox": {
+          "requested_mode": "auto",
+          "mode": "container-rlimit",
+          "isolated": false,
+          "surrogate": true,
+          "sanitizer": "henri_code_sanitizer.clean_generated_code"
+        },
+        "modules_importable_in_sandbox": [
+          "numpy",
+          "scipy",
+          "sympy"
+        ],
+        "meets_requirement": true
+      }
+    ],
+    "chosen_interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe",
+    "sandbox": {
+      "requested_mode": "auto",
+      "mode": "container-rlimit",
+      "isolated": false,
+      "surrogate": true,
+      "boundary": {
+        "isolated": false,
+        "surrogate": true,
+        "netns": false,
+        "pidns": false,
+        "mountns": false,
+        "rlimits": true,
+        "proven_by": "resource limits + setsid + per-call timeout",
+        "note": "SURROGATE BOUNDARY: rlimits only, NO netns; not isolation"
+      },
+      "timeout_s": 120.0,
+      "python_executable": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe",
+      "probe": {
+        "available": false,
+        "reason": "namespace isolation NOT PROVEN: unshare-direct rc=None: cannot spawn '/usr/bin/unshare': [WinError 2] The system cannot find the file specified | unshare-via-bash rc=127: probe exit 127: henri-ns-probe: line 1: exec: unshare: not found",
+        "command": [
+          "/usr/bin/unshare",
+          "--user",
+          "--map-root-user",
+          "--net",
+          "--pid",
+          "--fork",
+          "--mount-proc",
+          "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe",
+          "-I",
+          "-c",
+          "import os,sys; sys.stdout.write('HENRI_NS_PROBE pid=%d\\n' % os.getpid())"
+        ],
+        "isolation_proof": "",
+        "attempts": [
+          {
+            "label": "unshare-direct",
+            "command": [
+              "/usr/bin/unshare",
+              "--user",
+              "--map-root-user",
+              "--net",
+              "--pid",
+              "--fork",
+              "--mount-proc",
+              "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe",
+              "-I",
+              "-c",
+              "import os,sys; sys.stdout.write('HENRI_NS_PROBE pid=%d\\n' % os.getpid())"
+            ],
+            "returncode": null,
+            "error": "FileNotFoundError: [WinError 2] The system cannot find the file specified",
+            "failure": "cannot spawn '/usr/bin/unshare': [WinError 2] The system cannot find the file specified"
+          },
+          {
+            "label": "unshare-via-bash",
+            "command": [
+              "C:\\Program Files\\Git\\usr\\bin\\bash.EXE",
+              "-c",
+              "exec unshare --user --map-root-user --net --pid --fork --mount-proc \"$1\" -I -c \"$2\"",
+              "henri-ns-probe",
+              "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe",
+              "import os,sys; sys.stdout.write('HENRI_NS_PROBE pid=%d\\n' % os.getpid())"
+            ],
+            "returncode": 127,
+            "stdout": "",
+            "stderr": "henri-ns-probe: line 1: exec: unshare: not found",
+            "child_pid": null,
+            "failure": "probe exit 127: henri-ns-probe: line 1: exec: unshare: not found"
+          }
+        ],
+        "spawns": 2
+      },
+      "downgrade_reason": "namespace isolation NOT PROVEN: unshare-direct rc=None: cannot spawn '/usr/bin/unshare': [WinError 2] The system cannot find the file specified | unshare-via-bash rc=127: probe exit 127: henri-ns-probe: line 1: exec: unshare: not found",
+      "sanitizer": "henri_code_sanitizer.clean_generated_code"
+    },
+    "dataset_rows": 15,
+    "window": {
+      "size": 16,
+      "item_ids": [
+        "SciCode-78-78.1",
+        "SciCode-78-78.2",
+        "SciCode-1-1.1",
+        "SciCode-3-3.1",
+        "SciCode-4-4.1",
+        "SciCode-6-6.1",
+        "SciCode-7-7.1",
+        "SciCode-10-10.1",
+        "SciCode-10-10.2",
+        "SciCode-10-10.3",
+        "SciCode-10-10.4",
+        "SciCode-10-10.5",
+        "SciCode-10-10.6",
+        "SciCode-10-10.7",
+        "SciCode-10-10.8",
+        "SciCode-10-10.9"
+      ],
+      "selection_rule": "(a) every sub_step whose published tests carry no external-constant reference, stable order; (b) fill from stable order of all sub_steps",
+      "stable_order": "sorted by (numeric problem_id, sub_step index)",
+      "item_ids_sha256": "57baffada5a0ed97377e7b370a764ffce144a5cd0ed99eb04a33f0071e11b263"
+    },
+    "contamination_guard_selftest": {
+      "G1_blocks_reference_read": {
+        "raised": true,
+        "error": "G1: dataset field 'ground_truth_code' is reference text and may only be read while the reference-control arm is active"
+      },
+      "G1_allows_read_in_reference_arm": {
+        "raised": false
+      },
+      "G2_catches_reference_overlap": {
+        "raised": true,
+        "error": "G2: scored-arm payload covers 100.0% of the reference vs 0.0% of it given (differential 1.000 > tau 0.1667); window 'def get_alpha(recvec, alpha_scaling=5): \"\"\""
+      },
+      "G2_passes_empty_payload": {
+        "raised": false
+      },
+      "G2_passes_prescribed_header": {
+        "raised": false
+      }
+    },
+    "contamination_guards_behaved": true,
+    "controls": [
+      {
+        "control": "PC-1_authored_reference",
+        "kind": "positive",
+        "must": "PASS",
+        "observed_status": "PASSED",
+        "observed_taxonomy": "STATUS_PASSED",
+        "sub_class": "",
+        "behaved": true,
+        "elapsed_ms": 81.4,
+        "code_sha256": "eda2157a437440511f4375f45153240668370b7aeb5cae9fd3721876fe909b1c",
+        "tests_sha256": "b504d465477ccb9be1214aeae797ca5bd44e6c3c51b43542d0618c4ffc0af5b5",
+        "stderr_full": ""
+      },
+      {
+        "control": "NC-1_authored_wrong_sign",
+        "kind": "negative",
+        "must": "FAIL",
+        "observed_status": "FAILED",
+        "observed_taxonomy": "FAILED_ASSERT",
+        "sub_class": "published_assertion_failed",
+        "behaved": true,
+        "elapsed_ms": 78.5,
+        "code_sha256": "09b837b6393554628badd61a9891f3ed788cf3b0f95728d35372cf217888f5d1",
+        "tests_sha256": "b504d465477ccb9be1214aeae797ca5bd44e6c3c51b43542d0618c4ffc0af5b5",
+        "stderr_full": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_v9a8cckt\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_v9a8cckt\\published_tests.py\", line 3, in <module>\n    test_case_1()\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_v9a8cckt\\published_tests.py\", line 2, in test_case_1\n    assert henri_s1_reference_sum([1, 2, 3]) == 6.0\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\nHENRI_DRIVER: published test raised\n"
+      },
+      {
+        "control": "NC-2_empty_candidate",
+        "kind": "negative",
+        "must": "FAIL",
+        "observed_status": "FAILED",
+        "observed_taxonomy": "ERROR_OTHER",
+        "sub_class": "UNDEFINED_SYMBOL:henri_s1_reference_sum",
+        "behaved": true,
+        "elapsed_ms": 84.7,
+        "code_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tests_sha256": "b504d465477ccb9be1214aeae797ca5bd44e6c3c51b43542d0618c4ffc0af5b5",
+        "stderr_full": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_pz1w9k5i\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_pz1w9k5i\\published_tests.py\", line 3, in <module>\n    test_case_1()\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_pz1w9k5i\\published_tests.py\", line 2, in test_case_1\n    assert henri_s1_reference_sum([1, 2, 3]) == 6.0\n           ^^^^^^^^^^^^^^^^^^^^^^\nNameError: name 'henri_s1_reference_sum' is not defined\nHENRI_DRIVER: published test raised\n"
+      },
+      {
+        "control": "PC-D1_dataset_reference_78.1",
+        "kind": "positive",
+        "must": "PASS",
+        "observed_status": "PASSED",
+        "observed_taxonomy": "STATUS_PASSED",
+        "sub_class": "",
+        "behaved": true,
+        "elapsed_ms": 134.6,
+        "code_sha256": "0e4b3db2bbd45bdc831cb8fa7eb75c3e49248f70fd55cea96c38c2c7ed2af3c8",
+        "tests_sha256": "e70b5b64cd80edc118823df4a2c18df56f8878c11c7fd04c4919f291b1f79584",
+        "stderr_full": ""
+      },
+      {
+        "control": "PC-U2_candidate_path_upper_bound_78.1",
+        "kind": "positive",
+        "must": "PASS",
+        "observed_status": "PASSED",
+        "observed_taxonomy": "STATUS_PASSED",
+        "sub_class": "",
+        "behaved": true,
+        "elapsed_ms": 131.2,
+        "code_sha256": "0e4b3db2bbd45bdc831cb8fa7eb75c3e49248f70fd55cea96c38c2c7ed2af3c8",
+        "tests_sha256": "e70b5b64cd80edc118823df4a2c18df56f8878c11c7fd04c4919f291b1f79584",
+        "stderr_full": "",
+        "control_only": "synthetic generator fed the dataset reference for CALIBRATION ONLY; not a registered candidate source; excluded from the ledger and score"
+      },
+      {
+        "control": "PC-D3_dataset_reference_78.2",
+        "kind": "positive",
+        "must": "PASS",
+        "observed_status": "PASSED",
+        "observed_taxonomy": "STATUS_PASSED",
+        "sub_class": "",
+        "behaved": true,
+        "elapsed_ms": 159.0,
+        "code_sha256": "0c948fa14a9033137cb1cb5ca25bf0b2df6bddf2af693cf98dcc8640303d7128",
+        "tests_sha256": "b957ba58f5157f776a4e20cbfd1884e66296aadf6ec078324bd4482e54a986b8",
+        "stderr_full": ""
+      },
+      {
+        "control": "PC-U4_candidate_path_upper_bound_78.2",
+        "kind": "positive",
+        "must": "PASS",
+        "observed_status": "PASSED",
+        "observed_taxonomy": "STATUS_PASSED",
+        "sub_class": "",
+        "behaved": true,
+        "elapsed_ms": 159.9,
+        "code_sha256": "0c948fa14a9033137cb1cb5ca25bf0b2df6bddf2af693cf98dcc8640303d7128",
+        "tests_sha256": "b957ba58f5157f776a4e20cbfd1884e66296aadf6ec078324bd4482e54a986b8",
+        "stderr_full": "",
+        "control_only": "synthetic generator fed the dataset reference for CALIBRATION ONLY; not a registered candidate source; excluded from the ledger and score"
+      }
+    ],
+    "controls_all_behaved": true,
+    "candidate_source": {
+      "name": "BackboneCandidateSource",
+      "produces_code": true,
+      "description": "local pretrained backbone (transformers) generates each SciCode sub-step from a sanitized view; BACKBONE BASELINE, not a HENRI capability claim"
+    },
+    "ledger_rows_written": 16,
+    "candidate_source_report": {
+      "name": "BackboneCandidateSource",
+      "produces_code": true,
+      "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+      "model_dir": null,
+      "resolved_dir": "C:\\Users\\chan\\.cache\\huggingface\\hub\\models--Qwen--Qwen2.5-1.5B-Instruct\\snapshots\\989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+      "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+      "device": "cpu",
+      "max_new_tokens": 1024,
+      "deterministic": true,
+      "calls": 53,
+      "cache_hits": 37,
+      "generations": 16,
+      "emitted": 16,
+      "truncated": 0,
+      "no_code_emitted": 0,
+      "defines_expected": 16,
+      "per_item": [
+        {
+          "idx": 0,
+          "status": "CACHE_HIT",
+          "chars": 717
+        },
+        {
+          "idx": 1,
+          "status": "CACHE_HIT",
+          "chars": 790
+        },
+        {
+          "idx": 2,
+          "status": "CACHE_HIT",
+          "chars": 1091
+        },
+        {
+          "idx": 3,
+          "status": "CACHE_HIT",
+          "chars": 586
+        },
+        {
+          "idx": 4,
+          "status": "CACHE_HIT",
+          "chars": 1288
+        },
+        {
+          "idx": 5,
+          "status": "CACHE_HIT",
+          "chars": 546
+        },
+        {
+          "idx": 6,
+          "status": "EMITTED",
+          "chars": 520,
+          "raw_chars": 534,
+          "gen_tokens": 154,
+          "max_new_tokens": 1024,
+          "truncated": false,
+          "expect_name": "select_big_weights",
+          "defines_expect": true
+        },
+        {
+          "idx": 0,
+          "status": "CACHE_HIT",
+          "chars": 717
+        },
+        {
+          "idx": 1,
+          "status": "CACHE_HIT",
+          "chars": 790
+        },
+        {
+          "idx": 2,
+          "status": "CACHE_HIT",
+          "chars": 1091
+        },
+        {
+          "idx": 3,
+          "status": "CACHE_HIT",
+          "chars": 586
+        },
+        {
+          "idx": 4,
+          "status": "CACHE_HIT",
+          "chars": 1288
+        },
+        {
+          "idx": 5,
+          "status": "CACHE_HIT",
+          "chars": 546
+        },
+        {
+          "idx": 6,
+          "status": "CACHE_HIT",
+          "chars": 520
+        },
+        {
+          "idx": 7,
+          "status": "EMITTED",
+          "chars": 552,
+          "raw_chars": 566,
+          "gen_tokens": 150,
+          "max_new_tokens": 1024,
+          "truncated": false,
+          "expect_name": "sum_recip",
+          "defines_expect": true
+        },
+        {
+          "idx": 0,
+          "status": "CACHE_HIT",
+          "chars": 717
+        },
+        {
+          "idx": 1,
+          "status": "CACHE_HIT",
+          "chars": 790
+        },
+        {
+          "idx": 2,
+          "status": "CACHE_HIT",
+          "chars": 1091
+        },
+        {
+          "idx": 3,
+          "status": "CACHE_HIT",
+          "chars": 586
+        },
+        {
+          "idx": 4,
+          "status": "CACHE_HIT",
+          "chars": 1288
+        },
+        {
+          "idx": 5,
+          "status": "CACHE_HIT",
+          "chars": 546
+        },
+        {
+          "idx": 6,
+          "status": "CACHE_HIT",
+          "chars": 520
+        },
+        {
+          "idx": 7,
+          "status": "CACHE_HIT",
+          "chars": 552
+        },
+        {
+          "idx": 8,
+          "status": "EMITTED",
+          "chars": 631,
+          "raw_chars": 645,
+          "gen_tokens": 157,
+          "max_new_tokens": 1024,
+          "truncated": false,
+          "expect_name": "sum_real_self",
+          "defines_expect": true
+        }
+      ],
+      "evidence_class": "BACKBONE_BASELINE_NOT_HENRI_CAPABILITY",
+      "load_error": null
+    },
+    "ledger_rows_read": 16,
+    "failure_taxonomy": {
+      "candidate_arm": {
+        "STATUS_PASSED": 1,
+        "ERROR_OTHER": 5,
+        "BLOCKED_EXTERNAL_CONSTANT": 9,
+        "BLOCKED_DEPENDENCY": 1
+      },
+      "reference_arm": {
+        "STATUS_PASSED": 2,
+        "BLOCKED_EXTERNAL_CONSTANT": 13,
+        "BLOCKED_DEPENDENCY": 1
+      }
+    },
+    "score": {
+      "numerator": 1,
+      "denominator": 2,
+      "pass_at_1": 0.5,
+      "window_size": 16,
+      "attemptable_item_ids": [
+        "SciCode-78-78.1",
+        "SciCode-78-78.2"
+      ],
+      "passed_item_ids": [
+        "SciCode-78-78.1"
+      ],
+      "denominator_definition": "sub_steps whose OWN SciCode reference solution passed its OWN published tests through this harness inside the window"
+    },
+    "stderr_persistence": {
+      "full_stderr_in_every_failure_row": true,
+      "any_stderr_truncated": false,
+      "unattributed_rows": 2,
+      "ledger": "items.jsonl alongside this receipt; raw *.jsonl is gitignored, so the self-contained per-item digest below carries id/class/evidence/stderr sha256 for every row (D21: no unattributable row, in-repo or on disk)"
+    },
+    "per_item": [
+      {
+        "item_id": "SciCode-78-78.1",
+        "arm": "candidate",
+        "taxonomy": "STATUS_PASSED",
+        "sub_class": "",
+        "status": "PASSED",
+        "evidence": "",
+        "counts_toward_score": true,
+        "reference_arm_taxonomy": "STATUS_PASSED",
+        "reference_arm_sub_class": "",
+        "candidate_code_sha256": "1535150b012315f2ed9201e691d60c1a8564cb49b0f77a6c99e5c95767d41657",
+        "published_tests_sha256": "e70b5b64cd80edc118823df4a2c18df56f8878c11c7fd04c4919f291b1f79584",
+        "raw_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "raw_stderr_chars": 0,
+        "raw_stderr_tail": "",
+        "elapsed_ms": 130.6
+      },
+      {
+        "item_id": "SciCode-78-78.2",
+        "arm": "candidate",
+        "taxonomy": "ERROR_OTHER",
+        "sub_class": "unclassified:HENRI_DRIVER: published test raised",
+        "status": "EXECUTION_ERROR",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": true,
+        "reference_arm_taxonomy": "STATUS_PASSED",
+        "reference_arm_sub_class": "",
+        "candidate_code_sha256": "295bfa3822220ee5e38444f17587e69e630eaa947ef7f8134feae437897d883b",
+        "published_tests_sha256": "b957ba58f5157f776a4e20cbfd1884e66296aadf6ec078324bd4482e54a986b8",
+        "raw_stderr_sha256": "7f35878b7fd3e134d0a38d215f5f997ddb41cd1ab590e491989a5cdd0dcfceac",
+        "raw_stderr_chars": 1001,
+        "raw_stderr_tail": "  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_6oalz0zh\\published_tests.py\", line 11, in test_case_1\n    trajectory = runge_kutta_4th_order(pendulum_derivs, state, t0, dt, n, g, L, beta, A, alpha)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_6oalz0zh\\solution.py\", line 47, in runge_kutta_4th_order\n    k1 = f(trajectory[i], trajectory[i][0], trajectory[i][1], t0, g, L, beta, A, alpha)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: pendulum_derivs() takes 7 positional arguments but 9 were given\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 128.2
+      },
+      {
+        "item_id": "SciCode-1-1.1",
+        "arm": "candidate",
+        "taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "sub_class": "external_constant:target",
+        "status": "SKIPPED",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "reference_arm_sub_class": "external_constant:target",
+        "candidate_code_sha256": "fd8fe89afac4fc59ab0581a63cacf275650a39abf8777da02fb4ed61b10c954c",
+        "published_tests_sha256": "37b175a86f83cd6b2b6ac707254cb7e7a4d63b2a78f09d31aadb64b16c42f6e4",
+        "raw_stderr_sha256": "a64993f0ddaa7416e266efb2dbd42bc13d88cbe3c36c7c696552cb9feb989d30",
+        "raw_stderr_chars": 456,
+        "raw_stderr_tail": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_yqs3sglp\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_yqs3sglp\\published_tests.py\", line 10, in <module>\n    assert np.allclose(cg(A, b, x0,tol), target)\n                                         ^^^^^^\nNameError: name 'target' is not defined\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 133.4
+      },
+      {
+        "item_id": "SciCode-3-3.1",
+        "arm": "candidate",
+        "taxonomy": "ERROR_OTHER",
+        "sub_class": "unclassified:HENRI_DRIVER: published test raised",
+        "status": "EXECUTION_ERROR",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "reference_arm_sub_class": "external_constant:target",
+        "candidate_code_sha256": "f36b530ce4357bcea16044a8ec4ddb029672514c3c999cb41e0c2cac0bbf7e5d",
+        "published_tests_sha256": "ccfb4f48a3c8ec9ee3942d7776af715985d1ee0931c14f5eac424f4652edcea8",
+        "raw_stderr_sha256": "08b343d9174b30ddc69f1fdec8862620cb7b5f324ea988fed809f754a204a189",
+        "raw_stderr_chars": 725,
+        "raw_stderr_tail": "ll last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_10vj34_6\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_10vj34_6\\published_tests.py\", line 17, in <module>\n    assert np.allclose(GS(A, b, eps, x_true, x0), target)\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_10vj34_6\\solution.py\", line 29, in GS\n    x_new[i] = (b[i] - np.dot(L[0:i], x_new[:i]) - np.dot(U[0:i], x_new[i+1:])) / D[0]\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^\nValueError: shapes (0,7) and (0,) not aligned: 7 (dim 1) != 0 (dim 0)\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 132.1
+      },
+      {
+        "item_id": "SciCode-4-4.1",
+        "arm": "candidate",
+        "taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "sub_class": "external_constant:target",
+        "status": "SKIPPED",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "reference_arm_sub_class": "external_constant:target",
+        "candidate_code_sha256": "d9849cf2980e5223abd5d309f00222283a873504bc2614807d58c57d411015d6",
+        "published_tests_sha256": "3e0ada9c8f4c0ad496659d4838359e41dae36b883c21a83ef5ca4e6ca78cb6cf",
+        "raw_stderr_sha256": "456b46a93c48509f53051fadf2694c563d700d205c3cc400b73c5ea46509b60a",
+        "raw_stderr_chars": 439,
+        "raw_stderr_tail": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_b7gbz81n\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_b7gbz81n\\published_tests.py\", line 7, in <module>\n    assert np.allclose(ichol(A), target)\n                                 ^^^^^^\nNameError: name 'target' is not defined\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 156.7
+      },
+      {
+        "item_id": "SciCode-6-6.1",
+        "arm": "candidate",
+        "taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "sub_class": "external_constant:target",
+        "status": "SKIPPED",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "reference_arm_sub_class": "external_constant:target",
+        "candidate_code_sha256": "1705b5265501df1c13fc9b36781ad0c69efa7b8e6b4eee87bda502defa9d18c8",
+        "published_tests_sha256": "1c4fad3acd8b38b1a6885aefdaf449bde2aad7d3f1ed58c535abef6a86a1f7a3",
+        "raw_stderr_sha256": "94120e95aacb1d732d851d723bf580bc260989b983ea99904e310c9dc07a8e2d",
+        "raw_stderr_chars": 533,
+        "raw_stderr_tail": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_fctjwx7h\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_fctjwx7h\\published_tests.py\", line 4, in <module>\n    assert np.allclose(apply_low_pass_filter(image_array, frequency_threshold), target)\n                                                                                ^^^^^^\nNameError: name 'target' is not defined\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 134.8
+      },
+      {
+        "item_id": "SciCode-7-7.1",
+        "arm": "candidate",
+        "taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "sub_class": "external_constant:target",
+        "status": "SKIPPED",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "reference_arm_sub_class": "external_constant:target",
+        "candidate_code_sha256": "816678da22f6b0f678669b24f0c02c7c6a2ae694b8cf60afad9afc7700e99358",
+        "published_tests_sha256": "b16591adbd5ef180da9cc8bbb94aabb180f12f2eb8902a5b26f504d96365d0a4",
+        "raw_stderr_sha256": "e63502b249a769011cea35b52851795eabe410baa8fb42a8ccbe444c288a4f40",
+        "raw_stderr_chars": 676,
+        "raw_stderr_tail": "C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_x3t4qn2v\\solution.py:19: RuntimeWarning: invalid value encountered in divide\n  T /= np.max(np.abs(T))\nTraceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_x3t4qn2v\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_x3t4qn2v\\published_tests.py\", line 4, in <module>\n    assert np.allclose(apply_band_pass_filter(image_array, bandmin,bandmax), target)\n                                                                             ^^^^^^\nNameError: name 'target' is not defined\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 158.9
+      },
+      {
+        "item_id": "SciCode-10-10.1",
+        "arm": "candidate",
+        "taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "sub_class": "external_constant:target",
+        "status": "SKIPPED",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "reference_arm_sub_class": "external_constant:target",
+        "candidate_code_sha256": "41f5499c216f365d189a73cfc5c0dffd81d926a2742adab8a76e497f5ac642d7",
+        "published_tests_sha256": "b810772b736a178f98c65cae2a976c1289984de2343258d71a50debc4315a690",
+        "raw_stderr_sha256": "9077ca124f46a3f38a286e0940eb1d0c0f15135558390270a2091b7fba6d1f35",
+        "raw_stderr_chars": 506,
+        "raw_stderr_tail": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_benabcrg\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_benabcrg\\published_tests.py\", line 16, in <module>\n    assert np.allclose(get_alpha(np.linalg.inv(EX1['latvec']).T), target)\n                                                                  ^^^^^^\nNameError: name 'target' is not defined\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 272.4
+      },
+      {
+        "item_id": "SciCode-10-10.2",
+        "arm": "candidate",
+        "taxonomy": "ERROR_OTHER",
+        "sub_class": "CANDIDATE_UNDEFINED_SYMBOL:x",
+        "status": "EXECUTION_ERROR",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "reference_arm_sub_class": "external_constant:target",
+        "candidate_code_sha256": "b91c5759feffd40298b474cef816d59940b70888fd6e1ca408e993f6ccbd3036",
+        "published_tests_sha256": "36df51b658df2f49e70546e865a809831e19b846acb4aeb0d7ee78c91e12e901",
+        "raw_stderr_sha256": "cb594b60a2998c274eb365e2fdb6139ec7fd51922588976364f51587e04a25cd",
+        "raw_stderr_chars": 689,
+        "raw_stderr_tail": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_djuvwfaf\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_djuvwfaf\\published_tests.py\", line 16, in <module>\n    assert np.allclose(get_lattice_coords(EX1['latvec']), target)\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_djuvwfaf\\solution.py\", line 39, in get_lattice_coords\n    coords = np.array([x, y, z]).T.reshape(1, -1).repeat(nlatvec*2+1, axis=0)\n                       ^\nNameError: name 'x' is not defined\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 278.1
+      },
+      {
+        "item_id": "SciCode-10-10.3",
+        "arm": "candidate",
+        "taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "sub_class": "external_constant:target",
+        "status": "SKIPPED",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "reference_arm_sub_class": "external_constant:target",
+        "candidate_code_sha256": "29420d39172c59397aed5b7187ca1a9788ff7f796e2e338d1c09415dc0457c15",
+        "published_tests_sha256": "b9f3e19091a5151e1f9b7604e186fbe474ed952ea036760525dbe27bc8ec626e",
+        "raw_stderr_sha256": "f3b8ebbd86e424c64347acb4c8560d4a98e26ec04a1ec23d34d85b107cc7273f",
+        "raw_stderr_chars": 558,
+        "raw_stderr_tail": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_gg4t2apo\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_gg4t2apo\\published_tests.py\", line 16, in <module>\n    assert np.allclose(distance_matrix(EX1['configs'])[0], target[0]) and np.allclose(distance_matrix(EX1['configs'])[1], target[1])\n                                                           ^^^^^^\nNameError: name 'target' is not defined\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 337.5
+      },
+      {
+        "item_id": "SciCode-10-10.4",
+        "arm": "candidate",
+        "taxonomy": "ERROR_OTHER",
+        "sub_class": "CANDIDATE_UNDEFINED_SYMBOL:x",
+        "status": "EXECUTION_ERROR",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "reference_arm_sub_class": "external_constant:target",
+        "candidate_code_sha256": "16837c3dd5cf39efcf2f64f81e50532c9f85aec40a480d91c2fe0509b8244b4e",
+        "published_tests_sha256": "40f07b759446eea2e105b91feeb2647fcd0169ff77f55cf0df61475d7a5a53eb",
+        "raw_stderr_sha256": "febe0c9a5b5633993b4b884a2242c7ec22edcedca47c71ad381e6532a33bc929",
+        "raw_stderr_chars": 659,
+        "raw_stderr_tail": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_00gb93pu\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_00gb93pu\\published_tests.py\", line 20, in <module>\n    get_lattice_coords(EX['latvec'])[None, None, :, :],\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_00gb93pu\\solution.py\", line 39, in get_lattice_coords\n    coords = np.array([x, y, z]).T.reshape(1, -1).repeat(nlatvec*2+1, axis=0)\n                       ^\nNameError: name 'x' is not defined\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 342.4
+      },
+      {
+        "item_id": "SciCode-10-10.5",
+        "arm": "candidate",
+        "taxonomy": "ERROR_OTHER",
+        "sub_class": "CANDIDATE_UNDEFINED_SYMBOL:x",
+        "status": "EXECUTION_ERROR",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "reference_arm_sub_class": "external_constant:target",
+        "candidate_code_sha256": "5ecd325df1f42268944edbf5a1c4992fca51339a6eb486f5be5b7b04d1db09ce",
+        "published_tests_sha256": "bb8c31917c467886fc18ef9e9af8cf19ecb262abfbc7ddfb3aea3d1475272dbc",
+        "raw_stderr_sha256": "9301b267db7e65010195ab949846f05a66b44d70abbc1f48ea78c8ab35103d1a",
+        "raw_stderr_chars": 641,
+        "raw_stderr_tail": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_5px0ggz3\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_5px0ggz3\\published_tests.py\", line 21, in <module>\n    get_lattice_coords(EX['latvec']),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_5px0ggz3\\solution.py\", line 39, in get_lattice_coords\n    coords = np.array([x, y, z]).T.reshape(1, -1).repeat(nlatvec*2+1, axis=0)\n                       ^\nNameError: name 'x' is not defined\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 343.2
+      },
+      {
+        "item_id": "SciCode-10-10.6",
+        "arm": "candidate",
+        "taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "sub_class": "external_constant:target",
+        "status": "SKIPPED",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "reference_arm_sub_class": "external_constant:target",
+        "candidate_code_sha256": "4fce78c0ab08bf25ee25282473d714e1663dfb8086b5f4edcdd438b714b9a96e",
+        "published_tests_sha256": "1d4a7ef577b28f19a877075b5ca8c35e6f104f3106c7ca0d57b351b541a25c17",
+        "raw_stderr_sha256": "5f209643c211608079c1dea12dcb2a5bd56990e530b43ebe678e3fcbe6018f4c",
+        "raw_stderr_chars": 542,
+        "raw_stderr_tail": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_hg0_lq1d\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_hg0_lq1d\\published_tests.py\", line 29, in <module>\n    assert are_equivalent(generate_gpoints(np.linalg.inv(EX1['latvec']).T, gmax=1), target)\n                                                                                    ^^^^^^\nNameError: name 'target' is not defined\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 336.6
+      },
+      {
+        "item_id": "SciCode-10-10.7",
+        "arm": "candidate",
+        "taxonomy": "BLOCKED_DEPENDENCY",
+        "sub_class": "missing_module:scicode",
+        "status": "SKIPPED",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_DEPENDENCY",
+        "reference_arm_sub_class": "missing_module:scicode",
+        "candidate_code_sha256": "ab7052cfbf1923b3e24216acc08f5d586f68de62d9ff37606e53d88819e171e8",
+        "published_tests_sha256": "aee7921de1e069e7913ddf27755666c2ffe84994082ce0e5ede7c6081faa369c",
+        "raw_stderr_sha256": "2ce4148871f7aa303e50547527b52fe774bec98ea5d77d3c592a411b3bc8860a",
+        "raw_stderr_chars": 419,
+        "raw_stderr_tail": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_ybatolsj\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_ybatolsj\\published_tests.py\", line 1, in <module>\n    from scicode.compare.cmp import cmp_tuple_or_list\nModuleNotFoundError: No module named 'scicode'\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 339.2
+      },
+      {
+        "item_id": "SciCode-10-10.8",
+        "arm": "candidate",
+        "taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "sub_class": "external_constant:target",
+        "status": "SKIPPED",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "reference_arm_sub_class": "external_constant:target",
+        "candidate_code_sha256": "42d5bd4be3d7f430f3307eb84a26925f12ada869da11b5c74c567668629c5937",
+        "published_tests_sha256": "ab9e3c72e94653556c96b5a77750fc626b81d560700148cb5da4934dabd9134a",
+        "raw_stderr_sha256": "3b94f2853e57ee5e16158b45a4a4da907a660d06fad1baaa129152fd7ac893ae",
+        "raw_stderr_chars": 588,
+        "raw_stderr_tail": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_kb6hl_qq\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_kb6hl_qq\\published_tests.py\", line 22, in <module>\n    assert np.allclose(sum_recip(EX['atom_charges'], EX['atom_coords'], EX['configs'], gweights, gpoints), target)\n                                                                                                           ^^^^^^\nNameError: name 'target' is not defined\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 332.7
+      },
+      {
+        "item_id": "SciCode-10-10.9",
+        "arm": "candidate",
+        "taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "sub_class": "external_constant:target",
+        "status": "SKIPPED",
+        "evidence": "HENRI_DRIVER: published test raised",
+        "counts_toward_score": false,
+        "reference_arm_taxonomy": "BLOCKED_EXTERNAL_CONSTANT",
+        "reference_arm_sub_class": "external_constant:target",
+        "candidate_code_sha256": "27637cdca454b674b527d031000840657ba2d2efbc6706e57e36616c7fa54caa",
+        "published_tests_sha256": "cb3ab1a8d236a971c95a6560aafe14e60e6637e6cf9a3b9e1f2d43ca320e7b08",
+        "raw_stderr_sha256": "2ba8e871bf32c04d45788a68118f6dfe676d38b36a26457754359fe613102b9b",
+        "raw_stderr_chars": 622,
+        "raw_stderr_tail": "Traceback (most recent call last):\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_5xl59i3j\\henri_driver.py\", line 68, in <module>\n    exec(test_code, test_mod.__dict__)\n  File \"C:\\Users\\chan\\AppData\\Local\\Temp\\henri_sandbox_5xl59i3j\\published_tests.py\", line 17, in <module>\n    assert np.allclose(sum_real_self(EX['atom_charges'], EX['configs'].shape[0], get_alpha(np.linalg.inv(EX['latvec']).T)), target)\n                                                                                                                            ^^^^^^\nNameError: name 'target' is not defined\nHENRI_DRIVER: published test raised\n",
+        "elapsed_ms": 327.7
+      }
+    ],
+    "d19_calibration": {
+      "counts_derived_from": "henri_sandbox_harness.STATUS_PASSED vs SandboxResult.status",
+      "passed_property_used_for_counting": false,
+      "passed_property_agreement_rows": 16,
+      "rows": 16
+    },
+    "reference_arm_defects": {
+      "isolation_artifacts": [],
+      "note": "an ISOLATION_ARTIFACT means MY accumulated-protocol assumption failed for that item, which invalidates its attemptability classification"
+    },
+    "verdict": "SCORED",
+    "verdict_reason": "controls passed and the pin matched",
+    "wall_seconds": 693.69,
+    "non_claims": [
+      "INSTRUMENT VALIDATION AND BASELINE ONLY. This is NOT evidence of HENRI capability.",
+      "No code generator is wired to SciCode; the only registered candidate source emits the empty string. Any pass@1 here is the floor for an ABSENT generator.",
+      "Makes NO claim about the AAII index, its weights, or any constituent.",
+      "No local grader, tolerance, or re-derived expected value was substituted for the published tests.",
+      "Not a namespace-isolated run: mode=container-rlimit, isolated=False, surrogate=True.",
+      "The reference-control arm executes SciCode's own ground_truth_code; it is excluded from the candidate numerator and denominator."
+    ]
+  }
+}

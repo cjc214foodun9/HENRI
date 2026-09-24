@@ -64,7 +64,6 @@ ALLOWED_SUBSTEP_KEYS: Tuple[str, ...] = (
     "function_header",
     "step_description_prompt",
     "step_background",
-    "return_line",
 )
 
 MODEL_ID_DEFAULT = "Qwen/Qwen2.5-1.5B-Instruct"
@@ -143,6 +142,16 @@ def sanitize_problem_view(problem: Dict[str, Any], idx: int) -> Dict[str, Any]:
         # the candidate the solution body it is supposed to write.
         "step_background": str(case.get("step_background") or "").strip(),
     }
+    # UHR-05: ALLOWED_SUBSTEP_KEYS is now READ, not merely declared. A whitelist constant
+    # with no read site is of the declared-but-unread class: it documents an intent the code
+    # does not enforce, so the two silently drift. This assertion makes the constant the
+    # single source of truth for "which sub-step fields may travel", and fails loudly if a
+    # future edit adds a field to the view without declaring it (or vice versa).
+    _view_substep_keys = tuple(k for k in view if k != "required_dependencies")
+    if tuple(_view_substep_keys) != ALLOWED_SUBSTEP_KEYS:
+        raise CandidateSourceUnavailable(
+            f"sanitizer view keys {_view_substep_keys} do not match ALLOWED_SUBSTEP_KEYS "
+            f"{ALLOWED_SUBSTEP_KEYS}; declare the field or drop it")
 
     # The contract check: nothing forbidden may reach the model.
     leaked = [k for k in FORBIDDEN_VIEW_KEYS if k in view]
