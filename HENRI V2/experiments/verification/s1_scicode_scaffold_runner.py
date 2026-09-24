@@ -409,6 +409,99 @@ class NullCandidateSource(CandidateSource):
 
 _TARGET_RE = re.compile(r"(?<![A-Za-z0-9_.])target(?!\s*=)")
 
+# ---------------------------------------------------------------------------
+# UHR-05: OFFICIAL SciCode grader targets (FLAG-GATED, DEFAULT OFF).
+#
+# WHY (measured, own calls 2026-09-24)
+#   `target` -- the value each published test asserts -- is assigned 0x in BOTH corpus
+#   splits (dev 219 uses, test 1172 uses). So an item whose published test needs it is
+#   correctly excluded today. The BENCHMARK'S OWN grader supplies it:
+#       src/scicode/parse/parse.py:126  process_hdf5_to_tuple(step_id, test_num, h5py_file)
+#   With that accessor and the official h5 (338 groups; dev overlap 50/50), EVERY dev
+#   sub-step resolves an official target: 50/50, errors NONE.
+#
+# WHAT THIS IS NOT
+#   Not a tolerance, not a re-derived expected value, not a local grader. The tests stay
+#   VERBATIM and the values come from the official accessor over the official data file.
+#
+# DEFAULT OFF -> `_official_targets_enabled()` is False -> `_targets_satisfiable` reduces
+# to the original self-contained test and the payloads are byte-identical.
+_ENV_OFFICIAL_TARGETS = "HENRI_SCICODE_OFFICIAL_TARGETS"
+_OFFICIAL_RESOLVER = None
+_OFFICIAL_STATS = {"items_considered": 0, "items_targeted": 0, "injections": 0,
+                   "refusals": 0, "resolver_error": ""}
+
+
+def _official_targets_enabled() -> bool:
+    return os.environ.get(_ENV_OFFICIAL_TARGETS, "0") == "1"
+
+
+def _official_resolver():
+    """Discover the official grader once. Never raises; returns None when unavailable."""
+    global _OFFICIAL_RESOLVER
+    if _OFFICIAL_RESOLVER is not None:
+        return _OFFICIAL_RESOLVER
+    try:
+        from scicode_official_grader import OfficialTargetResolver
+        _OFFICIAL_RESOLVER = OfficialTargetResolver.discover()
+    except Exception as exc:  # noqa: BLE001 - absence must fail closed, not crash
+        _OFFICIAL_STATS["resolver_error"] = f"{type(exc).__name__}: {exc}"
+        _OFFICIAL_RESOLVER = False
+    return _OFFICIAL_RESOLVER
+
+
+def _official_can_target(step_id: str, n_tests: int):
+    """(ok, why) from the official grader, failing closed on any error."""
+    res = _official_resolver()
+    if not res:
+        return False, _OFFICIAL_STATS["resolver_error"] or "official grader unavailable"
+    try:
+        return res.can_target(step_id, n_tests)
+    except Exception as exc:  # noqa: BLE001
+        return False, f"{type(exc).__name__}: {exc}"
+
+
+def _targets_satisfiable(problem: dict, idx: int) -> bool:
+    """Can this item's published tests actually run?
+
+    DEFAULT: only when the tests are self-contained. With the official grader enabled,
+    an item whose tests need `target` is also satisfiable -- but only when the official
+    h5 covers it AND the corpus/h5 test counts agree (the i-th-test mapping proven).
+    """
+    case = problem["sub_steps"][idx]
+    joined = "\n".join(_dataset_field(case, "test_cases"))
+    if not _TARGET_RE.search(joined):
+        return True
+    if not _official_targets_enabled():
+        _OFFICIAL_STATS["refusals"] += 1
+        return False
+    _OFFICIAL_STATS["items_considered"] += 1
+    ok, _why = _official_can_target(_dataset_field(case, "step_number"),
+                                    len(_dataset_field(case, "test_cases")))
+    if ok:
+        _OFFICIAL_STATS["items_targeted"] += 1
+    else:
+        _OFFICIAL_STATS["refusals"] += 1
+    return bool(ok)
+
+
+def _official_tests(raw_tests, step_id: str) -> str:
+    """The exact text handed to the sandbox.
+
+    Returns the tests with the OFFICIAL target bound before each one when the grader is
+    enabled and covers the item; otherwise the tests joined VERBATIM (the default path).
+    """
+    if not _official_targets_enabled():
+        return "\n".join(raw_tests)
+    ok, _why = _official_can_target(step_id, len(raw_tests))
+    if not ok:
+        return "\n".join(raw_tests)
+    res = _official_resolver()
+    from scicode_official_grader import build_tests_with_targets
+    text = build_tests_with_targets(list(raw_tests), step_id, res)
+    _OFFICIAL_STATS["injections"] += 1
+    return text
+
 
 def stable_order(rows: list[dict]) -> list[tuple[dict, int]]:
     """(problem, sub_step_index) sorted by (numeric problem_id, step index)."""
@@ -428,8 +521,7 @@ def select_window(rows: list[dict], n: int = MAX_ITEMS) -> list[tuple[dict, int]
           skipping those already taken.
     """
     order = stable_order(rows)
-    selfcontained = [(r, i) for r, i in order
-                     if not _TARGET_RE.search("\n".join(_dataset_field(r["sub_steps"][i], "test_cases")))]
+    selfcontained = [(r, i) for r, i in order if _targets_satisfiable(r, i)]
     chosen = list(selfcontained)
     for cand in order:
         if len(chosen) >= n:
@@ -683,12 +775,12 @@ def dataset_control_rows(harness, dev: list[dict]) -> list[dict]:
     harness is broken.
     """
     rows = []
-    pairs = [(r, i) for r, i in stable_order(dev)
-             if not _TARGET_RE.search("\n".join(_dataset_field(r["sub_steps"][i], "test_cases")))]
+    pairs = [(r, i) for r, i in stable_order(dev) if _targets_satisfiable(r, i)]
     for problem, idx in pairs:
         case = problem["sub_steps"][idx]
         code = build_reference_code(problem, idx)
-        tests = "\n".join(_dataset_field(case, "test_cases"))
+        tests = _official_tests(_dataset_field(case, "test_cases"),
+                                _dataset_field(case, "step_number"))
         s = case
         res = run_case(harness, code, tests, f"dataset-control-{s['step_number']}")
         cls = classify(res["status"], res["stderr_full"], arm="reference_control",
@@ -911,7 +1003,8 @@ def main() -> int:
     for problem, idx in window:
         case = problem["sub_steps"][idx]
         wid = item_id(problem, idx)
-        tests = "\n".join(_dataset_field(case, "test_cases"))
+        tests = _official_tests(_dataset_field(case, "test_cases"),
+                                _dataset_field(case, "step_number"))
         deps = (problem.get("required_dependencies") or "")
         header = _dataset_field(case, "function_header") or ""
         step_prompt = _dataset_field(case, "step_description_prompt") or ""
@@ -1002,6 +1095,18 @@ def main() -> int:
     # ---- (7) aggregate by reading the ledger back (D21) --------------------
     persisted = list(ledger.rows())
     report["ledger_rows_written"] = rows_written
+    # UHR-05: official-grader provenance. Without this the denominator is unattributable:
+    # a reader must be able to tell whether `target` came from the benchmark's own grader
+    # and its own data file, or from nothing at all.
+    _ot = dict(_OFFICIAL_STATS)
+    _ot["enabled"] = _official_targets_enabled()
+    _resr = _official_resolver()
+    if _resr:
+        try:
+            _ot["pin"] = _resr.pin()
+        except Exception as exc:  # noqa: BLE001
+            _ot["pin_error"] = f"{type(exc).__name__}: {exc}"
+    report["official_targets"] = _ot
     # UHR-05: attach the source provenance AFTER the run loop. MEASURED DEFECT: attaching it
     # BEFORE the loop recorded `calls=0, emitted=0, device=None` on every run, because those
     # counters only move while generating -- a dead snapshot inside a receipt whose entire
