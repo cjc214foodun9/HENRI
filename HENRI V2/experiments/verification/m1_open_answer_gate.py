@@ -318,7 +318,20 @@ def main(argv=None):
     if dest.exists() and dest.is_dir():
         raise ValueError("malformed receipt override (is a directory): %r" % (str(dest),))
     dest.parent.mkdir(parents=True, exist_ok=True)
+    _predicate = {
+        "gate_version": "uhr05-v2",
+        "operative_criteria": ["P1_determinism>=1.0", "P3_order_sensitivity>=0.50",
+                               "P4_equivalence>=0.50", "P5_control_valid==True"],
+        "retired_criteria": ["P2_distinct_ratio: CONFOUNDED - the RANDOM-wave control "
+                             "scored ABOVE its 0.50 floor in every measured arm, so the old "
+                             "'vacuous = rand >= floor' predicate could never be False and "
+                             "M1_GATE_PASS was unreachable by construction"],
+        "control": "P5 requires BOTH shipped degenerate encoders (dead, hash) to FAIL the "
+                   "(P3,P4) pair; a structureless encoder passing invalidates the pair",
+        "floors_unchanged_from_preregistration": True,
+    }
     dest.write_text(json.dumps(dict(
+        predicate=_predicate,
         preregistration=dict(N=N_PROMPTS, P1=P1_DETERMINISM,
                              P2=P2_DISTINCT_FLOOR, P3=P3_ORDER_FLOOR,
                              P4=P4_EQUIV_FLOOR, seed=SEED),
