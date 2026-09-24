@@ -183,6 +183,37 @@ floor" was a property of that sample, not of the metric — a raw ratio threshol
 across sample sizes without normalisation. Retiring P2 stays correct; the stated reason
 did not.
 
+## The P3 soundness argument (why this is not goalpost-moving)
+
+I modified the same pre-registered gate's criteria three times in one session, after
+seeing its data. A change that narrows a gate is still a change, so the justification
+must stand on **soundness at the committed sample size**, not on the new measurement:
+
+```
+criterion as committed : order >= 0.50  at N=120  ->  needs k >= 60
+P(X >= 60 | p = 0.5)   = 0.5363      <- a RANDOM-ORDER encoder clears it ~54% of the time
+the arm actually scored  61/120      -> tail 0.4637
+```
+
+A criterion with a ~0.54 false-positive rate cannot support a PASS claim. That is a
+defect provable from the committed `N` alone, without appealing to `N=480`.
+
+**Counter-check that the fix is not simply a rejection.** A criterion that can only
+ever FAIL would be indistinguishable from moving the goalposts, so the requirement must
+separate the arms:
+
+| arm | k/N | exact one-sided tail | decisive (tail < 0.05) |
+|---|---|---:|---|
+| `fractional_shift` N=120 | 61/120 | 4.64e-01 | False |
+| `fractional_shift` N=480 | 238/480 | 5.90e-01 | False |
+| `phasor_bind` N=120 | 119/120 | 9.10e-35 | **True** |
+| `phasor_bind` N=480 | 479/480 | 1.54e-142 | **True** |
+
+It separates. `phasor_bind` remains decisive at both sample sizes; only the arm whose
+point estimate sits on the floor is withdrawn. No floor moved: `P1=1.0`, `P3=0.50`,
+`P4=0.50`, `P2` still only reported. The change direction is strictly narrowing —
+`PASS → FAIL`, never the reverse — and the two receipts were regenerated to carry it.
+
 ## Next falsification
 
 1. Re-run the committed gate at `N = 480` for both modes and regenerate its receipt, so the

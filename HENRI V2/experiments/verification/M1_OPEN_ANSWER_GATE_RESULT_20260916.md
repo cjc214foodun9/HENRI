@@ -1,5 +1,28 @@
 # M1 Pre-Registered Gate — Result: `M1_GATE_FAIL`
 
+> **SUPERSEDED IN PART — 2026-09-24 (UHR-05).** The numbers below are the historical
+> record of the gate as it ran on 2026-09-16 and are LEFT UNCHANGED. Two of its
+> criteria have since been corrected, so this document no longer describes the live
+> instrument:
+>
+> 1. **P2 `distinct_ratio` is RETIRED** — a MEASURED SCALE DEFECT: `distinct_top1/N`
+>    can never exceed `V/N`, so at `V=156` the `0.50` floor is unreachable by
+>    construction for `N > 312`. The rationale originally recorded for the retirement
+>    ("the random-wave control scored above the floor") was true at `N=120` and
+>    **`FALSIFIED` at `N=480`**.
+> 2. **P3 now requires a DECISIVE pass** — soundness repair, independent of any new
+>    data: as written, `order >= 0.50` at `N=120` needs `k >= 60`, and
+>    `P(X>=60 | p=0.5) = 0.5363`. A random-order encoder therefore cleared it ~54% of
+>    the time; the arm actually scored `61/120`, tail `0.4637`. A criterion with that
+>    false-positive rate cannot support a PASS claim.
+>
+> Effect on the live verdicts: `fractional_shift` moves `M1_GATE_PASS` →
+> `M1_GATE_FAIL:P3_NOT_DECISIVE` (and `M1_GATE_FAIL:P3` at `N=480`); `phasor_bind`
+> remains `M1_GATE_PASS` and remains decisive (`9.1e-35` at `N=120`). Floors were NOT
+> moved: `P1=1.0`, `P3=0.50`, `P4=0.50`. Live instrument and reasoning:
+> `UHR05_m1_control_hardening.md`.
+
+
 **Date:** 2026-09-16
 **Script:** `HENRI V2/experiments/verification/m1_open_answer_gate.py`
 **Receipt:** `m1_open_answer_gate_receipt.json`

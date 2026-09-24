@@ -38,6 +38,16 @@ Any non-zero score plan must name which channel it repairs.
 
 Recomputed from the committed `m1_open_answer_gate_receipt.json`:
 
+> **READ THIS BEFORE QUOTING THE TABLE BELOW — 2026-09-24 (UHR-05).** The receipt has
+> since been regenerated from a strictly narrower instrument, so the `distinct top-1`
+> figures below remain valid as history but the receipt's **verdicts changed**:
+> `fractional_shift` is now `M1_GATE_FAIL:P3_NOT_DECISIVE` (the P2 rationale given here
+> was `FALSIFIED` at `N=480`; P3 as written admitted a coin flip), while `phasor_bind`
+> remains `M1_GATE_PASS`. The `VACUOUS_DISTINCT_COUNT_NOT_INFORMATIVE` inference below
+> still holds — the armed falsifier did fire — but the ROOT CAUSE is a scale defect in
+> the statistic, not the control winning the axis. See
+> `UHR05_m1_control_hardening.md` for the measured replacement.
+
 | arm | distinct top-1 (floor 0.50) | RANDOM control |
 |---|---:|---:|
 | `fractional_shift` | **0.233** (below floor) | **0.592** (above floor) |

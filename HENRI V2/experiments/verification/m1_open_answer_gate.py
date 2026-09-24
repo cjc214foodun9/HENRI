@@ -215,6 +215,37 @@ def degenerate_wave(texts, dim, kind):
     return w / w.norm(dim=-1, keepdim=True).clamp_min(1e-12)
 
 
+def binom_tail_ge(k: int, n: int, p: float = 0.5) -> float:
+    """Exact P(X >= k) for X ~ Binomial(n, p). Used to require a DECISIVE pass."""
+    from math import comb
+    if n <= 0:
+        return 1.0
+    k = max(0, min(int(k), n))
+    return float(sum(comb(n, i) * (p ** i) * ((1.0 - p) ** (n - i)) for i in range(k, n + 1)))
+
+
+def phase_scramble(waves, seed: int):
+    """MATCHED content-destroying null (UHR-05, added after measurement).
+
+    WHY THIS EXISTS: the two shipped controls (`dead`, `hash`) are STRUCTURELESS --
+    they share no construction with the treatment, so they are the EASIEST controls
+    to fail and cannot bound what a same-construction artefact could achieve. This
+    null is MATCHED: it multiplies each dimension by an independent unit-modulus
+    random phase, which preserves the exact L2 norm AND the per-dimension phase
+    marginal, and destroys only the text->wave map.
+
+    MEASURED 2026-09-24 (gate machinery, real prompts): it FAILS the (P3,P4) pair in
+    BOTH modes at both N -- fractional_shift 0.4250/0.4667 (N=120) and 0.4458/0.4708
+    (N=480); phasor_bind 1.0000/0.0417 (N=120) and 0.9854/0.0271 (N=480). A control
+    that passed would invalidate the pair more strongly than `dead`/`hash` can.
+    """
+    import torch as _t
+    g = _t.Generator().manual_seed(int(seed))
+    th = _t.rand(waves.shape, generator=g) * (2.0 * _t.pi)
+    rot = _t.polar(_t.ones_like(th), th).to(waves.dtype)
+    return waves * rot
+
+
 def gate_validity(code, prompts, rng):
     """Run each degenerate encoder through the SAME order/equivalence machinery.
 
@@ -233,6 +264,25 @@ def gate_validity(code, prompts, rng):
         equiv = sum(x == y for x, y in zip(a, v)) / len(a)
         failed = (order < P3_ORDER_FLOOR) or (equiv < P4_EQUIV_FLOOR)
         detail[kind] = {"order_sensitivity": order, "equivalence": equiv, "fails_pair": failed}
+
+    # THIRD CONTROL (UHR-05): matched content-destroying null. Strictly harder than
+    # `dead`/`hash` because it is construction-matched (norm- and marginal-preserving).
+    # A fresh Random(SEED) is used so these numbers reproduce the measured values
+    # above rather than depending on the consumed `rng` state of the caller.
+    tok = vt.HoloVLATokenizer(code.cfg)
+    srng = random.Random(SEED)
+    with torch.no_grad():
+        a = code.logits(phase_scramble(tok.encode_text(list(prompts)), SEED + 29)).argmax(-1).tolist()
+        n = code.logits(phase_scramble(
+            tok.encode_text([shuffled(p, srng) for p in prompts]), SEED + 29)).argmax(-1).tolist()
+        v = code.logits(phase_scramble(
+            tok.encode_text([near_view(p) for p in prompts]), SEED + 29)).argmax(-1).tolist()
+    order = sum(x != y for x, y in zip(a, n)) / len(a)
+    equiv = sum(x == y for x, y in zip(a, v)) / len(a)
+    detail["phase_scramble"] = {
+        "order_sensitivity": order, "equivalence": equiv,
+        "fails_pair": bool((order < P3_ORDER_FLOOR) or (equiv < P4_EQUIV_FLOOR))}
+
     valid = all(d["fails_pair"] for d in detail.values())
     return valid, detail
 
@@ -253,15 +303,31 @@ def verdict(a, control_valid=True):
     p4 = a["equivalence"] >= P4_EQUIV_FLOOR
     p5 = bool(control_valid)          # degenerate encoders must FAIL the (P3,P4) pair
     p2_report = a["distinct_ratio"] >= P2_DISTINCT_FLOOR
+
+    # UHR-05 DECISIVENESS (added 2026-09-24; STRICTER only, no floor moved).
+    # A P3 value within sampling noise of its 0.50 floor is not a pass. MEASURED:
+    # N=120 `fractional_shift` scored 61/120 = 0.5083, with exact one-sided binomial
+    # tail P(X>=61 | p=0.5) = 0.4818 -- i.e. exactly what chance produces. Re-run at
+    # N=480 the SAME arm scored 238/480 = 0.4958 and FAILED its own floor, while the
+    # same-construction `signrand` control scored 0.5667 and PASSED: the ordering
+    # inverts with N, so that arm's P3 is noise. `p3_decisive` requires the floor to
+    # be cleared decisively (tail < 0.05). `None` means "not evaluable" (no `n`), which
+    # does not block a pass; `False` does.
+    _n = a.get("n")
+    _k = None if _n is None else int(round(a["order_sensitivity"] * _n))
+    p3_dec = None if _k is None else bool(binom_tail_ge(_k, _n) < 0.05)
+
     if not p5:
         label = "GATE_INVALID_DEGENERATE_ENCODER_PASSED"
-    elif p1 and p3 and p4:
+    elif p1 and p3 and p4 and p3_dec is not False:
         label = "M1_GATE_PASS"
     else:
         failed = [k for k, v in (("P1", p1), ("P3", p3), ("P4", p4)) if not v]
+        if p3_dec is False and not failed:
+            failed = ["P3_NOT_DECISIVE"]
         label = "M1_GATE_FAIL:" + ",".join(failed)
     return dict(P1_determinism=p1, P2_distinct_RETIRED=p2_report,
-                P3_order=p3, P4_equivalence=p4, P5_control_valid=p5,
+                P3_order=p3, P3_decisive=p3_dec, P4_equivalence=p4, P5_control_valid=p5,
                 distinct_ratio=a["distinct_ratio"],
                 rand_distinct_ratio=a["rand_distinct_ratio"], verdict=label)
 

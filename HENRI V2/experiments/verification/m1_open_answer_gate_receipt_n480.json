@@ -39,6 +39,7 @@
       "P1_determinism": true,
       "P2_distinct_RETIRED": false,
       "P3_order": false,
+      "P3_decisive": false,
       "P4_equivalence": true,
       "P5_control_valid": true,
       "verdict": "M1_GATE_FAIL:P3"
@@ -60,6 +61,7 @@
       "P1_determinism": true,
       "P2_distinct_RETIRED": false,
       "P3_order": true,
+      "P3_decisive": true,
       "P4_equivalence": true,
       "P5_control_valid": true,
       "verdict": "M1_GATE_PASS"

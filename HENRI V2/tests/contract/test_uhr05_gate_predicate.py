@@ -119,7 +119,12 @@ def test_gate_validity_helper_agrees_with_manual_computation():
     manual = all(not ((o >= m1.P3_ORDER_FLOOR) and (e >= m1.P4_EQUIV_FLOOR))
                  for o, e in (_degenerate_scores(code, prompts, k) for k in ("dead", "hash")))
     assert valid == manual, "gate_validity disagrees with the manual control computation"
-    assert set(detail) == {"dead", "hash"}
+    # UHR-05: the control SET is now three, not two -- the matched content-destroying
+    # null was added because `dead`/`hash` share no construction with the treatment.
+    assert set(detail) == {"dead", "hash", "phase_scramble"}
+    assert detail["phase_scramble"]["fails_pair"], (
+        "the MATCHED content-destroying null passed the (P3,P4) pair -> the pair does "
+        "not discriminate content from a norm-preserving phase scramble")
 
 
 # --------------------------------------------------------- verdict behaviour
