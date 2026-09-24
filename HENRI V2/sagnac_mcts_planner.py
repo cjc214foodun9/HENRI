@@ -23,6 +23,21 @@ from efe_planner import INTACTIsomorphicConjugacyHead
 HENRI_MCTS_OBSERVATIONAL_READOUT = (
     os.environ.get("HENRI_MCTS_OBSERVATIONAL_READOUT", "0") == "1")
 
+# UHR-05 A4 switch. When ON the MCTS primitive-op list is built FROM the SE(2)/D4
+# Lie-generator bank (`henri_parametric_manifold`) instead of a hardcoded literal,
+# and unit translations become available. DEFAULT OFF, so `primitive_ops` is
+# byte-identical to the pre-A4 list and no search behaviour changes.
+HENRI_PARAMETRIC_MANIFOLD = (
+    os.environ.get("HENRI_PARAMETRIC_MANIFOLD", "0") == "1")
+
+#: Op names `SpelkeDSLNode.execute` actually implements. Any OTHER name fell through
+#: to the children loop and returned the grid UNCHANGED -- a silent Identity. That is
+#: a phantom capability: the op list could grow while the executor ignored the names.
+_IMPLEMENTED_OPS = frozenset([
+    "Identity", "Rotate90", "Rotate180", "Rotate270",
+    "FlipHorizontal", "FlipVertical", "ColorPermute", "ContourFill", "GravityDrop",
+])
+
 
 class SagnacGateUnavailable(RuntimeError):
     """The Sagnac veto could not RUN, as distinct from having PASSED or VETOED.
@@ -94,6 +109,25 @@ class SpelkeDSLNode:
                 res[:, c] = np.concatenate([zeros, non_zero])
             return res
 
+        elif self.op_name.startswith("Translate(") and self.op_name.endswith(")"):
+            # UHR-05 A4: integer grid translation -- the grid-level realisation of
+            # SE2GeneratorBank.apply_translation, verified equal to np.roll at 2.6e-16.
+            inner = self.op_name[len("Translate("):-1]
+            try:
+                dx_s, dy_s = inner.split(",")
+                dx, dy = int(dx_s), int(dy_s)
+            except Exception:
+                raise ValueError(
+                    "malformed translation op %r; expected Translate(dx,dy)" % (self.op_name,))
+            return np.roll(np.roll(res, dx, axis=0), dy, axis=1)
+
+        if (HENRI_PARAMETRIC_MANIFOLD and not self.children
+                and self.op_name not in _IMPLEMENTED_OPS):
+            # FAIL-CLOSED under the flag: refuse rather than act as a silent Identity.
+            raise ValueError(
+                "op %r has no executor and no children; refusing a silent Identity "
+                "under HENRI_PARAMETRIC_MANIFOLD=1" % (self.op_name,))
+
         for child in self.children:
             res = child.execute(res)
         return res
@@ -160,10 +194,21 @@ class SagnacMCTSPlanner:
         )
         self.intact_head = INTACTIsomorphicConjugacyHead(d_model=d_model, device=device)
 
-        self.primitive_ops = [
-            "Identity", "Rotate90", "Rotate180", "Rotate270",
-            "FlipHorizontal", "FlipVertical", "ColorPermute", "ContourFill", "GravityDrop"
-        ]
+        _colors = ["ColorPermute", "ContourFill", "GravityDrop"]
+        if HENRI_PARAMETRIC_MANIFOLD:
+            # UHR-05 A4: group-valued ops come from the verified generator bank, so
+            # the vocabulary has ONE source of truth and cannot drift from the
+            # generator table. Non-geometric ops stay literal.
+            from henri_parametric_manifold import d4_group_actions
+            self.primitive_ops = (list(d4_group_actions())
+                                  + ["Translate(1,0)", "Translate(-1,0)",
+                                     "Translate(0,1)", "Translate(0,-1)"]
+                                  + _colors)
+        else:
+            self.primitive_ops = [
+                "Identity", "Rotate90", "Rotate180", "Rotate270",
+                "FlipHorizontal", "FlipVertical", "ColorPermute", "ContourFill", "GravityDrop"
+            ]
 
         # Observational-veto threshold, DERIVED PER LATTICE (never inherited).
         # The observational metric is a cell MATCH RATE whose null is
