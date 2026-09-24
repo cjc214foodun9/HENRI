@@ -401,3 +401,88 @@ be substituted here.
 `3.000001` is `|Tr(I)|`, so at least one record's reference is the identity — the
 `delta_extero = -0.0` family from run #3. The pooled path still ranks correctly there
 because it also reads the channels that did move.
+
+
+---
+
+## RUN #7 — ENV-PROBE PRE-REGISTRATION (written BEFORE any run #7 data exists)
+
+Identified by its CONTENT, not by a label: AMENDMENT 7/8/9/10 are already used by
+other notices in this file. This section binds run #7 to the frozen criteria and
+adds the admissibility rule and the anticipated legitimate outcomes.
+
+### Purpose — this is an ENV PROBE, not a plain replication
+
+Kill-runs #5/#6 established action IDENTIFICATION on the live path (C1 16/16,
+margin ~17x band) but could not test content discrimination, because in
+`ft09-0d8bbf25` the entire changed region is a step-determined cursor band: all
+activity sits in channels 4032..4095 (= row 63 of a 64x64 grid), the block slides
+-4 cells per step IDENTICALLY for every action, and `frame_diff_mean` is
+bit-identical (0.0009765625) in 32/32 records with `levels_completed=0`. Any other
+action composes to the identity at the true action's cells by construction, so its
+competitor score is the do-nothing baseline.
+
+THEREFORE run #7 asks: does any reachable environment supply ACTION-CONDITIONED
+content, i.e. a competitor set that is not identity-only? A negative answer is a
+SCOPE statement about the FORM B program, not a falsification of it.
+
+### Measured basis (free, zero GPU cost, from the historical corpus)
+
+`ka59-38d34dbb`, 540 records with a usable `changed_cells` field, 60 distinct step
+indices:
+
+| quantity | measured |
+|---|---|
+| actions recorded | ACTION1, ACTION2, ACTION3, ACTION4 |
+| per-action mean `changed_cells` | 15.73 / 17.34 / 18.60 / 11.17 |
+| distinct `changed_cells`, ACTION1 | 4 -> {0, 1, 18, 19} |
+| distinct `changed_cells`, ACTION2 | 4 -> {0, 1, 18, 19} |
+| step indices where both A1 and A2 observed | 24 |
+| `abs(cc(A1) - cc(A2))` at the SAME step index | nonzero in 6/24 (values {0, 18}) |
+
+Reading, WITH its limit: `changed_cells` is NOT a pure function of step index
+(6/24 step-matched pairs differ), which `ft09` could never show. BUT the
+distribution is bimodal ({0,1} vs {18,19}) and BOTH actions take all four values,
+which is equally consistent with state-dependent success/failure as with
+action-identity encoding. Run #7 is therefore a genuine probe; its outcome is NOT
+pre-judged here.
+
+### Configuration (exactly one flag differs between arms)
+
+    HENRI_SINGLE_ENV=ka59-38d34dbb        <- the env pin (the only env change)
+    ARM A: HENRI_UHR02_EXTERO_GATE=0
+    ARM B: HENRI_UHR02_EXTERO_GATE=1
+    steps=32      tau=0.3500      HENRI_MACRO_NUM_CHANNELS=1
+    EXTERNAL_OUTCOME_EFE=1   HENRI_TRACE_UPDATE_GATES=1   HENRI_OFFLINE_DIAG=1
+
+### Admissibility (checked BEFORE any verdict)
+
+1. `ka59-38d34dbb` must appear in the LIVE env list. If it does not, the run is
+   `BLOCKED_INFRASTRUCTURE`: no science claim, no kill budget consumed. This is a
+   FAIL-CLOSED preflight, not a post-hoc excuse.
+2. The run counts as an INDEPENDENT replication only if the env id differs from
+   `ft09-0d8bbf25` OR the action sequence differs. Otherwise it is recorded as a
+   robustness check and does NOT advance the kill counter.
+3. Both arms must exit 0 and G1-G5 must hold, per the frozen table.
+
+### Criteria (unchanged from the frozen pre-registration)
+
+G1 store holds a non-trivial recorded transition; G2 guard executed
+(`updated=true`); G3 pooled FORM B returns status OK; G4 both arms exit 0; G5
+flag-OFF emits no `phase820_extero_info`. Then C1 (own is argmin), C2
+(margin > band), C3 (`delta_extero` leaves {0.0}) — each recomputed from the raw
+`delta_pooled_all` values independently of the helper's own flag.
+
+### Anticipated legitimate outcomes (all pre-registered)
+
+| outcome | meaning | kill budget |
+|---|---|---|
+| PASS with a CONTENT-BEARING competitor set (invalid spread > 0) | FORM B discriminates content on the live path | none; strengthens |
+| PASS with an IDENTITY-ONLY competitor set | identification only, as in #5/#6 | none |
+| `BLOCKED: no live content comparator available` | no reachable env supplies action-conditioned content | none; recorded as a NEGATIVE SCOPE statement for the FORM B program |
+| preflight fail (env absent / nonzero arm exit) | `BLOCKED_INFRASTRUCTURE` | none |
+
+FALSIFIED still requires, as frozen: two consecutive runs that pass G1-G6 with a
+CONTENT-BEARING competitor set AND fail BOTH C1 and C2. An identity-only
+competitor set can never produce a kill, because it cannot produce a content
+claim in the first place.
