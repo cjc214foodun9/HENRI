@@ -1,4 +1,28 @@
-# UHR-05 — Why SciCode pass@1 has a denominator of 2, and what would legitimately widen it
+# UHR-05 — Why SciCode pass@1 *had* a denominator of 2, and what legitimately widens it
+
+> **ANSWERED AND SUPERSEDED IN PART — 2026-09-24, commit `d33ad10`.**
+> The question posed by this title is now settled; the measurement below is the historical
+> record of the **pre-grader** state and is left byte-intact.
+>
+> The blocker was real and correctly handled: `target` is assigned **zero** times in both
+> corpus splits, so excluding those items was correct protocol (`target` is the value every
+> published test asserts). But `target` was never *unavailable* — the benchmark supplies it
+> at grade time through its **own** accessor over its **own** data file. Using those is not
+> the local tolerance / re-derived expected value / grader injection that `runner:18-22`
+> forbids.
+>
+> MEASURED with my own calls:
+> * official grader obtained — repo clone `rc=0`, `pip install -e .` → `import scicode` OK
+> * `test_data.h5` **1,049,345,865 B**, 338 groups; h5 ∩ dev **50/50** (test 288/291)
+> * `process_hdf5_to_tuple` resolves **50/50** dev targets; mapping control — corpus
+>   `test_cases` counts equal h5 test counts on **50/50** sub-steps, zero disagreement
+> * `test_num` must be the **actual** per-item count `{3:33, 4:17}`; a uniform `4` raises
+>   `KeyError` on the 33 three-test items (this is why a uniform 4 first read as 17/50)
+> * flag `HENRI_SCICODE_OFFICIAL_TARGETS` (default **OFF**) — satisfiable pool **2 → 50**,
+>   attemptable **2 → 16** in a 16-item window, reference arm **2/2 → 16/16 STATUS_PASSED**
+>
+> Therefore the "denominator of 2" in the tables below is a **pre-grader artifact, not a
+> property of the task**. Resolution and full safety argument: the `d33ad10` commit message.
 
 **Date:** 2026-09-24 · **Author:** HENRI arbiter, from own tool calls
 **Evidence classes:** `OBSERVED` · `DERIVED` · `FALSIFIED` · `BLOCKED`
