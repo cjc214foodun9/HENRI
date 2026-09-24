@@ -78,7 +78,10 @@ import re
 import sys
 import time
 
-V2 = pathlib.Path(r"C:/Users/chan/henri-worktrees/aaii-v43/HENRI V2")
+# UHR-05 (DEAD HARDCODED PATH): absolute path to a worktree that need not exist;
+# the same class as the `parents[1]` break fixed in the M1 gate. Resolve from
+# __file__ (parents[2] == HENRI V2), with an explicit override for other checkouts.
+V2 = pathlib.Path(os.environ.get("HENRI_S1_V2") or pathlib.Path(__file__).resolve().parents[2])
 REPO = pathlib.Path(r"C:/Users/chan/henri-worktrees/aaii-v43")
 sys.path.insert(0, str(V2))
 
@@ -262,8 +265,26 @@ res = {"executable": sys.executable, "prefix": sys.prefix, "version": sys.versio
 for name in ("numpy", "scipy", "sympy"):
     try:
         mod = __import__(name)
-        res["modules"][name] = {"ok": True, "version": getattr(mod, "__version__", "?"),
-                                "file": getattr(mod, "__file__", "?")}
+        # UHR-05 VACUOUS-PROBE FIX. MEASURED DEFECT this guards: an EMPTY
+        # `site-packages/numpy/` directory imports as a NAMESPACE PACKAGE, so
+        # `__import__("numpy")` SUCCEEDS while `numpy.array` does not exist
+        # (measured: __file__=None, __version__=None, hasattr(numpy,"array")=False on the
+        # runner's chosen venv). A return-code-only probe ACCEPTED that stub and every
+        # downstream item then died with
+        #     AttributeError: module 'numpy' has no attribute 'array'
+        # which is what set controls_all_behaved=False and drove the verdict to VOID.
+        # A module is AVAILABLE only if it exposes a FUNCTIONAL API surface.
+        _need = {"numpy": ("ndarray", "array"),
+                 "scipy": ("linalg",),
+                 "sympy": ("symbols",)}.get(name, ())
+        _functional = all(hasattr(mod, _a) for _a in _need) if _need else True
+        res["modules"][name] = {
+            "ok": bool(_functional),
+            "version": getattr(mod, "__version__", "?"),
+            "file": getattr(mod, "__file__", "?"),
+            "requires": list(_need),
+            "reason": None if _functional else "STUB_OR_EMPTY_NAMESPACE",
+        }
     except BaseException as exc:
         res["modules"][name] = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
 print("HENRI_IMPORT_PROBE=" + json.dumps(res))
