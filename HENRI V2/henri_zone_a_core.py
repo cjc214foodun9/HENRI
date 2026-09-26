@@ -107,6 +107,14 @@ class ZoneACore:
         self.jepa = WaveJEPA(
             d_model=d_model, num_blocks=num_blocks, r_rank=r_rank, device=self.dev
         )
+        # DEVICE PARITY (verified defect 2026-09-26, found ONLY on the CUDA host):
+        # HENRIVisionEncoder receives `device=self.dev` (cuda on the GPU host) while
+        # HenriSwarmOrchestrator takes NO device argument and builds on CPU. The
+        # first coherence read then mixed cuda:0 with cpu and raised
+        # "Expected all tensors to be on the same device". Local CPU smoke could not
+        # see it because there self.dev == "cpu" for every component.
+        # Fix: put every component on ONE device.
+        self.orch = self.orch.to(self.dev)
 
     # ------------------------------------------------------------------ ingress
     def encode(self, grid: Any) -> torch.Tensor:
