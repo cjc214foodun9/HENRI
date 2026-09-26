@@ -163,7 +163,10 @@ def run_seeding(
     timeouts = 0
     reward_sum = 0.0
     reward_n = 0
-    distinct = set()
+    # BOUNDED distinct-output accounting: an unbounded set at 10^7 executions
+    # would hold ~1.25M tuples (~390 MB). Cap it and record saturation honestly.
+    DISTINCT_CAP = 200_000
+    distinct_saturated = False
     loss_hist: List[float] = []
     lookback: dict = {}
     t0 = time.perf_counter()
@@ -212,7 +215,10 @@ def run_seeding(
                                       results[: max(1, batch_size // 8)]):
                 if not res.timed_out and res.output:
                     bank.admit(prog_item, r_mean)
-                    distinct.add(tuple(res.output))
+                    if len(distinct) < DISTINCT_CAP:
+                        distinct.add(tuple(res.output))
+                    else:
+                        distinct_saturated = True
 
             # ---- 6. LEARNER UPDATE (the separate token budget)
             loss_val = learner.step(ids)
