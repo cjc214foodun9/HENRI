@@ -1,0 +1,56 @@
+{
+  "spec_id": "SPEC-2026-09-24-FUWT-EGRESS-V1",
+  "algorithm_name": "FusedUnitaryWaveTransducer-ContinuousPolarPrefix",
+  "mathematical_invariants": [
+    "wave_state on unit complex hypersphere S^(D-1) in C^65536 with ||psi||_2 == 1.0",
+    "polar decomposition z_k = r_k * exp(i * theta_k) strictly preserves L2 energy without metric distortion",
+    "orthogonal partitioning D=65536 into M=32 wave packets of width d=2048 preserves norm sum(||r_m||_2^2) == 1.0",
+    "continuous polar prefix features u_p = [r_p, cos(theta_p), sin(theta_p)] in R^6144",
+    "prefix embedding h_p = LayerNorm(W_transduce * u_p + b_p) in R^2048",
+    "downstream autoregressive token rollouts unconstrained by AST template masks up to max_new_tokens=4096",
+    "fail closed on NaN or non-unitary wave input: ||psi||_2 != 1.0 +- 1e-4 raises TransducerNormViolation"
+  ],
+  "tensor_contracts": {
+    "wave_input": {
+      "shape": "[Batch, 65536]",
+      "dtype": "complex64",
+      "dynamic_axes": ["Batch"]
+    },
+    "polar_features": {
+      "shape": "[Batch, 32, 6144]",
+      "dtype": "float32",
+      "dynamic_axes": ["Batch"]
+    },
+    "prefix_embeddings": {
+      "shape": "[Batch, 32, 2048]",
+      "dtype": "bfloat16",
+      "dynamic_axes": ["Batch"]
+    },
+    "kv_cache_prefix_k": {
+      "shape": "[Batch, num_heads, 32, head_dim]",
+      "dtype": "bfloat16",
+      "dynamic_axes": ["Batch"]
+    },
+    "kv_cache_prefix_v": {
+      "shape": "[Batch, num_heads, 32, head_dim]",
+      "dtype": "bfloat16",
+      "dynamic_axes": ["Batch"]
+    }
+  },
+  "loss_formulations": [
+    "L_NLL = - (1 / T) * sum_{t=1}^T ln p_theta(y_t | H_prefix, y_{<t})",
+    "L_total = L_NLL + lambda_reg * ||W_transduce||_F^2"
+  ],
+  "baseline_references": [
+    {
+      "arxiv_id": "2609.09902",
+      "vault_note_path": "HENRI-ARCH-2026-CODE-TRANSDUCER-V1",
+      "core_insight": "Contrastive projection and polar coordinate unrolling cancels common-mode interference and preserves phase geometry on complex manifolds."
+    },
+    {
+      "arxiv_id": "2608.24335",
+      "vault_note_path": "UHR05_egress_emittable_ceiling.md",
+      "core_insight": "Rigid AST grammar masks collapse effective channel capacity to <=83 bits; continuous soft-prompt prefix unbinders expand sequence capacity to full language model context."
+    }
+  ]
+}
