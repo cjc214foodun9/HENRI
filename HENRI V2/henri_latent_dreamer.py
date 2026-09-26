@@ -139,11 +139,23 @@ class FocusedLatentDreamer:
     def __init__(self, core: Any, config: Optional[DreamConfig] = None) -> None:
         self.core = core
         self.cfg = (config or DreamConfig()).validate()
+        # Device: the adapter must live on the SAME device as the incoming wave.
+        # Verified defect (2026-09-26): on the CUDA host the adapter stayed on CPU
+        # while the core produced CUDA waves, so dream() raised a device mismatch.
+        # Local CPU smoke could not see it. `_prepare_device` is called in dream().
+        self._dev = torch.device(getattr(core, "dev", "cpu"))
         self.adapter = LowRankDreamAdapter(
             num_blocks=core.num_blocks, width=self.cfg.width, rank=self.cfg.lora_rank
-        )
+        ).to(self._dev)
         self._egress_ratified = False
         self._ratification_receipt: Optional[str] = None
+
+    def _prepare_device(self, reference_wave: torch.Tensor) -> None:
+        """Move the adapter onto the reference wave's device before it is used."""
+        want = reference_wave.device
+        if self.adapter.down.device != want:
+            self.adapter.to(want)
+            self._dev = want
 
     # -------------------------------------------------------------- GATE-A
     def should_enter(self, delta: float) -> bool:
@@ -206,6 +218,11 @@ class FocusedLatentDreamer:
         """One bounded dream cycle. Returns telemetry; NEVER emits an action."""
         cfg = self.cfg
         limit = max_steps or cfg.max_dream_steps
+
+        # Device parity: the adapter must match the incoming wave's device.
+        # WIRED (not merely defined): the CUDA host caught a mismatch that local
+        # CPU smoke could not.
+        self._prepare_device(reference_wave)
 
         cs = self.core.candidate_set(active_wave, reference_wave, top_k=top_k,
                                      allowed_actions=allowed_actions)

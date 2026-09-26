@@ -166,6 +166,7 @@ def run_seeding(
     # BOUNDED distinct-output accounting: an unbounded set at 10^7 executions
     # would hold ~1.25M tuples (~390 MB). Cap it and record saturation honestly.
     DISTINCT_CAP = 200_000
+    distinct: set = set()
     distinct_saturated = False
     loss_hist: List[float] = []
     lookback: dict = {}
