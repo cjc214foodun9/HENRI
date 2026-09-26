@@ -40,6 +40,9 @@ __all__ = [
     "parameter_displacement",
     "adamw_preconditioner",
     "alignment_reward",
+    "reward_via_grad_dot",
+    "reward_via_jvp",
+    "JVP_AVAILABLE",
 ]
 
 
@@ -186,3 +189,131 @@ def alignment_reward(
 
     # [B, P] -> [B]
     return torch.abs(torch.sum(g * scaled_delta, dim=-1))
+
+
+# --------------------------------------------------------------------------------------
+# forward-mode (JVP) reward path
+#
+# The MILESTONE 1 protocol asks for forward-mode automatic differentiation via
+# `jvp_flash_attention`. That name is NOT a verified API: no such module exists in
+# this repository, and no `torch.func.jvp` call exists anywhere in the live tree.
+# The correct primitive is `torch.func.jvp`. The mechanism is sound, because the
+# reward is exactly a directional derivative:
+#
+#     <grad_theta L, v>  =  d/deps L(theta + eps*v) |_{eps=0}
+#
+# so ONE forward-mode pass returns the reward without materialising the gradient.
+# Which path actually executed MUST be recorded in the receipt. Never report a
+# JVP deployment when the reverse-mode fallback ran.
+# --------------------------------------------------------------------------------------
+
+try:  # pragma: no cover - import-time capability probe
+    import torch.func as _torch_func
+
+    JVP_AVAILABLE: bool = hasattr(_torch_func, "jvp")
+except Exception:  # pragma: no cover
+    _torch_func = None  # type: ignore[assignment]
+    JVP_AVAILABLE = False
+
+JVP_PATH_NAME = "forward-mode jvp (torch.func.jvp)"
+GRAD_DOT_PATH_NAME = "reverse-mode gradient dot product"
+
+
+def _pytree_validate(name: str, tree: object) -> None:
+    """Fail closed unless every leaf is a finite floating-point tensor."""
+    if isinstance(tree, torch.Tensor):
+        _require_tensor(name, tree)
+        return
+    if isinstance(tree, dict):
+        if not tree:
+            raise AlignmentRewardError(f"{name} must be a non-empty dict or tensor")
+        for key, value in tree.items():
+            _pytree_validate(f"{name}[{key!r}]", value)
+        return
+    raise AlignmentRewardError(
+        f"{name} must be a tensor or a dict of tensors, got {type(tree).__name__}"
+    )
+
+
+def _pytree_shapes(tree: object) -> object:
+    if isinstance(tree, torch.Tensor):
+        return tuple(tree.shape)
+    if isinstance(tree, dict):
+        return {k: _pytree_shapes(v) for k, v in tree.items()}
+    raise AlignmentRewardError(f"unsupported pytree node {type(tree).__name__}")
+
+
+def preconditioned_tangent(
+    displacement: torch.Tensor,
+    exp_avg_sq: torch.Tensor,
+    lr: float = 1e-4,
+    eps: float = 1e-8,
+) -> torch.Tensor:
+    """Return the tangent direction v = P_e @ delta_theta."""
+    d = _require_tensor("displacement", displacement)
+    v = _require_tensor("exp_avg_sq", exp_avg_sq)
+    _require_same_shape(("displacement", "exp_avg_sq"), (d, v))
+    if (v < 0).any():
+        raise AlignmentRewardError("exp_avg_sq (v) must be non-negative")
+    return adamw_preconditioner(v, lr=lr, eps=eps) * d
+
+
+def reward_via_grad_dot(
+    grad: torch.Tensor,
+    displacement: torch.Tensor,
+    exp_avg_sq: torch.Tensor,
+    lr: float = 1e-4,
+    eps: float = 1e-8,
+) -> torch.Tensor:
+    """Reverse-mode reward path, named for the MILESTONE 1 protocol.
+
+    Mathematically identical to `alignment_reward`. It exists under this name so
+    a receipt can state which path executed.
+    """
+    return alignment_reward(grad, displacement, exp_avg_sq, lr=lr, eps=eps)
+
+
+def reward_via_jvp(
+    loss_fn,
+    params,
+    tangent,
+) -> torch.Tensor:
+    """Forward-mode reward path: the reward as a directional derivative.
+
+    Args:
+        loss_fn: callable mapping a parameter pytree to a SCALAR tensor loss.
+        params: parameter pytree (a tensor or a dict of tensors).
+        tangent: pytree with the SAME structure and shapes as `params`; this is
+            the direction v = P_e @ delta_theta.
+
+    Returns:
+        |d/deps L(params + eps * tangent)| as a scalar tensor.
+
+    Fails closed when forward-mode AD is unavailable. The caller records which
+    path ran.
+    """
+    if not JVP_AVAILABLE:
+        raise AlignmentRewardError(
+            "torch.func.jvp is unavailable in this build; use reward_via_grad_dot and "
+            "record that the reverse-mode path ran"
+        )
+    if not callable(loss_fn):
+        raise AlignmentRewardError(f"loss_fn must be callable, got {type(loss_fn).__name__}")
+    _pytree_validate("params", params)
+    _pytree_validate("tangent", tangent)
+    if _pytree_shapes(params) != _pytree_shapes(tangent):
+        raise AlignmentRewardError(
+            "params and tangent must have identical structure and shapes: "
+            f"params={_pytree_shapes(params)} tangent={_pytree_shapes(tangent)}"
+        )
+
+    _, tangent_out = _torch_func.jvp(loss_fn, (params,), (tangent,))
+    if not torch.isfinite(tangent_out).all():
+        raise AlignmentRewardError("forward-mode jvp produced a non-finite output")
+    return torch.abs(tangent_out)
+
+
+def reward_path_name() -> str:
+    """Return the forward-mode path name when available, else the fallback name."""
+    return JVP_PATH_NAME if JVP_AVAILABLE else GRAD_DOT_PATH_NAME
+
