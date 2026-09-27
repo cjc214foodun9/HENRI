@@ -62,11 +62,12 @@ ax1.annotate("TOPO = 1.000000 exact\n(mask 0 params, fill from demos)",
              bbox=dict(boxstyle="round", fc="#fff7ec", ec="#cc7722"))
 ax1.text(4.45, 0.70, "class ceiling\n(transform contained)", fontsize=7.5, ha="right",
          va="center", color="#555555")
-ax2.annotate("exact recovery:\nthe transform IS in the class",
-             xy=(2.0, 1.0), xytext=(0.42, 0.68), fontsize=9, color="#228833",
+ax2.annotate("exact recovery:\ntransform in class",
+             xy=(2.0, 0.99), xytext=(2.95, 0.46),
+             fontsize=8.5, color="#228833",
              arrowprops=dict(arrowstyle="->", color="#228833", lw=1.4),
              bbox=dict(boxstyle="round", fc="#f0fff4", ec="#228833"))
-ax2.text(4.45, 0.30, "TOPO delta 0.000000\n(abstained, not routed)", fontsize=7.5,
+ax2.text(4.45, 0.16, "TOPO delta 0.000000\n(abstained, not routed)", fontsize=7.5,
          ha="right", va="center", color="#8a4b00")
 
 table = (
