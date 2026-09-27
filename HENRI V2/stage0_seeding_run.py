@@ -140,6 +140,40 @@ class ProgramBank:
 # the run
 # ======================================================================================
 
+def build_heldout(
+    n_samples: int,
+    seed: int,
+    prog_len: int,
+    seq_len: int,
+) -> torch.Tensor:
+    """Build a HELD-OUT batch that training NEVER sees.
+
+    Disjoint by construction on three axes, so a promotion signal derived from it
+    cannot be satisfied by memorisation:
+      * a different generator seed  -> different programs
+      * a different program LENGTH  -> out-of-distribution vs the training length
+      * a fixed, materialised batch -> identical across every evaluation, so the
+        progress delta is measured on the SAME items each time.
+
+    This exists because the driver's own docstring records that an earlier gate
+    measured progress on the SAME samples used for training, which measures
+    MEMORISATION (noise scored large "progress" by being memorised). Prediction on
+    unseen items is the only signal allowed to gate promotion.
+    """
+    hvm = CircularTapeVM(VMConfig(tape_size=256, max_steps=512, max_output=seq_len - 1))
+    hrng = torch.Generator().manual_seed(seed + 999_983)  # disjoint stream
+    hlen = prog_len + 8                                    # disjoint length
+    rows = []
+    for _ in range(n_samples):
+        res = hvm.execute(sample_program(hlen, hrng))
+        seq = list(res.output[: seq_len - 1])
+        if res.timed_out:
+            seq.append(TIMEOUT_TOKEN)
+        seq = seq + [0] * (seq_len - len(seq))
+        rows.append([min(x, VOCAB - 1) for x in seq[:seq_len]])
+    return torch.tensor(rows, dtype=torch.long)
+
+
 def run_seeding(
     n_executions: int,
     batch_size: int,
@@ -148,13 +182,51 @@ def run_seeding(
     prog_len: int = 32,
     seq_len: int = 33,
     reward_subsample: int = 64,
+    heldout_samples: int = 256,
+    eval_every: int = 50,
+    shard_dir: str | None = None,
+    shard_rows_per_file: int = 250_000,
 ) -> dict:
-    """Execute the bounded seeding loop. Returns the summary dict."""
+    """Execute the bounded seeding loop. Returns the summary dict.
+
+    PROMOTION GATE (ratified): the ONLY signal allowed to promote this run is
+    HELD-OUT curriculum progress. `final_loss` and `reward_mean` are recorded but
+    are explicitly NOT promotion signals (the old driver docstring records that a
+    training-loss/reward-based gate is satisfiable by memorisation).
+    """
     os.makedirs(out_dir, exist_ok=True)
     vm = CircularTapeVM(VMConfig(tape_size=256, max_steps=512, max_output=seq_len - 1))
     learner = TapeLearner(seed=seed)
     rng = torch.Generator().manual_seed(seed)
     bank = ProgramBank()
+
+    # ---- held-out evaluation set (never trained on; see build_heldout)
+    heldout_ids = build_heldout(heldout_samples, seed, prog_len, seq_len)
+    heldout_first: float | None = None
+    heldout_last: float | None = None
+    heldout_curve: list[tuple[int, float]] = []
+
+    # ---- binary shards: accumulate the token stream to disk (ACTION 1)
+    shard_files = 0
+    shard_bytes = 0
+    shard_written = 0
+    shard_buf = bytearray()
+    if shard_dir:
+        os.makedirs(shard_dir, exist_ok=True)
+
+        def _flush(buf: bytearray, idx: int) -> tuple[int, int]:
+            p = os.path.join(shard_dir, f"shard_{idx:05d}.bin")
+            with open(p, "wb") as sh:
+                sh.write(buf)
+            return 1, len(buf)
+
+    # round-0 held-out measurement (the baseline the delta is taken against)
+    heldout_first = learner.probe_loss(heldout_ids) if hasattr(learner, "probe_loss") else None
+    if heldout_first is None:
+        with torch.no_grad():
+            heldout_first = float(learner.loss(heldout_ids))
+    heldout_last = heldout_first
+    heldout_curve.append((0, heldout_first))
 
     n_rounds = max(1, (n_executions + batch_size - 1) // batch_size)
     executed = 0
@@ -229,6 +301,25 @@ def run_seeding(
             if len(lookback) > 4:
                 del lookback[min(lookback)]
 
+            # ---- 6a. SHARD the training token stream to disk (ACTION 1)
+            if shard_dir:
+                # vectorised: a per-element Python loop would cost ~17k iterations
+                # per round x ~19.5k rounds. .numpy().tobytes() is a single memcpy.
+                shard_buf.extend(ids.reshape(-1).to(torch.uint8).numpy().tobytes())
+                shard_written += int(ids.numel())
+                if len(shard_buf) >= shard_rows_per_file * seq_len:
+                    nf, nb = _flush(shard_buf, shard_files)
+                    shard_files += nf
+                    shard_bytes += nb
+                    shard_buf = bytearray()
+
+            # ---- 6b. HELD-OUT evaluation (the ONLY promotion signal)
+            if eval_every > 0 and (rnd % eval_every == 0) and rnd > 0:
+                with torch.no_grad():
+                    h = float(learner.loss(heldout_ids))
+                heldout_last = h
+                heldout_curve.append((rnd, h))
+
             if rnd % 10 == 0 or rnd == n_rounds - 1:
                 dt = time.perf_counter() - t0
                 fh.write(json.dumps({
@@ -246,9 +337,22 @@ def run_seeding(
                 fh.flush()
 
     dt = time.perf_counter() - t0
+
+    # ---- flush any remaining shard bytes
+    if shard_dir and shard_buf:
+        nf, nb = _flush(shard_buf, shard_files)
+        shard_files += nf
+        shard_bytes += nb
+        shard_buf = bytearray()
+
+    heldout_progress = (
+        (heldout_first - heldout_last)
+        if (heldout_first is not None and heldout_last is not None)
+        else None
+    )
     summary = {
-        "gate": "STAGE0_BOUNDED_SEEDING",
-        "purpose": "loop plumbing + throughput measurement (NOT curriculum, NOT ICL)",
+        "gate": "STAGE0_HELDOUT_SEEDING",
+        "purpose": "local token accumulation + HELD-OUT curriculum measurement",
         "seed": seed,
         "n_executions_requested": n_executions,
         "budget_vm_executions": executed,
@@ -258,17 +362,29 @@ def run_seeding(
         "exec_per_sec": round(executed / dt, 1),
         "reward_evals_per_sec": round(reward_evals / dt, 1),
         "learner_tokens_per_sec": round(tokens / dt, 1),
-        "final_loss": round(loss_hist[-1], 6) if loss_hist else None,
-        "first_loss": round(loss_hist[0], 6) if loss_hist else None,
-        "reward_mean": round(reward_sum / max(reward_n, 1), 10),
+        # ---- PROMOTION SIGNAL (held-out only)
+        "heldout_loss_first": heldout_first,
+        "heldout_loss_last": heldout_last,
+        "heldout_progress": heldout_progress,
+        "heldout_samples": heldout_samples,
+        "heldout_curve": [[int(r), float(v)] for r, v in heldout_curve],
+        # ---- NOT promotion signals (recorded for diagnosis only)
+        "final_loss_NOT_PROMOTION": round(loss_hist[-1], 6) if loss_hist else None,
+        "first_loss_NOT_PROMOTION": round(loss_hist[0], 6) if loss_hist else None,
+        "reward_mean_NOT_PROMOTION": round(reward_sum / max(reward_n, 1), 10),
+        # ---- shards
+        "shard_dir": shard_dir,
+        "shard_files": shard_files,
+        "shard_bytes": shard_bytes,
+        "shard_tokens_written": shard_written,
         "timeout_rate": round(timeouts / max(executed, 1), 4),
         "distinct_outputs": len(distinct),
         "bank_size": len(bank.programs),
         "alphabet_size": len(ALPHABET),
         "honest_boundary": (
-            "Validates loop plumbing and measures throughput only. Reward curriculum "
-            "validity is UNRESOLVED (two gates failed on gate defects). ICL emergence "
-            "is NOT testable at this scale."
+            "PROMOTION IS GATED ON heldout_progress ONLY. final_loss and reward_mean "
+            "are recorded but are NOT promotion signals (a training-loss or reward "
+            "gate is satisfiable by memorisation). ICL emergence is NOT tested here."
         ),
     }
     with open(os.path.join(out_dir, "summary.json"), "w", encoding="utf-8") as fh:
@@ -279,13 +395,26 @@ def run_seeding(
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--n-executions", type=int, default=1_000_000)
-    ap.add_argument("--batch-size", type=int, default=256)
+    ap.add_argument("--batch-size", type=int, default=512)
     ap.add_argument("--out", default="telemetry/stage0_seeding")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--reward-subsample", type=int, default=64)
+    ap.add_argument("--heldout-samples", type=int, default=256)
+    ap.add_argument("--eval-every", type=int, default=50)
+    ap.add_argument("--shard-dir", default=None,
+                    help="write the training token stream to uint8 shards here")
+    ap.add_argument("--shard-rows-per-file", type=int, default=250_000)
+    ap.add_argument("--threads", type=int, default=0,
+                    help="0 = leave torch default; else torch.set_num_threads(n)")
     a = ap.parse_args()
+    if a.threads > 0:
+        torch.set_num_threads(a.threads)
     s = run_seeding(a.n_executions, a.batch_size, a.out, a.seed,
-                    reward_subsample=a.reward_subsample)
+                    reward_subsample=a.reward_subsample,
+                    heldout_samples=a.heldout_samples,
+                    eval_every=a.eval_every,
+                    shard_dir=a.shard_dir,
+                    shard_rows_per_file=a.shard_rows_per_file)
     print(json.dumps(s, indent=2))
     return 0
 
