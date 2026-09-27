@@ -41,14 +41,15 @@ ax.set_xticks([0, 1])
 # revision drew these on a twin axis at x=2.30/2.62 while xlim was (-0.55,1.45),
 # so the bars fell OUTSIDE the visible axes and nothing was drawn. A figure that
 # silently omits a measured number is a defect, not a style choice.
-ax.text(0, 1.05, "recovered 8/8", ha="center", fontsize=9.5, weight="bold", color="#2ca02c")
-ax.text(1, 1.05, "recovered 0/8", ha="center", fontsize=9.5, weight="bold", color="#d62728")
+ax.text(0, 1.15, "recovered 8/8", ha="center", fontsize=9.5, weight="bold", color="#2ca02c")
+ax.text(1, 1.15, "recovered 0/8", ha="center", fontsize=9.5, weight="bold", color="#d62728")
 ax.set_xticks([0, 1]); ax.set_xticklabels(["REFLECTION\n(rigid -> D4)", "CONTAINMENT\n(position-dependent)"], fontsize=9)
-ax.set_ylabel("held-out cosine"); ax.set_ylim(0, 1.15); ax.set_xlim(-0.55, 1.45)
+ax.set_ylabel("held-out cosine"); ax.set_ylim(0, 1.34); ax.set_xlim(-0.55, 1.45)
 ax.set_title("ACTION 2 acceptance: %s vs target %s -> FALSIFIED\n"
              "reflections exact (cos 1.000000); containment inexpressible by a global-operator class"
              % (d["recovery_total"], d["preregistration"]["target"]), fontsize=10)
-ax.legend(fontsize=8, loc="upper left"); ax.grid(axis="y", alpha=0.25)
+ax.legend(fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.11), ncol=3, frameon=False)
+ax.grid(axis="y", alpha=0.25)
 ax.axhline(0.0, color="k", lw=0.6)
 
 # ---------------- panel 2: transducer pipeline ----------------
