@@ -79,19 +79,20 @@ The seeding path issues **no CUDA calls**. It is pure Python plus CPU tensors.
 Therefore the RTX 5090 contributes **nothing** to this stage, and the correct
 comparison is instance-CPU versus workstation-CPU.
 
-| Host | Measured rate | Wall for 303,030,303 executions | GPU cost |
-|---|---|---|---|
-| Vast instance 52826640 | 9,369.1 exec/s | **32,343 s ≈ 8.98 h** | **≈ $4.61** @ $0.5130/hr |
-| Local workstation CPU | 18,772.1 exec/s | **16,143 s ≈ 4.48 h** | **$0.00** |
+| Host | Batch | Measured rate | Wall for 303,030,303 executions | GPU cost |
+|---|---|---|---|---|
+| Vast instance 52826640 | 512 | 9,369.1 exec/s | **32,343 s ≈ 8.98 h** | **≈ $4.61** @ $0.5130/hr |
+| Local workstation CPU | 256 | 18,772.1 exec/s | 16,143 s ≈ 4.48 h | $0.00 |
+| Local workstation CPU | **512** | **14,745.6 exec/s** | **20,551 s ≈ 5.71 h** | **$0.00** |
 
-**DECISION: do not rent a GPU for Stage-0.** The workstation is **~2.0× faster**
-than the rented instance for this CPU-bound job, and free.
+**DECISION: do not rent a GPU for Stage-0.** At the **apples-to-apples** batch
+size (512 both sides) the workstation is **1.57× the instance rate** and free.
 
-Caveat on the local figure: it was measured at `--batch-size 256` over 20,000
-executions, while the instance run used `--batch-size 512` over 10^7. Batch size
-affects the reward subsample and the learner step, so the two rates are
-**approximately** comparable, not identical. Re-measure locally at batch 512
-before committing to the 4.48 h figure.
+The batch-256 local row is retained for provenance but is NOT the comparison to
+use: batch size changes the reward subsample and the learner step, so the
+corrected, like-for-like advantage is **1.57×**, not the 2.0× an earlier revision
+of this document quoted from the batch-256 run. Re-measured locally at 1,000,236
+executions in 67.83 s.
 
 ---
 
