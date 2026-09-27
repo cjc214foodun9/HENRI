@@ -119,6 +119,45 @@ inverse; it is the measured-best diagonal family on 60 real ARC tasks.
 4. **Prior evidence says it will not.** The expected outcome is a re-confirmed
    `FALSIFIED`, logged in `evolution.jsonl` so it is never re-proposed blind.
 
+#### Gap 2 — RESULT (measured 2026-09-27; supersedes the "expected" wording above)
+
+**Pre-registration correction.** The criterion actually registered and run was
+`Δ = mean(treatment) − mean(control) ≥ τ` with **τ = 0.01** on paired held-out
+cosine — *not* the `hit_rate − identity_rate ≥ 0.30` phrasing written in step 3
+above. That earlier phrasing was drafted before the harness existed and is
+**superseded**; it is left visible so the substitution is auditable.
+
+| Arm | mean held-out cosine | n |
+|---|---|---|
+| identity | 0.409158 | 60 |
+| **CONTROL** (per-slot diagonal ridge) | **0.430607** | 60 |
+| TREATMENT (resonator class upper bound) | 0.413310 | 60 |
+
+`Δ = −0.017296` vs `τ = 0.01` → **`FALSIFIED_NO_IMPROVEMENT`** (`OBSERVED`).
+
+- **H1 mechanism `PASS`:** exact-triple recovery `16/16 = 1.000` (gate ≥ 0.95) — but
+  only on **solvable-by-construction** synthesized composites. Mechanism valid;
+  decision falsified. Both are reported.
+- **Identity attractor:** the argmax selected the identity triple `(12, 3, 0)` on
+  **48/60** tasks — shift `(0,0)` ⊗ `BASE_COLOUR` ⊗ `solid`, every factor at its
+  identity index. The resonator class holds no real ARC task operator.
+- **Why the bound is valid:** exhaustive argmax over the `25 × 10 × 2 = 500`
+  codebook product **is** the upper bound of the class, so iteration order, anneal
+  schedule, or `β` cannot rescue the loss.
+- **Leakage control:** `factorize(target, reference)` consumes the target, so it was
+  deliberately **not** called; the triple is chosen by demo-only fit and the held
+  target enters at scoring only. Same demos, same held pair, same budget per arm.
+
+Artifacts:
+`tools/action2_resonator_paired_ab.py` (sha256 `d793082a…`),
+`experiments/verification/action2_resonator_paired_ab_observed.json` (sha256
+`c18a4ad2…`), ontology batch 5 (6 records), audit `ACTION2_PAIRED_AB_FALSIFIED`.
+
+Cross-check, **not** a conflation: my harness's control mean is `0.430607`; the
+earlier `arm_R` receipt recorded `0.4215` baseline / `0.4368` ceiling on a different
+harness and subset. Same operator family, different construction — the numbers are
+**not** claimed equal.
+
 ### Gap 3 — Verification gate (Sagnac)
 **Status:** literal claim `FALSIFIED`; the live gate is `0.35`, advisory, and its
 contract is `(delta, coherence, vetoed, status)`.
