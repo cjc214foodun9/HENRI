@@ -35,12 +35,14 @@ for i, (a, b, c) in enumerate(zip(ident, ctrl, treat)):
         ax.text(i,     b + 0.02, "%.4f" % b, ha="center", fontsize=8.5, weight="bold")
         ax.text(i + w, c + 0.02, "%.4f" % c, ha="center", fontsize=8.5, weight="bold")
 # total panel = recovered counts, on a twin axis
-axt = ax.twinx()
-axt.bar([2.30], [d["reflection"]["recovered"]], 0.34, color="#2ca02c", alpha=0.85, label="recovered (count)")
-axt.bar([2.62], [d["containment"]["recovered"]], 0.34, color="#d62728", alpha=0.85)
-axt.set_ylim(0, 16); axt.set_ylabel("recovered / 8", color="#2ca02c")
-axt.text(2.30, d["reflection"]["recovered"] + 0.4, "8/8", ha="center", fontsize=9, weight="bold", color="#2ca02c")
-axt.text(2.62, 0.4, "0/8", ha="center", fontsize=9, weight="bold", color="#d62728")
+ax.set_xticks([0, 1])
+# RECOVERED COUNTS as in-range annotations.
+# DEFECT FIXED 2026-09-27 (found by inspecting the rendered PNG): the first
+# revision drew these on a twin axis at x=2.30/2.62 while xlim was (-0.55,1.45),
+# so the bars fell OUTSIDE the visible axes and nothing was drawn. A figure that
+# silently omits a measured number is a defect, not a style choice.
+ax.text(0, 1.05, "recovered 8/8", ha="center", fontsize=9.5, weight="bold", color="#2ca02c")
+ax.text(1, 1.05, "recovered 0/8", ha="center", fontsize=9.5, weight="bold", color="#d62728")
 ax.set_xticks([0, 1]); ax.set_xticklabels(["REFLECTION\n(rigid -> D4)", "CONTAINMENT\n(position-dependent)"], fontsize=9)
 ax.set_ylabel("held-out cosine"); ax.set_ylim(0, 1.15); ax.set_xlim(-0.55, 1.45)
 ax.set_title("ACTION 2 acceptance: %s vs target %s -> FALSIFIED\n"
@@ -60,7 +62,7 @@ steps = [
     ("lexical_snap", "softmax(beta * W_codebook . Re(psi))\nbeta = 8.0 fixed by spec", "#fce8e6"),
     ("prefix_embeddings", "-> [B, 32, d_kv] one-way\nseeded fixed rotation, not learned", "#f3e8fd"),
 ]
-y = 0.88
+y = 0.99
 for i, (t, sub, col) in enumerate(steps):
     ax2.add_patch(plt.Rectangle((0.05, y - 0.155), 0.9, 0.15,
                                 transform=ax2.transAxes, facecolor=col, edgecolor="#444", lw=1.0))
@@ -70,10 +72,10 @@ for i, (t, sub, col) in enumerate(steps):
         ax2.annotate("", xy=(0.5, y - 0.215), xytext=(0.5, y - 0.155),
                      xycoords="axes fraction", textcoords="axes fraction",
                      arrowprops=dict(arrowstyle="-|>", color="#444", lw=1.4))
-    y -= 0.235
-ax2.text(0.05, 0.055, "fail-closed: non-unitary -> TransducerNormViolation | bad shape -> TransducerShapeError\n"
+    y -= 0.225
+ax2.text(0.04, 0.035, "fail-closed: non-unitary -> TransducerNormViolation | bad shape -> TransducerShapeError\n"
                       "HONEST LIMIT: no KV wiring into a backbone (models/ ABSENT); no benchmark score claimed.",
-         transform=ax2.transAxes, fontsize=8.4, color="#a00")
+         transform=ax2.transAxes, fontsize=8.2, color="#a00")
 
 fig.suptitle("HENRI — ACTION 2 acceptance (measured 8/16) + ACTION 3 transducer surface   "
              "[OBSERVED: experiments/verification/action2_acceptance_reflection_containment_observed.json]",
