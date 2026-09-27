@@ -27,12 +27,16 @@ cols = ["#888888", "#1f77b4", "#d62728"]
 b = ax1.bar(names, vals, color=cols, width=0.6)
 ax1.set_ylabel("mean held-out cosine")
 ax1.set_title("ACTION 2 — paired held-out A/B\nn=60 real ARC-AGI-2 training tasks", fontsize=11)
-ax1.set_ylim(0, 0.52)
+ax1.set_ylim(0, 0.62)
 for r, v in zip(b, vals):
     ax1.text(r.get_x() + r.get_width() / 2, v + 0.008, f"{v:.6f}", ha="center", fontsize=10, weight="bold")
-ax1.annotate(f"$\\Delta$ = {h2['delta']:+.6f}\n(vs $\\tau$={h2['tau']})  $\\rightarrow$ FALSIFIED",
-             xy=(1.5, 0.46), ha="center", fontsize=11, weight="bold", color="#d62728",
-             bbox=dict(boxstyle="round,pad=0.4", fc="#ffe6e6", ec="#d62728"))
+# Annotation placed ABOVE the tallest bar label in axes coordinates.
+# A prior revision anchored it at data (1.5, 0.46), which drew the callout box over the
+# CONTROL bar's numeric label and HID it (measured 2026-09-27 by inspecting the PNG).
+# A figure that obscures a measured number violates the diagram mandate.
+ax1.text(0.5, 0.90, f"$\\Delta$ = {h2['delta']:+.6f}  (vs $\\tau$={h2['tau']})\n$\\rightarrow$ FALSIFIED",
+         transform=ax1.transAxes, ha="center", va="center", fontsize=11, weight="bold",
+         color="#d62728", bbox=dict(boxstyle="round,pad=0.4", fc="#ffe6e6", ec="#d62728"))
 ax1.grid(axis="y", alpha=0.25)
 
 # ---- panel 2: per-task scatter, treatment vs control
