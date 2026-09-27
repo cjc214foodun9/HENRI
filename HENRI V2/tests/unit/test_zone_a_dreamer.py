@@ -132,7 +132,12 @@ def test_facade_deltas_preserve_the_graph(core):
     """
     grid = torch.randint(0, 10, (5, 5)).tolist()
     wave = core.encode(grid)
-    ref = torch.randn(N_BLOCKS, 8, requires_grad=True)
+    # DEVICE PARITY (defect confirmed on the CUDA host 2026-09-26): this fixture
+    # built `ref` on CPU while the facade lives on CUDA, so the coherence read
+    # mixed cuda:0 with cpu and raised "Expected all tensors to be on the same
+    # device". The GPU-host suite exposed it; local CPU smoke could not, because
+    # there every tensor is CPU. Build the reference on the core's device.
+    ref = torch.randn(N_BLOCKS, 8, requires_grad=True, device=core.dev)
     cs = core.candidate_set(wave, ref, top_k=3)
     assert cs.deltas.requires_grad, "deltas lost the autograd graph"
     g = torch.autograd.grad(cs.deltas.sum(), ref, allow_unused=True)[0]

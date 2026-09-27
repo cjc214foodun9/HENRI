@@ -1,0 +1,21 @@
+{
+  "gate": "STAGE0_BOUNDED_SEEDING",
+  "purpose": "loop plumbing + throughput measurement (NOT curriculum, NOT ICL)",
+  "seed": 0,
+  "n_executions_requested": 10000000,
+  "budget_vm_executions": 10000172,
+  "budget_reward_evaluations": 1250048,
+  "budget_learner_tokens": 330005676,
+  "wall_seconds": 1067.36,
+  "exec_per_sec": 9369.1,
+  "reward_evals_per_sec": 1171.2,
+  "learner_tokens_per_sec": 309179.9,
+  "final_loss": 0.099681,
+  "first_loss": 5.580404,
+  "reward_mean": 5.19013e-05,
+  "timeout_rate": 0.0291,
+  "distinct_outputs": 18811,
+  "bank_size": 4096,
+  "alphabet_size": 18,
+  "honest_boundary": "Validates loop plumbing and measures throughput only. Reward curriculum validity is UNRESOLVED (two gates failed on gate defects). ICL emergence is NOT testable at this scale."
+}
