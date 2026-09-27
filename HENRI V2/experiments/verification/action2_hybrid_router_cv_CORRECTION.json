@@ -1,0 +1,28 @@
+{
+  "corrected_statement": "Within this probe only: the per-slot diagonal ridge reaches 0.047489 on containment (vs ceiling 1.000000) and 3-demo fitting slightly improves on 1-demo fitting (0.028341 -> 0.047489).  The ridge is WEAK, not collapsing.  No cross-probe comparison is claimed.",
+  "evidence_class": "OBSERVED",
+  "lesson": "Never publish a numeric comparison across different fixtures or metrics.  The like-for-like comparison is always INSIDE one receipt, produced by one run.",
+  "retracts": {
+    "artifact": "commit f320a29 message + ontology henri.result.hybrid-router-cv-weak-alignment",
+    "asserted": "'ridge TRANSFER FAILS across positions: v1 0.439190 at ONE position -> 0.047489 fitted across 3 positions'",
+    "direction_error": "The within-probe transfer diagnostic points the OTHER way: fitted on 1 demo -> 0.028341; fitted on 3 demos -> 0.047489.  More positions help slightly, they do not collapse the fit.",
+    "why_invalid": "Cross-probe AND cross-metric.  v1 used a different fixture (5x5 ring, 15x15 grid, single position) and its own metric; 0.047489 is this probe's pre-registered cos_delta on a 4x4 ring / 12x12 grid / non-overlapping positions.  The two numbers are not comparable, so no 'collapse' is established by them."
+  },
+  "schema": "henri.arc.action2-hybrid-router-cv.CORRECTION.v1",
+  "unchanged_and_still_valid": {
+    "alignment_control": "IoU 0.0325, precision 0.0326, specificity 1.22x own/cross -> operator-generic alignment, not containment-specific",
+    "ceiling_comparison": "containment ridge 0.047489 vs class ceiling 1.000000 -> the ridge is a WEAK operator for position-dependent interior fill, regardless of fit size",
+    "containment_delta": {
+      "hybrid": 0.12146787751957164,
+      "identity": 0.0,
+      "ridge": 0.047489249215660716,
+      "rigid_d4": 0.12146787751957164
+    },
+    "reflection_delta": {
+      "rigid_d4": 0.9999999999999908
+    },
+    "router_correct": "16/16",
+    "routing": "D4 8/8 on containment (NOT ridge), D4 8/8 on reflection"
+  },
+  "utc": "2026-09-27T20:08:18Z"
+}
