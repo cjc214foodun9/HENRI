@@ -2,26 +2,21 @@
 
 WHY THIS EXISTS
 ---------------
-`arc_task_functor.py` fits a per-slot DIAGONAL ridge, which is the family
-measured best on real ARC.  Nothing in that module PREVENTED a later session
-from excising it and swapping in a different family on the strength of a
-document.  That is exactly what happened once already: a supplied directive
-asked for the tripartite resonator to replace it, and the resonator had
-already been measured WORSE.
+`arc_task_functor.py` fits a per-slot DIAGONAL ridge, the family measured best
+on real ARC.  Nothing in that module PREVENTED a later session from excising it
+and swapping in a different family on the strength of a document.  That already
+happened once: a supplied directive asked for the tripartite resonator to
+replace it, and the resonator had already been measured WORSE.
 
 This module makes the prohibition machine-readable and testable.
 
-MEASURED FACTS ENCODED HERE (do not restate as opinion)
--------------------------------------------------------
-* Incumbent `diag_ls` (per-slot diagonal ridge): held-out 0.430607 on 60 real
-  ARC-AGI-2 training tasks, controls paired.
-* `resonator_tripartite`: held-out 0.413310, delta -0.017296 vs tau 0.01 ->
-  FALSIFIED_NO_IMPROVEMENT.  Argmax picked the identity triple (12,3,0) on
-  48/60 tasks.  Receipt:
-  experiments/verification/action2_resonator_paired_ab_observed.json
-* Reflections ARE expressible by the resonator class (cos 1.000000); interior
-  fill is NOT (0/8), because the class composes GLOBAL operators. Receipt:
-  experiments/verification/action2_acceptance_reflection_containment_observed.json
+PROVENANCE
+----------
+Every constant below is copied at FULL precision from the measured receipt
+    experiments/verification/action2_resonator_paired_ab_observed.json
+    sha256 c18a4ad2b5f59df2889d4106cdca617ea52d07a28087c58e09bcb0c17c5d710a
+`tests/unit/test_operator_promotion.py` re-reads that receipt and asserts these
+constants equal it, so the numbers cannot silently drift.
 
 A family is promoted ONLY by a paired held-out A/B that beats the incumbent by
 tau.  Training loss and reward magnitude are NOT gates.
@@ -32,17 +27,24 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Tuple
 
-# Pre-registered acceptance margin.  Same constant as the A/B harness.
+RECEIPT_PATH = "experiments/verification/action2_resonator_paired_ab_observed.json"
+RECEIPT_SHA256 = "c18a4ad2b5f59df2889d4106cdca617ea52d07a28087c58e09bcb0c17c5d710a"
+
+# Pre-registered acceptance margin, identical to the A/B harness.
 TAU = 0.01
 
 INCUMBENT_FAMILY = "diag_ls"
 
-# Measured held-out scores on the same 60-task split.
+# Measured mean held-out cosine on the same 60-task paired split,
+# at FULL precision as recorded in the receipt.
 MEASURED_HELDOUT: Dict[str, float] = {
-    "diag_ls": 0.430607,
-    "identity": 0.409158,
-    "resonator_tripartite": 0.413310,
+    "diag_ls": 0.4306067231169436,
+    "identity": 0.409158394626138,
+    "resonator_tripartite": 0.41331040988528306,
 }
+
+# The receipt's own delta.  Asserted equal to the difference of the two means.
+MEASURED_DELTA = -0.01729631323166053
 
 # Families that measured NO better than the incumbent.  Deliberately NOT
 # promotable, so a future session cannot swap them in by assertion.
@@ -79,40 +81,37 @@ def registry() -> Dict[str, Family]:
     return dict(_REGISTRY)
 
 
-def assert_promotion_allowed(
-    candidate: str,
-    delta: float,
-    tau: float = TAU,
-) -> None:
-    """Raise unless `candidate` is promotable AND strictly beats by `tau`.
-
-    This is the single ratified gate.  A negative delta, a falsified family, or
-    the incumbent itself all fail closed.
-    """
-    if candidate == INCUMBENT_FAMILY:
-        raise PromotionBlocked(
-            "PROMOTION_BLOCKED: %r is the incumbent; nothing to promote" % candidate
-        )
-    if candidate in FALSIFIED_FAMILIES:
-        raise PromotionBlocked(
-            "PROMOTION_BLOCKED: %r measured no better than the incumbent "
-            "(held-out %.6f vs %.6f). The incumbent diagonal ridge stays."
-            % (candidate, MEASURED_HELDOUT.get(candidate, float("nan")),
-               MEASURED_HELDOUT[INCUMBENT_FAMILY])
-        )
-    if delta < tau:
-        raise PromotionBlocked(
-            "PROMOTION_BLOCKED: candidate delta %.6f < tau %.6f" % (delta, tau)
-        )
-
-
 def measured_delta(candidate: str) -> float:
-    """Held-out delta of `candidate` against the incumbent, from the receipts."""
+    """Held-out delta of `candidate` against the incumbent."""
     return MEASURED_HELDOUT[candidate] - MEASURED_HELDOUT[INCUMBENT_FAMILY]
 
 
+def assert_promotion_allowed(candidate: str, delta: float, tau: float = TAU) -> None:
+    """Raise unless `candidate` is promotable AND strictly beats by `tau`.
+
+    This is the single ratified gate.  A falsified family, the incumbent, or a
+    delta below tau all fail closed.
+    """
+    if candidate == INCUMBENT_FAMILY:
+        raise PromotionBlocked(
+            "PROMOTION_BLOCKED: " + repr(candidate) + " is the incumbent; nothing to promote"
+        )
+    if candidate in FALSIFIED_FAMILIES:
+        raise PromotionBlocked(
+            "PROMOTION_BLOCKED: " + repr(candidate) + " measured no better than the "
+            "incumbent (held-out " + repr(MEASURED_HELDOUT.get(candidate))
+            + " vs " + repr(MEASURED_HELDOUT[INCUMBENT_FAMILY]) + "). "
+            "The incumbent diagonal ridge stays."
+        )
+    if delta < tau:
+        raise PromotionBlocked(
+            "PROMOTION_BLOCKED: candidate delta " + repr(delta) + " < tau " + repr(tau)
+        )
+
+
 # Register the measured facts at import.
-register(INCUMBENT_FAMILY, MEASURED_HELDOUT[INCUMBENT_FAMILY], "measured-best; live fit path")
+register(INCUMBENT_FAMILY, MEASURED_HELDOUT[INCUMBENT_FAMILY],
+         "measured-best; the live fit path")
 register("identity", MEASURED_HELDOUT["identity"], "baseline only; not a candidate")
 register("resonator_tripartite", MEASURED_HELDOUT["resonator_tripartite"])
 
