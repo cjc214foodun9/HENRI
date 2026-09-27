@@ -202,7 +202,7 @@ def run_seeding(
     eval_every: int = 50,
     shard_dir: str | None = None,
     shard_rows_per_file: int = 250_000,
-    heldout_seed: int = None,  # noqa: E704
+    heldout_seed: int = None,
     curriculum_escalate: bool = False,
     plateau_var_threshold: float = 1e-4,
     curriculum_window: int = 50,
@@ -455,6 +455,20 @@ def main() -> int:
     ap.add_argument("--shard-rows-per-file", type=int, default=250_000)
     ap.add_argument("--threads", type=int, default=0,
                     help="0 = leave torch default; else torch.set_num_threads(n)")
+    # ---- CURRICULUM ESCALATION (directive 1). Default OFF: the live default
+    # path is unchanged unless the operator passes the flag.
+    # DEAD-STORE FIX 2026-09-27: the escalation logic was added to run_seeding's
+    # body but these flags were never declared and main() never forwarded them,
+    # so the ON path failed with "unrecognized arguments" -- a flag that is read
+    # but not wired is a dead store.
+    ap.add_argument("--curriculum-escalate", action="store_true",
+                    help="escalate program depth when loss variance collapses")
+    ap.add_argument("--curriculum-window", type=int, default=50,
+                    help="rolling window for the plateau variance detector")
+    ap.add_argument("--plateau-var-threshold", type=float, default=1e-4,
+                    help="sigma^2 below which depth escalates")
+    ap.add_argument("--max-prog-len", type=int, default=96,
+                    help="ceiling for the escalated program length")
     a = ap.parse_args()
     if a.threads > 0:
         torch.set_num_threads(a.threads)
@@ -463,7 +477,11 @@ def main() -> int:
                     heldout_samples=a.heldout_samples,
                     eval_every=a.eval_every,
                     shard_dir=a.shard_dir,
-                    shard_rows_per_file=a.shard_rows_per_file)
+                    shard_rows_per_file=a.shard_rows_per_file,
+                    curriculum_escalate=a.curriculum_escalate,
+                    plateau_var_threshold=a.plateau_var_threshold,
+                    curriculum_window=a.curriculum_window,
+                    max_prog_len=a.max_prog_len)
     print(json.dumps(s, indent=2))
     return 0
 
