@@ -1,0 +1,135 @@
+{
+  "probe": "REWARD_NORMALISATION_DECISION",
+  "defect_fixed": "base learner trains on MASTERED only, so FRONTIER is genuinely novel",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "verdict_by_variant": {
+    "RAW": {
+      "frontier_gt_mastered": true,
+      "frontier_gt_noise": true,
+      "SEPARATES": true
+    },
+    "COS": {
+      "frontier_gt_mastered": false,
+      "frontier_gt_noise": false,
+      "SEPARATES": false
+    },
+    "COSV": {
+      "frontier_gt_mastered": false,
+      "frontier_gt_noise": false,
+      "SEPARATES": false
+    }
+  },
+  "heldout_progress_axis_exists": true,
+  "runs": {
+    "0": {
+      "MASTERED": {
+        "reward": {
+          "RAW": 0.0014108031882631793,
+          "COS": 0.003392945664850889,
+          "COSV": 0.18072913668214333
+        },
+        "grad_norm_mean": 0.007568038180315423,
+        "loss_before": 0.001566663979461872,
+        "loss_after_heldout": 0.0010605027197968747,
+        "heldout_progress": 0.0005061612596649974
+      },
+      "FRONTIER": {
+        "reward": {
+          "RAW": 0.11570071748023807,
+          "COS": 0.0029795112235087282,
+          "COSV": 0.15870707766938377
+        },
+        "grad_norm_mean": 0.7290205274982385,
+        "loss_before": 6.301760934871179,
+        "loss_after_heldout": 0.004410743297233111,
+        "heldout_progress": 6.297350191573947
+      },
+      "NOISE": {
+        "reward": {
+          "RAW": 0.08832188725828208,
+          "COS": 0.0036266511687054305,
+          "COSV": 0.19317772800120087
+        },
+        "grad_norm_mean": 0.4058801683122053,
+        "loss_before": 5.770829944375982,
+        "loss_after_heldout": 9.66523621740017,
+        "heldout_progress": -3.8944062730241873
+      }
+    },
+    "1": {
+      "MASTERED": {
+        "reward": {
+          "RAW": 0.0007395439266523192,
+          "COS": 0.006531530258699075,
+          "COSV": 0.09441117604514979
+        },
+        "grad_norm_mean": 0.007837256173977472,
+        "loss_before": 0.0016187905362154453,
+        "loss_after_heldout": 0.0011046267124631194,
+        "heldout_progress": 0.0005141638237523259
+      },
+      "FRONTIER": {
+        "reward": {
+          "RAW": 0.07680321587888192,
+          "COS": 0.0072357840580973805,
+          "COSV": 0.10459093894939483
+        },
+        "grad_norm_mean": 0.734319976953666,
+        "loss_before": 6.354797827557316,
+        "loss_after_heldout": 0.003871407138146837,
+        "heldout_progress": 6.350926420419169
+      },
+      "NOISE": {
+        "reward": {
+          "RAW": 0.021413362333290772,
+          "COS": 0.0033292678611580562,
+          "COSV": 0.048123499653488194
+        },
+        "grad_norm_mean": 0.34811825310550687,
+        "loss_before": 5.651176865233697,
+        "loss_after_heldout": 9.724041704958408,
+        "heldout_progress": -4.072864839724711
+      }
+    },
+    "2": {
+      "MASTERED": {
+        "reward": {
+          "RAW": 0.0010215914987144593,
+          "COS": 0.005952700325649875,
+          "COSV": 0.15099902225392703
+        },
+        "grad_norm_mean": 0.006772874167689687,
+        "loss_before": 0.0013800595768073036,
+        "loss_after_heldout": 0.0009352413610153386,
+        "heldout_progress": 0.00044481821579196506
+      },
+      "FRONTIER": {
+        "reward": {
+          "RAW": 0.14658642850669296,
+          "COS": 0.007861628677177039,
+          "COSV": 0.19942180500201265
+        },
+        "grad_norm_mean": 0.7350571744409471,
+        "loss_before": 6.348268910811696,
+        "loss_after_heldout": 0.003770925966328262,
+        "heldout_progress": 6.344497984845368
+      },
+      "NOISE": {
+        "reward": {
+          "RAW": 0.018230211719112852,
+          "COS": 0.0019329485804144935,
+          "COSV": 0.04903209127663251
+        },
+        "grad_norm_mean": 0.34692352624195577,
+        "loss_before": 5.635449421909109,
+        "loss_after_heldout": 8.689981932224955,
+        "heldout_progress": -3.0545325103158456
+      }
+    }
+  },
+  "wall_seconds": 0.186
+}
