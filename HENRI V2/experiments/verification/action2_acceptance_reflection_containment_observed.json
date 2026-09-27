@@ -1,0 +1,393 @@
+{
+  "class_solvable_check": {
+    "op": [
+      2,
+      -2,
+      3,
+      5
+    ],
+    "recovered_cos": 0.999999999999982
+  },
+  "containment": {
+    "chosen_is_identity": 8,
+    "control_mean": 0.9928107360519571,
+    "identity_mean": 0.7872932085412064,
+    "n": 8,
+    "recovered": 0,
+    "treatment_mean": 0.7872932085412064
+  },
+  "correction": "Spin(3) includes reflections (180-deg rotation about an in-plane axis), so all 8 D4 elements are used, not 4 rotations.",
+  "device_kind": "cpu",
+  "evidence_class": "OBSERVED",
+  "honest_limit": "Internal-representation recovery on synthetic grids; NOT an ARC task-solve rate. No ARC score is claimed.",
+  "per_task": [
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "chosen_is_identity": false,
+      "control_cos": 0.0577962165730771,
+      "demo_fit": 0.9999999999999793,
+      "family": "reflection",
+      "identity_cos": 0.028341876329846544,
+      "recovered": true,
+      "task": "refl_00",
+      "treatment_cos": 0.9999999999999826
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        6
+      ],
+      "chosen_is_identity": false,
+      "control_cos": 0.04740284326567061,
+      "demo_fit": 0.9999999999999805,
+      "family": "reflection",
+      "identity_cos": 0.10677443415124961,
+      "recovered": true,
+      "task": "refl_01",
+      "treatment_cos": 0.9999999999999818
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "chosen_is_identity": false,
+      "control_cos": 0.04164191840666787,
+      "demo_fit": 0.9999999999999754,
+      "family": "reflection",
+      "identity_cos": 0.06651107392788798,
+      "recovered": true,
+      "task": "refl_02",
+      "treatment_cos": 0.9999999999999816
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        6
+      ],
+      "chosen_is_identity": false,
+      "control_cos": 0.015309507508075316,
+      "demo_fit": 0.9999999999999815,
+      "family": "reflection",
+      "identity_cos": 0.09686474286371245,
+      "recovered": true,
+      "task": "refl_03",
+      "treatment_cos": 0.999999999999978
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "chosen_is_identity": false,
+      "control_cos": 0.03125764888826046,
+      "demo_fit": 0.9999999999999809,
+      "family": "reflection",
+      "identity_cos": 0.07404902616920019,
+      "recovered": true,
+      "task": "refl_04",
+      "treatment_cos": 0.99999999999998
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        6
+      ],
+      "chosen_is_identity": false,
+      "control_cos": 0.028645295665611713,
+      "demo_fit": 0.9999999999999845,
+      "family": "reflection",
+      "identity_cos": 0.15646952983054138,
+      "recovered": true,
+      "task": "refl_05",
+      "treatment_cos": 0.9999999999999838
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "chosen_is_identity": false,
+      "control_cos": 0.0345657040096268,
+      "demo_fit": 0.999999999999982,
+      "family": "reflection",
+      "identity_cos": 0.07702709940978969,
+      "recovered": true,
+      "task": "refl_06",
+      "treatment_cos": 0.9999999999999811
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        6
+      ],
+      "chosen_is_identity": false,
+      "control_cos": 0.05276550458861214,
+      "demo_fit": 0.9999999999999827,
+      "family": "reflection",
+      "identity_cos": 0.11032587262449141,
+      "recovered": true,
+      "task": "refl_07",
+      "treatment_cos": 0.999999999999981
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "chosen_is_identity": true,
+      "control_cos": 0.9921239110971903,
+      "demo_fit": 0.7911703114841225,
+      "family": "containment",
+      "identity_cos": 0.7911703114841225,
+      "recovered": false,
+      "task": "cont_00",
+      "treatment_cos": 0.7911703114841225
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "chosen_is_identity": true,
+      "control_cos": 0.9929472780661909,
+      "demo_fit": 0.7887311164443882,
+      "family": "containment",
+      "identity_cos": 0.7887311164443882,
+      "recovered": false,
+      "task": "cont_01",
+      "treatment_cos": 0.7887311164443882
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "chosen_is_identity": true,
+      "control_cos": 0.9928258660058754,
+      "demo_fit": 0.7870402013623152,
+      "family": "containment",
+      "identity_cos": 0.7870402013623152,
+      "recovered": false,
+      "task": "cont_02",
+      "treatment_cos": 0.7870402013623152
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "chosen_is_identity": true,
+      "control_cos": 0.9931757978220469,
+      "demo_fit": 0.7905210226529252,
+      "family": "containment",
+      "identity_cos": 0.7905210226529252,
+      "recovered": false,
+      "task": "cont_03",
+      "treatment_cos": 0.7905210226529252
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "chosen_is_identity": true,
+      "control_cos": 0.9929472780661909,
+      "demo_fit": 0.7887311164443882,
+      "family": "containment",
+      "identity_cos": 0.7887311164443882,
+      "recovered": false,
+      "task": "cont_04",
+      "treatment_cos": 0.7887311164443882
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "chosen_is_identity": true,
+      "control_cos": 0.9929472780661909,
+      "demo_fit": 0.7887311164443882,
+      "family": "containment",
+      "identity_cos": 0.7887311164443882,
+      "recovered": false,
+      "task": "cont_05",
+      "treatment_cos": 0.7887311164443882
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "chosen_is_identity": true,
+      "control_cos": 0.9921239110971903,
+      "demo_fit": 0.7911703114841225,
+      "family": "containment",
+      "identity_cos": 0.7911703114841225,
+      "recovered": false,
+      "task": "cont_06",
+      "treatment_cos": 0.7911703114841225
+    },
+    {
+      "chosen": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "chosen_is_identity": true,
+      "control_cos": 0.9933945681947824,
+      "demo_fit": 0.7722504720130009,
+      "family": "containment",
+      "identity_cos": 0.7722504720130009,
+      "recovered": false,
+      "task": "cont_07",
+      "treatment_cos": 0.7722504720130009
+    }
+  ],
+  "preregistration": {
+    "class_product": 792,
+    "mask_ops": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        4,
+        5
+      ],
+      [
+        5,
+        6
+      ],
+      [
+        6,
+        7
+      ],
+      [
+        7,
+        8
+      ],
+      [
+        8,
+        9
+      ],
+      [
+        9,
+        0
+      ]
+    ],
+    "n_side": 9,
+    "shifts": [
+      [
+        -2,
+        -2
+      ],
+      [
+        -2,
+        0
+      ],
+      [
+        -2,
+        2
+      ],
+      [
+        0,
+        -2
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        2,
+        -2
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        2,
+        2
+      ]
+    ],
+    "spins_d4": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "target": "16/16",
+    "tau": 0.01
+  },
+  "recovery_total": "8/16",
+  "reflection": {
+    "chosen_is_identity": 0,
+    "control_mean": 0.03867307986320025,
+    "identity_mean": 0.08954545691333991,
+    "n": 8,
+    "recovered": 8,
+    "treatment_mean": 0.9999999999999813
+  },
+  "runtime_s": 31.11218279998866,
+  "schema": "henri.arc.action2-acceptance-reflection-containment.v2",
+  "utc": "2026-09-27T16:54:46Z"
+}
