@@ -62,27 +62,37 @@ class TopologicalFeatures:
     content_blind: bool
 
 
-def _flood_reachable(g: Sequence[Sequence[int]], bg: int) -> List[List[bool]]:
-    """4-connected flood fill from the border across BACKGROUND cells."""
+def _flood_reachable(g: Sequence[Sequence[int]], bg: Sequence[int]) -> List[List[bool]]:
+    """4-connected flood fill from the border across BACKGROUND cells.
+
+    DEFECT FIXED 2026-09-27: `bg` was a SINGLE value.  A noisy background draws
+    from a band (e.g. {0,1,2}), so a single-value fill treats every other noise
+    value as a CURVE and the resulting interior marker is an artifact of the
+    noise, not of the drawn curve.  Measured on the live 3-channel fixture: with
+    bg={0} the enclosed 2x2 region of a ring contained values {1,2}, so the
+    barrier was unreachable-0-cells only and the Jordan mask did not describe the
+    ring.  `bg` is now a membership set; `background_values=(0,)` reproduces the
+    previous behaviour exactly.
+    """
     n = len(g)
     m = len(g[0])
     seen = [[False] * m for _ in range(n)]
     q: deque = deque()
     for i in range(n):
         for j in (0, m - 1):
-            if g[i][j] == bg and not seen[i][j]:
+            if g[i][j] in bg and not seen[i][j]:
                 seen[i][j] = True
                 q.append((i, j))
     for j in range(m):
         for i in (0, n - 1):
-            if g[i][j] == bg and not seen[i][j]:
+            if g[i][j] in bg and not seen[i][j]:
                 seen[i][j] = True
                 q.append((i, j))
     while q:
         i, j = q.popleft()
         for di, dj in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             a, b = i + di, j + dj
-            if 0 <= a < n and 0 <= b < m and not seen[a][b] and g[a][b] == bg:
+            if 0 <= a < n and 0 <= b < m and not seen[a][b] and g[a][b] in bg:
                 seen[a][b] = True
                 q.append((a, b))
     return seen
@@ -93,12 +103,19 @@ class MultiscaleTopologicalEncoder:
 
     def __init__(self, d_model: int = 65536, n_levels: int = 5,
                  background: int = 0, enabled: bool = True,
-                 content_blind: bool = False) -> None:
+                 content_blind: bool = False,
+                 background_values: Optional[Sequence[int]] = None) -> None:
         if d_model < 2 or d_model % 2 != 0:
             raise TopologicalEncoderError("d_model must be even and >= 2")
         self.d_model = d_model
         self.n_levels = n_levels
         self.background = background
+        # MULTI-VALUE BACKGROUND (added 2026-09-27).  `None` -> the legacy
+        # single-value behaviour, so every existing caller and test is unchanged.
+        self.background_values = (
+            tuple(sorted({int(v) for v in background_values}))
+            if background_values is not None else (int(background),)
+        )
         self.enabled = enabled
         self.content_blind = content_blind
         self._pos_cache: Dict[Tuple[int, int, int], List[float]] = {}
@@ -132,16 +149,17 @@ class MultiscaleTopologicalEncoder:
           BOUNDARY = non-background cells 4-adjacent to an INTERIOR cell
         """
         n, m = len(g), len(g[0])
-        reach = _flood_reachable(g, self.background)
+        bg = self.background_values
+        reach = _flood_reachable(g, bg)
         interior = [[False] * m for _ in range(n)]
         for i in range(n):
             for j in range(m):
-                if g[i][j] == self.background and not reach[i][j]:
+                if g[i][j] in bg and not reach[i][j]:
                     interior[i][j] = True
         boundary = [[False] * m for _ in range(n)]
         for i in range(n):
             for j in range(m):
-                if interior[i][j] or g[i][j] == self.background:
+                if interior[i][j] or g[i][j] in bg:
                     continue
                 for di, dj in ((1, 0), (-1, 0), (0, 1), (0, -1)):
                     a, b = i + di, j + dj
@@ -152,11 +170,12 @@ class MultiscaleTopologicalEncoder:
 
     def _components(self, g: Sequence[Sequence[int]]) -> int:
         n, m = len(g), len(g[0])
+        bg = self.background_values
         seen = [[False] * m for _ in range(n)]
         k = 0
         for i in range(n):
             for j in range(m):
-                if seen[i][j] or g[i][j] == self.background:
+                if seen[i][j] or g[i][j] in bg:
                     continue
                 k += 1
                 col = g[i][j]
