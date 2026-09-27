@@ -174,6 +174,22 @@ def build_heldout(
     return torch.tensor(rows, dtype=torch.long)
 
 
+def _window_variance(hist, window: int) -> float | None:
+    """Population variance of the last `window` losses; None if not enough data.
+
+    This is the PLATEAU DETECTOR for curriculum escalation (directive 1).
+    A flat curriculum drives loss variance toward zero; when sigma^2 drops below
+    the pre-registered threshold the environment must raise difficulty instead of
+    burning more tokens at the same depth (measured: 99.66% of a 10B-token run
+    sat on a flat plateau).
+    """
+    if len(hist) < window:
+        return None
+    w = hist[-window:]
+    mu = sum(w) / len(w)
+    return sum((x - mu) ** 2 for x in w) / len(w)
+
+
 def run_seeding(
     n_executions: int,
     batch_size: int,
@@ -186,6 +202,11 @@ def run_seeding(
     eval_every: int = 50,
     shard_dir: str | None = None,
     shard_rows_per_file: int = 250_000,
+    heldout_seed: int = None,  # noqa: E704
+    curriculum_escalate: bool = False,
+    plateau_var_threshold: float = 1e-4,
+    curriculum_window: int = 50,
+    max_prog_len: int = 96,
 ) -> dict:
     """Execute the bounded seeding loop. Returns the summary dict.
 
@@ -244,13 +265,20 @@ def run_seeding(
     lookback: dict = {}
     t0 = time.perf_counter()
 
+    # ---- CURRICULUM ESCALATION state (directive 1). Default OFF; when ON the
+    # environment raises program depth as soon as loss variance collapses below
+    # the pre-registered threshold, instead of burning tokens at fixed depth.
+    curriculum_events: list[dict] = []
+    _cur_prog_len = prog_len
+    _rounds_since_escalation = 0
+
     telemetry_path = os.path.join(out_dir, "telemetry.jsonl")
     with open(telemetry_path, "w", encoding="utf-8") as fh:
         for rnd in range(n_rounds):
             # ---- 1. GENERATE: epsilon-greedy (30% from the reward-weighted bank)
             n_bank = int(0.3 * batch_size) if bank.programs else 0
             n_fresh = batch_size - n_bank
-            batch = [sample_program(prog_len, rng) for _ in range(n_fresh)]
+            batch = [sample_program(_cur_prog_len, rng) for _ in range(n_fresh)]
             batch += bank.sample(rng, n_bank)
 
             # ---- 2. EXECUTE (the cheap approved budget; total execution)
@@ -297,6 +325,21 @@ def run_seeding(
             loss_val = learner.step(ids)
             tokens += int(ids.numel())
             loss_hist.append(loss_val)
+
+            # ---- CURRICULUM ESCALATION (directive 1, default OFF)
+            var = _window_variance(loss_hist, curriculum_window)
+            if curriculum_escalate and var is not None:
+                if var < plateau_var_threshold and _cur_prog_len < max_prog_len:
+                    _old = _cur_prog_len
+                    _cur_prog_len = min(max_prog_len, int(_cur_prog_len * 1.5) + 2)
+                    curriculum_events.append({
+                        "round": int(rnd), "loss_variance": float(var),
+                        "old_prog_len": int(_old), "new_prog_len": int(_cur_prog_len),
+                        "trigger": "sigma2 < %.1e" % plateau_var_threshold,
+                    })
+                    _rounds_since_escalation = 0
+                elif var >= plateau_var_threshold:
+                    _rounds_since_escalation += 1
             lookback[learner.step_count] = learner.snapshot()
             if len(lookback) > 4:
                 del lookback[min(lookback)]
@@ -368,6 +411,12 @@ def run_seeding(
         "heldout_progress": heldout_progress,
         "heldout_samples": heldout_samples,
         "heldout_curve": [[int(r), float(v)] for r, v in heldout_curve],
+        "curriculum_escalate": bool(curriculum_escalate),
+        "plateau_var_threshold": float(plateau_var_threshold),
+        "curriculum_window": int(curriculum_window),
+        "curriculum_events": curriculum_events,
+        "final_prog_len": int(_cur_prog_len),
+        "initial_prog_len": int(prog_len),
         # ---- NOT promotion signals (recorded for diagnosis only)
         "final_loss_NOT_PROMOTION": round(loss_hist[-1], 6) if loss_hist else None,
         "first_loss_NOT_PROMOTION": round(loss_hist[0], 6) if loss_hist else None,

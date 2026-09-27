@@ -1,0 +1,422 @@
+{
+  "containment": {
+    "control_mean": 0.4391901812551786,
+    "hybrid_mean": 0.4391901812551786,
+    "hybrid_recovered": 0,
+    "identity_mean": 0.8496570730625769,
+    "n": 8,
+    "rigid_mean": 0.8496570730625769,
+    "routed_to_rigid": 0
+  },
+  "counterfactual_fixed_ridge": 0,
+  "counterfactual_fixed_rigid": 8,
+  "device_kind": "cpu",
+  "evidence_class": "OBSERVED",
+  "fixture_fix": "containment held pair is INDEPENDENT content (fresh ring position, fresh colours, fresh background noise), replacing the earlier rebuild whose identity baseline was inflated",
+  "honest_limit": "Synthetic grids, internal-representation recovery on the first held pair per task; NOT an ARC task-solve rate. No ARC score is claimed.",
+  "hybrid_recovery_total": "8/16",
+  "per_task": [
+    {
+      "channel": "RIGID",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "control_cos": 0.03720192690560569,
+      "demo_fit_ridge": 0.9800279636467395,
+      "demo_fit_rigid": 0.9999999999999793,
+      "family": "reflection",
+      "hybrid_cos": 0.9999999999999787,
+      "hybrid_recovers": true,
+      "identity_cos": 0.07387210781492996,
+      "rigid_cos": 0.9999999999999787,
+      "task": "refl_00"
+    },
+    {
+      "channel": "RIGID",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        6
+      ],
+      "control_cos": 0.025704818788828826,
+      "demo_fit_ridge": 0.9813743209827521,
+      "demo_fit_rigid": 0.9999999999999805,
+      "family": "reflection",
+      "hybrid_cos": 0.9999999999999787,
+      "hybrid_recovers": true,
+      "identity_cos": 0.028759778880884365,
+      "rigid_cos": 0.9999999999999787,
+      "task": "refl_01"
+    },
+    {
+      "channel": "RIGID",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "control_cos": 0.04479375545947693,
+      "demo_fit_ridge": 0.9823341502297048,
+      "demo_fit_rigid": 0.9999999999999754,
+      "family": "reflection",
+      "hybrid_cos": 0.9999999999999782,
+      "hybrid_recovers": true,
+      "identity_cos": 0.17431689525750763,
+      "rigid_cos": 0.9999999999999782,
+      "task": "refl_02"
+    },
+    {
+      "channel": "RIGID",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        6
+      ],
+      "control_cos": 0.07075023803435132,
+      "demo_fit_ridge": 0.9819234657377992,
+      "demo_fit_rigid": 0.9999999999999815,
+      "family": "reflection",
+      "hybrid_cos": 0.9999999999999842,
+      "hybrid_recovers": true,
+      "identity_cos": 0.05924434278434862,
+      "rigid_cos": 0.9999999999999842,
+      "task": "refl_03"
+    },
+    {
+      "channel": "RIGID",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "control_cos": 0.03905855330933209,
+      "demo_fit_ridge": 0.980203337568337,
+      "demo_fit_rigid": 0.9999999999999809,
+      "family": "reflection",
+      "hybrid_cos": 0.999999999999977,
+      "hybrid_recovers": true,
+      "identity_cos": 0.007923817586512267,
+      "rigid_cos": 0.999999999999977,
+      "task": "refl_04"
+    },
+    {
+      "channel": "RIGID",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        6
+      ],
+      "control_cos": 0.059623275004760716,
+      "demo_fit_ridge": 0.9816551051912903,
+      "demo_fit_rigid": 0.9999999999999845,
+      "family": "reflection",
+      "hybrid_cos": 0.9999999999999809,
+      "hybrid_recovers": true,
+      "identity_cos": 0.16192212312775697,
+      "rigid_cos": 0.9999999999999809,
+      "task": "refl_05"
+    },
+    {
+      "channel": "RIGID",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "control_cos": 0.034924673012616814,
+      "demo_fit_ridge": 0.9810608658803431,
+      "demo_fit_rigid": 0.999999999999982,
+      "family": "reflection",
+      "hybrid_cos": 0.9999999999999822,
+      "hybrid_recovers": true,
+      "identity_cos": 0.07794333022310658,
+      "rigid_cos": 0.9999999999999822,
+      "task": "refl_06"
+    },
+    {
+      "channel": "RIGID",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        6
+      ],
+      "control_cos": 0.05190506033040643,
+      "demo_fit_ridge": 0.9814478947797096,
+      "demo_fit_rigid": 0.9999999999999827,
+      "family": "reflection",
+      "hybrid_cos": 0.9999999999999805,
+      "hybrid_recovers": true,
+      "identity_cos": 0.10482155166096188,
+      "rigid_cos": 0.9999999999999805,
+      "task": "refl_07"
+    },
+    {
+      "channel": "RIDGE",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "control_cos": 0.4417253604312952,
+      "demo_fit_ridge": 0.9946925412088113,
+      "demo_fit_rigid": 0.8643801761523059,
+      "family": "containment",
+      "hybrid_cos": 0.4417253604312952,
+      "hybrid_recovers": false,
+      "identity_cos": 0.8526472858836381,
+      "rigid_cos": 0.8526472858836381,
+      "task": "cont_00"
+    },
+    {
+      "channel": "RIDGE",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "control_cos": 0.45354606207999515,
+      "demo_fit_ridge": 0.9937147291188172,
+      "demo_fit_rigid": 0.8564145721104797,
+      "family": "containment",
+      "hybrid_cos": 0.45354606207999515,
+      "hybrid_recovers": false,
+      "identity_cos": 0.8485121887022262,
+      "rigid_cos": 0.8485121887022262,
+      "task": "cont_01"
+    },
+    {
+      "channel": "RIDGE",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "control_cos": 0.42671824902642613,
+      "demo_fit_ridge": 0.9940339794019704,
+      "demo_fit_rigid": 0.8511302925347272,
+      "family": "containment",
+      "hybrid_cos": 0.42671824902642613,
+      "hybrid_recovers": false,
+      "identity_cos": 0.8611510339241285,
+      "rigid_cos": 0.8611510339241285,
+      "task": "cont_02"
+    },
+    {
+      "channel": "RIDGE",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "control_cos": 0.43035716629273707,
+      "demo_fit_ridge": 0.9939073956234726,
+      "demo_fit_rigid": 0.8585893700641707,
+      "family": "containment",
+      "hybrid_cos": 0.43035716629273707,
+      "hybrid_recovers": false,
+      "identity_cos": 0.8592830376040479,
+      "rigid_cos": 0.8592830376040479,
+      "task": "cont_03"
+    },
+    {
+      "channel": "RIDGE",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "control_cos": 0.43900251801497997,
+      "demo_fit_ridge": 0.9943260771381851,
+      "demo_fit_rigid": 0.8568410773321633,
+      "family": "containment",
+      "hybrid_cos": 0.43900251801497997,
+      "hybrid_recovers": false,
+      "identity_cos": 0.8250811947994078,
+      "rigid_cos": 0.8250811947994078,
+      "task": "cont_04"
+    },
+    {
+      "channel": "RIDGE",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "control_cos": 0.42475144554205996,
+      "demo_fit_ridge": 0.9933749705077832,
+      "demo_fit_rigid": 0.8424447809938275,
+      "family": "containment",
+      "hybrid_cos": 0.42475144554205996,
+      "hybrid_recovers": false,
+      "identity_cos": 0.8502915040579913,
+      "rigid_cos": 0.8502915040579913,
+      "task": "cont_05"
+    },
+    {
+      "channel": "RIDGE",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "control_cos": 0.44968371258125106,
+      "demo_fit_ridge": 0.9948486833285531,
+      "demo_fit_rigid": 0.8684341604319661,
+      "family": "containment",
+      "hybrid_cos": 0.44968371258125106,
+      "hybrid_recovers": false,
+      "identity_cos": 0.8556981477235904,
+      "rigid_cos": 0.8556981477235904,
+      "task": "cont_06"
+    },
+    {
+      "channel": "RIDGE",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "control_cos": 0.44773693607268483,
+      "demo_fit_ridge": 0.993564365074846,
+      "demo_fit_rigid": 0.8400370630925044,
+      "family": "containment",
+      "hybrid_cos": 0.44773693607268483,
+      "hybrid_recovers": false,
+      "identity_cos": 0.844592191805585,
+      "rigid_cos": 0.844592191805585,
+      "task": "cont_07"
+    }
+  ],
+  "preregistration": {
+    "class_product": 792,
+    "independent_held": true,
+    "mask_ops": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        4,
+        5
+      ],
+      [
+        5,
+        6
+      ],
+      [
+        6,
+        7
+      ],
+      [
+        7,
+        8
+      ],
+      [
+        8,
+        9
+      ],
+      [
+        9,
+        0
+      ]
+    ],
+    "n_side": 9,
+    "shifts": [
+      [
+        -2,
+        -2
+      ],
+      [
+        -2,
+        0
+      ],
+      [
+        -2,
+        2
+      ],
+      [
+        0,
+        -2
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        2,
+        -2
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        2,
+        2
+      ]
+    ],
+    "spins_d4": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "target": "16/16",
+    "tau": 0.01
+  },
+  "reflection": {
+    "control_mean": 0.04549528760567235,
+    "hybrid_mean": 0.99999999999998,
+    "hybrid_recovered": 8,
+    "identity_mean": 0.08610049341700104,
+    "n": 8,
+    "rigid_mean": 0.99999999999998,
+    "routed_to_rigid": 8
+  },
+  "router": "per-task: pick the channel with the higher DEMO fit; held target enters at scoring only",
+  "runtime_s": 29.823689899989404,
+  "schema": "henri.arc.action2-hybrid-operator-ab.v1",
+  "utc": "2026-09-27T18:17:01Z"
+}
