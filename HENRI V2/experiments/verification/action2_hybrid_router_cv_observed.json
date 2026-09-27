@@ -1,0 +1,638 @@
+{
+  "candidate_encodes": 50816,
+  "containment": {
+    "hybrid_delta": 0.12146787751957164,
+    "hybrid_full": 0.054634639285422844,
+    "identity_delta": 0.0,
+    "identity_full": 0.9562573148534641,
+    "n": 8,
+    "n_ties_cv": 0,
+    "ridge_1_demo_delta": 0.028340713987372437,
+    "ridge_delta": 0.047489249215660716,
+    "ridge_full": 0.9263336414971318,
+    "ridge_k_demo_delta": 0.047489249215660716,
+    "rigid_delta": 0.12146787751957164,
+    "rigid_full": 0.054634639285422844,
+    "routed_to_ridge": 0,
+    "routed_to_rigid": 8,
+    "router_correct": 8,
+    "routing_gap_mean": 0.0
+  },
+  "containment_best_channel_gain": 0.12146787751957164,
+  "device_kind": "cpu",
+  "evidence_class": "OBSERVED",
+  "fixture": "containment demos at DISTINCT NON-OVERLAPPING 4x4 ring positions (zero shared cells on the grid); held pair at a further distinct position; distinct (ring,inner) colours per pair",
+  "honest_limit": "Synthetic grids, internal-representation recovery on the first held pair per task; NOT an ARC task-solve rate. Non-overlapping positions isolate the transfer question. The D4 search is exhaustive (class upper bound). No ARC score is claimed.",
+  "hybrid_recovery_total_delta": "16/16",
+  "per_task": [
+    {
+      "channel": "D4",
+      "chosen_op": [
+        2,
+        2,
+        1,
+        2
+      ],
+      "cv_ridge": 0.02239653782781322,
+      "cv_rigid": 0.11213425218732054,
+      "family": "containment",
+      "held_winner": "D4",
+      "hybrid_delta": 0.11187709103563484,
+      "hybrid_full": 0.14585280707628542,
+      "identity_delta": 0.0,
+      "identity_full": 0.9544769719236774,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.026207378257610638,
+      "ridge_delta": 0.05227338966048905,
+      "ridge_full": 0.9284779129129872,
+      "ridge_k_demo_delta": 0.05227338966048905,
+      "rigid_delta": 0.11187709103563484,
+      "rigid_full": 0.14585280707628542,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "cont_00"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        2,
+        0,
+        2,
+        6
+      ],
+      "cv_ridge": 0.028681059978282814,
+      "cv_rigid": 0.10259973928095505,
+      "family": "containment",
+      "held_winner": "D4",
+      "hybrid_delta": 0.11842586652455041,
+      "hybrid_full": -0.08347407862304818,
+      "identity_delta": 0.0,
+      "identity_full": 0.9764294684007404,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.022499749495224392,
+      "ridge_delta": 0.022602965794927512,
+      "ridge_full": 0.9427113860660636,
+      "ridge_k_demo_delta": 0.022602965794927512,
+      "rigid_delta": 0.11842586652455041,
+      "rigid_full": -0.08347407862304818,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "cont_01"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        -2,
+        0,
+        1,
+        1
+      ],
+      "cv_ridge": 0.02195465224892214,
+      "cv_rigid": 0.09771858151030376,
+      "family": "containment",
+      "held_winner": "D4",
+      "hybrid_delta": 0.14018309479951335,
+      "hybrid_full": 0.06405628882868397,
+      "identity_delta": 0.0,
+      "identity_full": 0.9513352217868086,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.008673333399514408,
+      "ridge_delta": 0.03768541907934918,
+      "ridge_full": 0.9301731910906926,
+      "ridge_k_demo_delta": 0.03768541907934918,
+      "rigid_delta": 0.14018309479951335,
+      "rigid_full": 0.06405628882868397,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "cont_02"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        2,
+        0,
+        3,
+        5
+      ],
+      "cv_ridge": 0.03708393326230774,
+      "cv_rigid": 0.11256574720520003,
+      "family": "containment",
+      "held_winner": "D4",
+      "hybrid_delta": 0.1146790268798909,
+      "hybrid_full": 0.032139470524423806,
+      "identity_delta": 0.0,
+      "identity_full": 0.951369416609884,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.04494982915979319,
+      "ridge_delta": 0.052937133417442155,
+      "ridge_full": 0.9206373988988555,
+      "ridge_k_demo_delta": 0.052937133417442155,
+      "rigid_delta": 0.1146790268798909,
+      "rigid_full": 0.032139470524423806,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "cont_03"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        0,
+        0,
+        1,
+        3
+      ],
+      "cv_ridge": 0.022752717182329157,
+      "cv_rigid": 0.09994134841396496,
+      "family": "containment",
+      "held_winner": "D4",
+      "hybrid_delta": 0.14996619768266223,
+      "hybrid_full": 0.06301541317669196,
+      "identity_delta": 0.0,
+      "identity_full": 0.9529164565282763,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.03241543770519942,
+      "ridge_delta": 0.0607359609903715,
+      "ridge_full": 0.9223612654267266,
+      "ridge_k_demo_delta": 0.0607359609903715,
+      "rigid_delta": 0.14996619768266223,
+      "rigid_full": 0.06301541317669196,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "cont_04"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        2,
+        0,
+        10,
+        1
+      ],
+      "cv_ridge": 0.018254417526210025,
+      "cv_rigid": 0.13667074249700886,
+      "family": "containment",
+      "held_winner": "D4",
+      "hybrid_delta": 0.11714711798094075,
+      "hybrid_full": 0.04225566955552828,
+      "identity_delta": 0.0,
+      "identity_full": 0.9566112484801336,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.02315239778456061,
+      "ridge_delta": 0.03754306082631413,
+      "ridge_full": 0.9216548162685443,
+      "ridge_k_demo_delta": 0.03754306082631413,
+      "rigid_delta": 0.11714711798094075,
+      "rigid_full": 0.04225566955552828,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "cont_05"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        0,
+        -2,
+        7,
+        5
+      ],
+      "cv_ridge": 0.03263311190529811,
+      "cv_rigid": 0.10465565337440476,
+      "family": "containment",
+      "held_winner": "D4",
+      "hybrid_delta": 0.11731141291987203,
+      "hybrid_full": 0.1960328378258311,
+      "identity_delta": 0.0,
+      "identity_full": 0.954637492261011,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.02006237363598187,
+      "ridge_delta": 0.04514613593507419,
+      "ridge_full": 0.9224532823433015,
+      "ridge_k_demo_delta": 0.04514613593507419,
+      "rigid_delta": 0.11731141291987203,
+      "rigid_full": 0.1960328378258311,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "cont_06"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        2,
+        0,
+        8,
+        3
+      ],
+      "cv_ridge": 0.038370110368737935,
+      "cv_rigid": 0.11582008448825315,
+      "family": "containment",
+      "held_winner": "D4",
+      "hybrid_delta": 0.10215321233350864,
+      "hybrid_full": -0.02280129408101369,
+      "identity_delta": 0.0,
+      "identity_full": 0.9522822428371822,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.04876521246109498,
+      "ridge_delta": 0.07098992802131802,
+      "ridge_full": 0.9221998789698826,
+      "ridge_k_demo_delta": 0.07098992802131802,
+      "rigid_delta": 0.10215321233350864,
+      "rigid_full": -0.02280129408101369,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "cont_07"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "cv_ridge": 0.4526930247377908,
+      "cv_rigid": 0.9999999999999926,
+      "family": "reflection",
+      "held_winner": "D4",
+      "hybrid_delta": 0.9999999999999906,
+      "hybrid_full": 0.9999999999999771,
+      "identity_delta": 0.0,
+      "identity_full": -0.01566033377717391,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.28872398779871283,
+      "ridge_delta": 0.5822765575407198,
+      "ridge_full": 0.0868388367913648,
+      "ridge_k_demo_delta": 0.5822765575407198,
+      "rigid_delta": 0.9999999999999906,
+      "rigid_full": 0.9999999999999771,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "refl_08"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "cv_ridge": 0.4483643785677758,
+      "cv_rigid": 0.9999999999999911,
+      "family": "reflection",
+      "held_winner": "D4",
+      "hybrid_delta": 0.9999999999999919,
+      "hybrid_full": 0.9999999999999791,
+      "identity_delta": 0.0,
+      "identity_full": 0.015359146167736638,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.30522713242867033,
+      "ridge_delta": 0.5737591767910246,
+      "ridge_full": 0.08837492078155411,
+      "ridge_k_demo_delta": 0.5737591767910246,
+      "rigid_delta": 0.9999999999999919,
+      "rigid_full": 0.9999999999999791,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "refl_09"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "cv_ridge": 0.4606062342751051,
+      "cv_rigid": 0.9999999999999908,
+      "family": "reflection",
+      "held_winner": "D4",
+      "hybrid_delta": 0.9999999999999902,
+      "hybrid_full": 0.9999999999999817,
+      "identity_delta": 0.0,
+      "identity_full": 0.04693066964214071,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.28945539349940047,
+      "ridge_delta": 0.564779144677474,
+      "ridge_full": 0.09075274043677213,
+      "ridge_k_demo_delta": 0.564779144677474,
+      "rigid_delta": 0.9999999999999902,
+      "rigid_full": 0.9999999999999817,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "refl_10"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "cv_ridge": 0.45902195965774895,
+      "cv_rigid": 0.9999999999999923,
+      "family": "reflection",
+      "held_winner": "D4",
+      "hybrid_delta": 0.9999999999999948,
+      "hybrid_full": 0.99999999999998,
+      "identity_delta": 0.0,
+      "identity_full": -0.06768473014723575,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.2809537289430029,
+      "ridge_delta": 0.5801367523168207,
+      "ridge_full": 0.0681585689468913,
+      "ridge_k_demo_delta": 0.5801367523168207,
+      "rigid_delta": 0.9999999999999948,
+      "rigid_full": 0.99999999999998,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "refl_11"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "cv_ridge": 0.4638733519112601,
+      "cv_rigid": 0.9999999999999916,
+      "family": "reflection",
+      "held_winner": "D4",
+      "hybrid_delta": 0.9999999999999902,
+      "hybrid_full": 0.9999999999999782,
+      "identity_delta": 0.0,
+      "identity_full": -0.024149757622880054,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.287069064038211,
+      "ridge_delta": 0.5857135476425775,
+      "ridge_full": 0.07631094303062881,
+      "ridge_k_demo_delta": 0.5857135476425775,
+      "rigid_delta": 0.9999999999999902,
+      "rigid_full": 0.9999999999999782,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "refl_12"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "cv_ridge": 0.4471707120006682,
+      "cv_rigid": 0.9999999999999911,
+      "family": "reflection",
+      "held_winner": "D4",
+      "hybrid_delta": 0.9999999999999899,
+      "hybrid_full": 0.99999999999998,
+      "identity_delta": 0.0,
+      "identity_full": 0.015031309908823927,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.2715377370461031,
+      "ridge_delta": 0.5743712526400306,
+      "ridge_full": 0.09095938503459634,
+      "ridge_k_demo_delta": 0.5743712526400306,
+      "rigid_delta": 0.9999999999999899,
+      "rigid_full": 0.99999999999998,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "refl_13"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "cv_ridge": 0.46629575539139384,
+      "cv_rigid": 0.9999999999999925,
+      "family": "reflection",
+      "held_winner": "D4",
+      "hybrid_delta": 0.9999999999999889,
+      "hybrid_full": 0.9999999999999792,
+      "identity_delta": 0.0,
+      "identity_full": -0.0018239539511612517,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.29429550254146863,
+      "ridge_delta": 0.5666241705898071,
+      "ridge_full": 0.06495576238727967,
+      "ridge_k_demo_delta": 0.5666241705898071,
+      "rigid_delta": 0.9999999999999889,
+      "rigid_full": 0.9999999999999792,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "refl_14"
+    },
+    {
+      "channel": "D4",
+      "chosen_op": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "cv_ridge": 0.44748931955174864,
+      "cv_rigid": 0.9999999999999903,
+      "family": "reflection",
+      "held_winner": "D4",
+      "hybrid_delta": 0.9999999999999906,
+      "hybrid_full": 0.9999999999999816,
+      "identity_delta": 0.0,
+      "identity_full": -0.014734026807737229,
+      "n_ties_cv": 0,
+      "ridge_1_demo_delta": 0.29354538343048886,
+      "ridge_delta": 0.579959594230636,
+      "ridge_full": 0.08696575583935598,
+      "ridge_k_demo_delta": 0.579959594230636,
+      "rigid_delta": 0.9999999999999906,
+      "rigid_full": 0.9999999999999816,
+      "router_correct": true,
+      "routing_gap": 0.0,
+      "task": "refl_15"
+    }
+  ],
+  "preregistration": {
+    "class_product": 792,
+    "evaluation_hoist": "per-(item,candidate) encodes are fold-independent and computed once; folds are arithmetic over 4 scalars",
+    "label_namespace": "channel and held_winner both use {RIDGE, D4, TIE}",
+    "lam": 0.001,
+    "mask_ops": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        4,
+        5
+      ],
+      [
+        5,
+        6
+      ],
+      [
+        6,
+        7
+      ],
+      [
+        7,
+        8
+      ],
+      [
+        8,
+        9
+      ],
+      [
+        9,
+        0
+      ]
+    ],
+    "n_demos": 3,
+    "n_side": 12,
+    "positions_non_overlapping": true,
+    "positions_pool": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        4
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        4,
+        4
+      ],
+      [
+        4,
+        8
+      ],
+      [
+        8,
+        0
+      ],
+      [
+        8,
+        4
+      ],
+      [
+        8,
+        8
+      ]
+    ],
+    "primary_metric": "cos_delta = cos(pred-X, Y-X); no-op scores 0.0",
+    "ring_h": 4,
+    "router": "leave-one-out CV over K demos on the PRIMARY metric; tie -> D4",
+    "search_objective": "primary metric (cos_delta), exhaustive argmax over the class",
+    "secondary_metric": "cos_full = cos(pred, Y)  [v1 metric]",
+    "shifts": [
+      [
+        -2,
+        -2
+      ],
+      [
+        -2,
+        0
+      ],
+      [
+        -2,
+        2
+      ],
+      [
+        0,
+        -2
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        2,
+        -2
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        2,
+        2
+      ]
+    ],
+    "spins_d4": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "step": 4,
+    "tau": 0.01,
+    "verdict_rule": "ordered: containment router picks RIDGE (majority) -> FALSIFIED; elif hybrid - identity >= tau -> RECOVERS (win is the router); else -> FALSIFIED (neither channel beats identity)"
+  },
+  "reflection": {
+    "hybrid_delta": 0.9999999999999908,
+    "hybrid_full": 0.9999999999999796,
+    "identity_delta": 0.0,
+    "identity_full": -0.005841459573435865,
+    "n": 8,
+    "n_ties_cv": 0,
+    "ridge_1_demo_delta": 0.2888509912157573,
+    "ridge_delta": 0.5759525245536363,
+    "ridge_full": 0.08166461415605539,
+    "ridge_k_demo_delta": 0.5759525245536363,
+    "rigid_delta": 0.9999999999999908,
+    "rigid_full": 0.9999999999999796,
+    "routed_to_ridge": 0,
+    "routed_to_rigid": 8,
+    "router_correct": 8,
+    "routing_gap_mean": 0.0
+  },
+  "router_correct_total": "16/16",
+  "runtime_s": 295.50790500000585,
+  "schema": "henri.arc.action2-hybrid-router-cv.v1",
+  "suite_totals_delta": {
+    "fixed_ridge": 16,
+    "fixed_rigid": 16,
+    "hybrid": 16
+  },
+  "utc": "2026-09-27T19:54:53Z",
+  "verdict": "RECOVERS_WIN_IS_ROUTER"
+}
