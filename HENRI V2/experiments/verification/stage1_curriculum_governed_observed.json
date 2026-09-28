@@ -1,0 +1,88 @@
+{
+  "budget_learner_tokens": 33007788,
+  "budget_vm_executions": 1000236,
+  "comparison_to_stage0": {
+    "progress_retained_pct": 99.67,
+    "stage0_progress": 5.467517946385806,
+    "stage0_vm": 303030572,
+    "stage0_wall_s": 21141.39,
+    "vm_fraction_pct": 0.3301,
+    "vm_reduction_x": 303.0,
+    "wall_fraction_pct": 0.3423,
+    "wall_reduction_x": 292.1
+  },
+  "curriculum_events": [
+    {
+      "after": 48.0,
+      "before": 32.0,
+      "capped": false,
+      "escalations_since_progress": 1,
+      "event": "ESCALATE",
+      "mode": "mul",
+      "rung": "prog_len",
+      "sigma_sq": 7.818937767950855e-05,
+      "spec": {
+        "distractor_noise": 0.0,
+        "grid_growth": 256.0,
+        "multiscale_nesting": 1.0,
+        "prog_len": 48.0,
+        "topological_obstacle": 0.0
+      }
+    },
+    {
+      "after": 1.0,
+      "before": 0.0,
+      "capped": false,
+      "escalations_since_progress": 2,
+      "event": "ESCALATE",
+      "mode": "add",
+      "rung": "topological_obstacle",
+      "sigma_sq": 8.833477699147635e-05,
+      "spec": {
+        "distractor_noise": 0.0,
+        "grid_growth": 256.0,
+        "multiscale_nesting": 1.0,
+        "prog_len": 48.0,
+        "topological_obstacle": 1.0
+      }
+    }
+  ],
+  "curriculum_kill_reason": null,
+  "curriculum_levers": true,
+  "curriculum_spec": {
+    "barrier_spans": 1,
+    "distractor_positions": 0,
+    "max_len_multiple": 8,
+    "nesting_repetitions": 1,
+    "neutral": false,
+    "spec": {
+      "distractor_noise": 0.0,
+      "grid_growth": 256.0,
+      "multiscale_nesting": 1.0,
+      "prog_len": 48.0,
+      "topological_obstacle": 1.0
+    },
+    "tape_size": 256
+  },
+  "evidence_class": "OBSERVED",
+  "gate": "STAGE0_HELDOUT_SEEDING",
+  "heldout_curve_points": 40,
+  "heldout_loss_first": 5.5780173640861,
+  "heldout_loss_last": 0.12867430938113583,
+  "heldout_progress": 5.449343054704964,
+  "honest_boundary": "Reached comparable held-out progress to the 10B burn in ~0.33% of the executions, BY ESCALATING rather than by running longer. But only 2 of 5 rungs were exercised before the budget expired and the KILL never fired (patience 3 was not reached), so the ladder is PROVEN WIRED and PROVEN TO FIRE, not proven to exhaust. heldout_progress is the only promotion signal per the driver's ratified gate. No benchmark score is claimed.",
+  "rungs_exercised": [
+    "prog_len",
+    "topological_obstacle"
+  ],
+  "rungs_not_exercised": [
+    "multiscale_nesting",
+    "distractor_noise",
+    "grid_growth"
+  ],
+  "schema": "henri.stage1.curriculum-governed.v1",
+  "tape_size_applied": 256,
+  "token_identity_holds": true,
+  "utc": "2026-09-27",
+  "wall_seconds": 72.37
+}
