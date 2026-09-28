@@ -1,0 +1,270 @@
+{
+  "NOT_PROMOTION": true,
+  "arms": {
+    "cadence_w10": {
+      "distinct": 1616,
+      "frac": 0.9908169501670291,
+      "kill": null,
+      "n_escalations": 2,
+      "progress": 5.487951225184389,
+      "rungs": null,
+      "tokens": 4943037,
+      "vm": 149789,
+      "wall": 9.48
+    },
+    "cadence_w3": {
+      "distinct": 2638,
+      "frac": 0.46183483436699896,
+      "kill": null,
+      "n_escalations": 9,
+      "progress": 5.48314048803978,
+      "rungs": null,
+      "tokens": 4943037,
+      "vm": 149789,
+      "wall": 11.7
+    },
+    "cadence_w5": {
+      "distinct": 2094,
+      "frac": 0.8790208726885161,
+      "kill": null,
+      "n_escalations": 5,
+      "progress": 5.4854279441576885,
+      "rungs": null,
+      "tokens": 4943037,
+      "vm": 149789,
+      "wall": 10.35
+    },
+    "variance": {
+      "distinct": 1444,
+      "frac": 0.9983159013889004,
+      "kill": null,
+      "n_escalations": 1,
+      "progress": 5.488046948146997,
+      "rungs": null,
+      "tokens": 4943037,
+      "vm": 149789,
+      "wall": 9.21
+    }
+  },
+  "bars": {
+    "bar1_first_escalation_before_fraction_of_drop": 0.5,
+    "bar2_tau": 0.05,
+    "baseline_frac": 0.9984817871467463,
+    "baseline_progress": 5.487135175054281,
+    "control_progress": 5.488046948146997,
+    "floor": 5.438046948146997
+  },
+  "benchmark_scores_claimed": false,
+  "budget_rounds": 292,
+  "compute_matching_rule": "every arm must run the full budget with curriculum_kill_reason None; a governor-stopped arm is BLOCKED, never compared",
+  "control_variance": {
+    "distinct": 1444,
+    "frac": 0.9983159013889004,
+    "kill": null,
+    "n_escalations": 1,
+    "progress": 5.488046948146997,
+    "rungs": null,
+    "tokens": 4943037,
+    "vm": 149789,
+    "wall": 9.21
+  },
+  "corrections": [
+    "stage1_cadence_falsification.json: printed ESCALATION_DURING_LEARNING_INTERFERES is RETRACTED; corrected to BLOCKED__ARMS_NOT_COMPUTE_MATCHED (8.03x budget gap)",
+    "BAR 1 from that run STANDS: first cadence escalation at 8.56% of the drop vs 99.85% for the variance trigger -- a property of the trigger and the curve, not of the budget"
+  ],
+  "evidence_class": "OBSERVED",
+  "n_executions": 150000,
+  "overall_verdict": "CONFOUND_CLOSED",
+  "per_arm_verdicts": {
+    "cadence_w10": {
+      "compute_matched": true,
+      "fires_early": false,
+      "frac": 0.9908169501670291,
+      "kill_reason": null,
+      "n_escalations": 2,
+      "noninferior": true,
+      "progress": 5.487951225184389,
+      "tokens": 4943037,
+      "verdict": "CONFOUND_STILL_PRESENT",
+      "vm": 149789
+    },
+    "cadence_w3": {
+      "compute_matched": true,
+      "fires_early": true,
+      "frac": 0.46183483436699896,
+      "kill_reason": null,
+      "n_escalations": 9,
+      "noninferior": true,
+      "progress": 5.48314048803978,
+      "tokens": 4943037,
+      "verdict": "CONFOUND_CLOSED",
+      "vm": 149789
+    },
+    "cadence_w5": {
+      "compute_matched": true,
+      "fires_early": false,
+      "frac": 0.8790208726885161,
+      "kill_reason": null,
+      "n_escalations": 5,
+      "noninferior": true,
+      "progress": 5.4854279441576885,
+      "tokens": 4943037,
+      "verdict": "CONFOUND_STILL_PRESENT",
+      "vm": 149789
+    }
+  },
+  "per_rung_progress": {
+    "cadence_w10": [
+      {
+        "heldout_after": 0.0962168706255212,
+        "heldout_before": 0.14077234923489074,
+        "progress": 0.044555478609369537,
+        "round": 99,
+        "rung": "prog_len",
+        "value_after": 48.0
+      },
+      {
+        "heldout_after": 0.09037621965310881,
+        "heldout_before": 0.0962168706255212,
+        "progress": 0.0058406509724123895,
+        "round": 199,
+        "rung": "topological_obstacle",
+        "value_after": 1.0
+      }
+    ],
+    "cadence_w3": [
+      {
+        "heldout_after": 0.39814048293895304,
+        "heldout_before": 3.0460221657326607,
+        "progress": 2.6478816827937077,
+        "round": 29,
+        "rung": "prog_len",
+        "value_after": 48.0
+      },
+      {
+        "heldout_after": 0.16024432830342797,
+        "heldout_before": 0.39814048293895304,
+        "progress": 0.23789615463552508,
+        "round": 59,
+        "rung": "topological_obstacle",
+        "value_after": 1.0
+      },
+      {
+        "heldout_after": 0.1220674517497112,
+        "heldout_before": 0.16024432830342797,
+        "progress": 0.038176876553716765,
+        "round": 89,
+        "rung": "multiscale_nesting",
+        "value_after": 2.0
+      },
+      {
+        "heldout_after": 0.10737353563290747,
+        "heldout_before": 0.1220674517497112,
+        "progress": 0.014693916116803735,
+        "round": 119,
+        "rung": "distractor_noise",
+        "value_after": 1.0
+      },
+      {
+        "heldout_after": 0.10024802726406958,
+        "heldout_before": 0.10737353563290747,
+        "progress": 0.007125508368837893,
+        "round": 149,
+        "rung": "grid_growth",
+        "value_after": 512.0
+      },
+      {
+        "heldout_after": 0.09763836633802675,
+        "heldout_before": 0.10024802726406958,
+        "progress": 0.0026096609260428255,
+        "round": 179,
+        "rung": "prog_len",
+        "value_after": 72.0
+      },
+      {
+        "heldout_after": 0.09539948548763401,
+        "heldout_before": 0.09763836633802675,
+        "progress": 0.002238880850392741,
+        "round": 209,
+        "rung": "topological_obstacle",
+        "value_after": 2.0
+      },
+      {
+        "heldout_after": 0.09543039235735574,
+        "heldout_before": 0.09539948548763401,
+        "progress": -3.0906869721736285e-05,
+        "round": 239,
+        "rung": "multiscale_nesting",
+        "value_after": 3.0
+      },
+      {
+        "heldout_after": 0.0951869567977185,
+        "heldout_before": 0.09543039235735574,
+        "progress": 0.0002434355596372395,
+        "round": 269,
+        "rung": "distractor_noise",
+        "value_after": 2.0
+      }
+    ],
+    "cadence_w5": [
+      {
+        "heldout_after": 0.14135563641284865,
+        "heldout_before": 0.7565217862940332,
+        "progress": 0.6151661498811846,
+        "round": 49,
+        "rung": "prog_len",
+        "value_after": 48.0
+      },
+      {
+        "heldout_after": 0.10611950123227654,
+        "heldout_before": 0.14135563641284865,
+        "progress": 0.035236135180572115,
+        "round": 99,
+        "rung": "topological_obstacle",
+        "value_after": 1.0
+      },
+      {
+        "heldout_after": 0.09735630999158099,
+        "heldout_before": 0.10611950123227654,
+        "progress": 0.00876319124069555,
+        "round": 149,
+        "rung": "multiscale_nesting",
+        "value_after": 2.0
+      },
+      {
+        "heldout_after": 0.0937084597404067,
+        "heldout_before": 0.09735630999158099,
+        "progress": 0.003647850251174284,
+        "round": 199,
+        "rung": "distractor_noise",
+        "value_after": 1.0
+      },
+      {
+        "heldout_after": 0.09289950067980947,
+        "heldout_before": 0.0937084597404067,
+        "progress": 0.0008089590605972335,
+        "round": 249,
+        "rung": "grid_growth",
+        "value_after": 512.0
+      }
+    ],
+    "variance": [
+      {
+        "heldout_after": 0.09028049669050121,
+        "heldout_before": 0.09952290893352511,
+        "progress": 0.009242412243023898,
+        "round": 169,
+        "rung": "prog_len",
+        "value_after": 48.0
+      }
+    ]
+  },
+  "schema": "henri.falsification.cadence-matched.v2",
+  "seed": 20260927,
+  "spacings": [
+    3,
+    5,
+    10
+  ],
+  "utc": "2026-09-27"
+}

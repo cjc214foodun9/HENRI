@@ -1,0 +1,314 @@
+{
+  "NOT_PROMOTION": true,
+  "arm_order": [
+    "B variance (determinism/comparability check)",
+    "A cadence (treatment)"
+  ],
+  "arms": {
+    "A_cadence_treatment": {
+      "budget_learner_tokens": 1851069,
+      "budget_vm_executions": 56093,
+      "curriculum_kill_reason": "no held-out progress across 9 escalations",
+      "distinct_outputs": 1267,
+      "first_escalation": {
+        "after": 48.0,
+        "before": 32.0,
+        "capped": false,
+        "escalations_since_progress": 1,
+        "event": "ESCALATE",
+        "heldout_at_escalation": 5.11361489506444,
+        "learning_progress": 0.23726917448726415,
+        "mode": "mul",
+        "n_windows": 1,
+        "peak_rate": null,
+        "progress_rate": 0.004585987983529011,
+        "round": 9,
+        "rung": "prog_len",
+        "sigma_sq": 0.01628224688695092,
+        "spec": {
+          "distractor_noise": 0.0,
+          "grid_growth": 256.0,
+          "multiscale_nesting": 1.0,
+          "prog_len": 48.0,
+          "topological_obstacle": 0.0
+        },
+        "trigger": "cadence",
+        "trigger_reason": "cadence |velocity| 7.241e-02 > 1.000e-03 after 1 window(s)",
+        "velocity": 0.0724117468179866
+      },
+      "fraction_spent_at_first_escalation": 0.08556584617700444,
+      "governor_trigger": "cadence",
+      "heldout_loss_first": 5.578327444837498,
+      "heldout_loss_last": 0.14727556449100654,
+      "heldout_progress": 5.431051880346492,
+      "n_escalations": 10,
+      "rungs_exercised": null,
+      "token_identity_holds": null,
+      "wall_seconds": 4.22
+    },
+    "B_variance_control": {
+      "budget_learner_tokens": 14860989,
+      "budget_vm_executions": 450333,
+      "curriculum_kill_reason": "no held-out progress across 9 escalations",
+      "distinct_outputs": 5342,
+      "first_escalation": {
+        "after": 48.0,
+        "before": 32.0,
+        "capped": false,
+        "escalations_since_progress": 1,
+        "event": "ESCALATE",
+        "heldout_at_escalation": 0.09952290893352511,
+        "learning_progress": 0.014392813033704224,
+        "mode": "mul",
+        "n_windows": 17,
+        "peak_rate": null,
+        "progress_rate": 0.022390154354440642,
+        "round": 169,
+        "rung": "prog_len",
+        "sigma_sq": 5.318319967175072e-05,
+        "spec": {
+          "distractor_noise": 0.0,
+          "grid_growth": 256.0,
+          "multiscale_nesting": 1.0,
+          "prog_len": 48.0,
+          "topological_obstacle": 0.0
+        },
+        "trigger": "variance",
+        "trigger_reason": "sigma2 5.318e-05 < 1.000e-04",
+        "velocity": 0.08661594537332966
+      },
+      "fraction_spent_at_first_escalation": 0.9984817871467463,
+      "governor_trigger": "variance",
+      "heldout_loss_first": 5.578327444837498,
+      "heldout_loss_last": 0.0911922697832178,
+      "heldout_progress": 5.487135175054281,
+      "n_escalations": 8,
+      "rungs_exercised": null,
+      "token_identity_holds": null,
+      "wall_seconds": 34.07
+    }
+  },
+  "bars": {
+    "bar1_first_escalation_before_fraction_of_drop": 0.5,
+    "bar2_min_retained_fraction_of_baseline": 0.95,
+    "bar2_tau_vs_matched_control": 0.05
+  },
+  "baseline": {
+    "first_escalation_round": 169,
+    "fraction_spent_at_first_escalation": 0.9984817871467463,
+    "heldout_progress": 5.487135175054281,
+    "receipt": "HENRI V2/experiments/verification/stage1_rungs345_observed.json"
+  },
+  "benchmark_scores_claimed": false,
+  "config_common": {
+    "cadence_windows": 1,
+    "curriculum_levers": true,
+    "curriculum_window": 10,
+    "eval_every": 20,
+    "heldout_rebuild": false,
+    "heldout_samples": 64,
+    "kill_patience": 9,
+    "max_prog_len": 2048,
+    "n_executions": 2000000,
+    "plateau_var_threshold": 0.0001,
+    "prog_len": 32,
+    "progress_eps": 0.001,
+    "reward_subsample": 32,
+    "seed": 20260927,
+    "seq_len": 33
+  },
+  "correction": {
+    "bar1_still_stands": {
+      "frac_cadence_w1": 0.08556584617700444,
+      "frac_variance_control": 0.9984817871467463,
+      "why": "EARLY-FIRE belongs to the trigger and the held-out curve, not to the budget, so bar 1 is unaffected by the budget gap; and run 2 reproduces it at matched budgets"
+    },
+    "corrected_by": "stage1_cadence_matched.json",
+    "defect_in": "my verdict dispatch gated on a DEGENERATE budget (<20000 vm) while the registered TEXT gated on COMPARABILITY; the code was narrower than the rule it claimed to implement",
+    "lesson": "a pre-registration that exists only in prose is not a gate. The code that decides the verdict must implement the registered rule EXACTLY, and the receipt must store the rule at a path a reader will actually find.",
+    "second_defect_in_the_corrector": "the corrector read prev['pre_registration'] but run 1 wrote the rules TOP-LEVEL, so the first correction attempt raised KeyError"
+  },
+  "decision_rules": {
+    "early_and_noninferior": "CONFOUND_CLOSED",
+    "early_but_degraded": "ESCALATION_DURING_LEARNING_INTERFERES",
+    "not_comparable_or_failed": "BLOCKED_INFRASTRUCTURE",
+    "not_early": "CONFOUND_STILL_PRESENT"
+  },
+  "determinism_check": {
+    "config_matched": true,
+    "progress_delta": 0.0,
+    "vm_delta": 0
+  },
+  "evidence_class": "OBSERVED",
+  "frac_definition": "(L_first - L_at_first_esc) / (L_first - L_last) on the arm's own held-out curve; the SAME definition that produced the baseline's 0.9985",
+  "gates": {
+    "budgets_comparable": false,
+    "fires_early": true,
+    "floor": 5.437135175054281,
+    "frac_cadence": 0.08556584617700444,
+    "frac_control": 0.9984817871467463,
+    "noninferior": false,
+    "progress_cadence": 5.431051880346492,
+    "progress_control": 5.487135175054281,
+    "tau": 0.05
+  },
+  "per_rung_progress_cadence": [
+    {
+      "heldout_after": 4.333821964375832,
+      "heldout_before": 5.11361489506444,
+      "progress": 0.7797929306886076,
+      "round": 9,
+      "rung": "prog_len",
+      "value_after": 48.0
+    },
+    {
+      "heldout_after": 3.088174840559792,
+      "heldout_before": 4.333821964375832,
+      "progress": 1.24564712381604,
+      "round": 19,
+      "rung": "topological_obstacle",
+      "value_after": 1.0
+    },
+    {
+      "heldout_after": 1.6450338108867713,
+      "heldout_before": 3.088174840559792,
+      "progress": 1.4431410296730207,
+      "round": 29,
+      "rung": "multiscale_nesting",
+      "value_after": 2.0
+    },
+    {
+      "heldout_after": 0.7506613497256877,
+      "heldout_before": 1.6450338108867713,
+      "progress": 0.8943724611610836,
+      "round": 39,
+      "rung": "distractor_noise",
+      "value_after": 1.0
+    },
+    {
+      "heldout_after": 0.3972037186878544,
+      "heldout_before": 0.7506613497256877,
+      "progress": 0.35345763103783323,
+      "round": 49,
+      "rung": "grid_growth",
+      "value_after": 512.0
+    },
+    {
+      "heldout_after": 0.25929472602749293,
+      "heldout_before": 0.3972037186878544,
+      "progress": 0.1379089926603615,
+      "round": 59,
+      "rung": "prog_len",
+      "value_after": 72.0
+    },
+    {
+      "heldout_after": 0.1977644496245093,
+      "heldout_before": 0.25929472602749293,
+      "progress": 0.06153027640298364,
+      "round": 69,
+      "rung": "topological_obstacle",
+      "value_after": 2.0
+    },
+    {
+      "heldout_after": 0.16702687527682314,
+      "heldout_before": 0.1977644496245093,
+      "progress": 0.030737574347686147,
+      "round": 79,
+      "rung": "multiscale_nesting",
+      "value_after": 3.0
+    },
+    {
+      "heldout_after": 0.14879513810353762,
+      "heldout_before": 0.16702687527682314,
+      "progress": 0.018231737173285523,
+      "round": 89,
+      "rung": "distractor_noise",
+      "value_after": 2.0
+    },
+    {
+      "heldout_after": 0.14727556449100654,
+      "heldout_before": 0.14879513810353762,
+      "progress": 0.0015195736125310777,
+      "round": 99,
+      "rung": "grid_growth",
+      "value_after": 1024.0
+    }
+  ],
+  "per_rung_progress_control": [
+    {
+      "heldout_after": 0.09015299033148054,
+      "heldout_before": 0.09952290893352511,
+      "progress": 0.009369918602044572,
+      "round": 169,
+      "rung": "prog_len",
+      "value_after": 48.0
+    },
+    {
+      "heldout_after": 0.08841749883500424,
+      "heldout_before": 0.09015299033148054,
+      "progress": 0.0017354914964762963,
+      "round": 299,
+      "rung": "topological_obstacle",
+      "value_after": 1.0
+    },
+    {
+      "heldout_after": 0.0897536543706432,
+      "heldout_before": 0.08841749883500424,
+      "progress": -0.0013361555356389554,
+      "round": 389,
+      "rung": "multiscale_nesting",
+      "value_after": 2.0
+    },
+    {
+      "heldout_after": 0.08969761043133628,
+      "heldout_before": 0.0897536543706432,
+      "progress": 5.604393930691565e-05,
+      "round": 429,
+      "rung": "distractor_noise",
+      "value_after": 1.0
+    },
+    {
+      "heldout_after": 0.08815937740797698,
+      "heldout_before": 0.08969761043133628,
+      "progress": 0.0015382330233593006,
+      "round": 479,
+      "rung": "grid_growth",
+      "value_after": 512.0
+    },
+    {
+      "heldout_after": 0.08934187501485626,
+      "heldout_before": 0.08815937740797698,
+      "progress": -0.0011824976068792736,
+      "round": 749,
+      "rung": "prog_len",
+      "value_after": 72.0
+    },
+    {
+      "heldout_after": 0.0897436429686181,
+      "heldout_before": 0.08934187501485626,
+      "progress": -0.0004017679537618446,
+      "round": 759,
+      "rung": "topological_obstacle",
+      "value_after": 2.0
+    },
+    {
+      "heldout_after": 0.0911922697832178,
+      "heldout_before": 0.0897436429686181,
+      "progress": -0.0014486268145997017,
+      "round": 849,
+      "rung": "multiscale_nesting",
+      "value_after": 3.0
+    }
+  ],
+  "question": "does cadence-mode escalation fire before 50% of the held-out drop is spent, without degrading held-out progress?",
+  "registered_before_run_and_analysis": true,
+  "registration_written_at_state": {
+    "arms_run": 0,
+    "head": "e3e6729fe81c"
+  },
+  "schema": "henri.falsification.cadence-escalation.v1",
+  "utc": "2026-09-27",
+  "verdict": "BLOCKED__ARMS_NOT_COMPUTE_MATCHED",
+  "verdict_printed_by_script": "ESCALATION_DURING_LEARNING_INTERFERES",
+  "verdict_reason": "The arms ran 56093 vs 450333 VM executions (8.03x). Both were killed by the same rule ('no held-out progress across 9 escalations'): the cadence arm fires at EVERY window with cadence_windows=1, so it consumed that patience in ~10 windows while the variance arm only reached its first escalation at round 169. My pre-registration states that non-comparable arms yield BLOCKED_INFRASTRUCTURE, never a science claim. The printed verdict ESCALATION_DURING_LEARNING_INTERFERES is RETRACTED: bar 2 cannot be read from an unmatched-budget comparison."
+}
