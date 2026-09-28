@@ -38,6 +38,7 @@ No egress/action/benchmark claim. The result is REPORTED, never adopted as a new
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import os
@@ -84,7 +85,38 @@ def p_at_1(cleanup, book: torch.Tensor, noise: float, n_queries: int,
     return float((got == idx).float().mean())
 
 
-def main():
+def resolve_receipt_path(out=None):
+    """Resolve the receipt path with STRICT precedence.
+
+    ORDER: --out  >  HENRI_RECEIPT_DIR  >  module default (the COMMITTED path).
+
+    WHY (hazard proved live 2026-09-27): a backgrounded run of this tool targeted the
+    committed, ledger-cited receipt path simply because the default IS that path. It
+    missed clobbering committed evidence only because it crashed BEFORE its write --
+    accidental protection, not a guard. An ad-hoc or backgrounded run must be able to
+    redirect output WITHOUT editing the tool.
+
+    A MALFORMED override RAISES. Falling back to the committed default on a bad
+    override is the exact failure this function exists to prevent.
+    """
+    cand = out if out is not None else os.environ.get("HENRI_RECEIPT_DIR")
+    if cand is None:
+        return REC
+    if not str(cand).strip():
+        raise ValueError("empty receipt path override: refusing to fall back to the "
+                         "committed default")
+    p = os.path.abspath(str(cand))
+    if p == os.path.abspath(REC):
+        return p
+    if os.path.isdir(p) or str(cand).endswith(("/", chr(92))):
+        p = os.path.join(p, os.path.basename(REC))
+    if not os.path.dirname(p):
+        raise ValueError("receipt override has no parent directory: %r" % (cand,))
+    return p
+
+
+def main(out=None):
+    rec_path = resolve_receipt_path(out)
     lines = []
 
     def say(s=""):
@@ -252,8 +284,8 @@ def main():
     }
 
     # WRITE FIRST
-    os.makedirs(os.path.dirname(REC), exist_ok=True)
-    with open(REC, "w", encoding="utf-8") as f:
+    os.makedirs(os.path.dirname(rec_path), exist_ok=True)
+    with open(rec_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, sort_keys=True)
 
     say("")
@@ -268,11 +300,18 @@ def main():
             % (k, s["best_beta"], s["best_mean"], s["beta8_mean"],
                s["beta26.1_mean"], s["seal_minus_doc"]))
     say("  VERDICT: %s" % verdict)
-    say("  receipt: %s (%d B)" % (REC, os.path.getsize(REC)))
+    say("  receipt: %s (%d B)" % (rec_path, os.path.getsize(rec_path)))
 
     print("\n".join(lines[-3:]))
     return payload
 
 
 if __name__ == "__main__":
-    main()
+    _ap = argparse.ArgumentParser(
+        description="Hopfield beta calibration (writes a receipt).")
+    _ap.add_argument("--out", default=None,
+                     help="receipt path override; also honours HENRI_RECEIPT_DIR. "
+                          "The module default IS the committed path, so an ad-hoc "
+                          "run must override it or it overwrites committed evidence.")
+    _a = _ap.parse_args()
+    main(_a.out)
