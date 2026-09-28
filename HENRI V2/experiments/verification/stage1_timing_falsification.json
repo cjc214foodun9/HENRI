@@ -1,0 +1,510 @@
+{
+  "arms": {
+    "early": "cadence trigger, cadence_windows=3",
+    "late": "variance trigger"
+  },
+  "arms_run": {
+    "early_cadence_w3_s12345": {
+      "arm": "early_cadence_w3",
+      "distinct": 2598,
+      "kill": null,
+      "mean_residual": -0.002572643831423398,
+      "n_esc": 9,
+      "progress": 5.41565327297213,
+      "seed": 12345,
+      "vm": 149799,
+      "wall": 11.81
+    },
+    "early_cadence_w3_s161803": {
+      "arm": "early_cadence_w3",
+      "distinct": 2542,
+      "kill": null,
+      "mean_residual": -0.022462053069042042,
+      "n_esc": 9,
+      "progress": 5.4183196838753185,
+      "seed": 161803,
+      "vm": 149764,
+      "wall": 11.61
+    },
+    "early_cadence_w3_s20260927": {
+      "arm": "early_cadence_w3",
+      "distinct": 2638,
+      "kill": null,
+      "mean_residual": -0.004402483511880535,
+      "n_esc": 9,
+      "progress": 5.48314048803978,
+      "seed": 20260927,
+      "vm": 149789,
+      "wall": 11.77
+    },
+    "early_cadence_w3_s271828": {
+      "arm": "early_cadence_w3",
+      "distinct": 2682,
+      "kill": null,
+      "mean_residual": -0.008932146649453415,
+      "n_esc": 9,
+      "progress": 5.465004933832198,
+      "seed": 271828,
+      "vm": 149793,
+      "wall": 11.73
+    },
+    "early_cadence_w3_s31": {
+      "arm": "early_cadence_w3",
+      "distinct": 2678,
+      "kill": null,
+      "mean_residual": -0.006693844689205151,
+      "n_esc": 9,
+      "progress": 5.5394806669186005,
+      "seed": 31,
+      "vm": 149797,
+      "wall": 12.35
+    },
+    "early_cadence_w3_s31415": {
+      "arm": "early_cadence_w3",
+      "distinct": 2570,
+      "kill": null,
+      "mean_residual": -0.0020403279513390533,
+      "n_esc": 9,
+      "progress": 5.468392367180821,
+      "seed": 31415,
+      "vm": 149797,
+      "wall": 11.82
+    },
+    "early_cadence_w3_s7": {
+      "arm": "early_cadence_w3",
+      "distinct": 2570,
+      "kill": null,
+      "mean_residual": -0.021114192875226447,
+      "n_esc": 9,
+      "progress": 5.425453068297192,
+      "seed": 7,
+      "vm": 149806,
+      "wall": 11.77
+    },
+    "early_cadence_w3_s99": {
+      "arm": "early_cadence_w3",
+      "distinct": 2656,
+      "kill": null,
+      "mean_residual": -0.004128915582043842,
+      "n_esc": 9,
+      "progress": 5.457018194045232,
+      "seed": 99,
+      "vm": 149750,
+      "wall": 11.99
+    },
+    "late_variance_s12345": {
+      "arm": "late_variance",
+      "distinct": 1353,
+      "kill": null,
+      "mean_residual": 0.004450547366704095,
+      "n_esc": 1,
+      "progress": 5.417819464606364,
+      "seed": 12345,
+      "vm": 149799,
+      "wall": 9.21
+    },
+    "late_variance_s161803": {
+      "arm": "late_variance",
+      "distinct": 1497,
+      "kill": null,
+      "mean_residual": 0.004193179099624032,
+      "n_esc": 4,
+      "progress": 5.41842411456391,
+      "seed": 161803,
+      "vm": 149764,
+      "wall": 9.28
+    },
+    "late_variance_s20260927": {
+      "arm": "late_variance",
+      "distinct": 1444,
+      "kill": null,
+      "mean_residual": 0.004953600194129043,
+      "n_esc": 1,
+      "progress": 5.488046948146997,
+      "seed": 20260927,
+      "vm": 149789,
+      "wall": 9.51
+    },
+    "late_variance_s271828": {
+      "arm": "late_variance",
+      "distinct": 1500,
+      "kill": null,
+      "mean_residual": 0.002946269036180584,
+      "n_esc": 2,
+      "progress": 5.466707923946413,
+      "seed": 271828,
+      "vm": 149793,
+      "wall": 9.35
+    },
+    "late_variance_s31": {
+      "arm": "late_variance",
+      "distinct": 1618,
+      "kill": null,
+      "mean_residual": 0.0035584260331047797,
+      "n_esc": 3,
+      "progress": 5.542527597651804,
+      "seed": 31,
+      "vm": 149797,
+      "wall": 9.68
+    },
+    "late_variance_s31415": {
+      "arm": "late_variance",
+      "distinct": 1672,
+      "kill": null,
+      "mean_residual": 0.002023891748081681,
+      "n_esc": 4,
+      "progress": 5.46823387681792,
+      "seed": 31415,
+      "vm": 149797,
+      "wall": 9.77
+    },
+    "late_variance_s7": {
+      "arm": "late_variance",
+      "distinct": 1635,
+      "kill": null,
+      "mean_residual": -0.004178932663318686,
+      "n_esc": 3,
+      "progress": 5.4263767725840655,
+      "seed": 7,
+      "vm": 149806,
+      "wall": 9.77
+    },
+    "late_variance_s99": {
+      "arm": "late_variance",
+      "distinct": 1687,
+      "kill": null,
+      "mean_residual": 0.002056288267086862,
+      "n_esc": 4,
+      "progress": 5.458977353979668,
+      "seed": 99,
+      "vm": 149750,
+      "wall": 9.64
+    }
+  },
+  "benchmark_scores_claimed": false,
+  "comparability": {
+    "comparable": true,
+    "governor_stops": [],
+    "vm_spread": 0.00037381680306529776
+  },
+  "config_common": {
+    "batch_size": 512,
+    "curriculum_levers": true,
+    "curriculum_window": 10,
+    "eval_every": 20,
+    "heldout_rebuild": false,
+    "heldout_samples": 64,
+    "kill_patience": 9999,
+    "max_prog_len": 2048,
+    "plateau_var_threshold": 0.0001,
+    "prog_len": 32,
+    "progress_eps": 0.001,
+    "reward_subsample": 32,
+    "seq_len": 33
+  },
+  "decision_rules": {
+    "abs_delta_le_noise": "TIMING_DOES_NOT_MATTER",
+    "arm_blocked_if": "governor-stopped or budget not matched",
+    "delta": "mean(early) - mean(late)",
+    "delta_gt_noise": "EARLY_LADDER_PRODUCES_MORE_MARGINAL_PROGRESS",
+    "delta_lt_minus_noise": "EARLY_LADDER_PRODUCES_LESS_MARGINAL_PROGRESS",
+    "noise": "pooled within-arm std across seeds",
+    "reporting_rule": "state the conclusion under EVERY metric; never pick the flattering one"
+  },
+  "determinism_check_vs_committed_run2": {
+    "committed_cadence_w3_progress": 5.48314048803978,
+    "committed_variance_progress": 5.488046948146997,
+    "mine_early": 5.48314048803978,
+    "mine_late": 5.488046948146997,
+    "reproduces_committed_run_exactly": true,
+    "seed": 20260927
+  },
+  "metric_defect_found_before_running": {
+    "consequence": "the raw per-rung quantity is CIRCULAR between arms and cannot decide more-vs-less",
+    "finding": "per-rung progress = -0.004022 + 0.8992 x remaining-drop, Pearson r = 0.9999 (n=17) on the committed receipt"
+  },
+  "metrics": {
+    "primary": "total held-out progress at matched compute (non-circular)",
+    "secondary": "de-circularised per-rung residual against the timing line; caveat recorded: escalation COUNTS differ (9 vs 1-5) so its mean is over different rung sequences"
+  },
+  "n_executions": 150000,
+  "n_seeds_per_arm": 8,
+  "paired_analysis__post_hoc_NOT_preregistered": {
+    "common_mode_sd": 0.04155985378891389,
+    "df": 7,
+    "honesty_note": "this analysis was NOT pre-registered; it is reported alongside the pre-registered rule, and both are stated. The pre-registered rule said 'does not matter'; the correct paired statistic says a small consistent negative effect. The user's conclusion holds either way: the early ladder does NOT produce more.",
+    "mean_delta": -0.0018314221419838406,
+    "n_negative": 7,
+    "n_seeds": 8,
+    "p_two_tailed": 0.015992379665580685,
+    "per_seed_paired_delta": [
+      -0.004906460107217292,
+      -0.0009237042868734946,
+      -0.003046930733203723,
+      -0.001959159934435739,
+      -0.002166191634233705,
+      -0.0017029901142153747,
+      0.00015849036290038754,
+      -0.0001044306885917834
+    ],
+    "sd_delta": 0.0016407491723924178,
+    "se": 0.0005800924330124471,
+    "t": -3.157121240960134,
+    "unpaired_noise_band": 0.04156794993041607,
+    "verdict": "TIMING_MATTERS_NEGATIVELY",
+    "why": "both arms run on the SAME seeds, so the seed effect is COMMON-MODE and cancels in a paired difference; my pre-registered UNPAIRED noise band (pooled within-arm sd) therefore OVERSTATES the uncertainty by ~25.3x"
+  },
+  "paired_analysis_post_hoc_NOT_preregistered": {
+    "common_mode_sd": 0.04155985378891389,
+    "df": 7,
+    "honesty_note": "this analysis was NOT pre-registered; it is reported ALONGSIDE the pre-registered rule, and both are stated. The pre-registered rule said 'does not matter'; the correct paired statistic says a small consistent negative effect. The user's conclusion holds either way: the early ladder does NOT produce more.",
+    "magnitude_pct_of_late": 0.03353706797462473,
+    "mean_delta": -0.0018314221419838406,
+    "n_negative": 7,
+    "n_seeds": 8,
+    "p_two_tailed": 0.015992379665580685,
+    "per_seed_paired_delta": [
+      -0.004906460107217292,
+      -0.0009237042868734946,
+      -0.003046930733203723,
+      -0.001959159934435739,
+      -0.002166191634233705,
+      -0.0017029901142153747,
+      0.00015849036290038754,
+      -0.0001044306885917834
+    ],
+    "sd_delta": 0.0016407491723924178,
+    "se": 0.0005800924330124471,
+    "t": -3.157121240960134,
+    "unpaired_noise_band": 0.04156794993041607,
+    "verdict": "TIMING_MATTERS_NEGATIVELY__SMALL_CONSISTENT_EFFECT",
+    "why": "both arms run on the SAME seeds, so the seed effect is COMMON-MODE and cancels in a paired difference; the pre-registered UNPAIRED noise band (pooled within-arm sd) therefore OVERSTATES the uncertainty by ~25x"
+  },
+  "primary_metric": {
+    "delta": -0.0018314221419837295,
+    "early_per_seed": [
+      5.48314048803978,
+      5.425453068297192,
+      5.5394806669186005,
+      5.457018194045232,
+      5.41565327297213,
+      5.465004933832198,
+      5.468392367180821,
+      5.4183196838753185
+    ],
+    "late_per_seed": [
+      5.488046948146997,
+      5.4263767725840655,
+      5.542527597651804,
+      5.458977353979668,
+      5.417819464606364,
+      5.466707923946413,
+      5.46823387681792,
+      5.41842411456391
+    ],
+    "mean_early": 5.459057834395159,
+    "mean_late": 5.4608892565371425,
+    "noise_band": 0.04156794993041607,
+    "sd_early": 0.041139659330938466,
+    "sd_late": 0.04199187246324558,
+    "verdict": "TIMING_DOES_NOT_MATTER"
+  },
+  "question": "does the EARLY ladder produce MORE per-rung marginal progress than the LATE ladder, beyond the measured cross-arm noise band, at matched compute?",
+  "registered_before_these_arms_ran": true,
+  "residuals_per_arm_seed": {
+    "early_cadence_w3_s12345": [
+      0.009494993488936565,
+      -0.024098572084170322,
+      -0.010790016642745238,
+      -0.0022081088184578886,
+      0.0017837954526990418,
+      0.002953354612251624,
+      0.004856047171522433
+    ],
+    "early_cadence_w3_s161803": [
+      -0.08081684446793336,
+      -0.0668511490454764,
+      -0.04241834204762536,
+      -0.019714461989843307,
+      -0.0029131144700143864,
+      0.0007509720587177363,
+      0.002330543308981398,
+      0.0033639109466808634,
+      0.004110008085134446
+    ],
+    "early_cadence_w3_s20260927": [
+      -0.0015361990942381887,
+      -0.03050256629697276,
+      -0.016301673328247217,
+      -0.005455352675861561,
+      0.00018925285049249153,
+      0.0020807808081915622,
+      0.004056651154605975,
+      0.003800102258009074,
+      0.004046652717095811
+    ],
+    "early_cadence_w3_s271828": [
+      -0.02762769435550405,
+      -0.04233534454391086,
+      -0.016150316638085527,
+      -0.005673904858301122,
+      -0.0009499805683648496,
+      0.0012463643106394072,
+      0.0032859494144888853,
+      0.003755673409762044,
+      0.004059933984195339
+    ],
+    "early_cadence_w3_s31": [
+      -0.020036686881586885,
+      -0.03654996752293832,
+      -0.013450357465194587,
+      -0.004346135022741098,
+      0.0005219373113474531,
+      0.0021687900039035375,
+      0.003910192685880038,
+      0.0034548237949044483,
+      0.00408280089357905
+    ],
+    "early_cadence_w3_s31415": [
+      0.011669591778328936,
+      -0.02594135431021452,
+      -0.013836565263719208,
+      -0.0036049226046977467,
+      0.00022514064329247005,
+      0.001397764522170373,
+      0.0037097232365941204,
+      0.003985506328538419,
+      0.004032164107655676
+    ],
+    "early_cadence_w3_s7": [
+      -0.04856491559795906,
+      -0.05892795134792256,
+      -0.03757150696403658,
+      -0.022943323292034107,
+      -0.007846451481478067,
+      0.000315525098610471,
+      0.0023731485961116005,
+      0.004251931986896706
+    ],
+    "early_cadence_w3_s99": [
+      0.00402924476871247,
+      -0.03183486395237692,
+      -0.015692935606091973,
+      -0.005614762632331887,
+      -0.000371358170366912,
+      0.0014895281669979627,
+      0.0035435820462632666,
+      0.00317588604138499,
+      0.004115439099414418
+    ],
+    "late_variance_s12345": [
+      0.004450547366704095
+    ],
+    "late_variance_s161803": [
+      0.004081718792435105,
+      0.0044438439085012615,
+      0.0040539745979357306
+    ],
+    "late_variance_s20260927": [
+      0.004953600194129043
+    ],
+    "late_variance_s271828": [
+      0.0014991060262985693,
+      0.004393432046062599
+    ],
+    "late_variance_s31": [
+      0.0034767878468232255,
+      0.003066299173187902,
+      0.004132191079303212
+    ],
+    "late_variance_s31415": [
+      -0.0012129665700168959,
+      0.002793640006805177,
+      0.002300118519173631,
+      0.004214775036364813
+    ],
+    "late_variance_s7": [
+      -0.021996363863102084,
+      0.005265825474922301,
+      0.004193740398223724
+    ],
+    "late_variance_s99": [
+      -0.0034197453597231663,
+      0.0042934960096349,
+      0.0032446476518578392,
+      0.004106754766577876
+    ]
+  },
+  "schema": "henri.falsification.timing.v3",
+  "secondary_metric": {
+    "caveat": "escalation counts differ; mean is over different rung sequences",
+    "delta": -0.011543734655150784,
+    "early_residuals": [
+      -0.004402483511880535,
+      -0.021114192875226447,
+      -0.006693844689205151,
+      -0.004128915582043842,
+      -0.002572643831423398,
+      -0.008932146649453415,
+      -0.0020403279513390533,
+      -0.022462053069042042
+    ],
+    "late_residuals": [
+      0.004953600194129043,
+      -0.004178932663318686,
+      0.0035584260331047797,
+      0.002056288267086862,
+      0.004450547366704095,
+      0.002946269036180584,
+      0.002023891748081681,
+      0.004193179099624032
+    ],
+    "mean_early": -0.009043326019951736,
+    "mean_late": 0.0025004086351990487,
+    "noise_band": 0.0061350504141794516,
+    "sd_early": 0.008175757236249288,
+    "sd_late": 0.002904252189973237,
+    "verdict": "EARLY_LADDER_PRODUCES_LESS"
+  },
+  "seed_dependence_observed": {
+    "falsifies": "any claim that this pipeline is seed-independent at the experiment config",
+    "note": "the seed DOES move progress (sd 0.0420), so a real noise band exists and the 'beyond noise' framing is not vacuous -- but it is COMMON-MODE across arms, which is why the paired analysis is the appropriate one",
+    "per_seed_range_late": [
+      5.417819464606364,
+      5.542527597651804
+    ],
+    "status": "OBSERVED",
+    "within_arm_sd_early": 0.041139659330938466,
+    "within_arm_sd_late": 0.04199187246324558
+  },
+  "seed_dependence_verified_before_running": {
+    "consequence": "the noise band is REAL and measurable -- a reference block asserting 'seed-independent, band zero' is FALSIFIED here",
+    "evidence": "n=4 run: progress differs across seeds (5.488047 / 5.426377 / 5.542528 / 5.458977); learner params differ across learner seeds by 5.39e-01 at init; held-out sets differ byte-wise",
+    "status": "OBSERVED"
+  },
+  "seeds": [
+    20260927,
+    7,
+    31,
+    99,
+    12345,
+    271828,
+    31415,
+    161803
+  ],
+  "summary": {
+    "metrics_agreeing_on_not_more": 2,
+    "robust_conclusion": "the early ladder does NOT produce more per-rung marginal progress",
+    "user_conclusion": "HOLDS"
+  },
+  "timing_line": {
+    "intercept": -0.004022118453434392,
+    "n": 17,
+    "pearson_r": 0.9998580484556338,
+    "slope": 0.899216598848669
+  },
+  "utc": "2026-09-27",
+  "verdict": "TIMING_MATTERS_NEGATIVELY__SMALL_DETERMINISTIC_COST",
+  "verdict_printed_by_script": "TIMING_DOES_NOT_MATTER",
+  "verdict_reason": "PRE-REGISTERED (unpaired) rule: |delta| 0.001831 <= noise 0.041568 -> TIMING_DOES_NOT_MATTER. POST-HOC PAIRED analysis (the design is paired; both arms share seeds): mean paired delta -0.001831422, t = -3.157, df = 7, two-tailed p = 0.01599, 7/8 seeds negative -> a small CONSISTENT negative effect. The seed effect is common-mode (sd 0.041560) and cancels in the paired difference, so the unpaired band overstated uncertainty by ~25.3x. The user's conclusion holds under BOTH: the early ladder does NOT produce more per-rung marginal progress."
+}
