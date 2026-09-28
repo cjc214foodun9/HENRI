@@ -211,6 +211,12 @@
     "noise": "pooled within-arm std across seeds",
     "reporting_rule": "state the conclusion under EVERY metric; never pick the flattering one"
   },
+  "default_config_discrepancy_resolved": {
+    "probe_a": "h50, 20k vm, DEFAULT config -> reported identical progress",
+    "probe_b": "experiment config, 150k vm x 8 seeds -> progress sd 0.0420, values differ",
+    "resolution": "the probes used different configs (heldout_samples 256 vs 64, eval_every 50 vs 20, kill_patience 3 vs 9999); only the experiment config governs this run, and there the seed moves progress",
+    "verdict": "probe_a was a default-config artifact, not a property of the experiment"
+  },
   "determinism_check_vs_committed_run2": {
     "committed_cadence_w3_progress": 5.48314048803978,
     "committed_variance_progress": 5.488046948146997,
@@ -275,6 +281,12 @@
     ],
     "sd_delta": 0.0016407491723924178,
     "se": 0.0005800924330124471,
+    "sign_test": {
+      "n_negative": 7,
+      "n_seeds": 8,
+      "p_two_tailed_exact": 0.0703125
+    },
+    "significance_note": "the paired t-test gives p=0.01599 (normality assumed); the distribution-free sign test gives p=0.07031. Significance is MARGINAL and test-dependent, so the direction (7/8 negative, magnitude 0.0335% of progress) is the robust statement, not the p-value.",
     "t": -3.157121240960134,
     "unpaired_noise_band": 0.04156794993041607,
     "verdict": "TIMING_MATTERS_NEGATIVELY__SMALL_CONSISTENT_EFFECT",
@@ -466,6 +478,37 @@
     "sd_late": 0.002904252189973237,
     "verdict": "EARLY_LADDER_PRODUCES_LESS"
   },
+  "seed_dependence": {
+    "common_mode_sd": 0.04155985378891389,
+    "note": "the seed DOES move progress, so a noise band exists -- but it is COMMON-MODE across the two arms and cancels in a paired difference, which is why the paired statistic is the appropriate one. A reference block asserting seed-independence with std 0.000000 is contradicted by these values.",
+    "paired_delta_sd": 0.0016407491723924178,
+    "per_seed_early": [
+      5.48314048803978,
+      5.425453068297192,
+      5.5394806669186005,
+      5.457018194045232,
+      5.41565327297213,
+      5.465004933832198,
+      5.468392367180821,
+      5.4183196838753185
+    ],
+    "per_seed_late": [
+      5.488046948146997,
+      5.4263767725840655,
+      5.542527597651804,
+      5.458977353979668,
+      5.417819464606364,
+      5.466707923946413,
+      5.46823387681792,
+      5.41842411456391
+    ],
+    "real_noise_band": true,
+    "status": "OBSERVED",
+    "within_arm_sd": {
+      "early": 0.041139659330938466,
+      "late": 0.04199187246324558
+    }
+  },
   "seed_dependence_observed": {
     "falsifies": "any claim that this pipeline is seed-independent at the experiment config",
     "note": "the seed DOES move progress (sd 0.0420), so a real noise band exists and the 'beyond noise' framing is not vacuous -- but it is COMMON-MODE across arms, which is why the paired analysis is the appropriate one",
@@ -505,6 +548,7 @@
   },
   "utc": "2026-09-27",
   "verdict": "TIMING_MATTERS_NEGATIVELY__SMALL_DETERMINISTIC_COST",
+  "verdict_precise": "TIMING_DOES_NOT_HELP__SMALL_CONSISTENT_NEGATIVE_DIRECTION",
   "verdict_printed_by_script": "TIMING_DOES_NOT_MATTER",
   "verdict_reason": "PRE-REGISTERED (unpaired) rule: |delta| 0.001831 <= noise 0.041568 -> TIMING_DOES_NOT_MATTER. POST-HOC PAIRED analysis (the design is paired; both arms share seeds): mean paired delta -0.001831422, t = -3.157, df = 7, two-tailed p = 0.01599, 7/8 seeds negative -> a small CONSISTENT negative effect. The seed effect is common-mode (sd 0.041560) and cancels in the paired difference, so the unpaired band overstated uncertainty by ~25.3x. The user's conclusion holds under BOTH: the early ladder does NOT produce more per-rung marginal progress."
 }
