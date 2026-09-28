@@ -176,13 +176,24 @@ class SagnacMCTSPlanner:
         k_blocks: int = 8192,
         c_puct: float = 1.414,
         tau_veto: float = 0.35,
-        device: str = "cpu"
+        device: str = "cpu",
+        koopman_leaf: Optional[Any] = None,
     ):
         self.d_model = d_model
         self.k_blocks = k_blocks
         self.c_puct = c_puct
         self.tau_veto = tau_veto
         self.device = device
+
+        # ---- KOOPMAN LEAF CHANNEL (directive 4), DEFAULT OFF.
+        # MEASURED GAP THIS CLOSES: this file contained `koopman` = 0, `rollout` = 0,
+        # `simulate` = 0, `reward` = 0, and `henri_action_koopman.py` had no caller
+        # outside its own tests -- the world model existed and never reached search, so
+        # the planner judged ONE step and never a TRAJECTORY.
+        # The channel is injected, never constructed here, so the planner cannot
+        # acquire a hidden dependency and the caller owns the operator mapping.
+        # FAIL-OPEN: it only ever ADDS a veto (see KoopmanLeafChannel).
+        self.koopman_leaf = koopman_leaf
         self.vision_encoder = HENRIVisionEncoder(d_model=d_model, k_blocks=k_blocks, device=device)
         self.codec = qFHRREpistemicCodec(d_model=d_model, device=device)
         self.task_compiler = HolographicTaskFunctorCompiler(self.codec)
@@ -745,6 +756,23 @@ class SagnacMCTSPlanner:
                             child_node.delta_observational = _obs_stress
                             if _obs_stress > _obs_tau:
                                 child_node.is_pruned = True
+
+                    # ---- KOOPMAN LEAF CHANNEL (directive 4, DEFAULT OFF).
+                    # Rolls the child's primitive forward `horizon` steps in the latent
+                    # wave domain and scores the landing against the INDUCED GOAL
+                    # (reference_wave), never the held-out target -- the same
+                    # answer-coupling contract every other channel here obeys.
+                    # FAIL-OPEN and ADD-ONLY: an anomaly leaves the child untouched.
+                    if self.koopman_leaf is not None and not child_node.is_pruned:
+                        try:
+                            _kv = self.koopman_leaf.rollout_op(op, pred_wave, reference_wave)
+                            child_node.delta_rollout = _kv.score
+                            child_node.rollout_status = str(_kv.reason)
+                            if _kv.veto:
+                                child_node.is_pruned = True
+                        except Exception as _kexc:      # never let this channel crash search
+                            child_node.delta_rollout = None
+                            child_node.rollout_status = "UNAVAILABLE:%s" % type(_kexc).__name__
 
                     node.children.append(child_node)
 
