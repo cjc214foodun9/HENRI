@@ -80,7 +80,13 @@ RUNG_MUTATION: Dict[str, Tuple[str, float, float]] = {
     "topological_obstacle": ("add", 1.0, 4.0),
     "multiscale_nesting": ("add", 1.0, 5.0),
     "distractor_noise": ("add", 1.0, 8.0),
-    "grid_growth": ("add", 4.0, 64.0),
+    # DEFECT FIXED 2026-09-27: the cap was 64.0 while the DRIVER deploys
+    # grid_growth = float(tape_size) = 256.0, so `after = min(256+step, 64) = 64`
+    # and `_advance`'s `if after <= before: continue` SKIPPED this rung forever.
+    # Rung 5 could not fire at all. Measured by h15_discrim.py. The cap is now
+    # above any deployed tape size, and the mode is multiplicative so the lever
+    # doubles the tape from the deployment value (256 -> 512 -> ... -> 4096).
+    "grid_growth": ("mul", 2.0, 4096.0),
 }
 
 

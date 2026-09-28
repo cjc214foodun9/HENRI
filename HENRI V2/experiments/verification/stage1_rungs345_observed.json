@@ -1,0 +1,567 @@
+{
+  "NOT_PROMOTION": true,
+  "alphabet_size": 18,
+  "bank_size": 4096,
+  "budget_learner_tokens": 14860989,
+  "budget_reward_evaluations": 28160,
+  "budget_vm_executions": 450333,
+  "control_off_arm": {
+    "budget_vm_executions": 2000157,
+    "distinct_outputs": 6574,
+    "heldout_progress": 5.493928194081468,
+    "rungs_exercised": null,
+    "tape_size_applied": 256,
+    "token_identity_holds": null,
+    "wall_seconds": 127.18
+  },
+  "curriculum_escalate": false,
+  "curriculum_events": [
+    {
+      "after": 48.0,
+      "before": 32.0,
+      "capped": false,
+      "escalations_since_progress": 1,
+      "event": "ESCALATE",
+      "heldout_at_escalation": 0.09952290893352511,
+      "mode": "mul",
+      "round": 169,
+      "rung": "prog_len",
+      "sigma_sq": 5.318319967175072e-05,
+      "spec": {
+        "distractor_noise": 0.0,
+        "grid_growth": 256.0,
+        "multiscale_nesting": 1.0,
+        "prog_len": 48.0,
+        "topological_obstacle": 0.0
+      }
+    },
+    {
+      "after": 1.0,
+      "before": 0.0,
+      "capped": false,
+      "escalations_since_progress": 2,
+      "event": "ESCALATE",
+      "heldout_at_escalation": 0.09015299033148054,
+      "mode": "add",
+      "round": 299,
+      "rung": "topological_obstacle",
+      "sigma_sq": 9.4518526618422e-05,
+      "spec": {
+        "distractor_noise": 0.0,
+        "grid_growth": 256.0,
+        "multiscale_nesting": 1.0,
+        "prog_len": 48.0,
+        "topological_obstacle": 1.0
+      }
+    },
+    {
+      "after": 2.0,
+      "before": 1.0,
+      "capped": false,
+      "escalations_since_progress": 3,
+      "event": "ESCALATE",
+      "heldout_at_escalation": 0.08841749883500424,
+      "mode": "add",
+      "round": 389,
+      "rung": "multiscale_nesting",
+      "sigma_sq": 8.889329123050147e-05,
+      "spec": {
+        "distractor_noise": 0.0,
+        "grid_growth": 256.0,
+        "multiscale_nesting": 2.0,
+        "prog_len": 48.0,
+        "topological_obstacle": 1.0
+      }
+    },
+    {
+      "after": 1.0,
+      "before": 0.0,
+      "capped": false,
+      "escalations_since_progress": 4,
+      "event": "ESCALATE",
+      "heldout_at_escalation": 0.0897536543706432,
+      "mode": "add",
+      "round": 429,
+      "rung": "distractor_noise",
+      "sigma_sq": 9.226591542531843e-05,
+      "spec": {
+        "distractor_noise": 1.0,
+        "grid_growth": 256.0,
+        "multiscale_nesting": 2.0,
+        "prog_len": 48.0,
+        "topological_obstacle": 1.0
+      }
+    },
+    {
+      "after": 512.0,
+      "before": 256.0,
+      "capped": false,
+      "escalations_since_progress": 5,
+      "event": "ESCALATE",
+      "heldout_at_escalation": 0.08969761043133628,
+      "mode": "mul",
+      "round": 479,
+      "rung": "grid_growth",
+      "sigma_sq": 8.455567411401008e-05,
+      "spec": {
+        "distractor_noise": 1.0,
+        "grid_growth": 512.0,
+        "multiscale_nesting": 2.0,
+        "prog_len": 48.0,
+        "topological_obstacle": 1.0
+      },
+      "tape_size_after": 512,
+      "tape_size_before": 256
+    },
+    {
+      "after": 72.0,
+      "before": 48.0,
+      "capped": false,
+      "escalations_since_progress": 6,
+      "event": "ESCALATE",
+      "heldout_at_escalation": 0.08815937740797698,
+      "mode": "mul",
+      "round": 749,
+      "rung": "prog_len",
+      "sigma_sq": 8.518953681562731e-05,
+      "spec": {
+        "distractor_noise": 1.0,
+        "grid_growth": 512.0,
+        "multiscale_nesting": 2.0,
+        "prog_len": 72.0,
+        "topological_obstacle": 1.0
+      }
+    },
+    {
+      "after": 2.0,
+      "before": 1.0,
+      "capped": false,
+      "escalations_since_progress": 7,
+      "event": "ESCALATE",
+      "heldout_at_escalation": 0.08934187501485626,
+      "mode": "add",
+      "round": 759,
+      "rung": "topological_obstacle",
+      "sigma_sq": 6.75322238450478e-05,
+      "spec": {
+        "distractor_noise": 1.0,
+        "grid_growth": 512.0,
+        "multiscale_nesting": 2.0,
+        "prog_len": 72.0,
+        "topological_obstacle": 2.0
+      }
+    },
+    {
+      "after": 3.0,
+      "before": 2.0,
+      "capped": false,
+      "escalations_since_progress": 8,
+      "event": "ESCALATE",
+      "heldout_at_escalation": 0.0897436429686181,
+      "mode": "add",
+      "round": 849,
+      "rung": "multiscale_nesting",
+      "sigma_sq": 9.705802954550973e-05,
+      "spec": {
+        "distractor_noise": 1.0,
+        "grid_growth": 512.0,
+        "multiscale_nesting": 3.0,
+        "prog_len": 72.0,
+        "topological_obstacle": 2.0
+      }
+    },
+    {
+      "event": "KILL",
+      "events": 9,
+      "heldout_at_escalation": 0.09064085058296245,
+      "last_escalation": {
+        "after": 2.0,
+        "before": 1.0,
+        "capped": false,
+        "escalations_since_progress": 9,
+        "event": "ESCALATE",
+        "mode": "add",
+        "rung": "distractor_noise",
+        "sigma_sq": 5.454018883938853e-05,
+        "spec": {
+          "distractor_noise": 2.0,
+          "grid_growth": 512.0,
+          "multiscale_nesting": 3.0,
+          "prog_len": 72.0,
+          "topological_obstacle": 2.0
+        }
+      },
+      "reason": "no held-out progress across 9 escalations",
+      "round": 879,
+      "spec": {
+        "distractor_noise": 2.0,
+        "grid_growth": 512.0,
+        "multiscale_nesting": 3.0,
+        "prog_len": 72.0,
+        "topological_obstacle": 2.0
+      }
+    }
+  ],
+  "curriculum_kill_reason": "no held-out progress across 9 escalations",
+  "curriculum_levers": true,
+  "curriculum_spec": {
+    "barrier_spans": 2,
+    "distractor_positions": 1,
+    "max_len_multiple": 8,
+    "nesting_repetitions": 4,
+    "neutral": false,
+    "spec": {
+      "distractor_noise": 1.0,
+      "grid_growth": 512.0,
+      "multiscale_nesting": 3.0,
+      "prog_len": 72.0,
+      "topological_obstacle": 2.0
+    },
+    "tape_size": 512
+  },
+  "curriculum_window": 10,
+  "distinct_outputs": 5342,
+  "evidence_class": "OBSERVED",
+  "exec_per_sec": 13381.6,
+  "final_loss_NOT_PROMOTION": 0.203027,
+  "final_prog_len": 72,
+  "first_loss_NOT_PROMOTION": 5.577675,
+  "gate": "STAGE0_HELDOUT_SEEDING",
+  "harness_defect_in_this_run": "h17_run.py wrote the receipt from run_seeding()'s return value; the keys rungs_exercised / rungs_not_exercised / token_identity_holds are added by main(), so they were absent. They are DERIVED here from the event log and the token budgets, not invented.",
+  "heldout_curve": [
+    [
+      0,
+      5.578327444837498
+    ],
+    [
+      20,
+      4.214419786139314
+    ],
+    [
+      40,
+      1.4756931957264388
+    ],
+    [
+      60,
+      0.39390173031080095
+    ],
+    [
+      80,
+      0.1875639300935501
+    ],
+    [
+      100,
+      0.13947157610558691
+    ],
+    [
+      120,
+      0.11937816887776968
+    ],
+    [
+      140,
+      0.10874585435857358
+    ],
+    [
+      160,
+      0.10123050595906997
+    ],
+    [
+      180,
+      0.09813870707383998
+    ],
+    [
+      200,
+      0.09555324034755902
+    ],
+    [
+      220,
+      0.09355470345602504
+    ],
+    [
+      240,
+      0.09202032086871345
+    ],
+    [
+      260,
+      0.09173402561619305
+    ],
+    [
+      280,
+      0.09028049669050121
+    ],
+    [
+      300,
+      0.09000262590778688
+    ],
+    [
+      320,
+      0.0888591833144687
+    ],
+    [
+      340,
+      0.08885534055342387
+    ],
+    [
+      360,
+      0.08891502466192228
+    ],
+    [
+      380,
+      0.08855026095906851
+    ],
+    [
+      400,
+      0.08897770156974419
+    ],
+    [
+      420,
+      0.08892727617375638
+    ],
+    [
+      440,
+      0.08943323363632938
+    ],
+    [
+      460,
+      0.08947312016516656
+    ],
+    [
+      480,
+      0.08979069137827518
+    ],
+    [
+      500,
+      0.08955062210449499
+    ],
+    [
+      520,
+      0.08904733633012187
+    ],
+    [
+      540,
+      0.08939969018199766
+    ],
+    [
+      560,
+      0.08958655536687231
+    ],
+    [
+      580,
+      0.08904426384054748
+    ],
+    [
+      600,
+      0.08838321993351551
+    ],
+    [
+      620,
+      0.0888333578104378
+    ],
+    [
+      640,
+      0.08827000842753704
+    ],
+    [
+      660,
+      0.08818378086270516
+    ],
+    [
+      680,
+      0.08900973365931988
+    ],
+    [
+      700,
+      0.08817770939805174
+    ],
+    [
+      720,
+      0.08801021718718269
+    ],
+    [
+      740,
+      0.08831713162683336
+    ],
+    [
+      760,
+      0.08935543360009733
+    ],
+    [
+      780,
+      0.08925945058274552
+    ],
+    [
+      800,
+      0.08905529076964966
+    ],
+    [
+      820,
+      0.0899119557725474
+    ],
+    [
+      840,
+      0.08976717058117811
+    ],
+    [
+      860,
+      0.0911922697832178
+    ]
+  ],
+  "heldout_loss_first": 5.578327444837498,
+  "heldout_loss_last": 0.0911922697832178,
+  "heldout_progress": 5.487135175054281,
+  "heldout_samples": 64,
+  "honest_boundary": "PROMOTION IS GATED ON heldout_progress ONLY. final_loss and reward_mean are recorded but are NOT promotion signals (a training-loss or reward gate is satisfiable by memorisation). ICL emergence is NOT tested here.",
+  "initial_prog_len": 32,
+  "learner_tokens_per_sec": 441592.6,
+  "n_executions_requested": 2000000,
+  "per_rung_progress": [
+    {
+      "heldout_after": 0.09015299033148054,
+      "heldout_before": 0.09952290893352511,
+      "progress": 0.009369918602044572,
+      "round": 169,
+      "rung": "prog_len",
+      "value_after": 48.0
+    },
+    {
+      "heldout_after": 0.08841749883500424,
+      "heldout_before": 0.09015299033148054,
+      "progress": 0.0017354914964762963,
+      "round": 299,
+      "rung": "topological_obstacle",
+      "value_after": 1.0
+    },
+    {
+      "heldout_after": 0.0897536543706432,
+      "heldout_before": 0.08841749883500424,
+      "progress": -0.0013361555356389554,
+      "round": 389,
+      "rung": "multiscale_nesting",
+      "value_after": 2.0
+    },
+    {
+      "heldout_after": 0.08969761043133628,
+      "heldout_before": 0.0897536543706432,
+      "progress": 5.604393930691565e-05,
+      "round": 429,
+      "rung": "distractor_noise",
+      "value_after": 1.0
+    },
+    {
+      "heldout_after": 0.08815937740797698,
+      "heldout_before": 0.08969761043133628,
+      "progress": 0.0015382330233593006,
+      "round": 479,
+      "rung": "grid_growth",
+      "value_after": 512.0
+    },
+    {
+      "heldout_after": 0.08934187501485626,
+      "heldout_before": 0.08815937740797698,
+      "progress": -0.0011824976068792736,
+      "round": 749,
+      "rung": "prog_len",
+      "value_after": 72.0
+    },
+    {
+      "heldout_after": 0.0897436429686181,
+      "heldout_before": 0.08934187501485626,
+      "progress": -0.0004017679537618446,
+      "round": 759,
+      "rung": "topological_obstacle",
+      "value_after": 2.0
+    },
+    {
+      "heldout_after": 0.0911922697832178,
+      "heldout_before": 0.0897436429686181,
+      "progress": -0.0014486268145997017,
+      "round": 849,
+      "rung": "multiscale_nesting",
+      "value_after": 3.0
+    }
+  ],
+  "per_rung_progress_basis": "heldout_at_escalation is a FRESH held-out reading taken AT each escalation point; progress = heldout_before - heldout_after. Positive => the rung was followed by held-out improvement. This is the per-rung attribution the pre-registered bar requires.",
+  "plateau_var_threshold": 0.0001,
+  "pre_registration": {
+    "amendment_semantic_rungs": "recorded BLOCKED (no emitter on this substrate)",
+    "bar": "all five rungs fire AND per-rung progress stays positive after rung 2",
+    "baseline": {
+      "escalations_since_progress": 2,
+      "heldout_progress": 5.449343054704964,
+      "patience_then": 3,
+      "receipt": "stage1_curriculum_governed_observed.json",
+      "rungs_exercised": [
+        "prog_len",
+        "topological_obstacle"
+      ]
+    },
+    "deviation_from_deployed": "kill_patience raised 3 -> 9 so the run can reach rung 5; the KILL's own function is NOT re-proven here",
+    "per_rung_progress_mean_early": 0.0023802861344699375,
+    "per_rung_progress_mean_late": -0.0002976263468931102,
+    "question": "does held-out progress continue past the rung-1/2 plateau with all five ladder rungs active?",
+    "still_true": {
+      "all_five_rungs_fired": true,
+      "fired_order": [
+        "prog_len",
+        "topological_obstacle",
+        "multiscale_nesting",
+        "distractor_noise",
+        "grid_growth"
+      ],
+      "generator_entropy_4of4_levers_live": true,
+      "grid_growth_reaches_vm": [
+        {
+          "round": 479,
+          "tape_size": 512
+        }
+      ],
+      "token_identity_exact": true
+    },
+    "verdict": "BLOCKED__BAR_UNREACHABLE_BY_CONSTRUCTION",
+    "verdict_reason": "The escalation trigger (sigma^2 < 1e-4) fires only AFTER the learner has converged: held-out was 0.0995 at the first escalation out of a 5.5783 start (99.85% of the total drop already spent), so every per-rung delta measures noise around a floor. The bar 'progress continues past the rung-1/2 plateau' cannot be reached on this harness."
+  },
+  "purpose": "local token accumulation + HELD-OUT curriculum measurement",
+  "reward_evals_per_sec": 836.8,
+  "reward_mean_NOT_PROMOTION": 0.0011945217,
+  "rungs_exercised": [
+    "prog_len",
+    "topological_obstacle",
+    "multiscale_nesting",
+    "distractor_noise",
+    "grid_growth"
+  ],
+  "rungs_not_exercised": [],
+  "schema": "henri.stage1.rungs345.v1",
+  "seed": 20260927,
+  "semantic_rungs": {
+    "evidence": "grep of henri_curriculum_env.py and henri_curriculum_governor.py: jordan/interior/contour occurrences = 0; the env imports neither henri_scene_binder nor henri_action_koopman; the learner consumes byte sequences, not grids",
+    "requested": [
+      "rung3_jordan_masks",
+      "rung4_scene_binding",
+      "rung5_causal_graphs"
+    ],
+    "status": "BLOCKED__NO_EMITTER_ON_THIS_SUBSTRATE",
+    "tested_instead": [
+      "prog_len",
+      "topological_obstacle",
+      "multiscale_nesting",
+      "distractor_noise",
+      "grid_growth"
+    ]
+  },
+  "shard_bytes": 0,
+  "shard_dir": null,
+  "shard_files": 0,
+  "shard_tokens_written": 0,
+  "tape_size_applied": 512,
+  "tape_size_history": [
+    {
+      "round": 479,
+      "tape_size": 512
+    }
+  ],
+  "timeout_rate": 0.0458,
+  "token_identity_holds": true,
+  "wall_seconds": 33.65,
+  "wall_seconds_on": 33.66
+}

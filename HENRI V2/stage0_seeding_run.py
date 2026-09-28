@@ -226,18 +226,27 @@ def run_seeding(
     # never read, i.e. the mechanism did not exist. With this flag ON,
     # sampling routes through henri_curriculum_env using the governor spec.
     #
-    # grid_growth is consumed ONCE, here. Mid-run escalation of the tape size
-    # is deliberately NOT applied: it would change the machine between held-out
-    # measurements and break comparability. tape_size_applied records the choice.
+    # grid_growth is consumed here AND re-applied when the governor escalates it.
+    # DEFECT FIXED 2026-09-27: the first form applied it ONCE and never again, so
+    # rung 5 could change `_spec["grid_growth"]` without ever reaching the VM --
+    # a dead store, on top of a cap (64) below the deployed value (256) that made
+    # the rung un-fireable. The rung now REBUILDS the VM.
+    # COMPARABILITY CAVEAT (recorded in the receipt): the held-out set is built once
+    # at the INITIAL prog_len and is never re-drawn, so every held-out reading is
+    # taken against the SAME fixed target tensors while the VM grows underneath.
+    # `tape_size_history` records each change.
     _gov = None
     _spec = None
     _spec_report = None
     kill_reason: "str | None" = None
+    G_LADDER_NAMES = None
     _tape_size = 256
+    tape_size_history: list[dict] = []
     if curriculum_levers:
         from henri_curriculum_env import (sample_program_from_spec, spec_report,
                                           tape_size_from_spec)
-        from henri_curriculum_governor import CurriculumGovernor, GovernorConfig
+        from henri_curriculum_governor import (CurriculumGovernor, GovernorConfig,
+                                               LADDER as G_LADDER_NAMES)
         _gov = CurriculumGovernor(GovernorConfig(
             window=curriculum_window, var_threshold=plateau_var_threshold,
             progress_eps=progress_eps, kill_patience=kill_patience))
@@ -406,10 +415,32 @@ def run_seeding(
                 _ev = _gov.observe(loss_val,
                                  heldout=(heldout_last if _eval_this_round else None))
                 if _ev is not None:
+                    # PER-RUNG ATTRIBUTION (the pre-registered bar needs it): take a
+                    # FRESH held-out reading AT the escalation point. Each rung then
+                    # carries the level measured immediately BEFORE that rung takes
+                    # effect, so per-rung progress is a difference of consecutive
+                    # readings and no rung can be credited with progress it did not
+                    # cause. Measured defect this closes: the committed receipt had
+                    # per_rung=0 / rung_progress=0 -- no per-rung attribution at all.
+                    with torch.no_grad():
+                        _h_at = float(learner.loss(heldout_ids))
+                    _ev["heldout_at_escalation"] = _h_at
+                    _ev["round"] = int(rnd)
                     curriculum_events.append(_ev)
                     if _ev.get("event") == "ESCALATE":
                         _spec = _ev["spec"]
                         _cur_prog_len = int(_spec["prog_len"])
+                        # rung 5 -> rebuild the VM so the change REACHES the machine
+                        _new_tape = tape_size_from_spec(_spec, default=256)
+                        if _new_tape != _tape_size:
+                            _ev["tape_size_before"] = int(_tape_size)
+                            _ev["tape_size_after"] = int(_new_tape)
+                            _tape_size = int(_new_tape)
+                            vm = CircularTapeVM(VMConfig(tape_size=_tape_size,
+                                                         max_steps=512,
+                                                         max_output=seq_len - 1))
+                            tape_size_history.append({"round": int(rnd),
+                                                      "tape_size": int(_tape_size)})
                         _spec_report = spec_report(_spec)
                     elif _ev.get("event") == "KILL":
                         kill_reason = str(_ev.get("reason"))
@@ -445,6 +476,23 @@ def run_seeding(
         if (heldout_first is not None and heldout_last is not None)
         else None
     )
+    # ---- PER-RUNG ATTRIBUTION (pre-registered bar): pair each escalation with the
+    # held-out reading before it and the reading after it (next escalation, or the
+    # end of the run). progress = before - after, so a POSITIVE value means the rung
+    # was followed by held-out improvement.
+    _escal = [e for e in curriculum_events if isinstance(e, dict)
+              and e.get("event") == "ESCALATE"]
+    per_rung = []
+    for _i, _e in enumerate(_escal):
+        _b = _e.get("heldout_at_escalation")
+        _a = (_escal[_i + 1].get("heldout_at_escalation") if _i + 1 < len(_escal)
+              else heldout_last)
+        per_rung.append({
+            "rung": _e.get("rung"), "round": _e.get("round"),
+            "value_after": _e.get("after"),
+            "heldout_before": _b, "heldout_after": _a,
+            "progress": ((_b - _a) if (_b is not None and _a is not None) else None),
+        })
     summary = {
         "gate": "STAGE0_HELDOUT_SEEDING",
         "purpose": "local token accumulation + HELD-OUT curriculum measurement",
@@ -469,8 +517,33 @@ def run_seeding(
         "curriculum_events": curriculum_events,
         "curriculum_levers": bool(curriculum_levers),
         "curriculum_spec": _spec_report,
+        "per_rung_progress": per_rung,
+        "per_rung_progress_basis": (
+            "heldout_at_escalation is a FRESH held-out reading taken AT each escalation "
+            "point; progress = heldout_before - heldout_after. Positive => the rung was "
+            "followed by held-out improvement. This is the per-rung attribution the "
+            "pre-registered bar requires."),
         "curriculum_kill_reason": kill_reason,
         "tape_size_applied": int(_tape_size),
+        "tape_size_history": tape_size_history,
+        # ---- PRE-RUN AMENDMENT (recorded BEFORE the run, not after).
+        # The directive named rungs 3-5 SEMANTICALLY (Jordan masks / scene binding /
+        # causal graphs). My own grep measured those emitters ABSENT from this
+        # substrate: jordan/interior/contour = 0 in BOTH the curriculum env and the
+        # governor, and the env imports neither henri_scene_binder nor
+        # henri_action_koopman. The byte-tape VM has no 2-D grid emitter and the
+        # learner consumes byte sequences. So the ladder rungs are the IMPLEMENTED
+        # lever names, and the semantic rungs are recorded BLOCKED -- never relabelled.
+        "semantic_rungs": {
+            "requested": ["rung3_jordan_masks", "rung4_scene_binding",
+                          "rung5_causal_graphs"],
+            "status": "BLOCKED__NO_EMITTER_ON_THIS_SUBSTRATE",
+            "evidence": ("grep of henri_curriculum_env.py and henri_curriculum_governor.py: "
+                         "jordan/interior/contour occurrences = 0; the env imports neither "
+                         "henri_scene_binder nor henri_action_koopman; the learner consumes "
+                         "byte sequences, not grids"),
+            "tested_instead": list(G_LADDER_NAMES or ()),
+        },
         "final_prog_len": int(_cur_prog_len),
         "initial_prog_len": int(prog_len),
         # ---- NOT promotion signals (recorded for diagnosis only)
