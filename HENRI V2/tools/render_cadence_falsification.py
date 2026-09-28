@@ -44,11 +44,15 @@ ax = fig.add_axes([0.055, 0.575, 0.42, 0.30])
 cols = ["#999999", "#cc7722", "#ddaa33", "#228833"]
 b = ax.bar(range(4), fracs, color=cols, width=0.56)
 ax.axhline(0.50, color="red", ls="--", lw=1.5)
-ax.text(3.45, 0.515, "pre-registered bar\nfrac < 0.50", color="red", fontsize=8,
-        ha="right", va="bottom")
+# (the red bar caption moved into the corner legend above, clear of every label)
 ax.axhline(BASE_FRAC, color="#444444", ls=":", lw=1.3)
-ax.text(0.05, BASE_FRAC + 0.018, "committed baseline %.4f" % BASE_FRAC,
-        color="#444444", fontsize=7.8)
+# LAYOUT DEFECT FIXED after vision inspection: both caption lines sat at the same HEIGHT
+# as the first two bar labels (0.9983 and 0.9908 are within 0.02 of the dotted line), so
+# the text collided. The captions are now a corner legend placed ABOVE every label --
+# the highest bar label reaches 1.018, and these sit at axes-fraction 0.975/0.918.
+ax.text(0.012, 0.978, "dotted = committed baseline %.4f   |   red dashed = pre-registered bar  frac < 0.50"
+        % BASE_FRAC, transform=ax.transAxes, color="#444444", fontsize=7.6,
+        ha="left", va="top")
 for i, f in enumerate(fracs):
     ax.text(i, f + 0.02, "%.4f" % f, ha="center", fontsize=9, fontweight="bold")
 ax.set_xticks(range(4)); ax.set_xticklabels([labels[k] for k in order], fontsize=8.2)
