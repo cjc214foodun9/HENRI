@@ -203,6 +203,7 @@ def run_seeding(
     shard_dir: str | None = None,
     shard_rows_per_file: int = 250_000,
     heldout_seed: int = None,
+    heldout_rebuild: bool = False,
     curriculum_escalate: bool = False,
     plateau_var_threshold: float = 1e-4,
     curriculum_window: int = 50,
@@ -221,7 +222,18 @@ def run_seeding(
     are explicitly NOT promotion signals (the old driver docstring records that a
     training-loss/reward-based gate is satisfiable by memorisation).
     """
+    # ---- DEFECT FIXED 2026-09-27: TWO escalation mechanisms existed and BOTH
+    # could be ON at once -- TWO writers to the same knob (prog_len). Measured:
+    # `curriculum_escalate` and `curriculum_levers` each occur 6 times in this
+    # file. A silent double-write makes any escalation experiment unattributable,
+    # so this now FAILS CLOSED rather than running an ambiguous configuration.
     os.makedirs(out_dir, exist_ok=True)
+    if curriculum_escalate and curriculum_levers:
+        raise ValueError(
+            "curriculum_escalate (legacy, prog_len-only) and curriculum_levers "
+            "(governor ladder) are mutually exclusive: running both gives TWO "
+            "writers to prog_len and makes the escalation unattributable. "
+            "Enable exactly one.")
     # ---- CURRICULUM LEVERS (directive 1, NEW flag, default OFF).
     # MEASURED DEFICIT THIS CLOSES: the governor's topological_obstacle,
     # multiscale_nesting, distractor_noise and grid_growth levers occurred
@@ -411,6 +423,15 @@ def run_seeding(
             # ---- 6b. HELD-OUT evaluation (the ONLY promotion signal)
             _eval_this_round = False
             if eval_every > 0 and (rnd % eval_every == 0) and rnd > 0:
+                # DEFECT ADDRESSED 2026-09-27: the held-out set is built ONCE at the
+                # INITIAL prog_len, so as the curriculum raises prog_len the target
+                # goes progressively STALER and per-rung deltas compare against an
+                # out-of-date distribution. `heldout_rebuild` re-derives it at the
+                # CURRENT prog_len. Default OFF keeps every previously committed
+                # number comparable; the mode used is recorded in the receipt.
+                if heldout_rebuild:
+                    heldout_ids = build_heldout(heldout_samples, seed,
+                                                _cur_prog_len, seq_len)
                 with torch.no_grad():
                     h = float(learner.loss(heldout_ids))
                 heldout_last = h
@@ -519,6 +540,11 @@ def run_seeding(
         "heldout_loss_last": heldout_last,
         "heldout_progress": heldout_progress,
         "heldout_samples": heldout_samples,
+        "heldout_rebuild": bool(heldout_rebuild),
+        "heldout_target_note": (
+            "False keeps the target fixed at the INITIAL prog_len so committed "
+            "numbers stay comparable; True re-derives it at the CURRENT prog_len "
+            "so the target cannot go stale as the ladder climbs."),
         "heldout_curve": [[int(r), float(v)] for r, v in heldout_curve],
         "curriculum_escalate": bool(curriculum_escalate),
         "plateau_var_threshold": float(plateau_var_threshold),
@@ -588,6 +614,9 @@ def main() -> int:
     ap.add_argument("--out", default="telemetry/stage0_seeding")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--reward-subsample", type=int, default=64)
+    ap.add_argument("--heldout-rebuild", action="store_true",
+                    help="re-derive the held-out set at the CURRENT prog_len each "
+                         "eval (default OFF: fixed target keeps numbers comparable)")
     ap.add_argument("--heldout-samples", type=int, default=256)
     ap.add_argument("--eval-every", type=int, default=50)
     ap.add_argument("--shard-dir", default=None,
@@ -630,6 +659,7 @@ def main() -> int:
     s = run_seeding(a.n_executions, a.batch_size, a.out, a.seed,
                     reward_subsample=a.reward_subsample,
                     heldout_samples=a.heldout_samples,
+                    heldout_rebuild=bool(a.heldout_rebuild),
                     eval_every=a.eval_every,
                     shard_dir=a.shard_dir,
                     shard_rows_per_file=a.shard_rows_per_file,

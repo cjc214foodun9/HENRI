@@ -34,10 +34,27 @@ import torch
 
 from henri_region_selector import enclosed_regions
 
-BACKGROUND_VALUES: Tuple[int, ...] = (0,)
-CURVE_COLOURS: Tuple[int, ...] = (1, 2, 3, 4)
-FILL_COLOURS: Tuple[int, ...] = (5, 6, 7, 8, 9)
-CUE_COLOUR: int = 10
+# ------------------------------------------------------------------- PALETTE
+# DEFECT FIXED 2026-09-27 (measured). The first palette was invented locally:
+#     bg=(0,)  curve=(1,2,3,4)  fill=(5..9)
+# against the router's PUBLISHED contract:
+#     NOISE_BAND=(0,1,2)  RING_BAND=(3..9)  FILL_BAND=(10..17)
+# The curve band therefore COLLIDED with the router's background band on {1, 2}. A ring
+# drawn in 1 or 2 is BACKGROUND to `henri_region_selector`, so `TopoChannel` could not
+# see the curve, correctly ABSTAINED (cv = 0.0 on every containment task), and the router
+# fell back to a wrong channel. Measured: TOPO cv 0.0000, chosen D4, exact-match False.
+#
+# The bands are now TAKEN FROM THE ROUTER, not restated, so they cannot drift. A test
+# (`test_bands_match_the_router_contract`) pins the agreement.
+from henri_operator_router import (                                       # noqa: E402
+    FILL_BAND as _FILL_BAND,
+    NOISE_BAND as _NOISE_BAND,
+    RING_BAND as _RING_BAND,
+)
+
+BACKGROUND_VALUES: Tuple[int, ...] = tuple(_NOISE_BAND)
+CURVE_COLOURS: Tuple[int, ...] = tuple(_RING_BAND)
+FILL_COLOURS: Tuple[int, ...] = tuple(_FILL_BAND)
 FAMILIES: Tuple[str, ...] = ("containment_fill", "reflection", "two_rings_select")
 
 
@@ -76,18 +93,36 @@ def _interior_of(g: List[List[int]], bg: Sequence[int] = BACKGROUND_VALUES
     return enclosed_regions(g, bg)
 
 
-def make_task(family: str, rng: random.Random, size: int = 11) -> Dict[str, object]:
-    """Build one (input, target) 2-D grid task. Deterministic given `rng`."""
+def make_task(family: str, rng: random.Random, size: int = 11,
+              fill: Optional[int] = None,
+              cue: Optional[int] = None,
+              turns: Optional[int] = None) -> Dict[str, object]:
+    """Build one (input, target) 2-D grid task. Deterministic given `rng`.
+
+    DEFECT FIXED 2026-09-27 (measured). The fill colour was drawn PER TASK. The router's
+    contract is the opposite: `TopoChannel.fit` requires ONE constant fill across every
+    demo --
+        fills.append(next(iter(vals)))
+        ...
+        if not fills or len(set(fills)) != 1: return self        # ABSTAIN
+    With a per-task fill my changed-cell sets were individually perfect (all five region
+    rules at IoU 1.0000) and the channel STILL abstained, because no single fill was
+    consistent across demos. Measured: TOPO cv = 0.0000 vs the router's own fixture at
+    1.0000. The fill (and the two-ring cue) is now drawn ONCE per batch by `make_batch`
+    and passed down, and the router's own docstring states this contract explicitly:
+    "interior filled with a TASK-LEVEL CONSTANT colour".
+    """
     if family not in FAMILIES:
         raise GridTaskError("unknown family %r; expected one of %s" % (family, list(FAMILIES)))
     n = int(size)
     if n < 7:
         raise GridTaskError("size must be >= 7 so a closed curve fits with a border")
+    # the ROUTER's fixtures are square; a non-square grid is not comparable with them
     inp = _blank(n)
 
     if family == "containment_fill":
         colour = rng.choice(CURVE_COLOURS)
-        fill = rng.choice(FILL_COLOURS)
+        fill = int(fill if fill is not None else rng.choice(FILL_COLOURS))
         h = rng.randint(4, n - 2)
         w = rng.randint(4, n - 2)
         r0 = rng.randint(1, n - h - 1)
@@ -126,7 +161,13 @@ def make_task(family: str, rng: random.Random, size: int = 11) -> Dict[str, obje
             mr = r0 if rng.random() < 0.5 else r0 + h - 1
             mc = c0 if rng.random() < 0.5 else c0 + w - 1
             inp[mr][mc] = CURVE_COLOURS[-1] if colour != CURVE_COLOURS[-1] else CURVE_COLOURS[0]
-            rot = rng.randint(1, 3)
+            # the TRANSFORM must be constant across demos (router contract):
+            # `D4Channel.fit` searches ONE (roll, colour-map, D4) candidate for the whole
+            # demo set, exactly as the router's own fixture does (`g, g[::-1]` for every
+            # demo). Measured defect: a per-task `rot` meant no single operator fit the
+            # demos, so the held-out prediction matched only 1 of 4 seeds.
+            _drawn = rng.randint(1, 3)
+            rot = int(turns if turns is not None else _drawn)
             cand = [list(row) for row in zip(*inp[::-1])]
             for _ in range(rot - 1):
                 cand = [list(row) for row in zip(*cand[::-1])]
@@ -138,9 +179,19 @@ def make_task(family: str, rng: random.Random, size: int = 11) -> Dict[str, obje
             raise GridTaskError("reflection could not build a non-identity task")
 
     else:  # two_rings_select
-        c_same = rng.choice(CURVE_COLOURS)
+        # the CUE and the FILL are both TASK-LEVEL CONSTANTS (router contract)
+        # The cue must be the DETERMINISTIC extreme of the two ring colours, because the
+        # selector's only colour rules are `region_max_curve_colour` and
+        # `region_min_curve_colour` (measured: RULE_ORDER). Measured defect: a random cue
+        # meant half the tasks had BOTH the max and the min ring distinct from the cue, no
+        # rule survived, TOPO abstained, and the router fell back to RIDGE, which returns
+        # None for a grid. The cue is now always the MAX of the two ring colours.
+        if cue is not None:
+            c_same = int(cue)
+        else:
+            c_same = CURVE_COLOURS[-1]
         c_other = rng.choice([c for c in CURVE_COLOURS if c != c_same])
-        fill = rng.choice(FILL_COLOURS)
+        fill = int(fill if fill is not None else rng.choice(FILL_COLOURS))
         h, w = 4, 4
         _draw_ring(inp, 1, 1, h, w, c_other)
         _draw_ring(inp, 1, n - w - 1, h, w, c_same)
@@ -164,11 +215,20 @@ def make_task(family: str, rng: random.Random, size: int = 11) -> Dict[str, obje
             "changed_cells": len(changed), "meta": meta}
 
 
-def make_batch(family: str, n_tasks: int, seed: int, size: int = 11
+def make_batch(family: str, n_tasks: int, seed: int, size: int = 12
                ) -> List[Dict[str, object]]:
-    """Deterministic batch: identical seed -> identical tasks."""
+    """Deterministic batch. Identical seed -> identical tasks.
+
+    The FILL (and the two-ring CUE) is drawn ONCE here and applied to EVERY task in the
+    batch, which is the router's documented contract. Size defaults to 12, matching the
+    router's own N_SIDE, so tasks are directly comparable with its fixtures.
+    """
     rng = random.Random(int(seed))
-    return [make_task(family, rng, size=size) for _ in range(int(n_tasks))]
+    fill = rng.choice(FILL_COLOURS) if family != "reflection" else None
+    cue = CURVE_COLOURS[-1] if family == "two_rings_select" else None
+    turns = rng.randint(1, 3) if family == "reflection" else None
+    return [make_task(family, rng, size=size, fill=fill, cue=cue, turns=turns)
+            for _ in range(int(n_tasks))]
 
 
 def encode_task(task: Dict[str, object], encoder=None, binder=None

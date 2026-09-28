@@ -145,6 +145,33 @@ def apply_candidate(g, dx, dy, m, sp):
 
 # ------------------------------------------------------------------ metrics
 def flat(t) -> torch.Tensor:
+    """Flatten any supported encoder output to a 1-D float64 vector.
+
+    DEFECT FIXED 2026-09-27 (measured). `flat()` assumed a TENSOR, so:
+        flat(self.enc.encode(X))  ->  AttributeError: 'tuple' object has no
+                                       attribute 'is_complex'
+    when the encoder was `MultiscaleTopologicalEncoder`, whose `encode(grid)` returns
+    `(list_of_floats, TopologicalFeatures)`. NINE call sites in this module go through
+    `flat(self.enc.encode(...))`, and the encoder contract was implicit and
+    unvalidated, so the router could not be coupled to the very encoder the blueprint
+    names. Fixing it HERE repairs all nine at once -- patching call sites individually
+    is the class of defect where one missed site invalidates the whole run.
+
+    Accepted inputs, in this order:
+        (wave, features) tuple  -> unwrap the wave   (topological encoder)
+        list / sequence         -> as_tensor
+        float32 / float64 tensor-> used as-is
+        complex tensor          -> the real part
+    An unsupported type RAISES: a silent zero would be a fabricated score.
+    """
+    if isinstance(t, tuple) and t:
+        t = t[0]                       # (wave, features) -> wave
+    if isinstance(t, list):
+        t = torch.as_tensor(t, dtype=torch.float64)
+    if not torch.is_tensor(t):
+        raise TypeError(
+            "flat() got %s; expected a tensor, a (wave, features) tuple, or a list"
+            % type(t).__name__)
     if t.is_complex():
         t = t.real
     return t.reshape(-1).to(torch.float64)
