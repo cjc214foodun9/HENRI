@@ -103,3 +103,23 @@ Not achievable as written and **not claimed**: causal attention keys/values (the
 no attention core) and K=64 dream iterations over Koopman adapter weights (the dreamer and
 the Koopman operators are separate, unfitted units). SciCode / ARC-AGI / AAII scoring
 remains **BLOCKED**. No benchmark score is claimed anywhere.
+
+## Curriculum rungs 3-5 falsification (2026-09-27)
+
+Pre-registered question: does held-out progress continue past the rung-1/2 plateau once the
+later rungs are active? Receipt: `HENRI V2/experiments/verification/stage1_rungs345_observed.json`.
+
+| Verdict | `BLOCKED__BAR_UNREACHABLE_BY_CONSTRUCTION` — NOT falsified, NOT confirmed |
+|---|---|
+| Why | the `sigma^2 < 1e-4` trigger fires only AFTER convergence: held-out was 0.0995 at the first escalation out of a 5.5783 start (**99.82 % of the total drop already spent**), so every per-rung delta measures noise around a floor |
+| Still established (`OBSERVED`) | all five rungs fired in ladder order; `grid_growth` reached the machine (tape 256→512); token identity exact `450,333 x 33 = 14,860,989`; 4 of 4 generator levers move the output distribution |
+| Compute result (NOT reasoning) | governed arm reached comparable held-out progress at **4.4x fewer VM executions** (450,333 vs 2,000,157) and 3.8x less wall time |
+| Semantic rungs | `BLOCKED__NO_EMITTER_ON_THIS_SUBSTRATE` — the directive's rungs 3-5 (Jordan masks / scene binding / causal graphs) have **no emitter**: `jordan`/`interior`/`contour` = 0 occurrences in the env and the governor, and the env imports neither `henri_scene_binder` nor `henri_action_koopman`. The tested rungs are the **implemented lever names**, never relabelled |
+| Defects fixed | (1) rung 5 could not fire (cap 64 vs deployed 256 → `continue` forever); (2) rung 5 never reached the VM (tape applied once, pre-loop); (3) no per-rung held-out attribution existed |
+| Probe defect corrected | a unigram-only entropy metric cannot see REPETITION (`base * 2**(d-1)` preserves the unigram distribution, so TV = 0 by construction); it falsely called `multiscale_nesting` entropy-poor — the discriminating metric set shows `d_len +32`, `d_period +1.000` |
+
+Redesign direction (**NOT executed** — needs its own SpecContract and approval): replace the
+later byte-tape rungs with 2-D grid task emitters reusing this sprint's verified machinery
+(`henri_topological_encoder` / `henri_region_selector` for Jordan-mask tasks,
+`henri_scene_binder` for role-filler scenes, `henri_action_koopman` for causal rollouts),
+plus a learner input path — the current learner consumes byte sequences, not grids.
