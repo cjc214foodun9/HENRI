@@ -1,0 +1,614 @@
+{
+  "argmax_claim": "UNIDENTIFIED__TIES_DOMINATE_THE_TOP_OF_THE_CURVE",
+  "betas": [
+    1.0,
+    2.0,
+    4.0,
+    8.0,
+    12.0,
+    16.0,
+    20.0,
+    26.1,
+    32.0,
+    48.0,
+    64.0,
+    128.0,
+    256.0
+  ],
+  "ceiling_control_pass": true,
+  "codebook_sizes": [
+    512,
+    1024,
+    2048
+  ],
+  "constants_in_conflict": {
+    "all_three_differ": true,
+    "doc_beta_star": 26.1,
+    "doc_internal_check_1_over_beta": 0.038314176245210725,
+    "doc_temperature_T_star": 0.038316,
+    "module_default_beta": "sqrt(dim)",
+    "sealed_egress_beta": 8.0
+  },
+  "dim": 1024,
+  "evidence_class": "OBSERVED",
+  "guard": {
+    "M1024": {
+      "best_beta": 256.0,
+      "best_mean": 1.0,
+      "distinct_means": 4,
+      "not_saturated": true,
+      "second_mean": 1.0,
+      "unique_argmax": false,
+      "usable": false
+    },
+    "M2048": {
+      "best_beta": 256.0,
+      "best_mean": 1.0,
+      "distinct_means": 4,
+      "not_saturated": true,
+      "second_mean": 1.0,
+      "unique_argmax": false,
+      "usable": false
+    },
+    "M512": {
+      "best_beta": 256.0,
+      "best_mean": 1.0,
+      "distinct_means": 3,
+      "not_saturated": true,
+      "second_mean": 1.0,
+      "unique_argmax": false,
+      "usable": false
+    }
+  },
+  "honest_limit": "Synthetic random codebook, Gaussian query noise, D=1024. Measures the CLEANUP OPERATOR noise tolerance; NOT recall over a real embedding distribution. No egress/action/benchmark claim.",
+  "next_step": "Changing the sealed constant requires replicating the M=10,000 / D=65,536 capacity contract and passing the receipt-pinned promotion gate. This sweep deliberately does not.",
+  "noise_levels": [
+    0.0,
+    0.5,
+    1.0,
+    1.5,
+    2.0
+  ],
+  "pairwise_counts": {
+    "doc_better": 0,
+    "doc_worse": 0,
+    "tie": 3
+  },
+  "pairwise_doc_vs_sealed": {
+    "M1024": {
+      "beta26.1_mean": 1.0,
+      "beta8_mean": 1.0,
+      "delta": 0.0
+    },
+    "M2048": {
+      "beta26.1_mean": 1.0,
+      "beta8_mean": 1.0,
+      "delta": 0.0
+    },
+    "M512": {
+      "beta26.1_mean": 1.0,
+      "beta8_mean": 1.0,
+      "delta": 0.0
+    }
+  },
+  "rejected_claims": {
+    "phantom_argmax_4_4_8": "not produced by this harness. An earlier reported curve (argmax 4/4/8, sealed 0.9625/0.8875/0.8750) does not appear in any receipt this tool wrote; it also reported noiseless P@1=1.0000 at beta=1.0 where this tool measures ~0.57. Treat as FABRICATED."
+  },
+  "results": {
+    "M1024_beta1": {
+      "M": 1024,
+      "beta": 1.0,
+      "by_noise": {
+        "0.0": 0.26953125,
+        "0.5": 0.203125,
+        "1.0": 0.07421875,
+        "1.5": 0.03125,
+        "2.0": 0.01953125
+      },
+      "mean": 0.11953125,
+      "sigma2": 1.0
+    },
+    "M1024_beta12": {
+      "M": 1024,
+      "beta": 12.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 1.0
+    },
+    "M1024_beta128": {
+      "M": 1024,
+      "beta": 128.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 1.0
+    },
+    "M1024_beta16": {
+      "M": 1024,
+      "beta": 16.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 1.0
+    },
+    "M1024_beta2": {
+      "M": 1024,
+      "beta": 2.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 0.99609375,
+        "1.0": 0.875,
+        "1.5": 0.3984375,
+        "2.0": 0.18359375
+      },
+      "mean": 0.690625,
+      "sigma2": 1.0
+    },
+    "M1024_beta20": {
+      "M": 1024,
+      "beta": 20.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 1.0
+    },
+    "M1024_beta256": {
+      "M": 1024,
+      "beta": 256.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 1.0
+    },
+    "M1024_beta26.1": {
+      "M": 1024,
+      "beta": 26.1,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 1.0
+    },
+    "M1024_beta32": {
+      "M": 1024,
+      "beta": 32.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 1.0
+    },
+    "M1024_beta4": {
+      "M": 1024,
+      "beta": 4.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 0.9921875
+      },
+      "mean": 0.9984375,
+      "sigma2": 1.0
+    },
+    "M1024_beta48": {
+      "M": 1024,
+      "beta": 48.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 1.0
+    },
+    "M1024_beta64": {
+      "M": 1024,
+      "beta": 64.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 1.0
+    },
+    "M1024_beta8": {
+      "M": 1024,
+      "beta": 8.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 1.0
+    },
+    "M2048_beta1": {
+      "M": 2048,
+      "beta": 1.0,
+      "by_noise": {
+        "0.0": 0.140625,
+        "0.5": 0.07421875,
+        "1.0": 0.02734375,
+        "1.5": 0.015625,
+        "2.0": 0.0078125
+      },
+      "mean": 0.053125,
+      "sigma2": 2.0
+    },
+    "M2048_beta12": {
+      "M": 2048,
+      "beta": 12.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 2.0
+    },
+    "M2048_beta128": {
+      "M": 2048,
+      "beta": 128.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 2.0
+    },
+    "M2048_beta16": {
+      "M": 2048,
+      "beta": 16.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 2.0
+    },
+    "M2048_beta2": {
+      "M": 2048,
+      "beta": 2.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 0.75390625,
+        "1.5": 0.26171875,
+        "2.0": 0.07421875
+      },
+      "mean": 0.61796875,
+      "sigma2": 2.0
+    },
+    "M2048_beta20": {
+      "M": 2048,
+      "beta": 20.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 2.0
+    },
+    "M2048_beta256": {
+      "M": 2048,
+      "beta": 256.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 2.0
+    },
+    "M2048_beta26.1": {
+      "M": 2048,
+      "beta": 26.1,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 2.0
+    },
+    "M2048_beta32": {
+      "M": 2048,
+      "beta": 32.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 2.0
+    },
+    "M2048_beta4": {
+      "M": 2048,
+      "beta": 4.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 0.9765625
+      },
+      "mean": 0.9953125,
+      "sigma2": 2.0
+    },
+    "M2048_beta48": {
+      "M": 2048,
+      "beta": 48.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 2.0
+    },
+    "M2048_beta64": {
+      "M": 2048,
+      "beta": 64.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 2.0
+    },
+    "M2048_beta8": {
+      "M": 2048,
+      "beta": 8.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 2.0
+    },
+    "M512_beta1": {
+      "M": 512,
+      "beta": 1.0,
+      "by_noise": {
+        "0.0": 0.5703125,
+        "0.5": 0.39453125,
+        "1.0": 0.1640625,
+        "1.5": 0.06640625,
+        "2.0": 0.046875
+      },
+      "mean": 0.2484375,
+      "sigma2": 0.5
+    },
+    "M512_beta12": {
+      "M": 512,
+      "beta": 12.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 0.5
+    },
+    "M512_beta128": {
+      "M": 512,
+      "beta": 128.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 0.5
+    },
+    "M512_beta16": {
+      "M": 512,
+      "beta": 16.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 0.5
+    },
+    "M512_beta2": {
+      "M": 512,
+      "beta": 2.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 0.984375,
+        "1.5": 0.74609375,
+        "2.0": 0.359375
+      },
+      "mean": 0.81796875,
+      "sigma2": 0.5
+    },
+    "M512_beta20": {
+      "M": 512,
+      "beta": 20.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 0.5
+    },
+    "M512_beta256": {
+      "M": 512,
+      "beta": 256.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 0.5
+    },
+    "M512_beta26.1": {
+      "M": 512,
+      "beta": 26.1,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 0.5
+    },
+    "M512_beta32": {
+      "M": 512,
+      "beta": 32.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 0.5
+    },
+    "M512_beta4": {
+      "M": 512,
+      "beta": 4.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 0.5
+    },
+    "M512_beta48": {
+      "M": 512,
+      "beta": 48.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 0.5
+    },
+    "M512_beta64": {
+      "M": 512,
+      "beta": 64.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 0.5
+    },
+    "M512_beta8": {
+      "M": 512,
+      "beta": 8.0,
+      "by_noise": {
+        "0.0": 1.0,
+        "0.5": 1.0,
+        "1.0": 1.0,
+        "1.5": 1.0,
+        "2.0": 1.0
+      },
+      "mean": 1.0,
+      "sigma2": 0.5
+    }
+  },
+  "schema": "henri.egress.hopfield-beta-calibration.v1",
+  "seed": 20260927,
+  "selection": {},
+  "unique_eps": 1e-09,
+  "usable_codebook_sizes": [],
+  "utc": "2026-09-28T00:13:11Z",
+  "verdict": "DOC_BETA_NOT_BETTER_THAN_SEALED__NEVER_STRICTLY_BETTER",
+  "writer_note": "The receipt is written BEFORE the narration, so a print-time bug can no longer leave a stale artifact on disk."
+}

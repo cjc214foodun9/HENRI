@@ -1,0 +1,32 @@
+{
+  "schema": "henri.models.manifest.v1",
+  "purpose": "Declare the local backbone artifacts so Action 3 (SciCode/ARC scoring) has a verified substrate, and state which of them can actually be USED today.",
+  "worktree": "carrier/zone-a-selfplay",
+  "resolution": "henri_decoder.py resolves <module_dir>/models/henri_decoder_checkpoint.pt",
+  "artifacts": [
+    {
+      "file": "models/henri_decoder_checkpoint.pt",
+      "bytes": 799034119,
+      "sha256": "SEE_checkpoint_telemetry",
+      "tracked": false,
+      "gitignore_rule": "*.pt",
+      "delivery": "NTFS hardlink from the main tree (same inode, st_nlink=2)",
+      "why_not_committed": "*.pt is gitignored by policy; the link reproduces the artifact without committing a 762 MiB binary",
+      "verified_by": "os.stat inode + nlink comparison at wiring time",
+      "loadable": "not asserted here; call HENRIUnifiedEgressTransducer.checkpoint_telemetry() to obtain the load status and digest"
+    }
+  ],
+  "capability_boundary": {
+    "scicode_scoring": "BLOCKED",
+    "arc_agi_scoring": "BLOCKED",
+    "blocked_on": [
+      "trained prefix projections (the PrefixConditioner gain is untrained unless a checkpoint supplies it)",
+      "remote CUDA verification (local CPU runs are not production verification by project policy)",
+      "the arc_agi python module is ABSENT on this host (tests/unit/test_henri_phase838_zonec_bridge_wiring.py fails on ModuleNotFoundError: arc_agi)"
+    ],
+    "not_claimed": [
+      "no benchmark score is produced by this manifest",
+      "a KV cache is NOT available: henri_decoder.py has no attention core"
+    ]
+  }
+}

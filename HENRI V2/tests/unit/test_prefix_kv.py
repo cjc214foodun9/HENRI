@@ -20,7 +20,25 @@ import sys
 import pytest
 import torch
 
-C = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+def _project_root() -> str:
+    """Resolve HENRI V2/ from this test file.
+
+    DEFECT FIXED 2026-09-27: `dirname(dirname(__file__))` from
+    `HENRI V2/tests/unit/test_prefix_kv.py` yields `HENRI V2/tests`, so
+    `test_decoder_really_has_no_attention_core` hit its `pytest.skip` branch and
+    the Case-B determination was NEVER re-derived in CI. Walking up until the
+    module under test is present makes the check real.
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    d = here
+    for _ in range(6):
+        if os.path.exists(os.path.join(d, "henri_prefix_kv.py")):
+            return d
+        d = os.path.dirname(d)
+    return here
+
+
+C = _project_root()
 if C not in sys.path:
     sys.path.insert(0, C)
 
@@ -126,10 +144,34 @@ def test_wrong_prefix_width_raises():
         cond(torch.randn(B, T, D_HID), torch.randn(B, P, D_HID + 1))
 
 
-def test_hidden_must_be_3d():
+def test_hidden_2d_is_accepted_and_agrees_with_the_3d_path():
+    """2-D [B, d] IS supported: the egress hidden state is [B, d_hidden], a
+    pointwise MLP having no sequence axis. The 2-D and 3-D paths must agree."""
+    hidden, prefix = _tensors()
+    cond = PrefixConditioner(D_HID, use_prefix=True, pooling="last")
+    with torch.no_grad():
+        cond.prefix_gain.fill_(0.3)
+    flat = cond(hidden[:, 0, :], prefix)                 # [B, d]
+    assert tuple(flat.shape) == (B, D_HID)
+    full = cond(hidden, prefix)
+    assert float((flat - full[:, 0, :]).abs().max()) < 1e-12
+
+
+def test_hidden_rank_1_or_4_raises():
+    """Rank other than 2 or 3 must fail closed (the earlier contract said 3)."""
     cond = PrefixConditioner(D_HID, use_prefix=True)
     with pytest.raises(PrefixKVError):
-        cond(torch.randn(T, D_HID), torch.randn(B, P, D_HID))
+        cond(torch.randn(D_HID), torch.randn(B, P, D_HID))
+    with pytest.raises(PrefixKVError):
+        cond(torch.randn(B, T, D_HID, 1), torch.randn(B, P, D_HID))
+
+
+def test_batch_mismatch_fails_closed():
+    cond = PrefixConditioner(D_HID, use_prefix=True)
+    with torch.no_grad():
+        cond.prefix_gain.fill_(0.3)
+    with pytest.raises(PrefixKVError):
+        cond(torch.randn(B, T, D_HID), torch.randn(B + 1, P, D_HID))
 
 
 def test_prefix_must_be_3d():
@@ -258,12 +300,34 @@ def test_report_evidence_class_flips_with_flag():
     assert PrefixConditioner(D_HID, use_prefix=True).capability_report()["evidence_class"] == "DIAGNOSTIC"
 
 
+def _strip_comments_and_docstrings(src: str) -> str:
+    """Remove comments and string literals before a SYMBOL audit.
+
+    DEFECT FIXED 2026-09-27: the first version counted raw text, so an
+    explanatory comment in henri_decoder.py that NAMED the absent attention
+    symbols made this test report "attention core present" -- the detector fired
+    on its own documentation. A symbol audit must read CODE, never prose.
+    """
+    import io
+    import tokenize
+    out = []
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(src).readline):
+            if tok.type in (tokenize.COMMENT, tokenize.STRING):
+                continue
+            out.append(tok.string)
+    except (tokenize.TokenError, IndentationError):
+        return src
+    return " ".join(out)
+
+
 def test_decoder_really_has_no_attention_core():
-    """The Case-B determination itself, re-derived from the live decoder source."""
+    """The Case-B determination, re-derived from the live decoder CODE (comments
+    and string literals excluded, so prose cannot satisfy or break the check)."""
     p = os.path.join(C, "henri_decoder.py")
     if not os.path.exists(p):
         pytest.skip("henri_decoder.py not present")
-    src = open(p, encoding="utf-8").read()
+    code = _strip_comments_and_docstrings(open(p, encoding="utf-8").read())
     for sym in ("q_proj", "k_proj", "v_proj", "MultiheadAttention",
                 "scaled_dot_product", "past_key_values", "causal_mask"):
-        assert src.count(sym) == 0, f"{sym} appeared; re-classify Case A"
+        assert code.count(sym) == 0, f"{sym} appeared in CODE; re-classify Case A"

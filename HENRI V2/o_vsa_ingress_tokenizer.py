@@ -3,6 +3,12 @@ import os
 import torch
 import math
 
+# Level phase step for the multiscale topological ingress (2*pi*0.3819660113).
+# Golden-ratio conjugate family with _POSITION orders used by the sidecar, chosen
+# so distinct levels do not coincide in phase.
+_LEVEL_STEP = 2.0 * math.pi * 0.3819660112501051
+
+
 class O_VSA_IngressTokenizer:
     """
     Project HENRI: O-VSA Ingress Layer & True Local Tokenizer
@@ -66,14 +72,24 @@ class O_VSA_IngressTokenizer:
         Fractional Binding: Bypasses string tokenization. Maps a 2D spatial grid directly
         into a continuous FHRR superposed wave tensor of shape [1, num_blocks, 8].
 
-        DEFAULT-OFF REFORM (HENRI_ENCODER_TORUS=1): delegates to the
-        group-structured torus encoder (o_vsa_torus_encoder.py), where a cyclic
-        grid roll IS an exact wave operator. Default path is byte-identical and
-        unchanged. See o_vsa_torus_encoder.py for the measured justification.
+        DEFAULT-OFF REFORMS (both leave the default path byte-identical):
+          HENRI_ENCODER_TORUS=1      -> group-structured torus encoder
+                                        (o_vsa_torus_encoder.py), where a cyclic
+                                        grid roll IS an exact wave operator.
+          HENRI_ENCODER_MULTISCALE=1 -> multiscale topological fibre encoder
+                                        (encode_spatial_grid_multiscale), which binds
+                                        local coordinate phases with Jordan-curve
+                                        interior/boundary markers and nested
+                                        block-average levels.
+        See o_vsa_torus_encoder.py and henri_topological_encoder.py for the measured
+        justification of each.
         """
         if os.environ.get("HENRI_ENCODER_TORUS", "0") == "1":
             from o_vsa_torus_encoder import encode_spatial_grid_torus
             return encode_spatial_grid_torus(self, grid)
+
+        if os.environ.get("HENRI_ENCODER_MULTISCALE", "0") == "1":
+            return self.encode_spatial_grid_multiscale(grid)
 
         superposed_wave = torch.zeros(self.num_blocks, 4, 2, device=self.device)
         
@@ -99,9 +115,86 @@ class O_VSA_IngressTokenizer:
         superposed_wave = superposed_wave.view(self.num_blocks, 8)
         norm = torch.norm(superposed_wave, p=2, dim=-1, keepdim=True) + 1e-9
         superposed_wave = superposed_wave / norm
-        
+
         return superposed_wave.unsqueeze(0)
-        
+
+    def encode_spatial_grid_multiscale(self, grid: list[list[int]],
+                                       n_levels: int = 5,
+                                       background_values: tuple = (0, 1, 2),
+                                       ) -> torch.Tensor:
+        """MULTISCALE TOPOLOGICAL INGRESS (Directive 4), flag-gated OFF by default.
+
+        The flat path above binds `theta_v + norm_x*theta_x + norm_y*theta_y` per
+        cell into an accumulator of shape [num_blocks, 4, 2]. Every block receives
+        contributions because the accumulator is indexed by BLOCK, not by cell.
+
+        This path keeps that exact accumulator contract and ADDS the two things the
+        flat path lacks (measured: `multiscale|jordan|interior` = 0 hits before this
+        change):
+          * JORDAN MARKERS -- a 4-connected flood fill from the grid border over the
+            background BAND; unreachable background cells are INTERIOR, and curve
+            cells 4-adjacent to an interior cell are BOUNDARY. Interior and boundary
+            each add a fixed phase offset, so a closed curve and an open curve with
+            the SAME colours encode differently.
+          * MULTISCALE NESTING -- level L partitions the grid into 2^L x 2^L blocks;
+            each level adds its own position phase and, for coarse levels, a
+            block-average COLOUR term. Levels are superposed.
+
+        SHAPE BUG FIXED 2026-09-27: the first revision packaged the sidecar encoder's
+        flat [d_model] output by reshaping to [num_blocks, 8] and renormalizing per
+        row. That encoder writes only `(i*m + j + level*131) % (d_model//2)` slots,
+        so for a 144-cell grid ~99% of the slots are ZERO and the row norms are 0,
+        not 1 (measured: norms = [1,...,1,0,...,0]). Mirroring the block accumulator
+        here is both contract-correct and cheaper.
+
+        `background_values` MUST span the whole noise band. A single-value fill
+        treats the other noise values as curve and leaks the interior (measured:
+        interior 15 cells at IoU 0.2667 vs 4 cells at 1.0000).
+        """
+        from henri_topological_encoder import MultiscaleTopologicalEncoder
+
+        if not grid or not grid[0]:
+            raise ValueError("empty grid")
+        h, w = len(grid), len(grid[0])
+        # Markers come from the tested sidecar (d_model is irrelevant for geometry).
+        _mk = MultiscaleTopologicalEncoder(
+            d_model=64, n_levels=1, enabled=True,
+            background_values=tuple(background_values))
+        interior, boundary = _mk._markers(grid)
+
+        levels = max(1, min(int(n_levels), int(math.log2(max(h, w))) + 1))
+        acc = torch.zeros(self.num_blocks, 4, 2, device=self.device)
+
+        for level in range(levels):
+            span_y = max(1, h // (2 ** level))
+            span_x = max(1, w // (2 ** level))
+            level_phase = level * _LEVEL_STEP
+            for y in range(h):
+                norm_y = (2.0 * y / (h - 1)) - 1.0 if h > 1 else 0.0
+                for x in range(w):
+                    norm_x = (2.0 * x / (w - 1)) - 1.0 if w > 1 else 0.0
+                    token_id = min(grid[y][x], self.vocab_size - 1)
+                    val_complex = self.get_token_vector(token_id).view(self.num_blocks, 4, 2)
+                    theta_v = torch.atan2(val_complex[..., 1], val_complex[..., 0])
+
+                    total = (theta_v + norm_x * self.spatial_theta_x
+                             + norm_y * self.spatial_theta_y + level_phase)
+                    if interior[y][x]:
+                        total = total + math.pi
+                    elif boundary[y][x]:
+                        total = total + (math.pi / 2.0)
+                    if level < levels - 1:
+                        # coarse level: bind the block-average colour as well
+                        bcol = grid[min(h - 1, (y // span_y) * span_y)][
+                            min(w - 1, (x // span_x) * span_x)]
+                        total = total + bcol * _LEVEL_STEP
+                    acc += torch.stack([torch.cos(total), torch.sin(total)], dim=-1)
+
+        wave = acc.view(self.num_blocks, 8)
+        norm = torch.norm(wave, p=2, dim=-1, keepdim=True) + 1e-9
+        return (wave / norm).unsqueeze(0)
+
+
     def dynamic_ontology_expansion(self) -> int:
         new_vector_cpu = torch.randn(1, self.num_blocks, 8, device="cpu", dtype=torch.float16)
         new_vector_cpu = new_vector_cpu / torch.norm(new_vector_cpu.to(torch.float32), p=2, dim=-1, keepdim=True).to(torch.float16)

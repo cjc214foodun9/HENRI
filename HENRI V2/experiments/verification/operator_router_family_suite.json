@@ -1,0 +1,163 @@
+{
+  "bar": {
+    "control_nonconvex": ">= 0.99 expected if shape (not selection) is the limit",
+    "in_family": ">= 0.99",
+    "open_curve_inertness": "delta == 0.0 exactly",
+    "out_of_family": "NOT required to pass"
+  },
+  "body_sha256": "e6532b7e536edd11259b71be7b647502008042c78d1a05f66307813e6f9fa536",
+  "evidence_class": "OBSERVED",
+  "in_family_ok": true,
+  "n_demos": 3,
+  "nonconvex_control_delta": 0.9999999999999792,
+  "open_curve_routed_delta": 0.737369022252937,
+  "open_curve_routed_to": "RIDGE",
+  "open_curve_topo_own_delta": 0.0,
+  "out_of_family_failed": [
+    "concentric_annulus",
+    "concentric_inner",
+    "two_rings_select"
+  ],
+  "out_of_family_passed": [],
+  "rows": [
+    {
+      "cv": {
+        "D4": 0.1298874206234131,
+        "RIDGE": 0.05745843502137566,
+        "TOPO": 1.0000000000000038
+      },
+      "d4_encodes": 2382,
+      "delta": 1.0000000000000064,
+      "delta_full": 0.9999999999999829,
+      "family": "containment",
+      "kind": "in",
+      "mask_iou": 1.0,
+      "n_ties": 0,
+      "n_true_changed": 4,
+      "selected": "TOPO",
+      "topo_abstained": false,
+      "topo_own_abstained": false,
+      "topo_own_delta": 1.0000000000000064
+    },
+    {
+      "cv": {
+        "D4": 0.9999999999999912,
+        "RIDGE": 0.4662661502767646,
+        "TOPO": 0.0
+      },
+      "d4_encodes": 2382,
+      "delta": 0.9999999999999928,
+      "delta_full": 0.9999999999999802,
+      "family": "reflection",
+      "kind": "in",
+      "mask_iou": 1.0,
+      "n_ties": 0,
+      "n_true_changed": 130,
+      "selected": "D4",
+      "topo_abstained": false,
+      "topo_own_abstained": true,
+      "topo_own_delta": 0.0
+    },
+    {
+      "cv": {
+        "D4": 0.22424834082422004,
+        "RIDGE": 0.16078595290581674,
+        "TOPO": 0.0
+      },
+      "d4_encodes": 2382,
+      "delta": 0.2118080844742316,
+      "delta_full": 0.25819681302920605,
+      "family": "concentric_annulus",
+      "kind": "out",
+      "mask_iou": 0.16455696202531644,
+      "n_ties": 0,
+      "n_true_changed": 20,
+      "selected": "D4",
+      "topo_abstained": false,
+      "topo_own_abstained": true,
+      "topo_own_delta": 0.0
+    },
+    {
+      "cv": {
+        "D4": 0.11506228251428231,
+        "RIDGE": 0.08213791175411389,
+        "TOPO": 0.0
+      },
+      "d4_encodes": 2382,
+      "delta": 0.11470268934947471,
+      "delta_full": 0.10998800989476773,
+      "family": "concentric_inner",
+      "kind": "out",
+      "mask_iou": 0.043478260869565216,
+      "n_ties": 0,
+      "n_true_changed": 4,
+      "selected": "D4",
+      "topo_abstained": false,
+      "topo_own_abstained": true,
+      "topo_own_delta": 0.0
+    },
+    {
+      "cv": {
+        "D4": 0.11918223646057124,
+        "RIDGE": 0.07675650201092633,
+        "TOPO": 0.0
+      },
+      "d4_encodes": 2382,
+      "delta": 0.11710418032246495,
+      "delta_full": 0.1202947032287241,
+      "family": "two_rings_select",
+      "kind": "out",
+      "mask_iou": 0.038461538461538464,
+      "n_ties": 0,
+      "n_true_changed": 4,
+      "selected": "D4",
+      "topo_abstained": false,
+      "topo_own_abstained": true,
+      "topo_own_delta": 0.0
+    },
+    {
+      "cv": {
+        "D4": 0.1842472952973744,
+        "RIDGE": 0.13429342982969927,
+        "TOPO": 0.999999999999981
+      },
+      "d4_encodes": 2382,
+      "delta": 0.9999999999999792,
+      "delta_full": 0.9999999999999847,
+      "family": "nonconvex_control",
+      "kind": "control",
+      "mask_iou": 1.0,
+      "n_ties": 0,
+      "n_true_changed": 13,
+      "selected": "TOPO",
+      "topo_abstained": false,
+      "topo_own_abstained": false,
+      "topo_own_delta": 0.9999999999999792
+    },
+    {
+      "cv": {
+        "D4": 0.575780366967778,
+        "RIDGE": 0.6145693758929598,
+        "TOPO": 0.0
+      },
+      "d4_encodes": 2382,
+      "delta": 0.737369022252937,
+      "delta_full": 0.4650406096460801,
+      "family": "open_curve",
+      "kind": "control",
+      "mask_iou": null,
+      "n_ties": 0,
+      "n_true_changed": 102,
+      "selected": "RIDGE",
+      "topo_abstained": false,
+      "topo_own_abstained": true,
+      "topo_own_delta": 0.0
+    }
+  ],
+  "schema": "henri.operator-router.family-suite.v1",
+  "seed": 20260927,
+  "template_matcher_verdict": "SHAPE_GENERAL_TOPOLOGY_LIMITED",
+  "topo_own_delta_nonconvex": 0.9999999999999792,
+  "topo_own_inert_on_open_curve": true,
+  "utc": "2026-09-27T23:39:06Z"
+}

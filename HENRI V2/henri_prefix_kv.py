@@ -105,19 +105,40 @@ class PrefixConditioner(nn.Module):
     # --------------------------------------------------------------- forward
     def forward(self, hidden: torch.Tensor,
                 prefix: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """Accept [B, T, d] OR [B, d].
+
+        The 2-D form is required by the HENRI egress unbinder, whose hidden state
+        is `[B, d_hidden]` (a pointwise MLP has no sequence axis). 2-D input is
+        treated as T=1 for the conditioning arithmetic and returned with the SAME
+        rank it arrived with, so the default path stays byte-identical.
+        """
+        squeeze = False
+        if hidden.dim() == 2:
+            hidden = hidden.unsqueeze(1)          # [B, d] -> [B, 1, d]
+            squeeze = True
         if hidden.dim() != 3:
-            raise PrefixKVError(f"hidden must be [B,T,d], got shape {tuple(hidden.shape)}")
+            raise PrefixKVError(
+                f"hidden must be [B,T,d] or [B,d], got shape {tuple(hidden.shape)}")
         if hidden.shape[-1] != self.d_hidden:
             raise PrefixKVError(
                 f"hidden last dim {hidden.shape[-1]} != d_hidden {self.d_hidden}")
         # DEFAULT PATH: return the input unchanged.  Byte-identical by identity.
         if not self.use_prefix or prefix is None:
-            return hidden
+            return hidden.squeeze(1) if squeeze else hidden
         if prefix.device != hidden.device:
             raise PrefixKVError(
                 f"device mismatch: prefix on {prefix.device}, hidden on {hidden.device}")
         bias = self.pool(prefix.to(hidden.dtype))
-        return hidden + self.prefix_drop((bias * self.prefix_gain).unsqueeze(1))
+        # FAIL CLOSED on a batch mismatch. DEFECT FIXED 2026-09-27: without this
+        # the addition broadcast silently (or raised a raw RuntimeError), so a
+        # caller could pair B=2 hidden states with B=3 prefixes and get a
+        # shape-error traceback instead of a contract violation.
+        if bias.shape[0] != hidden.shape[0]:
+            raise PrefixKVError(
+                f"batch mismatch: prefix batch {bias.shape[0]} != hidden batch "
+                f"{hidden.shape[0]}; refusing to broadcast")
+        out = hidden + self.prefix_drop((bias * self.prefix_gain).unsqueeze(1))
+        return out.squeeze(1) if squeeze else out
 
     # ------------------------------------------------------------ diagnostics
     def capability_report(self) -> Dict[str, Any]:

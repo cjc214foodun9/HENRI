@@ -61,7 +61,8 @@ class HENRINeuralEgressUnbinder(nn.Module):
     phase states onto discrete vocabulary token distributions.
     Governed by Bingham Plastic yield mechanics and anisotropic Langevin noise.
     """
-    def __init__(self, d_model: int = 65536, d_hidden: int = 2048, vocab_size: int = 32000, device: str = "cuda"):
+    def __init__(self, d_model: int = 65536, d_hidden: int = 2048, vocab_size: int = 32000, device: str = "cuda",
+                 use_prefix: bool = False):
         # Decision 2 (Carrier E6, approved 2026-09-11): discrete-token egress
         # strip. Default-OFF: when HENRI_STRIP_DISCRETE_EGRESS is unset this has
         # no effect and construction is unchanged.
@@ -80,10 +81,22 @@ class HENRINeuralEgressUnbinder(nn.Module):
         # Projection to vocabulary logits
         self.lm_head = nn.Linear(d_hidden, vocab_size, bias=False)
 
+        # Prefix conditioning (Gap 6 / Directive 3), DEFAULT OFF.
+        # Constructed ONLY when enabled: with use_prefix=False no parameter is
+        # registered at all, so the state_dict is byte-identical to the legacy
+        # module and `_load_checkpoint` cannot fail on unexpected keys. That is
+        # the default-path safety argument, and it is structural, not a claim.
+        self.use_prefix = bool(use_prefix)
+        self.prefix_cond = None
+        if self.use_prefix:
+            from henri_prefix_kv import PrefixConditioner
+            self.prefix_cond = PrefixConditioner(d_hidden, use_prefix=True, pooling="mean")
+
         self.to(self.device)
         self.optimizer = torch.optim.AdamW(self.parameters(), lr=1e-3, weight_decay=1e-4)
 
-    def forward(self, wave_state: torch.Tensor, w_task: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def forward(self, wave_state: torch.Tensor, w_task: Optional[torch.Tensor] = None,
+                prefix_embeddings: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         Input: wave_state shape [batch_size, d_model] or [d_model]
         Optional: w_task shape [batch_size, d_model] or [d_model] for linear task modulation
@@ -108,6 +121,31 @@ class HENRINeuralEgressUnbinder(nn.Module):
             unit_wave = unit_wave * (1.0 + unit_w_task)
 
         h = self.down_proj(unit_wave)
+
+        # PREFIX CONDITIONING (Gap 6 / Directive 3).  Applied to the HIDDEN state,
+        # through the SAME trained down_proj -- there is no second projection to
+        # invent.  The prefix arrives in d_model space (a wave), is projected and
+        # pooled to [B, d_hidden] by the tested PrefixConditioner, and mixed with
+        # a learned per-dimension gain that is UNTRAINED unless a checkpoint
+        # supplies it.  Default OFF -> h is returned untouched.
+        #
+        # WHAT THIS IS NOT: a key/value cache.  See capability_report() in
+        # henri_prefix_kv.py for the enumerated absence proof (that module lists the
+        # symbol names; naming them HERE would make a source-level audit read this
+        # comment as evidence of an attention core -- a detector firing on its own
+        # subject).  Wiring alone never promotes a capability claim:
+        # verify_prefix_capability() requires the flag to be declared, forwarded,
+        # reach a consumer, AND change the output.
+        if self.prefix_cond is not None and prefix_embeddings is not None:
+            p = prefix_embeddings.to(self.device).to(torch.float32)
+            if p.dim() == 1:
+                p = p.unsqueeze(0)                     # [d] -> [1, d]
+            if p.dim() == 2:
+                p = p.unsqueeze(0)                     # [P, d] -> [1, P, d]
+            p = p / (torch.norm(p, dim=-1, keepdim=True) + 1e-8)
+            p_hidden = self.down_proj(p)               # [B, P, d_hidden]
+            h = self.prefix_cond(h, p_hidden)
+
         h = self.layer_norm(h)
         h = self.act(h)
         logits = self.lm_head(h)
