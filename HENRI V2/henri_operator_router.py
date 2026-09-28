@@ -167,7 +167,11 @@ def flat(t) -> torch.Tensor:
     if isinstance(t, tuple) and t:
         t = t[0]                       # (wave, features) -> wave
     if isinstance(t, list):
-        t = torch.as_tensor(t, dtype=torch.float64)
+        # torch.tensor (not torch.as_tensor): as_tensor failed with
+        # AttributeError in one interpreter observed this session, and the
+        # constructor is the more portable form. For a plain list the semantics
+        # are identical.
+        t = torch.tensor(list(t), dtype=torch.float64)
     if not torch.is_tensor(t):
         raise TypeError(
             "flat() got %s; expected a tensor, a (wave, features) tuple, or a list"

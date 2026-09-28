@@ -148,3 +148,32 @@ resolution is impossible as written.
 **Hardware status: CPU only.** SciCode / ARC-AGI / AAII scoring stays **BLOCKED** — `arc_agi` is absent on this host, the prefix projection is untrained, and there is no attention core to host a KV cache. **No benchmark score is claimed anywhere.**
 
 **Honest boundary:** this is **not** a verified functional ML model. The chain returns a *codebook index*, never an executed action, and its evidence class is `DIAGNOSTIC`. The 2-D emitter is opt-in and is **not** wired into the seeding driver, because the driver and its 60+ tests are load-bearing and this sprint already produced one regression from an over-eager patch.
+
+## Functional pipeline joined + contract defects corrected (2026-09-27)
+
+**The blueprint's "transmission disconnect" was measured to be literally true.** At `HEAD 24dd528`
+all six stages existed and were `TRACKED`, but no module chained three or more of them, and
+`henri_functional_pipeline.py` did not exist.
+
+| Artifact | What it does | Verified |
+|---|---|---|
+| `henri_functional_pipeline.py` | the missing join | **14/14** tests; PATH A **12/12** exact grid match |
+| `henri_operator_router.flat()` | one adapter repairing **9** crashing call sites | accepts tensor \| `(wave, features)` \| list; **raises** otherwise |
+| `henri_curriculum_grid.py` | three consumer-contract violations corrected | 12/12 exact across 3 families × 4 seeds |
+| `stage0_seeding_run.py` | two reported defects | escalation writers now **fail closed**; `--heldout-rebuild` |
+
+**Two paths, not one.** The blueprint draws a single arrow through both a symbolic operator
+router and a continuous latent rollout. A symbolic operator cannot be Koopman-rolled out, and a
+latent trajectory is not a grid fill, so the pipeline runs them **separately** and states which
+produced the output. Tests assert PATH A never invokes koopman/sagnac/hopfield and PATH B never
+invokes the router.
+
+**Scope (`OBSERVED`).** PATH A is *in-context operator selection* from K demonstrations, measured
+as exact grid match — real, narrow, and **not learning**. PATH B returns a codebook **index**,
+never an executed action. `evidence_class = DIAGNOSTIC`, `score_eligible = false`.
+
+**Not achieved:** no benchmark score. `arc_agi` is absent on this host, the prefix projection is
+untrained, and there is no attention core to host a KV cache — so SciCode / ARC-AGI / AAII stay
+**BLOCKED**. The 2-D emitter is **not** wired into the seeding driver (opt-in by design; the driver
+and its 60+ tests are load-bearing and this sprint already produced one regression from an
+over-eager patch). The cadence escalation mode is unit-tested but **not yet re-run end to end**.

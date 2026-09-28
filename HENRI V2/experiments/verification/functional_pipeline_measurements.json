@@ -1,0 +1,267 @@
+{
+  "exact_total": 12,
+  "families": {
+    "containment_fill": [
+      {
+        "changed_cells": 8,
+        "cv": {
+          "D4": 0.5293,
+          "RIDGE": 0.1494,
+          "TOPO": 1.0
+        },
+        "exact": true,
+        "n_ties": 0,
+        "route": "TOPO",
+        "seed": 20260927
+      },
+      {
+        "changed_cells": 6,
+        "cv": {
+          "D4": 0.5928,
+          "RIDGE": 0.1429,
+          "TOPO": 1.0
+        },
+        "exact": true,
+        "n_ties": 0,
+        "route": "TOPO",
+        "seed": 7
+      },
+      {
+        "changed_cells": 14,
+        "cv": {
+          "D4": 0.591,
+          "RIDGE": 0.375,
+          "TOPO": 1.0
+        },
+        "exact": true,
+        "n_ties": 0,
+        "route": "TOPO",
+        "seed": 31
+      },
+      {
+        "changed_cells": 15,
+        "cv": {
+          "D4": 0.6481,
+          "RIDGE": 0.5326,
+          "TOPO": 1.0
+        },
+        "exact": true,
+        "n_ties": 0,
+        "route": "TOPO",
+        "seed": 99
+      }
+    ],
+    "reflection": [
+      {
+        "changed_cells": 48,
+        "cv": {
+          "D4": 1.0,
+          "RIDGE": 0.2392,
+          "TOPO": 0.0
+        },
+        "exact": true,
+        "n_ties": 0,
+        "route": "D4",
+        "seed": 20260927
+      },
+      {
+        "changed_cells": 36,
+        "cv": {
+          "D4": 1.0,
+          "RIDGE": 0.1383,
+          "TOPO": 0.0
+        },
+        "exact": true,
+        "n_ties": 0,
+        "route": "D4",
+        "seed": 7
+      },
+      {
+        "changed_cells": 34,
+        "cv": {
+          "D4": 1.0,
+          "RIDGE": 0.2618,
+          "TOPO": 0.0
+        },
+        "exact": true,
+        "n_ties": 0,
+        "route": "D4",
+        "seed": 31
+      },
+      {
+        "changed_cells": 40,
+        "cv": {
+          "D4": 1.0,
+          "RIDGE": 0.4413,
+          "TOPO": 0.0
+        },
+        "exact": true,
+        "n_ties": 0,
+        "route": "D4",
+        "seed": 99
+      }
+    ],
+    "two_rings_select": [
+      {
+        "changed_cells": 4,
+        "cv": {
+          "D4": 0.2135,
+          "RIDGE": 0.9956,
+          "TOPO": 1.0
+        },
+        "exact": true,
+        "n_ties": 0,
+        "route": "TOPO",
+        "seed": 20260927
+      },
+      {
+        "changed_cells": 4,
+        "cv": {
+          "D4": 0.3972,
+          "RIDGE": 0.9906,
+          "TOPO": 1.0
+        },
+        "exact": true,
+        "n_ties": 0,
+        "route": "TOPO",
+        "seed": 7
+      },
+      {
+        "changed_cells": 4,
+        "cv": {
+          "D4": 0.4121,
+          "RIDGE": 0.9905,
+          "TOPO": 1.0
+        },
+        "exact": true,
+        "n_ties": 0,
+        "route": "TOPO",
+        "seed": 31
+      },
+      {
+        "changed_cells": 4,
+        "cv": {
+          "D4": 0.3754,
+          "RIDGE": 0.9938,
+          "TOPO": 1.0
+        },
+        "exact": true,
+        "n_ties": 0,
+        "route": "TOPO",
+        "seed": 99
+      }
+    ]
+  },
+  "flat_adapter": {
+    "complex": {
+      "norm": 3.226426,
+      "shape": [
+        8
+      ]
+    },
+    "int": "RAISES TypeError (correct)",
+    "list": {
+      "norm": 2.0,
+      "shape": [
+        16
+      ]
+    },
+    "topo_(list,feats)": {
+      "norm": 2.828427,
+      "shape": [
+        1024
+      ]
+    }
+  },
+  "n_demos": 3,
+  "n_total": 12,
+  "path_a": {
+    "changed_cells": 8,
+    "correct": true,
+    "family": "containment_fill",
+    "n_objects": 2,
+    "route": "TOPO",
+    "scene_norm": 1.0000001192092896,
+    "scene_shape": [
+      512
+    ],
+    "stages": [
+      "ingress",
+      "scene_binder:ok",
+      "router:TOPO",
+      "predict:grid"
+    ]
+  },
+  "path_b": {
+    "abstain_reason": "NO_CHAIN (koopman and egress are both required)",
+    "emitted_index": null,
+    "evidence_class": "DIAGNOSTIC",
+    "stages": [
+      "state",
+      "chain:absent"
+    ]
+  },
+  "pipeline_report": {
+    "benchmark_scores_claimed": false,
+    "beta": 8.0,
+    "beta_is_sealed": true,
+    "binder_injected": true,
+    "chain_built": false,
+    "epsilon_hard": 0.35,
+    "evidence_class": "DIAGNOSTIC",
+    "horizon": 5,
+    "path_a_symbolic": [
+      "ingress",
+      "scene_binder",
+      "router+region_select",
+      "operator_application -> GRID"
+    ],
+    "path_b_continuous": [
+      "ingress",
+      "scene_binder",
+      "koopman_rollout",
+      "sagnac_veto",
+      "hopfield_egress -> CODEBOOK INDEX"
+    ],
+    "paths_do_not_share": "a symbolic operator cannot be Koopman-rolled out, and a latent trajectory is not a grid fill",
+    "paths_share": [
+      "ingress",
+      "scene_binder",
+      "evidence discipline"
+    ],
+    "router_injected": true,
+    "schema": "henri.functional-pipeline.v1",
+    "score_eligible": false
+  },
+  "router_bands": {
+    "FILL_BAND": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17
+    ],
+    "NOISE_BAND": [
+      0,
+      1,
+      2
+    ],
+    "RING_BAND": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ]
+  },
+  "seeds": [
+    20260927,
+    7,
+    31,
+    99
+  ]
+}
