@@ -212,10 +212,11 @@
     "reporting_rule": "state the conclusion under EVERY metric; never pick the flattering one"
   },
   "default_config_discrepancy_resolved": {
-    "probe_a": "h50, 20k vm, DEFAULT config -> reported identical progress",
-    "probe_b": "experiment config, 150k vm x 8 seeds -> progress sd 0.0420, values differ",
-    "resolution": "the probes used different configs (heldout_samples 256 vs 64, eval_every 50 vs 20, kill_patience 3 vs 9999); only the experiment config governs this run, and there the seed moves progress",
-    "verdict": "probe_a was a default-config artifact, not a property of the experiment"
+    "corrected_resolution": "the cause is BUDGET, not config. My first explanation attributed it to the config difference (heldout_samples 256 vs 64, eval_every 50 vs 20, kill_patience 3 vs 9999); re-measuring explicitly at 60k vm shows the seed moves progress in BOTH configs, so that explanation is RETRACTED. At 20k vm the two seeds' differences cancelled in first-minus-last.",
+    "probe_a": "h50, 20k vm (39 rounds), legacy path -> progress agreed to <1e-12",
+    "probe_b": "60k vm, BOTH configs -> progress DIFFERS across seeds; and 150k vm x 8 seeds -> within-arm sd 0.0420",
+    "retracted_explanation": "the probes used different configs (heldout_samples 256 vs 64, eval_every 50 vs 20, kill_patience 3 vs 9999); only the experiment config governs this run, and there the seed moves progress",
+    "retraction_reason": "my own 60k-vm re-measurement contradicts the recorded explanation; the record is corrected rather than left standing"
   },
   "determinism_check_vs_committed_run2": {
     "committed_cadence_w3_progress": 5.48314048803978,
@@ -548,6 +549,7 @@
   },
   "utc": "2026-09-27",
   "verdict": "TIMING_MATTERS_NEGATIVELY__SMALL_DETERMINISTIC_COST",
+  "verdict_note_correction": "the discrepancy correction above is a RECORD HYGIENE fix: no measured number changed, only my stated CAUSE for one early probe.",
   "verdict_precise": "TIMING_DOES_NOT_HELP__SMALL_CONSISTENT_NEGATIVE_DIRECTION",
   "verdict_printed_by_script": "TIMING_DOES_NOT_MATTER",
   "verdict_reason": "PRE-REGISTERED (unpaired) rule: |delta| 0.001831 <= noise 0.041568 -> TIMING_DOES_NOT_MATTER. POST-HOC PAIRED analysis (the design is paired; both arms share seeds): mean paired delta -0.001831422, t = -3.157, df = 7, two-tailed p = 0.01599, 7/8 seeds negative -> a small CONSISTENT negative effect. The seed effect is common-mode (sd 0.041560) and cancels in the paired difference, so the unpaired band overstated uncertainty by ~25.3x. The user's conclusion holds under BOTH: the early ladder does NOT produce more per-rung marginal progress."
