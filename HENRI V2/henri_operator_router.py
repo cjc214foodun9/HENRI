@@ -64,6 +64,21 @@ HONEST LIMITS
 * `background_values` must span the whole noise band; a single-value fill treats
   other noise values as curve cells (measured: IoU 0.2667 vs 1.0000).
 * Deterministic (seed). Local CPU.
+
+
+REGION SELECTION (directive 1)
+------------------------------
+The first form marked ALL border-unreachable background, which is correct for one
+closed curve and WRONG for nested curves: it marked the annulus AND the core as one
+mask, so the channel ABSTAINED on all three out-of-family fixtures and the router
+fell back to D4 at delta 0.211808 / 0.114703 / 0.117104. `henri_region_selector`
+now enumerates candidate regions from the input's own geometry, and the channel
+SELECTS the rule by cross-demo consistency. Measured per-family IoU of the CHOSEN
+rule on the held pair: annulus -> region_largest 1.0000 ; core -> region_smallest
+1.0000 ; relational -> region_max_curve_colour 1.0000 (the area rules are OMITTED on
+an area tie rather than guessed, which is what forces the colour rule there). The
+controls are preserved: an OPEN curve has no enclosed region and a global transform
+has changed set == the whole grid, so both still abstain.
 """
 
 from __future__ import annotations
@@ -74,6 +89,7 @@ from typing import Dict, List, Optional, Sequence, Set, Tuple
 import torch
 
 from henri_topological_encoder import MultiscaleTopologicalEncoder
+from henri_region_selector import RULE_ORDER, region_candidates
 
 # ------------------------------------------------------------------ geometry
 N_SIDE = 12
@@ -294,53 +310,101 @@ class D4Channel(Channel):
 
 
 class TopoChannel(Channel):
-    """LOCAL interior fill: mask from the input's geometry, value from demos.
+    """LOCAL interior fill with EXPLICIT REGION SELECTION (Directive 1).
 
-    ABSTAINS (predict -> None, score 0.0) unless EVERY demo satisfies, at
-    IoU >= min_iou: changed_cells(X,Y) == interior_mask(X), one constant fill
-    value per demo, and the SAME value across demos.  A global transform has
-    changed set == the whole grid, so it never fits -- that is what keeps the
-    reflection family clean and makes the router's job well posed.
+    HISTORY (measured). The first form marked ALL background the border cannot
+    reach. That is correct for a single closed curve but WRONG for nested ones: it
+    marks the annulus AND the core together, so it mismatched every out-of-family
+    fixture and ABSTAINED on all three (`topo_own_delta = 0.0`), leaving the router
+    to fall back to D4 at delta 0.211808 / 0.114703 / 0.117104.
+
+    THE FIX. The mask is now chosen from an explicit candidate set built from the
+    input's own geometry by `henri_region_selector`:
+
+        interior_all            union of every enclosed region (the OLD behaviour)
+        region_largest          the largest enclosed region (annulus)
+        region_smallest         the smallest enclosed region (core)
+        region_max_curve_colour the region bounded by the highest-coloured curve
+        region_min_curve_colour the region bounded by the lowest-coloured curve
+
+    WHY SELECTION IS NECESSARY, NOT OPTIONAL. Measured per-family IoU on the held
+    pair: the annulus fixture is solved by `region_largest` (1.0000) but NOT by
+    `region_smallest` (0.0000); the core fixture is the exact reverse; the relational
+    fixture is solved only by the COLOUR rule. No single rule passes all three, so
+    the channel must pick a rule per task.
+
+    SELECTION IS BY CROSS-DEMO CONSISTENCY, NOT BY LUCK. A rule survives only if it
+    reproduces the demo changed-cells at IoU >= min_iou on EVERY demo; survivors are
+    taken in `RULE_ORDER` preference. The held-out pair is never consulted. When no
+    rule survives, the channel ABSTAINS (predict -> None, score 0.0) -- which is what
+    preserves the two controls: a global transform has changed set == the whole grid,
+    and an OPEN curve has NO enclosed region, so both must abstain.
     """
 
     name = "TOPO"
     capacity = 0
 
-    def __init__(self, encoder, background_values=NOISE_BAND, min_iou: float = 0.99):
+    def __init__(self, encoder, background_values=NOISE_BAND, min_iou: float = 0.99,
+                 background_values_for_selector=None):
         super().__init__(encoder)
         self.min_iou = min_iou
         self.fill: Optional[int] = None
+        self.rule: Optional[str] = None
+        self.bg = tuple(background_values)
         self._mk = MultiscaleTopologicalEncoder(
             d_model=64, n_levels=1, enabled=True,
-            background_values=tuple(background_values))
+            background_values=self.bg)
 
     def interior_mask(self, grid) -> Set[Tuple[int, int]]:
         mi, _ = self._mk._markers(grid)
         return {(i, j) for i in range(len(grid)) for j in range(len(grid[0])) if mi[i][j]}
 
+    def rule_mask(self, X, rule: str) -> Set[Tuple[int, int]]:
+        """The candidate region for `rule` on grid X (empty set when undefined)."""
+        return set(region_candidates(X, self.bg).get(rule, set()))
+
     def fit(self, demos):
+        """Choose ONE rule that reproduces EVERY demo's changed-cells, then the fill.
+
+        A rule must clear `min_iou` on EVERY demo. Survivors are taken in
+        `RULE_ORDER` preference (simplest / most general first). Any failure to make
+        the measurement (empty change set, multi-valued fill, no surviving rule)
+        leaves `rule`/`fill` at None, i.e. the channel ABSTAINS.
+        """
         self.fill = None
+        self.rule = None
+        if not demos:
+            return self
+
+        survivors = list(RULE_ORDER)
         fills: List[int] = []
         for X, Y in demos:
             ch = changed_cells(X, Y)
             if not ch:
                 return self
-            mask = self.interior_mask(X)
-            if not mask or iou(ch, mask) < self.min_iou:
-                return self
             vals = {Y[i][j] for (i, j) in ch}
             if len(vals) != 1:
                 return self
             fills.append(next(iter(vals)))
-        if fills and len(set(fills)) == 1:
-            self.fill = fills[0]
+            cands = region_candidates(X, self.bg)
+            survivors = [r for r in survivors
+                         if r in cands and iou(ch, set(cands[r])) >= self.min_iou]
+            if not survivors:
+                return self
+        if not fills or len(set(fills)) != 1:
+            return self
+        self.rule = survivors[0]
+        self.fill = fills[0]
         return self
 
     def predict(self, X):
-        if self.fill is None:
+        if self.fill is None or self.rule is None:
+            return None
+        mask = self.rule_mask(X, self.rule)
+        if not mask:
             return None
         Y = [r[:] for r in X]
-        for (i, j) in self.interior_mask(X):
+        for (i, j) in mask:
             Y[i][j] = self.fill
         return Y
 
@@ -619,9 +683,18 @@ def run_family_suite(encoder, families=None, n_demos: int = 3, seed: int = 20260
         d, ffull = r.score(X, Y)
         true_ch = changed_cells(X, Y)
         ch = r.channel
+        # NOTE (directive 1): TOPO's IoU must be computed from the mask it actually
+        # FILLS. After region selection that is `rule_mask(X, ch.rule)`, not the
+        # legacy all-background `interior_mask`. Measuring the old mask would report
+        # annulus 0.8333 while the prediction scores ~1.0 -- an instrument that
+        # disagrees with the mechanism, and mask IoU is the pre-registered bar.
         pred_mask = None
         if ch.name == "TOPO":
-            pred_mask = set() if ch.predict(X) is None else ch.interior_mask(X)
+            if ch.predict(X) is None:
+                pred_mask = set()
+            else:
+                pred_mask = (ch.rule_mask(X, ch.rule) if getattr(ch, "rule", None)
+                             else ch.interior_mask(X))
         elif ch.name == "D4":
             pred_mask = changed_cells(X, ch.predict(X))
         d4 = next(c for c in router.channels if c.name == "D4")
@@ -646,6 +719,8 @@ def run_family_suite(encoder, families=None, n_demos: int = 3, seed: int = 20260
             "topo_abstained": r.report()["topo_abstained"],
             "topo_own_delta": topo_own,
             "topo_own_abstained": _tc.predict(X) is None,
+            "topo_own_rule": getattr(_tc, "rule", None),
+            "routed_rule": getattr(getattr(r, "channel", None), "rule", None),
             "mask_iou": (iou(true_ch, pred_mask) if pred_mask is not None else None),
             "n_true_changed": len(true_ch),
             "d4_encodes": d4.encodes,
@@ -654,9 +729,20 @@ def run_family_suite(encoder, families=None, n_demos: int = 3, seed: int = 20260
         "schema": "henri.operator-router.family-suite.v1",
         "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "evidence_class": "OBSERVED", "n_demos": n_demos, "seed": seed,
+        # TWO bars, both kept. The first is the SNAPSHOT bar that produced the
+        # SHAPE_GENERAL_TOPOLOGY_LIMITED verdict (out-of-family not required to pass).
+        # The second is the PRE-REGISTERED bar of directive 1, fixed BEFORE the
+        # region-selection code existed: out-of-family must pass with mask IoU > 0.5.
+        # A bar that is moved after seeing results is not a bar, so `bar` is preserved
+        # byte-for-byte and the new target lives beside it.
         "bar": {"in_family": ">= 0.99", "out_of_family": "NOT required to pass",
                 "control_nonconvex": ">= 0.99 expected if shape (not selection) is the limit",
                 "open_curve_inertness": "delta == 0.0 exactly"},
+        "bar_directive1_prereg": {
+            "out_of_family": "delta >= 0.99 AND mask IoU > 0.5 (all three families)",
+            "in_family": ">= 0.99 unchanged",
+            "controls": "nonconvex >= 0.99 ; open-curve TOPO-own delta == 0.0 exactly",
+            "fixed_before": "the region-selection implementation (this commit)",},
         "rows": rows,
         "in_family_ok": all(r["delta"] >= 0.99 for r in rows if r["kind"] == "in"),
         "out_of_family_passed": [r["family"] for r in rows
@@ -679,6 +765,19 @@ def run_family_suite(encoder, families=None, n_demos: int = 3, seed: int = 20260
             (r["topo_own_delta"] == 0.0 for r in rows if r["family"] == "open_curve"), None),
         "topo_own_delta_nonconvex": next(
             (r["topo_own_delta"] for r in rows if r["family"] == "nonconvex_control"), None),
+        "region_selection": {
+            "rules_chosen": {r["family"]: r.get("topo_own_rule") for r in rows},
+            "routed_rules": {r["family"]: r.get("routed_rule") for r in rows},
+            "out_of_family_mask_iou": {r["family"]: r.get("mask_iou") for r in rows
+                                       if r["kind"] == "out"},
+            "out_of_family_delta": {r["family"]: r.get("delta") for r in rows
+                                    if r["kind"] == "out"},
+        },
+        "directive1_verdict": (
+            "REGION_SELECTION_PASSES_OUT_OF_FAMILY"
+            if all((r.get("delta") or 0.0) >= 0.99 and (r.get("mask_iou") or 0.0) > 0.5
+                   for r in rows if r["kind"] == "out")
+            else "REGION_SELECTION_STILL_LIMITED"),
         "template_matcher_verdict": (
             "SHAPE_GENERAL_TOPOLOGY_LIMITED"
             if (next((r["delta"] for r in rows if r["family"] == "nonconvex_control"), 0.0) >= 0.99
