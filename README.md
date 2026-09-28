@@ -85,3 +85,21 @@ the backbone checkpoint is present but its prefix projections are untrained, no 
 verification has been run for these modules, and the `arc_agi` module is absent on this host. The
 `*.png` figures under `HENRI V2/docs/diagrams/` are untracked by repository policy
 (`.gitignore:19`); the tracked artifacts are their renderers under `HENRI V2/tools/render_*.py`.
+
+## Four-directives sprint (2026-09-27)
+
+Scope: four engineering directives executed against the synthesis blueprint, each with a
+pre-registered bar and a committed receipt under `HENRI V2/experiments/verification/`.
+
+| Directive | Module | Result | Hardware status |
+|---|---|---|---|
+| D1 explicit topological region selection | `henri_region_selector.py` | **PASSES** the pre-registered out-of-family bar (mask IoU 1.0 > 0.5 on all three families); in-family and both controls intact | CPU only; 25 unit tests |
+| D2 train the prefix projection | `henri_prefix_train.py` | **FALSIFIED** on the scaffold: no arm beats OFF, the strongest memorises (train 0.0163 / held-out 11.51 vs uniform 5.5452) | SCAFFOLD only (d_model=1024, checkpoint disabled); NOT the 799 MB backbone |
+| D3 dynamic curriculum governor | `stage0_seeding_run.py --curriculum-levers` | **99.67 % of the Stage-0 held-out progress at 0.33 % of the executions** (1.00 M vs 303.03 M), token identity exact | CPU; 2 of 5 rungs exercised, KILL never fired |
+| D4 Koopman rollouts to the planner | `henri_koopman_leaf.py` + `sagnac_mcts_planner.py` | WIRED, default OFF; add-only veto, fail-open; OFF-path contract suite unchanged | CPU only; 18 unit tests |
+| synthesis: dream compass + Hopfield terminator | `henri_dream_compass.py`, `henri_latent_dreamer.py` | raw alignment reward wired into the live SGLD loop (default OFF); GATE-C and GATE-D verified intact | CPU only; 27 + 15 unit tests |
+
+Not achievable as written and **not claimed**: causal attention keys/values (the decoder has
+no attention core) and K=64 dream iterations over Koopman adapter weights (the dreamer and
+the Koopman operators are separate, unfitted units). SciCode / ARC-AGI / AAII scoring
+remains **BLOCKED**. No benchmark score is claimed anywhere.
