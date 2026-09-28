@@ -52,10 +52,13 @@ axA.axhline(nb, color="#34495e", linestyle="--", linewidth=1.4, zorder=2)
 axA.axhline(-nb, color="#34495e", linestyle="--", linewidth=1.4, zorder=2)
 lo, hi = min(d, -nb) * 1.5, max(0.0, nb) * 1.5
 axA.set_ylim(lo, hi)
-axA.annotate("delta = %+.4f" % d, (0, d), textcoords="offset points", xytext=(0, -16 if d < 0 else 10),
-             ha="center", fontsize=9.5, fontweight="bold")
-axA.text(0.62, nb, "+noise %.4f" % nb, fontsize=8.4, va="bottom", color="#2c3e50")
-axA.text(0.62, -nb, "-noise %.4f" % nb, fontsize=8.4, va="top", color="#2c3e50")
+axA.set_xlim(-0.75, 1.55)
+axA.annotate("delta = %+.4f" % d, (0, d), textcoords="offset points",
+             xytext=(0, -17 if d < 0 else 11), ha="center", fontsize=9.5, fontweight="bold")
+axA.text(0.70, 0.40, "+noise %+.4f" % nb, transform=axA.transAxes,
+         fontsize=8.4, va="center", ha="left", color="#2c3e50")
+axA.text(0.70, 0.30, "-noise %+.4f" % nb, transform=axA.transAxes,
+         fontsize=8.4, va="center", ha="left", color="#2c3e50")
 axA.set_title("A. REGISTERED TEST\n|delta| within the noise band", fontsize=10, fontweight="bold")
 axA.set_xticks([0]); axA.set_xticklabels(["early - late"], fontsize=9)
 axA.set_ylabel("mean per-rung residual", fontsize=9)
@@ -81,10 +84,11 @@ axB.set_title("B. PAIRED, MATCHED-RUNG-INDEX (both arms share seeds -> seed effe
                  pair["sign_test"]["n_seeds"], pair["sign_test"]["p_two_tailed_exact"]),
               fontsize=10, fontweight="bold")
 axB.set_ylabel("early - late (matched rung prefix)", fontsize=9)
-axB.text(0.015, 0.05, "every bar <= 0 except one: the early ladder is if anything WORSE,\n"
-                      "magnitude %.4f  (%.3f%% of the ~5.43 held-out drop)"
+axB.set_ylim(min(vals) - 0.018, max(0.0, max(vals)) + 0.030)
+axB.text(0.985, 0.905, "every bar <= 0 except one: the early ladder is if anything WORSE,\n"
+                       "magnitude %.4f  (%.3f%% of the ~5.43 held-out drop)"
          % (abs(pair["mean_delta"]), 100 * abs(pair["mean_delta"]) / 5.43),
-         transform=axB.transAxes, fontsize=8.6, va="bottom",
+         transform=axB.transAxes, fontsize=8.6, va="top", ha="right",
          bbox=dict(boxstyle="round,pad=0.32", fc="#fdf2e9", ec="#a04000", lw=0.9))
 
 # ---- C: rung-count asymmetry ----
@@ -96,9 +100,11 @@ axC.bar(x - 0.2, ne, width=0.4, color="#2c7fb8", edgecolor="black", lw=0.7, labe
 axC.bar(x + 0.2, nl, width=0.4, color="#e67e22", edgecolor="black", lw=0.7, label="late (variance)")
 axC.set_title("C. RUNG-COUNT ASYMMETRY\nwhy a pooled mean is confounded", fontsize=10, fontweight="bold")
 axC.set_xlabel("arm (sorted)", fontsize=9); axC.set_ylabel("escalations reached", fontsize=9)
-axC.legend(fontsize=8.2, loc="upper left")
+axC.set_ylim(0, max(max(ne), max(nl)) + 3.4)
+axC.legend(fontsize=8.2, loc="upper center", ncol=2, framealpha=0.95,
+           borderpad=0.3, columnspacing=1.1)
 axC.text(0.5, 0.055, "late reaches 1-4 rungs vs early 7-9\n-> paired test truncates to the SHARED prefix",
-         transform=axC.transAxes, fontsize=8.2, ha="center",
+         transform=axC.transAxes, fontsize=8.2, ha="center", va="bottom",
          bbox=dict(boxstyle="round,pad=0.3", fc="#fef9e7", ec="#b7950b", lw=0.9))
 
 # ---- D: the circular raw metric ----
