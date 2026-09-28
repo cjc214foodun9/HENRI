@@ -106,6 +106,14 @@ class DreamResult:
     adapter_delta_norm: float
     creep_enabled: bool
     selected_action_changed: Optional[bool] = None  # M3-ACT harness fills this
+    # ---- alignment-compass telemetry (directive: RAW reward into live SGLD).
+    # All default to None/0 so the compass-OFF path constructs this dataclass exactly as
+    # before and every existing caller keeps working positionally.
+    alignment_reward_last: Optional[float] = None
+    alignment_reward_mean: Optional[float] = None
+    alignment_steps: int = 0
+    compass_terminated: bool = False
+    compass_reason: Optional[str] = None
 
 
 class LowRankDreamAdapter(nn.Module):
@@ -136,9 +144,16 @@ class LowRankDreamAdapter(nn.Module):
 class FocusedLatentDreamer:
     """Test-time self-play adaptation gated by the LIVE Zone A metric."""
 
-    def __init__(self, core: Any, config: Optional[DreamConfig] = None) -> None:
+    def __init__(self, core: Any, config: Optional[DreamConfig] = None,
+                 compass: Any = None) -> None:
         self.core = core
         self.cfg = (config or DreamConfig()).validate()
+        # ---- ALIGNMENT COMPASS (default None = OFF).
+        # INJECTED, never constructed here: the dreamer cannot acquire a hidden
+        # dependency, and the caller owns the compass's threshold. With None the loop is
+        # byte-for-byte the previous behaviour. The compass MEASURES and may STOP; it
+        # never updates a weight, so the SGLD creep remains governed by HENRI_DREAM_CREEP.
+        self.compass = compass
         # Device: the adapter must live on the SAME device as the incoming wave.
         # Verified defect (2026-09-26): on the CUDA host the adapter stayed on CPU
         # while the core produced CUDA waves, so dream() raised a device mismatch.
@@ -245,6 +260,16 @@ class FocusedLatentDreamer:
         consensus = 0.0
         woke = False
 
+        # ---- compass state (only used when self.compass is not None)
+        _p0 = ([p.detach().clone() for p in (self.adapter.down, self.adapter.up)]
+               if self.compass is not None else None)
+        _r_sum = 0.0
+        _r_n = 0
+        _r_last: Optional[float] = None
+        _exp_avg_sq = None
+        _compass_terminated = False
+        _compass_reason = None
+
         for _ in range(limit):
             # GATE-C: the adapter enters the SCORED wave, so the loss below has a
             # live gradient path to adapter.down / adapter.up.
@@ -270,11 +295,37 @@ class FocusedLatentDreamer:
                         p.add_(-cfg.sgld_lr * g + noise)
             # default: grads computed (the path is PROVEN live) but NO weight change
 
+            # ---- ALIGNMENT COMPASS (RAW reward from the live SGLD path).
+            # Measures the preconditioned alignment between the dream gradient and the
+            # adapter's own displacement since dream start. RECORDS only; the only thing
+            # it can change is whether the loop continues (an ADDED stop condition).
+            if self.compass is not None:
+                try:
+                    _flat_g = torch.cat([g.detach().reshape(-1) for g in grads])
+                    _flat_d = torch.cat([(p.detach() - p0).reshape(-1)
+                                         for p, p0 in zip((self.adapter.down,
+                                                           self.adapter.up), _p0)])
+                    _sq = _flat_g * _flat_g
+                    _exp_avg_sq = _sq if _exp_avg_sq is None else (
+                        0.9 * _exp_avg_sq + 0.1 * _sq)
+                    _v = self.compass.judge(_flat_g, _flat_d, _exp_avg_sq)
+                    if _v.reward is not None:
+                        _r_last = float(_v.reward)
+                        _r_sum += _r_last
+                        _r_n += 1
+                    if not _v.continue_dreaming and _v.valid:
+                        _compass_terminated = True
+                        _compass_reason = str(_v.reason)
+                except Exception as _cexc:      # never let the compass break the dream
+                    _compass_reason = "UNAVAILABLE:%s" % type(_cexc).__name__
+
             steps_taken += 1
             final_delta = min(cs.delta_floats())
             consensus = self._consensus(cs.waves)
             if self.should_wake(final_delta, consensus):
                 woke = True
+                break
+            if _compass_terminated:
                 break
 
         return DreamResult(
@@ -283,4 +334,9 @@ class FocusedLatentDreamer:
             consensus_r=consensus,
             adapter_delta_norm=self.adapter.delta_norm() - before,
             creep_enabled=self.creep_enabled(),
+            alignment_reward_last=_r_last,
+            alignment_reward_mean=(_r_sum / _r_n) if _r_n else None,
+            alignment_steps=_r_n,
+            compass_terminated=_compass_terminated,
+            compass_reason=_compass_reason,
         )
