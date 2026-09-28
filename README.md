@@ -58,3 +58,30 @@ HENRI V2 remains an active research program. Claims about wave mechanics, biolog
 ## License status
 
 `LICENSE.md` is a source-derived license document supplied for this release candidate. Its legal owner, grant, and compatibility with the repository contents require review before a public release is promoted. Do not infer an MIT license from the draft configuration.
+
+## Six-gap remediation (2026-09-27)
+
+Scope: architectural modules added to close the blueprint's "Six Missing Systems", each shipped
+with the falsification that bounds it. All measurements below are from this worktree's own
+receipts; the raw artifacts are committed under `HENRI V2/experiments/verification/`.
+
+| Gap | Module | Scope | Hardware status |
+|---|---|---|---|
+| G1 hierarchy | `henri_scene_binder.py` | nested object x role binding; deterministic per-slot phase codes (the qFHRR random-ring codec is measured NON-compositional and is rejected) | CPU only; 29/29 unit tests |
+| G2 operator pool | `henri_operator_router.py` | 3-channel pool (RIDGE 65536 params / D4 792 candidates / TOPO 0 params), leave-one-out CV selection, capacity tie-break, plus an out-of-family suite | CPU only; 28/28 unit tests |
+| G3 egress | `henri_hopfield_egress.py` (pre-existing) | sealed beta=8.0 retained; the document's beta*=26.10 measured and NOT adopted | CPU sweep at D=1024; does not replicate the D=65,536 / M=10,000 capacity contract |
+| G4 world model | `henri_action_koopman.py` | per-action K_a least-squares operators; abstains on an unseen action rather than substituting identity | CPU only; 31/31 unit tests |
+| G5 curriculum | `henri_curriculum_governor.py`, `henri_curriculum_env.py` | 5-rung heterogeneous ladder with a reachable plateau KILL switch; levers wired into `stage0_seeding_run.py` behind `--curriculum-levers` (default OFF) | CPU only; 19/19 + 20/20 unit tests |
+| G6 substrate | `henri_prefix_kv.py`, `models/manifest.json` | default-OFF prefix conditioner wired into `henri_decoder.py`; backbone checkpoint hardlinked into `models/` | checkpoint NOT loaded by these tests (no trained prefix projections) |
+
+Measured result that bounds all of it: the operator pool is **shape-general but topology-limited** --
+non-convex containment 0.9999999999999792 (shape is not the limit) while nested-curve SELECTION tasks
+fail (concentric_annulus 0.211808 / concentric_inner 0.114703 / two_rings_select 0.117104). The
+in-family containment score of 1.000000 is exact **by construction** (the fixture generates precisely
+the object the topological channel searches for).
+
+Not established: no benchmark score is claimed. SciCode / ARC-AGI / AAII scoring remains BLOCKED --
+the backbone checkpoint is present but its prefix projections are untrained, no remote CUDA
+verification has been run for these modules, and the `arc_agi` module is absent on this host. The
+`*.png` figures under `HENRI V2/docs/diagrams/` are untracked by repository policy
+(`.gitignore:19`); the tracked artifacts are their renderers under `HENRI V2/tools/render_*.py`.
