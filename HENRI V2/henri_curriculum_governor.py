@@ -99,6 +99,48 @@ class GovernorConfig:
     max_events: int = 24                # hard ceiling on escalation events
     rungs: Tuple[str, ...] = LADDER
     spec: Dict[str, float] = field(default_factory=lambda: dict(DEFAULT_SPEC))
+    # ---- DIRECTIVE 1: escalation TRIGGER SELECTION.
+    # "variance" (default) reproduces the previous behaviour byte-for-byte, so no
+    # existing caller changes. "progress" uses the moving-window loss DERIVATIVE.
+    # WHY: the variance floor sigma^2 < 1e-4 is a PLATEAU DETECTOR -- it can only fire
+    # once there is nothing left to learn. Measured on the committed receipt: the first
+    # escalation landed with 99.82% of the total loss drop already spent. A trigger
+    # based on the loss DERIVATIVE fires while the learner is still improving but
+    # SLOWING, i.e. before the manifold settles into a local attractor.
+    trigger: str = "variance"
+    progress_rate_threshold: float = 1e-3   # absolute relative-improvement floor
+    # ---- DIRECTIVE 1, corrected by measurement. Firing on an ABSOLUTE rate floor is
+    # ALSO a post-convergence detector: measured, it fired at the SAME step as the
+    # variance floor (both step 239) because both wait for learning to stop. The
+    # directive wants escalation BEFORE the weights settle, so the primary condition is
+    # a DECAY of the learning rate relative to its own peak: once the rate has halved,
+    # the task family is yielding less marginal information than it can.
+    progress_decay_fraction: float = 0.5
+    validate_trigger: bool = True
+    # ---- CADENCE RULE (the mode that actually beats the confound).
+    # MEASURED: on an exponential decay, |dL/dt| = a*(L-floor), so the RELATIVE rate
+    # a*(L-floor)/L is nearly CONSTANT while L >> floor and collapses only as L -> floor
+    # (threshold fires at ~98% of the drop). ANY threshold on that metric is therefore a
+    # post-convergence detector -- the directive's literal metric included. The
+    # directive's own wording is the escape: "escalate WHILE gradient velocity is
+    # non-zero" is a CADENCE rule. Fire every `cadence_windows` windows for as long as
+    # the loss is still falling by more than `velocity_noise_frac` of its own scale.
+    cadence_windows: int = 1
+    velocity_noise_frac: float = 1e-3
+
+    def __post_init__(self) -> None:
+        """FAIL CLOSED on an unknown trigger.
+
+        Measured defect: with an unrecognised trigger the dispatch fell through to the
+        variance branch, so a typo silently selected a different policy. An unknown
+        trigger now raises instead of guessing.
+        """
+        if self.validate_trigger and self.trigger not in ("variance", "progress",
+                                                         "cadence"):
+            raise ValueError(
+                "unknown governor trigger %r; expected 'variance', 'progress' or "
+                "'cadence'" % (self.trigger,))
+
 
 
 class CurriculumGovernor:
@@ -114,6 +156,17 @@ class CurriculumGovernor:
         self._progress_marks: List[float] = []
         self.best_heldout: Optional[float] = None
         self._since_progress = 0
+        # ---- DIRECTIVE 1 state. ROOT CAUSE of a 23-test regression: an earlier patch
+        # anchored on `self._since_progress = 0`, which occurs TWICE in this file, so the
+        # edit was SKIPPED and these four attributes were never initialized while
+        # learning_progress()/progress_rate()/observe() already read them ->
+        # AttributeError on every observe() call. The anchor is now unique.
+        self._last_progress: Optional[float] = None
+        self._last_rate: Optional[float] = None
+        self._peak_rate: Optional[float] = None
+        self._last_velocity: Optional[float] = None
+        self._n_windows = 0
+        self._windows_since_escalation = 0
 
     # ------------------------------------------------------------- telemetry
     @property
@@ -123,6 +176,60 @@ class CurriculumGovernor:
     @property
     def n_observations(self) -> int:
         return len(self._window)
+
+    def learning_progress(self) -> Optional[float]:
+        """Moving-window loss progress (Directive 1).
+
+            Delta L_progress = (1/W) * sum_{w=0}^{W-1} L_{t-w}  -  L_t
+
+        POSITIVE means the loss is still FALLING (the older window is worse than the
+        current value). This is the derivative-based replacement for the variance
+        floor. Telemetry only; the escalation decision lives in `progress_rate`.
+        """
+        n = len(self._window)
+        if n < self.cfg.window or n < 2:
+            # DEFECT FIXED 2026-09-27: observe() consumes the window after computing
+            # this, so the live value is only available DURING observe(). Returning the
+            # stored last value keeps the accessor meaningful for report()/telemetry
+            # instead of silently reporting None (a dead-store).
+            return self._last_progress
+        cur = float(self._window[-1])
+        older = self._window[:-1]
+        return (sum(older) / len(older)) - cur
+
+    def progress_rate(self) -> Optional[float]:
+        """Relative per-step improvement = learning_progress / W / max(|L_t|, eps).
+
+        Dimensionless, so ONE threshold transfers across loss scales. Escalation
+        fires when this falls BELOW `progress_rate_threshold`: the learner is still
+        improving but SLOWING. That is EARLIER than a variance collapse by
+        construction, because variance only collapses after the loss has flattened.
+        """
+        if len(self._window) < self.cfg.window or len(self._window) < 2:
+            return self._last_rate
+        p = self._last_progress if self._last_progress is not None else self.learning_progress()
+        if p is None:
+            return None
+        cur = abs(float(self._window[-1]))
+        return (p / float(self.cfg.window)) / max(cur, 1e-9)
+
+    def velocity(self) -> Optional[float]:
+        """||loss change across the window|| normalized by the window's own scale.
+
+        NON-ZERO means the learner is still moving. This is the CADENCE signal: the
+        directive says to escalate while velocity is non-zero, which is a rule about
+        WHEN to keep stepping, not a threshold on a decaying rate.
+        """
+        if len(self._window) < self.cfg.window or len(self._window) < 2:
+            return self._last_velocity
+        first = float(self._window[0])
+        last = float(self._window[-1])
+        scale = max(abs(first), abs(last), 1e-9)
+        return (first - last) / scale
+
+    def peak_rate(self) -> Optional[float]:
+        """The best relative progress rate seen since the last escalation."""
+        return self._peak_rate
 
     def variance(self) -> Optional[float]:
         n = len(self._window)
@@ -190,8 +297,53 @@ class CurriculumGovernor:
             return None
 
         v = self.variance()
+        prog = self.learning_progress()
+        rate = self.progress_rate()
+        self._last_progress = prog
+        self._last_rate = rate
+        vel = self.velocity()
+        self._last_velocity = vel
+        self._n_windows += 1
+        self._windows_since_escalation += 1
+        if rate is not None and (self._peak_rate is None or rate > self._peak_rate):
+            self._peak_rate = rate
         self._window = []
-        if v is None or v >= self.cfg.var_threshold:
+
+        # ---- TRIGGER DISPATCH (Directive 1). Default "variance" is byte-identical to
+        # the previous behaviour; "progress" fires on the loss derivative.
+        if self.cfg.trigger == "cadence":
+            # Escalate on a CADENCE while velocity is still non-zero. This fires at the
+            # FIRST cadence boundary at which the loss is still moving -- EARLY by
+            # construction, and it does not wait for a rate to decay.
+            _moving = (vel is not None and abs(vel) > self.cfg.velocity_noise_frac)
+            _due = self._windows_since_escalation >= max(1, self.cfg.cadence_windows)
+            fire = bool(_moving and _due)
+            _why = ("cadence |velocity| %.3e > %.3e after %d window(s)"
+                    % (abs(vel) if vel is not None else float("nan"),
+                       self.cfg.velocity_noise_frac, self._windows_since_escalation))
+        elif self.cfg.trigger == "progress":
+            # PRIMARY: decay of the rate relative to its own peak (fires EARLY).
+            # SECONDARY: the absolute floor (fires only after near-convergence).
+            _decay_ref = (self.cfg.progress_decay_fraction * self._peak_rate
+                          if self._peak_rate else None)
+            _by_decay = (rate is not None and _decay_ref is not None and rate < _decay_ref)
+            _by_floor = (rate is not None
+                         and rate < self.cfg.progress_rate_threshold)
+            fire = bool(_by_decay or _by_floor)
+            _why = ("decay rate %.3e < %.3e*peak(%.3e)=%.3e"
+                    % (rate if rate is not None else float("nan"),
+                       self.cfg.progress_decay_fraction,
+                       self._peak_rate if self._peak_rate else float("nan"),
+                       _decay_ref if _decay_ref is not None else float("nan"))
+                    if _by_decay else
+                    "floor rate %.3e < %.3e"
+                    % (rate if rate is not None else float("nan"),
+                       self.cfg.progress_rate_threshold))
+        else:
+            fire = (v is not None and v < self.cfg.var_threshold)
+            _why = "sigma2 %.3e < %.3e" % (v if v is not None else float("nan"),
+                                           self.cfg.var_threshold)
+        if not fire:
             return None                        # still learning: do not interrupt
 
         advance = self._advance()
@@ -201,8 +353,19 @@ class CurriculumGovernor:
                     "spec": self.spec, "events": len(self.events)}
 
         self._since_progress += 1
+        # a new task family resets the learning-rate reference and the cadence clock
+        self._peak_rate = None
+        self._windows_since_escalation = 0
         advance["event"] = "ESCALATE"
         advance["sigma_sq"] = v
+        # ---- DIRECTIVE 1 telemetry: the derivative channel that DECIDED this event.
+        advance["learning_progress"] = prog
+        advance["progress_rate"] = rate
+        advance["trigger"] = self.cfg.trigger
+        advance["trigger_reason"] = _why
+        advance["peak_rate"] = self._peak_rate
+        advance["n_windows"] = self._n_windows
+        advance["velocity"] = vel
         advance["spec"] = self.spec
         advance["escalations_since_progress"] = self._since_progress
         self.events.append(advance)
@@ -229,6 +392,10 @@ class CurriculumGovernor:
             "events": len(self.events), "rungs_applied": [e["rung"] for e in self.events],
             "spec": self.spec, "best_heldout": self.best_heldout,
             "sigma_sq_last": self.variance(),
+            "trigger": self.cfg.trigger,
+            "progress_rate_last": self.progress_rate(),
+            "velocity_last": self.velocity(),
+            "learning_progress_last": self.learning_progress(),
             "cfg": {k: (list(v) if isinstance(v, tuple) else v)
                     for k, v in asdict(self.cfg).items()},
         }

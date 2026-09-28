@@ -210,6 +210,9 @@ def run_seeding(
     curriculum_levers: bool = False,
     progress_eps: float = 1e-3,
     kill_patience: int = 3,
+    governor_trigger: str = "variance",
+    progress_rate_threshold: float = 1e-3,
+    cadence_windows: int = 1,
 ) -> dict:
     """Execute the bounded seeding loop. Returns the summary dict.
 
@@ -249,7 +252,13 @@ def run_seeding(
                                                LADDER as G_LADDER_NAMES)
         _gov = CurriculumGovernor(GovernorConfig(
             window=curriculum_window, var_threshold=plateau_var_threshold,
-            progress_eps=progress_eps, kill_patience=kill_patience))
+            progress_eps=progress_eps, kill_patience=kill_patience,
+            # DIRECTIVE 1: "variance" reproduces the previous path byte-for-byte;
+            # "progress" fires on the moving-window loss DERIVATIVE, so it can
+            # escalate BEFORE the loss flattens.
+            trigger=governor_trigger,
+            progress_rate_threshold=progress_rate_threshold,
+            cadence_windows=cadence_windows))
         _gov.cfg.spec["prog_len"] = float(prog_len)
         _gov.cfg.spec["grid_growth"] = float(_tape_size)
         _spec = _gov.spec
@@ -517,6 +526,8 @@ def run_seeding(
         "curriculum_events": curriculum_events,
         "curriculum_levers": bool(curriculum_levers),
         "curriculum_spec": _spec_report,
+        "governor_trigger": governor_trigger,
+        "progress_rate_threshold": progress_rate_threshold,
         "per_rung_progress": per_rung,
         "per_rung_progress_basis": (
             "heldout_at_escalation is a FRESH held-out reading taken AT each escalation "
@@ -603,6 +614,14 @@ def main() -> int:
                          "FIVE governor levers reach the generator (default OFF)")
     ap.add_argument("--governor-progress-eps", type=float, default=1e-3,
                     help="held-out gain counted as progress by the governor")
+    ap.add_argument("--governor-trigger", choices=("variance", "progress", "cadence"),
+                    default="variance",
+                    help="escalation trigger: the post-convergence variance floor, "
+                         "or the learning-progress derivative (Directive 1)")
+    ap.add_argument("--cadence-windows", type=int, default=1,
+                    help="escalate every N windows while the loss is still moving")
+    ap.add_argument("--progress-rate-threshold", type=float, default=1e-3,
+                    help="relative per-step improvement floor for --governor-trigger progress")
     ap.add_argument("--governor-kill-patience", type=int, default=3,
                     help="non-progressing escalations before the run TERMINATES")
     a = ap.parse_args()
@@ -620,7 +639,10 @@ def main() -> int:
                     max_prog_len=a.max_prog_len,
                     curriculum_levers=a.curriculum_levers,
                     progress_eps=a.governor_progress_eps,
-                    kill_patience=a.governor_kill_patience)
+                    kill_patience=a.governor_kill_patience,
+                    governor_trigger=a.governor_trigger,
+                    progress_rate_threshold=a.progress_rate_threshold,
+                    cadence_windows=a.cadence_windows)
     print(json.dumps(s, indent=2))
     return 0
 
