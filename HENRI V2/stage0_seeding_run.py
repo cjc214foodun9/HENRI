@@ -207,6 +207,9 @@ def run_seeding(
     plateau_var_threshold: float = 1e-4,
     curriculum_window: int = 50,
     max_prog_len: int = 96,
+    curriculum_levers: bool = False,
+    progress_eps: float = 1e-3,
+    kill_patience: int = 3,
 ) -> dict:
     """Execute the bounded seeding loop. Returns the summary dict.
 
@@ -216,7 +219,34 @@ def run_seeding(
     training-loss/reward-based gate is satisfiable by memorisation).
     """
     os.makedirs(out_dir, exist_ok=True)
-    vm = CircularTapeVM(VMConfig(tape_size=256, max_steps=512, max_output=seq_len - 1))
+    # ---- CURRICULUM LEVERS (directive 1, NEW flag, default OFF).
+    # MEASURED DEFICIT THIS CLOSES: the governor's topological_obstacle,
+    # multiscale_nesting, distractor_noise and grid_growth levers occurred
+    # 0 times in this file AND in stage0_universal_seeder.py -- declared but
+    # never read, i.e. the mechanism did not exist. With this flag ON,
+    # sampling routes through henri_curriculum_env using the governor spec.
+    #
+    # grid_growth is consumed ONCE, here. Mid-run escalation of the tape size
+    # is deliberately NOT applied: it would change the machine between held-out
+    # measurements and break comparability. tape_size_applied records the choice.
+    _gov = None
+    _spec = None
+    _spec_report = None
+    kill_reason: "str | None" = None
+    _tape_size = 256
+    if curriculum_levers:
+        from henri_curriculum_env import (sample_program_from_spec, spec_report,
+                                          tape_size_from_spec)
+        from henri_curriculum_governor import CurriculumGovernor, GovernorConfig
+        _gov = CurriculumGovernor(GovernorConfig(
+            window=curriculum_window, var_threshold=plateau_var_threshold,
+            progress_eps=progress_eps, kill_patience=kill_patience))
+        _gov.cfg.spec["prog_len"] = float(prog_len)
+        _gov.cfg.spec["grid_growth"] = float(_tape_size)
+        _spec = _gov.spec
+        _tape_size = tape_size_from_spec(_spec, default=256)
+        _spec_report = spec_report(_spec)
+    vm = CircularTapeVM(VMConfig(tape_size=_tape_size, max_steps=512, max_output=seq_len - 1))
     learner = TapeLearner(seed=seed)
     rng = torch.Generator().manual_seed(seed)
     bank = ProgramBank()
@@ -278,7 +308,11 @@ def run_seeding(
             # ---- 1. GENERATE: epsilon-greedy (30% from the reward-weighted bank)
             n_bank = int(0.3 * batch_size) if bank.programs else 0
             n_fresh = batch_size - n_bank
-            batch = [sample_program(_cur_prog_len, rng) for _ in range(n_fresh)]
+            if _spec is not None:
+                batch = [sample_program_from_spec(_spec, rng, sample_program,
+                                                  len(ALPHABET)) for _ in range(n_fresh)]
+            else:
+                batch = [sample_program(_cur_prog_len, rng) for _ in range(n_fresh)]
             batch += bank.sample(rng, n_bank)
 
             # ---- 2. EXECUTE (the cheap approved budget; total execution)
@@ -357,11 +391,29 @@ def run_seeding(
                     shard_buf = bytearray()
 
             # ---- 6b. HELD-OUT evaluation (the ONLY promotion signal)
+            _eval_this_round = False
             if eval_every > 0 and (rnd % eval_every == 0) and rnd > 0:
                 with torch.no_grad():
                     h = float(learner.loss(heldout_ids))
                 heldout_last = h
                 heldout_curve.append((rnd, h))
+                _eval_this_round = True
+            # ---- GOVERNOR ADOPTION (directive 1; only when --curriculum-levers ON).
+            # The governor escalates over the HETEROGENEOUS ladder and can TERMINATE the
+            # run when escalation stops moving held-out progress. That KILL is the
+            # literal reading of "cease flat token volume burns".
+            if _gov is not None:
+                _ev = _gov.observe(loss_val,
+                                 heldout=(heldout_last if _eval_this_round else None))
+                if _ev is not None:
+                    curriculum_events.append(_ev)
+                    if _ev.get("event") == "ESCALATE":
+                        _spec = _ev["spec"]
+                        _cur_prog_len = int(_spec["prog_len"])
+                        _spec_report = spec_report(_spec)
+                    elif _ev.get("event") == "KILL":
+                        kill_reason = str(_ev.get("reason"))
+                        break
 
             if rnd % 10 == 0 or rnd == n_rounds - 1:
                 dt = time.perf_counter() - t0
@@ -415,6 +467,10 @@ def run_seeding(
         "plateau_var_threshold": float(plateau_var_threshold),
         "curriculum_window": int(curriculum_window),
         "curriculum_events": curriculum_events,
+        "curriculum_levers": bool(curriculum_levers),
+        "curriculum_spec": _spec_report,
+        "curriculum_kill_reason": kill_reason,
+        "tape_size_applied": int(_tape_size),
         "final_prog_len": int(_cur_prog_len),
         "initial_prog_len": int(prog_len),
         # ---- NOT promotion signals (recorded for diagnosis only)
@@ -469,6 +525,13 @@ def main() -> int:
                     help="sigma^2 below which depth escalates")
     ap.add_argument("--max-prog-len", type=int, default=96,
                     help="ceiling for the escalated program length")
+    ap.add_argument("--curriculum-levers", action="store_true",
+                    help="route sampling through henri_curriculum_env so ALL "
+                         "FIVE governor levers reach the generator (default OFF)")
+    ap.add_argument("--governor-progress-eps", type=float, default=1e-3,
+                    help="held-out gain counted as progress by the governor")
+    ap.add_argument("--governor-kill-patience", type=int, default=3,
+                    help="non-progressing escalations before the run TERMINATES")
     a = ap.parse_args()
     if a.threads > 0:
         torch.set_num_threads(a.threads)
@@ -481,7 +544,10 @@ def main() -> int:
                     curriculum_escalate=a.curriculum_escalate,
                     plateau_var_threshold=a.plateau_var_threshold,
                     curriculum_window=a.curriculum_window,
-                    max_prog_len=a.max_prog_len)
+                    max_prog_len=a.max_prog_len,
+                    curriculum_levers=a.curriculum_levers,
+                    progress_eps=a.governor_progress_eps,
+                    kill_patience=a.governor_kill_patience)
     print(json.dumps(s, indent=2))
     return 0
 
