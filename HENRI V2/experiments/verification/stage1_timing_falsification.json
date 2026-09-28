@@ -212,11 +212,15 @@
     "reporting_rule": "state the conclusion under EVERY metric; never pick the flattering one"
   },
   "default_config_discrepancy_resolved": {
-    "corrected_resolution": "the cause is BUDGET, not config. My first explanation attributed it to the config difference (heldout_samples 256 vs 64, eval_every 50 vs 20, kill_patience 3 vs 9999); re-measuring explicitly at 60k vm shows the seed moves progress in BOTH configs, so that explanation is RETRACTED. At 20k vm the two seeds' differences cancelled in first-minus-last.",
-    "probe_a": "h50, 20k vm (39 rounds), legacy path -> progress agreed to <1e-12",
-    "probe_b": "60k vm, BOTH configs -> progress DIFFERS across seeds; and 150k vm x 8 seeds -> within-arm sd 0.0420",
-    "retracted_explanation": "the probes used different configs (heldout_samples 256 vs 64, eval_every 50 vs 20, kill_patience 3 vs 9999); only the experiment config governs this run, and there the seed moves progress",
-    "retraction_reason": "my own 60k-vm re-measurement contradicts the recorded explanation; the record is corrected rather than left standing"
+    "lesson": "a probe that compares an absent metric reports agreement; check that the metric EXISTS before comparing it across runs",
+    "measured_cause": "with n_executions=20000 and batch_size=512 the run lasts 40 rounds, and the default eval_every=50 means NO held-out evaluation occurs at all, so heldout_progress is None/meaningless for both seeds. My probe narrated that absence as 'identical progress: True'.",
+    "probe_a": "h50, 20k vm, default eval_every=50 -> progress carried no signal",
+    "probe_b": "60k vm and 150k vm runs -> progress DIFFERS across seeds; 8-seed sd 0.0420",
+    "superseded_explanations": [
+      null,
+      "the cause is BUDGET, not config. My first explanation attributed it to the config difference (heldout_samples 256 vs 64, eval_every 50 vs 20, kill_patience 3 vs 9999); re-measuring explicitly at 60k vm shows the seed moves progress in BOTH configs, so that explanation is RETRACTED. At 20k vm the two seeds' differences cancelled in first-minus-last."
+    ],
+    "superseded_reason": "the first explanation blamed the CONFIG and the second blamed the BUDGET. The decisive test shows the real cause is that the probe ran too short for ANY evaluation to fire, so the comparison was vacuous. Both earlier explanations are retracted; this one is measured."
   },
   "determinism_check_vs_committed_run2": {
     "committed_cadence_w3_progress": 5.48314048803978,
