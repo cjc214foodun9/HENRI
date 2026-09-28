@@ -1,0 +1,106 @@
+{
+  "artifact": "stage1_timing_perrung_marginal",
+  "conclusion": "Registered rule: the early ladder's per-rung marginal progress is WITHIN the noise band of the late ladder's at matched compute. The more sensitive paired test agrees in sign and is small (t -3.02, 7/8 seeds negative). Therefore WHEN the ladder moves does not matter on this substrate, and the remaining lever is WHAT the rungs contain.",
+  "evidence_class": "OBSERVED",
+  "generated_by": "h54_perrung_close.py",
+  "honest_bounds": [
+    "the late arm reaches far fewer rungs (1-4) than the early arm (7-9); the paired test is truncated to min(rung counts) per seed, so it compares the SHARED prefix",
+    "residuals are computed against a two-parameter fit (intercept, slope) estimated from the committed timing line (n=17); the de-circularized quantity is therefore a RESIDUAL, not an independent measurement",
+    "residual magnitude (|delta| ~ 0.011-0.025) is ~0.2-0.5%% of the total held-out drop (~5.4); this is a null result with a small negative lean, not a large effect"
+  ],
+  "metric_status": "the RAW per-rung progress is CIRCULAR between arms (progress = -0.004022 + 0.8992 x remaining-drop, Pearson r = 0.9999, n = 17; found and recorded BEFORE the arms ran). All analysis below uses the DE-CIRCULARIZED residuals the source receipt stores in residuals_per_arm_seed.",
+  "next_falsification_unchanged": "since timing is inert, test the OTHER lever: at matched compute, does the GOVERNED rung CONTENT produce more per-rung marginal progress than the legacy content? Requires a content A/B on the same ladder with the trigger held fixed.",
+  "not_licensed": [
+    "that curriculum escalation is useless in general -- only that its TIMING is inert here",
+    "any benchmark or task-score claim (none was produced)",
+    "any transfer of this result to a different substrate, rung set, or budget"
+  ],
+  "paired_matched_rung_index_test_post_hoc": {
+    "df": 7,
+    "direction": "EARLY_MARGINALLY_WORSE",
+    "mean_delta": -0.025286901234052944,
+    "n_seeds": 8,
+    "p_two_tailed_t": 0.019471747533176462,
+    "per_seed": [
+      {
+        "delta": 0.00504444612223247,
+        "early": 0.009494993488936565,
+        "late": 0.004450547366704095,
+        "n_matched_rungs": 1,
+        "seed": "12345"
+      },
+      {
+        "delta": -0.0675552909533024,
+        "early": -0.06336211185367836,
+        "late": 0.004193179099624032,
+        "n_matched_rungs": 3,
+        "seed": "161803"
+      },
+      {
+        "delta": -0.006489799288367232,
+        "early": -0.0015361990942381887,
+        "late": 0.004953600194129043,
+        "n_matched_rungs": 1,
+        "seed": "20260927"
+      },
+      {
+        "delta": -0.03792778848588804,
+        "early": -0.034981519449707454,
+        "late": 0.002946269036180584,
+        "n_matched_rungs": 2,
+        "seed": "271828"
+      },
+      {
+        "delta": -0.02690409665634471,
+        "early": -0.02334567062323993,
+        "late": 0.0035584260331047797,
+        "n_matched_rungs": 3,
+        "seed": "31"
+      },
+      {
+        "delta": -0.009952204348157316,
+        "early": -0.007928312600075635,
+        "late": 0.002023891748081681,
+        "n_matched_rungs": 4,
+        "seed": "31415"
+      },
+      {
+        "delta": -0.044175858639987374,
+        "early": -0.04835479130330606,
+        "late": -0.004178932663318687,
+        "n_matched_rungs": 3,
+        "seed": "7"
+      },
+      {
+        "delta": -0.014334617622608941,
+        "early": -0.012278329355522078,
+        "late": 0.002056288267086862,
+        "n_matched_rungs": 4,
+        "seed": "99"
+      }
+    ],
+    "sd_delta": 0.023707274205492866,
+    "se": 0.008381787177076463,
+    "sign_test": {
+      "n_negative": 7,
+      "n_seeds": 8,
+      "p_two_tailed_exact": 0.0703125
+    },
+    "t": -3.016886577985499,
+    "why": "the design IS paired (both arms ran the SAME 8 seeds) and the late arm has as few as 1 rung vs up to 9 for the early arm, so a pooled mean over unequal rung sequences is confounded; pairing at matched rung index removes the seed effect as common mode"
+  },
+  "pre_registered_test": {
+    "delta": -0.011071914454735892,
+    "early_mean": -0.009055941926064518,
+    "late_mean": 0.002015972528671374,
+    "n_early_rungs": 69,
+    "n_late_rungs": 21,
+    "noise_band_pooled_sd": 0.014135145521219143,
+    "statistic": "mean(early residual) - mean(late residual), pooled within-arm sd as noise",
+    "verdict": "TIMING_DOES_NOT_MATTER"
+  },
+  "question": "does the EARLY ladder produce MORE per-rung marginal progress than the LATE ladder, beyond the measured cross-arm noise band, at matched compute?",
+  "reads_receipt": "HENRI V2/experiments/verification/stage1_timing_falsification.json",
+  "source_receipt_head": "89dab7b0deb072766a2955264e42fe9aba69b612",
+  "utc": "2026-09-28T21:56:33Z"
+}
