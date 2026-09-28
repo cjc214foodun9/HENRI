@@ -123,3 +123,28 @@ later byte-tape rungs with 2-D grid task emitters reusing this sprint's verified
 (`henri_topological_encoder` / `henri_region_selector` for Jordan-mask tasks,
 `henri_scene_binder` for role-filler scenes, `henri_action_koopman` for causal rollouts),
 plus a learner input path — the current learner consumes byte sequences, not grids.
+
+## Critical-gap adjudication + Directives 1/2/4 (2026-09-27)
+
+The attached diagnostic names five "critical missing systems". Each was adjudicated
+against the live tree **before** any build; two were already closed and one stated
+resolution is impossible as written.
+
+| Gap | Status | Evidence |
+|---|---|---|
+| G1 generator substrate | **OPEN -> BUILT** | `henri_curriculum_grid.py` (3 families, coupled to the verified encoders) |
+| G2 transmission | **PARTIAL** | `henri_hopfield_egress.py` exists at sealed `beta=8.0`; the decoder has **0** attention symbols, so "causal attention keys/values" is **impossible** as stated |
+| G3 hierarchy | **ALREADY CLOSED** | `henri_scene_binder.py` (29/29), an earlier commit |
+| G4 topological region selection | **ALREADY CLOSED** | committed OOF mask IoU **1.0** on all three families vs the doc's own bar > 0.5 |
+| G5 world model in search | **PARTIAL -> JOINED** | pieces existed but were never joined: `henri_koopman_leaf.py` mentioned sagnac **0** times |
+
+| Directive | Result | Measurement |
+|---|---|---|
+| **D1** learning-progress escalation | done, with a **correction** | `GovernorConfig.trigger` dispatches `variance` (default, byte-identical) / `progress` (the doc's literal metric) / `cadence`. On one 400-step curve, first escalation: variance **step 239** (99.11 % of the drop already spent), progress **step 239** (99.11 % — the literal metric is *also* post-convergence), cadence **step 19** (31.65 %, still learning). An unknown trigger now **fails closed**. |
+| **D2** 2-D spatial emitter | done | `containment_fill` / `reflection` / `two_rings_select`; disjoint colour bands; targets computed from the generator's **own** bookkeeping, never by calling the operator under test |
+| **D3** minimal-bounding region selection | **already complete** | not rebuilt |
+| **D4** Koopman -> Sagnac -> Hopfield egress | done | `henri_agential_chain.py`; sealed `epsilon_hard=0.35` / `beta=8.0` / horizon 5; a veto **removes** and is never re-admitted; an **empty** codebook emits **nothing** |
+
+**Hardware status: CPU only.** SciCode / ARC-AGI / AAII scoring stays **BLOCKED** — `arc_agi` is absent on this host, the prefix projection is untrained, and there is no attention core to host a KV cache. **No benchmark score is claimed anywhere.**
+
+**Honest boundary:** this is **not** a verified functional ML model. The chain returns a *codebook index*, never an executed action, and its evidence class is `DIAGNOSTIC`. The 2-D emitter is opt-in and is **not** wired into the seeding driver, because the driver and its 60+ tests are load-bearing and this sprint already produced one regression from an over-eager patch.
