@@ -24,7 +24,7 @@ fam = show("HENRI V2/experiments/verification/operator_router_family_suite.json"
 s1 = show("HENRI V2/experiments/verification/stage1_rungs345_observed.json")
 rs = fam.get("region_selection") or {}
 
-fig = plt.figure(figsize=(14.8, 9.6))
+fig = plt.figure(figsize=(14.8, 10.0))
 fig.text(0.5, 0.968, "Project HENRI - five critical gaps adjudicated + four directives executed",
          ha="center", fontsize=13.6, fontweight="bold")
 fig.text(0.5, 0.940, "every number read from the git-committed receipts at render time",
@@ -105,17 +105,19 @@ for k, v in rows4:
     ax4.text(0.02, y - 0.058, v, fontsize=7.7, family="monospace", color="#333333")
     y -= 0.152
 
-fig.text(0.5, 0.152,
-         "HONEST BOUNDARIES  |  NOT a verified functional ML model: no benchmark score exists "
-         "(arc_agi absent, no trained prefix projection, no attention core). The chain returns a codebook INDEX, never an executed action.\n"
-         "The 2-D emitter is NOT wired into the seeding driver (opt-in by design: the driver and its 60+ tests are load-bearing, "
-         "and this sprint already caused one regression from an over-eager patch). A trained prefix projection / KV cache remains BLOCKED.\n"
-         "MEASURED CONFOUND (unchanged, committed): the escalation trigger fires only after convergence -- 99.82%% of the drop was spent before "
-         "the first escalation in stage1_rungs345_observed.json. D1's cadence mode addresses this and is unit-tested; it is NOT yet re-run end to end.",
-         ha="center", va="top", fontsize=7.9,
+fig.text(0.5, 0.150,
+         "HONEST BOUNDARIES\n"
+         "NOT a verified functional ML model: no benchmark score exists. arc_agi is absent, the prefix projection is\n"
+         "untrained, and there is no attention core. The chain returns a codebook INDEX, never an executed action.\n"
+         "The 2-D emitter is NOT wired into the seeding driver (opt-in by design: the driver and its 60+ tests are\n"
+         "load-bearing, and this sprint already caused one regression from an over-eager patch).\n"
+         "The measured confound stands: the escalation trigger fires only after convergence (99.82%% of the drop was\n"
+         "spent before the first escalation). D1's cadence mode addresses this and is unit-tested, but it is NOT yet\n"
+         "re-run end to end. SciCode / ARC / AAII scoring remains BLOCKED.",
+         ha="center", va="top", fontsize=8.0,
          bbox=dict(boxstyle="round,pad=0.55", fc="#fff7ec", ec="#cc7722"))
 
-fig.text(0.5, 0.040,
+fig.text(0.5, 0.028,
          "claim -> hypothesis -> evidence -> mechanism -> action -> verification -> uncertainty   |   "
          "labels: OBSERVED / DERIVED / HYPOTHESIS / FALSIFIED / BLOCKED   |   no benchmark score is claimed",
          ha="center", fontsize=8.0, color="#555555")
