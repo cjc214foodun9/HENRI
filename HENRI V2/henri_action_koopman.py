@@ -113,7 +113,8 @@ class ActionConditionedKoopman:
         if rank is None and self.dim > DENSE_DIM_LIMIT and not allow_dense:
             raise WorldModelError(
                 f"refusing to construct a dense [{self.dim},{self.dim}] operator: "
-                f"that is {self.dim * self.dim * 4 / (1024 ** 3):.2f} GB per action "
+                f"that is {self.dim * self.dim * 4 / (1024 ** 3):.2f} GiB "
+                f"({self.dim * self.dim * 4 / 1e9:.2f} GB) per action "
                 f"(Contract A: never form D^2). Pass rank=r with r <= 64 for the "
                 f"low-rank form, or allow_dense=True to override deliberately.")
         if rank is not None and rank > self.dim:

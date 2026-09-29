@@ -13,6 +13,7 @@ v3: try a chain of REAL instruments; report which one answered; keep
 
 from __future__ import annotations
 
+import argparse
 import ctypes
 import json
 import math
@@ -31,6 +32,35 @@ import henri_koopman_leaf as KL                                    # noqa: E402
 DIM = 65536
 N_ACTIONS = 4
 N_SAMPLES = 64
+DEFAULT_OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          "d3_low_rank_koopman_verification_v3.json")
+
+
+def resolve_out() -> str:
+    """Receipt path: --out > HENRI_RECEIPT_DIR > committed default.
+
+    DEFECT FIXED 2026-09-28 (same class as sagnac_scale_defect.py:53). This script
+    originally wrote to its COMMITTED receipt path with NO override, so any
+    diagnostic re-run silently clobbered a committed artifact and re-dirtied the
+    tracked tree. That is the defect recorded in the 9a8fbce retraction. A
+    MALFORMED --out now RAISES rather than falling back to the committed path,
+    because falling back is the exact failure being prevented.
+    """
+    ap = argparse.ArgumentParser(add_help=False)
+    ap.add_argument("--out", default=None)
+    ns, _ = ap.parse_known_args()
+    cand = ns.out or os.environ.get("HENRI_RECEIPT_DIR")
+    if not cand:
+        return DEFAULT_OUT
+    if ns.out:
+        parent = os.path.dirname(os.path.abspath(ns.out))
+        if parent and not os.path.isdir(parent):
+            raise SystemExit(f"MALFORMED --out: directory does not exist: {parent}")
+        if os.path.isdir(ns.out):
+            raise SystemExit(f"MALFORMED --out: is a directory: {ns.out}")
+        return os.path.abspath(ns.out)
+    return os.path.join(os.path.abspath(cand),
+                        "d3_low_rank_koopman_verification_v3.json")
 
 
 # ------------------------------------------------------- real memory probes
@@ -121,6 +151,9 @@ def make_triples(seed=3):
 
 
 def main():
+    # Fail FAST on a malformed --out: resolving at the end would burn ~60 s of
+    # D=65,536 compute before rejecting the argument.
+    out = resolve_out()
     instr_name, rss0 = current_rss_mib()
     R = {"schema": "henri.d3-low-rank-koopman-verification.v3",
          "directive": 3,
@@ -271,8 +304,6 @@ def main():
     R["criteria"]["rss_delta"] = (
         "STDOUT ONLY (allocator-state dependent, varies run to run).")
 
-    out = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                       "d3_low_rank_koopman_verification_v3.json")
     with open(out, "w", encoding="utf-8") as fh:
         json.dump(R, fh, indent=2, default=str)
     print("WROTE", out)
