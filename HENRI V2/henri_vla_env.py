@@ -51,6 +51,11 @@ class EnvConfig:
     step_size: float = 0.08
     tol: float = 0.06
     dot_radius: int = 3
+    # Task regions for CONTINUAL LEARNING: Task A restricts the goal to the LEFT
+    # half, Task B to the RIGHT half. Disjoint supports are what make a forgetting
+    # measurement meaningful -- a shared support would let a policy score on both
+    # without retaining anything.
+    goal_region: str = "any"          # "any" | "left" | "right"
 
 
 class PixelReachEnv:
@@ -65,14 +70,26 @@ class PixelReachEnv:
     def reset(self, seed: int = 0):
         g = torch.Generator().manual_seed(int(seed))
         s = self.cfg.size
+        # GOAL sampling respects the task region (continual learning).
+        lo, hi = 0.25, 0.75
+        if self.cfg.goal_region == "left":
+            hi = 0.5
+        elif self.cfg.goal_region == "right":
+            lo = 0.5
+
+        def draw():
+            return lo + (hi - lo) * float(torch.rand(1, generator=g))
+
         self.ee = torch.tensor([0.25 + 0.5 * float(torch.rand(1, generator=g)),
                                 0.25 + 0.5 * float(torch.rand(1, generator=g))])
-        self.goal = torch.tensor([0.25 + 0.5 * float(torch.rand(1, generator=g)),
-                                  0.25 + 0.5 * float(torch.rand(1, generator=g))])
+        self.goal = torch.tensor([draw(), draw()])
         # start far enough apart that random play does NOT succeed trivially
-        while float((self.ee - self.goal).norm()) < 0.30:
-            self.goal = torch.tensor([0.25 + 0.5 * float(torch.rand(1, generator=g)),
-                                      0.25 + 0.5 * float(torch.rand(1, generator=g))])
+        tries = 0
+        while float((self.ee - self.goal).norm()) < 0.30 and tries < 64:
+            tries += 1
+            self.ee = torch.tensor([0.25 + 0.5 * float(torch.rand(1, generator=g)),
+                                    0.25 + 0.5 * float(torch.rand(1, generator=g))])
+            self.goal = torch.tensor([draw(), draw()])
         self.t = 0
         self.done = False
         self.success = False

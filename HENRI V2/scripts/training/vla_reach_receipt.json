@@ -1,0 +1,357 @@
+{
+  "schema": "henri.vla-reach.v1",
+  "device": "cuda",
+  "d_model": 65536,
+  "smoke": false,
+  "config": {
+    "d_model": 65536,
+    "train_episodes": 256,
+    "eval_episodes": 64,
+    "eval_seed": 90000,
+    "steps": 3000,
+    "batch": 64,
+    "lr": 0.002,
+    "eval_every": 750,
+    "sample_steps": 8,
+    "out": null,
+    "smoke": false
+  },
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 5090",
+    "capability": [
+      12,
+      0
+    ],
+    "vram_gb": 33.67
+  },
+  "head_trainable_params": 3819527,
+  "ingress_trainable_params": 0,
+  "baselines": {
+    "random_policy_success": 0.1875,
+    "analytic_expert_success": 1.0
+  },
+  "normalizer": {
+    "n_dof": 7,
+    "mean": [
+      -0.012165520340204239,
+      -0.028864335268735886,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "std": [
+      0.7133130431175232,
+      0.7007626295089722,
+      9.999999974752427e-07,
+      9.999999974752427e-07,
+      9.999999974752427e-07,
+      9.999999974752427e-07,
+      9.999999974752427e-07
+    ]
+  },
+  "psi_shape": [
+    1156,
+    65536
+  ],
+  "psi_dtype": "torch.float16",
+  "psi_gib": 0.141,
+  "dataset_seconds": 1.8,
+  "train_seconds": 25.2,
+  "steps_per_second": 119.05,
+  "loss_curve": [
+    {
+      "step": 1,
+      "loss": 1.370403
+    },
+    {
+      "step": 50,
+      "loss": 0.970156
+    },
+    {
+      "step": 100,
+      "loss": 0.715687
+    },
+    {
+      "step": 150,
+      "loss": 0.661274
+    },
+    {
+      "step": 200,
+      "loss": 0.63591
+    },
+    {
+      "step": 250,
+      "loss": 0.539746
+    },
+    {
+      "step": 300,
+      "loss": 0.685469
+    },
+    {
+      "step": 350,
+      "loss": 0.639147
+    },
+    {
+      "step": 400,
+      "loss": 0.63047
+    },
+    {
+      "step": 450,
+      "loss": 0.696511
+    },
+    {
+      "step": 500,
+      "loss": 0.615
+    },
+    {
+      "step": 550,
+      "loss": 0.708589
+    },
+    {
+      "step": 600,
+      "loss": 0.584124
+    },
+    {
+      "step": 650,
+      "loss": 0.503713
+    },
+    {
+      "step": 700,
+      "loss": 0.499452
+    },
+    {
+      "step": 750,
+      "loss": 0.40693
+    },
+    {
+      "step": 800,
+      "loss": 0.397214
+    },
+    {
+      "step": 850,
+      "loss": 0.299369
+    },
+    {
+      "step": 900,
+      "loss": 0.309198
+    },
+    {
+      "step": 950,
+      "loss": 0.294839
+    },
+    {
+      "step": 1000,
+      "loss": 0.261406
+    },
+    {
+      "step": 1050,
+      "loss": 0.250332
+    },
+    {
+      "step": 1100,
+      "loss": 0.245053
+    },
+    {
+      "step": 1150,
+      "loss": 0.266941
+    },
+    {
+      "step": 1200,
+      "loss": 0.238743
+    },
+    {
+      "step": 1250,
+      "loss": 0.291012
+    },
+    {
+      "step": 1300,
+      "loss": 0.276438
+    },
+    {
+      "step": 1350,
+      "loss": 0.261138
+    },
+    {
+      "step": 1400,
+      "loss": 0.2043
+    },
+    {
+      "step": 1450,
+      "loss": 0.312115
+    },
+    {
+      "step": 1500,
+      "loss": 0.260841
+    },
+    {
+      "step": 1550,
+      "loss": 0.249822
+    },
+    {
+      "step": 1600,
+      "loss": 0.279278
+    },
+    {
+      "step": 1650,
+      "loss": 0.216392
+    },
+    {
+      "step": 1700,
+      "loss": 0.195431
+    },
+    {
+      "step": 1750,
+      "loss": 0.282424
+    },
+    {
+      "step": 1800,
+      "loss": 0.233356
+    },
+    {
+      "step": 1850,
+      "loss": 0.270669
+    },
+    {
+      "step": 1900,
+      "loss": 0.232124
+    },
+    {
+      "step": 1950,
+      "loss": 0.210515
+    },
+    {
+      "step": 2000,
+      "loss": 0.261805
+    },
+    {
+      "step": 2050,
+      "loss": 0.225424
+    },
+    {
+      "step": 2100,
+      "loss": 0.193071
+    },
+    {
+      "step": 2150,
+      "loss": 0.180412
+    },
+    {
+      "step": 2200,
+      "loss": 0.222794
+    },
+    {
+      "step": 2250,
+      "loss": 0.232458
+    },
+    {
+      "step": 2300,
+      "loss": 0.265349
+    },
+    {
+      "step": 2350,
+      "loss": 0.207223
+    },
+    {
+      "step": 2400,
+      "loss": 0.162849
+    },
+    {
+      "step": 2450,
+      "loss": 0.178314
+    },
+    {
+      "step": 2500,
+      "loss": 0.204862
+    },
+    {
+      "step": 2550,
+      "loss": 0.200549
+    },
+    {
+      "step": 2600,
+      "loss": 0.219563
+    },
+    {
+      "step": 2650,
+      "loss": 0.21472
+    },
+    {
+      "step": 2700,
+      "loss": 0.121827
+    },
+    {
+      "step": 2750,
+      "loss": 0.239675
+    },
+    {
+      "step": 2800,
+      "loss": 0.136204
+    },
+    {
+      "step": 2850,
+      "loss": 0.166822
+    },
+    {
+      "step": 2900,
+      "loss": 0.245185
+    },
+    {
+      "step": 2950,
+      "loss": 0.155244
+    },
+    {
+      "step": 3000,
+      "loss": 0.208197
+    }
+  ],
+  "loss_first": 1.370403,
+  "loss_last": 0.208197,
+  "closed_loop_evals": [
+    {
+      "success_rate": 0.328125,
+      "mean_final_dist": 0.3189639501797501,
+      "n_episodes": 64,
+      "seeds": "90000..90063",
+      "step": 750
+    },
+    {
+      "success_rate": 0.453125,
+      "mean_final_dist": 0.2723911464854609,
+      "n_episodes": 64,
+      "seeds": "90000..90063",
+      "step": 1500
+    },
+    {
+      "success_rate": 0.484375,
+      "mean_final_dist": 0.26471790195500944,
+      "n_episodes": 64,
+      "seeds": "90000..90063",
+      "step": 2250
+    },
+    {
+      "success_rate": 0.46875,
+      "mean_final_dist": 0.26333692468324443,
+      "n_episodes": 64,
+      "seeds": "90000..90063",
+      "step": 3000
+    }
+  ],
+  "final_success_rate": 0.46875,
+  "verdicts": {
+    "beats_random_baseline": true,
+    "random_baseline": 0.1875,
+    "delta_over_random": 0.2812,
+    "loss_decreased": true,
+    "loss_ratio_last_over_first": 0.1519,
+    "LOOP_CLOSES": true
+  },
+  "peak_vram_mib": 355.0,
+  "honest_limits": [
+    "SYNTHETIC pixel task; success rate here is NOT robot capability",
+    "no benchmark score is claimed (ARC/SciCode/LIBERO absent)",
+    "behaviour cloning from an ANALYTIC expert, not from a real corpus",
+    "the ingress sketch is frozen; only the flow head adapts"
+  ]
+}
