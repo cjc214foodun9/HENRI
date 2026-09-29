@@ -80,8 +80,18 @@ def measure():
     # the flat() adapter contract, measured
     import torch
     flat_cases = {}
+    # F1 FIX (2026-09-28, measured). This case was previously drawn from UNSEEDED
+    # torch.randn(8), so `flat_adapter.complex.norm` varied between runs
+    # (measured over three consecutive runs: 1.65984, 2.198456, 1.684546) while
+    # the receipt declares evidence_class OBSERVED. The committed JSON therefore
+    # held one arbitrary draw, and the earlier "3.226426" vs "1.998235" vs
+    # "3.124444" disagreement was a sampling artifact, not a code change.
+    # A receipt that cannot be reproduced is not evidence. Seeded below so the
+    # committed artifact is byte-reproducible across runs.
+    _g = torch.Generator().manual_seed(20260928)
     for label, obj in (("topo_(list,feats)", enc.encode([[0, 1], [1, 0]])),
-                       ("complex", torch.complex(torch.randn(8), torch.randn(8))),
+                       ("complex", torch.complex(torch.randn(8, generator=_g),
+                                                 torch.randn(8, generator=_g))),
                        ("list", [0.5] * 16)):
         f = OR.flat(obj)
         flat_cases[label] = {"shape": list(f.shape),

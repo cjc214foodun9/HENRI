@@ -50,7 +50,45 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-OUT = os.path.join(HERE, "sagnac_scale_defect_observed.json")
+DEFAULT_OUT = os.path.join(HERE, "sagnac_scale_defect_observed.json")
+OUT = DEFAULT_OUT
+
+
+def resolve_out(argv=None):
+    """Resolve the receipt path: --out > HENRI_RECEIPT_DIR > committed default.
+
+    WHY THIS EXISTS (measured 2026-09-28). This script previously wrote DIRECTLY
+    to the committed receipt path with no override. Every diagnostic re-run --
+    including re-runs used to CHECK the receipt -- silently overwrote a committed
+    artifact and re-dirtied the worktree. It corrupted the receipt twice in one
+    session and cost a full retraction cycle.
+
+    A MALFORMED override RAISES. It never falls back to the committed default:
+    falling back is exactly the silent-clobber failure this guards against.
+
+    The default is byte-identical to the previous behaviour, so a plain
+    `python sagnac_scale_defect.py` reproduces the committed artifact unchanged
+    (aside from the run-time-derived caller line numbers, which are expected to
+    drift when sources move -- see the F2 note in the receipt's own docs).
+    """
+    argv = list(sys.argv[1:] if argv is None else argv)
+    out = None
+    if "--out" in argv:
+        i = argv.index("--out")
+        if i + 1 >= len(argv):
+            raise SystemExit("--out requires a path argument")
+        out = argv[i + 1]
+    if out is None:
+        env = os.environ.get("HENRI_RECEIPT_DIR")
+        if env:
+            out = os.path.join(env, "sagnac_scale_defect_observed.json")
+    if out is None:
+        out = DEFAULT_OUT
+    parent = os.path.dirname(os.path.abspath(out))
+    if not parent:
+        raise SystemExit("receipt path has no parent directory: %r" % (out,))
+    os.makedirs(parent, exist_ok=True)
+    return out
 
 
 def unit(n: int, seed: int, D: int) -> torch.Tensor:
@@ -60,6 +98,8 @@ def unit(n: int, seed: int, D: int) -> torch.Tensor:
 
 
 def main() -> int:
+    global OUT
+    OUT = resolve_out()
     from sagnac_mcts_planner import SagnacMCTSPlanner
 
     D = 1024
