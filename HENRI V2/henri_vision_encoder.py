@@ -35,6 +35,7 @@ class HENRIVisionEncoder(nn.Module):
         spatial_basis_kind: str = "default",
         bg_mask: bool = False,
         vectorized_accum: bool = False,
+        parity_dedup: bool = False,
     ):
         """UWE spatial encoder.
 
@@ -65,6 +66,7 @@ class HENRIVisionEncoder(nn.Module):
         self.spatial_basis_kind = spatial_basis_kind
         self.bg_mask = bg_mask
         self.vectorized_accum = bool(vectorized_accum)
+        self.parity_dedup = bool(parity_dedup)
 
         # Complex phase spatial basis vectors [max_grid_dim, D // 2]
         # x-axis translation phase generator and y-axis translation phase generator
@@ -128,10 +130,29 @@ class HENRIVisionEncoder(nn.Module):
         components = segmenter.segment_grid(grid_np)
 
         parity_mask_grid = np.ones((H, W), dtype=np.float32)
-        for comp in components:
-            interior_px, exterior_px = ParityContourMask.compute_parity_contour((H, W), comp.pixels)
-            for r_i, c_i in interior_px:
-                parity_mask_grid[r_i, c_i] = -1.0  # Parity reflection operator for enclosed regions
+        # DEDUPLICATION. `segment_grid` already called compute_parity_contour for
+        # every component and stored the result on the record as `interior_pixels`;
+        # the legacy path recomputed the identical full-grid flood fill here, doing
+        # the work TWICE per component. Measured at 16x16 (230 single-pixel
+        # components): P4 56156 us + P5 53478 us of a 112061 us encode
+        # (experiments/verification/phase_split_receipt.json).
+        #
+        # This flag is INDEPENDENT of `vectorized_accum` on purpose. The batched
+        # superposition is SLOWER on small grids (4x4: measured 0.64x) because the
+        # [nr, W, D//2] tensor allocation dominates 16 cells of arithmetic, while
+        # the dedup is a pure win at every size. Coupling them would have forced
+        # small-grid callers to pay a regression to get the dedup.
+        if self.parity_dedup or self.vectorized_accum:
+            # Same function, same arguments -> identical by construction; asserted
+            # in experiments/verification/verify_fixes.sh section 3.
+            for comp in components:
+                for r_i, c_i in comp.interior_pixels:
+                    parity_mask_grid[r_i, c_i] = -1.0
+        else:
+            for comp in components:
+                interior_px, _ = ParityContourMask.compute_parity_contour((H, W), comp.pixels)
+                for r_i, c_i in interior_px:
+                    parity_mask_grid[r_i, c_i] = -1.0  # Parity reflection operator for enclosed regions
 
         parity_mask_tensor = torch.tensor(parity_mask_grid, dtype=torch.float32, device=self.device)
 
