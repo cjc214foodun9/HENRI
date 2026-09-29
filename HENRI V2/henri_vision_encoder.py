@@ -36,6 +36,7 @@ class HENRIVisionEncoder(nn.Module):
         bg_mask: bool = False,
         vectorized_accum: bool = False,
         parity_dedup: bool = False,
+        parity_fast: bool = False,
     ):
         """UWE spatial encoder.
 
@@ -67,6 +68,7 @@ class HENRIVisionEncoder(nn.Module):
         self.bg_mask = bg_mask
         self.vectorized_accum = bool(vectorized_accum)
         self.parity_dedup = bool(parity_dedup)
+        self.parity_fast = bool(parity_fast)
 
         # Complex phase spatial basis vectors [max_grid_dim, D // 2]
         # x-axis translation phase generator and y-axis translation phase generator
@@ -127,7 +129,26 @@ class HENRIVisionEncoder(nn.Module):
         superposed_wave = torch.zeros(self.d_model // 2, dtype=torch.complex64, device=self.device)
         grid_np = grid_clamped.cpu().numpy()
         segmenter = ConnectedComponentSegmenter(background_color=0)
-        components = segmenter.segment_grid(grid_np)
+        # WIRING (defect fixed 2026-09-29). Three defects, all in code that was
+        # already committed:
+        #   1. `segment_grid` accepted `want_exterior` and dropped it -- enabling
+        #      the flag changed NOTHING and measured 1.00x, i.e. a no-op that
+        #      reads as an optimisation.
+        #   2. `_parity_contour_fast` was DEAD CODE: `grep -n 'fast=True'`
+        #      returned only its own docstring. Nothing ever called it.
+        #   3. `parity_fast` did not exist as a parameter at all.
+        #
+        # DESIGN: encode_grid reads ONLY `comp.interior_pixels` (this function
+        # returns `normalized_wave`; the records are local and never escape), so
+        # `want_exterior=False` is unconditionally correct here -- it is not a
+        # tunable, it is a fact about the consumer. The exterior list is
+        # therefore not built, and no flag has to be set to get that. Only the
+        # BFS implementation remains a flag.
+        components = segmenter.segment_grid(
+            grid_np,
+            want_exterior=False,
+            fast=self.parity_fast,
+        )
 
         parity_mask_grid = np.ones((H, W), dtype=np.float32)
         # DEDUPLICATION. `segment_grid` already called compute_parity_contour for

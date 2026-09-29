@@ -196,14 +196,25 @@ class ConnectedComponentSegmenter:
     def __init__(self, background_color: int = 0):
         self.background_color = background_color
 
-    def segment_grid(self, grid: List[List[int]], want_exterior: bool = True) -> List[ObjectRecord]:
+    def segment_grid(self, grid: List[List[int]], want_exterior: bool = True, fast: bool = False) -> List[ObjectRecord]:
         """
         Segments a 2D grid into a list of ObjectRecords with parity contour classification.
 
-        want_exterior=False skips building `exterior_pixels` for every record, which
-        `henri_vision_encoder.encode_grid` never reads. Defaults preserve the
-        production path byte-for-byte; mech_type classification does not use the
-        exterior list (it branches on `len(interior_px) > 0`).
+        want_exterior=False skips building `exterior_pixels` for every record.
+        fast=True selects the list-of-lists flood fill (measured 1.72-1.80x, output
+        element-for-element identical).
+
+        DEFECT FIXED 2026-09-29: BOTH parameters were previously accepted and then
+        DROPPED on the floor -- the call to compute_parity_contour below did not
+        forward them, so `want_exterior=False` measured 1.00x (a no-op) and the
+        `fast` argument did not exist at all. `_parity_contour_fast` was dead code:
+        grep for `fast=True` returned only its own docstring. Both are now
+        forwarded, and `experiments/verification/flag_wiring_audit.py` asserts that
+        every flag on this class reaches a consumer.
+
+        Defaults preserve the production path byte-for-byte; mech_type
+        classification does not read the exterior list (it branches on
+        len(interior_px) > 0).
         """
         arr = np.array(grid, dtype=int)
         rows, cols = arr.shape
@@ -245,7 +256,9 @@ class ConnectedComponentSegmenter:
                     centroid_c = float(np.mean(c_coords))
 
                     # Compute Parity Contour Mask (IN/OUT)
-                    interior_px, exterior_px = ParityContourMask.compute_parity_contour((rows, cols), component)
+                    interior_px, exterior_px = ParityContourMask.compute_parity_contour(
+                        (rows, cols), component,
+                        fast=fast, want_exterior=want_exterior)
 
                     if area == 1:
                         mech_type = "single_pixel"
