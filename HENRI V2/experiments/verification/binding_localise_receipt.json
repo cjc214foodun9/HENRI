@@ -1,0 +1,41 @@
+{
+  "schema": "henri.bridge_binding_localise/1",
+  "geometry": {
+    "n": 256,
+    "n_patches": 256,
+    "d_vit": 1024,
+    "d_model": 65536,
+    "eps_base": 0.001,
+    "eps_noise": 0.001
+  },
+  "readout": "r2_std (scale-aware), held-out 25%, lam_rel=1e-3",
+  "A_pooled_r2": 1.0,
+  "A_feats_offdiag_cos": 0.99795236,
+  "B_binding_ON": {
+    "r2_std": 0.9999,
+    "mean_offdiag_cos": 0.99877076,
+    "binding_active": true,
+    "binding_ratio": 0.002209,
+    "dc_share": 0.998775
+  },
+  "B_terms": {
+    "binding_term_r2": -0.0078,
+    "binding_term_norm_over_psi": 0.003095
+  },
+  "C_binding_OFF": {
+    "r2_std": 0.9999,
+    "mean_offdiag_cos": 0.99909135,
+    "binding_active": false,
+    "binding_ratio": 0.0,
+    "dc_share": 0.999094
+  },
+  "verdicts": {
+    "input_readable": true,
+    "binding_ON_loses_state": false,
+    "binding_OFF_keeps_state": true,
+    "H5_BINDING_TERM_IS_THE_DESTROYER": false,
+    "r2_delta_on_minus_off": 0.0
+  },
+  "next_action": "Binding is NOT the destroyer; the loss is in to_pool/to_phase or the attention pool. Next: read the state from the bridge's internal pooled vector (attention-pooled, not mean-pooled) to split those two.",
+  "_why": "H5 test: push state-bearing features through the REAL bridge with position binding ON vs OFF, using the proven scale-aware readout. Localises whether the 256-way VSA superposition destroys the state the pooled path carries."
+}
