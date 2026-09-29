@@ -6,18 +6,18 @@
     "S1_inner_proper": 0.018305059522390366,
     "S1_inner_mean": 1.787603468983434e-05,
     "S1_ratio_mean_over_proper": 0.0009765625,
-    "S1_delta_measured": 0.9999821239653102,
+    "S1_delta_measured": 0.5091525316238403,
     "S1_delta_predicted_as_1_minus_inner_over_D": 0.9999821239653102,
-    "S1_identity_holds": true,
+    "S1_identity_holds": false,
     "S1_one_over_D": 0.0009765625,
     "S2_live_delta_by_case": {
-      "identical": 0.9990234376164153,
-      "orthogonal_pair": 0.9999821239653102,
-      "random_1": 0.9999537621806667,
-      "random_2": 0.999979989566782
+      "identical": 0.0,
+      "orthogonal_pair": 0.5091525316238403,
+      "random_1": 0.47632622718811035,
+      "random_2": 0.48975467681884766
     },
-    "S2_live_delta_range": 0.0009586863488948438,
-    "S2_identical_match_stress": 0.9990234376164153,
+    "S2_live_delta_range": 0.5091525316238403,
+    "S2_identical_match_stress": 0.0,
     "S2_identical_match_should_be": 0.0,
     "S3_normalized_delta_by_case": {
       "identical": 3.552713678800501e-15,
@@ -26,11 +26,11 @@
       "random_2": 0.9795093163847923
     },
     "S3_normalized_range": 0.9816949393865394,
-    "S4_search_returned_op": "Identity",
-    "S4_search_delta": 0.4973173029720783,
+    "S4_search_returned_op": "Rotate90",
+    "S4_search_delta": 0.004996836185455322,
     "S4_children_total": 9,
-    "S4_children_pruned": 9,
-    "S4_prune_rate": 1.0,
+    "S4_children_pruned": 4,
+    "S4_prune_rate": 0.4444444444444444,
     "S5_callers": [
       {
         "file": "arc_sagnac_veto.py",
@@ -44,168 +44,33 @@
       },
       {
         "file": "production_arc_run.py",
-        "line": 274,
+        "line": 266,
         "text": "# set, the production SagnacMCTSPlanner.dual_channel_sagnac_veto re-ranks the"
       },
       {
         "file": "production_arc_run.py",
-        "line": 827,
+        "line": 819,
         "text": "# width mismatch in dual_channel_sagnac_veto, but a SECOND coupled 8192 remains"
       },
       {
         "file": "production_arc_run.py",
-        "line": 2493,
+        "line": 2477,
         "text": "sagnac_planner.dual_channel_sagnac_veto("
       },
       {
         "file": "sagnac_mcts_planner.py",
-        "line": 46,
+        "line": 31,
         "text": "`dual_channel_sagnac_veto` computes an elementwise product of two waves, which"
       },
       {
         "file": "sagnac_mcts_planner.py",
-        "line": 374,
+        "line": 318,
         "text": "def dual_channel_sagnac_veto("
       },
       {
         "file": "sagnac_mcts_planner.py",
-        "line": 656,
+        "line": 600,
         "text": "delta_axiom, delta_epistemic, hard_veto_triggered = self.dual_channel_sagnac_veto("
-      },
-      {
-        "file": "tests\\contract\\test_macro_field_resolution.py",
-        "line": 150,
-        "text": "r_agree = pl.dual_channel_sagnac_veto(u, u, u, epsilon_hard=pl.tau_veto)"
-      },
-      {
-        "file": "tests\\contract\\test_macro_field_resolution.py",
-        "line": 151,
-        "text": "r_oppose = pl.dual_channel_sagnac_veto(-u, u, u, epsilon_hard=pl.tau_veto)"
-      },
-      {
-        "file": "tests\\contract\\test_phase823_target_grounding.py",
-        "line": 106,
-        "text": "assert \"dual_channel_sagnac_veto(\" in src, \"veto consumer missing\""
-      },
-      {
-        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
-        "line": 8,
-        "text": "sagnac_planner.dual_channel_sagnac_veto(_psi_macro, _axiom, _world)"
-      },
-      {
-        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
-        "line": 80,
-        "text": "hits = _calls_by_name(_prod_tree(), \"dual_channel_sagnac_veto\")"
-      },
-      {
-        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
-        "line": 81,
-        "text": "assert hits, \"no dual_channel_sagnac_veto call in production_arc_run.py\""
-      },
-      {
-        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
-        "line": 131,
-        "text": "_, _, hard = planner.dual_channel_sagnac_veto(c, ax, ax,"
-      },
-      {
-        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
-        "line": 139,
-        "text": "_, _, hard = planner.dual_channel_sagnac_veto(c, ax, ax,"
-      },
-      {
-        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
-        "line": 152,
-        "text": "_, _, hard = planner.dual_channel_sagnac_veto(c, ax, ax)   # no epsilon"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
-        "line": 4,
-        "text": "`SagnacMCTSPlanner.dual_channel_sagnac_veto` used `torch.mean(w.conj() * w_ref)`"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
-        "line": 96,
-        "text": "delta, _, _ = planner.dual_channel_sagnac_veto(a, a, a)"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
-        "line": 109,
-        "text": "d_id = planner.dual_channel_sagnac_veto(a, a, a)[0]"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
-        "line": 110,
-        "text": "d_orth = planner.dual_channel_sagnac_veto(a, b, b)[0]"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
-        "line": 111,
-        "text": "d_r1 = planner.dual_channel_sagnac_veto(r1a, r1b, r1b)[0]"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
-        "line": 112,
-        "text": "d_r2 = planner.dual_channel_sagnac_veto(r2a, r2b, r2b)[0]"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
-        "line": 128,
-        "text": "_, _, veto = planner.dual_channel_sagnac_veto(ref, ref, ref)"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
-        "line": 168,
-        "text": "d_real, _, _ = planner.dual_channel_sagnac_veto(real, real, real)"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
-        "line": 169,
-        "text": "d_comp, _, _ = planner.dual_channel_sagnac_veto(comp, comp, comp)"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
-        "line": 179,
-        "text": "d, _, _ = planner.dual_channel_sagnac_veto(w, o, o)"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
-        "line": 188,
-        "text": "d, _, _ = planner.dual_channel_sagnac_veto(z, ref, ref)"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_width_contract.py",
-        "line": 6,
-        "text": "1. WIDTH. `dual_channel_sagnac_veto` multiplies two waves elementwise. Production"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_width_contract.py",
-        "line": 74,
-        "text": "planner.dual_channel_sagnac_veto(big, small, small, epsilon_hard=planner.tau_veto)"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_width_contract.py",
-        "line": 85,
-        "text": "r = planner.dual_channel_sagnac_veto(big, small, small, epsilon_hard=planner.tau_veto)"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_width_contract.py",
-        "line": 103,
-        "text": "planner.dual_channel_sagnac_veto(odd, small, small, epsilon_hard=planner.tau_veto)"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_width_contract.py",
-        "line": 111,
-        "text": "r = planner.dual_channel_sagnac_veto(u, u, u, epsilon_hard=planner.tau_veto)"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_width_contract.py",
-        "line": 128,
-        "text": "r_agree = planner.dual_channel_sagnac_veto(u, u, u, epsilon_hard=planner.tau_veto)"
-      },
-      {
-        "file": "tests\\contract\\test_sagnac_width_contract.py",
-        "line": 129,
-        "text": "r_oppose = planner.dual_channel_sagnac_veto(-u, u, u, epsilon_hard=planner.tau_veto)"
       },
       {
         "file": "experiments\\verification\\action5_fullscale_width.py",
@@ -476,10 +341,145 @@
         "file": "experiments\\verification\\verify_width_contract.py",
         "line": 87,
         "text": "if \"dual_channel_sagnac_veto\" in src:"
+      },
+      {
+        "file": "tests\\contract\\test_macro_field_resolution.py",
+        "line": 150,
+        "text": "r_agree = pl.dual_channel_sagnac_veto(u, u, u, epsilon_hard=pl.tau_veto)"
+      },
+      {
+        "file": "tests\\contract\\test_macro_field_resolution.py",
+        "line": 151,
+        "text": "r_oppose = pl.dual_channel_sagnac_veto(-u, u, u, epsilon_hard=pl.tau_veto)"
+      },
+      {
+        "file": "tests\\contract\\test_phase823_target_grounding.py",
+        "line": 106,
+        "text": "assert \"dual_channel_sagnac_veto(\" in src, \"veto consumer missing\""
+      },
+      {
+        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
+        "line": 8,
+        "text": "sagnac_planner.dual_channel_sagnac_veto(_psi_macro, _axiom, _world)"
+      },
+      {
+        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
+        "line": 80,
+        "text": "hits = _calls_by_name(_prod_tree(), \"dual_channel_sagnac_veto\")"
+      },
+      {
+        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
+        "line": 81,
+        "text": "assert hits, \"no dual_channel_sagnac_veto call in production_arc_run.py\""
+      },
+      {
+        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
+        "line": 131,
+        "text": "_, _, hard = planner.dual_channel_sagnac_veto(c, ax, ax,"
+      },
+      {
+        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
+        "line": 139,
+        "text": "_, _, hard = planner.dual_channel_sagnac_veto(c, ax, ax,"
+      },
+      {
+        "file": "tests\\contract\\test_production_sagnac_veto_gate.py",
+        "line": 152,
+        "text": "_, _, hard = planner.dual_channel_sagnac_veto(c, ax, ax)   # no epsilon"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
+        "line": 4,
+        "text": "`SagnacMCTSPlanner.dual_channel_sagnac_veto` used `torch.mean(w.conj() * w_ref)`"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
+        "line": 96,
+        "text": "delta, _, _ = planner.dual_channel_sagnac_veto(a, a, a)"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
+        "line": 109,
+        "text": "d_id = planner.dual_channel_sagnac_veto(a, a, a)[0]"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
+        "line": 110,
+        "text": "d_orth = planner.dual_channel_sagnac_veto(a, b, b)[0]"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
+        "line": 111,
+        "text": "d_r1 = planner.dual_channel_sagnac_veto(r1a, r1b, r1b)[0]"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
+        "line": 112,
+        "text": "d_r2 = planner.dual_channel_sagnac_veto(r2a, r2b, r2b)[0]"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
+        "line": 128,
+        "text": "_, _, veto = planner.dual_channel_sagnac_veto(ref, ref, ref)"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
+        "line": 168,
+        "text": "d_real, _, _ = planner.dual_channel_sagnac_veto(real, real, real)"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
+        "line": 169,
+        "text": "d_comp, _, _ = planner.dual_channel_sagnac_veto(comp, comp, comp)"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
+        "line": 179,
+        "text": "d, _, _ = planner.dual_channel_sagnac_veto(w, o, o)"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_scale_consistency.py",
+        "line": 188,
+        "text": "d, _, _ = planner.dual_channel_sagnac_veto(z, ref, ref)"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_width_contract.py",
+        "line": 6,
+        "text": "1. WIDTH. `dual_channel_sagnac_veto` multiplies two waves elementwise. Production"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_width_contract.py",
+        "line": 74,
+        "text": "planner.dual_channel_sagnac_veto(big, small, small, epsilon_hard=planner.tau_veto)"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_width_contract.py",
+        "line": 85,
+        "text": "r = planner.dual_channel_sagnac_veto(big, small, small, epsilon_hard=planner.tau_veto)"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_width_contract.py",
+        "line": 103,
+        "text": "planner.dual_channel_sagnac_veto(odd, small, small, epsilon_hard=planner.tau_veto)"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_width_contract.py",
+        "line": 111,
+        "text": "r = planner.dual_channel_sagnac_veto(u, u, u, epsilon_hard=planner.tau_veto)"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_width_contract.py",
+        "line": 128,
+        "text": "r_agree = planner.dual_channel_sagnac_veto(u, u, u, epsilon_hard=planner.tau_veto)"
+      },
+      {
+        "file": "tests\\contract\\test_sagnac_width_contract.py",
+        "line": 129,
+        "text": "r_oppose = planner.dual_channel_sagnac_veto(-u, u, u, epsilon_hard=planner.tau_veto)"
       }
     ],
     "S5_caller_count": 89,
-    "DEFECT_CONFIRMED": true
+    "DEFECT_CONFIRMED": false
   },
   "claim": "dual_channel_sagnac_veto computes 1 - |<a,b>|/D instead of 1 - |<a,b>|/(||a|| ||b||), so every stress is pinned near 1.0 and the hard veto fires on 100% of candidates. This is the live 'un-passable by construction' defect, and it is a DIVISION BY D, not the random-axiom construction the spec blamed.",
   "hypothesis_falsified": "My earlier D1 hypothesis -- that self-referencing psi_world pins the EPISTEMIC channel to 0 -- is FALSIFIED by measurement (0.999, not 0). The real cause is the mean-vs-inner-product scaling, and it pins BOTH channels near 1.0."
