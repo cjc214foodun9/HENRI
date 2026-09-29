@@ -1,0 +1,90 @@
+{
+  "schema": "henri.d4-sgdr-supplement.v1",
+  "purpose": "close the warm-restart loophole in OPTIMIZER_STALL_FALSIFIED",
+  "document_claim": "plateau is an OPTIMIZER AND LEARNING-RATE SCHEDULE failure, not entropy and not capacity",
+  "pre_registration": {
+    "margin": 0.01,
+    "rule_revise": "any restart arm <= control - MARGIN -> STALL_CONFIRMED",
+    "rule_stands": "no restart arm within MARGIN of control -> falsification STANDS"
+  },
+  "harness_validity": {
+    "control_reproduced_D4_BASE_LOSS": true,
+    "control_heldout": 0.12927328145989597,
+    "D4_recorded_BASE_LOSS": 0.12927328145989597,
+    "abs_diff": 0.0,
+    "lr_traces_inert_arms": [],
+    "v2_all_schedules_non_inert": true,
+    "distinct_weight_shas": 4,
+    "all_arms_same_weights": false
+  },
+  "arms": [
+    {
+      "tag": "CTRL_const_lr3e-3",
+      "n_params": 32896,
+      "heldout_loss_final": 0.12927328145989597,
+      "train_loss_first10_mean": 5.369010638152904,
+      "train_loss_last10_mean": 0.08948982856109264,
+      "weight_sha": "c1771e8abf342fae",
+      "lr_trace_probe": {
+        "0": 0.003,
+        "200": 0.003,
+        "600": 0.003,
+        "1199": 0.003
+      }
+    },
+    {
+      "tag": "SGDR_3xT400_emin3e-4",
+      "n_params": 32896,
+      "heldout_loss_final": 0.12922980135503678,
+      "train_loss_first10_mean": 5.369051117643647,
+      "train_loss_last10_mean": 0.09154321697342398,
+      "weight_sha": "ab17488fbd300be4",
+      "lr_trace_probe": {
+        "0": 0.003,
+        "200": 0.00165,
+        "600": 0.00165,
+        "1199": 0.00030004163717953393
+      },
+      "delta_vs_control": 4.3480104859189295e-05
+    },
+    {
+      "tag": "SGDR_3xT400_emin0_mult2",
+      "n_params": 32896,
+      "heldout_loss_final": 0.1294843035813889,
+      "train_loss_first10_mean": 5.3690556151295965,
+      "train_loss_last10_mean": 0.09062312586289101,
+      "weight_sha": "6ae615d290207f32",
+      "lr_trace_probe": {
+        "0": 0.003,
+        "200": 0.0015,
+        "600": 0.0015,
+        "1199": 0.001505890471085709
+      },
+      "delta_vs_control": -0.00021102212149293198
+    },
+    {
+      "tag": "KICK_step600_lr3e-2",
+      "n_params": 32896,
+      "heldout_loss_final": 0.1292678436522564,
+      "train_loss_first10_mean": 5.369010638152904,
+      "train_loss_last10_mean": 0.08948716390971076,
+      "weight_sha": "c1fdf56112bf75e0",
+      "lr_trace_probe": {
+        "0": 0.003,
+        "200": 0.003,
+        "600": 0.03,
+        "1199": 0.003
+      },
+      "delta_vs_control": 5.4378076395633634e-06
+    }
+  ],
+  "best_restart_arm": "SGDR_3xT400_emin3e-4",
+  "best_delta_vs_control": 4.3480104859189295e-05,
+  "verdicts": {
+    "OPTIMIZER_STALL_REVISED_TO_CONFIRMED": false,
+    "FALSIFICATION_STANDS_INCLUDING_RESTARTS": true
+  },
+  "mechanism_note": "If all arms reach bit-identical weights, the plateau is not a shallow basin the optimiser fell into: it is a genuine attractor -- the exact optimum of this model class on this data -- and every escape mechanism tried lands on it.",
+  "citation_basis": "SGDR arXiv:1608.03983 (delegate-supplied, INFERRED, NOT verified by arbiter)",
+  "reuse": "data generation, Adam core, heldout and train() imported from d4_optimizer_sweep"
+}
