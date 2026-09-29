@@ -1,0 +1,121 @@
+{
+  "schema": "henri.vlm-vla.v1",
+  "device": "cuda",
+  "config": {
+    "model": "Qwen/Qwen3-VL-4B-Instruct",
+    "train_episodes": 16,
+    "eval_episodes": 16,
+    "steps": 150,
+    "batch": 64,
+    "lr": 0.002,
+    "eval_every": 150,
+    "d_pool": 512,
+    "out": "/tmp/vlm_smoke.json",
+    "smoke": true
+  },
+  "baseline_for_comparison": {
+    "arm": "random frozen patch projection",
+    "success_rate": 0.4688,
+    "random_policy_success": 0.1875,
+    "source": "scripts/training/vla_reach_receipt.json"
+  },
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 5090",
+    "vram_gb": 33.67
+  },
+  "vlm": {
+    "model_id": "Qwen/Qwen3-VL-4B-Instruct",
+    "tower_path": "model.visual",
+    "d_vit": 1024,
+    "n_patches": 256,
+    "output_key_used": "last_hidden_state(2d)",
+    "output_keys_seen": [
+      "last_hidden_state",
+      "pooler_output",
+      "deepstack_features"
+    ],
+    "needs_grid_thw": true,
+    "load_seconds": 8.8
+  },
+  "n_train_samples": 75,
+  "feature_cache": {
+    "shape": [
+      75,
+      256,
+      1024
+    ],
+    "dtype": "torch.float16",
+    "gib": 0.037,
+    "seconds": 0.7
+  },
+  "bridge_geometry": {
+    "ext_n_patches": 256,
+    "ext_d_vit": 1024,
+    "tokens_are_flattened": true,
+    "probe_shape": [
+      256,
+      1024
+    ],
+    "pos_codes_shape": [
+      256,
+      65536
+    ]
+  },
+  "bridge_trainable": 36308480,
+  "head_trainable": 3819527,
+  "vlm_frozen_params": 4437815808,
+  "binding_active": true,
+  "binding_ratio": 0.062908,
+  "n_feats_at_probe": 256,
+  "psi_probe_shape": [
+    2,
+    65536
+  ],
+  "psi_probe_unit_norm": 1.0,
+  "train_seconds": 21.0,
+  "loss_first": 1.20754,
+  "loss_last": 0.590591,
+  "loss_curve": [
+    {
+      "step": 1,
+      "loss": 1.20754
+    },
+    {
+      "step": 50,
+      "loss": 0.935226
+    },
+    {
+      "step": 100,
+      "loss": 0.722597
+    },
+    {
+      "step": 150,
+      "loss": 0.590591
+    }
+  ],
+  "closed_loop_evals": [
+    {
+      "step": 150,
+      "success_rate": 0.125,
+      "se": 0.0827
+    }
+  ],
+  "verdicts": {
+    "vlm_success_rate": 0.125,
+    "random_feature_baseline": 0.4688,
+    "random_policy_baseline": 0.1875,
+    "delta_vs_random_feature_arm": -0.3438,
+    "combined_se": 0.1497,
+    "vlm_beats_random_arm_by_2se": false,
+    "vlm_beats_random_policy": false,
+    "loss_decreased": true,
+    "LOOP_CLOSES": false
+  },
+  "peak_vram_mib": 17893.7,
+  "honest_limits": [
+    "SYNTHETIC pixel reach task; not robot capability, not a benchmark score",
+    "n=16 eval episodes -> SE ~0.06; a difference under ~0.12 is not resolved",
+    "VLM frozen: gains are attributable to features, not vision-path capacity",
+    "3-channel 64x64 env images upsampled to 224 -- the VLM sees a synthetic scene"
+  ]
+}
