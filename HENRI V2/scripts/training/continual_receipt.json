@@ -1,0 +1,167 @@
+{
+  "schema": "henri.continual.v1",
+  "device": "cuda",
+  "config": {
+    "train_episodes": 128,
+    "eval_episodes": 64,
+    "steps_per_task": 1200,
+    "batch": 64,
+    "lr": 0.002,
+    "ewc_lambda": 500.0,
+    "buffer_size": 2048,
+    "memory_capacity": 2048,
+    "out": "/root/henri/HENRI V2/scripts/training/continual_receipt.json",
+    "d_model": 65536,
+    "smoke": false
+  },
+  "tasks": {
+    "A": "goal region LEFT",
+    "B": "goal region RIGHT"
+  },
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 5090",
+    "vram_gb": 33.67
+  },
+  "data": {
+    "n_A": 596,
+    "n_B": 591,
+    "psi_dim": 65536
+  },
+  "results": {
+    "NAIVE": {
+      "acquisition_task_A": 0.3281,
+      "retention_task_A": 0.0,
+      "forgetting": 0.3281,
+      "se_acquisition": 0.0587,
+      "se_retention": 0.0,
+      "n_eval_episodes": 64,
+      "forgetting_exceeds_2se": true,
+      "acquisition_task_B": 0.5,
+      "loss_A_first_last": [
+        1.18787,
+        0.22605
+      ],
+      "loss_B_first_last": [
+        1.51107,
+        0.18463
+      ],
+      "ewc_fisher": null,
+      "mechanism_effective_vs_naive": null
+    },
+    "REPLAY": {
+      "acquisition_task_A": 0.3281,
+      "retention_task_A": 0.3906,
+      "forgetting": -0.0625,
+      "se_acquisition": 0.0587,
+      "se_retention": 0.061,
+      "n_eval_episodes": 64,
+      "forgetting_exceeds_2se": false,
+      "acquisition_task_B": 0.4219,
+      "loss_A_first_last": [
+        1.18787,
+        0.22605
+      ],
+      "loss_B_first_last": [
+        1.71301,
+        0.50855
+      ],
+      "ewc_fisher": null,
+      "mechanism_effective_vs_naive": true,
+      "buffer": {
+        "n_seen": 1187,
+        "n_stored": 1187,
+        "fill_fraction": 0.5796,
+        "task_0_stored": 596,
+        "task_1_stored": 591
+      }
+    },
+    "EWC": {
+      "acquisition_task_A": 0.3281,
+      "retention_task_A": 0.0,
+      "forgetting": 0.3281,
+      "se_acquisition": 0.0587,
+      "se_retention": 0.0,
+      "n_eval_episodes": 64,
+      "forgetting_exceeds_2se": true,
+      "acquisition_task_B": 0.3906,
+      "loss_A_first_last": [
+        1.18787,
+        0.22605
+      ],
+      "loss_B_first_last": [
+        1.83545,
+        0.13887
+      ],
+      "ewc_fisher": {
+        "n_tasks": 1,
+        "fisher_mean": 4.5528908231062815e-05,
+        "fisher_max": 0.008941084146499634,
+        "nonfinite_params": []
+      },
+      "mechanism_effective_vs_naive": false,
+      "ewc": {
+        "lambda": 500.0,
+        "n_tasks_anchored": 1
+      }
+    },
+    "BOTH": {
+      "acquisition_task_A": 0.1562,
+      "retention_task_A": 0.4062,
+      "forgetting": -0.25,
+      "se_acquisition": 0.0454,
+      "se_retention": 0.0614,
+      "n_eval_episodes": 64,
+      "forgetting_exceeds_2se": false,
+      "acquisition_task_B": 0.3438,
+      "loss_A_first_last": [
+        1.18787,
+        0.22415
+      ],
+      "loss_B_first_last": [
+        2.21891,
+        0.2861
+      ],
+      "ewc_fisher": {
+        "n_tasks": 1,
+        "fisher_mean": 0.0001920428330777213,
+        "fisher_max": 0.050762828439474106,
+        "nonfinite_params": []
+      },
+      "mechanism_effective_vs_naive": true,
+      "buffer": {
+        "n_seen": 1187,
+        "n_stored": 1187,
+        "fill_fraction": 0.5796,
+        "task_0_stored": 596,
+        "task_1_stored": 591
+      },
+      "ewc": {
+        "lambda": 500.0,
+        "n_tasks_anchored": 1
+      },
+      "hopfield": {
+        "n_slots": 2048,
+        "capacity": 2048,
+        "beta": 8.0,
+        "fill_fraction": 1.0,
+        "task_0_slots": 1001,
+        "task_1_slots": 1047,
+        "recall_cosine": 0.8606,
+        "recall_attn_entropy_nats": 7.5302
+      }
+    }
+  },
+  "verdicts": {
+    "forgetting_naive": 0.3281,
+    "best_mechanism": "BOTH",
+    "best_forgetting": -0.25,
+    "any_mechanism_reduces_forgetting": true,
+    "significant_forgetting_naive": true
+  },
+  "peak_vram_mib": 1512.9,
+  "honest_limits": [
+    "TWO tasks only - the minimum for a forgetting measurement, not a stream",
+    "success rates ~0.5 carry binomial SE ~0.06 at n=64; SE is reported",
+    "synthetic pixel env; no robot or benchmark claim"
+  ]
+}

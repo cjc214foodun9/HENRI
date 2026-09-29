@@ -1,0 +1,31 @@
+########## 1. PUSH CONTINUAL STACK + ENV FIX ##########
+Have fun!
+Have fun!
+  pushed 3 files
+
+########## 2. GPU CONTINUAL LEARNING: 2 tasks x 4 mechanisms @ D=65536 ##########
+[cl] device=cuda smoke=False
+[cl] A samples=596  B samples=591
+[cl] NAIVE   ACC(A)=0.3281 RET(A)=0.0000 FORGET=+0.3281 ACC(B)=0.5000
+[cl] REPLAY  ACC(A)=0.3281 RET(A)=0.3906 FORGET=-0.0625 ACC(B)=0.4219
+[cl] EWC     ACC(A)=0.3281 RET(A)=0.0000 FORGET=+0.3281 ACC(B)=0.3906
+[cl] BOTH    ACC(A)=0.1562 RET(A)=0.4062 FORGET=-0.2500 ACC(B)=0.3438
+
+[cl] WROTE /root/henri/HENRI V2/scripts/training/continual_receipt.json
+[cl] VERDICTS: {
+  "forgetting_naive": 0.3281,
+  "best_mechanism": "BOTH",
+  "best_forgetting": -0.25,
+  "any_mechanism_reduces_forgetting": true,
+  "significant_forgetting_naive": true
+}
+
+########## 3. PULL RECEIPT ##########
+Have fun!
+  4114 bytes
+
+########## 4. GPU STATE + SPEND ##########
+NVIDIA GeForce RTX 5090, 0 %, 1 MiB
+[48;5;240m[97m  1  23.92   chandler.coleman401@gmail.com  True       -        [0m
+
+END

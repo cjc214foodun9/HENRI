@@ -1,0 +1,52 @@
+=== re-run FIXED backbone trainability test ===
+Have fun!
+  "import_file": "/root/henri/HENRI V2/henri_adaptive_backbone.py",
+  "model_id": "Qwen/Qwen3-VL-4B-Instruct",
+  "load_seconds": 6.3,
+  "vram_after_load": 8.266,
+  "vram_after_load_peak": 8.266,
+  "lora_modules": 252,
+  "lora_target_examples": [
+    "model.language_model.layers.0.self_attn.q_proj",
+    "model.language_model.layers.0.self_attn.k_proj",
+    "model.language_model.layers.0.self_attn.v_proj",
+    "model.language_model.layers.0.self_attn.o_proj",
+    "model.language_model.layers.0.mlp.gate_proj",
+    "model.language_model.layers.0.mlp.up_proj"
+  ],
+  "total_params": 4569936384,
+  "trainable_params": 132120576,
+  "trainable_pct": 2.8911,
+  "vram_after_lora": 8.512,
+  "vram_after_lora_peak": 8.512,
+  "zero_init_identity_ok": true,
+  "zero_init_max_logit_diff": 0.0,
+  "backward_ok": true,
+  "gradient_checkpointing": true,
+  "loss_value": 9.7083,
+  "backward_seconds": 0.13,
+  "n_params_with_grad": 504,
+  "grad_norm_total": 1.9814594984054565,
+  "grad_norm_finite": true,
+  "optimizer_step_ok": true,
+  "vram_after_backward": 9.177,
+  "vram_after_backward_peak": 9.669,
+  "throughput": {
+    "bs1": {
+      "steps_per_sec": 6.913,
+      "sec_per_step": 0.1447,
+      "tokens_per_sec": 1769.7,
+      "peak_gib": 9.744
+    },
+    "bs4": {
+      "steps_per_sec": 4.767,
+      "sec_per_step": 0.2098,
+      "tokens_per_sec": 4881.5,
+      "peak_gib": 11.391
+    }
+  },
+  "vram_final": 9.476,
+  "vram_final_peak": 11.391,
+  "fits_32gb": true,
+  "TRAINABLE_ON_REAL_BACKBONE": true
+}
