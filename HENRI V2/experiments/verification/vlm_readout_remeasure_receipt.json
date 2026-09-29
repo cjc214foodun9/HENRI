@@ -1,0 +1,92 @@
+{
+  "schema": "henri.vlm_readout_remeasure/1",
+  "when": "2026-09-29 18:42:32",
+  "purpose": "re-measure psi readability with a permutation-null-validated readout; the legacy fixed-penalty readout failed its own null on near-collinear unit-norm features (r2 -1.4811)",
+  "pre_registered": {
+    "instrument_validated": "|permutation null| < 0.10",
+    "psi_readable_under_fixed": "r2_ridge(psi) >= 0.50",
+    "legacy_numbers_are_artifacts": "legacy null fails AND fixed null passes"
+  },
+  "cache": {
+    "n": 256,
+    "n_patches": 256,
+    "d_vit": 1024,
+    "bytes": 134224029,
+    "fp16_expectation": 134217728
+  },
+  "bridge": {
+    "binding_active": true,
+    "binding_ratio": 0.034601,
+    "dc_share": 0.999922,
+    "trainable_params": 36242432
+  },
+  "representations": {
+    "input_mean_pooled_1024": {
+      "d": 1024,
+      "r2_fixed": 0.7139,
+      "r2_legacy": 0.7249,
+      "null_fixed": -0.7743,
+      "null_legacy": -0.8693,
+      "cos": 0.999999
+    },
+    "attention_pooled_1024": {
+      "d": 1024,
+      "r2_fixed": 0.6649,
+      "r2_legacy": 0.7325,
+      "null_fixed": -0.3574,
+      "null_legacy": -0.6022,
+      "cos": 0.99999907
+    },
+    "to_pool_512": {
+      "d": 512,
+      "r2_fixed": 0.617,
+      "r2_legacy": 0.6778,
+      "null_fixed": -0.3037,
+      "null_legacy": -0.5477,
+      "cos": 0.99999902
+    },
+    "to_phase_65536": {
+      "d": 65536,
+      "r2_fixed": 0.6841,
+      "r2_legacy": 0.5632,
+      "null_fixed": -0.4035,
+      "null_legacy": -1.293,
+      "cos": 0.99999903
+    },
+    "binding_term_65536": {
+      "d": 65536,
+      "r2_fixed": 0.6657,
+      "r2_legacy": 0.3203,
+      "null_fixed": -0.7184,
+      "null_legacy": -2.5198,
+      "cos": 0.93770673
+    },
+    "accumulator_65536": {
+      "d": 65536,
+      "r2_fixed": 0.7233,
+      "r2_legacy": 0.3973,
+      "null_fixed": -0.6771,
+      "null_legacy": -2.027,
+      "cos": 0.99992439
+    },
+    "psi_65536_unitnorm": {
+      "d": 65536,
+      "r2_fixed": 0.69,
+      "r2_legacy": 0.3955,
+      "null_fixed": -0.7979,
+      "null_legacy": -2.0274,
+      "cos": 0.99992439
+    }
+  },
+  "verdicts": {
+    "psi_permutation_null_fixed": -0.7979,
+    "psi_permutation_null_legacy": -2.0274,
+    "instrument_validated_on_psi": false,
+    "legacy_readout_broken_on_psi": true,
+    "psi_readable_under_fixed": true,
+    "pooled_readable_under_fixed": true,
+    "legacy_numbers_are_artifacts": false,
+    "readability_drop_fixed_readout": 0.0239
+  },
+  "conclusion": "NEITHER readout passes its null on psi's geometry, so no psi readability claim can be made with this instrument. Report BLOCKED."
+}

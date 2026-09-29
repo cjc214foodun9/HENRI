@@ -1,0 +1,75 @@
+{
+  "schema": "henri.vlm_control_artifact/1",
+  "when": "2026-09-29 18:40:29",
+  "purpose": "decide whether control-C's 0.6432 -> 0.0021 is a real effect or an artifact of the single-scalar standardizer",
+  "readouts": {
+    "r2_scalar": "one scalar standardizer (suspect)",
+    "r2_perdim": "per-dimension z-score (scale-invariant control)"
+  },
+  "cache": {
+    "n": 256,
+    "n_patches": 256,
+    "d_vit": 1024,
+    "bytes": 134224029,
+    "fp16_expectation": 134217728
+  },
+  "cases": {
+    "ref_pooled_1024": {
+      "dim": 1024,
+      "r2_scalar": 0.7249,
+      "r2_perdim": 0.6941
+    },
+    "zA_512": {
+      "dim": 512,
+      "r2_scalar": 0.6844,
+      "r2_perdim": 0.575
+    },
+    "h_unit_65536": {
+      "dim": 65536,
+      "r2_scalar": 0.6432,
+      "r2_perdim": 0.6419
+    },
+    "h_plus_0.0_noise": {
+      "dim": 65536,
+      "r2_scalar": 0.6432,
+      "r2_perdim": 0.6419
+    },
+    "h_plus_0.036_noise": {
+      "dim": 65536,
+      "r2_scalar": 0.0021,
+      "r2_perdim": 0.0022
+    },
+    "h_plus_0.3_noise": {
+      "dim": 65536,
+      "r2_scalar": -0.0026,
+      "r2_perdim": -0.0026
+    },
+    "h_plus_1.0_noise": {
+      "dim": 65536,
+      "r2_scalar": -0.0027,
+      "r2_perdim": -0.0026
+    },
+    "pure_noise_65536": {
+      "dim": 65536,
+      "r2_scalar": -0.0055,
+      "r2_perdim": -0.0048
+    },
+    "h_unit_permuted_rows": {
+      "dim": 65536,
+      "r2_scalar": -1.4811,
+      "r2_perdim": -1.4822
+    }
+  },
+  "verdicts": {
+    "scalar_readout_collapses_on_0.036_perturbation": true,
+    "perdim_readout_keeps_it": false,
+    "SCALAR_STANDARDIZER_IS_THE_ARTIFACT": false,
+    "permutation_null_holds_scalar": false,
+    "pure_noise_unreadable_by_perdim": true,
+    "baseline_scalar": 0.6432,
+    "baseline_perdim": 0.6419,
+    "perturbed_scalar": 0.0021,
+    "perturbed_perdim": 0.0022
+  },
+  "consequence": "Scalar standardizer exonerated: the perturbation really does cost readability, and the stage 4->5 drop is attributable to the added superposition."
+}
