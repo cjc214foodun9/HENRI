@@ -1,0 +1,141 @@
+{
+  "schema": "henri.d4-basin-shape-probe.v1",
+  "purpose": "decide BROAD FLAT BASIN vs EXACT COMMON POINT; tests my own interpretation, since the reference's hash-identity instrument is ambiguous for Adam",
+  "pre_registration": {
+    "collapse_rule": "max pairwise relative weight distance at the FINAL checkpoint < 0.01 AND strictly decreased",
+    "broad_basin_rule": "otherwise",
+    "total_steps": 3600,
+    "checkpoints": [
+      1200,
+      2400,
+      3600
+    ],
+    "rank": 64,
+    "margin_context": 0.01
+  },
+  "checkpoints": {
+    "1200": {
+      "max_pairwise_rel_weight_distance": 0.28656463614101807,
+      "heldout_spread": 0.0002545022263521213,
+      "per_arm": {
+        "CTRL_const_lr3e-3": {
+          "heldout": 0.12927328145989597,
+          "grad_norm": 0.008514340463941193,
+          "train_loss_100_mean": null
+        },
+        "SGDR_9xT400_emin3e-4": {
+          "heldout": 0.12922980135503678,
+          "grad_norm": 0.010916213521952427,
+          "train_loss_100_mean": null
+        },
+        "SGDR_9xT400_emin0_x2": {
+          "heldout": 0.1294843035813889,
+          "grad_norm": 0.009494180137938896,
+          "train_loss_100_mean": null
+        },
+        "KICK_600_1800_3000": {
+          "heldout": 0.1292678436522564,
+          "grad_norm": 0.00850863669046564,
+          "train_loss_100_mean": null
+        }
+      },
+      "lr_at_checkpoint": {
+        "CTRL_const_lr3e-3": 0.003,
+        "SGDR_9xT400_emin3e-4": 0.00030004163717953393,
+        "SGDR_9xT400_emin0_x2": 0.001505890471085709,
+        "KICK_600_1800_3000": 0.003
+      }
+    },
+    "2400": {
+      "max_pairwise_rel_weight_distance": 0.27498376405307207,
+      "heldout_spread": 0.0008423924817812789,
+      "per_arm": {
+        "CTRL_const_lr3e-3": {
+          "heldout": 0.1291691457566717,
+          "grad_norm": 0.011497722201093291,
+          "train_loss_100_mean": null
+        },
+        "SGDR_9xT400_emin3e-4": {
+          "heldout": 0.12832675327489043,
+          "grad_norm": 0.011824999068393485,
+          "train_loss_100_mean": null
+        },
+        "SGDR_9xT400_emin0_x2": {
+          "heldout": 0.12891750550102937,
+          "grad_norm": 0.01236060183080614,
+          "train_loss_100_mean": null
+        },
+        "KICK_600_1800_3000": {
+          "heldout": 0.12916698307083088,
+          "grad_norm": 0.011496330714295176,
+          "train_loss_100_mean": null
+        }
+      },
+      "lr_at_checkpoint": {
+        "CTRL_const_lr3e-3": 0.003,
+        "SGDR_9xT400_emin3e-4": 0.00030004163717953393,
+        "SGDR_9xT400_emin0_x2": 0.001502945241220268,
+        "KICK_600_1800_3000": 0.003
+      }
+    },
+    "3600": {
+      "max_pairwise_rel_weight_distance": 0.25320034939719355,
+      "heldout_spread": 0.00014385463473765014,
+      "per_arm": {
+        "CTRL_const_lr3e-3": {
+          "heldout": 0.12787813085771116,
+          "grad_norm": 0.0178297841525371,
+          "train_loss_100_mean": null
+        },
+        "SGDR_9xT400_emin3e-4": {
+          "heldout": 0.12780563212598609,
+          "grad_norm": 0.017984309773424842,
+          "train_loss_100_mean": null
+        },
+        "SGDR_9xT400_emin0_x2": {
+          "heldout": 0.12794948676072374,
+          "grad_norm": 0.017757472197164975,
+          "train_loss_100_mean": null
+        },
+        "KICK_600_1800_3000": {
+          "heldout": 0.12788567075269136,
+          "grad_norm": 0.017817272124595135,
+          "train_loss_100_mean": null
+        }
+      },
+      "lr_at_checkpoint": {
+        "CTRL_const_lr3e-3": 0.003,
+        "SGDR_9xT400_emin3e-4": 0.00030004163717953393,
+        "SGDR_9xT400_emin0_x2": 0.002886382178702117,
+        "KICK_600_1800_3000": 0.003
+      }
+    }
+  },
+  "validity": {
+    "v1_control_reproduces_D4_BASE_LOSS": true,
+    "v1_control_at_1200": 0.12927328145989597,
+    "v1_D4_recorded": 0.12927328145989597,
+    "v3_grad_norms_at_final": {
+      "CTRL_const_lr3e-3": 0.0178297841525371,
+      "SGDR_9xT400_emin3e-4": 0.017984309773424842,
+      "SGDR_9xT400_emin0_x2": 0.017757472197164975,
+      "KICK_600_1800_3000": 0.017817272124595135
+    }
+  },
+  "verdicts": {
+    "max_pairwise_rel_distance_first": 0.28656463614101807,
+    "max_pairwise_rel_distance_final": 0.25320034939719355,
+    "distance_decreased": true,
+    "COLLAPSE_SUPPORTED_exact_common_point": false,
+    "BROAD_BASIN_STANDS": true,
+    "heldout_spread_first": 0.0002545022263521213,
+    "heldout_spread_final": 0.00014385463473765014
+  },
+  "interpretation": "COLLAPSE_SUPPORTED means longer training pulls the arms to one point, so the plateau is a single optimum and the reference's MECHANISM was right even though its hash evidence was fabricated. BROAD_BASIN_STANDS means the arms remain separated weight-wise while their losses agree, so the plateau is a wide flat basin. The loss spread is reported at every checkpoint: agreement-without-collapse is the broad-basin signature.",
+  "honest_limits": [
+    "synthetic byte-tape fixture, not ARC/SciCode data",
+    "rank 64 only; rank 42 untested here",
+    "3x the D4 budget (3600 vs 1200 steps); a much longer budget is untested",
+    "conclusions are for THIS model class, data volume and seed"
+  ]
+}
