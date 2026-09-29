@@ -1,0 +1,35 @@
+{
+  "schema": "henri.bridge_near_collinear/1",
+  "geometry": {
+    "n": 128,
+    "n_patches": 8,
+    "d_vit": 1024,
+    "d_model": 65536,
+    "cos_target": 0.999999,
+    "cos_measured": 0.99999803,
+    "deviation_scale_eps": 0.00015320535186177695
+  },
+  "readout": "standardised kernel ridge, held-out 25%, lam_rel=1e-3",
+  "A_r2_input": 1.0,
+  "A_highpass_r2": 1.0,
+  "feats_mean_offdiag_cos": 0.99998766,
+  "B_r2_psi_shipped": 0.9843,
+  "B_cos_psi_shipped": 0.99999714,
+  "B_binding_ratio": 4.3e-05,
+  "C_r2_psi_highpassed_input": 0.963,
+  "C_cos_psi_highpassed_input": -0.0075981,
+  "D_r2_psi_centred": 0.963,
+  "D_cos_psi_centred": -0.0075981,
+  "E_r2_accumulator_raw": 0.9843,
+  "E_cos_accumulator_raw": 0.99999726,
+  "verdicts": {
+    "input_is_readable": true,
+    "bridge_loses_state": false,
+    "H3_normalisation_crushes_deviation": false,
+    "highpass_input_restores": true,
+    "centring_restores": true,
+    "raw_accumulator_readable": true
+  },
+  "fix_identified": "centre before normalising",
+  "_why": "H3 tested: L2-normalisation does NOT crush the state deviation. On synthetic features matched to the MEASURED GPU geometry (cos 0.999998) the bridge PRESERVES readability (r2 0.9843). H3 FALSIFIED."
+}

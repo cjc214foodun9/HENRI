@@ -1,0 +1,39 @@
+{
+  "schema": "henri.readout_instrument_check/1",
+  "n": 256,
+  "d": 4096,
+  "state_dim": 4,
+  "readouts": {
+    "FIXED": "solve(k + 1e-2*I, y)  [vlm_repr_diag.py as used]",
+    "SCALED": "standardise, solve(k + 1e-3*n*I, y)"
+  },
+  "cases": {
+    "unit_norm_near_collinear": {
+      "mean_offdiag_cos": 0.99979931,
+      "feat_norm_mean": 1.0,
+      "r2_FIXED": 0.7206,
+      "r2_SCALED": 1.0
+    },
+    "large_norm_features": {
+      "mean_offdiag_cos": 0.99979931,
+      "feat_norm_mean": 30.0,
+      "r2_FIXED": 1.0,
+      "r2_SCALED": 1.0
+    },
+    "well_conditioned_unit_norm": {
+      "mean_offdiag_cos": -7.014e-05,
+      "feat_norm_mean": 1.0,
+      "r2_FIXED": -13.0829,
+      "r2_SCALED": -0.0618
+    }
+  },
+  "verdicts": {
+    "same_data_state_present": true,
+    "FIXED_collapses_on_unit_norm_near_collinear": false,
+    "SCALED_reads_it": true,
+    "READOUT_ARTIFACT_CONFIRMED": false,
+    "well_conditioned_readable_by_both": false
+  },
+  "consequence": "If NOT confirmed, the fixed-penalty readout is exonerated and the bridge really does lose state; the search continues in the bridge.",
+  "_why": "Is r2_psi_vlm_bridge 0.0509 an artifact of the fixed-penalty readout? NO. On near-collinear unit-norm data the fixed readout returns 0.7206, so it is not categorically broken on psi-like geometry. READOUT_ARTIFACT_CONFIRMED false. NOTE: the 'well_conditioned' case is a NULL (target independent of features), so its low R^2 is expected and is NOT readout pathology."
+}
