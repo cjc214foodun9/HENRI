@@ -1,0 +1,62 @@
+{
+  "G5_wave_width_and_dense_cost": {
+    "reduced_d_model": 512,
+    "encode_grid_dtype": "torch.float32",
+    "encode_grid_shape": [
+      512
+    ],
+    "flat_numel_after_real": 512,
+    "numel_per_d_model": 1.0,
+    "projected_production_flat_width": 65536,
+    "fp32_dense_operator_bytes_per_action": 17179869184,
+    "gib_per_action": 16.0,
+    "gib_for_8_actions": 128.0,
+    "verdict": "DENSE [D,D] OPERATOR IS THE d^2 TRAP"
+  },
+  "G1_learner_capacity_and_entropy_floor": {
+    "vocab": 257,
+    "depth": 64,
+    "n_params": 32896,
+    "param_shapes": [
+      [
+        257,
+        64
+      ],
+      [
+        64,
+        257
+      ]
+    ],
+    "heldout_loss_untrained": 5.5780173640861,
+    "heldout_H_unigram_nats": 0.6836259961128235,
+    "heldout_H_next_given_prev_nats": 0.120360557604103,
+    "uniform_floor_ln_vocab": 5.54907608489522,
+    "capacity_verdict": "a 32896-parameter bilinear model over a 257-token vocab; the observed 0.0984 converged loss is BELOW the unigram entropy (0.6836) and near the conditional bigram floor (0.1204) -- consistent with CAPACITY SATURATION rather than tape entropy exhaustion"
+  },
+  "G1_grid_schema": {
+    "grid_task_type": "dict",
+    "keys": [
+      "changed_cells",
+      "family",
+      "input",
+      "meta",
+      "target"
+    ],
+    "input_type": "list",
+    "cell_type": "int",
+    "target_type": "list",
+    "families": [
+      "containment_fill",
+      "reflection",
+      "two_rings_select"
+    ],
+    "schema_mismatch": "grid tasks are dicts of 2-D python ints; TapeLearner consumes a LongTensor [B,T] with values in [0,257). No honest join exists without a new learner head."
+  },
+  "G1_rung_emitter_source_audit": {
+    "rung_rebuilds_vm": true,
+    "tape_size_history_present": true,
+    "grid_growth_binds_tape_size": true,
+    "learner_is_byte_tape": true,
+    "doc_claim_no_emitter_for_rungs_3_5": "FALSIFIED if rung_rebuilds_vm is true"
+  }
+}
