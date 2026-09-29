@@ -1,0 +1,66 @@
+{
+  "schema": "henri.capacity-kill.v1",
+  "config": {
+    "steps": 1200,
+    "batch": 256,
+    "seq_len": 33,
+    "prog_len": 32,
+    "heldout_n": 256,
+    "seed": 0,
+    "lr": 0.003
+  },
+  "floors": {
+    "train_fitted_bigram_to_heldout_HONEST": 0.1804369917596133,
+    "heldout_fitted_bigram_to_heldout_INSAMPLE": 0.12036055760410298,
+    "uniform_ln_vocab": 5.54907608489522
+  },
+  "harness_control": {
+    "production_TapeLearner_heldout_loss": 0.12927328145989597,
+    "generalised_r64_heldout_loss": 0.12927328145989597,
+    "abs_diff": 0.0,
+    "verdict": "HARNESS_OK"
+  },
+  "arms": [
+    {
+      "tag": "BILINEAR_r64",
+      "n_params": 32896,
+      "heldout_loss_final": 0.12927328145989597,
+      "train_loss_first10_mean": 5.369010638152904,
+      "train_loss_last10_mean": 0.08948982856109264,
+      "heldout_loss_at_200": null,
+      "wall_s_stdout_only": null,
+      "beats_honest_bigram_floor": true
+    },
+    {
+      "tag": "BILINEAR_r512",
+      "n_params": 263168,
+      "heldout_loss_final": 0.12990767555259636,
+      "train_loss_first10_mean": 4.045809353732011,
+      "train_loss_last10_mean": 0.08829742239437303,
+      "heldout_loss_at_200": null,
+      "wall_s_stdout_only": null,
+      "beats_honest_bigram_floor": true
+    },
+    {
+      "tag": "NONLINEAR_h64",
+      "n_params": 36992,
+      "heldout_loss_final": 0.1297021000522958,
+      "train_loss_first10_mean": 4.850241156568004,
+      "train_loss_last10_mean": 0.08995406473399352,
+      "heldout_loss_at_200": null,
+      "wall_s_stdout_only": null,
+      "beats_honest_bigram_floor": true
+    }
+  ],
+  "floor_used": 0.1804369917596133,
+  "v1_verdict_SUPERSEDED": "CAPACITY_HYPOTHESIS_ACCEPTED (v1 rule, non-discriminating)",
+  "corrected_verdict_rule": {
+    "rule": "ACCEPT capacity iff (control - r512) >= MARGIN; else ACCEPT class iff (control - nonlinear) >= MARGIN; else FALSIFIED both",
+    "margin": 0.01,
+    "delta_capacity_8x": -0.0006343940927003855,
+    "delta_class": -0.0004288185923998211,
+    "verdict": "CAPACITY_HYPOTHESIS_FALSIFIED",
+    "why_v1_was_wrong": "the control arm itself passed the v1 floor, so v1 could only ACCEPT"
+  },
+  "verdict": "CAPACITY_HYPOTHESIS_FALSIFIED"
+}

@@ -32,11 +32,34 @@ Measured (reduced scale, held-out batch, `build_heldout(256, 0, 32, 33)`):
 
 **Interpretation.** A 32,896-parameter bilinear model converged to 0.0984 nats,
 which is *below* the held-out unigram entropy (0.6836) and *at* the held-out
-conditional bigram floor (0.1204). A model with 32,896 parameters and no
-attention cannot represent structure beyond low-order byte statistics. The
-observed loss is therefore consistent with **capacity saturation**, not with
-entropy exhaustion of the tape. Pumping more tokens or emitting 2D grids into
-the same 32,896-parameter byte model cannot raise the ceiling.
+conditional bigram floor (0.1204). I first read this as **capacity saturation**.
+
+> **CORRECTION 2026-09-28 (`capacity_kill_experiment.py`, this commit).** That
+> reading is **FALSIFIED** by its own pre-registered kill experiment. Measured on
+> a shared materialised held-out set (production `build_heldout`), harness control
+> reproducing the production `TapeLearner` exactly (`abs_diff = 0.0`):
+>
+> | arm | params | held-out loss |
+> |---|---|---|
+> | `BILINEAR_r64` (control) | 32,896 | **0.129273** |
+> | `BILINEAR_r512` (**8x capacity**) | 263,168 | **0.129908** |
+> | `NONLINEAR_h64` (different class) | 36,992 | **0.129702** |
+>
+> 8x capacity made held-out loss slightly **worse** (`delta = -0.000634`,
+> margin `0.01`). A different model class did not help either
+> (`delta = -0.000429`). **Capacity saturation is NOT the binding constraint.**
+>
+> The same experiment also kills the *document's* story. The control beats the
+> honest train-fitted bigram floor (`0.129273 < 0.180437`), so the learner IS
+> extracting real structure beyond low-order byte statistics. "The 1D tape
+> exhausted its marginal algorithmic entropy" is therefore **not supported**.
+>
+> So BOTH causal accounts of the plateau are now falsified: not entropy
+> exhaustion (document), and not capacity saturation (my earlier reading). The
+> cause is unidentified. What survives is narrower and still decisive for
+> Directive 1: the learner's input contract is `LongTensor [B,T]` over
+> `VOCAB=257` (byte sequences), grid tasks are 2-D int structures, and no honest
+> join exists without a NEW learner head -- a spec change, not a local wire.
 
 **Schema mismatch (the reason Directive 1 cannot be wired as written).**
 `henri_curriculum_grid.make_batch` returns `dict`s whose `input`/`target` are
