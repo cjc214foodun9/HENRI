@@ -21,18 +21,47 @@ RUNNER_TEXT = RUNNER.read_text(encoding="utf-8", errors="replace")
 SCORE_GATE_TEXT = SCORE_GATE.read_text(encoding="utf-8", errors="replace")
 
 
+def _enclosing_guards(text: str, call_site: str):
+    """Yield the enclosing `if` headers for EVERY occurrence of `call_site(`.
+
+    WHY THE OLD "nearest preceding if" FORM WAS WRONG (measured 2026-09-28).
+    It took the LAST `if` header in a 400-character window before the FIRST
+    occurrence of the call site. When the UHR-05 A2 Pearl gate inserted an
+    inner `if _cg_ok:` between the freeze guard and `checkpoint_wave`, the
+    nearest header became the inner gate, so a materially present freeze guard
+    was reported ABSENT (test failed on correct code). It also only ever
+    inspected one occurrence, so a second, unguarded call site was invisible.
+
+    This walks upward from EACH call site and collects every `if`/`elif`
+    header at a strictly smaller indent, stopping when the enclosing function
+    ends. It is STRONGER than the old heuristic: every call site must carry
+    the condition, not just the first one encountered.
+    """
+    for m in re.finditer(re.escape(call_site) + r"\s*\(", text):
+        idx = m.start()
+        line_start = text.rfind("\n", 0, idx) + 1
+        call_line = text[line_start:text.find("\n", idx)]
+        call_indent = len(call_line) - len(call_line.lstrip(" \t"))
+        guards = []
+        for line in reversed(text[:line_start].split("\n")):
+            if not line.strip():
+                continue
+            indent = len(line) - len(line.lstrip(" \t"))
+            if indent == 0:
+                break  # left the enclosing function
+            if indent < call_indent and line.strip().startswith(("if ", "elif ")):
+                guards.append(line.strip())
+        yield guards
+
+
 def _guard_present(call_site: str, condition: str) -> bool:
-    """Find `call_site(` and require `condition` in the nearest preceding
-    if-statement header within 3 lines."""
-    idx = RUNNER_TEXT.find(call_site)
-    if idx < 0:
-        return False
-    window = RUNNER_TEXT[max(0, idx - 400):idx]
-    # match the last `if` header that contains the condition
-    last_cond = None
-    for m in re.finditer(r"if\s+([^\n:]+):", window):
-        last_cond = m.group(1)
-    return last_cond is not None and condition in last_cond
+    """True when EVERY call site is enclosed by an `if` carrying `condition`."""
+    seen = False
+    for guards in _enclosing_guards(RUNNER_TEXT, call_site):
+        seen = True
+        if not any(condition in g for g in guards):
+            return False
+    return seen
 
 
 def test_novelty_write_gated_by_learning_frozen():

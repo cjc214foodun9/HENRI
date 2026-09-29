@@ -26,9 +26,34 @@ def test_824_meta_prior_default_off():
 def test_824_meta_prior_causal_consumer():
     # Flag must reach a computation that changes the store BEFORE the
     # planner consumes it (wired at store construction, default OFF).
+    #
+    # STALE PIN ADVANCED 2026-09-28 (measured). This assertion previously
+    # required the literal `num_channels=8192`. That literal was removed when the
+    # macro-field RESOLUTION defect was fixed: the store is now constructed from
+    # the shared `_macro_num_blocks()` helper so that BOTH coupled consumers
+    # (ActionOutcomeGeneratorStore and _pad_su3_field) resolve the same block
+    # count. A hardcoded 8192 against a 64-block field was MEASURED to raise
+    # `einsum(): subscript n has size 8192 ... does not broadcast with 64`.
+    #
+    # The PIN IS NOT DELETED -- it is advanced to the invariant that actually
+    # discriminates now: the store's channel count must come from the single
+    # shared helper, and the prior must receive THAT SAME value. Pinning the
+    # literal again would re-assert the defect. The dedicated coverage for the
+    # coupling lives in tests/contract/test_macro_field_resolution.py (M1/M1b).
     src = _read(RUNNER)
     assert "pretrain_action_generators(" in src
-    assert "num_channels=8192" in src
+    assert "_num_channels = _macro_num_blocks()" in src, (
+        "the store's channel count must come from the shared resolution helper")
+    assert "num_channels=_num_channels" in src, (
+        "the store must be constructed at the shared resolution")
+    # the prior is passed the SAME resolved value (not a second literal).
+    # Bounded window: the call spans two lines and the first ')' belongs to
+    # `str(DEVICE)`, so a split on ')' truncates before `num_channels`.
+    _callsite = src.find("pretrain_action_generators(")
+    window = src[_callsite:_callsite + 400]
+    assert "num_channels=_num_channels" in window, (
+        "the prior must use the same resolved channel count as the store; "
+        f"call window was {window[:120]!r}")
 
 
 def test_824_zero_pretraining_invariant():
