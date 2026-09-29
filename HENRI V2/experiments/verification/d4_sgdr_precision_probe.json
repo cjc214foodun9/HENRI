@@ -1,0 +1,123 @@
+{
+  "schema": "henri.d4-sgdr-precision-probe.v1",
+  "purpose": "test whether the MoA reference's 'all arms bit-identical' claim is a PRECISION artifact; my committed float64 receipt shows four distinct hashes",
+  "pre_registration": {
+    "rule": "COLLAPSES_AT_F32 iff distinct(float32) < distinct(float64)",
+    "margin_context": 0.01
+  },
+  "production_dtype": {
+    "params.emb": "torch.float64",
+    "params.head": "torch.float64"
+  },
+  "by_dtype": {
+    "float64": {
+      "distinct_shas": 4,
+      "shas": [
+        "c1771e8abf342fae",
+        "ab17488fbd300be4",
+        "6ae615d290207f32",
+        "c1fdf56112bf75e0"
+      ],
+      "control_heldout": 0.12927328145989597,
+      "arms": [
+        {
+          "tag": "CTRL_const_lr3e-3",
+          "n_params": 32896,
+          "heldout_loss_final": 0.12927328145989597,
+          "train_loss_first10_mean": 5.369010638152904,
+          "train_loss_last10_mean": 0.08948982856109264,
+          "weight_sha": "c1771e8abf342fae",
+          "delta_vs_control": 0.0
+        },
+        {
+          "tag": "SGDR_3xT400_emin3e-4",
+          "n_params": 32896,
+          "heldout_loss_final": 0.12922980135503678,
+          "train_loss_first10_mean": 5.369051117643647,
+          "train_loss_last10_mean": 0.09154321697342398,
+          "weight_sha": "ab17488fbd300be4",
+          "delta_vs_control": 4.3480104859189295e-05
+        },
+        {
+          "tag": "SGDR_3xT400_emin0_mult2",
+          "n_params": 32896,
+          "heldout_loss_final": 0.1294843035813889,
+          "train_loss_first10_mean": 5.3690556151295965,
+          "train_loss_last10_mean": 0.09062312586289101,
+          "weight_sha": "6ae615d290207f32",
+          "delta_vs_control": -0.00021102212149293198
+        },
+        {
+          "tag": "KICK_step600_lr3e-2",
+          "n_params": 32896,
+          "heldout_loss_final": 0.1292678436522564,
+          "train_loss_first10_mean": 5.369010638152904,
+          "train_loss_last10_mean": 0.08948716390971076,
+          "weight_sha": "c1fdf56112bf75e0",
+          "delta_vs_control": 5.4378076395633634e-06
+        }
+      ]
+    },
+    "float32": {
+      "distinct_shas": 4,
+      "shas": [
+        "65bf29564b5c7ba5",
+        "4e25be652b6973a1",
+        "d17f13e4c0f82ccf",
+        "ef095f91f1bd5709"
+      ],
+      "control_heldout": 0.1292734295129776,
+      "arms": [
+        {
+          "tag": "CTRL_const_lr3e-3",
+          "n_params": 32896,
+          "heldout_loss_final": 0.1292734295129776,
+          "train_loss_first10_mean": 5.3690110206604,
+          "train_loss_last10_mean": 0.08948987275362015,
+          "weight_sha": "65bf29564b5c7ba5",
+          "delta_vs_control": 0.0
+        },
+        {
+          "tag": "SGDR_3xT400_emin3e-4",
+          "n_params": 32896,
+          "heldout_loss_final": 0.1292298585176468,
+          "train_loss_first10_mean": 5.369051551818847,
+          "train_loss_last10_mean": 0.09154314398765565,
+          "weight_sha": "4e25be652b6973a1",
+          "delta_vs_control": 4.357099533081055e-05
+        },
+        {
+          "tag": "SGDR_3xT400_emin0_mult2",
+          "n_params": 32896,
+          "heldout_loss_final": 0.1294841170310974,
+          "train_loss_first10_mean": 5.369055652618409,
+          "train_loss_last10_mean": 0.09062320291996002,
+          "weight_sha": "d17f13e4c0f82ccf",
+          "delta_vs_control": -0.000210687518119812
+        },
+        {
+          "tag": "KICK_step600_lr3e-2",
+          "n_params": 32896,
+          "heldout_loss_final": 0.1292678862810135,
+          "train_loss_first10_mean": 5.3690110206604,
+          "train_loss_last10_mean": 0.0894872672855854,
+          "weight_sha": "ef095f91f1bd5709",
+          "delta_vs_control": 5.543231964111328e-06
+        }
+      ]
+    }
+  },
+  "verdicts": {
+    "float64_distinct_shas": 4,
+    "float32_distinct_shas": 4,
+    "COLLAPSES_AT_F32": false,
+    "reference_claim_sha": "3f9c2b81e04a7d55",
+    "reference_sha_present_anywhere": false
+  },
+  "interpretation": "The same four arms keep DISTINCT weights in both precisions, so the reference's bit-identity is NOT reproduced at either precision. If COLLAPSES_AT_F32 is True the effect exists but only at reduced precision; if False the reference's mechanism claim is unsupported at this model/data/seed entirely. In both cases the FALSIFICATION verdict is unchanged: no arm within MARGIN of the control.",
+  "honest_limits": [
+    "synthetic byte-tape fixture, not ARC/SciCode data",
+    "conclusions are for THIS model class, data volume and seed",
+    "one rank (64); rank 42 is untested here"
+  ]
+}
