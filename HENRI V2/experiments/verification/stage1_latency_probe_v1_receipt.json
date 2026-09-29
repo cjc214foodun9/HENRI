@@ -1,0 +1,43 @@
+{
+ "results": {
+  "bg=True:4x4": {
+   "cpu_us": 489.48,
+   "wall_us": 489.63,
+   "gpu_us": 489.35,
+   "verdict": "GPU-BOUND"
+  },
+  "bg=True:16x16": {
+   "cpu_us": 119655.1,
+   "wall_us": 119655.39,
+   "gpu_us": 119678.84,
+   "verdict": "GPU-BOUND"
+  },
+  "bg=True:30x30": {
+   "cpu_us": 123374.64,
+   "wall_us": 123374.86,
+   "gpu_us": 122955.17,
+   "verdict": "GPU-BOUND"
+  },
+  "bg=False:4x4": {
+   "cpu_us": 599.59,
+   "wall_us": 599.73,
+   "gpu_us": 599.93,
+   "verdict": "GPU-BOUND"
+  },
+  "bg=False:16x16": {
+   "cpu_us": 118147.57,
+   "wall_us": 118147.8,
+   "gpu_us": 117217.01,
+   "verdict": "GPU-BOUND"
+  },
+  "bg=False:30x30": {
+   "cpu_us": 116002.67,
+   "wall_us": 116002.96,
+   "gpu_us": 115802.14,
+   "verdict": "GPU-BOUND"
+  }
+ },
+ "first_call_us": 118082.25885033607,
+ "steady_min_us": 119251.15436315536,
+ "steady_median_us": 120791.52837395668
+}

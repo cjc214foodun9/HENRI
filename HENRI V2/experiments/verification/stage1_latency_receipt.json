@@ -1,0 +1,110 @@
+{
+ "4x4": {
+  "cells": 16,
+  "nonzero": 4,
+  "wall_us": 498.37,
+  "kernel_us": 103.75,
+  "gap_us": 394.62,
+  "gap_pct": 79.2,
+  "kernels_per_call": 402.1,
+  "verdict": "PYTHON/LAUNCH-BOUND",
+  "top_kernels": [
+   {
+    "k": "aten::empty",
+    "dev_us": 0.0
+   },
+   {
+    "k": "aten::to",
+    "dev_us": 0.0
+   },
+   {
+    "k": "aten::_to_copy",
+    "dev_us": 0.0
+   },
+   {
+    "k": "aten::empty_strided",
+    "dev_us": 0.0
+   },
+   {
+    "k": "aten::copy_",
+    "dev_us": 0.88
+   },
+   {
+    "k": "Activity Buffer Request",
+    "dev_us": 0.01
+   }
+  ]
+ },
+ "16x16": {
+  "cells": 256,
+  "nonzero": 230,
+  "wall_us": 123321.25,
+  "kernel_us": 3007.11,
+  "gap_us": 120314.14,
+  "gap_pct": 97.6,
+  "kernels_per_call": 10100.4,
+  "verdict": "PYTHON/LAUNCH-BOUND",
+  "top_kernels": [
+   {
+    "k": "aten::empty",
+    "dev_us": 0.0
+   },
+   {
+    "k": "aten::to",
+    "dev_us": 0.0
+   },
+   {
+    "k": "aten::_to_copy",
+    "dev_us": 0.0
+   },
+   {
+    "k": "aten::empty_strided",
+    "dev_us": 0.0
+   },
+   {
+    "k": "aten::copy_",
+    "dev_us": 1.03
+   },
+   {
+    "k": "Activity Buffer Request",
+    "dev_us": 0.15
+   }
+  ]
+ },
+ "30x30": {
+  "cells": 900,
+  "nonzero": 810,
+  "wall_us": 133697.05,
+  "kernel_us": 10588.37,
+  "gap_us": 123108.68,
+  "gap_pct": 92.1,
+  "kernels_per_call": 35321.1,
+  "verdict": "PYTHON/LAUNCH-BOUND",
+  "top_kernels": [
+   {
+    "k": "aten::empty",
+    "dev_us": 0.0
+   },
+   {
+    "k": "aten::to",
+    "dev_us": 0.0
+   },
+   {
+    "k": "aten::_to_copy",
+    "dev_us": 0.0
+   },
+   {
+    "k": "aten::empty_strided",
+    "dev_us": 0.0
+   },
+   {
+    "k": "aten::copy_",
+    "dev_us": 1.37
+   },
+   {
+    "k": "Activity Buffer Request",
+    "dev_us": 0.38
+   }
+  ]
+ }
+}
