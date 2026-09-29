@@ -133,14 +133,34 @@ def test_hard_veto_does_not_fire_on_a_matching_candidate(planner):
 
 
 # ------------------------------------------------------------------ S4
-def test_legacy_scale_is_reproducible_for_ab(planner):
-    """S4. The defect must stay reproducible, and the fix must be reversible."""
+def test_legacy_scale_is_reproducible_for_ab(planner, tmp_path):
+    """S4. The defect must stay reproducible, and the fix must be reversible.
+
+    RECEIPT-CLOBBER FIX (2026-09-28, measured). This test used to invoke the probe
+    with NO output override, so the LEGACY arm's numbers were written straight
+    into the COMMITTED receipt path. Every full-suite run therefore rewrote a
+    committed artifact with defect-demonstrating values, leaving the tracked tree
+    dirty and -- worse -- making the receipt AMBIGUOUS: one path was written by
+    two different arms of one harness. Measured arm attribution:
+
+        HEAD blob    == default-arm output   (S2_ident 0.0,     S4 Rotate90, prune 0.4444)
+        9a8fbce blob == legacy-arm  output   (S2_ident 0.99902, S4 Identity, prune 1.0)
+
+    That ambiguity produced a false "the committed receipt is stale" conclusion
+    and cost a retraction cycle. This test reads ONLY `proc.stdout`, so
+    redirecting the write changes no assertion here. The committed receipt is
+    now asserted byte-UNCHANGED, which fails if the `--out` is ever removed.
+    """
     script = ROOT / "experiments" / "verification" / "sagnac_scale_defect.py"
     if not script.exists():
         pytest.skip("scale-defect probe not present")
+    receipt = ROOT / "experiments" / "verification" / "sagnac_scale_defect_observed.json"
+    receipt_before = receipt.read_bytes() if receipt.exists() else None
     env = dict(os.environ)
     env["HENRI_SAGNAC_LEGACY_SCALE"] = "1"
-    proc = subprocess.run([sys.executable, str(script)], capture_output=True,
+    proc = subprocess.run([sys.executable, str(script),
+                           "--out", str(tmp_path / "legacy_arm" / "legacy.json")],
+                          capture_output=True,
                           text=True, env=env, timeout=600, cwd=str(ROOT))
     out = proc.stdout
     # The legacy arm must show the pinned-near-1 pathology.
@@ -153,6 +173,15 @@ def test_legacy_scale_is_reproducible_for_ab(planner):
     assert stress > 0.9, (
         f"legacy arm gave EXACT-MATCH stress {stress:.6f}; the recorded defect "
         f"(~0.999) is not reproducible, so the A/B escape hatch is broken.")
+    # REGRESSION GUARD for the clobber fix itself: the committed receipt must be
+    # byte-identical before and after this test. Without this, a future edit that
+    # drops the `--out` would silently restore the defect that wrote legacy-arm
+    # values into a committed artifact, and nothing would fail.
+    receipt_after = receipt.read_bytes() if receipt.exists() else None
+    assert receipt_after == receipt_before, (
+        "the legacy-arm run CLOBBERED the committed receipt "
+        f"({receipt}). The probe must be invoked with --out (tmp_path) so the "
+        "committed artifact keeps its default-arm content.")
 
 
 # ------------------------------------------------------------------ S5
