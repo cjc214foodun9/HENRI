@@ -1,0 +1,223 @@
+{
+  "schema": "henri.d3-nonnormality-probe.v2",
+  "purpose": "close the delegation Q2 non-normality gap; supersede v1",
+  "dim": 64,
+  "n_per_action": 128,
+  "lam_analytic_rho": 0.95,
+  "coupling": 0.5,
+  "control": {
+    "power_norms": [
+      0.9999999810068247,
+      0.9999999620136499,
+      0.9999999430204756,
+      0.9999999240273014,
+      0.9999999050341275,
+      0.9999998860409542
+    ],
+    "gelfand": [
+      {
+        "k": 1,
+        "norm": 0.9999999810068247,
+        "norm_pow_1_over_k": 0.9999999810068247
+      },
+      {
+        "k": 2,
+        "norm": 0.9999999620136499,
+        "norm_pow_1_over_k": 0.9999999810068247
+      },
+      {
+        "k": 4,
+        "norm": 0.9999999240273013,
+        "norm_pow_1_over_k": 0.9999999810068247
+      },
+      {
+        "k": 8,
+        "norm": 0.9999998480546084,
+        "norm_pow_1_over_k": 0.9999999810068247
+      },
+      {
+        "k": 16,
+        "norm": 0.9999996961092399,
+        "norm_pow_1_over_k": 0.9999999810068247
+      }
+    ],
+    "passes": true
+  },
+  "rho": {
+    "analytic": 0.95,
+    "eigvals": 1.2192324893848516,
+    "eigvals_error": 0.26923248938485167,
+    "gelfand_table": [
+      {
+        "k": 1,
+        "norm": 1.4246263351171744,
+        "norm_pow_1_over_k": 1.4246263351171744
+      },
+      {
+        "k": 2,
+        "norm": 2.0295576004775393,
+        "norm_pow_1_over_k": 1.4246254246213421
+      },
+      {
+        "k": 4,
+        "norm": 4.119069183974495,
+        "norm_pow_1_over_k": 1.424622409621473
+      },
+      {
+        "k": 8,
+        "norm": 16.965910054866495,
+        "norm_pow_1_over_k": 1.4246137936461147
+      },
+      {
+        "k": 16,
+        "norm": 287.7692759041927,
+        "norm_pow_1_over_k": 1.424591263020615
+      },
+      {
+        "k": 32,
+        "norm": 82700.6544478315,
+        "norm_pow_1_over_k": 1.4245318199421
+      },
+      {
+        "k": 64,
+        "norm": 6782935567.157469,
+        "norm_pow_1_over_k": 1.4243473156393622
+      }
+    ],
+    "gelfand_final": 1.4243473156393622,
+    "gelfand_converged": false,
+    "gelfand_note": "Gelfand needs k->inf; a strongly NON-NORMAL matrix has NOT converged by k=64, so a Gelfand value far ABOVE the analytic rho is itself a measurement of the severity of the non-normality."
+  },
+  "transient": {
+    "power_norms": [
+      1.4246263351171744,
+      2.0295576004775393,
+      2.89135114515743,
+      4.119069183974497,
+      5.868079063646819,
+      8.359712160740953,
+      11.909268526501183,
+      16.965910054866495,
+      24.16948874794622,
+      34.431498735125984,
+      49.05039194715057,
+      69.87584359918941
+    ],
+    "amplification_true_rho": [
+      1.4996066685443943,
+      2.248817285847689,
+      3.372329663399831,
+      5.057136374305903,
+      7.583643870325793,
+      11.372336258033325,
+      17.053748372194057,
+      25.573390951950035,
+      38.34908589364203,
+      57.50688905034732,
+      86.23485230257332,
+      129.3134803894233
+    ],
+    "amplification_eigvals_rho": [
+      1.1684615916329064,
+      1.365300745959363,
+      1.595295931482837,
+      1.864030347103384,
+      2.1780273140588085,
+      2.544908441942811,
+      2.9735784377340644,
+      3.4744410257431513,
+      4.059651200587286,
+      4.743409918682435,
+      5.54230836250296,
+      6.4757301119168496
+    ],
+    "peak_k": 12,
+    "peak_true": 129.3134803894233,
+    "peak_as_v1_reported": 6.4757301119168496
+  },
+  "lowrank_capture": {
+    "8": {
+      "eff_rank": 8,
+      "norm_at_peak": 2.925824249233347,
+      "ratio_vs_dense": 0.04187175565301208
+    },
+    "32": {
+      "eff_rank": 32,
+      "norm_at_peak": 34.002193017447794,
+      "ratio_vs_dense": 0.48660869430765963
+    },
+    "64": {
+      "eff_rank": 64,
+      "norm_at_peak": 70.5148262966642,
+      "ratio_vs_dense": 1.0091445435870516
+    }
+  },
+  "lowrank_captures_transient_at_r64": true,
+  "rollout_error_by_horizon": {
+    "lowrank_r32": [
+      0.7294057756662369,
+      0.8223872184753418,
+      0.9732286483049393,
+      1.2547857165336609
+    ],
+    "lowrank_r64": [
+      0.008979744394309819,
+      0.019283668138086796,
+      0.026272809132933617,
+      0.04037095420062542
+    ],
+    "dense": [
+      0.008979744161479175,
+      0.019283668138086796,
+      0.026272773277014494,
+      0.04037083964794874
+    ]
+  },
+  "horizons": [
+    1,
+    3,
+    5,
+    10
+  ],
+  "cross_action_angles": {
+    "0-1": {
+      "min_deg": 0.6163903953900267,
+      "mean_deg": 45.061198311127285
+    },
+    "0-2": {
+      "min_deg": 1.3549571306731834,
+      "mean_deg": 46.126882874394056
+    },
+    "0-3": {
+      "min_deg": 0.577482958343255,
+      "mean_deg": 45.51800025839536
+    },
+    "1-2": {
+      "min_deg": 0.7221806392399885,
+      "mean_deg": 45.22512880625533
+    },
+    "1-3": {
+      "min_deg": 4.16575895359784,
+      "mean_deg": 46.73446906281039
+    },
+    "2-3": {
+      "min_deg": 0.4433372080367716,
+      "mean_deg": 45.383953118419456
+    }
+  },
+  "cross_action_min_angle_deg": 0.4433372080367716,
+  "cross_action_note": "Small minimum angle => the per-action U_a subspaces overlap, so a state held in one action's coordinates IS partly expressible in another's. Mean angle near 45 deg => they are otherwise close to orthogonal.",
+  "production_scope": "enforce_unit_norm=True bounds the transient at the step() boundary; raw _apply_* is unbounded",
+  "verdict_inputs": {
+    "control_passes": true,
+    "analytic_rho": 0.95,
+    "rho_from_eigvals_UNRELIABLE": 1.2192324893848516,
+    "rho_from_gelfand": 1.4243473156393622,
+    "gelfand_converged": false,
+    "peak_transient_k": 12,
+    "peak_transient_amplification": 129.3134803894233,
+    "v1_understated_by_factor": 19.968942212625016,
+    "lowrank_captures_transient_at_r64": true,
+    "cross_action_min_angle_deg": 0.4433372080367716
+  }
+}
