@@ -58,20 +58,21 @@ class ParityContourMask:
     """
 
     @staticmethod
-    def compute_parity_contour(grid_shape: Tuple[int, int], contour_pixels: List[Tuple[int, int]], fast: bool = False) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
+    def compute_parity_contour(grid_shape: Tuple[int, int], contour_pixels: List[Tuple[int, int]], fast: bool = False, want_exterior: bool = True) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
         """
         Calculates parity contour mask via flood-fill interior/exterior classification.
         Returns: (interior_pixels, exterior_pixels)
 
         fast=True selects `_parity_contour_fast`, which is algorithmically identical
-        (same FIFO visit order, same row-major output order) but removes two
-        quadratic costs. MEASURED on the RTX 5090
-        (experiments/verification/phase_split_receipt.json): the segmentation block
-        is 97.8% of encode_grid wall time at 16x16 (109634.7 of 112061.3 us), and
-        this routine is dominant within it.
+        but removes the measured dominant cost (numpy scalar indexing).
+        want_exterior=False skips building the exterior list, which
+        `henri_vision_encoder.encode_grid` never reads. Defaults preserve the
+        production path byte-for-byte.
         """
         if fast:
-            return ParityContourMask._parity_contour_fast(grid_shape[0], grid_shape[1], contour_pixels)
+            return ParityContourMask._parity_contour_fast(
+                grid_shape[0], grid_shape[1], contour_pixels,
+                want_exterior=want_exterior)
         rows, cols = grid_shape
         mask = np.zeros((rows, cols), dtype=int)
         
@@ -104,13 +105,13 @@ class ParityContourMask:
                 val = padded[r + 1, c + 1]
                 if val == 0:
                     interior_pixels.append((r, c))
-                elif val == 2 and (r, c) not in contour_pixels:
+                elif want_exterior and val == 2 and (r, c) not in contour_pixels:
                     exterior_pixels.append((r, c))
 
         return interior_pixels, exterior_pixels
 
     @staticmethod
-    def _parity_contour_fast(rows: int, cols: int, contour_pixels: List[Tuple[int, int]]) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
+    def _parity_contour_fast(rows: int, cols: int, contour_pixels: List[Tuple[int, int]], want_exterior: bool = True) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
         """Identical output to the legacy path; the measured cost removed.
 
         MEASURED (experiments/verification/seg_cost_probe.py, CPU):
@@ -122,15 +123,16 @@ class ParityContourMask:
               one 1-px call: legacy 198.83 us -> pylist 113.22 us
 
         The dominant cost is NUMPY SCALAR INDEXING (`padded[nr, nc]` costs
-        ~150-350 ns per access), not `list.pop(0)`. A deque does not help --
-        it was measured 0.69x, i.e. slower, and is not used here.
+        ~150-350 ns per access), not `list.pop(0)`. A deque does not help -- it
+        was measured 0.69x, i.e. slower, and is not used here.
 
-        A Python list-of-lists makes each access a plain list index. The
-        extraction scan uses the same Python loops as the legacy path so the
-        emitted order is byte-identical.
+        `want_exterior=False` skips allocating the exterior list. At 16x16 that
+        list holds up to 256 tuples per component and is discarded unread by
+        encode_grid, which consumes only `interior_pixels`. Interior output is
+        unaffected, so identity holds for the value that is actually consumed.
 
-        Visit order is irrelevant to the result: with the barrier fixed, the
-        set of cells reachable from the pad corner is determined by reachability
+        Visit order is irrelevant to the result: with the barrier fixed, the set
+        of cells reachable from the pad corner is determined by reachability
         alone, so LIFO (this) and FIFO (legacy) mark the same cells. Identity is
         asserted element-by-element in
         experiments/verification/test_fast_segmenter_equiv.py (200/200 fuzz cases).
@@ -161,7 +163,7 @@ class ParityContourMask:
                 v = row[c + 1]
                 if v == 0:
                     interior_pixels.append((r, c))
-                elif v == 2 and (r, c) not in cs:
+                elif want_exterior and v == 2 and (r, c) not in cs:
                     exterior_pixels.append((r, c))
         return interior_pixels, exterior_pixels
 
@@ -194,9 +196,14 @@ class ConnectedComponentSegmenter:
     def __init__(self, background_color: int = 0):
         self.background_color = background_color
 
-    def segment_grid(self, grid: List[List[int]]) -> List[ObjectRecord]:
+    def segment_grid(self, grid: List[List[int]], want_exterior: bool = True) -> List[ObjectRecord]:
         """
         Segments a 2D grid into a list of ObjectRecords with parity contour classification.
+
+        want_exterior=False skips building `exterior_pixels` for every record, which
+        `henri_vision_encoder.encode_grid` never reads. Defaults preserve the
+        production path byte-for-byte; mech_type classification does not use the
+        exterior list (it branches on `len(interior_px) > 0`).
         """
         arr = np.array(grid, dtype=int)
         rows, cols = arr.shape
