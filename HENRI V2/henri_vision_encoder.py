@@ -34,6 +34,7 @@ class HENRIVisionEncoder(nn.Module):
         device: Optional[str] = None,
         spatial_basis_kind: str = "default",
         bg_mask: bool = False,
+        vectorized_accum: bool = False,
     ):
         """UWE spatial encoder.
 
@@ -46,6 +47,14 @@ class HENRIVisionEncoder(nn.Module):
             excluded from the superposition sum (Phase 7.3 G2: kills the DC
             offset; identity cos 0.971 -> 0.467 on real corpus pairs).
             Default False preserves the production path byte-for-byte.
+        vectorized_accum: when True, the per-cell superposition loop is replaced
+            by a batched tensor expression (`_superpose_vectorized`). The legacy
+            loop compares `grid_clamped[r, c] == 0` on a CUDA tensor, which
+            synchronises the device PER CELL, and issues ~39 kernel launches per
+            cell. Measured on the RTX 5090 (stage1_latency_receipt.json): 402
+            launches for a 4x4 grid, 10,100 for 16x16, 35,321 for 30x30, with
+            79-98% of wall time in Python/launch gaps.
+            Default False preserves the production path byte-for-byte.
         """
         super().__init__()
         self.d_model = d_model
@@ -55,6 +64,7 @@ class HENRIVisionEncoder(nn.Module):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.spatial_basis_kind = spatial_basis_kind
         self.bg_mask = bg_mask
+        self.vectorized_accum = bool(vectorized_accum)
 
         # Complex phase spatial basis vectors [max_grid_dim, D // 2]
         # x-axis translation phase generator and y-axis translation phase generator
@@ -125,20 +135,24 @@ class HENRIVisionEncoder(nn.Module):
 
         parity_mask_tensor = torch.tensor(parity_mask_grid, dtype=torch.float32, device=self.device)
 
-        contributed = 0
-        for r in range(H):
-            py = self.spatial_basis_y[r]
-            for c in range(W):
-                # Phase 7.3 G2: structural background masking. When enabled,
-                # color-0 cells are EXCLUDED from the superposition sum
-                # (kills the DC offset). Default False = legacy byte-identical.
-                if self.bg_mask and grid_clamped[r, c] == 0:
-                    continue
-                contributed += 1
-                px = self.spatial_basis_x[c]
-                pc = self.color_codebook[grid_clamped[r, c]]
-                kappa = parity_mask_tensor[r, c]
-                superposed_wave.add_(px * py * pc * kappa)
+        if self.vectorized_accum:
+            superposed_wave, contributed = self._superpose_vectorized(
+                grid_clamped, parity_mask_tensor, H, W)
+        else:
+            contributed = 0
+            for r in range(H):
+                py = self.spatial_basis_y[r]
+                for c in range(W):
+                    # Phase 7.3 G2: structural background masking. When enabled,
+                    # color-0 cells are EXCLUDED from the superposition sum
+                    # (kills the DC offset). Default False = legacy byte-identical.
+                    if self.bg_mask and grid_clamped[r, c] == 0:
+                        continue
+                    contributed += 1
+                    px = self.spatial_basis_x[c]
+                    pc = self.color_codebook[grid_clamped[r, c]]
+                    kappa = parity_mask_tensor[r, c]
+                    superposed_wave.add_(px * py * pc * kappa)
 
         if contributed == 0:
             raise ValueError(
@@ -152,6 +166,70 @@ class HENRIVisionEncoder(nn.Module):
         # Project onto unit hypersphere S^{D-1}
         normalized_wave = F.normalize(real_wave, p=2, dim=-1)
         return normalized_wave
+
+    @torch.no_grad()
+    def _superpose_vectorized(
+        self,
+        grid_clamped: torch.Tensor,
+        parity_mask: torch.Tensor,
+        H: int,
+        W: int,
+        row_chunk: int = 32,
+    ) -> Tuple[torch.Tensor, int]:
+        """Batched equivalent of the legacy per-cell superposition loop.
+
+        WHY THIS EXISTS (measured, not suspected)
+        =========================================
+        The legacy loop evaluates `grid_clamped[r, c] == 0` on a CUDA tensor
+        inside a Python `if`. That converts a device scalar to a Python bool,
+        which SYNCHRONISES the device once per cell, and issues ~39 kernel
+        launches per cell. Measured on the RTX 5090
+        (experiments/verification/stage1_latency_receipt.json):
+
+            grid     launches/call    wall_us    kernel_us    gap%
+            4x4              402.1      498.37       103.75    79.2
+            16x16          10,100.4   123321.25     3007.11    97.6
+            30x30          35,321.1   133697.05    10588.37    92.1
+
+        Arithmetic is the same sum over cells: the operation is a Hadamard
+        product per cell (`px * py * pc * kappa`) followed by addition. Both are
+        linear, so the batched form is algebraically identical; only the
+        floating-point summation order differs, bounded by the equivalence test
+        in experiments/verification/test_vectorized_encoder_equiv.py.
+
+        Memory is bounded by `row_chunk`: peak is O(row_chunk * W * d_model),
+        not O(H * W * d_model).
+        """
+        valid = None
+        if self.bg_mask:
+            # one comparison for the whole grid, not one per cell
+            valid = (grid_clamped != 0)
+
+        # [H, W, D//2] built per row-chunk so the peak stays bounded
+        acc = torch.zeros(self.d_model // 2, dtype=torch.complex64, device=self.device)
+        contributed = 0
+        for r0 in range(0, H, row_chunk):
+            r1 = min(r0 + row_chunk, H)
+            nr = r1 - r0
+            # positions: [nr, W, D//2] = y-ramp (broadcast over columns)
+            #                        * x-ramp (broadcast over rows)
+            pos = (self.spatial_basis_y[r0:r1, None, :]
+                   * self.spatial_basis_x[None, :W, :])
+            cols = self.color_codebook[grid_clamped[r0:r1]]        # [nr, W, D//2]
+            # DEFECT FIXED 2026-09-29: parity_mask is [H, W], so the broadcast
+            # axis must be the LAST one: [nr, W, 1] against [nr, W, D//2].
+            # `parity_mask[r0:r1, None, :]` gave [nr, 1, W], which `.expand`
+            # turned into [nr, W, W] -- a silent shape collision that only
+            # survives when W == D//2.
+            terms = pos * cols * parity_mask[r0:r1, :, None]
+            if valid is not None:
+                vm = valid[r0:r1, :, None]                         # [nr, W, 1]
+                contributed += int(vm.sum().item())
+                terms = terms * vm
+            else:
+                contributed += nr * W
+            acc = acc + terms.sum(dim=(0, 1))
+        return acc, contributed
 
     @torch.no_grad()
     def encode_spatial_grid(self, grid) -> torch.Tensor:

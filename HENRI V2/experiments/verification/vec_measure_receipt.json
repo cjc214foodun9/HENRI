@@ -1,0 +1,48 @@
+{
+ "grids": {
+  "4x4": {
+   "legacy": {
+    "cpu_us": 557.37,
+    "wall_us": 558.12,
+    "kernel_us": 51.83,
+    "launches_per_call": 148.2
+   },
+   "vectorized": {
+    "cpu_us": 403.41,
+    "wall_us": 404.08,
+    "kernel_us": 32.79,
+    "launches_per_call": 49.1
+   }
+  },
+  "16x16": {
+   "legacy": {
+    "cpu_us": 122330.15,
+    "wall_us": 122331.07,
+    "kernel_us": 1504.64,
+    "launches_per_call": 3834.3
+   },
+   "vectorized": {
+    "cpu_us": 112037.85,
+    "wall_us": 112039.39,
+    "kernel_us": 344.23,
+    "launches_per_call": 49.1
+   }
+  },
+  "30x30": {
+   "legacy": {
+    "cpu_us": 134543.74,
+    "wall_us": 134544.79,
+    "kernel_us": 5288.27,
+    "launches_per_call": 13435.0
+   },
+   "vectorized": {
+    "cpu_us": 97163.01,
+    "wall_us": 97163.89,
+    "kernel_us": 1492.0,
+    "launches_per_call": 49.1
+   }
+  }
+ },
+ "sum_pass_us": 82.28,
+ "implied_gb_s": 1631.3
+}
