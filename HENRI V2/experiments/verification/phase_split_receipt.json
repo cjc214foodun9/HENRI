@@ -1,0 +1,58 @@
+{
+ "4x4": {
+  "H": 4,
+  "W": 4,
+  "components": 2,
+  "P1_grid_to_dev": 5.06,
+  "P3_dev_to_host": 12.87,
+  "P4_segment": 97.89,
+  "P5_parity_mask": 48.49,
+  "P6_host_to_dev": 9.87,
+  "P7_superpose": 84.94,
+  "P8_norm": 30.35,
+  "TOTAL_measured": 362.38,
+  "P4_5_python_block": 146.38
+ },
+ "8x8": {
+  "H": 8,
+  "W": 8,
+  "components": 12,
+  "P1_grid_to_dev": 4.34,
+  "P3_dev_to_host": 11.22,
+  "P4_segment": 1040.7,
+  "P5_parity_mask": 932.26,
+  "P6_host_to_dev": 9.15,
+  "P7_superpose": 95.11,
+  "P8_norm": 29.37,
+  "TOTAL_measured": 2122.0,
+  "P4_5_python_block": 1972.96
+ },
+ "16x16": {
+  "H": 16,
+  "W": 16,
+  "components": 230,
+  "P1_grid_to_dev": 4.76,
+  "P3_dev_to_host": 13.62,
+  "P4_segment": 56156.05,
+  "P5_parity_mask": 53478.62,
+  "P6_host_to_dev": 9.53,
+  "P7_superpose": 362.57,
+  "P8_norm": 30.23,
+  "TOTAL_measured": 112061.31,
+  "P4_5_python_block": 109634.67
+ },
+ "30x30": {
+  "H": 30,
+  "W": 30,
+  "components": 53,
+  "P1_grid_to_dev": 4.83,
+  "P3_dev_to_host": 13.24,
+  "P4_segment": 48480.73,
+  "P5_parity_mask": 45073.88,
+  "P6_host_to_dev": 10.05,
+  "P7_superpose": 1507.3,
+  "P8_norm": 29.61,
+  "TOTAL_measured": 95592.26,
+  "P4_5_python_block": 93554.62
+ }
+}
