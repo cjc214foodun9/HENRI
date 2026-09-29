@@ -239,7 +239,7 @@ class VLMPhaseBridge(nn.Module):
 
     def __init__(self, d_vit: int, n_patches: int, d_model: int = D_DEFAULT,
                  d_pool: int = 512, n_heads: int = 4, seed: int = 0,
-                 use_position_binding: bool = True):
+                 use_position_binding: bool = True, binding_chunk: int = 8):
         super().__init__()
         if d_model % BLOCK_DIM != 0:
             raise VLMBridgeError(f"d_model must be a multiple of {BLOCK_DIM}")
@@ -248,6 +248,8 @@ class VLMPhaseBridge(nn.Module):
         self.d_model = int(d_model)
         self.d_pool = int(d_pool)
         self.use_position_binding = bool(use_position_binding)
+        # patches processed per chunk in binding_term (memory, not semantics)
+        self.binding_chunk = max(1, int(binding_chunk))
 
         self.query = nn.Parameter(torch.randn(1, 1, d_vit) * 0.02)
         self.k_proj = nn.Linear(d_vit, d_vit, bias=False)
@@ -271,6 +273,32 @@ class VLMPhaseBridge(nn.Module):
         att = torch.softmax((q @ k.transpose(1, 2)) / math.sqrt(d), dim=-1)
         return (att @ v).squeeze(1)
 
+    def binding_term(self, feats: torch.Tensor, chunk: int | None = None) -> torch.Tensor:
+        """sum_n phi(feats[:,n,:]) * pos[n,:]  ->  [B, D]   (VSA bind + bundle).
+
+        DEFECT FIXED 2026-09-29, measured as a CUDA OOM on the RTX 5090:
+        "Tried to allocate 16.00 GiB" at the bind line. The direct form builds
+        [B,N,D] for BOTH `pf` and `bound`. At B=256, N=256, D=65536 that is
+        16.00 GiB EACH (32 GiB total) on a 31.36 GiB card. Production survived
+        only because batch 64 needs 4 GiB each -- peak 17893.7 MiB measured.
+
+        The bind is Hadamard (elementwise) and the bundle is a sum over N, so the
+        contraction is linear in n and can be accumulated in chunks with
+        IDENTICAL arithmetic. Peak drops from O(B*N*D) to O(B*chunk*D):
+        537 MiB at the settings that OOM'd. This is an exact reformulation, not
+        an approximation -- verified against the naive form in
+        experiments/verification/test_binding_chunk_equiv.py.
+        """
+        B, N, _ = feats.shape
+        c = max(1, int(chunk or self.binding_chunk))
+        acc = None
+        for k in range(0, N, c):
+            fk = feats[:, k:k + c, :].to(torch.float32)
+            pk = self.to_phase(self.to_pool(self.v_proj(fk)))        # [B, c, D]
+            term = (pk * self.pos_codes[k:k + c, :]).sum(dim=1)      # [B, D]
+            acc = term if acc is None else acc + term
+        return acc
+
     def forward(self, feats: torch.Tensor, return_pooled: bool = False):
         pooled = self.pool(feats.to(torch.float32))          # [B, d_vit]
         z = self.to_pool(pooled)                              # [B, d_pool]
@@ -282,10 +310,9 @@ class VLMPhaseBridge(nn.Module):
         self.n_feats = int(feats.shape[1])
         if self.binding_active:
             # bind the projected patch features with position codes and superpose,
-            # so psi keeps a compositional role-filler structure
-            pf = self.to_phase(self.to_pool(self.v_proj(feats.to(torch.float32))))
-            bound = pf * self.pos_codes[None, :, :]           # elementwise bind
-            bsum = bound.sum(dim=1)
+            # so psi keeps a compositional role-filler structure. CHUNKED over
+            # patches so no [B,N,D] tensor is materialized (see binding_term).
+            bsum = self.binding_term(feats.to(torch.float32))
             acc = bsum + p
             # CONTRIBUTION DIAGNOSTIC: if the binding term is negligible next to
             # the pooled term, the "compositional role-filler" claim is hollow.
