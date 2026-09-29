@@ -1,0 +1,125 @@
+{
+  "schema": "henri.d3-low-rank-koopman-verification.v3",
+  "directive": 3,
+  "supersedes": [
+    "v1 (vacuous tracemalloc gate)",
+    "v2 (GetProcessMemoryInfo call failed)"
+  ],
+  "dim": 65536,
+  "n_actions": 4,
+  "n_samples_per_action": 64,
+  "dense_equivalent_gib_per_action": 16.0,
+  "dense_equivalent_gib_for_4": 64.0,
+  "memory_instrument_available": "psutil_rss",
+  "memory_instruments_found": [
+    "ctypes_psapi",
+    "psutil_rss"
+  ],
+  "hardware": {
+    "cuda_available": false,
+    "device": "cpu"
+  },
+  "gpu_budget_claim": "BLOCKED - no CUDA on this host",
+  "rank_rows": [
+    {
+      "rank_requested": 16,
+      "rank_used": 16,
+      "effective_rank": {
+        "0": 16,
+        "1": 16,
+        "2": 16,
+        "3": 16
+      },
+      "stored_mib": 32.0,
+      "dense_matrix_formed": false,
+      "savings_factor": 2048.0,
+      "torch_profiler_self_cpu_mib": 416.0,
+      "tracemalloc_peak_mib_NEGATIVE_CONTROL": 64.8674,
+      "relative_residual": {
+        "0": 0.860313,
+        "1": 0.860231,
+        "2": 0.860148,
+        "3": 0.860094
+      }
+    },
+    {
+      "rank_requested": 64,
+      "rank_used": 64,
+      "effective_rank": {
+        "0": 64,
+        "1": 64,
+        "2": 64,
+        "3": 64
+      },
+      "stored_mib": 128.0,
+      "dense_matrix_formed": false,
+      "savings_factor": 512.0,
+      "torch_profiler_self_cpu_mib": 512.0,
+      "tracemalloc_peak_mib_NEGATIVE_CONTROL": 0.0773,
+      "relative_residual": {
+        "0": 1e-06,
+        "1": 1e-06,
+        "2": 1e-06,
+        "3": 1e-06
+      }
+    },
+    {
+      "rank_requested": 256,
+      "rank_used": 256,
+      "effective_rank": {
+        "0": 64,
+        "1": 64,
+        "2": 64,
+        "3": 64
+      },
+      "stored_mib": 128.0,
+      "dense_matrix_formed": false,
+      "savings_factor": 512.0,
+      "torch_profiler_self_cpu_mib": 512.0,
+      "tracemalloc_peak_mib_NEGATIVE_CONTROL": 0.0784,
+      "relative_residual": {
+        "0": 1e-06,
+        "1": 1e-06,
+        "2": 1e-06,
+        "3": 1e-06
+      }
+    }
+  ],
+  "negative_control_verdict": {
+    "claim": "tracemalloc cannot see PyTorch tensor buffers",
+    "tracemalloc_max_mib": 64.8674,
+    "torch_alloc_max_mib": 512.0,
+    "under_report_factor_per_rank": [
+      6.4,
+      6623.5,
+      6530.6
+    ],
+    "min_under_report_factor": 6.413082688684917,
+    "verdict": "CONTROL_CONFIRMS_BLINDNESS",
+    "why_it_matters": "v1 read the blind number and PASSED a 500 MB gate for ANY model size, including a full 17.18 GB allocation"
+  },
+  "criteria": {
+    "stored_operator_under_500MB": true,
+    "stored_operator_mib": 128.0,
+    "dense_equivalent_gib_per_action": 16.0,
+    "torch_allocated_under_500MB": false,
+    "torch_allocated_mib": 512.0,
+    "criterion_basis": "torch.profiler self_cpu_memory_usage = real torch allocator, unlike tracemalloc",
+    "rollout_under_150us_on_CPU": false,
+    "rollout_gpu_budget": "BLOCKED - <150 us is a GPU figure; NOT claimed",
+    "rollout_timing": "MEASURED TO STDOUT ONLY (wall-clock, not reproducible). The directive's <150 us budget is a GPU figure and is NOT claimed.",
+    "rss_delta": "STDOUT ONLY (allocator-state dependent, varies run to run)."
+  },
+  "planner_seam": {
+    "model_rank": 64,
+    "representation": "low_rank",
+    "fitted_actions": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "wave_dim": 65536,
+    "horizon": 5
+  }
+}

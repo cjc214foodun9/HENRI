@@ -91,7 +91,20 @@ class KoopmanLeafEvaluator:
 
     def __init__(self, wave_dim: int, n_actions: int, horizon: int = 3,
                  tau_rollout: float = DEFAULT_TAU_ROLLOUT,
-                 enforce_unit_norm: bool = True) -> None:
+                 enforce_unit_norm: bool = True,
+                 rank: Optional[int] = None,
+                 allow_dense: bool = False) -> None:
+        """`rank=None` (default) keeps the LEGACY dense operator, byte-identical.
+
+        `rank=r` propagates the LOW-RANK form to the world model (Contract A,
+        Directive 3). WIRING DEFECT THIS CLOSES (measured 2026-09-28): this
+        constructor previously passed NO rank, so at wave_dim=65536 the leaf path
+        always built a dense [65536,65536] float32 operator (17.18 GB per action,
+        137 GB for 8) and the low-rank implementation was UNREACHABLE from the
+        planner. The default stays dense so no existing consumer changes -- but
+        above DENSE_DIM_LIMIT a dense build now FAILS CLOSED unless `allow_dense`
+        is set explicitly.
+        """
         if wave_dim < 2:
             raise ValueError("wave_dim must be >= 2")
         if n_actions < 1:
@@ -100,9 +113,11 @@ class KoopmanLeafEvaluator:
         self.n_actions = int(n_actions)
         self.horizon = int(horizon)
         self.tau_rollout = float(tau_rollout)
+        self.rank = rank
         self.model = ActionConditionedKoopman(
             dim=self.wave_dim, n_actions=self.n_actions,
-            enforce_unit_norm=enforce_unit_norm)
+            enforce_unit_norm=enforce_unit_norm, rank=rank,
+            allow_dense=allow_dense)
 
     # ------------------------------------------------------------------ fit
     def fit(self, triples: Sequence[Tuple[torch.Tensor, int, torch.Tensor]]):
@@ -116,7 +131,10 @@ class KoopmanLeafEvaluator:
 
     @property
     def fitted_actions(self) -> List[int]:
-        return sorted(self.model.K)
+        # Representation-aware: the low-rank path leaves `model.K` EMPTY, so
+        # reading it directly reported "no fitted actions" for a correctly fitted
+        # model. `model._fitted()` returns the active representation's keys.
+        return list(self.model._fitted())
 
     # -------------------------------------------------------------- scoring
     @staticmethod
