@@ -1,0 +1,77 @@
+{
+  "schema": "henri.vlm_stage_localise/1",
+  "when": "2026-09-29 18:33:32",
+  "device": "cuda",
+  "device_name": "NVIDIA GeForce RTX 5090",
+  "n": 256,
+  "readout": "r2_std (scale-aware), held-out 25%, lam_rel=1e-3",
+  "obs_shape": [
+    256,
+    3,
+    64,
+    64
+  ],
+  "state_span": [
+    0.2502,
+    0.75
+  ],
+  "vlm": {
+    "tower_path": "model.visual",
+    "d_vit": 1024,
+    "n_patches": 256,
+    "feat_shape": [
+      256,
+      256,
+      1024
+    ],
+    "output_key_used": "last_hidden_state(2d)",
+    "seconds": 11.1
+  },
+  "cache_written": 134224029,
+  "stages": {
+    "0_input_mean_pooled": {
+      "dim": 1024,
+      "r2_std": 0.7249,
+      "cos": 0.999999
+    },
+    "1_control_random_proj": {
+      "dim": 512,
+      "r2_std": 0.6844,
+      "note": "capacity check: 2:1 random compression, no training"
+    },
+    "2_attention_pooled": {
+      "dim": 1024,
+      "r2_std": 0.6903,
+      "cos": 0.99999905
+    },
+    "3_to_pool": {
+      "dim": 512,
+      "r2_std": 0.6681,
+      "cos": 0.99999906
+    },
+    "4_to_phase": {
+      "dim": 65536,
+      "r2_std": 0.6037,
+      "cos": 0.99999906
+    },
+    "5_accumulator": {
+      "dim": 65536,
+      "r2_std": 0.3961,
+      "cos": 0.99991868
+    },
+    "6_psi_normalised": {
+      "dim": 65536,
+      "r2_std": 0.3949,
+      "cos": 0.99991868
+    }
+  },
+  "binding_active": true,
+  "binding_ratio": 0.03604,
+  "dc_share": 0.999919,
+  "vlm_frozen_params": 4437815808,
+  "input_r2": 0.7249,
+  "first_stage_below_half_of_input": null,
+  "control_random_proj_r2": 0.6844,
+  "capacity_explains_drop": true,
+  "DESTROYER": "none -- readability survives the whole bridge"
+}

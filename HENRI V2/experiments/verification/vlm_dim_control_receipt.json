@@ -1,0 +1,42 @@
+{
+  "schema": "henri.vlm_dim_control/1",
+  "when": "2026-09-29 18:36:30",
+  "cache": "/root/henri/vlm_feat_cache.pt",
+  "readout": "r2_std (scale-aware), held-out 25%, lam_rel=1e-3",
+  "real_psi_r2_from_stage_probe": 0.3949,
+  "real_binding_ratio": 0.03604,
+  "pre_registered": {
+    "X_le_0.50": "generic geometry+readout explains the drop; binding exonerated",
+    "X_ge_0.55": "the added superposition itself costs readability",
+    "0.50_lt_X_lt_0.55": "UNRESOLVED -- reported, not assigned"
+  },
+  "cache_meta": {
+    "n": 256,
+    "n_patches": 256,
+    "d_vit": 1024,
+    "env_class": "PixelReachEnv",
+    "bytes": 134224029
+  },
+  "cache_size_consistency": {
+    "n_x_np_x_dv_x_2_fp16": 134217728,
+    "matches_measured_cache": false
+  },
+  "r2_pooled_1024_reference": 0.7249,
+  "r2_random_1024_to_512": 0.6844,
+  "r2_random_65536_raw": 0.645,
+  "r2_random_65536_unitnorm": 0.6432,
+  "r2_unitnorm_plus_random_superposition": {
+    "beta_0.03604": 0.0021,
+    "beta_0.1": -0.0021,
+    "beta_0.3": -0.0026,
+    "beta_1.0": -0.0027
+  },
+  "r2_at_measured_binding_ratio": 0.0021,
+  "verdicts": {
+    "X_random_65536_unitnorm": 0.6432,
+    "GENERIC_geometry_explains_drop": false,
+    "ADDED_SUPERPOSITION_COSTS": true,
+    "UNRESOLVED": false,
+    "real_psi_r2_reproduced_by_random_geometry": false
+  }
+}
