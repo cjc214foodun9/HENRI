@@ -1,0 +1,457 @@
+{
+  "schema": "henri.vlm_readout_calibrated/1",
+  "when": "2026-09-29 18:44:18",
+  "purpose": "sweep ridge regularisation until the permutation null passes, then read psi readability at the calibrated setting",
+  "lam_grid": [
+    0.01,
+    0.1,
+    1.0,
+    10.0,
+    100.0,
+    1000.0
+  ],
+  "k_permutations": 8,
+  "null_tolerance": 0.1,
+  "pre_registered": {
+    "null_pass": "|mean(null)| < 0.10 across ALL reps",
+    "psi_readable": "obs(psi) >= 0.50 at the calibrated lam_frac",
+    "pooled_readable": "obs(pooled) >= 0.50 at the calibrated lam_frac",
+    "noise_control_is_zero": "obs(pure_noise) <= 0.20",
+    "no_lam_passes": "report BLOCKED with the sweep as evidence"
+  },
+  "cache": {
+    "n": 256,
+    "n_patches": 256,
+    "d_vit": 1024,
+    "bytes": 134224029,
+    "fp16_expectation": 134217728
+  },
+  "bridge": {
+    "binding_active": true,
+    "binding_ratio": 0.034601
+  },
+  "geometry": {
+    "input_mean_pooled_1024": {
+      "d": 1024,
+      "cos": 0.999999,
+      "pr": 1.0
+    },
+    "attention_pooled_1024": {
+      "d": 1024,
+      "cos": 0.99999907,
+      "pr": 1.0
+    },
+    "to_pool_512": {
+      "d": 512,
+      "cos": 0.99999902,
+      "pr": 1.0
+    },
+    "to_phase_65536": {
+      "d": 65536,
+      "cos": 0.99999903,
+      "pr": 1.0
+    },
+    "accumulator_65536": {
+      "d": 65536,
+      "cos": 0.99992439,
+      "pr": 1.0
+    },
+    "psi_65536_unitnorm": {
+      "d": 65536,
+      "cos": 0.99992439,
+      "pr": 1.0
+    },
+    "CONTROL_pure_noise_65536": {
+      "d": 65536,
+      "cos": -2.226e-05,
+      "pr": 254.99
+    },
+    "binding_term_65536": {
+      "d": 65536,
+      "cos": 0.93770673,
+      "pr": 1.14
+    }
+  },
+  "sweep": {
+    "lam_frac_0.01": {
+      "input_mean_pooled_1024": {
+        "obs": 0.7139,
+        "null_mean": -0.7566,
+        "null_sd": 0.2008,
+        "calibrated": 0.8371,
+        "z": 7.32
+      },
+      "attention_pooled_1024": {
+        "obs": 0.6649,
+        "null_mean": -0.3923,
+        "null_sd": 0.1153,
+        "calibrated": 0.7593,
+        "z": 9.17
+      },
+      "to_pool_512": {
+        "obs": 0.617,
+        "null_mean": -0.4346,
+        "null_sd": 0.128,
+        "calibrated": 0.7331,
+        "z": 8.22
+      },
+      "to_phase_65536": {
+        "obs": 0.6841,
+        "null_mean": -0.4402,
+        "null_sd": 0.121,
+        "calibrated": 0.7807,
+        "z": 9.29
+      },
+      "accumulator_65536": {
+        "obs": 0.7233,
+        "null_mean": -0.9604,
+        "null_sd": 0.2717,
+        "calibrated": 0.8588,
+        "z": 6.2
+      },
+      "psi_65536_unitnorm": {
+        "obs": 0.69,
+        "null_mean": -1.154,
+        "null_sd": 0.3076,
+        "calibrated": 0.8561,
+        "z": 5.99
+      },
+      "CONTROL_pure_noise_65536": {
+        "obs": -0.0048,
+        "null_mean": 0.0006,
+        "null_sd": 0.0091,
+        "calibrated": -0.0054,
+        "z": -0.59
+      },
+      "binding_term_65536": {
+        "obs": 0.6657,
+        "null_mean": -1.1871,
+        "null_sd": 0.3295,
+        "calibrated": 0.8472,
+        "z": 5.62
+      },
+      "_worst_abs_null_mean": 1.1871,
+      "_null_passes": false
+    },
+    "lam_frac_0.1": {
+      "input_mean_pooled_1024": {
+        "obs": 0.695,
+        "null_mean": -0.2971,
+        "null_sd": 0.0983,
+        "calibrated": 0.7649,
+        "z": 10.09
+      },
+      "attention_pooled_1024": {
+        "obs": 0.5747,
+        "null_mean": -0.1084,
+        "null_sd": 0.0564,
+        "calibrated": 0.6163,
+        "z": 12.11
+      },
+      "to_pool_512": {
+        "obs": 0.5235,
+        "null_mean": -0.1339,
+        "null_sd": 0.0599,
+        "calibrated": 0.5797,
+        "z": 10.97
+      },
+      "to_phase_65536": {
+        "obs": 0.596,
+        "null_mean": -0.1314,
+        "null_sd": 0.0563,
+        "calibrated": 0.6429,
+        "z": 12.92
+      },
+      "accumulator_65536": {
+        "obs": 0.6684,
+        "null_mean": -0.3956,
+        "null_sd": 0.142,
+        "calibrated": 0.7624,
+        "z": 7.49
+      },
+      "psi_65536_unitnorm": {
+        "obs": 0.6707,
+        "null_mean": -0.5292,
+        "null_sd": 0.1766,
+        "calibrated": 0.7846,
+        "z": 6.79
+      },
+      "CONTROL_pure_noise_65536": {
+        "obs": -0.0042,
+        "null_mean": 0.0007,
+        "null_sd": 0.0084,
+        "calibrated": -0.0049,
+        "z": -0.59
+      },
+      "binding_term_65536": {
+        "obs": 0.6529,
+        "null_mean": -0.5289,
+        "null_sd": 0.1837,
+        "calibrated": 0.773,
+        "z": 6.43
+      },
+      "_worst_abs_null_mean": 0.5292,
+      "_null_passes": false
+    },
+    "lam_frac_1": {
+      "input_mean_pooled_1024": {
+        "obs": 0.5442,
+        "null_mean": -0.0759,
+        "null_sd": 0.0314,
+        "calibrated": 0.5763,
+        "z": 19.72
+      },
+      "attention_pooled_1024": {
+        "obs": 0.2926,
+        "null_mean": -0.026,
+        "null_sd": 0.0232,
+        "calibrated": 0.3106,
+        "z": 13.76
+      },
+      "to_pool_512": {
+        "obs": 0.2972,
+        "null_mean": -0.0351,
+        "null_sd": 0.0241,
+        "calibrated": 0.3211,
+        "z": 13.76
+      },
+      "to_phase_65536": {
+        "obs": 0.3137,
+        "null_mean": -0.0325,
+        "null_sd": 0.0241,
+        "calibrated": 0.3353,
+        "z": 14.34
+      },
+      "accumulator_65536": {
+        "obs": 0.4835,
+        "null_mean": -0.0962,
+        "null_sd": 0.0556,
+        "calibrated": 0.5288,
+        "z": 10.43
+      },
+      "psi_65536_unitnorm": {
+        "obs": 0.5197,
+        "null_mean": -0.1419,
+        "null_sd": 0.0746,
+        "calibrated": 0.5794,
+        "z": 8.87
+      },
+      "CONTROL_pure_noise_65536": {
+        "obs": -0.0017,
+        "null_mean": 0.001,
+        "null_sd": 0.0046,
+        "calibrated": -0.0026,
+        "z": -0.57
+      },
+      "binding_term_65536": {
+        "obs": 0.5131,
+        "null_mean": -0.1407,
+        "null_sd": 0.0776,
+        "calibrated": 0.5732,
+        "z": 8.43
+      },
+      "_worst_abs_null_mean": 0.1419,
+      "_null_passes": false
+    },
+    "lam_frac_10": {
+      "input_mean_pooled_1024": {
+        "obs": 0.2313,
+        "null_mean": -0.0159,
+        "null_sd": 0.0136,
+        "calibrated": 0.2434,
+        "z": 18.14
+      },
+      "attention_pooled_1024": {
+        "obs": 0.0561,
+        "null_mean": -0.01,
+        "null_sd": 0.0112,
+        "calibrated": 0.0655,
+        "z": 5.93
+      },
+      "to_pool_512": {
+        "obs": 0.0696,
+        "null_mean": -0.0119,
+        "null_sd": 0.0111,
+        "calibrated": 0.0805,
+        "z": 7.37
+      },
+      "to_phase_65536": {
+        "obs": 0.0636,
+        "null_mean": -0.0108,
+        "null_sd": 0.0114,
+        "calibrated": 0.0736,
+        "z": 6.53
+      },
+      "accumulator_65536": {
+        "obs": 0.2239,
+        "null_mean": -0.0133,
+        "null_sd": 0.0128,
+        "calibrated": 0.2341,
+        "z": 18.47
+      },
+      "psi_65536_unitnorm": {
+        "obs": 0.2923,
+        "null_mean": -0.0147,
+        "null_sd": 0.0198,
+        "calibrated": 0.3026,
+        "z": 15.5
+      },
+      "CONTROL_pure_noise_65536": {
+        "obs": -0.0002,
+        "null_mean": 0.0003,
+        "null_sd": 0.0008,
+        "calibrated": -0.0005,
+        "z": -0.56
+      },
+      "binding_term_65536": {
+        "obs": 0.2922,
+        "null_mean": -0.0134,
+        "null_sd": 0.0209,
+        "calibrated": 0.3016,
+        "z": 14.64
+      },
+      "_worst_abs_null_mean": 0.0159,
+      "_null_passes": true
+    },
+    "lam_frac_100": {
+      "input_mean_pooled_1024": {
+        "obs": 0.0359,
+        "null_mean": -0.0033,
+        "null_sd": 0.0064,
+        "calibrated": 0.039,
+        "z": 6.11
+      },
+      "attention_pooled_1024": {
+        "obs": 0.004,
+        "null_mean": -0.0045,
+        "null_sd": 0.0071,
+        "calibrated": 0.0084,
+        "z": 1.2
+      },
+      "to_pool_512": {
+        "obs": 0.0062,
+        "null_mean": -0.0045,
+        "null_sd": 0.0069,
+        "calibrated": 0.0107,
+        "z": 1.55
+      },
+      "to_phase_65536": {
+        "obs": 0.0049,
+        "null_mean": -0.0044,
+        "null_sd": 0.007,
+        "calibrated": 0.0093,
+        "z": 1.33
+      },
+      "accumulator_65536": {
+        "obs": 0.0377,
+        "null_mean": -0.0025,
+        "null_sd": 0.0045,
+        "calibrated": 0.0401,
+        "z": 8.91
+      },
+      "psi_65536_unitnorm": {
+        "obs": 0.0646,
+        "null_mean": -0.0001,
+        "null_sd": 0.0029,
+        "calibrated": 0.0647,
+        "z": 21.95
+      },
+      "CONTROL_pure_noise_65536": {
+        "obs": -0.0,
+        "null_mean": 0.0,
+        "null_sd": 0.0001,
+        "calibrated": -0.0001,
+        "z": -0.55
+      },
+      "binding_term_65536": {
+        "obs": 0.0659,
+        "null_mean": 0.0002,
+        "null_sd": 0.0032,
+        "calibrated": 0.0657,
+        "z": 20.85
+      },
+      "_worst_abs_null_mean": 0.0045,
+      "_null_passes": true
+    },
+    "lam_frac_1000": {
+      "input_mean_pooled_1024": {
+        "obs": 0.0038,
+        "null_mean": -0.0003,
+        "null_sd": 0.0012,
+        "calibrated": 0.0041,
+        "z": 3.51
+      },
+      "attention_pooled_1024": {
+        "obs": 0.0002,
+        "null_mean": -0.0005,
+        "null_sd": 0.0016,
+        "calibrated": 0.0008,
+        "z": 0.48
+      },
+      "to_pool_512": {
+        "obs": 0.0005,
+        "null_mean": -0.0005,
+        "null_sd": 0.0015,
+        "calibrated": 0.001,
+        "z": 0.66
+      },
+      "to_phase_65536": {
+        "obs": 0.0003,
+        "null_mean": -0.0005,
+        "null_sd": 0.0016,
+        "calibrated": 0.0008,
+        "z": 0.53
+      },
+      "accumulator_65536": {
+        "obs": 0.004,
+        "null_mean": -0.0002,
+        "null_sd": 0.0008,
+        "calibrated": 0.0043,
+        "z": 5.49
+      },
+      "psi_65536_unitnorm": {
+        "obs": 0.0074,
+        "null_mean": 0.0,
+        "null_sd": 0.0003,
+        "calibrated": 0.0074,
+        "z": 23.25
+      },
+      "CONTROL_pure_noise_65536": {
+        "obs": -0.0,
+        "null_mean": 0.0,
+        "null_sd": 0.0,
+        "calibrated": -0.0,
+        "z": -0.55
+      },
+      "binding_term_65536": {
+        "obs": 0.0076,
+        "null_mean": 0.0001,
+        "null_sd": 0.0003,
+        "calibrated": 0.0075,
+        "z": 22.2
+      },
+      "_worst_abs_null_mean": 0.0005,
+      "_null_passes": true
+    }
+  },
+  "lam_fracs_passing_null": [
+    "lam_frac_10",
+    "lam_frac_100",
+    "lam_frac_1000"
+  ],
+  "chosen_lam_frac": "lam_frac_10",
+  "verdicts": {
+    "null_pass": true,
+    "chosen": "lam_frac_10",
+    "pooled_obs": 0.2313,
+    "psi_obs": 0.2923,
+    "noise_obs": -0.0002,
+    "psi_readable": false,
+    "pooled_readable": false,
+    "noise_control_is_zero": true,
+    "calibrated_drop_pooled_minus_psi": -0.061,
+    "psi_calibrated": 0.3026,
+    "pooled_calibrated": 0.2434
+  },
+  "conclusion": "Readout CALIBRATED at lam_frac_10. On the real geometry psi is NOT readable (obs 0.2923) vs input 0.2313; the bridge costs -0.061 readability. Noise control clean."
+}
