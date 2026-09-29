@@ -1,0 +1,43 @@
+{
+  "schema": "henri.bridge_dc_share/2",
+  "geometry": {
+    "B": 64,
+    "N": 256,
+    "d_vit": 1024,
+    "d_model": 65536
+  },
+  "scope_note": "the GPU cos_sim 0.99987 is confounded by VLM pooled features that are themselves cos 0.999999; this guard asserts local geometry + a faithful legacy control",
+  "fixed": {
+    "cos_sim_offdiag": -0.000532,
+    "dc_share": 0.016285,
+    "psi_unit_norm": 1.0,
+    "inputs_distinguishable": 0.004277,
+    "binding_active": true,
+    "binding_ratio": 0.989701,
+    "pos_codes_rowsum_absmax": 0.0007874872535467148
+  },
+  "checks": {
+    "fixed_healthy": {
+      "cos_offdiag_lt_0.50": true,
+      "dc_share_lt_0.50": true,
+      "unit_norm": true,
+      "binding_active": true,
+      "pos_codes_centered": true,
+      "inputs_distinguishable": true
+    },
+    "control_shows_defect": {
+      "control_dc_share_gt_5x_fixed": true,
+      "control_cos_worse_than_fixed": true
+    }
+  },
+  "positive_control_legacy": {
+    "cos_sim_offdiag": 0.724375,
+    "dc_share": 0.72871,
+    "dc_ratio_vs_fixed": 44.747,
+    "note": "bias=True + uncentered codes on the SAME bridge class; a relative criterion is used because the absolute collapse level depends on input geometry",
+    "control_dc_share_gt_5x_fixed": true,
+    "control_cos_worse_than_fixed": true
+  },
+  "GUARD_HOLDS": true,
+  "_why": "psi must not collapse: healthy geometry + a FAITHFUL legacy control (bias=True, uncentered codes on the same class) that measurably worsens it"
+}

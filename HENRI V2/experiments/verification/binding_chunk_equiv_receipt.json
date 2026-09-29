@@ -6,23 +6,23 @@
   ],
   "checks": {
     "chunk=1": {
-      "max_abs_diff": 4.470348358154297e-08,
-      "rel_diff": 2.81905e-07,
+      "max_abs_diff": 2.2351741790771484e-08,
+      "rel_diff": 1.52222e-07,
       "allclose_rtol_1e-5": true
     },
     "chunk=2": {
-      "max_abs_diff": 2.9802322387695312e-08,
-      "rel_diff": 1.87937e-07,
+      "max_abs_diff": 2.2351741790771484e-08,
+      "rel_diff": 1.52222e-07,
       "allclose_rtol_1e-5": true
     },
     "chunk=3": {
-      "max_abs_diff": 2.9802322387695312e-08,
-      "rel_diff": 1.87937e-07,
+      "max_abs_diff": 2.2817403078079224e-08,
+      "rel_diff": 1.55393e-07,
       "allclose_rtol_1e-5": true
     },
     "chunk=8": {
-      "max_abs_diff": 2.2351741790771484e-08,
-      "rel_diff": 1.40953e-07,
+      "max_abs_diff": 1.4901161193847656e-08,
+      "rel_diff": 1.01481e-07,
       "allclose_rtol_1e-5": true
     },
     "chunk=32": {
@@ -36,12 +36,11 @@
       "allclose_rtol_1e-5": true
     }
   },
-  "psi_max_abs_diff": 1.4901161193847656e-08,
+  "psi_max_abs_diff": 1.862645149230957e-08,
   "psi_allclose": true,
   "psi_norm_mean": 1.0,
-  "binding_ratio": 0.33854085,
+  "binding_ratio": 1.05786657,
   "binding_active": true,
   "EQUIVALENCE_HOLDS": true,
-  "_test": "experiments/verification/test_binding_chunk_equiv.py",
-  "_why": "chunked binding_term must reproduce the naive [B,N,D] form; float32 summation order differs so agreement is ~1e-7 relative, not bitwise. chunk=32/1024 hit 0.0 exactly."
+  "_why": "chunked binding_term reproduces the naive [B,N,D] form to ~1e-7 relative; exact reformulation of a measured 16.00 GiB OOM"
 }

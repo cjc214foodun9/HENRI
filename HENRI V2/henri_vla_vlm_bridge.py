@@ -254,14 +254,33 @@ class VLMPhaseBridge(nn.Module):
         self.query = nn.Parameter(torch.randn(1, 1, d_vit) * 0.02)
         self.k_proj = nn.Linear(d_vit, d_vit, bias=False)
         self.v_proj = nn.Linear(d_vit, d_vit, bias=False)
-        self.to_pool = nn.Linear(d_vit, d_pool)
-        self.to_phase = nn.Linear(d_pool, d_model)
+        # DEFECT ADDRESSED 2026-09-29 -- see experiments/verification/vlm_repr_diag.py.
+        # MEASURED: state readability of psi falls from R^2 0.7559 (pooled VLM
+        # features) to 0.0691 after this bridge, while the random-projection
+        # ingress keeps 0.9886. So psi loses state its input contains.
+        # CONTRIBUTING CAUSE, measured locally: biases on this stack inject an
+        # input-independent vector -- to_phase.bias, plus to_phase.bias (.)
+        # sum_n pos_codes[n] through the binding sum, the codes not being
+        # centered. At the local test geometry that raised the DC energy share
+        # from 0.0163 to ~0.57 and cos_sim from 0.015 to ~0.57.
+        # NOT the whole story, and stated as such: the GPU run's cos_sim 0.99987
+        # is CONFOUNDED, because the VLM's pooled features are themselves
+        # cos 0.999999 across observations for this synthetic scene.
+        # bias=False + centered codes removes this source. Whether readability
+        # actually recovers is measured by re-running vlm_repr_diag.py -- it is
+        # not assumed here.
+        self.to_pool = nn.Linear(d_vit, d_pool, bias=False)
+        self.to_phase = nn.Linear(d_pool, d_model, bias=False)
         self.phase_offset = nn.Parameter(torch.zeros(d_model))
 
         g = torch.Generator().manual_seed(seed)
-        # position codes for VSA binding: [n_patches, D], deterministic, frozen
+        # position codes for VSA binding: [n_patches, D], deterministic, frozen.
+        # CENTERED so that sum_n pos_codes[n] = 0: otherwise any bias would
+        # project straight onto that nonzero code sum as another DC term.
+        # Centering costs no expressivity -- binding still uses each code.
         pos = torch.randn(self.n_patches, d_model, generator=g)
-        pos = pos / pos.norm(dim=-1, keepdim=True)
+        pos = pos - pos.mean(dim=0, keepdim=True)
+        pos = pos / pos.norm(dim=-1, keepdim=True).clamp(min=1e-12)
         self.register_buffer("pos_codes", pos.to(torch.float32), persistent=True)
 
     def pool(self, feats: torch.Tensor) -> torch.Tensor:
@@ -323,9 +342,32 @@ class VLMPhaseBridge(nn.Module):
             acc = p
             self.binding_ratio = 0.0
         psi = acc / acc.norm(dim=-1, keepdim=True).clamp(min=1e-12)
+        # RESIDUAL DC MONITOR (defect fixed above, guarded here). If the learned
+        # `phase_offset` or any future path reintroduces a common direction, the
+        # cosine geometry saturates again and psi stops carrying per-sample
+        # information. This is recorded, so the failure cannot return silently.
+        self.dc_share = self._dc_share(acc)
         if return_pooled:
             return psi, pooled
         return psi
+
+    @staticmethod
+    def _dc_share(acc: torch.Tensor) -> float:
+        """Energy fraction along the single common direction of `acc`.
+
+        ~1.0 => one DC direction dominates (representation is information-poor).
+        ~1/B => no common direction (healthy). Needs B > 1 to be meaningful.
+        """
+        if acc.shape[0] < 2:
+            return float("nan")
+        m = acc.mean(dim=0)
+        n = m.norm()
+        if float(n) < 1e-12:
+            return 0.0
+        mh = m / n
+        proj = acc @ mh
+        denom = (acc ** 2).sum(dim=-1).mean().clamp(min=1e-12)
+        return float(((proj ** 2).mean() / denom).detach().item())
 
     def trainable_params(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)

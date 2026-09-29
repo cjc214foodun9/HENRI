@@ -107,6 +107,25 @@ def _pr(x: torch.Tensor) -> float:
     return float((s * s) / (lam * lam).sum().clamp(min=1e-30))
 
 
+def _dc_share(x: torch.Tensor) -> float:
+    """Energy fraction along the single common direction of the batch.
+
+    ~1.0 => one DC direction dominates, so the representation carries almost no
+    per-sample information (the bridge-collapse signature). ~1/n => healthy.
+    This is the direct, interpretable form of `cos_sim ~ 1`.
+    """
+    if x.shape[0] < 2:
+        return float("nan")
+    m = x.mean(dim=0)
+    n = m.norm()
+    if float(n) < 1e-12:
+        return 0.0
+    mh = m / n
+    proj = x @ mh
+    denom = (x ** 2).sum(dim=-1).mean().clamp(min=1e-12)
+    return float((proj ** 2).mean() / denom)
+
+
 def _r2(x: torch.Tensor, y: torch.Tensor, frac: float = 0.25, lam: float = 1e-2) -> float:
     n = x.shape[0]
     nte = max(1, int(n * frac))
@@ -197,8 +216,12 @@ def main() -> int:
     R["pr_psi_vlm_bridge"] = round(_pr(psi_v.cpu()), 2)
     R["cos_sim_vlm_bridge"] = round(
         float((F.normalize(psi_v, dim=-1) @ F.normalize(psi_v, dim=-1).T).mean()), 6)
+    R["dc_share_vlm_bridge"] = round(_dc_share(psi_v.cpu()), 4)
+    R["dc_share_module"] = round(float(getattr(bridge, "dc_share", float("nan"))), 4)
     R["binding_ratio"] = round(float(getattr(bridge, "binding_ratio", 0.0)), 6)
     R["binding_active"] = bool(getattr(bridge, "binding_active", False))
+    if "psi_r" in dir():
+        R["dc_share_random_ingress"] = round(_dc_share(psi_r.cpu()), 4)
 
     # ---- VERDICT --------------------------------------------------------------
     rr = R.get("r2_psi_random_ingress")

@@ -1,0 +1,45 @@
+{
+  "schema": "henri.vlm_repr_diag/1",
+  "when": "2026-09-29 18:04:18",
+  "device": "cuda",
+  "n_samples": 256,
+  "psi_dim": 65536,
+  "device_name": "NVIDIA GeForce RTX 5090",
+  "env_class": "PixelReachEnv",
+  "obs_shape": [
+    256,
+    3,
+    64,
+    64
+  ],
+  "state_span": [
+    0.2507,
+    0.7495
+  ],
+  "r2_raw_pixels": 0.9995,
+  "pr_raw_pixels": 1.2,
+  "r2_psi_random_ingress": 0.9886,
+  "pr_psi_random_ingress": 1.2,
+  "cos_sim_random_ingress": 0.91087,
+  "vlm": {
+    "tower_path": "model.visual",
+    "d_vit": 1024,
+    "n_patches": 256,
+    "load_and_features_s": 11.0
+  },
+  "r2_vlm_pooled_features": 0.7559,
+  "pr_vlm_pooled_features": 1.0,
+  "cos_sim_vlm_pooled": 0.999999,
+  "r2_vlm_patch_features": 0.3013,
+  "r2_psi_vlm_bridge": 0.0691,
+  "pr_psi_vlm_bridge": 1.0,
+  "cos_sim_vlm_bridge": 0.99987,
+  "binding_ratio": 0.085161,
+  "binding_active": true,
+  "verdicts": {
+    "H2_vlm_representation_uninformative": false,
+    "H1_bridge_destroys_information": true,
+    "random_pixels_readable": true,
+    "explains_0.4688_random_arm": true
+  }
+}
