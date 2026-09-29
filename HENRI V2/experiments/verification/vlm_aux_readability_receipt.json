@@ -1,0 +1,370 @@
+{
+  "schema": "henri.vlm_aux_readability/1",
+  "when": "2026-09-29 18:40:05",
+  "device": "cuda",
+  "device_name": "NVIDIA GeForce RTX 5090",
+  "config": {
+    "episodes": 700,
+    "max_steps": 24,
+    "steps": 1200,
+    "batch": 64,
+    "eval_episodes": 48,
+    "lr": 0.0003,
+    "d_pool": 512,
+    "lam_probe": 1.0,
+    "lam_geom": 1.0,
+    "model": "Qwen/Qwen3-VL-4B-Instruct",
+    "out": "/root/henri/vlm_aux_readability.json"
+  },
+  "init_seed": 77,
+  "baselines": {
+    "random_policy": 0.1875,
+    "random_feature_arm": 0.4688
+  },
+  "pre_registered": {
+    "control_collapses": "CONTROL psi r2 < 0.20",
+    "readability_preserved_X": "arm X psi r2 >= 0.50",
+    "FIX_CONFIRMED": "some aux arm r2 >= 0.50 AND succ >= CONTROL + 2SE",
+    "NO_FIX": "all aux arms below 0.50",
+    "primary_endpoint": "readability (r2_std)",
+    "secondary_endpoint": "closed-loop success, UNDERPOWERED at n=48"
+  },
+  "env_class": "PixelReachEnv",
+  "data": {
+    "n_samples": 3271,
+    "n_dof": 7,
+    "steps_per_episode_mean": 4.67,
+    "collect_seconds": 0.9
+  },
+  "vlm": {
+    "model_id": "Qwen/Qwen3-VL-4B-Instruct",
+    "tower_path": "model.visual",
+    "feat_shape": [
+      3271,
+      256,
+      1024
+    ],
+    "output_key_used": "last_hidden_state(2d)",
+    "extract_seconds": 39.4
+  },
+  "pooled_r2": 0.8543,
+  "arms": {
+    "CONTROL": {
+      "binding_active": true,
+      "binding_ratio": 0.034633,
+      "psi_r2_at_init": 0.3948,
+      "loss_first": 1.155388,
+      "loss_last": 0.670755,
+      "ratio": 0.5805,
+      "curve": [
+        {
+          "step": 1,
+          "loss": 1.155388,
+          "parts": {
+            "flow": 1.155388
+          }
+        },
+        {
+          "step": 200,
+          "loss": 0.654482,
+          "parts": {
+            "flow": 0.654482
+          }
+        },
+        {
+          "step": 400,
+          "loss": 0.665775,
+          "parts": {
+            "flow": 0.665775
+          }
+        },
+        {
+          "step": 600,
+          "loss": 0.695505,
+          "parts": {
+            "flow": 0.695505
+          }
+        },
+        {
+          "step": 800,
+          "loss": 0.70337,
+          "parts": {
+            "flow": 0.70337
+          }
+        },
+        {
+          "step": 1000,
+          "loss": 0.614436,
+          "parts": {
+            "flow": 0.614436
+          }
+        },
+        {
+          "step": 1200,
+          "loss": 0.670755,
+          "parts": {
+            "flow": 0.670755
+          }
+        }
+      ],
+      "train_seconds": 114.3,
+      "psi_r2": -0.4648,
+      "psi_cos": 0.9759436,
+      "psi_r2_delta_vs_init": -0.8596,
+      "success": 0.166667,
+      "wins": 8,
+      "se": 0.053791,
+      "eval_seconds": 37.0
+    },
+    "PROBE": {
+      "binding_active": true,
+      "binding_ratio": 0.034633,
+      "psi_r2_at_init": 0.3948,
+      "loss_first": 2.272203,
+      "loss_last": 0.961008,
+      "ratio": 0.4229,
+      "curve": [
+        {
+          "step": 1,
+          "loss": 2.272203,
+          "parts": {
+            "flow": 1.155388,
+            "probe": 1.116816
+          }
+        },
+        {
+          "step": 200,
+          "loss": 1.086518,
+          "parts": {
+            "flow": 0.660326,
+            "probe": 0.426192
+          }
+        },
+        {
+          "step": 400,
+          "loss": 1.009352,
+          "parts": {
+            "flow": 0.661804,
+            "probe": 0.347548
+          }
+        },
+        {
+          "step": 600,
+          "loss": 1.015591,
+          "parts": {
+            "flow": 0.699855,
+            "probe": 0.315736
+          }
+        },
+        {
+          "step": 800,
+          "loss": 0.9845,
+          "parts": {
+            "flow": 0.701577,
+            "probe": 0.282923
+          }
+        },
+        {
+          "step": 1000,
+          "loss": 0.884317,
+          "parts": {
+            "flow": 0.617765,
+            "probe": 0.266552
+          }
+        },
+        {
+          "step": 1200,
+          "loss": 0.961008,
+          "parts": {
+            "flow": 0.671351,
+            "probe": 0.289657
+          }
+        }
+      ],
+      "train_seconds": 116.4,
+      "psi_r2": -0.3036,
+      "psi_cos": 0.10303624,
+      "psi_r2_delta_vs_init": -0.6983,
+      "success": 0.166667,
+      "wins": 8,
+      "se": 0.053791,
+      "eval_seconds": 32.4
+    },
+    "GEOM": {
+      "binding_active": true,
+      "binding_ratio": 0.034633,
+      "psi_r2_at_init": 0.3948,
+      "loss_first": 2.15524,
+      "loss_last": 0.672105,
+      "ratio": 0.3118,
+      "curve": [
+        {
+          "step": 1,
+          "loss": 2.15524,
+          "parts": {
+            "flow": 1.155388,
+            "geom": 0.999852
+          }
+        },
+        {
+          "step": 200,
+          "loss": 0.666675,
+          "parts": {
+            "flow": 0.660148,
+            "geom": 0.006527
+          }
+        },
+        {
+          "step": 400,
+          "loss": 0.662044,
+          "parts": {
+            "flow": 0.662002,
+            "geom": 4.2e-05
+          }
+        },
+        {
+          "step": 600,
+          "loss": 0.690155,
+          "parts": {
+            "flow": 0.690074,
+            "geom": 8.2e-05
+          }
+        },
+        {
+          "step": 800,
+          "loss": 0.700155,
+          "parts": {
+            "flow": 0.699917,
+            "geom": 0.000238
+          }
+        },
+        {
+          "step": 1000,
+          "loss": 0.613976,
+          "parts": {
+            "flow": 0.613942,
+            "geom": 3.5e-05
+          }
+        },
+        {
+          "step": 1200,
+          "loss": 0.672105,
+          "parts": {
+            "flow": 0.671996,
+            "geom": 0.00011
+          }
+        }
+      ],
+      "train_seconds": 115.5,
+      "psi_r2": -17.5123,
+      "psi_cos": 0.02366756,
+      "psi_r2_delta_vs_init": -17.9071,
+      "success": 0.125,
+      "wins": 6,
+      "se": 0.047735,
+      "eval_seconds": 32.4
+    },
+    "BOTH": {
+      "binding_active": true,
+      "binding_ratio": 0.034633,
+      "psi_r2_at_init": 0.3948,
+      "loss_first": 3.272055,
+      "loss_last": 0.96593,
+      "ratio": 0.2952,
+      "curve": [
+        {
+          "step": 1,
+          "loss": 3.272055,
+          "parts": {
+            "flow": 1.155388,
+            "probe": 1.116816,
+            "geom": 0.999852
+          }
+        },
+        {
+          "step": 200,
+          "loss": 1.069065,
+          "parts": {
+            "flow": 0.665233,
+            "probe": 0.402599,
+            "geom": 0.001232
+          }
+        },
+        {
+          "step": 400,
+          "loss": 1.040809,
+          "parts": {
+            "flow": 0.675666,
+            "probe": 0.347381,
+            "geom": 0.017762
+          }
+        },
+        {
+          "step": 600,
+          "loss": 1.025759,
+          "parts": {
+            "flow": 0.71076,
+            "probe": 0.31468,
+            "geom": 0.000319
+          }
+        },
+        {
+          "step": 800,
+          "loss": 0.987642,
+          "parts": {
+            "flow": 0.704453,
+            "probe": 0.282158,
+            "geom": 0.001031
+          }
+        },
+        {
+          "step": 1000,
+          "loss": 0.88706,
+          "parts": {
+            "flow": 0.618556,
+            "probe": 0.267726,
+            "geom": 0.000777
+          }
+        },
+        {
+          "step": 1200,
+          "loss": 0.96593,
+          "parts": {
+            "flow": 0.673686,
+            "probe": 0.292068,
+            "geom": 0.000176
+          }
+        }
+      ],
+      "train_seconds": 116.5,
+      "psi_r2": -0.287,
+      "psi_cos": 0.02557333,
+      "psi_r2_delta_vs_init": -0.6818,
+      "success": 0.166667,
+      "wins": 8,
+      "se": 0.053791,
+      "eval_seconds": 32.4
+    }
+  },
+  "psi_r2_at_init": 0.3948,
+  "verdicts": {
+    "control_collapses": true,
+    "readability_preserved_PROBE": false,
+    "improves_success_PROBE": false,
+    "readability_preserved_GEOM": false,
+    "improves_success_GEOM": false,
+    "readability_preserved_BOTH": false,
+    "improves_success_BOTH": false,
+    "FIX_CONFIRMED": false,
+    "fixed_arms": [],
+    "NO_FIX": true
+  },
+  "peak_vram_mib": 16916.8,
+  "honest_limits": [
+    "SYNTHETIC pixel task; not robot capability; not a benchmark score",
+    "secondary endpoint underpowered: n=48 -> 2*SE ~0.108",
+    "PROBE arm uses the 4-D state as training-time auxiliary supervision only",
+    "VLM frozen; 64x64 three-channel upsampled to 224 is OOD for it",
+    "sample count matched to the random-feature arm (3072) by design"
+  ]
+}
