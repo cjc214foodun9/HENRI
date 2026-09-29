@@ -43,8 +43,18 @@ PRE-REGISTERED DECISION RULE (written BEFORE running)
            predicts that Directive 1's 2D emitter cannot help either, because
            the learner still has no context mechanism.
   4. AT_MATCHED_BIGRAM_FLOOR iff |base - matched_bigram_floor| <= 0.005
-        -> the control is already at the bigram conditional entropy; no optimiser
-           can go below it. Strong form of (2).
+       -> the control is already at the bigram conditional entropy; no optimiser
+          can go below it. Strong form of (2).
+       SUPERSEDED 2026-09-28 by d4_budget_extension_probe.json. The clause
+       "already at ... no optimiser can go below it" is too strong: at 3x this
+       budget the control reaches 0.127878, which is BELOW the floor quoted here
+       (0.127910). The floor is VOLUME-DEPENDENT (0.127910 at 307,200 rows,
+       0.127717 at 921,600 rows), so it is not a fixed bound. Measured outcome:
+       the control stays above the MATCHED-volume floor at every checkpoint
+       (gaps +0.00136 / +0.00136 / +0.00016) while still descending, and the
+       context arm beats the control by ~0.0124 nats at 3x budget. Read the
+       verdict as "the bilinear arm approaches the matched bigram floor", NOT as
+       "the floor cannot be crossed".
 
   Arms 3 and 4 are INDEPENDENT of arm 1: all three are reported, never merged.
 

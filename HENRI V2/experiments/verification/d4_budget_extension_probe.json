@@ -1,0 +1,84 @@
+{
+  "schema": "henri.d4-budget-extension-probe.v1",
+  "purpose": "decide whether the 0.129273 plateau is CONVERGED or BUDGET-LIMITED, and whether the context advantage measured at 1200 steps persists at matched budget",
+  "forced_by": "d4_basin_shape_probe measured control 0.12787813 at 3600 steps, BELOW D4's matched bigram floor 0.12791051 -- which falsifies my own verdict-4 interpretation clause",
+  "pre_registration": {
+    "margin": 0.01,
+    "checkpoints": [
+      1200,
+      2400,
+      3600
+    ],
+    "context_persists_rule": "(ctrl - ctx) >= MARGIN at FINAL checkpoint",
+    "context_budget_artifact_rule": "(ctrl - ctx) < MARGIN at FINAL checkpoint",
+    "floor_binding_rule": "ctrl_final >= floor(matched volume) - 0.005",
+    "ranks": {
+      "ctrl": 64,
+      "ctx": 42
+    },
+    "params": {
+      "ctrl": 32896,
+      "ctx": 32382
+    }
+  },
+  "checkpoints": {
+    "1200": {
+      "rows_consumed": 307200,
+      "control_heldout": 0.12927328145989597,
+      "context_heldout": 0.11773296202655177,
+      "gap_control_minus_context": 0.011540319433344201,
+      "bigram_floor_at_matched_volume": 0.12791051131738324,
+      "control_minus_floor": 0.001362770142512737,
+      "context_minus_floor": -0.010177549290831464
+    },
+    "2400": {
+      "rows_consumed": 614400,
+      "control_heldout": 0.1291691457566717,
+      "context_heldout": 0.11640094684028529,
+      "gap_control_minus_context": 0.01276819891638642,
+      "bigram_floor_at_matched_volume": 0.12781278652729747,
+      "control_minus_floor": 0.0013563592293742432,
+      "context_minus_floor": -0.011411839687012176
+    },
+    "3600": {
+      "rows_consumed": 921600,
+      "control_heldout": 0.12787813085771116,
+      "context_heldout": 0.11552280157990034,
+      "gap_control_minus_context": 0.012355329277810814,
+      "bigram_floor_at_matched_volume": 0.12771732725232135,
+      "control_minus_floor": 0.00016080360538980876,
+      "context_minus_floor": -0.012194525672421005
+    }
+  },
+  "validity": {
+    "v1_control_at_1200_reproduces_D4_BASE_LOSS": true,
+    "v1_control_at_1200": 0.12927328145989597,
+    "v1_D4_recorded_BASE_LOSS": 0.12927328145989597,
+    "v2_floor_at_307200_reproduces_D4_record": true,
+    "v2_floor_at_307200": 0.12791051131738324,
+    "v2_D4_recorded_floor": 0.12791051131738324,
+    "v3_loss_still_descending_control": true,
+    "v3_loss_still_descending_context": true,
+    "v3_floor_still_descending_with_volume": true
+  },
+  "verdicts": {
+    "control_1200": 0.12927328145989597,
+    "control_3600": 0.12787813085771116,
+    "context_1200": 0.11773296202655177,
+    "context_3600": 0.11552280157990034,
+    "gap_1200": 0.011540319433344201,
+    "gap_3600": 0.012355329277810814,
+    "MARGIN": 0.01,
+    "CONTEXT_ADVANTAGE_PERSISTS_AT_MATCHED_BUDGET": true,
+    "CONTEXT_ADVANTAGE_WAS_BUDGET_ARTIFACT": false,
+    "FLOOR_BINDING_AT_FINAL": true,
+    "FLOOR_FALSIFIED_BY_BUDGET": false
+  },
+  "interpretation": "CONTEXT_ADVANTAGE_PERSISTS: the model-class conclusion survives matched budget -- context, not the optimiser, is the binding constraint.",
+  "honest_limits": [
+    "synthetic byte-tape fixture, not ARC/SciCode data",
+    "3600 steps is still finite; the loss was descending at the last checkpoint in the basin probe, so no claim of a converged floor is made anywhere here",
+    "two arms only; the full LR/clip sweep is not re-run at extended budget",
+    "conclusions are for THIS model class, data volume and seed"
+  ]
+}
