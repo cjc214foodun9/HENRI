@@ -1,0 +1,127 @@
+{
+  "schema": "henri.d4-optimizer-sweep.v1",
+  "document_claim": "plateau is an OPTIMIZER AND LEARNING-RATE SCHEDULE failure, not entropy and not capacity",
+  "claim_status": "HYPOTHESIS_UNDER_TEST",
+  "fixed_architecture": {
+    "class": "bilinear (TapeLearner form)",
+    "target_params": 32896
+  },
+  "config": {
+    "steps": 1200,
+    "batch": 256,
+    "seq_len": 33,
+    "prog_len": 32,
+    "heldout_n": 256,
+    "seed": 0,
+    "base_lr": 0.003,
+    "margin": 0.01,
+    "rows_consumed_by_each_arm": 307200
+  },
+  "harness_control": {
+    "production_TapeLearner": 0.12927328145989597,
+    "generalised_r64_baseline": 0.12927328145989597,
+    "abs_diff_vs_production": 0.0,
+    "abs_diff_vs_recorded_BASE_LOSS": 0.0,
+    "verdict": "HARNESS_OK"
+  },
+  "floors": {
+    "bigram_fit_on_4000_rows_PREVIOUSLY_QUOTED": 0.1804369917596133,
+    "bigram_fit_on_matched_307200_rows": 0.12791051131738324,
+    "uniform_ln_vocab": 5.54907608489522
+  },
+  "arms": [
+    {
+      "tag": "CTRL_r64_lr3e-3",
+      "n_params": 32896,
+      "heldout_loss_final": 0.12927328145989597,
+      "train_loss_first10_mean": 5.369010638152904,
+      "train_loss_last10_mean": 0.08948982856109264
+    },
+    {
+      "tag": "LR_0.0001",
+      "n_params": 32896,
+      "heldout_loss_final": 1.8367032940077976,
+      "train_loss_first10_mean": 5.574144571588144,
+      "train_loss_last10_mean": 1.7875032632048444
+    },
+    {
+      "tag": "LR_0.0003",
+      "n_params": 32896,
+      "heldout_loss_final": 0.23067988469223713,
+      "train_loss_first10_mean": 5.560607653972241,
+      "train_loss_last10_mean": 0.13975790185165596
+    },
+    {
+      "tag": "LR_0.001",
+      "n_params": 32896,
+      "heldout_loss_final": 0.13190105076195138,
+      "train_loss_first10_mean": 5.512961161010084,
+      "train_loss_last10_mean": 0.09452027545876435
+    },
+    {
+      "tag": "LR_0.01",
+      "n_params": 32896,
+      "heldout_loss_final": 0.12986066761194043,
+      "train_loss_first10_mean": 4.634504394169286,
+      "train_loss_last10_mean": 0.0885762578848143
+    },
+    {
+      "tag": "LR_0.05",
+      "n_params": 32896,
+      "heldout_loss_final": 0.1355156183175792,
+      "train_loss_first10_mean": 1.6800677768386112,
+      "train_loss_last10_mean": 0.09540403630542375
+    },
+    {
+      "tag": "LR_3e-3_COSINE",
+      "n_params": 32896,
+      "heldout_loss_final": 0.12961471260451568,
+      "train_loss_first10_mean": 5.369018217390478,
+      "train_loss_last10_mean": 0.09237513470427483
+    },
+    {
+      "tag": "LR_1e-2_COSINE",
+      "n_params": 32896,
+      "heldout_loss_final": 0.1281481425799728,
+      "train_loss_first10_mean": 4.6345572426146955,
+      "train_loss_last10_mean": 0.0885425926152664
+    },
+    {
+      "tag": "LR_1e-2_CLIP1.0",
+      "n_params": 32896,
+      "heldout_loss_final": 0.12987109650095588,
+      "train_loss_first10_mean": 4.737519874331177,
+      "train_loss_last10_mean": 0.0886621643516184
+    },
+    {
+      "tag": "LR_3e-3_COSINE_CLIP1.0",
+      "n_params": 32896,
+      "heldout_loss_final": 0.1291669553240329,
+      "train_loss_first10_mean": 5.371877307216813,
+      "train_loss_last10_mean": 0.09159653662579495
+    }
+  ],
+  "best_arm": {
+    "tag": "LR_1e-2_COSINE",
+    "heldout_loss_final": 0.1281481425799728,
+    "improvement_over_control": 0.0011251388799231599
+  },
+  "model_class_arm": {
+    "tag": "CONTEXT_r42_prev_token",
+    "n_params": 32382,
+    "heldout_loss_final": 0.11773296202655177,
+    "train_loss_first10_mean": 5.412225279829711,
+    "train_loss_last10_mean": 0.08607820342812249
+  },
+  "verdicts": {
+    "1_OPTIMIZER_STALL_CONFIRMED": false,
+    "2_OPTIMIZER_STALL_FALSIFIED": true,
+    "3_MODEL_CLASS_IS_THE_BINDING_CONSTRAINT": true,
+    "4_AT_MATCHED_BIGRAM_FLOOR": true,
+    "best_sweep_delta_vs_control": 0.0011251388799231599,
+    "context_delta_vs_control": 0.011540319433344201,
+    "control_minus_matched_bigram_floor": 0.001362770142512737,
+    "control_minus_4000row_bigram_floor": -0.051163710299717335
+  },
+  "interpretation": "MODEL_CLASS_IS_THE_BINDING_CONSTRAINT: no schedule change helped, but a capacity-matched WITH-CONTEXT model did. The ceiling is the absence of context in the bilinear form, not the optimiser and not capacity."
+}

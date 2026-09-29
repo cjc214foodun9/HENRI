@@ -1,0 +1,109 @@
+{
+  "schema": "henri.d2-demo-ingress-probe.v1",
+  "directive": 2,
+  "envs_probed": 16,
+  "demos_present": 0,
+  "blocked_no_demos": 16,
+  "env_errors": 0,
+  "per_env": [
+    {
+      "env": "cn04",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "ka59",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "g50t",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "sb26",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "ar25",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "lp85",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "dc22",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "m0r0",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "bp35",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "ls20",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "re86",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "ft09",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "s5i5",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "r11l",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "cd82",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    },
+    {
+      "env": "lf52",
+      "status": "BLOCKED_NO_DEMONSTRATIONS",
+      "demo_pair_count": 0,
+      "provenance": "public_api"
+    }
+  ],
+  "criterion_from_document": "demo_pair_count > 0 across all evaluation tasks",
+  "criterion_status": "BLOCKED__NO_PUBLIC_DEMO_CHANNEL",
+  "why_not_fixable_by_editing_the_ingress_schema": "the field the document says to 'update' does not exist on the public API surface: game.examples and game.demonstrations are both absent, and the downloaded env .py files contain no examples/demonstrations/train/test keys at all. There is nothing to load into the in-context buffer. Writing pairs from elsewhere would fabricate demonstrations."
+}
