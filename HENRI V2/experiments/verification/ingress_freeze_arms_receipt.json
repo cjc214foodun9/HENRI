@@ -1,0 +1,223 @@
+{
+  "schema": "henri.ingress_freeze_arms/1",
+  "when": "2026-09-29 18:55:31",
+  "device": "cuda",
+  "device_name": "NVIDIA GeForce RTX 5090",
+  "smoke": false,
+  "config": {
+    "episodes": 256,
+    "max_steps": 24,
+    "steps": 3000,
+    "batch": 64,
+    "lr": 0.002,
+    "eval_episodes": 64,
+    "eval_seed": 90000,
+    "sample_steps": 8,
+    "d_model": 65536,
+    "d_pool": 512,
+    "model": "Qwen/Qwen3-VL-4B-Instruct",
+    "out": "/root/henri/ingress_freeze_arms.json",
+    "smoke": false
+  },
+  "hypothesis": "the arm that reached 0.4688 had a FROZEN ingress (0 trainable params); the arm that failed had a trainable bridge. Test: freeze the bridge and hold everything else identical.",
+  "pre_registered": {
+    "A_reproduces": "success_A >= 0.30",
+    "B_reproduces_failure": "success_B <= 0.20",
+    "TRAINABILITY_IS_THE_CAUSE": "success_C >= 0.30 AND success_C >= success_B + 2*SE",
+    "FREEZING_FULLY_RECOVERS": "success_C >= success_A - 2*SE",
+    "REPRESENTATION_IS_THE_CAUSE": "success_C <= 0.20"
+  },
+  "env": {
+    "n_dof": 7,
+    "horizon": 48
+  },
+  "data": {
+    "n_samples": 1203,
+    "n_dof": 7,
+    "obs_shape": [
+      3,
+      64,
+      64
+    ],
+    "collect_seconds": 0.3
+  },
+  "vlm": {
+    "model_id": "Qwen/Qwen3-VL-4B-Instruct",
+    "tower_path": "model.visual",
+    "feat_shape": [
+      1203,
+      256,
+      1024
+    ],
+    "output_key_used": "last_hidden_state(2d)",
+    "frozen_params": 4437815808,
+    "extract_seconds": 19.7
+  },
+  "arms": {
+    "RANDOM_FROZEN": {
+      "head_trainable": 3819527,
+      "ingress": "VisionPhaseIngress FROZEN",
+      "ingress_trainable": 0,
+      "psi_dim": 65536,
+      "psi_cos_at_init": 0.910688,
+      "psi_trainable_params": 3819527,
+      "psi_cos_after": 0.910688,
+      "loss_first": 1.175129,
+      "loss_last": 0.213615,
+      "ratio": 0.1818,
+      "curve": [
+        {
+          "step": 1,
+          "loss": 1.175129
+        },
+        {
+          "step": 500,
+          "loss": 0.642323
+        },
+        {
+          "step": 1000,
+          "loss": 0.212532
+        },
+        {
+          "step": 1500,
+          "loss": 0.214733
+        },
+        {
+          "step": 2000,
+          "loss": 0.234492
+        },
+        {
+          "step": 2500,
+          "loss": 0.148747
+        },
+        {
+          "step": 3000,
+          "loss": 0.213615
+        }
+      ],
+      "train_seconds": 2.9,
+      "success": 0.390625,
+      "se": 0.060986,
+      "eval_episodes": 64,
+      "peak_vram_mib": 17271.0
+    },
+    "VLM_TRAINABLE": {
+      "head_trainable": 3819527,
+      "ingress": "VLMPhaseBridge TRAINABLE",
+      "ingress_trainable": 36242432,
+      "binding_active": true,
+      "binding_ratio": 0.037405,
+      "psi_dim": 65536,
+      "psi_cos_at_init": 0.999916,
+      "psi_trainable_params": 40061959,
+      "psi_cos_after": 0.553284,
+      "loss_first": 1.175129,
+      "loss_last": 0.209172,
+      "ratio": 0.178,
+      "curve": [
+        {
+          "step": 1,
+          "loss": 1.175129
+        },
+        {
+          "step": 500,
+          "loss": 0.666318
+        },
+        {
+          "step": 1000,
+          "loss": 0.30678
+        },
+        {
+          "step": 1500,
+          "loss": 0.209177
+        },
+        {
+          "step": 2000,
+          "loss": 0.218355
+        },
+        {
+          "step": 2500,
+          "loss": 0.193989
+        },
+        {
+          "step": 3000,
+          "loss": 0.209172
+        }
+      ],
+      "train_seconds": 287.6,
+      "success": 0.375,
+      "se": 0.060515,
+      "eval_episodes": 64,
+      "peak_vram_mib": 22643.6
+    },
+    "VLM_FROZEN": {
+      "head_trainable": 3819527,
+      "ingress": "VLMPhaseBridge FROZEN",
+      "ingress_trainable": 0,
+      "binding_active": true,
+      "binding_ratio": 0.037405,
+      "psi_dim": 65536,
+      "psi_cos_at_init": 0.999916,
+      "psi_trainable_params": 3819527,
+      "psi_cos_after": 0.999916,
+      "loss_first": 1.175129,
+      "loss_last": 0.470329,
+      "ratio": 0.4002,
+      "curve": [
+        {
+          "step": 1,
+          "loss": 1.175129
+        },
+        {
+          "step": 500,
+          "loss": 0.666609
+        },
+        {
+          "step": 1000,
+          "loss": 0.485296
+        },
+        {
+          "step": 1500,
+          "loss": 0.464776
+        },
+        {
+          "step": 2000,
+          "loss": 0.40832
+        },
+        {
+          "step": 2500,
+          "loss": 0.425958
+        },
+        {
+          "step": 3000,
+          "loss": 0.470329
+        }
+      ],
+      "train_seconds": 2.6,
+      "success": 0.15625,
+      "se": 0.045387,
+      "eval_episodes": 64,
+      "peak_vram_mib": 23632.5
+    }
+  },
+  "verdicts": {
+    "A_reproduces": true,
+    "B_reproduces_failure": false,
+    "TRAINABILITY_IS_THE_CAUSE": false,
+    "FREEZING_FULLY_RECOVERS": false,
+    "REPRESENTATION_IS_THE_CAUSE": true,
+    "success_A": 0.390625,
+    "success_B": 0.375,
+    "success_C": 0.15625,
+    "random_policy_baseline": 0.1875,
+    "2se_bc": 0.121,
+    "2se_ac": 0.122
+  },
+  "honest_limits": [
+    "SYNTHETIC pixel reach task; not robot capability; not a benchmark score",
+    "n=64 eval episodes -> 2*SE ~ 0.121; differences below that are UNRESOLVED",
+    "VLM frozen in all arms; only the BRIDGE differs in trainability",
+    "arm A uses a different ingress architecture (VSA random projection), so it is a protocol control, not a like-for-like feature comparison",
+    "64x64 three-channel env images upsampled to 224 is OOD for the VLM"
+  ]
+}
