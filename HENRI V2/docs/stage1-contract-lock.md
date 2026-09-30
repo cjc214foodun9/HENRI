@@ -201,3 +201,62 @@ already L2-normalizes its output, so rollout norms are `1.0` *by construction*
 operator is unitary. T2-c must test the operator on a test vector, not read back
 the norm of an already-normalized output — otherwise it is the "unitary
 overclaim" fallacy from the arbiter's own rule list.
+
+---
+
+## 9. Tier 2 measured gate — HARNESS preflight (NOT a Tier-2 result)
+
+`experiments/verification/tier2_measured_gate.py` is written and CPU-preflighted
+at **preflight scale** (`d=512`, `nb=64`, `r=16`, 16×16). Production scale
+(`d=65536`) is **NOT** measured. Nothing in this section is a Tier-2 promotion.
+
+Preflight verdict: `TIER2_MEASURED: KILLED` (exit 2) — `T2-a` 3-step open-loop
+cosine `0.008811` vs threshold `0.92`, min `-0.076817 < 0.60` → the
+pre-registered kill fired **in code**, as a hard exit.
+
+Chance baseline: for a random unit vector in `d` dims, `cos ~ N(0, 1/√d)`,
+`sd = 0.0442`. T2-a therefore sits **below chance** at this scale.
+
+### Rank sweep (diagnostic: capacity vs architecture)
+
+| rank | 1-step cos | 3-step cos |
+|---|---|---|
+| 16 | 0.024448 | 0.008811 |
+| 32 | 0.063474 | 0.041220 |
+| 64 | 0.126082 | 0.046751 |
+| 128 | 0.153204 | 0.064478 |
+
+Both columns rise monotonically. `3×chance_sd = 0.1326`: only the **1-step**
+column clears it (at r=128); the 3-step column never does. Reading: subspace
+capacity **contributes**, but even the best cell is far below `0.92`, so capacity
+alone does not explain the miss. **This curve does not separate capacity from an
+architecture/information limit.** It is reported, not promoted.
+
+### Two defects this preflight caught in its own harness (do not re-introduce)
+
+1. **Geometry — a clause that could never pass.** The first draft measured
+   `‖V A_sub Vᵀ v‖` on an *ambient* unit vector and asserted "`A_sub = I` must give
+   `1.0`". False: `VᵀV = I_r` but `V Vᵀ` is a rank-`r` projector, so for random
+   ambient `v`, `‖V Vᵀ v‖ ≈ √(r/d)` — measured `0.137` at `r=16, d=512` against
+   `√(16/512)=0.177`. Unitarity is definable only on the `r`-dim subspace. This is
+   the same class as the `perceive_1step` bug: **a gate that cannot pass is as
+   worthless as one that cannot fail.**
+
+2. **A manufactured pass — worse than the bug it replaced.** The corrected draft
+   read `jepa.predictor`, which is **never trained** (`main()` trains a *fresh*
+   predictor inside `score_predictor()`). `A_sub` initialises to `torch.eye(r)`, so
+   the "measured" gain was exactly `1.00000000` and the defect exactly
+   `0.00000000e+00` — **by initialisation**. Reporting the identity matrix as proof
+   that a learned operator is unitary is symbolic proof by naming, the same defect
+   class as the hardcoded `smoke_marker`. T2-c now reads the **trained** operator
+   and an untouched operator is `INVALID` (exit 1), never `PASS`.
+
+Corrected T2-c on the trained operator: `‖A_sub u‖ = 1.06022692`,
+`|gain−1| = 6.023e-02`, orthogonality defect `9.225e-01`,
+`‖A_sub − I‖_max = 1.230` (operator moved from init) → genuine **NOT-REACHED**.
+Metric-validity check: an orthogonal reference factor returns gain `1.00000000`,
+defect `3.10e-07` — so the metric *can* report a clean pass.
+
+**What remains:** the same harness at production scale on a re-provisioned 5090,
+in the same batched window as `contract_lock_check.py --live` (the lock's 720 h
+freshness limit will have expired the current receipt — by design).
