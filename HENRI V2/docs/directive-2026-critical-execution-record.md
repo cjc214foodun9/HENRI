@@ -82,6 +82,31 @@ Consequently the GPU window instruction is corrected: run `--live` and
 `tier2_measured_gate.py` as planned. Do **not** expect production-scale `beta` confirmation
 from that window.
 
+**The requirement is now machine-readable, not prose.** This section previously stated the
+promotion requirement only as prose, which is bypassable: a session that reads this doc and
+not the prior receipt would see no enforcement. That is the same failure
+`henri_operator_promotion.py` was written to prevent for operator families — a supplied
+directive once asked for a resonator family that had already been measured worse.
+
+`henri_egress_promotion.py` (commit `83e1779`, tests
+`tests/unit/test_egress_promotion.py`) makes it callable:
+
+* `audit()` re-reads both β-gate receipts and verifies pinned digests, so the constants
+  cannot silently drift. Digests are **LF-normalised** and derived from the git-stored
+  blobs; the sibling gate hashes raw bytes and is therefore checkout-fragile on a host that
+  rewrites line endings (this worktree warns about exactly that).
+* `assert_promotion_allowed(M, d)` raises `PromotionGated` unless a measurement was taken
+  at or above `M=10,000 / D=65,536`. Fail-closed on a missing receipt, a digest mismatch,
+  or a sub-scale measurement.
+* `is_provisional()` is `True` today, and `HopfieldTerminator.report()` carries the result
+  under `promotion_gate`, so `PROVISIONAL` reaches a telemetry surface rather than living
+  only in this document.
+
+Verified from the committed code, not the working tree: a conforming `(10000, 65536)`
+measurement **passes**, a sub-scale `(174, 512)` **raises**. The gate blocks what was
+actually measured and still opens on a conforming one — a gate that can only fail is the
+mirror of a gate that can only pass.
+
 New instrument: `experiments/verification/egress_beta_gate.py`.
 `CanonicalCodebookEgress` (`henri_hopfield_egress.py:60`) default changed `8.0 -> 26.10`
 with full provenance in the docstring. The prior `sealed_beta_note` in
