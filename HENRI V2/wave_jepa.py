@@ -26,7 +26,8 @@ class WaveJEPA(nn.Module):
 
     def __init__(self, d_model: int = 65536, num_blocks: int = 8192, r_rank: int = 16,
                  device: Optional[str] = None, use_context_matching: bool = False,
-                 context_mix: float = 0.3, context_beta: float = 8.0):
+                 context_mix: float = 0.3, context_beta: float = 8.0,
+                 encoder: Optional[nn.Module] = None):
         super().__init__()
         self.d_model = d_model
         self.num_blocks = num_blocks
@@ -42,8 +43,19 @@ class WaveJEPA(nn.Module):
         self.context_mix = context_mix
         self.context_beta = context_beta
 
-        # 1. Context & Target Ingress Encoder (HENRIVisionEncoder)
-        self.encoder = HENRIVisionEncoder(d_model=d_model, k_blocks=num_blocks, device=self.device)
+        # 1. Context & Target Ingress Encoder (HENRIVisionEncoder).
+        #
+        # SUBSTRATE PINNING (Tier 2). When an encoder is injected, WaveJEPA MUST
+        # use it instead of constructing its own. The previous unconditional
+        # construction silently ran the JEPA on the encoder DEFAULTS
+        # (spatial_basis_kind="default", bg_mask=False, fused_superpose=False,
+        # parity_scipy=False) while the locked Stage-1 config is
+        # (incommensurate, bg_mask=True, fused_superpose=True, parity_scipy=True).
+        # A JEPA measured on one substrate cannot be compared with a contract
+        # measured on another -- that is a silent cross-fixture comparison.
+        # encoder=None keeps the legacy behaviour byte-identical.
+        self.encoder = encoder if encoder is not None else HENRIVisionEncoder(
+            d_model=d_model, k_blocks=num_blocks, device=self.device)
 
         # 2. Action-Conditioned Latent Predictor (R-EDMD Koopman Operator p_psi)
         self.predictor = RecursiveDualEDMD(d_model=d_model, r_rank=r_rank, lambda_forget=0.98)

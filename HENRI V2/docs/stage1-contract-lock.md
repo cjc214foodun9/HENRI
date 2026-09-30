@@ -156,6 +156,48 @@ Per user direction, Tier 2 proceeds **behind its own gate**:
 | T2-c | unitary invariant preserved through the operator | `\|‖Ψ‖−1\| < 1e-5` after 3 steps |
 | T2-kill | pre-registered cheapest kill | if 3-step cos < 0.60 at the first measurement, the operator form is wrong — stop, do not tune |
 
-**Environment matter:** Tier 2 verification needs the GPU, which is being stopped
-by user directive. Tier 2 *structural* work (wiring, flag, import closure) can
-proceed CPU-side; T2-a/T2-c must be measured on a re-provisioned 5090.
+**Environment matter:** Tier 2 verification needs the GPU. Tier 2 *structural*
+work proceeded CPU-side and has PASSED (see §8). T2-a/T2-c must be measured on a
+re-provisioned 5090. The instance was stopped 2026-09-30 (`actual_status:
+exited`, verified via the Vast API).
+
+---
+
+## 8. Tier 2 structural gate — RESULT
+
+`experiments/verification/test_tier2_wiring.py` (CPU, no GPU, exit 0):
+
+| # | check | result |
+|---|---|---|
+| 1 | `WaveJEPA.encoder IS` the injected object (identity) | **PASS** |
+| 2 | substrates are OBSERVABLY different (`max|diff| = 2.367e-01`) | **PASS** |
+| 3 | legacy (`encoder=None`) == default injection (`0.000e+00`) | **PASS** |
+| 4 | `predict_future` raises `WORLD_MODEL_NOT_WIRED` without a model | **PASS** |
+| 5 | `rollout` returns `len(actions)+1` finite states | **PASS** |
+
+**Defect found and fixed by this gate.** `wave_jepa.py` constructed its own
+encoder with the module DEFAULTS —
+`spatial_basis_kind="default"`, `bg_mask=False`, `fused_superpose=False`,
+`parity_scipy=False` — while the locked Stage-1 config is `incommensurate`,
+`bg_mask=True`, `fused_superpose=True`, `parity_scipy=True`. WaveJEPA therefore
+ran on a **different substrate** from the one the contract was measured on.
+Comparing those two numbers would be a silent cross-fixture comparison. Fixed by
+accepting an injected `encoder` and using it; check 2 exists precisely so this
+cannot regress into a cosmetic distinction.
+
+**Wiring is now real, not a flag.** `HENRIUnifiedVLAModel` gained
+`world_model=None` plus `predict_future` / `rollout`. With no world model,
+`predict_future` **raises** rather than returning a stand-in: a fabricated
+prediction would let a caller mistake a mock loop for a real transition. The
+Stage-1 path (`world_model=None`) is unchanged.
+
+**Still NOT claimed (needs the 5090, one batched session with `--live`):**
+T2-a 3-step cosine `≥ 0.92`; T2-c `|‖Ψ‖−1| < 1e-5` **under the operator**;
+pre-registered kill at 3-step cosine `< 0.60`.
+
+**A unitarity caveat that must not be misread.** `RecursiveDualEDMD.forward`
+already L2-normalizes its output, so rollout norms are `1.0` *by construction*
+(measured `1.000000 ×4`). Those norms are **not** evidence that the composite
+operator is unitary. T2-c must test the operator on a test vector, not read back
+the norm of an already-normalized output — otherwise it is the "unitary
+overclaim" fallacy from the arbiter's own rule list.

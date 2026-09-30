@@ -96,6 +96,7 @@ class HENRIUnifiedVLAModel:
         temporal_ledger: Optional[Any] = None,
         boundary_axioms: Optional[torch.Tensor] = None,
         device: Optional[str] = None,
+        world_model: Optional[Any] = None,
     ):
         self.tokenizer = tokenizer
         self.orch = orchestrator
@@ -104,6 +105,11 @@ class HENRIUnifiedVLAModel:
         self.ledger = temporal_ledger
         self.dev = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.boundary_axioms = boundary_axioms
+        # TIER 2 (optional, default None => the Stage-1 path is unchanged).
+        # A WaveJEPA-compatible latent world model. When present it is the ONLY
+        # consumer of `predict_future`; when absent those methods fail closed
+        # rather than silently falling back to a predictor nobody measured.
+        self.world_model = world_model
 
     # -- Ingress ------------------------------------------------------------
 
@@ -113,6 +119,49 @@ class HENRIUnifiedVLAModel:
         wave = wave_blocks.squeeze(0)                            # [K, 8]
         digest = _wave_digest(wave)
         return wave, digest
+
+    # -- Tier 2: latent world model (WaveJEPA), default-OFF ---------------
+
+    def predict_future(
+        self,
+        state_wave: torch.Tensor,
+        action_wave: torch.Tensor,
+    ) -> torch.Tensor:
+        """One action-conditioned latent step: Psi_{t+1} = T(Psi_t, a_t).
+
+        Fails closed when no world model is wired. Returning a fabricated
+        prediction here would be a mock loop -- the caller could not tell a real
+        transition from a stand-in.
+        """
+        if self.world_model is None:
+            raise RuntimeError(
+                "WORLD_MODEL_NOT_WIRED: construct HENRIUnifiedVLAModel with "
+                "world_model=WaveJEPA(encoder=<the locked tokenizer>)")
+        return self.world_model.predict_future_latent(state_wave, action_wave)
+
+    def rollout(
+        self,
+        state_wave: torch.Tensor,
+        action_waves: Sequence[torch.Tensor],
+        renormalize_each_step: bool = True,
+    ) -> list:
+        """Multi-step latent rollout; returns the state after EACH step.
+
+        `renormalize_each_step` is recorded rather than assumed: the predictor's
+        own forward() already L2-normalizes its output, so the returned norms
+        are 1.0 by construction and are NOT evidence that the operator is
+        unitary. See T2-c in docs/stage1-contract-lock.md.
+        """
+        import torch.nn.functional as _F
+
+        states = [state_wave]
+        cur = state_wave
+        for a_t in action_waves:
+            cur = self.predict_future(cur, a_t)
+            if renormalize_each_step:
+                cur = _F.normalize(cur.view(-1), p=2, dim=0).view(cur.shape)
+            states.append(cur)
+        return states
 
     # -- Task compilation (held-out falsifiable gate) -----------------------
 
