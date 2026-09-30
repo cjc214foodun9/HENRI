@@ -46,7 +46,41 @@ the linear class — rank, learned basis, and `lambda_forget` sweeps cannot reac
 
 ## 2. Directive 2 — typed egress at beta* = 26.10
 
-**MEASURED. 26.10 IS strictly better than the sealed 8.0. `ADOPT_26.10_MEASURED`.**
+**MEASURED. 26.10 IS strictly better than the sealed 8.0. `ADOPT_26.10_MEASURED` — at
+`d=512`, which is BELOW this constant's named promotion scale. The code change is therefore
+`PROVISIONAL`.**
+
+**Promotion status: `PROVISIONAL — pending M=10,000 / D=65,536`.**
+
+The prior receipt `experiments/verification/hopfield_beta_calibration.json` states the
+governance rule for this exact constant:
+
+> "Changing the sealed constant requires replicating the M=10,000 / D=65,536 capacity
+> contract and passing the receipt-pinned promotion gate. This sweep deliberately does not."
+
+This work changed the value on fixtures at `d=512`, `M=64` and `M=174`. That is direct
+measurement with passing controls, but it is **not** the production capacity contract, so it
+does not satisfy that gate. Precise governance scope: `beta` is **not** an entry in
+`validate_seal_consistency.py` (`PAIRS`/`SCALAR_SPECS`), so no *registered* seal gate was
+tripped — the requirement above is the one the constant's own prior receipt names.
+
+A first revision of this record said `ADOPT_26.10_MEASURED` without disclosing the scale
+gap. That is the same defect class as the convergence table that asserted a fired control
+it could not show. The disclosure is now inline.
+
+**The promotion gate CANNOT be closed by this harness — a fixture limitation, measured.**
+The gate requires `M=10,000`. `egress_beta_gate.py`'s grid generator indexes every pattern
+by `k % g`, so its unique-grid family caps at **174** (measured: a request for `M=256`
+raised `size of tensor a (174) must match b (256)`, and the `M=174` request yielded exactly
+174). The family grows only linearly in `g`, so no practical grid reaches 10,000. Closing
+the gate therefore requires a **real production engram source** (waves encoded from the
+actual codec or benchmark corpus), not an enlarged synthetic family. That fixture is **not
+yet built**. An earlier revision of this paragraph asserted `--m 10000` as the fix; that was
+a claim the artifact could not support, and it is recorded here rather than quietly dropped.
+
+Consequently the GPU window instruction is corrected: run `--live` and
+`tier2_measured_gate.py` as planned. Do **not** expect production-scale `beta` confirmation
+from that window.
 
 New instrument: `experiments/verification/egress_beta_gate.py`.
 `CanonicalCodebookEgress` (`henri_hopfield_egress.py:60`) default changed `8.0 -> 26.10`

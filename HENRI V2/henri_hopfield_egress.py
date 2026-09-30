@@ -58,7 +58,7 @@ class CanonicalCodebookEgress:
     """
 
     def __init__(self, dim: int, beta: float = 26.10) -> None:
-        """beta = 26.10 -- DIRECTIVE + MEASURED (see PROVENANCE below).
+        """beta = 26.10 -- DIRECTIVE + MEASURED + PROVISIONAL (see PROVENANCE below).
 
         PROVENANCE (two separate facts; do not merge them)
           1. DIRECTIVE: HENRI-ARCH-2026-CRITICAL-DIRECTIVE-V1 item 2 mandates
@@ -74,6 +74,16 @@ class CanonicalCodebookEgress:
           3. NOT MEASURED: that 26.10 is the OPTIMUM. It is not. The measured
              curves show beta >= 64 reaches tolerance 6.0 at M/d=0.125, i.e. 26.10
              is a good value, not the argmax.
+          4. PROVISIONAL -- THIS DEFAULT HAS NOT PASSED ITS PROMOTION GATE.
+             Measured at d=512 (M=64, M=174) only. The constant's own prior
+             receipt (experiments/verification/hopfield_beta_calibration.json)
+             states that changing the sealed constant requires replicating the
+             M=10,000 / D=65,536 capacity contract and passing the receipt-pinned
+             promotion gate. That scale has NOT been run. Treat as provisional
+             pending production-scale replication.
+             Governance scope: beta is NOT an entry in validate_seal_consistency.py
+             (PAIRS/SCALAR_SPECS), so no registered seal gate is tripped; the
+             requirement above is the one this constant's own receipt names.
 
         TWO INSTRUMENT FAILURES THIS CONSTANT'S PROVENANCE SURVIVED
           * `hopfield_beta_calibration.json` (prior receipt) reported
