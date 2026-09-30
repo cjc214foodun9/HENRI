@@ -37,6 +37,7 @@ class HENRIVisionEncoder(nn.Module):
         vectorized_accum: bool = False,
         parity_dedup: bool = False,
         parity_fast: bool = False,
+        parity_scipy: bool = False,
     ):
         """UWE spatial encoder.
 
@@ -69,6 +70,7 @@ class HENRIVisionEncoder(nn.Module):
         self.vectorized_accum = bool(vectorized_accum)
         self.parity_dedup = bool(parity_dedup)
         self.parity_fast = bool(parity_fast)
+        self.parity_scipy = bool(parity_scipy)
 
         # Complex phase spatial basis vectors [max_grid_dim, D // 2]
         # x-axis translation phase generator and y-axis translation phase generator
@@ -148,6 +150,7 @@ class HENRIVisionEncoder(nn.Module):
             grid_np,
             want_exterior=False,
             fast=self.parity_fast,
+            use_scipy=self.parity_scipy,
         )
 
         parity_mask_grid = np.ones((H, W), dtype=np.float32)
@@ -170,8 +173,27 @@ class HENRIVisionEncoder(nn.Module):
                 for r_i, c_i in comp.interior_pixels:
                     parity_mask_grid[r_i, c_i] = -1.0
         else:
+            # SECOND METHOD: recompute from `comp.pixels` instead of reusing the
+            # record. This is a genuine A/B against the reuse path above.
+            #
+            # DEFECT FIXED 2026-09-29: this call used the DEFAULT
+            # want_exterior=True, which defeats the geometric skip (the skip is
+            # gated on `not want_exterior` because the exterior genuinely is the
+            # flood result). So even after the skip was added, THIS branch still
+            # ran a full flood fill per component -- the reason dense_16x16 kept
+            # measuring ~65.8 ms with all 230 components skippable.
+            #
+            # want_exterior=False here is PROVEN safe, not assumed:
+            # test_geometric_skip_equiv.py enumerates all 65,535 non-empty
+            # contour subsets of the 4x4 grid and asserts the interior is
+            # element-for-element identical with and without the exterior, with
+            # ZERO false negatives from the predicate. fast= is forwarded too, so
+            # this branch matches the segmenter's own call exactly.
             for comp in components:
-                interior_px, _ = ParityContourMask.compute_parity_contour((H, W), comp.pixels)
+                interior_px, _ = ParityContourMask.compute_parity_contour(
+                    (H, W), comp.pixels,
+                    fast=self.parity_fast, want_exterior=False,
+                    use_scipy=self.parity_scipy)
                 for r_i, c_i in interior_px:
                     parity_mask_grid[r_i, c_i] = -1.0  # Parity reflection operator for enclosed regions
 

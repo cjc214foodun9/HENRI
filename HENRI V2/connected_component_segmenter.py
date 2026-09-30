@@ -58,7 +58,38 @@ class ParityContourMask:
     """
 
     @staticmethod
-    def compute_parity_contour(grid_shape: Tuple[int, int], contour_pixels: List[Tuple[int, int]], fast: bool = False, want_exterior: bool = True) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
+    def _can_enclose(contour_pixels: List[Tuple[int, int]]) -> bool:
+        """Necessary condition for a NON-EMPTY interior. Not sufficient.
+
+        The flood starts at the padded corner (0,0) and moves 4-connected
+        through zeros. A cell survives as interior only if every 4-connected
+        path from the corner to it hits a contour pixel, which requires the
+        contour to close around it.
+
+        THREE MEASURED COUNTERINTUITIONS -- do not "simplify" this:
+          * a 3x3 RING (area 8) encloses its centre. Obvious.
+          * a 4-PIXEL DIAMOND -- (0,1),(1,0),(1,2),(2,1) -- ALSO encloses its
+            centre. Area 4, bbox 3x3, and all four padded neighbours of the
+            centre are contour, so the flood cannot enter. This is why the
+            threshold is AREA>=4 and not AREA>=8. Asserted in
+            experiments/verification/test_geometric_skip_equiv.py.
+          * a 2x2 BLOCK (area 4, bbox 2x2) and a 4x1 LINE enclose nothing --
+            the bbox clause excludes them.
+
+        SUFFICIENCY FAILS: a solid 3x3 block (area 9, bbox 3x3) passes this
+        test and still has an empty interior, because every cell is contour.
+        Survivors therefore run the real flood. This skip only removes work
+        that provably cannot change the result.
+        """
+        n = len(contour_pixels)
+        if n < 4:
+            return False
+        rs = [p[0] for p in contour_pixels]
+        cs = [p[1] for p in contour_pixels]
+        return (max(rs) - min(rs) + 1) >= 3 and (max(cs) - min(cs) + 1) >= 3
+
+    @staticmethod
+    def compute_parity_contour(grid_shape: Tuple[int, int], contour_pixels: List[Tuple[int, int]], fast: bool = False, want_exterior: bool = True, use_scipy: bool = False) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
         """
         Calculates parity contour mask via flood-fill interior/exterior classification.
         Returns: (interior_pixels, exterior_pixels)
@@ -69,10 +100,19 @@ class ParityContourMask:
         `henri_vision_encoder.encode_grid` never reads. Defaults preserve the
         production path byte-for-byte.
         """
-        if fast:
+        # GEOMETRIC SKIP (measured). When the caller does not want the exterior,
+        # a component that cannot enclose anything returns an empty interior
+        # WITHOUT running the flood fill. At 16x16 every one of the 230
+        # components is a single pixel, so 230 full flood fills were computing
+        # an all-ones mask. Gated on `not want_exterior` because the exterior
+        # genuinely is the flood result and must stay byte-identical on the
+        # public default path.
+        if not want_exterior and not ParityContourMask._can_enclose(contour_pixels):
+            return [], []
+        if fast or use_scipy:
             return ParityContourMask._parity_contour_fast(
                 grid_shape[0], grid_shape[1], contour_pixels,
-                want_exterior=want_exterior)
+                want_exterior=want_exterior, use_scipy=use_scipy)
         rows, cols = grid_shape
         mask = np.zeros((rows, cols), dtype=int)
         
@@ -111,7 +151,7 @@ class ParityContourMask:
         return interior_pixels, exterior_pixels
 
     @staticmethod
-    def _parity_contour_fast(rows: int, cols: int, contour_pixels: List[Tuple[int, int]], want_exterior: bool = True) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
+    def _parity_contour_fast(rows: int, cols: int, contour_pixels: List[Tuple[int, int]], want_exterior: bool = True, use_scipy: bool = False) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
         """Identical output to the legacy path; the measured cost removed.
 
         MEASURED (experiments/verification/seg_cost_probe.py, CPU):
@@ -137,6 +177,11 @@ class ParityContourMask:
         asserted element-by-element in
         experiments/verification/test_fast_segmenter_equiv.py (200/200 fuzz cases).
         """
+        if not want_exterior and not ParityContourMask._can_enclose(contour_pixels):
+            return [], []
+        if use_scipy:
+            return ParityContourMask._parity_contour_scipy(
+                rows, cols, contour_pixels, want_exterior)
         H, W = rows + 2, cols + 2
         padded = [[0] * W for _ in range(H)]
         cs = set()
@@ -168,6 +213,32 @@ class ParityContourMask:
         return interior_pixels, exterior_pixels
 
     @staticmethod
+    def _parity_contour_scipy(rows: int, cols: int, contour_pixels: List[Tuple[int, int]], want_exterior: bool = True) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
+        """C-speed equivalent of the flood fill via scipy.ndimage.
+
+        `binary_fill_holes` fills background regions that cannot be reached from
+        the image border, using the default cross structuring element -- that is
+        4-connectivity, the same connectivity as the legacy BFS. Ordering is
+        row-major from `np.argwhere`, matching the legacy raster scan.
+
+        scipy is imported lazily: this is an optional accelerator and the module
+        must keep working without it. Fuzz-verified against the legacy path in
+        experiments/verification/test_geometric_skip_equiv.py -- equivalence is
+        asserted, not assumed from the argument above.
+        """
+        from scipy import ndimage
+        mask = np.zeros((rows, cols), dtype=bool)
+        for r, c in contour_pixels:
+            if 0 <= r < rows and 0 <= c < cols:
+                mask[r, c] = True
+        filled = ndimage.binary_fill_holes(mask)
+        interior_pixels = [tuple(p) for p in np.argwhere(filled & ~mask)]
+        exterior_pixels = []
+        if want_exterior:
+            exterior_pixels = [tuple(p) for p in np.argwhere(~filled)]
+        return interior_pixels, exterior_pixels
+
+    @staticmethod
     def bind_topological_roles(
         interior_wave: torch.Tensor,
         exterior_wave: torch.Tensor,
@@ -196,7 +267,7 @@ class ConnectedComponentSegmenter:
     def __init__(self, background_color: int = 0):
         self.background_color = background_color
 
-    def segment_grid(self, grid: List[List[int]], want_exterior: bool = True, fast: bool = False) -> List[ObjectRecord]:
+    def segment_grid(self, grid: List[List[int]], want_exterior: bool = True, fast: bool = False, use_scipy: bool = False) -> List[ObjectRecord]:
         """
         Segments a 2D grid into a list of ObjectRecords with parity contour classification.
 
@@ -258,7 +329,7 @@ class ConnectedComponentSegmenter:
                     # Compute Parity Contour Mask (IN/OUT)
                     interior_px, exterior_px = ParityContourMask.compute_parity_contour(
                         (rows, cols), component,
-                        fast=fast, want_exterior=want_exterior)
+                        fast=fast, want_exterior=want_exterior, use_scipy=use_scipy)
 
                     if area == 1:
                         mech_type = "single_pixel"
