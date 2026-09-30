@@ -108,12 +108,28 @@ Fixture is shared with the linear harness **by importing it**, so the two arms a
 the same distribution. Split is by **whole trajectory seed** (train `[11,22,33,44]`, test
 `[55,66]`) to defeat mememorisation.
 
-| steps | arm | train 3-step | test 3-step | mem gap |
-|---|---|---|---|---|
-| 40 | mlp | 0.149 | 0.0537 | +0.095 |
-| 400 | mlp+skip | 0.337 | 0.168 | +0.170 |
-| 2000 | mlp+skip | 0.403 | 0.216 | +0.187 |
-| 12000 | mlp+skip | 0.445 | **0.226** | +0.219 |
+| steps | arm | train 3-step | test 3-step | mem gap | flag |
+|---|---|---|---|---|---|
+| 40 | mlp | 0.149 | 0.054 | +0.095 | |
+| 40 | mlp+skip | 0.008 | −0.000 | +0.008 | |
+| 400 | mlp | 0.313 | 0.125 | +0.188 | |
+| 400 | mlp+skip | 0.337 | 0.168 | +0.170 | |
+| 2000 | mlp | 0.490 | 0.209 | +0.280 | **MEMORISATION** |
+| 2000 | mlp+skip | 0.403 | 0.216 | +0.187 | |
+| 12000 | mlp | 0.495 | 0.197 | +0.298 | **MEMORISATION** |
+| 12000 | mlp+skip | 0.445 | **0.226** | +0.219 | |
+
+**Both arms are shown, including the rows where the guard FIRED.** An earlier revision of
+this table listed only the `mlp+skip` rows (all below the 0.25 flag) and asserted in prose
+that the memorisation control fired — an assertion its own table could not evidence. The
+flagged rows are now visible: the plain-MLP arm crosses the threshold at 2000 steps
+(`+0.280`) and again at 12000 (`+0.298`).
+
+**The 400-step row is clean and must not be cited alone.** It is the single point where the
+gap is smallest on the skip arm (`+0.170`); citing "400 steps shows no memorisation" would
+be *true per-row and false about the ladder*, because the gap rises monotonically with
+optimisation on both arms. This is the same fault as the withdrawn `CAPACITY` verdict: a
+single favourable sample promoted to a general claim.
 
 Linear reference on the same fixture: 3-step **0.1457** (metric validity OK).
 
@@ -123,9 +139,10 @@ Linear reference on the same fixture: 3-step **0.1457** (metric validity OK).
    `+0.080`) — consistent with the 0.280 bound covering the linear class only.
 2. **It does not approach the 0.92 contract**, and plateaus (`0.216 -> 0.226` between 2k
    and 12k steps while loss keeps falling) — so more steps of THIS class will not close it.
-3. **The memorisation gap is positive and growing** (`+0.219`), so the test number is not a
-   clean generalisation result. The fixture has too little trajectory diversity for a
-   512-hidden MLP.
+3. **The memorisation guard FIRED on the plain-MLP arm** (`+0.280` at 2000, `+0.298` at
+   12000), and the gap on the skip arm rises monotonically (`+0.008 → +0.170 → +0.187 →
+   +0.219`). The test numbers are therefore **not clean generalisation results**. The
+   fixture has too little trajectory diversity for a 512-hidden MLP.
 
 **Therefore this is NOT "non-linearity is dead."** It is: *a flat MLP of this size, on this
 narrow fixture, plateaus well below contract.* The directive's own standard —
