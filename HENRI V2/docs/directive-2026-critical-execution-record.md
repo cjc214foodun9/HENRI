@@ -153,6 +153,26 @@ the same distribution. Split is by **whole trajectory seed** (train `[11,22,33,4
 | 12000 | mlp | 0.495 | 0.197 | +0.298 | **MEMORISATION** |
 | 12000 | mlp+skip | 0.445 | **0.226** | +0.219 | |
 
+**Receipt provenance — every row is backed by a committed artifact.** An earlier revision of
+this section cited these numbers with only the 12000-step receipt in version control; the
+other three were on disk but **untracked**, so a future reader could not verify 6 of the 8
+rows. All four are now committed and re-checked against this table at landing time
+(fail-closed in `land_nonlin_receipts.sh`):
+
+| steps | receipt |
+|---|---|
+| 40 | `receipts/tier2_nonlinear_cpu.json` |
+| 400 | `receipts/tier2_nonlinear_cpu_400.json` |
+| 2000 | `receipts/tier2_nonlinear_cpu_2000.json` |
+| 12000 | `receipts/tier2_nonlinear_cpu_12000.json` |
+
+All four were produced by the probe as it stands in this commit (verified: the probe is
+byte-identical to `HEAD`), so they share one code path. Each carries
+`verdict: NONLINEAR_KILLED_AT_THIS_SCALE`; the **memorisation** observation is a property of
+the `mlp` arm's `mem_gap` column, computed and reported by the probe, not a separate verdict
+string. Do not attribute a `MEMORISATION_GUARD_FIRED` verdict to these receipts — no such
+string exists in them.
+
 **Both arms are shown, including the rows where the guard FIRED.** An earlier revision of
 this table listed only the `mlp+skip` rows (all below the 0.25 flag) and asserted in prose
 that the memorisation control fired — an assertion its own table could not evidence. The

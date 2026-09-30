@@ -1,0 +1,50 @@
+{
+  "measured_utc": "2026-09-30T05:33:56+00:00",
+  "python": "3.14.0",
+  "torch": "2.11.0+cu128",
+  "device": "cpu",
+  "d_model": 512,
+  "num_blocks": 64,
+  "train_seeds": [
+    11,
+    22,
+    33,
+    44
+  ],
+  "test_seeds": [
+    55,
+    66
+  ],
+  "linear_reference": {
+    "one_step": 0.3157306960298835,
+    "three_step": 0.14573919730901252
+  },
+  "arms": {
+    "mlp": {
+      "train1": 0.5633684685017215,
+      "train3": 0.31339691652344,
+      "test1": 0.36610744172260945,
+      "test3": 0.1252223434081922,
+      "static3": 0.0020012210831434154,
+      "mem_gap": 0.1881745731152478,
+      "loss_last": 0.00125218671746552,
+      "residual": false
+    },
+    "mlp+identity-skip": {
+      "train1": 0.6121636764073628,
+      "train3": 0.3374073729452599,
+      "test1": 0.3858232217511007,
+      "test3": 0.1678141392379378,
+      "static3": 0.0020012210831434154,
+      "mem_gap": 0.1695932337073221,
+      "loss_last": 0.000731376581825316,
+      "residual": true
+    }
+  },
+  "thresholds": {
+    "pass_": 0.92,
+    "kill": 0.6
+  },
+  "verdict": "NONLINEAR_KILLED_AT_THIS_SCALE",
+  "cpu_scale": true
+}
