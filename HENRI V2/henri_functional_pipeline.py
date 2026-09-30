@@ -30,7 +30,9 @@ MEASURED APIS ONLY (every one was read from the live object this session)
   binder.filler_vector(kind,value) | binder.role_filler_scene(pairs)
   koopman.roll(state, actions) -> RolloutResult(states, actions, horizon)
   arc_sagnac_veto.evaluate_veto(c, a, w, eps) -> (d_ax, d_ep, triggered, status)
-  CanonicalCodebookEgress(dim, beta=8.0).decode(wave) -> status SNAPPED | REJECTED
+  CanonicalCodebookEgress(dim, beta=26.10).decode(wave) -> status SNAPPED | REJECTED
+  (beta default 8.0 -> 26.10 per HENRI-ARCH-2026-CRITICAL-DIRECTIVE-V1; PROVISIONAL --
+   promotion gate M=10,000 / D=65,536 not yet met. This line previously said beta=8.0.)
   AgentialChain.plan(state, candidates) -> ChainResult
   NOT used, because each was measured ABSENT: router.apply_to, chan.predict_grid,
   res.cv_scores, res.chosen.

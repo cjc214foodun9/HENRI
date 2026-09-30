@@ -19,7 +19,9 @@ This module supplies both as FAIL-OPEN, DEFAULT-OFF helpers:
 
   AlignmentCompass   the preconditioned gradient-alignment reward as a dream-step
                      PROGRESS signal: r = |<grad, P * displacement>|.
-  HopfieldTerminator a wrap of CanonicalCodebookEgress (sealed beta=8.0) that snaps a
+  HopfieldTerminator a wrap of CanonicalCodebookEgress (beta default 26.10,
+  PROVISIONAL: promotion gate M=10,000 / D=65,536 not yet met; this line said
+  "sealed beta=8.0" until the directive changed the default) that snaps a
                      continuous wave to a discrete codebook id.
   DreamEgressRouter  the combined path: the compass decides CONTINUE vs TERMINATE, the
                      terminator snaps the final wave, and a RATIFIED flag gates
@@ -191,6 +193,26 @@ class AlignmentCompass:
         }
 
 
+def _promotion_status() -> Dict[str, Any]:
+    """Runtime status of the egress beta promotion gate.
+
+    Lazy import so this module stays importable if the gate is absent -- and FAILS
+    CLOSED if it is, rather than silently reporting a promoted-looking state. This is
+    what makes PROVISIONAL reachable by telemetry instead of living only in prose.
+    """
+    try:
+        import henri_egress_promotion as _ep
+
+        return _ep.status()
+    except Exception as exc:  # pragma: no cover - defensive path
+        return {
+            "provisional": True,
+            "receipts_ok": False,
+            "error": type(exc).__name__,
+            "note": "PROVISIONAL (promotion gate module unavailable -- fail closed)",
+        }
+
+
 class HopfieldTerminator:
     """Snap a continuous wave to a discrete codebook id via the sealed Hopfield egress.
 
@@ -283,7 +305,13 @@ class HopfieldTerminator:
                 "synthetic random codebook and a P@1-by-argmax metric that is "
                 "beta-INVARIANT BY CONSTRUCTION (softmax is monotonic), so it could not "
                 "discriminate temperature. 26.10 is a good value, NOT the argmax: "
-                "beta>=64 reaches tolerance 6.0 at M/d=0.125."),
+                "beta>=64 reaches tolerance 6.0 at M/d=0.125. "
+                "PROVISIONAL: measured at d=512 (M=64, M=174) ONLY. The constant's own "
+                "prior receipt requires replicating the M=10,000 / D=65,536 capacity "
+                "contract to pass the receipt-pinned promotion gate; that gate is NOT "
+                "met, and the current fixture cannot meet it (its unique-grid family "
+                "caps at 174). Do not cite this as production-validated."),
+            "promotion_gate": _promotion_status(),
             "fail_mode": "FAIL_OPEN: any anomaly -> snapped None, emitted False",
         }
 

@@ -19,7 +19,11 @@ APIS ARE THE MEASURED ONES, NOT INVENTED ONES
     DEFAULT_EPSILON_HARD = 0.35 (the epistemic SEARCH VETO constant, NOT 0.0431, which
     is the separate pre-ZoneC crystallization setpoint -- never swapped).
   * ActionConditionedKoopman.roll(state, actions) -> RolloutResult(states, actions, horizon)
-  * CanonicalCodebookEgress(dim, beta=8.0).decode(wave) -> status "SNAPPED" | "REJECTED"
+  * CanonicalCodebookEgress(dim, beta=26.10).decode(wave) -> status "SNAPPED" | "REJECTED"
+    (beta default changed 8.0 -> 26.10 under HENRI-ARCH-2026-CRITICAL-DIRECTIVE-V1;
+     PROVISIONAL -- promotion gate M=10,000 / D=65,536 not yet met. An earlier
+     revision of this line advertised beta=8.0 and would have pinned the retired
+     constant.)
 
 FAIL-CLOSED RULES (each one is a defect class this project has already paid for)
   * An EMPTY codebook yields REJECTED, so an unregistered chain emits NOTHING. The
