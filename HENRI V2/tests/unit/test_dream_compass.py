@@ -198,12 +198,21 @@ def test_terminator_honours_a_rejecting_validator():
     assert v.valid is False and v.emitted is False and v.reason == "REJECTED"
 
 
-def test_terminator_defaults_to_the_SEALED_beta_and_says_so():
+def test_terminator_defaults_to_the_directive_beta_and_says_why():
+    """26.10 replaced 8.0 under HENRI-ARCH-2026-CRITICAL-DIRECTIVE-V1.
+
+    This test previously asserted the SEALED 8.0 and that the note named 26.10 as
+    REJECTED. That record was overturned by measurement, not by preference: on real
+    encoded waves 26.10 tolerates strictly more noise than 8.0
+    (receipts/egress_beta_gate_m64.json / _m174.json). The earlier rejection used a
+    synthetic random codebook and a beta-invariant argmax metric.
+    """
     t = DC.HopfieldTerminator(dim=DIM)
-    assert t.beta == 8.0
+    assert t.beta == 26.10
     rep = t.report()
-    assert rep["beta"] == 8.0
-    assert "26.10" in rep["sealed_beta_note"], "must name the rejected document constant"
+    assert rep["beta"] == 26.10
+    assert "26.10" in rep["sealed_beta_note"], "must name the adopted constant"
+    assert "26.10" in rep["sealed_beta_note"] and "8.0" in rep["sealed_beta_note"]
 
 
 def test_terminator_configuration_guards():

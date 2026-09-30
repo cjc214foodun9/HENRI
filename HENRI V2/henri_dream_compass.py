@@ -204,8 +204,18 @@ class HopfieldTerminator:
     # refusal even when an index is present.
     REJECT_STATUSES = frozenset({"REJECTED", "INVALID", "REFUSED", "REJECT"})
 
-    def __init__(self, dim: int, beta: float = 8.0,
+    def __init__(self, dim: int, beta: float = 26.10,
                  validator: Optional[Callable[[int], bool]] = None) -> None:
+        """beta defaults to 26.10 (HENRI-ARCH-2026-CRITICAL-DIRECTIVE-V1).
+
+        PROVENANCE: directive-mandated AND measured better than the previous seal.
+        On real encoded waves (receipts/egress_beta_gate_m64.json, _m174.json) 26.10
+        tolerates strictly more noise than 8.0 (4.0 vs 2.0 at M/d=0.125; 4.0 vs 1.5
+        at M/d=0.340). The earlier "26.10 is NOT better" finding came from a synthetic
+        random codebook scored by a P@1-by-argmax metric that is beta-INVARIANT by
+        construction (softmax is monotonic), so it could not discriminate temperature.
+        NOTE: 26.10 is a good value, not the argmax (beta>=64 reaches tolerance 6.0).
+        """
         if dim < 2:
             raise DreamCompassError("dim must be >= 2")
         if beta <= 0:
@@ -264,8 +274,16 @@ class HopfieldTerminator:
             "schema": "henri.dream.hopfield-terminator.v1",
             "dim": self.dim, "beta": self.beta, "registered": self.registered,
             "ids": list(self._ids),
-            "sealed_beta_note": ("8.0 is the SEALED egress value; the document's 26.10 was "
-                                 "measured NOT better than the seal and is not adopted"),
+            "sealed_beta_note": (
+                "8.0 was the sealed value. HENRI-ARCH-2026-CRITICAL-DIRECTIVE-V1 "
+                "mandated 26.10. On REAL encoded waves with a noise-tolerance "
+                "instrument (receipts/egress_beta_gate_m64.json, _m174.json) 26.10 is "
+                "measured strictly better than 8.0 (tolerance 4.0 vs 2.0 at M/d=0.125; "
+                "4.0 vs 1.5 at M/d=0.340). The earlier 'NOT better' finding used a "
+                "synthetic random codebook and a P@1-by-argmax metric that is "
+                "beta-INVARIANT BY CONSTRUCTION (softmax is monotonic), so it could not "
+                "discriminate temperature. 26.10 is a good value, NOT the argmax: "
+                "beta>=64 reaches tolerance 6.0 at M/d=0.125."),
             "fail_mode": "FAIL_OPEN: any anomaly -> snapped None, emitted False",
         }
 

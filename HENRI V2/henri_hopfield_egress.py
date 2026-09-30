@@ -57,7 +57,35 @@ class CanonicalCodebookEgress:
     snapped index.
     """
 
-    def __init__(self, dim: int, beta: float = 8.0) -> None:
+    def __init__(self, dim: int, beta: float = 26.10) -> None:
+        """beta = 26.10 -- DIRECTIVE + MEASURED (see PROVENANCE below).
+
+        PROVENANCE (two separate facts; do not merge them)
+          1. DIRECTIVE: HENRI-ARCH-2026-CRITICAL-DIRECTIVE-V1 item 2 mandates
+             beta* = 26.10 (T* = 0.038316). This was originally proposed as an
+             "empirically derived optimum".
+          2. MEASURED (this repo, receipts/egress_beta_gate_m64.json and
+             _m174.json, instrument `experiments/verification/egress_beta_gate.py`):
+             26.10 is STRICTLY BETTER THAN THE SEALED 8.0 on real encoded waves:
+                 M/d=0.125 : noise tolerance 4.0 vs 2.0
+                 M/d=0.340 : noise tolerance 4.0 vs 1.5
+             (noise tolerance = largest ||noise||/||engram|| where cleanup keeps
+             clean_cos >= 0.90; up is better).
+          3. NOT MEASURED: that 26.10 is the OPTIMUM. It is not. The measured
+             curves show beta >= 64 reaches tolerance 6.0 at M/d=0.125, i.e. 26.10
+             is a good value, not the argmax.
+
+        TWO INSTRUMENT FAILURES THIS CONSTANT'S PROVENANCE SURVIVED
+          * `hopfield_beta_calibration.json` (prior receipt) reported
+            `DOC_BETA_NOT_BETTER_THAN_SEALED__NEVER_STRICTLY_BETTER` with
+            `unique_argmax: false`, from a SYNTHETIC RANDOM codebook where its own
+            `honest_limit` disclaimed real recall. That fixture cannot discriminate.
+          * The P@1-by-argmax metric used there is BETA-INVARIANT BY CONSTRUCTION:
+            softmax is monotonic, so argmax(softmax(beta*sim)) == argmax(sim) for
+            every beta > 0. Any argmax egress metric can never calibrate a
+            temperature. The new instrument measures noise tolerance instead, and
+            carries an invariance control that asserts this flatness explicitly.
+        """
         self.dim = dim
         self.cleanup = ContinuousHopfieldCleanup(dim=dim, beta=beta)
         self.canonical_ids: List[int] = []

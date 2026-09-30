@@ -6,6 +6,37 @@ forgetting factor (lambda_forget in [0.95, 0.99]).
 
 Eliminates windowed batch replay by updating covariance and cross-covariance
 matrices incrementally in O(r^2 * D) FLOPS without Backpropagation Through Time (BPTT).
+
+=============================================================================
+DEPRECATED FOR STATE-TRANSITION PREDICTION  (HENRI-ARCH-2026-CRITICAL-DIRECTIVE-V1)
+=============================================================================
+
+Do NOT spend further compute on rank, basis, or regularisation sweeps for this
+class. The linear-in-phi model class is bounded by measurement, committed at
+`72f20fe` and documented in `docs/stage1-contract-lock.md` section 9:
+
+    best LINEAR 3-step cosine  = 0.280163  (d=65536)   0.232242  (d=512)
+    required contract gate     = 0.92
+    stability                  = invariant over lambda in [1e-5, 1e-2]
+
+The ceiling carries NO rank bottleneck (full-d closed-form ridge, dual form), so
+it is an UPPER BOUND FOR THE LINEAR CLASS: raising `r_rank`, learning the basis
+`V`, or re-tuning `lambda_forget` cannot reach 0.92. That was demonstrated, not
+assumed -- a `learned` basis arm was measured (gain +0.0086 / +0.0344) and the
+effective-rank cap was enforced.
+
+SCOPE OF THE DEPRECATION (deliberately narrow):
+  * DEPRECATED: this module as the state-transition predictor in `WaveJEPA`
+    (`wave_jepa.py` predictor channel). Use a non-linear propagator instead.
+  * NOT DEPRECATED: `CoupledRecursiveDualEDMD` below, which is still consumed by
+    the Phase 8.34 benchmark. The module is retained, not deleted.
+  * NOT DEPRECATED: the attribution ladder in
+    `experiments/verification/tier2_measured_gate.py`. That code is what ANSWERED
+    the capacity-vs-architecture question; it is evidence, not debt.
+
+The bound covers the LINEAR class ONLY. A non-linear predictor over Psi is not
+bounded by 0.280, and whether it can reach 0.92 is an open, falsifiable question
+-- see `experiments/verification/tier2_nonlinear_probe.py`.
 """
 
 import math
