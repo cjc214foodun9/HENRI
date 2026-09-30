@@ -1,0 +1,114 @@
+{
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "torch": "2.12.0+cu130",
+  "cuda": "13.0",
+  "repos": "/root/henri/HENRI V2",
+  "encoder": {
+    "D65536_4x4": {
+      "D": 65536,
+      "grid": "4x4",
+      "wall_us": 434.2585988342762,
+      "kernel_us": 52.265666666666526,
+      "gap_pct": 87.96439107781205,
+      "launches_per_call": 61.0,
+      "norm": 1.0,
+      "norm_err": 0.0,
+      "finite": true,
+      "shape": [
+        65536
+      ]
+    },
+    "D65536_16x16": {
+      "D": 65536,
+      "grid": "16x16",
+      "wall_us": 13249.081056565046,
+      "kernel_us": 1505.2030000000007,
+      "gap_pct": 88.63918943831838,
+      "launches_per_call": 1671.0,
+      "norm": 1.0,
+      "norm_err": 0.0,
+      "finite": true,
+      "shape": [
+        65536
+      ]
+    },
+    "D65536_30x30": {
+      "D": 65536,
+      "grid": "30x30",
+      "wall_us": 106757.39863266548,
+      "kernel_us": 5290.411666666604,
+      "gap_pct": 95.04445431002863,
+      "launches_per_call": 5859.0,
+      "norm": 1.0,
+      "norm_err": 0.0,
+      "finite": true,
+      "shape": [
+        65536
+      ]
+    },
+    "D2048_4x4": {
+      "D": 2048,
+      "grid": "4x4",
+      "wall_us": 540.0029942393303,
+      "kernel_us": 45.729666666666525,
+      "gap_pct": 91.53159016625766,
+      "launches_per_call": 61.0,
+      "norm": 0.9999999403953552,
+      "norm_err": 5.960464477539063e-08,
+      "finite": true,
+      "shape": [
+        2048
+      ]
+    },
+    "D2048_16x16": {
+      "D": 2048,
+      "grid": "16x16",
+      "wall_us": 13173.180650919676,
+      "kernel_us": 1447.7636666666779,
+      "gap_pct": 89.00976381459095,
+      "launches_per_call": 1671.0,
+      "norm": 1.0,
+      "norm_err": 0.0,
+      "finite": true,
+      "shape": [
+        2048
+      ]
+    },
+    "D2048_30x30": {
+      "D": 2048,
+      "grid": "30x30",
+      "wall_us": 106479.62161650261,
+      "kernel_us": 5057.794333333778,
+      "gap_pct": 95.24998844234257,
+      "launches_per_call": 5859.0,
+      "norm": 1.0,
+      "norm_err": 0.0,
+      "finite": true,
+      "shape": [
+        2048
+      ]
+    }
+  },
+  "vla": {
+    "perceive_shape": [
+      8192,
+      8
+    ],
+    "perceive_norm": 1.0,
+    "perceive_norm_err": 0.0,
+    "perceive_finite": true,
+    "perceive_1step_us": 704.340934753418,
+    "perceive_1step_kernel_us": 56.830666666666595,
+    "perceive_1step_launches": 62.0,
+    "act_action": "ACTION1",
+    "act_rejection": "None",
+    "act_step_us": 3433.0297261476517,
+    "act_step_kernel_us": 554.5156666666524,
+    "act_step_launches": 314.0,
+    "encode_1step_us": 541.3937196135521,
+    "encode_1step_kernel_us": 51.81933333333336,
+    "encode_1step_launches": 61.0,
+    "checkpoint_status": "LOADED",
+    "trained_decoder_active": true
+  }
+}

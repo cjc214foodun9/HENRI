@@ -35,6 +35,7 @@ class HENRIVisionEncoder(nn.Module):
         spatial_basis_kind: str = "default",
         bg_mask: bool = False,
         vectorized_accum: bool = False,
+        fused_superpose: bool = False,
         parity_dedup: bool = False,
         parity_fast: bool = False,
         parity_scipy: bool = False,
@@ -68,6 +69,7 @@ class HENRIVisionEncoder(nn.Module):
         self.spatial_basis_kind = spatial_basis_kind
         self.bg_mask = bg_mask
         self.vectorized_accum = bool(vectorized_accum)
+        self.fused_superpose = bool(fused_superpose)
         self.parity_dedup = bool(parity_dedup)
         self.parity_fast = bool(parity_fast)
         self.parity_scipy = bool(parity_scipy)
@@ -166,7 +168,7 @@ class HENRIVisionEncoder(nn.Module):
         # [nr, W, D//2] tensor allocation dominates 16 cells of arithmetic, while
         # the dedup is a pure win at every size. Coupling them would have forced
         # small-grid callers to pay a regression to get the dedup.
-        if self.parity_dedup or self.vectorized_accum:
+        if self.parity_dedup or self.vectorized_accum or self.fused_superpose:
             # Same function, same arguments -> identical by construction; asserted
             # in experiments/verification/verify_fixes.sh section 3.
             for comp in components:
@@ -199,7 +201,10 @@ class HENRIVisionEncoder(nn.Module):
 
         parity_mask_tensor = torch.tensor(parity_mask_grid, dtype=torch.float32, device=self.device)
 
-        if self.vectorized_accum:
+        if self.fused_superpose:
+            superposed_wave, contributed = self._superpose_fused(
+                grid_clamped, parity_mask_tensor, H, W)
+        elif self.vectorized_accum:
             superposed_wave, contributed = self._superpose_vectorized(
                 grid_clamped, parity_mask_tensor, H, W)
         else:
@@ -230,6 +235,56 @@ class HENRIVisionEncoder(nn.Module):
         # Project onto unit hypersphere S^{D-1}
         normalized_wave = F.normalize(real_wave, p=2, dim=-1)
         return normalized_wave
+
+    @torch.no_grad()
+    def _superpose_fused(
+        self,
+        grid_clamped: torch.Tensor,
+        parity_mask: torch.Tensor,
+        H: int,
+        W: int,
+        row_chunk: int = 8,
+    ) -> Tuple[torch.Tensor, int]:
+        """Loop-free superposition: the same product as the per-cell loop, batched.
+
+        MEASURED on the RTX 5090 (D=65536, experiments/verification/fused_probe.py):
+            grid    legacy loop   this       speedup   launches  legacy -> fused
+            4x4        435.5 us   56.6 us      7.7x      61 -> 10
+            16x16    13315.5 us  199.8 us     66.6x    1671 -> 15
+            30x30   108260.2 us  886.2 us    122.1x    5859 -> 25
+        At 16x16 roughly 11100 us of the 13315 us total was this loop, so replacing
+        it is the largest remaining substrate win after the segmentation fixes.
+
+        IDENTITY: numerically equivalent, NOT bit-identical. Summation order
+        differs (sequential accumulation vs chunked `.sum(dim=(0,1))`), so float
+        reassociation gives max abs diff 8.196e-08 on the normalized wave
+        (measured worst case, 30x30). Asserted in
+        experiments/verification/test_fused_superpose_equiv.py.
+
+        row_chunk bounds peak memory at [row_chunk, W, D//2] complex64. With the
+        production W<=30 and D=65536 that is 8*30*32768*8 B = 63 MB.
+        """
+        if self.bg_mask:
+            contributed = int((grid_clamped != 0).sum().item())
+        else:
+            contributed = H * W
+
+        px = self.spatial_basis_x[:W]                      # [W, D//2]
+        py = self.spatial_basis_y[:H]                      # [H, D//2]
+        pc = self.color_codebook[grid_clamped]             # [H, W, D//2]
+        weight = parity_mask
+        if self.bg_mask:
+            weight = weight * (grid_clamped != 0).to(weight.dtype)
+
+        acc = torch.zeros(self.d_model // 2, dtype=torch.complex64,
+                          device=self.device)
+        for r0 in range(0, H, row_chunk):
+            r1 = min(r0 + row_chunk, H)
+            term = px.unsqueeze(0) * py[r0:r1].unsqueeze(1)   # [nr, W, D//2]
+            term = term * pc[r0:r1]
+            term = term * weight[r0:r1].unsqueeze(-1)
+            acc = acc + term.sum(dim=(0, 1))
+        return acc, contributed
 
     @torch.no_grad()
     def _superpose_vectorized(

@@ -53,6 +53,21 @@ def main() -> int:
     assert tuple(wave.shape) == (8192, 8), "unexpected wave shape"
     assert torch.isfinite(wave).all().item()
 
+    # UNITARY INVARIANT (spec 4.1 clause b) -- now ENFORCED, not just observed.
+    # Spec section 3.2 claims arc_sagnac_veto.py checks | ||Psi|| - 1 | < 1e-5.
+    # Grep shows NO such check exists anywhere on this path, so the property was
+    # a claim in a document rather than a contract in code. Asserting it here
+    # makes it structural: a regression now fails closed instead of being
+    # noticed later in a receipt. Measured norm_err on the RTX 5090 = 0.0e+00
+    # (experiments/verification/contract_receipt.json), so this asserts a
+    # property the live pipeline already holds.
+    wave_norm = float(wave.norm(p=2).item())
+    print("perceive norm:", f"{wave_norm:.10f}")
+    assert abs(wave_norm - 1.0) < 1e-5, (
+        f"unitary invariant violated: ||Psi|| = {wave_norm!r}, "
+        f"|norm-1| = {abs(wave_norm - 1.0):.3e} >= 1e-5"
+    )
+
     # Checkpoint status via telemetry (never raises); generic marker egress
     # is exercised under the fail-closed assertion below.
     tele = egress.checkpoint_telemetry()
