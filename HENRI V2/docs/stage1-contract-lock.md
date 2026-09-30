@@ -359,3 +359,38 @@ preferred: the instance disk holds the 799 MB checkpoint
 (`sha256 75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060`) that
 clause (a) requires — though it is also present locally, so a fresh provision
 remains viable if that checkpoint is uploaded.
+
+**Session outcome: the GPU half is BLOCKED and DEFERRED by user decision.** No
+further restart attempts. The science question this window was meant to answer is
+already answered CPU-side (above), so the deferral does not leave the attribution
+question open.
+
+Measured this session, then stopped:
+
+- **Restart refused 6/6** over ~13 min. `PUT /api/v0/instances/52826640/ {"state":"running"}`
+  returned `{"success": false, "error": "resources_unavailable", "msg": "Required
+  resources are currently unavailable, state change queued."}` on every attempt, and
+  `actual_status` stayed `exited` throughout. Machine 143423 has no free 5090 slot.
+- **A global shortage is ruled out:** 112 rentable RTX 5090 offers, cheapest
+  `$0.4022/hr` (vs `$0.5130/hr` on 143423), all `cuda_max_good >= 13.0`.
+- **The fallback was verified viable before being deferred:** the execution image
+  `ghcr.io/cjc214foodun9/henri-v2-execution@sha256:aa518484...` is **publicly
+  pullable** — an anonymous pull token returned 200 and the manifest-by-digest
+  returned 200 (`oci.image.index.v1+json`, `linux/amd64`). So a fresh host can pull
+  it with no registry credentials. This refutes the natural assumption that a
+  private-looking GHCR path blocks a fresh provision.
+- **Unverified, and flagged as such:** credit balance. `/api/v1/users/current/`
+  returns **404**, so that endpoint is wrong and spend headroom is **unconfirmed**.
+
+**Provenance rule that governs the deferral:** every load-bearing measurement on
+this project came from machine 143423. A fresh host is a **different fixture**, so
+its clause (c) latencies must not be compared against 143423's numbers, and the
+lock receipt must record which host produced it. This is why the GPU half was
+deferred to an explicit decision rather than silently moved.
+
+**Cheapest path for the next session:** retry the restart first (free, preserves the
+fixture). If it is still refused, fresh-provision any `cuda_max_good >= 13.0` 5090,
+pull the public image, upload `models/henri_decoder_checkpoint.pt`
+(`sha256 75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060`), run one
+batched window (`contract_lock_check.py --live` + `tier2_measured_gate.py --d 65536`),
+then stop unconditionally via `PUT /api/v0/instances/<id>/`.
