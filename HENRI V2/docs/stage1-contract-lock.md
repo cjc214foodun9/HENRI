@@ -257,6 +257,105 @@ Corrected T2-c on the trained operator: `‖A_sub u‖ = 1.06022692`,
 Metric-validity check: an orthogonal reference factor returns gain `1.00000000`,
 defect `3.10e-07` — so the metric *can* report a clean pass.
 
-**What remains:** the same harness at production scale on a re-provisioned 5090,
-in the same batched window as `contract_lock_check.py --live` (the lock's 720 h
-freshness limit will have expired the current receipt — by design).
+**CORRECTION (recorded, not repeated):** an earlier revision of this line said the
+lock's 720 h freshness limit "will have expired the current receipt — by design".
+That was **wrong and I authored it**. The receipt is `2026-09-30T00:36:33Z`, hours
+old; 720 h = 30 days. The freshness guard applies only to `--receipt` revalidation
+mode; `--live` re-measures from scratch regardless. The reason to run `--live` is
+**re-verification on changed hardware**, not expiry.
+
+## 9. Attribution: why the Tier-2 latent-prediction hypothesis fails
+
+**OBSERVED — CPU, no GPU spent.** The rank sweep alone could not answer
+"capacity vs architecture" because `RecursiveDualEDMD.V` is a **fixed random
+buffer that never learns** (`register_buffer("V", F.normalize(v_init, ...))`,
+`recursive_dual_edmd.py:39`). Sweeping `rank` therefore varied capacity while
+holding basis quality and model class fixed — three causes entangled.
+
+Two arms were added, with the decision rule **fixed in the source before running**:
+
+| arm | isolates |
+|---|---|
+| `learned` basis (top-`r` principal directions, fit on warmup only) | projection quality |
+| information ceiling (full-`d` closed-form ridge, dual form, **no rank cap**) | information / model class |
+
+### d=512, warmup 120 (preflight)
+
+| basis | rank | 1-step | 3-step |
+|---|---|---|---|
+| random | 16 | 0.024448 | 0.008811 |
+| learned | 16 | 0.038179 | 0.017381 |
+| learned | 64 | **0.325519** | **0.172919** |
+| random | 64 | 0.126082 | 0.046751 |
+
+basis gain +0.0086 (below bar) · capacity gain +0.1555 (clears bar) → `CAPACITY`.
+
+### d=512, warmup 200 (same code, same ranks) — the verdict MOVES
+
+| basis | rank | 1-step | 3-step |
+|---|---|---|---|
+| random | 16 | 0.057722 | 0.019250 |
+| learned | 16 | 0.134386 | 0.053615 |
+| learned | 64 | **0.281222** | **0.150083** |
+| random | 64 | 0.102037 | 0.032138 |
+
+basis gain +0.0344 · capacity gain +0.0965 (below bar) → `MIXED / UNRESOLVED`.
+
+**The attribution verdict is warmup-sensitive near the 0.10 threshold.** The
+earlier `CAPACITY` reading was therefore **premature** and is withdrawn: it sat
+above the bar by choice of warmup size. Any future promotion of a cause needs the
+separation to hold across warmup sizes, not just one.
+
+### Information ceiling — the decisive measurement
+
+Dual-form ridge, `x^T W = (X x)^T (K + λI)^{-1} Y`, `K = X X^T` is only `[n,n]`,
+so `d` never enters the compute. This is why production `d` is measurable on CPU.
+
+| d | λ-scale | 1-step | 3-step | in-sample identity ctrl | machinery |
+|---|---|---|---|---|---|
+| 512 | 1e-6…1e-4 | 0.3838 | 0.2318–0.2322 | 0.9998–1.0000 | ok (3/4) |
+| **65536** | 1e-6…1e-5 | 0.3526 | **0.2802** | 1.0000 | ok (2/4) |
+
+λ = 1e-3·n was rejected by the in-sample control (`self_in` 0.9862 at d=512, 0.9152
+at d=65536) — an earlier headline of `0.235187` was read off that **bad** λ. The
+control, not a judgement call, caught it.
+
+**Result: no linear map on this encoding reaches the 0.92 threshold — the ceiling
+is 0.232 (d=512) / 0.280 (d=65536), stable across three orders of magnitude in λ.**
+It is an **upper bound for the linear model class**, so rank, a learned basis, and
+optimizer tuning **cannot** close the gap. `RecursiveDualEDMD` is a linear-in-`φ`
+operator; the KILL is therefore attributable to **information / model class**, not
+capacity and not the fixed random `V`.
+
+**Scope limit, stated so it cannot be over-read:** this bounds the *linear* model
+class. A nonlinear predictor (e.g. the WaveJEPA MLP path) is not bounded by it.
+The finding is "rank and basis are not the binding constraint for a linear world
+model", not "the encoding is unusable".
+
+### Production-dimension Tier-2 gate (CPU, d=65536, nb=8192, warmup 800)
+
+```
+T2-a 3-step open-loop   : 0.000201   vs >= 0.92  -> NOT-REACHED
+T2-a static do-nothing  : -0.000077  (tautology guard: gate is NON-TRIVIAL)
+T2-c subspace gain      : 0.461278   |gain-1| = 5.387e-01  -> NOT-REACHED
+T2-c orthogonality def. : 0.802539   (orthogonal reference: 1.96e-07 -> metric OK)
+T2-c operator moved     : ||A_sub - I||_max = 1.309  (learning did occur)
+CHANCE BASELINE         : sd = 1/sqrt(65536) = 0.0039
+TIER2_MEASURED: KILLED  (rc=2)
+```
+
+The tautology guard matters: at `d=65536` the static baseline is `-0.000077`, so a
+`PASS` on T2-a could **not** have been bought by doing nothing. The gate is
+non-trivial at production dimension.
+
+**What remains (GPU-only):** `contract_lock_check.py --live` — the CUDA smoke and
+the clause (c) latency measurements. Blocked this session by Vast capacity on
+machine 143423: `PUT .../state=running` returned
+`{"error":"resources_unavailable","msg":"...state change queued."}` and the status
+stayed `exited` for >12 min. 112 rentable RTX 5090 offers existed at
+$0.4022/hr+, all `cuda_max_good >= 13.0`, so this is a per-host capacity
+issue, not a global shortage. A restart (not a fresh provision) is strongly
+preferred: the instance disk holds the 799 MB checkpoint
+(`sha256 75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060`) that
+clause (a) requires — though it is also present locally, so a fresh provision
+remains viable if that checkpoint is uploaded.
