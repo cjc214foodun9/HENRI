@@ -1,5 +1,12 @@
 # Stage-1 Contract Verdict — the minimal viable reflex loop, measured
 
+> **SUPERSEDED ON CLAUSE (c):** the clause-(c) verdict below (FAIL 31.0x / 229.7x
+> / 16.7x against the spec's literal 15 us) stands as recorded evidence. The
+> *resolution* of that failure is the amended contract in
+> `docs/stage1-contract-lock.md`, which is **UNLOCKED** until
+> `contract_lock_check.py --live` prints LOCKED from a measured receipt. Read the
+> two together; do not read this file's FAIL as a live gate state.
+
 **Date of measurement:** 2026-09-29 / 2026-09-30
 **Target:** NVIDIA RTX 5090 (sm_120, 33.67 GB), `torch 2.12.0+cu130`, scipy 1.18.0
 **Entrypoint:** `experiments/verification/smoke_unified_vla_cuda.py`

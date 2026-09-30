@@ -1,0 +1,50 @@
+{
+  "measured_utc": "2026-09-30T00:36:33Z",
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "torch": "2.12.0+cu130",
+  "D": 65536,
+  "locked_config": {
+    "d_model": 65536,
+    "k_blocks": 8192,
+    "device": "cuda",
+    "spatial_basis_kind": "incommensurate",
+    "bg_mask": true,
+    "fused_superpose": true,
+    "parity_scipy": true
+  },
+  "encode_1step_us": 249.02037389221647,
+  "encode_1step_std_us": 0.4756511649815167,
+  "perceive_norm": 1.0,
+  "perceive_norm_err": 0.0,
+  "perceive_finite": true,
+  "perceive_digest": "1ff4ebbaba9a",
+  "perceive_shape": [8192, 8],
+  "perceive_1step_us": 412.035874490227,
+  "perceive_1step_std_us": 0.3375609159952618,
+  "act_step_us": 2844.5403490747726,
+  "act_step_std_us": 3.5043368582803884,
+  "act_probe_1": "UnifiedVLAResult(step=0, action=<GameAction.ACTION1: 1>, act",
+  "act_probe_2": "UnifiedVLAResult(step=0, action=<GameAction.ACTION1: 1>, act",
+  "act_return_type": "UnifiedVLAResult",
+  "act_deterministic": true,
+  "checkpoint_status": "LOADED",
+  "trained_decoder_active": true,
+  "fail_closed_generic": true,
+  "smoke_exit_code": 0,
+  "smoke_seconds": 18.95,
+  "smoke_stdout_sha256": "32ed413e3b72e4c4c8f9f1cdea32c7e2fa6e4a6a19884584bff143a268cb0a55",
+  "smoke_output_bytes": 1240,
+  "smoke_marker_seen_in_output": true,
+  "smoke_marker_count": 1,
+  "smoke_norm_lines": [
+    "perceive norm: 1.0000000000"
+  ],
+  "smoke_tail": [
+    "act action: ACTION1 rejection: None efe: -1.0764 explored: True",
+    "UNIFIED_VLA_CUDA_SMOKE_PASS",
+    "",
+    "/root/henri/HENRI V2/hopfield_cleanup.py:218: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.",
+    "Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)",
+    "  return self.id_to_action[int(idx)], float(conf)"
+  ]
+}
