@@ -406,7 +406,9 @@ runs for `max_steps`, using the SGLD convention `sqrt(2 * gamma * kT * dt)`.
 `VETO_UNAVAILABLE` never fires: a failed measurement is not a veto.
 
 **Evidence.** 11 contract tests pass (`tests/unit/test_sagnac_thermal_loop.py`).
-A separate 8-claim probe holds. Reproducibility: identical seed -> bit-identical
+An 8-claim probe holds at `experiments/verification/thermal_loop_probe.py`
+(`python experiments/verification/thermal_loop_probe.py` -> rc 0).
+Reproducibility: identical seed -> bit-identical
 creep (`max|diff| = 0.0`). Invariants: `kT` strictly increasing in `delta` and
 `> kT_base` when active, bounded by `kT_max` for every tested input, `||theta||`
 restored after creep.
