@@ -158,6 +158,8 @@ def main() -> int:
                     help="comma list of arms to run")
     ap.add_argument("--res-iters", type=int, default=3,
                     help="recursion depth of the structured resonator arm")
+    ap.add_argument("--mixer-hidden", type=int, default=32,
+                    help="hidden width of the per-block slot mixer (mlp-per-block)")
     args = ap.parse_args()
 
     torch.manual_seed(args.seed)
@@ -229,6 +231,14 @@ def main() -> int:
         # with SHARED factors. Not a flat map -- see henri_structured_predictor.
         "resonator": lambda: StructuredResonator(args.d, args.nb, args.grid,
                                                  iters=args.res_iters),
+        # NEW ARM, different name: same code path with the per-block slot mixer
+        # ENABLED. The committed `resonator` arm keeps slot_mixer=False, so its
+        # receipt stays byte-reproducible. This is the A/B for genuine
+        # non-linearity INSIDE the factorisation (see henri_structured_predictor).
+        "mlp-per-block": lambda: StructuredResonator(args.d, args.nb, args.grid,
+                                                     iters=args.res_iters,
+                                                     slot_mixer=True,
+                                                     mixer_hidden=args.mixer_hidden),
     }
     for name in [a for a in args.arms.split(",") if a in ARM_FACTORIES]:
         model = ARM_FACTORIES[name]().to(device)

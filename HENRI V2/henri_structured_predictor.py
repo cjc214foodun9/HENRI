@@ -125,6 +125,45 @@ class _BlockShift(nn.Module):
         return out.squeeze(0) if squeeze else out
 
 
+class _SlotMixer(nn.Module):
+    """Per-block NON-LINEAR mixer on the slot vector, weights SHARED across blocks.
+
+    WHY THIS EXISTS
+    ---------------
+    The committed `resonator` arm measured test3 0.088508 -- WORSE than the linear
+    reference 0.145739 -- because its composite is exactly LINEAR:
+
+        R   = orthogonal matrix        (linear)
+        Pi  = constant diagonal        (linear)
+        T   = block permutation        (linear)
+        h  <- h + alpha_k * T(Pi(R(h))) (linear combination of linear maps)
+        return normalize(h)             (changes RADIUS only)
+
+    Cosine similarity reads DIRECTION only, so the exit normalise adds no
+    expressiveness. The composite therefore sits inside the linear function class,
+    and 643 parameters confined to one rotor/shift/mask are a strict SUBCLASS of
+    it -- which is why it scored BELOW the linear reference rather than merely
+    short of 0.92. A factorisation is not a non-linearity.
+
+    This mixer is the minimal genuine non-linearity inside the factorisation: an
+    MLP on each block's slot vector with weights SHARED across blocks, so the
+    parameter cost is INDEPENDENT OF `nb`. That matters at production scale: at
+    nb = 8192 a per-block module would silently reintroduce the memory wall the
+    factorisation exists to avoid. Two layers with GELU is the minimum that
+    leaves the linear class (a single 8->8 linear layer would not).
+    """
+
+    def __init__(self, slots: int = 8, hidden: int = 32) -> None:
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(slots, hidden), nn.GELU(),
+            nn.Linear(hidden, slots),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x)          # shared weights: cost independent of nb
+
+
 class StructuredResonator(nn.Module):
     """Iterated tripartite (rotor -> mask -> shift) predictor with shared factors.
 
@@ -134,7 +173,8 @@ class StructuredResonator(nn.Module):
     """
 
     def __init__(self, d_model: int, num_blocks: int, grid: int = 16,
-                 slots: int = 8, iters: int = 3, mask_init: float = 2.0) -> None:
+                 slots: int = 8, iters: int = 3, mask_init: float = 2.0,
+                 slot_mixer: bool = False, mixer_hidden: int = 32) -> None:
         super().__init__()
         if d_model != num_blocks * slots:
             raise ValueError(
@@ -152,20 +192,47 @@ class StructuredResonator(nn.Module):
         self.mask_logits = nn.Parameter(torch.full((num_blocks, slots), float(mask_init)))
         self.alpha = nn.Parameter(torch.full((iters,), 0.3))
 
+        # NON-LINEARITY, default-OFF. With slot_mixer=False this arm is BYTE-IDENTICAL
+        # to the committed `resonator` arm, so the already-landed receipt stays
+        # reproducible. The flag is what makes the linear-vs-non-linear comparison
+        # an A/B on ONE code path rather than two divergent implementations.
+        self.use_slot_mixer = bool(slot_mixer)
+        self.mixer = None
+        if self.use_slot_mixer:
+            self.mixer = _SlotMixer(slots, mixer_hidden)
+            # Zero-init the OUTPUT layer so the arm STARTS at the linear solution
+            # (residual contributes 0). Training can only move away from it if
+            # that helps, which makes the comparison interpretable: any gain is
+            # attributable to the non-linear term, not to a changed start point.
+            last = self.mixer.net[-1]
+            nn.init.zeros_(last.weight)
+            nn.init.zeros_(last.bias)
+
     def factors(self):
-        return ("R_rotor", "Pi_mask", "T_blockshift")
+        base = ("R_rotor", "Pi_mask", "T_blockshift")
+        return base + ("M_slotmixer",) if self.use_slot_mixer else base
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         lead = x.shape[:-1]
         h = x.reshape(-1, self.nb, self.slots)
         for k in range(self.iters):
             r = self.rotor(h)
+            if self.mixer is not None:
+                # residual, per-block, weights SHARED across blocks -> the cost of
+                # this term does not grow with nb
+                r = r + self.mixer(r)
             m = r * torch.sigmoid(self.mask_logits).unsqueeze(0)
             t = self.shift(m)
             h = h + self.alpha[k] * t
         return F.normalize(h.reshape(*lead, self.d_model), p=2, dim=-1)
 
 
-def build_arm(d_model: int, num_blocks: int, grid: int = 16, iters: int = 3):
-    """Factory for the probe's arm registry."""
-    return StructuredResonator(d_model, num_blocks, grid=grid, iters=iters)
+def build_arm(d_model: int, num_blocks: int, grid: int = 16, iters: int = 3,
+              slot_mixer: bool = False, mixer_hidden: int = 32):
+    """Factory for the probe's arm registry.
+
+    `slot_mixer=False` (the default) reproduces the committed `resonator` arm
+    byte-identically. `slot_mixer=True` selects the non-linear variant.
+    """
+    return StructuredResonator(d_model, num_blocks, grid=grid, iters=iters,
+                               slot_mixer=slot_mixer, mixer_hidden=mixer_hidden)
