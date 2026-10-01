@@ -284,3 +284,77 @@ The distinction that must survive to the next session:
   worse than the resonator (loss 3.57e-03 vs
   3.01e-03). That is an optimisation failure on this fixture, not
   a class bound.
+
+
+---
+
+## 6. Pillar wiring audit -- VERIFIED, three findings (2026-10-01)
+
+Earlier sections recorded Pillars 3 and 5 as "wiring unverified". This section
+replaces that guess with measured counts. Nothing here is inferred from prose.
+
+**Method.** "Production importers" = `grep -rnE "^\s*(from|import)\s+<module>"`, excluding
+`tests/`, `experiments/`, `_archive/`. A module is COUPLED only if a production
+file imports it *or* calls its API. A module imported only by `experiments/` bears
+evidence but is not on a production path.
+
+**Counts are IMPORT STATEMENTS, not mentions.** A loose `grep -rl <module>` returns
+6 files for `henri_scene_binder`; 5 of those are prose (a module docstring at
+`henri_curriculum_grid.py:26`, comments at `stage0_seeding_run.py:570,580`, and
+three render tools). Only `tools/measure_functional_pipeline.py:24` is an import.
+The landing gate re-runs the import-specific pattern, so a mention can never be
+counted as a coupling.
+
+| Pillar | Module | Production importers | Production call sites | Verdict |
+|---|---|---|---|---|
+| 1 | `henri_scene_binder.py` | 1 (`tools/measure_functional_pipeline.py:24`) | `henri_functional_pipeline.py:139,147,149,170` | COUPLED (injected) |
+| 3 | `arc_sagnac_veto.py` | 0 | `evaluate_veto(` in `basal_boundary_engine.py` = 0 | ORPHANED |
+| 3 | `henri_thermo_langevin.py` | 0 | 4 importers, all under `experiments/verification/` | ORPHANED |
+| 5 | `zone_c_causal_engram_dag.py` | 0 | 2 importers, both under `experiments/verification/` | ORPHANED (flag default OFF) |
+| 5 | `zone_c_attractor_pruner.py` | 0 | 1 importer, `tests/unit/test_architectural_milestones.py` | ORPHANED |
+
+**Finding 1 -- the Sagnac veto has no production consumer.** `arc_sagnac_veto.py`
+defines `evaluate_veto(candidate_wave, axiom_wave, world_wave, epsilon_hard)` and
+returns `(delta_axiom, delta_epistemic, hard_veto_triggered, status)`. The file its
+own docstring names as the consumer, `basal_boundary_engine.py`, calls it **0**
+times. An earlier candidate-consumer list was docstring mentions, not calls.
+
+**Finding 2 -- the thermodynamic sink is diagnostics-only.** All four importers of
+`henri_thermo_langevin` live under `experiments/verification/`
+(`thermo_diagnostic.py`, `thermo_gradcheck.py`, `thermo_imprint_sweep.py`,
+`thermo_trainer_diag.py`). `arc_sagnac_veto.py` does not import it. The Pillar 3
+loop (veto -> Langevin thermalization) does not exist in the code.
+
+**Finding 3 -- the DAG and the pruner are not connected to each other or to
+production.** `zone_c_causal_engram_dag.py` contains **0** references to
+`attractor_pruner` / `AttractorPruner`. The DAG's `flag_enabled()` is default OFF
+(`FLAG_ENV == "1"` required). `zone_c_attractor_pruner.py` is imported only by one
+unit test. STEP 4's second half ("connect Zone C DAG to prune previously failed
+operator branches") is therefore unsatisfiable by wiring these two: both ends are
+orphans, so connecting them would change no production behaviour.
+
+### Consequence for STEP 4, stated precisely
+
+Wiring the DAG to the pruner would connect two modules that no production path
+reaches. That produces no behavioural change and is the wrapper-that-only-renames
+failure mode rejected in section 2. The prerequisite is a production consumer for
+the veto-and-sink loop, not another wrapper.
+
+### What this section does NOT claim
+
+- Not that these modules are defective: each has a tested in-memory API.
+- Not that Pillar 3's physics constants are wrong: only that nothing runs them live.
+- G2 (`henri_operator_router.py`) was not audited in this pass and is not claimed.
+
+### Pillar scoreboard after this audit
+
+| Pillar | Status |
+|---|---|
+| 1 Hierarchy | COUPLED via injection; still lacks multiscale Jordan-curve nesting |
+| 2 World model | built and MEASURED NEGATIVE at this scale (section 3.3) |
+| 3 Sagnac veto + sink | components present; the loop is absent (Findings 1 and 2) |
+| 4 Hopfield egress | hardened; PROVISIONAL, promotion gate UNMET |
+| 5 Causal DAG | components present; not on any production path (Finding 3) |
+
+Two of five pillars remain unmade as loops. Step 4 stays blocked behind Step 3's
+0.92 contract, which no measured arm has met.
