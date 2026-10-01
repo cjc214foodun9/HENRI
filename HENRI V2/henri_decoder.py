@@ -716,6 +716,22 @@ class HENRIUnifiedEgressTransducer:
             telemetry["synthetic_marker"] = True
             telemetry["score_eligible"] = False
         elif "python" in prompt_lower or "function" in prompt_lower or "def " in prompt_lower:
+            # STEP 2 (HENRI-ARCH-2026-CRITICAL-DIRECTIVE-V1): "Reject open-domain
+            # token generation; restrict outputs to typed action heads."
+            #
+            # DEFECT THIS CLOSES (measured, see test_arc_integrity_p1.py): this
+            # branch reaches decode_autoregressive_sequence, whose code_vocab_map is
+            # a 10-token canned stub map ({"def ", "solution():\n", "    ", ...}).
+            # It was closed only INCIDENTALLY -- argmax landing outside that map
+            # raised the out-of-vocab guard -- so it was not gated by the flag like
+            # its three siblings, it was unreachable even for synthetic fixtures
+            # (flag=1 still hit the out-of-vocab path), and it never marked
+            # ineligibility. A lucky argmax is not a contract.
+            if not synthetic_egress:
+                raise DecoderEgressFailClosedError(
+                    "python/code marker egress disabled by default; "
+                    "set HENRI_SYNTHETIC_EGRESS=1 for synthetic fixtures only"
+                )
             constructed_code, gen_ids, seq_telemetry = self.codebook.decode_autoregressive_sequence(
                 unbinder=self.unbinder,
                 goal_wave=goal_wave,
@@ -725,6 +741,11 @@ class HENRIUnifiedEgressTransducer:
             )
             response_text = f"```python\n{constructed_code}\n```"
             telemetry.update(seq_telemetry)
+            # Set AFTER the update so a key in seq_telemetry cannot clobber them.
+            # Output comes from a fixed stub vocabulary, so it can never be a
+            # scored task outcome.
+            telemetry["synthetic_marker"] = True
+            telemetry["score_eligible"] = False
         elif "math" in prompt_lower or "solve" in prompt_lower or "value" in prompt_lower or "boxed" in prompt_lower:
             if not synthetic_egress:
                 raise DecoderEgressFailClosedError(
