@@ -1,0 +1,5 @@
+verification.json text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+# Last match wins: preserve exact installed overlay bytes, including CRLF.
+profile-overlay/** -text whitespace=cr-at-eol,-blank-at-eof

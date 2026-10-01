@@ -1,0 +1,24 @@
+{
+  "enabled": true,
+  "distro": "Ubuntu",
+  "cli": "/home/chan/.local/bin/openshell",
+  "prover": "/home/chan/.local/bin/openshell-prover",
+  "gateway": "henri-pilot",
+  "sandbox": "henri-guarded-pilot",
+  "boundary": "C:\\Users\\chan\\AppData\\Local\\hermes\\policies\\henri-openshell-boundary.yaml",
+  "boundary_sha256": "ad68692821188824ee88815b2a7700ba6b2dc231e7e9daa6938f2290158e506f",
+  "allowed_executables": [
+    "/usr/bin/id",
+    "/usr/bin/printf",
+    "/bin/sh",
+    "/usr/bin/bash",
+    "/usr/bin/python3"
+  ],
+  "required_coverage": [
+    "filesystem",
+    "network_l4",
+    "network_rest",
+    "process",
+    "landlock"
+  ]
+}

@@ -1,0 +1,205 @@
+{
+  "schema": "drawio-skill/diagram-ir/v1",
+  "metadata": {
+    "title": "HENRI cache-first controlled engineering",
+    "description": "OBSERVED instruction/API layers; OpenShell workload qualification pending; Vast path not covered by local pilot."
+  },
+  "nodes": [
+    {
+      "id": "sources",
+      "label": "OBSERVED sources: Drive / vault / NotebookLM",
+      "kind": "service",
+      "properties": {
+        "trust_boundary": "sources",
+        "status": "observed",
+        "owner": "henri-ontology"
+      },
+      "provenance": {
+        "path": "C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json"
+      }
+    },
+    {
+      "id": "prefix",
+      "label": "OBSERVED cache-first bundle / stable prefix",
+      "kind": "service",
+      "properties": {
+        "trust_boundary": "host",
+        "status": "observed",
+        "owner": "henri-soul"
+      },
+      "provenance": {
+        "path": "C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json"
+      }
+    },
+    {
+      "id": "jev",
+      "label": "OBSERVED Jev typed API + local memo",
+      "kind": "service",
+      "properties": {
+        "trust_boundary": "provider",
+        "status": "observed",
+        "owner": "henri-system1"
+      },
+      "provenance": {
+        "path": "C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json"
+      }
+    },
+    {
+      "id": "root",
+      "label": "Acting root: approval + deterministic gates",
+      "kind": "service",
+      "properties": {
+        "trust_boundary": "host",
+        "status": "observed-plugin-hook",
+        "owner": "henri-agent-integration"
+      },
+      "provenance": {
+        "path": "C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json"
+      }
+    },
+    {
+      "id": "moa",
+      "label": "MoA: parallel advisory refs / one actor",
+      "kind": "service",
+      "properties": {
+        "trust_boundary": "provider",
+        "status": "observed-wire",
+        "owner": "henri-moa-routing"
+      },
+      "provenance": {
+        "path": "C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json"
+      }
+    },
+    {
+      "id": "prover",
+      "label": "OpenShell policy prover: coverage-limited",
+      "kind": "service",
+      "properties": {
+        "trust_boundary": "wsl",
+        "status": "observed-4-verdict-controls",
+        "owner": "henri-agent-integration"
+      },
+      "provenance": {
+        "path": "C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json"
+      }
+    },
+    {
+      "id": "sandbox",
+      "label": "OBSERVED OpenShell mTLS / denied access controls",
+      "kind": "service",
+      "properties": {
+        "trust_boundary": "wsl",
+        "status": "local-pilot-verified",
+        "owner": "henri-agent-integration"
+      },
+      "provenance": {
+        "path": "C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json"
+      }
+    },
+    {
+      "id": "telemetry",
+      "label": "Observed receipts / distinct cache accounting",
+      "kind": "database",
+      "properties": {
+        "trust_boundary": "host",
+        "status": "observed",
+        "owner": "henri-telemetry-analyzer"
+      },
+      "provenance": {
+        "path": "C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json"
+      }
+    },
+    {
+      "id": "ledger",
+      "label": "Hash-linked governance ledger",
+      "kind": "database",
+      "properties": {
+        "trust_boundary": "host",
+        "status": "observed",
+        "owner": "henri-agent-integration"
+      },
+      "provenance": {
+        "path": "C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json"
+      }
+    },
+    {
+      "id": "vast",
+      "label": "BLOCKED integration: Vast CUDA containment",
+      "kind": "service",
+      "properties": {
+        "trust_boundary": "remote",
+        "status": "blocked",
+        "owner": "henri-vast-lifecycle"
+      },
+      "provenance": {
+        "path": "C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "s-p",
+      "source": "sources",
+      "target": "prefix",
+      "label": "bounded source refs",
+      "kind": "data"
+    },
+    {
+      "id": "p-j",
+      "source": "prefix",
+      "target": "jev",
+      "label": "eligible typed judgments",
+      "kind": "data"
+    },
+    {
+      "id": "j-r",
+      "source": "jev",
+      "target": "root",
+      "label": "advice only, no permission",
+      "kind": "data"
+    },
+    {
+      "id": "r-m",
+      "source": "root",
+      "target": "moa",
+      "label": "bounded dynamic tail",
+      "kind": "data"
+    },
+    {
+      "id": "r-p",
+      "source": "root",
+      "target": "prover",
+      "label": "effective policy / boundary",
+      "kind": "data"
+    },
+    {
+      "id": "p-b",
+      "source": "prover",
+      "target": "sandbox",
+      "label": "only within_boundary",
+      "kind": "control"
+    },
+    {
+      "id": "b-t",
+      "source": "sandbox",
+      "target": "telemetry",
+      "label": "real RC / output / audit",
+      "kind": "data"
+    },
+    {
+      "id": "t-l",
+      "source": "telemetry",
+      "target": "ledger",
+      "label": "verified compact event",
+      "kind": "data"
+    },
+    {
+      "id": "r-v",
+      "source": "root",
+      "target": "vast",
+      "label": "separate approval + CUDA gate",
+      "kind": "control"
+    }
+  ],
+  "views": []
+}

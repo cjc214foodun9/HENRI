@@ -1,0 +1,50 @@
+[
+  {
+    "case": "prover-contained.yaml",
+    "return_code": 0,
+    "result": "within_boundary",
+    "coverage": {
+      "domains": [
+        "filesystem",
+        "network_l4",
+        "network_rest",
+        "process",
+        "landlock"
+      ]
+    }
+  },
+  {
+    "case": "prover-exceeds.yaml",
+    "return_code": 1,
+    "result": "exceeds_boundary",
+    "coverage": {
+      "domains": [
+        "filesystem",
+        "network_l4",
+        "network_rest",
+        "process",
+        "landlock"
+      ]
+    }
+  },
+  {
+    "case": "blueprint-invalid-policy.yaml",
+    "return_code": 2,
+    "result": "error",
+    "coverage": null
+  },
+  {
+    "case": "unsupported-policy.yaml",
+    "return_code": 3,
+    "result": "unsupported",
+    "coverage": {
+      "domains": [
+        "filesystem",
+        "network_l4",
+        "network_rest",
+        "process",
+        "landlock"
+      ]
+    }
+  }
+]

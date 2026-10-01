@@ -1,0 +1,61 @@
+{
+  "scope": "local control-plane installation and real path checks, not HENRI CUDA/capability or overall cache uplift",
+  "cache_second_call": {
+    "read_tokens": 3904,
+    "total_input_tokens": 3988,
+    "hit_fraction": 0.9789368104312939,
+    "first_call_usage": "UNKNOWN_ZERO_FIELDS",
+    "cost_status": "estimated"
+  },
+  "jev_api": "HTTP200 TypeSafe dated model; routing and denial advice; exact-request application memo observed",
+  "new_session_hook": {
+    "event": "JEV_OWNER_ADVISORY",
+    "result": {
+      "answer": {
+        "choice": "ARCHITECTURE",
+        "confidence": 0.91,
+        "probabilities": {
+          "ARBITRATION": 0.05,
+          "ARCHITECTURE": 0.93,
+          "INTEGRATION": 0.01,
+          "RESEARCH": 0
+        },
+        "type": "choice"
+      },
+      "application_cache_hit": false,
+      "authorization": false,
+      "generation_id": "gen-dec-1790893217-IZiWOnKyoCDlPe0PDHzj",
+      "kind": "owner",
+      "status": "ADVISORY"
+    },
+    "session_id": "20261001_152017_d7410e",
+    "task_sha256": "923e35bc2b9b5d0e603b99bb38804360f5e845f738b476de82689b04550ea54b"
+  },
+  "openshell": {
+    "version": "0.1.2",
+    "gateway": "henri-pilot",
+    "auth": "mTLS",
+    "sandbox_id": "2bfca82d-7bd5-4baa-8c19-04ff1dde31fa",
+    "landlock_abi": 3,
+    "rules_applied": 14,
+    "rules_skipped": 0,
+    "prover_positive_rc": 0,
+    "exceeds_rc": 1,
+    "invalid_schema_rc": 2,
+    "unsupported_rc": 3,
+    "world_writable_path_denied": true,
+    "network_ocsf_denial": true,
+    "gate_refusal": "BLOCKED_NO_EXECUTION"
+  },
+  "known_limits": [
+    "Vast containment not implemented",
+    "active parent terminal remains local",
+    "new plugin requires process restart",
+    "prover coverage excludes MCP/GraphQL",
+    "policy proof+exec is not atomic against operator mutation",
+    "Jev not calibrated",
+    "draw.io native exporter missing",
+    "visual browser inspection timed out; no pixel claim",
+    "Muse reference failures remain; roster unchanged"
+  ]
+}

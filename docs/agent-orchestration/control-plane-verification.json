@@ -1,0 +1,21 @@
+{
+  "scope": "instruction loaders, real API receipts, corrupted-response refusal, real guarded sandbox handler; not CUDA/model performance",
+  "bundle_members": [
+    "henri-soul",
+    "henri-research",
+    "henri-architecture",
+    "henri-agent-integration",
+    "henri-ontology",
+    "henri-diagrams",
+    "drawio-skill",
+    "henri-system1"
+  ],
+  "missing": [],
+  "soul_loader": "PASS",
+  "cache_first_entries": "PASS",
+  "jev_exact_memo": "PASS",
+  "jev_invalid_choice_refused": "PASS",
+  "plugin_guarded_tool": "PASS",
+  "open_shell_receipt": "C:\\Users\\chan\\AppData\\Local\\hermes\\logs\\henri-openshell\\90ab4ba87ca74adea4fa37bb9ae932f2\\receipt.json",
+  "all_authorizations_remain_external": true
+}

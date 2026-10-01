@@ -1,0 +1,283 @@
+{
+  "scope": "instruction/control-plane installation, real API and local sandbox consumers; not CUDA/capability or universal cache improvement",
+  "soul_loader": "PASS",
+  "bundle_builder": "PASS",
+  "loaded_skills": [
+    "henri-soul",
+    "henri-research",
+    "henri-architecture",
+    "henri-agent-integration",
+    "henri-ontology",
+    "henri-diagrams",
+    "drawio-skill",
+    "henri-system1"
+  ],
+  "missing_skills": [],
+  "frozen_contract_validator": "PASS",
+  "overlay_files": [
+    {
+      "path": "henri-openshell.json",
+      "sha256": "bdd0100db42fdbe70a07a87b63fcc23684a0708c95becd3e95ae5894a7fe3a84",
+      "bytes": 641
+    },
+    {
+      "path": "plugins/henri-control-plane/__init__.py",
+      "sha256": "08ab86178941f826780e4ca166f2b2e95ed637627507825e84f7fc19940ab0c3",
+      "bytes": 5306
+    },
+    {
+      "path": "plugins/henri-control-plane/plugin.yaml",
+      "sha256": "17ab888cc0727a6680740ba486381b26a0b5d06584ae5dce16344617bcb0f39b",
+      "bytes": 218
+    },
+    {
+      "path": "policies/henri-openshell-boundary.yaml",
+      "sha256": "ad68692821188824ee88815b2a7700ba6b2dc231e7e9daa6938f2290158e506f",
+      "bytes": 342
+    },
+    {
+      "path": "scripts/henri_cache_audit.py",
+      "sha256": "0e638145e60432173f59e131114b39b554ab83f2a3da3d1ce1b9695cc2059ca5",
+      "bytes": 7492
+    },
+    {
+      "path": "scripts/henri_openshell.py",
+      "sha256": "670dedfa68aa2b9f293c0fcee92e9c6a7f51d45bd9e41be3c6d12934a0ba1f59",
+      "bytes": 6205
+    },
+    {
+      "path": "scripts/henri_system1.py",
+      "sha256": "ef9fc1c36e6a0e53badd0ab9efd456c3776d0cd4edb81d6af75774a5d649642a",
+      "bytes": 9196
+    },
+    {
+      "path": "skill-bundles/henri-bundle.yaml",
+      "sha256": "f40b5bb77d7238ad1711116a6d68a987fd9d0b61ae98fe10739f779404ad5534",
+      "bytes": 2013
+    },
+    {
+      "path": "skills/creative/drawio-skill/LICENSE",
+      "sha256": "0d43b46456eda48a9054fbfa915ac80e150f5db5cf90714eda710c02e1df461a",
+      "bytes": 1069
+    },
+    {
+      "path": "skills/creative/drawio-skill/SKILL.md",
+      "sha256": "fe6107180c6f42d25fbad3e5a9d62282078727b43ca894b47238893f7bee135a",
+      "bytes": 9983
+    },
+    {
+      "path": "skills/data-science/henri-architecture/references/constraints-before-20261001.md",
+      "sha256": "75dbde520d95c20a6d53a6e4b1f69f498cc317025022ca0b93945985c9a82330",
+      "bytes": 29079
+    },
+    {
+      "path": "skills/data-science/henri-architecture/references/reference-index.md",
+      "sha256": "fb0b4f4b05f83852e238ad3c94711a04d60180e12b5467c305fb4c7b82bac6d0",
+      "bytes": 6650
+    },
+    {
+      "path": "skills/data-science/henri-architecture/references/stack-before-20261001.md",
+      "sha256": "abc651db0a5495dd92c87ae1e48748bf8dae397ee0ce41cf82d96937d2a89418",
+      "bytes": 37742
+    },
+    {
+      "path": "skills/data-science/henri-architecture/SKILL.md",
+      "sha256": "85df42e45216ea48108abc08cde7634ac3d61da5443797f4e70d39c682e5a69b",
+      "bytes": 4522
+    },
+    {
+      "path": "skills/henri-workflow/henri-agent-integration/references/cache-maximization-playbook.md",
+      "sha256": "6675cb3116daa3945fa88e4bdfcbda976837a6cdb4acfce8fe8fb61ac8ed745e",
+      "bytes": 5417
+    },
+    {
+      "path": "skills/henri-workflow/henri-agent-integration/references/openshell-boundary.md",
+      "sha256": "6d57455680bd5166af4d6a0beb60c7070815234216a95fb45e4a8bad7d52f124",
+      "bytes": 3801
+    },
+    {
+      "path": "skills/henri-workflow/henri-agent-integration/references/reference-index.md",
+      "sha256": "75c7e91037e394ad22f60d277f335b3181a4b542677fab37a197dd519756bf55",
+      "bytes": 10229
+    },
+    {
+      "path": "skills/henri-workflow/henri-agent-integration/references/stack-before-20261001.md",
+      "sha256": "cc98b21067d1123e379860af505acf9b322ad8631fb9be62c09be0de0b8e1c7b",
+      "bytes": 24736
+    },
+    {
+      "path": "skills/henri-workflow/henri-agent-integration/SKILL.md",
+      "sha256": "49dbe4b34f76455b6fd48751188e47c7be5ca1633dc648f18774f2323ad3de3b",
+      "bytes": 5694
+    },
+    {
+      "path": "skills/henri-workflow/henri-agent-workflow/references/reference-index.md",
+      "sha256": "d8fb7d601068dfd3b1bcc32739dfb00098dedd017bed8b535b476ccac62dbcfd",
+      "bytes": 882
+    },
+    {
+      "path": "skills/henri-workflow/henri-agent-workflow/references/stack-before-20261001.md",
+      "sha256": "1df934e722d5d10b676595b3b10b9a40028a068708b4ff3674555d6e0bfa2c81",
+      "bytes": 9196
+    },
+    {
+      "path": "skills/henri-workflow/henri-agent-workflow/SKILL.md",
+      "sha256": "d9b350139baafae3baab5e0df43bcd6a719c745091b43ce5108eb6adef55193a",
+      "bytes": 2228
+    },
+    {
+      "path": "skills/henri-workflow/henri-co-scientist-rigor/references/reference-index.md",
+      "sha256": "364451794cabf804f9924207fe48a84336cc5030e8b744c375a6747812c35c93",
+      "bytes": 214
+    },
+    {
+      "path": "skills/henri-workflow/henri-co-scientist-rigor/references/stack-before-20261001.md",
+      "sha256": "9097e10cb0d0a58a827ca11555ceea02f6650514d4f076be1fe6ce3fed5c4032",
+      "bytes": 7130
+    },
+    {
+      "path": "skills/henri-workflow/henri-co-scientist-rigor/SKILL.md",
+      "sha256": "ae7d69688a8007836cb68cb582fd2d11b1a7ee6a2053c911526bf735d76eee33",
+      "bytes": 3324
+    },
+    {
+      "path": "skills/henri-workflow/henri-diagrams/SKILL.md",
+      "sha256": "b24ae09faa34bde42683d66be2336da83261b7d69a7f11de1c804212497ed3d5",
+      "bytes": 2389
+    },
+    {
+      "path": "skills/henri-workflow/henri-holonic-graph/references/reference-index.md",
+      "sha256": "364451794cabf804f9924207fe48a84336cc5030e8b744c375a6747812c35c93",
+      "bytes": 214
+    },
+    {
+      "path": "skills/henri-workflow/henri-holonic-graph/references/stack-before-20261001.md",
+      "sha256": "2045127945b05b094d0a4738efb9267491ed3145e1d8965cc820d9165173402c",
+      "bytes": 11629
+    },
+    {
+      "path": "skills/henri-workflow/henri-holonic-graph/SKILL.md",
+      "sha256": "6e0ae5086ecbe7c96649eb14843162de3314f254d6e2eaf7eb82c8aa0b97743d",
+      "bytes": 3019
+    },
+    {
+      "path": "skills/henri-workflow/henri-moa-routing/references/jev-systemone-integration.md",
+      "sha256": "d7cc8435063f74f41743ac27775d1bd38bb1fdc3ad1b7360413f0382fd8e0ead",
+      "bytes": 3879
+    },
+    {
+      "path": "skills/henri-workflow/henri-moa-routing/references/reference-index.md",
+      "sha256": "d4bd4fd5a4c88241fbdd2f8763b3c5711d493bcda1036f6aeca769661efca017",
+      "bytes": 335
+    },
+    {
+      "path": "skills/henri-workflow/henri-moa-routing/references/stack-before-20261001.md",
+      "sha256": "5ba2901c732b01e6e2aa21000d31884043893c4d1da09dcfe721bb32ad2dc89a",
+      "bytes": 21507
+    },
+    {
+      "path": "skills/henri-workflow/henri-moa-routing/SKILL.md",
+      "sha256": "81003620d9337a628affc3abbd39ad88c4f0fc8c9dfa88eebc513ac64fbdd335",
+      "bytes": 4780
+    },
+    {
+      "path": "skills/henri-workflow/henri-ontology/references/reference-index.md",
+      "sha256": "c02fcc8f4712225898fb8abf42f21af3068c132c5af44783b624aec7611ad194",
+      "bytes": 354
+    },
+    {
+      "path": "skills/henri-workflow/henri-ontology/references/stack-before-20261001.md",
+      "sha256": "50944c77fe0cb4537a7eea7164fac658fa0a390cd55c611ebbdc701f16727337",
+      "bytes": 9680
+    },
+    {
+      "path": "skills/henri-workflow/henri-ontology/SKILL.md",
+      "sha256": "f84d5984c64312f05ce5ede9bc454536a035e2b03a6630920f7fe0c7158b883b",
+      "bytes": 4425
+    },
+    {
+      "path": "skills/henri-workflow/henri-research/references/reference-index.md",
+      "sha256": "230fa8b3d5d14933e059197263eb1a2393394ed720213213842c23db1bf94e73",
+      "bytes": 3100
+    },
+    {
+      "path": "skills/henri-workflow/henri-research/references/stack-before-20261001.md",
+      "sha256": "280cd1ca9a3273ab8e11b4f276af7e1c2b7ad7b893c9630aebf0b797275e6f89",
+      "bytes": 20020
+    },
+    {
+      "path": "skills/henri-workflow/henri-research/SKILL.md",
+      "sha256": "6d2baacb624c1895003479fabca50a01561fde894517f3ca76a6665fbd964617",
+      "bytes": 3881
+    },
+    {
+      "path": "skills/henri-workflow/henri-soul/references/diagram-mandate.md",
+      "sha256": "988f472907cb8cfc5280cf3f7976bbd91f15c42c77d340a25fa01c1e40fd4978",
+      "bytes": 1370
+    },
+    {
+      "path": "skills/henri-workflow/henri-soul/references/reference-index.md",
+      "sha256": "81166deba7f2259147b86242e9a0d1eb6e70afc6c1c14de6fc84f186851f59d0",
+      "bytes": 247
+    },
+    {
+      "path": "skills/henri-workflow/henri-soul/references/scientisttwo-workflow.md",
+      "sha256": "c7d45d8883cd59a7230a88797db1a7a7c9ba69befe3204e6facd574941033aa0",
+      "bytes": 11912
+    },
+    {
+      "path": "skills/henri-workflow/henri-soul/references/stack-before-20261001.md",
+      "sha256": "e40cacdec334d6de7195bef03eb257e15e58985263e5dd52e4d957ba814e0c55",
+      "bytes": 14425
+    },
+    {
+      "path": "skills/henri-workflow/henri-soul/SKILL.md",
+      "sha256": "c39841765b0dc853e1614530e02ca2c35ca883bc89d8e38f28e50fc4a4ac7c0e",
+      "bytes": 4457
+    },
+    {
+      "path": "skills/henri-workflow/henri-strace-optimizer/references/henri-edg.json",
+      "sha256": "eebdda195a82472dbf95b71d961190541f07711fa6dfb36138503b9e5141399a",
+      "bytes": 8318
+    },
+    {
+      "path": "skills/henri-workflow/henri-strace-optimizer/references/henri-edg.md",
+      "sha256": "07bc3553b865e9523d4f77566fad0bba558e40a41180a555f2687e6f6c1db0ea",
+      "bytes": 2519
+    },
+    {
+      "path": "skills/henri-workflow/henri-strace-optimizer/references/reference-index.md",
+      "sha256": "01cf4c99b01faebf920011dff91bad34cd7f87356d60b9b538f85d754fa473aa",
+      "bytes": 511
+    },
+    {
+      "path": "skills/henri-workflow/henri-strace-optimizer/references/stack-before-20261001.md",
+      "sha256": "cad8a7fbd94223d1731bb3de32a71b7b0bbae3cb10f659e8a2b138c9279a1941",
+      "bytes": 8456
+    },
+    {
+      "path": "skills/henri-workflow/henri-strace-optimizer/SKILL.md",
+      "sha256": "b9a37935c2eba8f99e843011942edb8e5ef200e9eb8961f4d929a7953b8262ab",
+      "bytes": 2959
+    },
+    {
+      "path": "skills/henri-workflow/henri-system1/SKILL.md",
+      "sha256": "e329060792a55a5a28ed6880ff27683ddf65aa1d576a03609ebedb44bbb33416",
+      "bytes": 3824
+    },
+    {
+      "path": "SOUL.md",
+      "sha256": "089358d5de50998fb7f6663b4ec974e4d816cf64310aefa341a13d29a196018d",
+      "bytes": 6363
+    }
+  ],
+  "cache_probe": {
+    "read_tokens": 3904,
+    "total_input_tokens": 3988,
+    "hit_fraction": 0.9789368104312939,
+    "first_call_usage": "UNKNOWN_ZERO_FIELDS",
+    "cost_status": "estimated"
+  },
+  "performance_benefit": "HYPOTHESIS",
+  "remote_cuda_verification": "NOT_RUN_CONTROL_PLANE_ONLY"
+}

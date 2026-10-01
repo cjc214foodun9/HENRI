@@ -1,0 +1,57 @@
+# Retained reference index
+
+Load only the relevant domain. Revalidate dated facts against the selected checkout and actual run. Current SKILL.md owns routing. Historical snapshots do not override current policy.
+
+- `references/aaii-v411-composite-and-exposure-audit.md`
+- `references/aaii-v42-composite-and-exposure-audit.md`
+- `references/aaii-v43-composite-and-exposure-audit.md`
+- `references/agentic-graph-ingestion.md`
+- `references/amendment-awareness-attention-ontology-20260918.md`
+- `references/arxiv-bulk-retrieval.md`
+- `references/autoresearch-grounding.md`
+- `references/candidate-ranking-saturation-and-cost-endpoints.md`
+- `references/causal-reranking-target-leakage-and-cost-gates.md`
+- `references/construct-gate-and-preregistration-validity.md`
+- `references/covariance-conditioning-and-matrix-log-contracts.md`
+- `references/delta-rule-qfhrr-associative-memory-premise-audit.md`
+- `references/delta-rule-qfhrr-triton-verification-lessons.md`
+- `references/drive-ingest-canonical-path-verification.md`
+- `references/drive-vault-junction-linking.md`
+- `references/dynamic-composite-benchmark-grounding.md`
+- `references/entropy-gating-premise-audit.md`
+- `references/evidence-discipline.md`
+- `references/extensionless-drive-pdf-and-formal-mapping.md`
+- `references/gauge-invariant-relational-egress.md`
+- `references/heldout-benchmark-grounding.md`
+- `references/holonic-contracts.md`
+- `references/moa-roster-live-verification.md`
+- `references/notebooklm-mcp-stack-verification.md`
+- `references/primary-source-authentication-and-corpus-presence.md`
+- `references/primary-source-fallbacks-youtube-crossref.md`
+- `references/reverse-engineered-architecture-premise-audit.md`
+- `references/sequential-carrier-governance-and-verification.md`
+- `references/stage0-dynamical-substrate-contracts.md`
+- `references/stage0-dynamical-substrate.md`
+- `references/stage0-frozen-encoder-contracts.md`
+- `references/stage0-nonlinear-observable-revision-contracts.md`
+- `references/stage0-redmd-identifiability-contracts.md`
+- `references/stage0-reduced-koopman-rev3-evidence.md`
+- `references/stage0-reduced-koopman-rev4-evidence.md`
+- `references/stage0-reduced-koopman-spectral-contracts.md`
+- `references/supplied-blueprint-reconstruct-and-execute.md`
+- `references/supplied-remediation-artifact-premise-audit.md`
+- `references/supplied-unified-engine-reconciliation.md`
+- `references/system1-calibrated-probe-search-integration.md`
+- `references/system1-decoder-support-audit.md`
+- `references/system1-frozen-backbone-structural-egress.md`
+- `references/system1-outcome-energy-calibration.md`
+- `references/system1-sequence-curriculum-diagnostics.md`
+- `references/system1-stochastic-swarm-evaluation.md`
+- `references/system1-structural-egress-cegis.md`
+- `references/system1-zonec-mechanism-efficacy-audit.md`
+- `references/theory-program-carrier-verification-lessons.md`
+- `references/theory-program-to-henri-carrier-mapping.md`
+- `references/token-controls.md`
+- `references/tzcsm-k5-corpus-source-state.md`
+- `references/vault-ingestion.md`
+- `references/world-knowledge-boundary.md`

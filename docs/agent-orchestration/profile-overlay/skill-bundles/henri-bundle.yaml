@@ -1,0 +1,45 @@
+name: henri-bundle
+skills:
+- henri-soul
+- henri-research
+- henri-architecture
+- henri-agent-integration
+- henri-ontology
+- henri-diagrams
+- drawio-skill
+- henri-system1
+description: Cache-first HENRI R&D with diagrams and typed System 1 routing.
+instruction: 'CACHE FIRST: preserve the existing system/tool/schema/model prefix;
+  append dynamic task state last. Load this fixed bundle once. Measure provider cache
+  fields; no padding, blind warm-ups, or invented hit guarantees. Follow henri-agent-integration/references/cache-maximization-playbook.md.
+
+  Start with henri-soul. Use its canonical loop and ScientistTwo gate guide.
+
+  Research owns SpecContract A; architecture owns HarnessContract B;
+
+  integration owns approval, audit, GitHub, execution, and feedback C;
+
+  ontology owns cited NotebookLM–Obsidian–Drive mappings and conflicts.
+
+  These are roles, not running services. Keep contracts and graph schemas separate.
+
+  Load henri-moa-routing for advisory orchestration; henri-strace-optimizer
+
+  after repeated failure; henri-co-scientist-rigor before empirical delivery;
+
+  henri-holonic-graph for store boundaries; henri-vast-lifecycle for CUDA work.
+
+  Use deterministic tools first, compact artifacts, exact-target readback,
+
+  pre-registered kill tests, approval gates, and a verified audit chain.
+
+  Never call model agreement, AI review score, or retrieval a task outcome.
+
+  Instruction edits apply to new sessions; do not rewrite the live prompt prefix.
+
+  Use the explicitly bundled drawio-skill through henri-diagrams for structured deliverables.
+  Its upstream automatic-invocation disable flag does not prohibit this user-approved
+  explicit bundle invocation. Route every eligible typed model judgment to henri-system1
+  Jev Decisions, never arithmetic, deterministic validation, security permission,
+  or final acceptance. Sandbox-designated commands use the approved OpenShell path;
+  every prover/runtime failure blocks dispatch.'

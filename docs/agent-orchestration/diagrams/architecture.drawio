@@ -1,0 +1,67 @@
+<mxfile host="drawio-skill" agent="diagram-ir" version="3.0.0">
+  <diagram id="system" name="System">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="sources" value="OBSERVED sources: Drive / vault / NotebookLM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="sources" data-kind="service" data-properties="{&quot;trust_boundary&quot;:&quot;sources&quot;,&quot;status&quot;:&quot;observed&quot;,&quot;owner&quot;:&quot;henri-ontology&quot;}" data-source-properties="{&quot;trust_boundary&quot;:&quot;sources&quot;,&quot;status&quot;:&quot;observed&quot;,&quot;owner&quot;:&quot;henri-ontology&quot;}" data-source-label="OBSERVED sources: Drive / vault / NotebookLM" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json&quot;}" data-owner="henri-ontology" data-boundary="sources">
+          <mxGeometry x="60" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="prefix" value="OBSERVED cache-first bundle / stable prefix" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="prefix" data-kind="service" data-properties="{&quot;trust_boundary&quot;:&quot;host&quot;,&quot;status&quot;:&quot;observed&quot;,&quot;owner&quot;:&quot;henri-soul&quot;}" data-source-properties="{&quot;trust_boundary&quot;:&quot;host&quot;,&quot;status&quot;:&quot;observed&quot;,&quot;owner&quot;:&quot;henri-soul&quot;}" data-source-label="OBSERVED cache-first bundle / stable prefix" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json&quot;}" data-owner="henri-soul" data-boundary="host">
+          <mxGeometry x="290" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jev" value="OBSERVED Jev typed API + local memo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="jev" data-kind="service" data-properties="{&quot;trust_boundary&quot;:&quot;provider&quot;,&quot;status&quot;:&quot;observed&quot;,&quot;owner&quot;:&quot;henri-system1&quot;}" data-source-properties="{&quot;trust_boundary&quot;:&quot;provider&quot;,&quot;status&quot;:&quot;observed&quot;,&quot;owner&quot;:&quot;henri-system1&quot;}" data-source-label="OBSERVED Jev typed API + local memo" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json&quot;}" data-owner="henri-system1" data-boundary="provider">
+          <mxGeometry x="520" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="root" value="Acting root: approval + deterministic gates" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="root" data-kind="service" data-properties="{&quot;trust_boundary&quot;:&quot;host&quot;,&quot;status&quot;:&quot;observed-plugin-hook&quot;,&quot;owner&quot;:&quot;henri-agent-integration&quot;}" data-source-properties="{&quot;trust_boundary&quot;:&quot;host&quot;,&quot;status&quot;:&quot;observed-plugin-hook&quot;,&quot;owner&quot;:&quot;henri-agent-integration&quot;}" data-source-label="Acting root: approval + deterministic gates" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json&quot;}" data-owner="henri-agent-integration" data-boundary="host">
+          <mxGeometry x="750" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="moa" value="MoA: parallel advisory refs / one actor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="moa" data-kind="service" data-properties="{&quot;trust_boundary&quot;:&quot;provider&quot;,&quot;status&quot;:&quot;observed-wire&quot;,&quot;owner&quot;:&quot;henri-moa-routing&quot;}" data-source-properties="{&quot;trust_boundary&quot;:&quot;provider&quot;,&quot;status&quot;:&quot;observed-wire&quot;,&quot;owner&quot;:&quot;henri-moa-routing&quot;}" data-source-label="MoA: parallel advisory refs / one actor" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json&quot;}" data-owner="henri-moa-routing" data-boundary="provider">
+          <mxGeometry x="60" y="230" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="prover" value="OpenShell policy prover: coverage-limited" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="prover" data-kind="service" data-properties="{&quot;trust_boundary&quot;:&quot;wsl&quot;,&quot;status&quot;:&quot;observed-4-verdict-controls&quot;,&quot;owner&quot;:&quot;henri-agent-integration&quot;}" data-source-properties="{&quot;trust_boundary&quot;:&quot;wsl&quot;,&quot;status&quot;:&quot;observed-4-verdict-controls&quot;,&quot;owner&quot;:&quot;henri-agent-integration&quot;}" data-source-label="OpenShell policy prover: coverage-limited" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json&quot;}" data-owner="henri-agent-integration" data-boundary="wsl">
+          <mxGeometry x="290" y="230" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="sandbox" value="OBSERVED OpenShell mTLS / denied access controls" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="sandbox" data-kind="service" data-properties="{&quot;trust_boundary&quot;:&quot;wsl&quot;,&quot;status&quot;:&quot;local-pilot-verified&quot;,&quot;owner&quot;:&quot;henri-agent-integration&quot;}" data-source-properties="{&quot;trust_boundary&quot;:&quot;wsl&quot;,&quot;status&quot;:&quot;local-pilot-verified&quot;,&quot;owner&quot;:&quot;henri-agent-integration&quot;}" data-source-label="OBSERVED OpenShell mTLS / denied access controls" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json&quot;}" data-owner="henri-agent-integration" data-boundary="wsl">
+          <mxGeometry x="520" y="230" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="telemetry" value="Observed receipts / distinct cache accounting" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1" data-model-id="telemetry" data-kind="database" data-properties="{&quot;trust_boundary&quot;:&quot;host&quot;,&quot;status&quot;:&quot;observed&quot;,&quot;owner&quot;:&quot;henri-telemetry-analyzer&quot;}" data-source-properties="{&quot;trust_boundary&quot;:&quot;host&quot;,&quot;status&quot;:&quot;observed&quot;,&quot;owner&quot;:&quot;henri-telemetry-analyzer&quot;}" data-source-label="Observed receipts / distinct cache accounting" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json&quot;}" data-owner="henri-telemetry-analyzer" data-boundary="host">
+          <mxGeometry x="750" y="230" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ledger" value="Hash-linked governance ledger" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1" data-model-id="ledger" data-kind="database" data-properties="{&quot;trust_boundary&quot;:&quot;host&quot;,&quot;status&quot;:&quot;observed&quot;,&quot;owner&quot;:&quot;henri-agent-integration&quot;}" data-source-properties="{&quot;trust_boundary&quot;:&quot;host&quot;,&quot;status&quot;:&quot;observed&quot;,&quot;owner&quot;:&quot;henri-agent-integration&quot;}" data-source-label="Hash-linked governance ledger" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json&quot;}" data-owner="henri-agent-integration" data-boundary="host">
+          <mxGeometry x="60" y="380" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="vast" value="BLOCKED integration: Vast CUDA containment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="vast" data-kind="service" data-properties="{&quot;trust_boundary&quot;:&quot;remote&quot;,&quot;status&quot;:&quot;blocked&quot;,&quot;owner&quot;:&quot;henri-vast-lifecycle&quot;}" data-source-properties="{&quot;trust_boundary&quot;:&quot;remote&quot;,&quot;status&quot;:&quot;blocked&quot;,&quot;owner&quot;:&quot;henri-vast-lifecycle&quot;}" data-source-label="BLOCKED integration: Vast CUDA containment" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json&quot;}" data-owner="henri-vast-lifecycle" data-boundary="remote">
+          <mxGeometry x="290" y="380" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-0" value="bounded source refs" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="sources" target="prefix" data-model-id="s-p" data-kind="data" data-properties="{}" data-source-properties="{}" data-source-label="bounded source refs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-1" value="eligible typed judgments" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="prefix" target="jev" data-model-id="p-j" data-kind="data" data-properties="{}" data-source-properties="{}" data-source-label="eligible typed judgments">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-2" value="advice only, no permission" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="jev" target="root" data-model-id="j-r" data-kind="data" data-properties="{}" data-source-properties="{}" data-source-label="advice only, no permission">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-3" value="bounded dynamic tail" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="root" target="moa" data-model-id="r-m" data-kind="data" data-properties="{}" data-source-properties="{}" data-source-label="bounded dynamic tail">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-4" value="effective policy / boundary" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="root" target="prover" data-model-id="r-p" data-kind="data" data-properties="{}" data-source-properties="{}" data-source-label="effective policy / boundary">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-5" value="only within_boundary" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="prover" target="sandbox" data-model-id="p-b" data-kind="control" data-properties="{}" data-source-properties="{}" data-source-label="only within_boundary">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-6" value="real RC / output / audit" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="sandbox" target="telemetry" data-model-id="b-t" data-kind="data" data-properties="{}" data-source-properties="{}" data-source-label="real RC / output / audit">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-7" value="verified compact event" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="telemetry" target="ledger" data-model-id="t-l" data-kind="data" data-properties="{}" data-source-properties="{}" data-source-label="verified compact event">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-8" value="separate approval + CUDA gate" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="root" target="vast" data-model-id="r-v" data-kind="control" data-properties="{}" data-source-properties="{}" data-source-label="separate approval + CUDA gate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

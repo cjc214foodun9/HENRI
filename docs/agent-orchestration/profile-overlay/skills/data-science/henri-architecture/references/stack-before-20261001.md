@@ -1,0 +1,202 @@
+# Historical instruction snapshot
+
+This is the previous entry file. It is not current policy. Use current SKILL.md for routing. Revalidate every dated runtime claim.
+
+---
+name: henri-architecture
+description: HENRI V2 load-bearing architecture — verified wave, Clifford, EDMD, planner, learning, Zone C, telemetry, and remote-verification constraints.
+category: data-science
+---
+
+# HENRI ARCHITECTURE — CONSTRAINT CATALOG
+
+Load before HENRI V2 changes. This catalog records verified constraints and falsified mechanisms; revalidate dated claims against live code and telemetry. Zone C semantic-memory rules: `references/zone-c-semantic-world-knowledge.md`. Transduction operator contract — a scalar rotor `e^{i*theta}` is a U(1) GAUGE no-op (complex overlap 0.999999940; real `[cos,sin]` overlap = cos(theta)), so a scalar answer or score delta CANNOT select among K candidates; encode a scalar delta as a bounded per-dimension ramp, recover it against a REFERENCE wave, and never bind an outcome into `state_wave`: `references/transduction-operator-contract.md`. Directive-premise audit — trace a claimed metric to the code path that PRODUCED it before refactoring toward it, replica the baseline to ~1e-7 before comparing, and sweep the named parameter across orders of magnitude to test whether it is the lever at all (measured: the 0.3321 ARC few-shot gap is invariant across ridge 1e-9..1e+1, so it is an ESTIMATION deficit, not regularization). Harness-defect classes (vacuous precondition tests, lazy attribute init, silenced stderr, dead self-diagnostics), the block-by-account-state local-CPU-corpus fallback, and the Zone C freeze: `references/attribution-before-refactor-protocol.md`. Vacuous-invariant and content-invariance defect classes: an encoder whose phase derives from index buffers never reads its input (two different inputs encode identically, so identity wins argmin by construction -- report the RANK of the asserted answer, measured 30/49); a telescoping sum of forward differences is not a closed-loop integral, so an all-zero field PASSES the veto; and config fields declared but never read mean the mechanism does not exist. Every invariant gate ships a DEAD-INPUT negative control that must FAIL it: `references/vacuous-invariant-and-content-invariance-defects.md`. Seals are SETS of artifacts: when one measurement ships as a doc plus a receipt, consistency between them is TESTABLE — gate it, give the gate negative controls, prove the committed receipt is execution-derived before treating its numbers as `OBSERVED`, and treat any verifier whose own defects produced a verdict as never having run. Before accepting a low-dimensional basis family as a sample-efficiency win, measure how many basis operators are diagonal in the live basis and report `rank(G)`. Adjudicating a supplied directive PDF (fabricated advisory blocks, phantom symbols, gate numbers recovered from your own extraction). All of it, with measured numbers: `references/seal-consistency-and-verifier-self-defects.md`.
+
+Basal cognition / Markov-blanket boundary engineering (Zone A/B/C) — the Mermin-Wagner chimera theorem for 1-D local coupling, the measured non-local percolation knee (160 -> 0.165, 168 -> 0.940), sealed hardware defaults `non_local_span=504` / `lock_horizon_steps=1024`, and the six corrected spec defects (D-SAGNAC, D-KURAMOTO, D-STALE-R, D-ENGINE-1, D-ENGINE-2, D1): `references/basal-cognition-boundary-engineering.md`.
+
+GPU kernel parity proofs and derived tau/latency bounds — the exact-parity anchor pattern, independent-implementation parity, per-slot vs. cold-horizon budget separation, and evidence-class discipline for GPU claims: `references/gpu-kernel-parity-and-tau-bounds.md`.
+
+Scale conflation and device-scratch traps (2026-09-14, commit `85149cf`) — the five-row conflated-pairs table (32-step measurement vs 1024-step derived floor, tap vector 3025 vs ring 8192, spec halo partition vs Triton thread-block tile, sealed span width vs tap reach in decay lengths, global vs block-local norm), the device-scratch inheritance class (hit 4x; invisible to CPU tests), the tautological-validator cure, GPU latency methodology (parity before latency, steps-sweep launch/marginal separation, CUDA-graph capture, batch-vs-streams bottleneck classification), retraction discipline, the supplied-artifact audit order, and measured Blackwell constants incl. `FUSED_TILE_SIZE = 16` (218.8x vs 1024): `references/scale-conflation-and-device-traps.md`.
+
+Remote verification execution on Vast — the run-side constraints that complement the provision/stop lifecycle skills: the SSH port ROTATES on every start (trust the `ssh_port` field over the `ports` map; measured 37414 answered while the map's 18360 was refused), a credential-less remote checkout needs a SHA-256 verified git bundle into a named ref or scp into a detached worktree at the frozen SHA, splitting work across the 600 s foreground cap, pulling receipts BEFORE stopping the instance, and the exit-code-through-a-pipe trap: `references/remote-verification-execution-playbook.md`.
+
+Spec/ratification audits and self-confirming detectors — how a mandate PDF's
+constants can belong to a DIFFERENT operator than the one it ships (linear-ramp
+vs evanescent kernel at matched settings: r = 0.5649 FAIL vs 1.0000 PASS, L1
+0.8185), author-then-execute for contract suites, and guards that fire on their
+own subject: `references/spec-ratification-and-detector-audit.md`.
+
+## HOLONIC STATIC PREAMBLE — shared contract header
+
+Byte-identical across `henri-research`, `henri-architecture`, `henri-agent-integration`. Edit all three copies together or not at all; drift fails `validate_holonic_contracts.py`.
+
+- Triad: `/henri-agent-integration` (Root Holon & Infrastructure Conductor) ←→ `/henri-research` (Exploration & Spec Holon) ←→ `/henri-architecture` (Implementation Engine Holon).
+- Frozen contracts: A `SpecContract` (research → architecture); B `HarnessContract` (architecture → integration); C `ExecutionFeedbackContract` (integration → research/architecture). Schemas: `references/holonic-contracts.md`.
+- MoA engine (LIVE `hermes moa list` 2026-09-11): references 1 `openrouter/z-ai/glm-5.3-flash` [high], 2 `openrouter/meta/muse-spark-1.3` [high], 3 `openrouter/minimax/minimax-m3` [high] = Deep Context Judge; aggregator `deepseek/deepseek-flash` [max]. A roster line is a dated snapshot: qwen/qwen3.8-flash (slot 2) and the `:free` id are superseded. Re-read `hermes moa list` before quoting a roster.
+- State passing: intent, local constraints, and structured payloads only. Never pass full traces, raw tracebacks, or chain-of-thought upward.
+- Evidence labels: `OBSERVED`, `DERIVED`, `INFERRED`, `HYPOTHESIS`, `FALSIFIED`, `BLOCKED`.
+- KV-cache rule (STRICT, enforced 2026-08-27): this header, the system prompt, the loaded skill set, and the toolset are the session cache prefix. MUST stay byte-identical; append ephemeral execution traces at the END of the payload, never in the middle. Any mid-session change to system prompt, skills, tools, MoA roster, or model invalidates the prefix cache — apply such changes only between sessions, then restart.
+
+## Holon position: Implementation Engine Holon
+
+You are `/henri-architecture`, the code implementation and repository node of the HENRI holonic triad. You consume `SpecContract` from `/henri-research`, run your own inner execution loop (tests → fix → verify), and emit `HarnessContract` to `/henri-agent-integration` for remote CUDA verification.
+
+INPUTS
+
+- `SpecContract` (Contract A) — consume it WITHOUT modifying the requested API boundary. A shape, dtype, or invariant change is a spec change; escalate to research.
+- `ExecutionFeedbackContract` (iteration ≤ 2): apply targeted AST-diff fixes, not full-context restarts. Schema + example: `references/holonic-contracts.md`.
+
+OUTPUTS
+
+- `HarnessContract` (Contract B) plus one atomic git commit per carrier.
+- Verification suite: shape/synthetic-batch tests, autograd or numerical gradient check, benchmark entrypoint — written BEFORE the tensor manipulation code (TDD order).
+
+BOUNDARY RULES
+
+- Test-driven order: write unit and shape-check tests before implementation code.
+- Local execution loop: fix, retest, re-verify internally before emitting state upward. Only clean, verified code and metadata return to the parent.
+- Self-contained headless harnesses for remote Vast.ai nodes; no dependencies outside the pinned runtime.
+- Repo hygiene: atomic commits, AST diff patches, deprecated code under `_archive/`, clean production tree.
+- Local CPU tests never count as HENRI verification; remote CUDA verification is owned by `/henri-agent-integration`.
+- Schema freeze: Contract B is immutable. Report runtime surprises through Contract C, not by changing the contract.
+
+## Design epistemology
+
+1. Trace definition → caller → tensor/data path → external effect.
+2. Verify citations, shapes, device placement, causal timing, and task provenance against live code.
+3. Separate mathematical validity, implementation validity, and external task outcome.
+4. Prefer one small causal consumer with a pre-registered kill test; archive deprecated code under `_archive/`.
+5. Consult NotebookLM bank `ca4bb787-de9d-4ee0-89c9-bf71259cc86d` before design and after measurement. Label its output `INFERRED`/`HYPOTHESIS`; live code and telemetry override it. If auth is stale, record `BLOCKED` and do not fabricate a citation.
+
+## Weakness and finite-extension selectors
+
+Treat Bennett weakness as extension cardinality in a defined finite implication space, not as a synonym for entropy, freedom, low complexity, or wave-space volume. A HENRI approximation must use explicit pre-decision continuation sets, remain default-off, act only inside a declared baseline tie, preserve hard vetoes, and remain blocked without a causal continuation provider.
+
+See `references/bennett-weakness-extension-selector.md` for evidence boundaries, integration invariants, verification gates, and the alternate-index post-commit status pitfall.
+
+## Load-bearing mathematical and tensor contracts
+
+- F1 carrier spec/prereg SEALED 2026-08-28: `references/f1-lie-displacement-carrier-validation.md`.
+- Spatial-domain circular convolution does not preserve norm; FHRR phase multiplication is frequency-domain; renormalize where required.
+- Unweighted second-moment covariance pooling is row-permutation invariant: C(QX) = C(X) for C(X) = (1/T)(X_cP)ᵀ(X_cP) (fp32 diff 2.4e-7 = noise). Never pre-register token-order sensitivity here — unsatisfiable by construction (K1c C4 FALSIFIED_BY_INVARIANCE 2026-08-25). Order sensitivity needs an explicitly position-dependent representation in a NEW carrier; re-embedding other texts is not a token-permutation contract. fp32 nested-sqrt matrix log (Denman-Beavers) is infeasible at 1e-4 (≥18 passes, 2^n quantization amplification ≥0.03 abs err, A1→A3 chain); use eigh-based log.
+- For digital-twin phase adapters, use `references/phase-codec-digital-twin-boundary.md`: declare shape/layout/dtype/device/normalization/quantization/provenance/loss; reject silent projective flattening; keep adapters default-off; and separate representation, optical-equivalence, latency, and task-outcome evidence.
+- Normalized Sagnac delta is `1 - Re(<pred, emp>)/(||pred|| ||emp||)`, bounded `[0, 2]`. Do not substitute raw L2 for a bounded similarity residual.
+- Cl(3,0) reversion flips bivectors and the pseudoscalar: indices 4, 5, 6, and 7 under the current basis.
+- Yang-Mills↔qFHRR bridge (see `references/yang-mills-qfhrr-bridge.md`): Sagnac delta = compact U(1) Wilson action; qFHRR binding = translation action of (C_256)^D (NOT one-hot permutation); Spin(3) ≅ SU(2) in Cl(3,0); SU(3) NOT representable in Cl(3,0) or Cl(1,3) (no 2-dim irrep).
+- c3-next egress taxonomy: Hopfield snap = remember-only; linear decode = degenerate; CEGIS/AST + transformation-relative ranking = composition. Wave->AST decoder era (runs 12-17) and the byte-exact run-by-run history, FALSIFIED arms, and the qFHRR-codec conclusion: `references/c3-next-latent-composition-egress.md`. Escalation alone drives gains; default lambda=0.0, keep the flag for other grammar scales.
+- qFHRR text codec structure (MEASURED 2026-08-02, commit 40ab0b0): `qFHRREpistemicCodec.encode_text` is SHA-256-seeded `torch.randint` — deterministic (identical strings → identical rings, sim 1.0) but NON-COMPOSITIONAL: every distinct string maps to an independent random Z_256 ring, similarity ≈ 1/√D for ALL distinct pairs (control: f(3,3,3) vs f(4,4,4) -0.0045; "a+b" vs "b+a" -0.0004; "27" vs "28" 0.0027; baseline 0.0039). A W_task compiled from these waves is a random-delta superposition; it cannot carry a task's I/O relation. When any qFHRR ranking is flat, run the codec-geometry control FIRST (mbpp_rank_probe.py `--per-item-wtask` emits `codec_geometry_control.json`) to separate codec-geometry failure from operator failure — do not tune λ/r_rank/λ_forget or recompile the operator before ruling out a structureless encoder.
+- STRUCTURED CODEC KILL RESULT (Run21, 2026-08-04, commit 440f11d): char-engram + fractional position binding (`qfhrr_structured_codec.py` `StructuredCharPositionCodec`) restored non-random continuity (nearby_input_sim 0.62 vs legacy −0.0045) and order sensitivity (position_swap_sim 0.0066 full vs 1.0 nopos) and improved task 89 (42→7), but task 62 stayed occluded (30/52) — verdict FALSIFIED_AT_SCALE; no variant met the joint (62,89) ≤ 24 gate plus beats-identity/legacy. Wiring rules that made the run valid: (a) representation-aware `ring_to_real` at EVERY encode consumer — any leftover legacy linear-map site = INVALID_PLUMBING; (b) identity/no-W_task arms must disable pred−prompt contrast (`normalize(0)` = NaN); (c) token and position rings must share device before bundling (nopos arm returned cuda zeros → cross-device RuntimeError on CUDA only, invisible to local CPU smoke); (d) any nonzero arm exit → BLOCKED_INFRASTRUCTURE, never a scientific verdict. Healthy geometry ≠ task success; per-task phase occlusion persists (run19 pattern); do not respond with global codec tuning or grammar growth. See `references/structured-qfhrr-codec-kill-experiment.md`.
+- Cholesky retraction is the stable Stiefel path. Apply it to both expert matrices. Do not restore Newton–Schulz without a proved basin and test.
+- Phase 5 P2 thermostat wavelet record (2026-08-08): `AdaptiveViscoelasticThermostat` gained Haar wavelet band noise gating + dominance lock counter behind `use_wavelet_gating=False` (default path byte-identical; friction/LR/veto math untouched). Unit tests pass (Haar round-trip, lock ≤ bound, null-band never locks, single-band noise ratio ≈0.72×). Recovery gate honest KILL at every temperature: both arms diffusion-dominated, lock never engaged — harness limitation, NOT mechanism falsification. REVIEW FLAG before re-gating: the inverse path multiplies the gradient's coarse coefficient by the coarse gate, leaking deterministic gradient content into the stochastic term — noise must be freshly sampled per band. See `henri-agent-integration/references/phase5-rank-and-wavelet-gate-lessons.md` for gate-validity sequence (Haar inverse coarsest-first, NaN ⇒ BLOCKED_INFRASTRUCTURE, mechanism-engagement checks, manifold-basin starts, paired-seed comparisons).
+- SGLD noise uses `sqrt(2*T*dt)`. Raw-temperature noise leaves the retraction basin.
+- The creep update must differentiate the intended free energy. A named objective function is not evidence that its gradient reaches the live parameter update.
+- Normalize dimension-dependent L2 residuals by `sqrt(d)` before comparing with fixed thresholds.
+- EFE planner waves are real `[num_blocks, 8]` at the planner boundary. Complex stores use `2D` real width; real stores use `D`. Assert dimensions at storage boundaries.
+- Any new complex flat `[D]` family is a SEPARATE representation family (third, after Cl(3,0) `[8192,8]` and Z_256^D rings). Introduce it only as a default-OFF diagnostic sidecar with a one-way norm-preserving adapter, no action-policy influence, and kill gates. See `references/complex-wave-family-sidecar-boundary.md`.
+- EDMD must remain dual/thin-SVD at production dimension. Never form `d²` or `2d × d` tensors. Effective rank is `min(requested_rank, N)`.
+- Blend underdetermined EDMD batch fits. Do not hard-swap a young solve. Use residual-only retraction where a full retract would erase SVD amplitudes.
+- Per-block renormalization can move a wave out of a global invariant subspace. Do not renormalize after projection when testing membership or penalty.
+- Constraint is a candidate-specific penalty: `lambda * ||pred - P_inv(pred)|| / sqrt(d)` plus calibrated rejection. The falsified additive boundary-row attractor is not a valid action-scoring channel.
+- For a `[K, 8]` wave tensor with `K=8192` blocks, per-block row norm `||w_k||_2 = 1.0 +- 1e-6`, giving total tensor norm `||Psi||_2 = sqrt(8192) ~= 90.5096`. Dimension-normalized norm is `1/sqrt(K) * ||Psi||_2 = 1.0 +- 1e-6`.
+- Zone C Epistemic Seeding (`zone_c_axiom_seeder.py`, Phase 4.1) seeds 11 boundary axioms in `boundary_axioms` table (5 crystal axioms + 6 Spelke Core Knowledge Priors: translation, rotation, reflection parity, color-rebinding, gravity drop, contour fill) to eliminate Coherent Solipsism. Query latency < 2.5ms on pgvector HNSW index. See `references/spelke-core-knowledge-epistemic-seeding.md`.
+- Zone C & SCI Epistemic Axiom Engine (`zone_c_epistemic_axiom_harness.py`) translates discrete knowledge into D=65,536 uint8 phase hypervectors in Z_256 (qFHRR). Operates element-wise modular addition binding (q_a + q_b) mod 256 and O(1) modular subtraction unbinding (q_bound - q_key) mod 256. Sagnac Epistemic Veto Engine isolates failing orthogonal dimensions via circular unbinding E_ontological = Psi_cand x B_active^dag and injects anisotropic Langevin noise masks when Delta_Sagnac > 0.35 / rigidity.
+- HENRI Benchmark Gauntlet (`henri_benchmark_gauntlet.py`) provides an automated 3-preset evaluation suite (`--preset full-production|artificial-analysis|robotics-deepmind`):
+  1. `full-production`: Internal production suite (EFEPlanner update latency, Zone C & SCI qFHRR Epistemic Recall, Thermostat Stiefel projection, ARC-AGI-3 CEGIS / Sagnac MCTS).
+  2. `artificial-analysis`: External Artificial Analysis Composite Intelligence Index Suite (GDP Val AAV2, Terminal Bench Hard/V2.1, T^2 Telecom, T^3 Banking, AA-LCR, AA Omniscience, HLE, GPQA Diamond, SWE-bench/SCI Code, IF Bench, QuickPT, Apex Agents, AA IT Bench, MMMU Pro).
+  3. `robotics-deepmind`: Robotics & Continuous Control Suite (CartPole/Pendulum ODEs, Cl(3,0) 3D Kinematics, V-JEPA visual patch ingress, $M=10,000$ Hopfield codebook capacity & SNR analysis).
+- Hopfield Codebook Capacity Contract: At $D=65,536$ and $M=10,000$ engrams, crosstalk variance is $\sigma^2 = M/D \approx 0.1526$, yielding $\text{SNR} \approx 8.16 \text{ dB}$ and $100\%$ $P@1$ retrieval precision with $\beta = 8.0$.
+- Hopfield CUDA Device Invariant: `ContinuousHopfieldCleanup` auto-transfers buffer engrams to the query wavefront tensor device on `retrieve()` / `hard_retrieve()` / `energy()` to prevent cross-device CUDA execution errors.
+- Projective SU(d) Hopfield experiments must preserve the $\mathbb{C}P^{d-1}$ representation boundary, avoid ceiling-saturated controls, and pass fail-closed CUDA preflights; see `references/projective-hopfield-experiment-boundary.md`.
+- Accuracy-gated lambda is a finite schedule from the learned operator's loss signal. A learned, unstable subspace is not yet a constraint.
+- Before implementing a paper- or PDF-prescribed operator, audit the live definition, constructor, caller, and training rule; the document may describe a stale block-diagonal implementation while live code already contains the coupled field (Phase 5 observed: `LowRankCoupledTransition` was already `predicted = V(W^T fused) + R_block fused` with QR retraction and a cross-block coupling test).
+- Enforce effective transition rank `min(requested_rank, d)` before allocation/retraction; `qr(mode="reduced")` returns `[d, min(d, r)]` and copying into an unclamped `[d, r]` Parameter fails when r > d. A toy dimension that clamps two requested ranks to the same value cannot support a rank A/B claim.
+- Verify cross-channel routing with a distinct-block Jacobian receipt (`|∂out_j/∂in_i| > ε`, i ≠ j) plus a field-disabled (rank-0) control whose Jacobian is exactly zero.
+- Mechanism probes must reuse the production learner (`train_transition_batch`/`train_transition_step`); a bespoke gradient loop tests a different algorithm and can reverse arm ordering.
+- Keep reduced-scale mechanism acceptance separate from production CUDA thresholds. Never relax a production threshold to make a toy probe pass; defer to the CUDA gauntlet and record the deferral.
+- See `references/phase5-low-rank-transition-verification.md` for the stale-design audit, rank/QR trap, teacher–student controls, and verdict boundaries.
+- **Potts→Ising one-hot coupling constancy (Phase 8.37, 2606.17327 §2):** under the exact one-hot embedding (one +1, K−1 of −1 per row), every row contributes (2−K)·φ_i to the coupling sum regardless of active slot → the rank-1 coupling J=(1/D)·φφᵀ is CONSTANT over all valid configurations. An Ising "unbinding" term built only from pairwise coupling is a tautology; the discriminating channel is the field h_{i,a} = cos(θ_i − bin_center_a) (the qFHRR LUT). Keep J factorized (dense [D,D] = 34 GiB at D=65,536; add a `dense_coupling_bytes` audit property) and verify factorized energy == dense reference at toy scale.
+- **Potts sampling: heat-bath, not Metropolis (Phase 8.37):** Metropolis single-slot-flip starves at K=256 (1/255 proposal hit rate per row; agreement stuck ~0.85–0.91 even at 2000 sweeps). Use Potts heat-bath (Glauber) row re-sampling: P(a|row) ∝ exp(2·h[i,a]/T), exact detailed balance, vectorized (softmax + multinomial), converges to the field ground state at low T. Sampler must derive initial spins from the h-field argmax when the constructor's spins argument is None.
+- **Float32-tie contract for sampler/decoder tests (Phase 8.37):** rows whose phase sits within float32 epsilon of a bin-boundary midpoint have h_best − h_second < 1e-6; the sampler flips between tied bins at the exact Boltzmann rate while argmax is deterministic — a genuine tie, not a defect. Assert exact convergence on a delta field (no ties); on real cosine fields permit disagreements vs argmax ONLY on tied rows (gap < 1e-6). REINFORCE/advantage direction tests need NON-UNIFORM rewards: constant rewards collapse the advantage to zero and the ZERO_ADVANTAGE fail-closed fires (correct behavior, wrong test).
+
+## Production and verification contracts
+
+- HENRI tests and production benchmarks run on the Vast CUDA target or canonical CI only. Do not run local CPU tests.
+- Paired evaluations that read persistent memory (Zone C) require snapshot/attribution proof or the write-freeze flag on BOTH arms; contamination = `BLOCKED_INFRASTRUCTURE`. Recipe: `henri-agent-integration/references/paired-zone-c-isolation-and-common-mode-gates.md`.
+- Default deployment is commit → push → `henri-ci`. Manual SSH/SCP is for CI-reported failures or explicitly queued experiments.
+- Before a remote production launch, enforce one active run per GPU and clean abandoned processes through the approved lifecycle. Do not hide OOM conditions.
+- Telemetry must include per-step delta, coherence, free energy, Kuramoto `r`, loss/learning engagement, EFE decomposition, candidate admission/rejection, fallback state, and external outcome where available.
+- ARC score eligibility requires an explicit RUNNER-LEVEL LOADED-checkpoint gate. A hidden component-construction requirement (e.g. `efe_planner.py:366-368` `checkpoint_policy="required"` only when d_model==65536, skipped at other scales) is NOT a score gate and is never checked at the score-emission path.
+- Synthetic marker egress (`HENRI_SYNTHETIC_EGRESS=1`) and offline persistence surrogates (`offline://surrogate`, `MOCK_TEST_MODE`) make a run DIAGNOSTIC-ONLY, never score-eligible. Label the trace accordingly.
+- An `EVALUATION_BLOCKED` telemetry event is NOT fail-closed unless control flow actually stops or skips the affected score path. A branch that only emits telemetry and continues the loop is a notice, not a gate (verified: pre-6d3b944 `hasattr(orch.planner, "sagnac_mcts_planner")` branch was unreachable AND non-terminating).
+- Live ARC action policy (verified 2026-08-09): `orch.plan_action -> EFEPlanner.select_action` (EFE argmin / T4). `SagnacMCTSPlanner` and `USE_OBJECT_SAGNAC_MCTS` gate object segmentation only and never select actions in `production_arc_run.py`.
+- Merging sealed-ACCEPT branches (receipt, learned 2026-08-21, merged `svd-rank128` + `phase835` + `phase822` at `76e0e26`): (a) FIRST check the seal commit is not already an ancestor (`git merge-base --is-ancestor <seal> HEAD` — phase822's CODE was already in HEAD; only its seal ledger doc was unmerged), and inspect the branch's verdict doc (phase835 tip said ACCEPT but gate-1 verdict was PARTIAL — transition fixed 0.0119, egress FALSIFIED; merge only the code whose gates passed, keep falsified components default-OFF); (b) check conflicts BEFORE merging: `git merge-tree $(git merge-base HEAD <branch>) HEAD <branch> | grep -c '^<<<<<<<'`; (c) a branch whose diff REMOVES a sealed method (835 removed `trajectory_reinforce_post_train`) is safe only if it branched BEFORE the seal — verify `git merge-base --is-ancestor <seal> <branch>` and confirm the method survives in the merged tree (`grep -c` after merge); (d) resolve positional keep-both conflicts by removing ONLY the three marker lines with an assertion-first script (count markers == 3, assert line content, remove, verify zero markers remain, py_compile, structural outline grep); (e) run the FULL suite after the merge chain before pushing (627 → 675 passed after the 3 merges).
+- Phase 8 PSG implementation, vectorized-EFE fidelity, uploaded-design-packet verification, and evaluation-freeze closure: see the integration skill's `references/arc-phase8-progressive-semantic-grounding.md`.
+- Report plateaus and distributions, not monotonicity. Put every test tensor on the selected device.
+- Zone C connections use `zone_c_env.py`. Development is the safe default; production requires explicit guarded configuration. Never hardcode production DSNs in new code.
+- Live Zone C failure must fail closed. A surrogate is valid only through an explicit `offline://surrogate` test target or `MOCK_TEST_MODE=1`; never catch a live connection error and silently substitute in-memory state.
+- Verify the connected Zone C environment marker before DDL and before persistence writes when the consumer can cross environments. Keep telemetry sinks and engram stores on the same resolved DSN.
+- **Half-migration detection (learned 2026-08-25, CLASS49 Zone C):** matching tests, runner kwargs, and schema columns do NOT prove the callee implementation was migrated. OBSERVED: `zone_c_segment_cache.py` was pre-CLASS49 (no `canonical_domain_family`, no `assert_attribution`, no `domain_family` filter) while the runner passed the kwarg and the unit test imported the helpers — HEAD itself was a broken half-migration. When a runner passes a new kwarg and the callee rejects it, do NOT auto-remove the kwarg (that papers over a missing feature); first inspect the contract tests and schema migrations, then complete the callee migration. Trace the full chain: runner call → orchestrator wrapper → SegmentCache → backend store → SQL columns → retrieval query. Preserve semantic gates: `domain_family` is retrieval isolation (Gate 4), not decoration; `run_id/arm_id/commit_sha` are provenance controls (Gate 1) that must be PERSISTED to SQL columns, not swallowed by `**kwargs`; persistent writes fail closed on missing/invalid attribution (`ATTRIBUTION_VIOLATION`). Restore BOTH stores (in-process surrogate AND Timescale SQL persistence/filtering), then run focused unit + integration tests, full regression, and default-OFF identity after repairs. Report baseline and delta separately (added passing tests with unchanged existing failures = no regression). Full case: `references/zone-c-half-migration-and-attribution.md`.
+- Production Zone C initialization is native PostgreSQL on Vast, not Docker-in-Docker. Require `workspace_is_volume=true`, install PostgreSQL 16, pgvector, and TimescaleDB, move PostgreSQL `data_directory` to the mounted workspace volume, then apply the canonical schema and seed only auditable engineering contracts. Verify `SHOW data_directory`, extensions, hypertables, HNSW indexes, axiom count, and backup hash before CUDA tests.
+- Vast SSH is dynamic. Prefer the current `ssh*.vast.ai` hostname and mapped SSH port from the user or `vast-capabilities`; if the direct IP stalls after KEX, use `StrictHostKeyChecking=accept-new`, `IdentitiesOnly=yes`, and the local Ed25519 key. A port-open result is not SSH authentication evidence.
+- HENRI repository paths on fresh instances may be nested: checkout root `/workspace/HENRI V2`, active code `/workspace/HENRI V2/HENRI V2`. Verify with `git ls-tree` and run tests from the actual active-code directory.
+- Python dependencies are image-specific. Verify `torch`, CUDA, `pytest`, `psycopg`, and `arc_agi` in the exact interpreter before running. Do not call a dependency install successful if the SSH command timed out or `import torch` still fails.
+- The active Zone C schemas are file-specific. Do not use the obsolete `zone_c_database_initialization.py` path without a new audit.
+- Zone C dev wiring (verified + repaired 2026-08-03): the canonical schema file lives at `HENRI V2/migrations/zone_c_schema.sql`; `docker/zonec-dev/docker-compose.yml` mounts it as initdb 01 and `init_scripts/02_dev_environment.sql` as 02. If the schema file MOVES, the docker bind mount silently goes stale and a fresh container initializes with ONLY the env-marker table (extensions + marker, NO engrams/hypertables/boundary_axioms) — the failure is silent because initdb skips a missing mount. Repair a live dev DB without recreating the container: apply the migrations file, run `python zone_c_axiom_seeder.py --dsn postgres://zonec_dev_user:zonec_dev@localhost:5434/henri_zonec_dev`, then prove the full wire with `load_boundary_axioms(dsn=...)` → expect `[11, 8192, 8]`, max_norm_err < 1e-4, proj_cos ≥ 0.9999 (LOADER_VERIFY_PASS). Read-only dev-DB audit: `scripts/zonec_live_audit.py` (checks env marker, extensions, boundary_axioms count/kinds/HNSW index, hypertables, continuous aggregates). `qfhrr_state_events` is created on-demand by `qfhrr_readout_ledger`; its absence in an idle dev DB is expected, not a wiring failure. Framing: Zone C `boundary_axioms` are FROZEN REFERENCE WAVES (epistemic priors constraining the Sagnac veto / EFE scoring), NOT SGD-trainable weights — the differentiable linear head was archived; `W_task` is compiled online per task, Zone C holds the persistent constraint bank.
+- For the Zone C implementation pattern, consult `references/zone-c-fail-closed-implementation.md`.
+
+## Hermes development graph
+
+Use deterministic computation before model inference. Cache-maximization and token-minimization playbook (MoA-internal rules, append-only skill-edit discipline, cache-telemetry audit, graph tricks): `henri-agent-integration/references/cache-maximization-playbook.md`.
+
+`cron no-agent collector → compact artifact → skill-backed analyzer → audit ledger → human approval → implementation → remote CI → telemetry analyzer → decision`
+
+Use Hermes v0.19 features deliberately:
+
+- `cronjob` no-agent mode for watchdogs, CI, ingestion, audit verification, and compact telemetry extraction.
+- `context_from` to pass compact outputs between jobs instead of replaying logs.
+- `workdir` for repository-scoped jobs with project rules.
+- Explicit `model/provider` pins for unattended agent jobs. Unpinned jobs fail closed after a global model change.
+- Cron execution history (`hermes cron runs`) as the operational audit record.
+- MoA traces, session exports, and the immutable HENRI audit chain as separate evidence layers.
+- Curator backups and archive states for skill maintenance. There is no assumed `skilld` daemon; use the supported curator and skill APIs.
+- Firecrawl-backed `web` for current documentation and hard pages. Internet research is allowed and expected when it adds evidence. Apify is conditional: use it only through an installed, credential-backed MCP/plugin or API; do not document a phantom integration.
+
+## Falsification checklist
+
+Before accepting a change, ask:
+
+- Does the symbol exist and have a live production consumer?
+- Does a configuration flag reach a computational consumer? Constructor storage and runner wiring are not engagement: trace flag → field → branch → changed output before calling the flag live (dead `bg_mask` flag caught this way before commit).
+- Spatial-basis invertibility probes must test the complete representation variant: independent/incommensurate x/y ramps alone are confounded when shared background mass (constant color-0 carrier) remains in the superposition — test ramps + foreground masking together, and verify default-path byte identity (max tensor diff 0.0) against the legacy constructor.
+- Does the tensor shape match at every boundary?
+- Is the signal causally available at decision time?
+- Is the objective differentiated through the intended path?
+- Does the mechanism discriminate candidates rather than rescale all candidates?
+- Is the threshold dimension-normalized and calibrated from observed distributions?
+- Does the result get measured on the actual CUDA path and compared with pre-registered criteria?
+- Does the control operate in a discriminative, non-ceiling/non-floor regime?
+- Does the remote shell stop on every failed preflight rather than merely printing the error?
+
+## Agentic graph adapter
+
+Use `adapters/henri_graph_contract.yaml` for graph routing. Load this adapter for HENRI wave, tensor, EDMD, planner, learning, constraint, Zone C, and architecture changes. Require the definition-to-caller-to-data-path-to-external-effect trace. Require deterministic receipts before completion. Treat model agreement as advisory. Route an architecture decision to `henri-agent-integration`; do not invoke skills recursively.
+
+When an architecture decision enters an agent graph, return only the compact decision, applicable invariants, impacted interfaces, failure modes, acceptance checks, and artifact references. Do not return raw traces, complete files, raw telemetry, or chain-of-thought. A graph receipt can verify a deterministic check, but it cannot by itself establish mathematical validity or external task outcome.
+
+## Compacted references (2026-09-22)
+
+- `references/ground-state-vla-review.md` — Ground-state review before a new VLA phase. Ground-state review, roadmap review, fidelity remediation. Sub-sections: Sub-sections: Multi-lineage repository and checkpoint integrity (learned…; Bounded implementation on a dirty tree; Alternate-index post-commit interpretation; Do not misclassify alternate-index status as a patch blocker.
+- `references/causal-planning-rules.md` — Causal planning rules. Full causal planning rule set (Level-2 detail).
+- `references/benchmark-holdout-grounding.md` — External benchmark holdout grounding. Holdout grounding for external benchmarks. Sub-sections: Sub-sections: Run-evidence post-mortem rules (learned 2026-08-01, MBPP….
+- `references/performance-gate-validity.md` — Accelerator performance-gate validity (learned 2026-08-18, Phase 8.28). Performance-gate validity lessons (Phase 8.28).
+- `references/common-mode-carrier-test.md` — Common-mode carrier test for structured text encoders. Structured-text-encoder common-mode carrier test.
+- `references/causal-emergence-ratchet-receipts.md` — Causal Emergence telemetry (packet HENRI-CLASS47, 2026-08-21). Causal-emergence receipts and pitfalls (estimator contract: references/causal-emergence-telemetry.md).
+- `references/branch-execution-smoke.md` — Branch-execution smoke design (learned 2026-08-12, Phase 7.4). Branch-execution smoke design (Phase 7.4).
+- `references/connectivity-audit.md` — Connectivity audit and activation boundary (learned 2026-08-12). Connectivity audit and activation boundary.
+- `references/premerge-checklist.md` — Device-scratch and units-conflation pre-merge checklist (added 2026-09-14). Pre-merge device/units checklist.
+- `references/forensic-fine-comb-audit-protocol.md` — Forensic fine-comb audit protocol (learned 2026-08-03). Fine-comb audit protocol (duplicate stub merged here). (Section removed from SKILL.md on 2026-09-22; the reference file already carries this content.)
+- `references/multimodal-ingress.md` — Multimodal ingress decision rule. Multimodal ingress decision rule.
+- `references/leaf-worker-routing.md` — Asymmetric Leaf-Worker Audit Routing & Cross-Provider Boundary Firewall (CONDITIONAL). Leaf-worker audit routing + provider firewall.
+- `references/accuracy-first-reversal.md` — Accuracy-first strategy reversal and fidelity remediation. Accuracy-first reversal and fidelity remediation.
+- `references/roadmap-review.md` — Reverse-engineered roadmap review. Reverse-engineered roadmap review protocol.
+- `references/hardware-digital-twin-audit.md` — Hardware digital-twin comparisons. Hardware digital-twin comparison rules. (Section removed from SKILL.md on 2026-09-22; the reference file already carries this content.)

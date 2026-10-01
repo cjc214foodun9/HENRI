@@ -1,0 +1,97 @@
+{
+  "upstream_commit": "9d9e19a65f94862fd68d2cb825c49d3bb4f5c8a8",
+  "restored": [
+    {
+      "path": "scripts/pyclasses.py",
+      "sha256": "47bbed35aca6524d3edcc406454b5948cde6593c91d4bda41279c66e5be24178"
+    },
+    {
+      "path": "scripts/pyimports.py",
+      "sha256": "548ca8964b1c7e529d0bac54e1320ab1df48934991e72ade9472f7bd72d40c1e"
+    },
+    {
+      "path": "scripts/raster2drawio.py",
+      "sha256": "3a5e9e6a415453d8ee3e5997c3e5f7d2695e0ab015c5d3c74b336764c311f1ba"
+    },
+    {
+      "path": "scripts/relabel.py",
+      "sha256": "bf15f096dace9b70656a5d65a32cbf4c284f063c832113000b6c9530123a5e2c"
+    },
+    {
+      "path": "scripts/repair_png.py",
+      "sha256": "8bf49dbc475fba5cd93a21d1a3e61d34acc74924b6ed66b10e23bc05f47f4f22"
+    },
+    {
+      "path": "scripts/restyle.py",
+      "sha256": "372c399a56230385ae4b8b1d8b49d1f6314e4021c0f15b78916bdbf598ebe54e"
+    },
+    {
+      "path": "scripts/runbook.py",
+      "sha256": "2775832cb54981e93035ee6477a8c55fe586268abd52b5672feea6d1032aa972"
+    },
+    {
+      "path": "scripts/rustimports.py",
+      "sha256": "def1b77b36636717494685ed6ac5b5d727618e01a5596c691be5ebb6544df654"
+    },
+    {
+      "path": "scripts/seqlayout.py",
+      "sha256": "d6c961021f5be5ded3f93220fb3f277eb9b88efa0ec6e146ecad158ee5ffef5d"
+    },
+    {
+      "path": "scripts/shapesearch.py",
+      "sha256": "3eb768ebdd3c38968222ef73c06c62ba456e191957d414a2341688baffc1e151"
+    },
+    {
+      "path": "scripts/sqlerd.py",
+      "sha256": "a18d533bd83750a49333fea746654e84348ddbc864f9ff661499ac14810c6e44"
+    },
+    {
+      "path": "scripts/svgflow.py",
+      "sha256": "e668982b01147821b1a2e7cc9a21c01e55daf64db4d18fe52e545ec493be2a78"
+    },
+    {
+      "path": "scripts/tfimports.py",
+      "sha256": "155f986e9eab9173e1912c8179538f2a9ba1800a84cf8601847566e6be05f90b"
+    },
+    {
+      "path": "scripts/tfstate.py",
+      "sha256": "86756141f0ae9bb48cc7308d2f5730c46b51b209fb4fe80e5d41048ee1e450ff"
+    },
+    {
+      "path": "scripts/timelapse.py",
+      "sha256": "cc00651f5d3b9d611e00b8c9a8657b93e850f885944fb27f6857a63aa6eab6b5"
+    },
+    {
+      "path": "scripts/tubemap.py",
+      "sha256": "c75f13d3c09343c681a1f85620ae837a44880e6ac57d0660fdd7f24d60745f05"
+    },
+    {
+      "path": "scripts/validate.py",
+      "sha256": "8cd2f795c3e8336967d3f54b8d0302d048af03d82416310992d1ed38aa06677b"
+    },
+    {
+      "path": "styles/built-in/colorblind-safe.json",
+      "sha256": "36779242322a1a0d204a6c3b3582cb245a597db77126d0e502481701b59b1f29"
+    },
+    {
+      "path": "styles/built-in/corporate.json",
+      "sha256": "80b2b7709a11fb515817c6295dc119a76dbd2408e83a16152c95650251b89ba0"
+    },
+    {
+      "path": "styles/built-in/dark.json",
+      "sha256": "fcd4684b6a6198e835006c9709fb7843997f8ad9463d29f1968c8695d323aa68"
+    },
+    {
+      "path": "styles/built-in/default.json",
+      "sha256": "90c66bfe2bb3af6def5586b5507000e5d1780b1d07f47ab1b2b0200c6730ecd0"
+    },
+    {
+      "path": "styles/built-in/handdrawn.json",
+      "sha256": "8ba8c4dd70fdfa3b05e4de80c43389d96f013113de3776dfc50c770aa5577894"
+    },
+    {
+      "path": "styles/schema.json",
+      "sha256": "a5d7fc98dd440dddbf32d12c427a8a8ebefc7f6a57af04050c65dcf182ba02eb"
+    }
+  ]
+}

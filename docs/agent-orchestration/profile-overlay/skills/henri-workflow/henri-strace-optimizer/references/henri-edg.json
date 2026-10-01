@@ -1,0 +1,307 @@
+{
+  "version": 1,
+  "generated": "2026-10-01",
+  "evidence_class": "INFERRED",
+  "refresh_trigger": "bundle members, contracts, cron jobs, carriers, or store topology changed",
+  "source": "Observed installed skill roles, current bundle, MoA CLI/config, cron/script inspection; HENRI runtime edges remain historical hypotheses until a caller/run verifies them.",
+  "nodes": [
+    {
+      "id": "root_holon",
+      "role": "decision_maker",
+      "desc": "henri-agent-integration: owns approvals, Vast dispatch, MoA gating"
+    },
+    {
+      "id": "research_holon",
+      "role": "decision_maker",
+      "desc": "henri-research: emits SpecContract A"
+    },
+    {
+      "id": "architecture_holon",
+      "role": "decision_maker",
+      "desc": "henri-architecture: emits HarnessContract B"
+    },
+    {
+      "id": "strace_holon",
+      "role": "executor",
+      "desc": "henri-strace-optimizer: root-cause attribution + policy proposals"
+    },
+    {
+      "id": "moa_aggregator",
+      "role": "executor",
+      "desc": "acting model resolved from live MoA preset; only tool-bearing MoA node"
+    },
+    {
+      "id": "moa_ref_a",
+      "role": "executor",
+      "desc": "tool-less code/consumer advisor; exact model from live preset"
+    },
+    {
+      "id": "moa_ref_b",
+      "role": "executor",
+      "desc": "tool-less mechanism/system advisor; exact model from live preset"
+    },
+    {
+      "id": "moa_ref_c",
+      "role": "executor",
+      "desc": "tool-less independent falsification advisor; does not see current A/B outputs"
+    },
+    {
+      "id": "cron_ci",
+      "role": "executor",
+      "desc": "henri-ci runner every 3m"
+    },
+    {
+      "id": "cron_ingest",
+      "role": "executor",
+      "desc": "henri-research-ingest every 10m"
+    },
+    {
+      "id": "cron_watchdog",
+      "role": "executor",
+      "desc": "notebooklm auth watchdog daily"
+    },
+    {
+      "id": "codec_encoder",
+      "role": "executor",
+      "desc": "historical codec/representation node; verify actual representation and caller"
+    },
+    {
+      "id": "edmd",
+      "role": "executor",
+      "desc": "R-EDMD online dynamics learner"
+    },
+    {
+      "id": "planner",
+      "role": "decision_maker",
+      "desc": "historical planning node; verify action-policy caller; do not assume SagnacMCTS selects actions"
+    },
+    {
+      "id": "egress_head",
+      "role": "executor",
+      "desc": "hopfield egress + AST decode; fail-closed veto"
+    },
+    {
+      "id": "constraints",
+      "role": "executor",
+      "desc": "constraint penalties; candidate-specific, dim-normalized"
+    },
+    {
+      "id": "carrier_c1",
+      "role": "executor",
+      "desc": "sealed SO8 rotor carrier (ed7b603); dispatch-driver-only"
+    },
+    {
+      "id": "carrier_k3",
+      "role": "executor",
+      "desc": "sealed KG5 TZCSM carrier; remote run needs approval"
+    },
+    {
+      "id": "carrier_g8",
+      "role": "executor",
+      "desc": "sealed gauge carrier; grade_scramble 0.0"
+    },
+    {
+      "id": "benchmark_harness",
+      "role": "executor",
+      "desc": "MBPP / ARC-AGI-3 / gauntlet runners"
+    },
+    {
+      "id": "telemetry_store",
+      "role": "passive_state",
+      "desc": "G:\\My Drive\\HENRI_Telemetry JSONL/JSON artifacts"
+    },
+    {
+      "id": "audit_chain",
+      "role": "passive_state",
+      "desc": "active-profile audit/henri_audit_chain.jsonl; hash-linked unsigned governance"
+    },
+    {
+      "id": "vault",
+      "role": "passive_state",
+      "desc": "Obsidian local vault projections"
+    },
+    {
+      "id": "trustgraph",
+      "role": "passive_state",
+      "desc": "optional holonic context layer (service must be verified)"
+    },
+    {
+      "id": "zone_c",
+      "role": "passive_state",
+      "desc": "latent artifacts and CUDA telemetry only"
+    },
+    {
+      "id": "ontology_holon",
+      "role": "passive_state",
+      "desc": "typed evidence/mapping source manifest; current five-core member"
+    },
+    {
+      "id": "notebooklm",
+      "role": "passive_state",
+      "desc": "cited corpus synthesis; resolved source reads required"
+    },
+    {
+      "id": "drive_source",
+      "role": "passive_state",
+      "desc": "original source bytes/revisions; mounted and API evidence distinct"
+    }
+  ],
+  "edges": [
+    {
+      "from": "research_holon",
+      "to": "architecture_holon",
+      "type": "data",
+      "evidence": "SpecContract A"
+    },
+    {
+      "from": "architecture_holon",
+      "to": "root_holon",
+      "type": "data",
+      "evidence": "HarnessContract B"
+    },
+    {
+      "from": "root_holon",
+      "to": "research_holon",
+      "type": "data",
+      "evidence": "ExecutionFeedbackContract C"
+    },
+    {
+      "from": "root_holon",
+      "to": "architecture_holon",
+      "type": "data",
+      "evidence": "ExecutionFeedbackContract C"
+    },
+    {
+      "from": "strace_holon",
+      "to": "root_holon",
+      "type": "data",
+      "evidence": "proposals + attributions; approval before patch"
+    },
+    {
+      "from": "root_holon",
+      "to": "strace_holon",
+      "type": "control",
+      "evidence": "stage dispatch and approval gates"
+    },
+    {
+      "from": "root_holon",
+      "to": "moa_aggregator",
+      "type": "control",
+      "evidence": "MoA dispatch, capped 3/session"
+    },
+    {
+      "from": "moa_aggregator",
+      "to": "moa_ref_a",
+      "type": "control",
+      "evidence": "reference fanout"
+    },
+    {
+      "from": "moa_aggregator",
+      "to": "moa_ref_b",
+      "type": "control",
+      "evidence": "reference fanout"
+    },
+    {
+      "from": "moa_aggregator",
+      "to": "moa_ref_c",
+      "type": "control",
+      "evidence": "judge fanout"
+    },
+    {
+      "from": "cron_ci",
+      "to": "benchmark_harness",
+      "type": "control",
+      "evidence": "CI run"
+    },
+    {
+      "from": "benchmark_harness",
+      "to": "telemetry_store",
+      "type": "data",
+      "evidence": "item_results.jsonl etc."
+    },
+    {
+      "from": "codec_encoder",
+      "to": "edmd",
+      "type": "data",
+      "evidence": "wave vectors [8192,8]"
+    },
+    {
+      "from": "edmd",
+      "to": "planner",
+      "type": "data",
+      "evidence": "predicted solution waves"
+    },
+    {
+      "from": "planner",
+      "to": "egress_head",
+      "type": "data",
+      "evidence": "planner waves [num_blocks,8]"
+    },
+    {
+      "from": "egress_head",
+      "to": "benchmark_harness",
+      "type": "data",
+      "evidence": "decoded outputs; fail-closed veto"
+    },
+    {
+      "from": "constraints",
+      "to": "planner",
+      "type": "data",
+      "evidence": "candidate-specific penalties"
+    },
+    {
+      "from": "root_holon",
+      "to": "carrier_c1",
+      "type": "control",
+      "evidence": "sealed; dispatch requires explicit approval"
+    },
+    {
+      "from": "root_holon",
+      "to": "carrier_k3",
+      "type": "control",
+      "evidence": "sealed; remote run requires APPROVE_REMOTE_RUN"
+    },
+    {
+      "from": "root_holon",
+      "to": "carrier_g8",
+      "type": "control",
+      "evidence": "sealed; gauge rotor sandwich"
+    },
+    {
+      "from": "telemetry_store",
+      "to": "strace_holon",
+      "type": "data",
+      "evidence": "corpus for Stage 2"
+    },
+    {
+      "from": "audit_chain",
+      "to": "strace_holon",
+      "type": "data",
+      "evidence": "governance context"
+    },
+    {
+      "from": "drive_source",
+      "to": "ontology_holon",
+      "type": "data",
+      "evidence": "source read/hash; cloud revision only through authorized API"
+    },
+    {
+      "from": "vault",
+      "to": "ontology_holon",
+      "type": "data",
+      "evidence": "exact readable note and original source refs"
+    },
+    {
+      "from": "notebooklm",
+      "to": "ontology_holon",
+      "type": "data",
+      "evidence": "resolved source IDs; synthesis INFERRED"
+    },
+    {
+      "from": "ontology_holon",
+      "to": "research_holon",
+      "type": "data",
+      "evidence": "compact resolved manifest; workflow instruction, not automatic caller"
+    }
+  ]
+}

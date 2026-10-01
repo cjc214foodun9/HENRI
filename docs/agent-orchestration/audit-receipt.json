@@ -1,0 +1,35 @@
+{
+  "hash": "98884162a421d1f1fd0c50dbef62cac40309585a3adeac2c6e350533ffd78d1c",
+  "action": "CACHE_JEV_OPENSHELL_LOCAL_VERIFIED",
+  "payload": {
+    "scope": "cache-first instructions, approved Draw.io install/repair, Jev advisory plugin, local WSL OpenShell pilot; no main/math/schema/Vast change",
+    "bundle": [
+      "henri-soul",
+      "henri-research",
+      "henri-architecture",
+      "henri-agent-integration",
+      "henri-ontology",
+      "henri-diagrams",
+      "drawio-skill",
+      "henri-system1"
+    ],
+    "plugin": "henri-control-plane",
+    "open_shell_sandbox": "2bfca82d-7bd5-4baa-8c19-04ff1dde31fa",
+    "cache_reads": 3904,
+    "evidence_ref": "C:\\Users\\chan\\henri-telemetry\\cache-openshell-jev\\completion-evidence.json",
+    "evidence_sha256": "78507a3b38c7be07b2cf8d41677bee3312aa723495ea5668d676ae53393b28a4",
+    "benefit": "HYPOTHESIS",
+    "limits": [
+      "Vast containment not implemented",
+      "active parent terminal remains local",
+      "new plugin requires process restart",
+      "prover coverage excludes MCP/GraphQL",
+      "policy proof+exec is not atomic against operator mutation",
+      "Jev not calibrated",
+      "draw.io native exporter missing",
+      "visual browser inspection timed out; no pixel claim",
+      "Muse reference failures remain; roster unchanged"
+    ]
+  },
+  "chain_verified": true
+}

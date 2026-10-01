@@ -1,0 +1,8 @@
+name: henri-control-plane
+version: 0.1.0
+description: Cache-safe HENRI Jev advisory routing and guarded execution tools.
+provides_tools:
+  - henri_system1_decide
+  - henri_guarded_exec
+provides_hooks:
+  - pre_llm_call
