@@ -386,3 +386,58 @@ Two of five pillars remain unmade as loops. Step 4 stays blocked behind Step 3's
   after a MODULE-WIDE importer scan found `production_arc_run.py:2598`. The
   sub-claim about `basal_boundary_engine.py` (0 calls) was and remains true; the
   generalisation from it was not. Gate scope widened from single-file to module-wide.
+
+
+---
+
+## 7. Pillar 3 loop: built, tested, DEFAULT-OFF, not yet wired (2026-10-01)
+
+Section 6, Finding 2 recorded that `arc_sagnac_veto.py` does not import
+`henri_thermo_langevin`, so the Pillar 3 loop did not exist in the code. This
+section records the new coupling and, just as precisely, its remaining limit.
+
+**New module:** `henri_sagnac_thermal_loop.py`. Flag `HENRI_SAGNAC_THERMAL_LOOP`,
+default `"0"` so the production path is byte-identical when unset.
+
+**Mechanism.** `evaluate_veto(candidate, axiom, world)` -> on a hard veto, the
+thermal budget is `kT = kT_base * (1 + excess)` clamped to `kT_max`, where
+`excess = max(0, (delta_axiom - tau_veto) / tau_veto)`. Bounded anisotropic creep
+runs for `max_steps`, using the SGLD convention `sqrt(2 * gamma * kT * dt)`.
+`VETO_UNAVAILABLE` never fires: a failed measurement is not a veto.
+
+**Evidence.** 11 contract tests pass (`tests/unit/test_sagnac_thermal_loop.py`).
+A separate 8-claim probe holds. Reproducibility: identical seed -> bit-identical
+creep (`max|diff| = 0.0`). Invariants: `kT` strictly increasing in `delta` and
+`> kT_base` when active, bounded by `kT_max` for every tested input, `||theta||`
+restored after creep.
+
+### Two defects the RED probe found (both in this session's own code)
+
+1. **Fixture outside the metric's domain.** `_sagnac_similarity` for complex waves
+   is `|mean(conj(a) * b)|` -- a MEAN over D components, not a normalised inner
+   product. Measured: `ones vs ones -> sim 1.0000` (quiet), but
+   `onehot vs onehot -> sim 0.015625 = 1/D -> delta 0.984 -> FIRES`. So `eps_hard
+   = 0.35` is meaningful only for near-unit-modulus waves. This is now pinned by
+   test T9 rather than hidden, and the probe fixture was corrected.
+2. **The helper disagreed with the event it described.** `kT_from_delta` returned
+   `kT_base = 1.0` at or below threshold, while the quiescent event reported
+   `kT = 0.0` for that same state. Fixed: the helper now returns `0.0` when
+   `excess <= 0`, so one state has one thermal budget.
+
+### The limit, stated plainly
+
+**`henri_sagnac_thermal_loop.py` has 0 production importers.** The module exists
+and is tested, but no production path constructs it, so the veto -> thermalisation
+loop is **still absent from production**. What is now true is that the coupling is
+*built and provably correct in isolation*; what remains is a production consumer
+that calls it on a vetoed candidate. That is a wiring task against a real module,
+not a design question.
+
+### What this section does NOT claim
+
+- Not that the 8.2 line of physics in the source documents is reproduced.
+- Not that the loop improves any task metric. No task metric was measured.
+- Not that `henri_thermo_langevin` is now coupled: it is still imported only by
+  `experiments/verification/`. This module re-implements the noise convention
+  rather than importing the sink, because the sink's `LangevinComputer` carries
+  trainable couplings and optimiser state that a per-veto creep step must not touch.
