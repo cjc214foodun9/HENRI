@@ -153,6 +153,11 @@ def main() -> int:
     ap.add_argument("--depth", type=int, default=2)
     ap.add_argument("--seed", type=int, default=1234)
     ap.add_argument("--out", type=str, default=None)
+    ap.add_argument("--arms", type=str,
+                    default="mlp,mlp+identity-skip,resonator",
+                    help="comma list of arms to run")
+    ap.add_argument("--res-iters", type=int, default=3,
+                    help="recursion depth of the structured resonator arm")
     args = ap.parse_args()
 
     torch.manual_seed(args.seed)
@@ -210,9 +215,23 @@ def main() -> int:
 
     # ---- NON-LINEAR ARMS ------------------------------------------------------
     results = {}
-    for name, residual in (("mlp", False), ("mlp+identity-skip", True)):
-        model = WavePropagator(args.d, hidden=args.hidden, depth=args.depth,
-                               residual=residual).to(device)
+    import os as _os, sys as _sys
+    _ROOT = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    if _ROOT not in _sys.path:
+        _sys.path.insert(0, _ROOT)
+    from henri_structured_predictor import StructuredResonator
+    ARM_FACTORIES = {
+        "mlp": lambda: WavePropagator(args.d, hidden=args.hidden, depth=args.depth,
+                                      residual=False),
+        "mlp+identity-skip": lambda: WavePropagator(args.d, hidden=args.hidden,
+                                                    depth=args.depth, residual=True),
+        # Pillar 2 candidate: STRUCTURED (rotor -> mask -> block-shift), iterated
+        # with SHARED factors. Not a flat map -- see henri_structured_predictor.
+        "resonator": lambda: StructuredResonator(args.d, args.nb, args.grid,
+                                                 iters=args.res_iters),
+    }
+    for name in [a for a in args.arms.split(",") if a in ARM_FACTORIES]:
+        model = ARM_FACTORIES[name]().to(device)
         opt = torch.optim.Adam(model.parameters(), lr=args.lr)
         model.train()
         last = None
@@ -245,7 +264,12 @@ def main() -> int:
         mem = tr3m - te3m
         results[name] = dict(train1=tr1m, train3=tr3m, test1=te1m, test3=te3m,
                              static3=st3m, mem_gap=mem, loss_last=last,
-                             residual=residual)
+                             # BUG FIXED: this read `residual=residual` after the arm
+                             # loop was generalised to a name list, raising NameError
+                             # before any arm could be scored. The flag is now taken
+                             # from the model itself so every arm reports its own.
+                             residual=bool(getattr(model, "residual", False)),
+                             arm=name)
         print()
         print(f"NON-LINEAR ARM: {name}   (hidden={args.hidden} depth={args.depth} steps={args.steps})")
         print(f"  TRAIN 3-step (memorisation detector) : {tr3m:.6f}")
