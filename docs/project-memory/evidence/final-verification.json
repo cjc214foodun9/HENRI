@@ -1,0 +1,16 @@
+{
+  "evidence_class": "OBSERVED",
+  "scope": "local engineering infrastructure only; no HENRI model/CUDA performance",
+  "tests_return_code": 0,
+  "test_executions": 26,
+  "unique_test_names": 18,
+  "tests_no_skips": true,
+  "tests_log_sha256": "10fe2d9612c8ed861f78a892e97f22d33ceaf1f8a3246c76c2b6711a92793165",
+  "source_commit": "c897d435cb89542f865c4c69e121a75ec2cb7c47",
+  "project_records": 3,
+  "installed_overlay_files": 58,
+  "original_dirty_tree_unchanged": true,
+  "honcho": "OFFLINE_USER_CHOICE; import BLOCKED agent.turn_author",
+  "drive_cloud_revision": "BLOCKED_NO_API_AUTH",
+  "benefit": "HYPOTHESIS"
+}

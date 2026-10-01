@@ -16,6 +16,8 @@ A holon is a bounded workflow inside a parent workflow. Skills define roles, not
 
 Drive = originals/revisions; Obsidian = readable source/decision/conflict projections; NotebookLM = cited retrieval/synthesis; typed ontology = terms/mappings/constraints/evidence; audit chain = hash-linked governance; graph schemas = control-plane envelopes, not A/B/C; STRACE = derived failure analysis; time-series = operational telemetry; optional TrustGraph = verified relationship/agent flows; Zone C = latent/reference artifacts, not engineering notes.
 
+CodeGraph = disposable SHA-pinned static source index, with dynamic/heuristic boundaries. Project memory = reviewed operational records mirrored in GitHub; optional Honcho = derivative retrieval, offline until approved and verified. Neither is the cited ontology, audit authority, or Zone C.
+
 Link with IDs/hashes, not schema merger. NotebookLM does not implement the engineering graph; Zone C is not its substitute.
 
 ## Path

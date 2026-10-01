@@ -1,0 +1,16 @@
+{
+  "evidence_class": "OBSERVED",
+  "record_id": "pm-e7c974c02a8098c9c7fe9f2be94337170c865d6c0ce9787cb2d9b637d8cc51fd",
+  "repo_url": "https://github.com/cjc214foodun9/HENRI.git",
+  "schema_version": 1,
+  "source_commit": "c897d435cb89542f865c4c69e121a75ec2cb7c47",
+  "sources": [
+    {
+      "git_blob": "358aa6f77869aa2e148685955af6e769af6d9cb9",
+      "path": "docs/agent-orchestration/profile-overlay/scripts/henri_system1.py",
+      "sha256": "ef9fc1c36e6a0e53badd0ab9efd456c3776d0cd4edb81d6af75774a5d649642a"
+    }
+  ],
+  "summary": "The typed caller uses finite owner, escalation, failure, evidence, store and risk rubrics. Confidence is advisory; deterministic permission, proof, hashes and final acceptance remain outside model authority.",
+  "title": "Jev advisory typed judgment consumer"
+}

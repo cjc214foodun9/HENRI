@@ -45,6 +45,10 @@ Evolution: diagnose → attribute → one-level patch → paired-validation gate
 
 Evidence/store classification is eligible for Jev advice through henri-system1. Do not let the label replace source resolution, schema validation, deterministic provenance, or approval. A source hash or probe must still support each committed mapping. Diagram provenance and policy proof are separate from latent ontology and internal coherence.
 
+## Engineering graph and project memory
+
+CodeGraph supplies SHA-pinned source relationships; dynamic and heuristic edges keep their limits. Project memory stores reviewed operational decisions, references, failures, and next gates; Honcho recall is optional derivative context. Neither replaces cited NotebookLM/Obsidian/Drive sources or proves execution. Use existing term/mapping/constraint/evidence families with probe refs; link SHA/blob/source IDs and existing audit event. No schema merger, raw session upload, benchmark answers, or Zone C payloads.
+
 ## Operations
 
 Load notebooklm, obsidian, google-workspace only for their active operations; henri-holonic-graph for store boundaries. Use python "$HERMES_HOME/scripts/nlm_run.py" login --check on this host. After CLI reauth, MCP refresh_auth plus real source read verifies recovery. Do not upgrade MCP mid-session.

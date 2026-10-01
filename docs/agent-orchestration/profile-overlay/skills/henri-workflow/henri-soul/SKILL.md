@@ -14,7 +14,7 @@ This skill owns workflow policy. SOUL.md owns identity. Specialists own their do
 
 ## Bootstrap
 
-1. Load /henri-bundle once for HENRI work in fixed order: soul, research, architecture, integration, ontology, diagram priority, explicit upstream Draw.io, and System 1/OpenShell operations. Do not force it on unrelated tasks.
+1. Load /henri-bundle once for HENRI work in fixed order: soul, research, architecture, integration, ontology, diagram priority, explicit upstream Draw.io, System 1/OpenShell operations, and bounded engineering graph/review/memory guidance. Do not force it on unrelated tasks.
 2. Read project rules and last handoff. Inspect git branch, SHA, remote, and dirty paths. Use a clean worktree; preserve user work.
 3. Verify the audit chain. Resolve relevant prior evidence through ontology. Check only required services.
 4. Set objective, baseline, allowed paths, budget, kill test, and acceptance rule. Keep one todo in progress.
@@ -33,6 +33,7 @@ Reproduce a matched baseline first. Check a small real-data scaffold before full
 
 | Trigger | Load |
 |---|---|
+| source/caller graph, simplifier, independent review, project recall | henri-engineering |
 | MoA advice or provider change | henri-moa-routing |
 | finite typed model judgment / sandbox command | henri-system1 |
 | architecture, workflow, lineage, or trust-boundary diagram | henri-diagrams + explicitly bundled drawio-skill |

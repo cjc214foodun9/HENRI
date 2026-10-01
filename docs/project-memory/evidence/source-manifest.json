@@ -1,0 +1,56 @@
+{
+  "repo_url": "https://github.com/cjc214foodun9/HENRI.git",
+  "commit_sha": "c897d435cb89542f865c4c69e121a75ec2cb7c47",
+  "files": [
+    {
+      "path": "HENRI V2/agentic_graph/__init__.py",
+      "sha256": "4b11dea754d93a41bd4d395665490ba15403c48114e92de635334673e5eebc7e"
+    },
+    {
+      "path": "HENRI V2/agentic_graph/budgets.py",
+      "sha256": "9b4d90566d4d8106c2c46f80b282573d9b644285686f1bc9cc0280a3ad13e532"
+    },
+    {
+      "path": "HENRI V2/agentic_graph/context_packer.py",
+      "sha256": "d378c0359ee95cd9e61d2c99afa1de7c9ce4f96247811041ec79c7dfd549e054"
+    },
+    {
+      "path": "HENRI V2/agentic_graph/evidence_receipts.py",
+      "sha256": "b36cf8f490f77d39dfe8f7c93ca2ae3b28ed52e293a952e21969fa605fb1239b"
+    },
+    {
+      "path": "HENRI V2/agentic_graph/models.py",
+      "sha256": "8f81207fcf73f591cf68b6d0746599aa6a4450c419fea6ccdfd63182004478c5"
+    },
+    {
+      "path": "HENRI V2/agentic_graph/routing.py",
+      "sha256": "1c63ff959f4001bd83b03276c2974e1ddbd0d9494f1abb0be7ac5e7c3474b199"
+    },
+    {
+      "path": "HENRI V2/agentic_graph/runtime.py",
+      "sha256": "9f26df6eb2ded90c88a6852c7a9087892c07fde92094ee5c41a92d2ddccb244f"
+    },
+    {
+      "path": "HENRI V2/agentic_graph/static_prefix.py",
+      "sha256": "2a0f2f0d805f825a39915c382c3703e4207e747347ed95ace90f4a2cb6089458"
+    },
+    {
+      "path": "HENRI V2/agentic_graph/verifier.py",
+      "sha256": "89ab8673a70cbde1d1779a34c6df4c631cbd01a3a348bd0c30a9fc8c73b2fccb"
+    },
+    {
+      "path": "docs/agent-orchestration/profile-overlay/scripts/henri_cache_audit.py",
+      "sha256": "0e638145e60432173f59e131114b39b554ab83f2a3da3d1ce1b9695cc2059ca5"
+    },
+    {
+      "path": "docs/agent-orchestration/profile-overlay/scripts/henri_openshell.py",
+      "sha256": "670dedfa68aa2b9f293c0fcee92e9c6a7f51d45bd9e41be3c6d12934a0ba1f59"
+    },
+    {
+      "path": "docs/agent-orchestration/profile-overlay/scripts/henri_system1.py",
+      "sha256": "ef9fc1c36e6a0e53badd0ab9efd456c3776d0cd4edb81d6af75774a5d649642a"
+    }
+  ],
+  "snapshot": "C:\\Users\\chan\\henri-telemetry\\engineering-memory\\source-snapshot",
+  "scope": "AST only; exact committed source; no execution claim"
+}

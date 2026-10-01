@@ -43,6 +43,10 @@ Load applicable constraint references through `references/reference-index.md` be
 - Preserve the declared zero-pretraining/task-compilation contract. Disclose pretrained backbones and separate their contribution.
 - Archive deprecated HENRI code under HENRI V2/_archive/ unless deletion is approved.
 
+## Engineering graph and review
+
+Use henri-engineering for a SHA-bound CodeGraph source inventory before caller audit; inspect its dynamic boundary and heuristic confidence. Simplify changed code only after behavior tests. Apply supplied review guidance to an independent bounded diff/spec/security review before commit; resolve blockers. CodeGraph is source evidence, not executed effect. Record public project-memory refs after exact artifact verification.
+
 ## Implement and verify
 
 Write the discriminating test first. Use isolated worktrees and exact paths. HENRI tests run only on Vast CUDA or canonical CI. Local instruction/schema/prompt checks do not establish model performance.

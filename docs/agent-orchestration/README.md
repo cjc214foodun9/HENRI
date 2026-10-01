@@ -1,12 +1,12 @@
 # HENRI cache-first control-plane overlay
 
-Approved scope: default-profile instructions, editable diagrams, real Jev typed advice, and a local OpenShell WSL pilot. This branch does not change HENRI mathematics, graph schemas, benchmark evaluators, the MoA roster, or Vast deployment. No main merge is authorized.
+Approved scope: default-profile instructions, editable diagrams, real Jev typed advice, and a local OpenShell WSL pilot. Engineering extension: the fixed bundle also includes henri-engineering. See ../project-memory/ for reviewed source records, CodeGraph receipts, independent review, and ontology linkage. Honcho is installed but offline and blocked on host compatibility; no remote-memory claim. This branch does not change HENRI mathematics, graph schemas, benchmark evaluators, the MoA roster, or Vast deployment. No main merge is authorized.
 
 ## Operating stack
 
 `stable prefix → deterministic evidence → Jev typed advice → acting root/approval → complete-policy prover → qualified local sandbox → real receipts → audit decision`
 
-The fixed bundle contains five core HENRI skills plus henri-diagrams, explicitly invoked upstream drawio-skill, and henri-system1. Every HENRI entry starts with cache discipline. Upstream Draw.io remains unchanged and is bundled explicitly with user approval. Existing local supporting references are retained; this repository ships a profile overlay, not a standalone HENRI skill installation.
+The fixed bundle contains five core HENRI skills plus henri-diagrams, explicitly invoked upstream drawio-skill, henri-system1, and henri-engineering. Every HENRI entry starts with cache discipline. Upstream Draw.io remains unchanged and is bundled explicitly with user approval. Existing local supporting references are retained; this repository ships a profile overlay, not a standalone HENRI skill installation.
 
 ## Actual integration
 

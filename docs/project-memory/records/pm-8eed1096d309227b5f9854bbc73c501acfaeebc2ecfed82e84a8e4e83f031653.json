@@ -1,0 +1,16 @@
+{
+  "evidence_class": "OBSERVED",
+  "record_id": "pm-8eed1096d309227b5f9854bbc73c501acfaeebc2ecfed82e84a8e4e83f031653",
+  "repo_url": "https://github.com/cjc214foodun9/HENRI.git",
+  "schema_version": 1,
+  "source_commit": "c897d435cb89542f865c4c69e121a75ec2cb7c47",
+  "sources": [
+    {
+      "git_blob": "c2d0dc77fa2e0b730bfab306c3567ddc11a3160c",
+      "path": "docs/agent-orchestration/profile-overlay/scripts/henri_openshell.py",
+      "sha256": "670dedfa68aa2b9f293c0fcee92e9c6a7f51d45bd9e41be3c6d12934a0ba1f59"
+    }
+  ],
+  "summary": "The local guard obtains complete effective policy, demands within_boundary under required coverage, and executes only in its named sandbox. Its own source states local WSL scope, no host-wide or Vast GPU claim.",
+  "title": "OpenShell scoped execution consumer"
+}

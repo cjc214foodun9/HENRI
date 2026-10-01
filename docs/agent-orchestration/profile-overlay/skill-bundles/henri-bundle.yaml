@@ -8,7 +8,8 @@ skills:
 - henri-diagrams
 - drawio-skill
 - henri-system1
-description: Cache-first HENRI R&D with diagrams and typed System 1 routing.
+- henri-engineering
+description: Cache-first HENRI R&D, source review and project memory.
 instruction: 'CACHE FIRST: preserve the existing system/tool/schema/model prefix;
   append dynamic task state last. Load this fixed bundle once. Measure provider cache
   fields; no padding, blind warm-ups, or invented hit guarantees. Follow henri-agent-integration/references/cache-maximization-playbook.md.
@@ -42,4 +43,6 @@ instruction: 'CACHE FIRST: preserve the existing system/tool/schema/model prefix
   explicit bundle invocation. Route every eligible typed model judgment to henri-system1
   Jev Decisions, never arithmetic, deterministic validation, security permission,
   or final acceptance. Sandbox-designated commands use the approved OpenShell path;
-  every prover/runtime failure blocks dispatch.'
+  every prover/runtime failure blocks dispatch. Use henri-engineering for pinned AST
+  code graphs, changed-code simplification, independent review, and SHA-verified project
+  memory. Honcho stays offline; no transcript upload or automatic activation.'

@@ -1,0 +1,17 @@
+{
+  "hosts": {
+    "hermes": {
+      "enabled": false,
+      "workspace": "henri-engineering",
+      "peerName": "henri-project",
+      "aiPeer": "henri-arbiter",
+      "recallMode": "tools",
+      "saveMessages": false,
+      "initOnSessionStart": false,
+      "sessionStrategy": "per-session",
+      "queryRewrite": false,
+      "logging": false,
+      "contextTokens": 800
+    }
+  }
+}

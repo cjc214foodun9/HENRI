@@ -58,6 +58,10 @@ Verify branch support. henri-ci may follow main only. Do not merge to trigger a 
 
 Use henri-system1 for the new Jev/OpenShell consumers. Plugin henri-control-plane exposes typed advice and guarded execution; activation was checked in a fresh Hermes session. The active-profile scripts/henri_openshell.py obtains the complete effective policy and runs the operator-boundary prover before sandbox exec. Any error/unsupported/inconclusive/violation blocks. Kernel qualification and denial controls are separate evidence. Keep policy changes serialized: proof+exec is not atomic against an operator's concurrent mutation. No host-tool override and no Vast protection claim. Exact procedures: references/openshell-boundary.md.
 
+## Stateful project handoff
+
+Use henri-engineering for reviewed public project records pinned to Git-stored source bytes and exact commit. Local records are canonical; Honcho is an optional projection and remains offline. GitHub sync requires exact remote branch SHA plus content readback. Link ontology mappings and the existing audit event without copying raw ledger/chat/data. A per-repo Honcho session is not repository sync.
+
 ## Remote and measurement
 
 Use henri-vast-lifecycle. Default: commit → push → henri-ci → CUDA artifacts → delivery. SSH/SCP only for CI failure, debugging, or approved queued experiment. Check current endpoint, interpreter, CUDA, workdir, and one active run per GPU.

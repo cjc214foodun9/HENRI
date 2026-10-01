@@ -1,0 +1,79 @@
+<mxfile host="drawio-skill" agent="diagram-ir" version="3.0.0">
+  <diagram id="system" name="System">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="sources" value="Drive originals / Obsidian notes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="sources" data-kind="artifact" data-properties="{&quot;evidence&quot;:&quot;OBSERVED mounted path/hash; cloud revision BLOCKED&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;OBSERVED mounted path/hash; cloud revision BLOCKED&quot;}" data-source-label="Drive originals / Obsidian notes" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\engineering-memory\\engineering.ir.json&quot;}">
+          <mxGeometry x="60" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="corpus" value="NotebookLM cited corpus" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="corpus" data-kind="store" data-properties="{&quot;evidence&quot;:&quot;OBSERVED source readback; synthesis INFERRED&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;OBSERVED source readback; synthesis INFERRED&quot;}" data-source-label="NotebookLM cited corpus" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\engineering-memory\\engineering.ir.json&quot;}">
+          <mxGeometry x="290" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ontology" value="Typed ontology mappings" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="ontology" data-kind="store" data-properties="{&quot;evidence&quot;:&quot;OBSERVED six new records; historical drift retained&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;OBSERVED six new records; historical drift retained&quot;}" data-source-label="Typed ontology mappings" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\engineering-memory\\engineering.ir.json&quot;}">
+          <mxGeometry x="520" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="source-sha" value="Exact Git source SHA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="source-sha" data-kind="artifact" data-properties="{&quot;evidence&quot;:&quot;OBSERVED c897d435 control-plane source&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;OBSERVED c897d435 control-plane source&quot;}" data-source-label="Exact Git source SHA" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\engineering-memory\\engineering.ir.json&quot;}">
+          <mxGeometry x="750" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="codegraph" value="CodeGraph 1.6.1 / 12 files" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="codegraph" data-kind="module" data-properties="{&quot;evidence&quot;:&quot;OBSERVED 136 nodes / 233 edges; AST/heuristic only&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;OBSERVED 136 nodes / 233 edges; AST/heuristic only&quot;}" data-source-label="CodeGraph 1.6.1 / 12 files" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\engineering-memory\\engineering.ir.json&quot;}">
+          <mxGeometry x="60" y="230" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="engineering" value="Bounded implementation / simplifier" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="engineering" data-kind="process" data-properties="{&quot;evidence&quot;:&quot;Installed policy; no math/schema/default change&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;Installed policy; no math/schema/default change&quot;}" data-source-label="Bounded implementation / simplifier" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\engineering-memory\\engineering.ir.json&quot;}">
+          <mxGeometry x="290" y="230" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="review" value="Independent diff/spec review" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="review" data-kind="process" data-properties="{&quot;evidence&quot;:&quot;Advisory findings; deterministic tests own verdict&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;Advisory findings; deterministic tests own verdict&quot;}" data-source-label="Independent diff/spec review" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\engineering-memory\\engineering.ir.json&quot;}">
+          <mxGeometry x="520" y="230" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="records" value="Reviewed public project records" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="records" data-kind="store" data-properties="{&quot;evidence&quot;:&quot;OBSERVED three records; source/blob/SHA256&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;OBSERVED three records; source/blob/SHA256&quot;}" data-source-label="Reviewed public project records" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\engineering-memory\\engineering.ir.json&quot;}">
+          <mxGeometry x="750" y="230" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="github" value="GitHub review branch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="github" data-kind="store" data-properties="{&quot;evidence&quot;:&quot;Proposed exact-SHA delivery; not main promotion&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;Proposed exact-SHA delivery; not main promotion&quot;}" data-source-label="GitHub review branch" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\engineering-memory\\engineering.ir.json&quot;}">
+          <mxGeometry x="60" y="380" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="audit" value="Existing governance ledger" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="audit" data-kind="store" data-properties="{&quot;evidence&quot;:&quot;Verified hash-linked events; not signed truth&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;Verified hash-linked events; not signed truth&quot;}" data-source-label="Existing governance ledger" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\engineering-memory\\engineering.ir.json&quot;}">
+          <mxGeometry x="290" y="380" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="honcho" value="Honcho OFFLINE / import BLOCKED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="honcho" data-kind="store" data-properties="{&quot;evidence&quot;:&quot;User disabled; missing agent.turn_author; no upload&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;User disabled; missing agent.turn_author; no upload&quot;}" data-source-label="Honcho OFFLINE / import BLOCKED" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\engineering-memory\\engineering.ir.json&quot;}">
+          <mxGeometry x="520" y="380" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="zonec" value="Zone C latent state (separate)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="zonec" data-kind="store" data-properties="{&quot;evidence&quot;:&quot;Not read or modified in this change&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;Not read or modified in this change&quot;}" data-source-label="Zone C latent state (separate)" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\engineering-memory\\engineering.ir.json&quot;}">
+          <mxGeometry x="750" y="380" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-0" value="approved document import" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="sources" target="corpus" data-model-id="source-corpus" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="approved document import">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-1" value="source IDs / exact support" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="corpus" target="ontology" data-model-id="corpus-map" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="source IDs / exact support">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-2" value="exact-source snapshot" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="source-sha" target="codegraph" data-model-id="git-code" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="exact-source snapshot">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-3" value="known symbols / dynamic limits" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="codegraph" target="engineering" data-model-id="code-audit" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="known symbols / dynamic limits">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-4" value="resolved constraints / conflicts" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="ontology" target="engineering" data-model-id="ontology-audit" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="resolved constraints / conflicts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-5" value="bounded diff and tests" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="engineering" target="review" data-model-id="eng-review" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="bounded diff and tests">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-6" value="accepted public findings" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="review" target="records" data-model-id="review-record" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="accepted public findings">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-7" value="commit / exact SHA readback" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="records" target="github" data-model-id="record-github" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="commit / exact SHA readback">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-8" value="verified delivery event" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="github" target="audit" data-model-id="github-ledger" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="verified delivery event">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-9" value="mapping IDs, not schema merger" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="records" target="ontology" data-model-id="memory-map" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="mapping IDs, not schema merger">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-10" value="BLOCKED optional projection" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="records" target="honcho" data-model-id="memory-honcho" data-kind="async" data-properties="{}" data-source-properties="{}" data-source-label="BLOCKED optional projection">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

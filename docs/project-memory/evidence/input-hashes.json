@@ -1,0 +1,34 @@
+[
+  {
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\agentic_graph\\code-simplifier.md",
+    "sha256": "2a51e8d210580d9f66ac2ed1226c41f9374565fc275da30d7bb95f65c2cc87bb"
+  },
+  {
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\agentic_graph\\requesting-code-review\\SKILL.md",
+    "sha256": "cfcee1b06774e7c0517f1e09be1a11f2d5680257072723e709ddbcf7e08b795a"
+  },
+  {
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\agentic_graph\\requesting-code-review\\code-reviewer.md",
+    "sha256": "82e370be6b3447523816286195571e4216ba56ba1ad6ad0e87862294c4c78dcb"
+  },
+  {
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\agentic_graph\\codegraph-main\\package.json",
+    "sha256": "8b66a1a9bd9cc5eef26988f56b8a79b9c98128a3b5c6e4a8454cc6a5d3f01fb4"
+  },
+  {
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\agentic_graph\\codegraph-main\\README.md",
+    "sha256": "eb84996efef40925f8a1acea1978537d18a3d1560e960e76ef7b081e5c03a071"
+  },
+  {
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\agentic_graph\\hermes-plugin-honcho\\README.md",
+    "sha256": "58c12155dc7fba90dab89b34447049707a0a8e84108e9bee3556d7ff9c38ffdb"
+  },
+  {
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\agentic_graph\\hermes-plugin-honcho\\__init__.py",
+    "sha256": "b439c9efb0de20f51239f1b4f8c1f37f98be985dd86deb496307705e39ba3688"
+  },
+  {
+    "path": "C:\\Users\\chan\\Desktop\\HENRI 7B SWARM\\HENRI V2\\agentic_graph\\hermes-plugin-honcho\\session_migration.py",
+    "sha256": "4c9e651614af6fff457ffb4aff8c1cacf853bd26afeea1dd19d176dd88068598"
+  }
+]

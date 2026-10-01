@@ -1,0 +1,31 @@
+{
+  "schema": "drawio-skill/diagram-ir/v1",
+  "metadata": {"title": "HENRI engineering source and memory boundaries", "description": "Observed source retrieval/local records; external Honcho blocked. Source data and schema owners stay separate."},
+  "nodes": [
+    {"id":"sources","label":"Drive originals / Obsidian notes","kind":"artifact","properties":{"evidence":"OBSERVED mounted path/hash; cloud revision BLOCKED"}},
+    {"id":"corpus","label":"NotebookLM cited corpus","kind":"store","properties":{"evidence":"OBSERVED source readback; synthesis INFERRED"}},
+    {"id":"ontology","label":"Typed ontology mappings","kind":"store","properties":{"evidence":"OBSERVED six new records; historical drift retained"}},
+    {"id":"source-sha","label":"Exact Git source SHA","kind":"artifact","properties":{"evidence":"OBSERVED c897d435 control-plane source"}},
+    {"id":"codegraph","label":"CodeGraph 1.6.1 / 12 files","kind":"module","properties":{"evidence":"OBSERVED 136 nodes / 233 edges; AST/heuristic only"}},
+    {"id":"engineering","label":"Bounded implementation / simplifier","kind":"process","properties":{"evidence":"Installed policy; no math/schema/default change"}},
+    {"id":"review","label":"Independent diff/spec review","kind":"process","properties":{"evidence":"Advisory findings; deterministic tests own verdict"}},
+    {"id":"records","label":"Reviewed public project records","kind":"store","properties":{"evidence":"OBSERVED three records; source/blob/SHA256"}},
+    {"id":"github","label":"GitHub review branch","kind":"store","properties":{"evidence":"Proposed exact-SHA delivery; not main promotion"}},
+    {"id":"audit","label":"Existing governance ledger","kind":"store","properties":{"evidence":"Verified hash-linked events; not signed truth"}},
+    {"id":"honcho","label":"Honcho OFFLINE / import BLOCKED","kind":"store","properties":{"evidence":"User disabled; missing agent.turn_author; no upload"}},
+    {"id":"zonec","label":"Zone C latent state (separate)","kind":"store","properties":{"evidence":"Not read or modified in this change"}}
+  ],
+  "edges": [
+    {"id":"source-corpus","source":"sources","target":"corpus","label":"approved document import","kind":"sync"},
+    {"id":"corpus-map","source":"corpus","target":"ontology","label":"source IDs / exact support","kind":"sync"},
+    {"id":"git-code","source":"source-sha","target":"codegraph","label":"exact-source snapshot","kind":"sync"},
+    {"id":"code-audit","source":"codegraph","target":"engineering","label":"known symbols / dynamic limits","kind":"sync"},
+    {"id":"ontology-audit","source":"ontology","target":"engineering","label":"resolved constraints / conflicts","kind":"sync"},
+    {"id":"eng-review","source":"engineering","target":"review","label":"bounded diff and tests","kind":"sync"},
+    {"id":"review-record","source":"review","target":"records","label":"accepted public findings","kind":"sync"},
+    {"id":"record-github","source":"records","target":"github","label":"commit / exact SHA readback","kind":"sync"},
+    {"id":"github-ledger","source":"github","target":"audit","label":"verified delivery event","kind":"sync"},
+    {"id":"memory-map","source":"records","target":"ontology","label":"mapping IDs, not schema merger","kind":"sync"},
+    {"id":"memory-honcho","source":"records","target":"honcho","label":"BLOCKED optional projection","kind":"async"}
+  ]
+}

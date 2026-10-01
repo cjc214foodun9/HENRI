@@ -1,0 +1,186 @@
+{
+  "source_commit": "c897d435cb89542f865c4c69e121a75ec2cb7c47",
+  "source_files": 12,
+  "source_manifest_sha256": "29948c2e7f2c985f7ef8e96b2619f89a4998f376eb40f274ae2b57d7b0679db2",
+  "tool_version": "1.6.1",
+  "node_sha256": "b3094d0b49f9ad602262a9921551737bb97637c05dd357a06ae98188d7290aa3",
+  "entry_sha256": "e50fc067c0f229d5bf1051fa8af5f939822db59dbdac0d02e8597be734417bf3",
+  "nodes": 136,
+  "edges": 233,
+  "pending_refs": 0,
+  "known_symbol": "GraphRuntime",
+  "known_symbol_found": true,
+  "telemetry_requested": "off via DO_NOT_TRACK/CODEGRAPH_TELEMETRY/CODEGRAPH_NO_UPDATE_CHECK",
+  "scope": "12 exact committed Python files; AST + heuristic edges, no runtime truth",
+  "commands": [
+    {
+      "command": [
+        "status",
+        "C:\\Users\\chan\\henri-telemetry\\engineering-memory\\source-snapshot",
+        "--json"
+      ],
+      "return_code": 0,
+      "data": {
+        "initialized": true,
+        "version": "1.6.1",
+        "projectPath": "C:\\Users\\chan\\henri-telemetry\\engineering-memory\\source-snapshot",
+        "indexPath": "C:\\Users\\chan\\henri-telemetry\\engineering-memory\\source-snapshot\\.codegraph",
+        "lastIndexed": "2026-10-01T23:28:44.629Z",
+        "fileCount": 12,
+        "nodeCount": 136,
+        "edgeCount": 233,
+        "dbSizeBytes": 589824,
+        "walSizeBytes": 0,
+        "backend": "node-sqlite",
+        "journalMode": "wal",
+        "nodesByKind": {
+          "class": 12,
+          "file": 12,
+          "function": 24,
+          "import": 49,
+          "method": 20,
+          "variable": 19
+        },
+        "languages": [
+          "python"
+        ],
+        "pendingChanges": {
+          "added": 0,
+          "modified": 0,
+          "removed": 0
+        },
+        "worktreeMismatch": null,
+        "index": {
+          "builtWithVersion": "1.6.1",
+          "builtWithExtractionVersion": 27,
+          "currentExtractionVersion": 27,
+          "reindexRecommended": false,
+          "state": "complete",
+          "pendingRefs": 0
+        }
+      }
+    },
+    {
+      "command": [
+        "query",
+        "GraphRuntime",
+        "--path",
+        "C:\\Users\\chan\\henri-telemetry\\engineering-memory\\source-snapshot",
+        "--limit",
+        "5",
+        "--json"
+      ],
+      "return_code": 0,
+      "data": [
+        {
+          "node": {
+            "id": "class:9f803f41cb169b91b2509bd88c5cb8e4",
+            "kind": "class",
+            "name": "GraphRuntime",
+            "qualifiedName": "GraphRuntime",
+            "filePath": "HENRI V2/agentic_graph/runtime.py",
+            "language": "python",
+            "startLine": 9,
+            "endLine": 26,
+            "startColumn": 0,
+            "endColumn": 162,
+            "visibility": null,
+            "isExported": false,
+            "isAsync": false,
+            "isStatic": false,
+            "isAbstract": false,
+            "updatedAt": 1790897324637
+          },
+          "score": 109.1194863820516
+        },
+        {
+          "node": {
+            "id": "class:27bf3071dabbbe25ec4dbfc28c586d8e",
+            "kind": "class",
+            "name": "GraphRuntimeError",
+            "qualifiedName": "GraphRuntimeError",
+            "filePath": "HENRI V2/agentic_graph/runtime.py",
+            "language": "python",
+            "startLine": 7,
+            "endLine": 7,
+            "startColumn": 0,
+            "endColumn": 43,
+            "visibility": null,
+            "isExported": false,
+            "isAsync": false,
+            "isStatic": false,
+            "isAbstract": false,
+            "updatedAt": 1790897324637
+          },
+          "score": 60.119486382051605
+        },
+        {
+          "node": {
+            "id": "method:f85f1f921a709af0c290ec6849d4183e",
+            "kind": "method",
+            "name": "promote",
+            "qualifiedName": "GraphRuntime::promote",
+            "filePath": "HENRI V2/agentic_graph/runtime.py",
+            "language": "python",
+            "startLine": 19,
+            "endLine": 21,
+            "startColumn": 4,
+            "endColumn": 113,
+            "signature": "(self,claim_status,receipts)",
+            "visibility": null,
+            "isExported": false,
+            "isAsync": false,
+            "isStatic": false,
+            "isAbstract": false,
+            "updatedAt": 1790897324637
+          },
+          "score": 30.23690001635341
+        },
+        {
+          "node": {
+            "id": "method:cc1b36f143e69382ca0beed5450e1314",
+            "kind": "method",
+            "name": "retry_leaf",
+            "qualifiedName": "GraphRuntime::retry_leaf",
+            "filePath": "HENRI V2/agentic_graph/runtime.py",
+            "language": "python",
+            "startLine": 22,
+            "endLine": 26,
+            "startColumn": 4,
+            "endColumn": 162,
+            "signature": "(self,leaf_id,task,repair)",
+            "visibility": null,
+            "isExported": false,
+            "isAsync": false,
+            "isStatic": false,
+            "isAbstract": false,
+            "updatedAt": 1790897324637
+          },
+          "score": 30.044737483151486
+        },
+        {
+          "node": {
+            "id": "method:08454d255fdd2aa52c88294886836d9b",
+            "kind": "method",
+            "name": "__init__",
+            "qualifiedName": "GraphRuntime::__init__",
+            "filePath": "HENRI V2/agentic_graph/runtime.py",
+            "language": "python",
+            "startLine": 10,
+            "endLine": 11,
+            "startColumn": 4,
+            "endColumn": 181,
+            "signature": "(self,budget=None,retries=None,task_id=\"runtime-task\")",
+            "visibility": null,
+            "isExported": false,
+            "isAsync": false,
+            "isStatic": false,
+            "isAbstract": false,
+            "updatedAt": 1790897324637
+          },
+          "score": 29.924276716281398
+        }
+      ]
+    }
+  ]
+}

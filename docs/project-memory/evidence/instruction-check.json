@@ -1,0 +1,22 @@
+{
+  "scope": "instruction/source-tool integration; no HENRI scores",
+  "soul_loader": "PASS",
+  "bundle_loader": "PASS",
+  "members": [
+    "henri-soul",
+    "henri-research",
+    "henri-architecture",
+    "henri-agent-integration",
+    "henri-ontology",
+    "henri-diagrams",
+    "drawio-skill",
+    "henri-system1",
+    "henri-engineering"
+  ],
+  "missing": [],
+  "frozen_contracts": "PASS",
+  "honcho_active": false,
+  "honcho_import": "BLOCKED agent.turn_author",
+  "source_tool": "CodeGraph 1.6.1, exact source snapshot",
+  "tool_roster_hot_reload": false
+}

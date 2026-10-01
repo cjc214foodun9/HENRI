@@ -1,0 +1,23 @@
+{
+  "scope": "review branch feat/engineering-project-memory; no main/GPU/remote memory claim",
+  "script_sha256": "2d7df25fa3e49dbf9dad8c9af4e22d7f0f35d9cfe176e4e646162804c00ac10b",
+  "source_commit": "c897d435cb89542f865c4c69e121a75ec2cb7c47",
+  "review_recheck_sha256": "484ea0942a365b15155591cb0e99d984d3839474c70ce6483c1b1c3546442cb4",
+  "ontology_ids": [
+    "ont-term-67e2e9f068f8",
+    "ont-evidence-a3f83fdf70ac",
+    "ont-mapping-6acec6a160f0",
+    "ont-mapping-5a81067cd723",
+    "ont-mapping-db0eca2fddc2",
+    "ont-constraint-d4aa9681c0ad"
+  ],
+  "grounding_event": "2ca4d55b2a6afe4e9e88ac077584f3ea3e342197d30cb2cbc0542b2f8933028a",
+  "project_records": 3,
+  "tests_return_code": 0,
+  "test_executions": 26,
+  "unique_test_names": 18,
+  "honcho": "OFFLINE_USER_CHOICE_IMPORT_BLOCKED",
+  "benefit": "HYPOTHESIS",
+  "audit_event": "b724ad9029f807f069fdccaf07731310dea32b6a9828884abbea20ae0dd3195d",
+  "chain": "chain intact: 1773 records, head b724ad9029f807f0\u2026"
+}

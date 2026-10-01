@@ -1,0 +1,16 @@
+{
+  "evidence_class": "OBSERVED",
+  "record_id": "pm-d348357e24acd35f28a1f0f839a520715b02982b33e17944c28ee3b36dfdd0ad",
+  "repo_url": "https://github.com/cjc214foodun9/HENRI.git",
+  "schema_version": 1,
+  "source_commit": "c897d435cb89542f865c4c69e121a75ec2cb7c47",
+  "sources": [
+    {
+      "git_blob": "b3fdfab03fe6c264e0f06415b852313f80d7b176",
+      "path": "HENRI V2/agentic_graph/runtime.py",
+      "sha256": "9f26df6eb2ded90c88a6852c7a9087892c07fde92094ee5c41a92d2ddccb244f"
+    }
+  ],
+  "summary": "GraphRuntime emits engineering control-plane state. The source graph and its receipts do not prove production dispatch or external task success. Audit live callers before changing a state transition.",
+  "title": "GraphRuntime source boundary"
+}

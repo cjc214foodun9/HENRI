@@ -1,0 +1,26 @@
+{
+  "evidence_class": "OBSERVED",
+  "scope": "source/note/file and known-symbol readback; source truth/current runtime not established",
+  "note_path": "G:\\My Drive\\HENRI_Research_Vault\\HENRI_Research_Vault\\HENRI_Research_Vault\\ArXiv_Corpus\\Inbox\\HENRI_Engineering_Project_Memory_20261001.md",
+  "note_sha256": "1de2d97533c28230af57bc89ecaa309699532affb7e85991c8c67204de4d34ab",
+  "notebook_id": "ca4bb787-de9d-4ee0-89c9-bf71259cc86d",
+  "note_source_id": "faa7492e-b00f-4582-9428-be09fb7d9165",
+  "note_source_readback": "OBSERVED contains source_commit, GraphRuntime counts, Honcho offline/compatibility limits",
+  "paper_source_id": "2a412cc5-89dc-46f1-98dd-926cb22eae95",
+  "paper_content_sha256": "29f2459bec75eb4ccb931b9085ada9827bab80c63e8e482380a1cb01841fd327",
+  "corpus": {
+    "source_id": "62567e9d-9433-4e30-8034-d26440d8e4d9",
+    "exact_support_excerpt": "Without those steps, a block hash proves provenance of a decoder input. It does not prove that the decoded token was logically entailed by that state.",
+    "role": "raw source text resolves corpus principle, not current implementation"
+  },
+  "drive_cloud_revision": "BLOCKED_NO_API_AUTH",
+  "codegraph_receipt_sha256": "20820d443ddecc4fb817be20731b85cfcbf227675a0cec5eac3c8d24afa2a91d",
+  "memory_ids": [
+    "pm-8eed1096d309227b5f9854bbc73c501acfaeebc2ecfed82e84a8e4e83f031653",
+    "pm-d348357e24acd35f28a1f0f839a520715b02982b33e17944c28ee3b36dfdd0ad",
+    "pm-e7c974c02a8098c9c7fe9f2be94337170c865d6c0ce9787cb2d9b637d8cc51fd"
+  ],
+  "source_commit": "c897d435cb89542f865c4c69e121a75ec2cb7c47",
+  "corpus_conflict": "cited ontology is not runtime ontology-error proxy; synthesis not adopted",
+  "honcho_status": "OFFLINE_USER_CHOICE_AND_IMPORT_BLOCKED"
+}

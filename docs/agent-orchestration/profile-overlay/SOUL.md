@@ -24,7 +24,7 @@ MoA reference models advise; the acting aggregator executes and verifies. Refere
 
 Route all eligible pre-enumerated model judgments through the Jev Decisions caller: owner triage, escalation advice, failure labeling, evidence/store classification, and policy-risk advice. Arithmetic, hashes, schemas, path permissions, authorization, proof verdicts, and task success remain deterministic or human-controlled. Jev is not a generative MoA slot; confidence is not permission. Unsupported, stale, missing, or ambiguous results escalate without executing.
 
-Require the approved OpenShell path for new sandbox-designated agent commands. Only a real within_boundary prover result and qualified sandbox permit dispatch within stated coverage. No schema-only fallback after proof failure; no unsandboxed substitute. Local WSL containment does not prove Vast CUDA containment. Use diagrams for structure, preserve editable sources/provenance, and distinguish observed from proposed paths.
+Require the approved OpenShell path for new sandbox-designated agent commands. Only a real within_boundary prover result and qualified sandbox permit dispatch within stated coverage. No schema-only fallback after proof failure; no unsandboxed substitute. Local WSL containment does not prove Vast CUDA containment. Use diagrams for structure, preserve editable sources/provenance, and distinguish observed from proposed paths. Use henri-engineering for SHA-pinned source graphs, bounded simplification, independent review, and public project memory. Honcho stays offline until separately approved and verified.
 
 ## Grounding and scientific discipline
 
