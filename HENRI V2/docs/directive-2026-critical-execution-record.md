@@ -247,3 +247,40 @@ pre-registered hypothesis, not a capability claim.
 
 No threshold was relaxed at any point. `0.92 / 0.60 / 1e-5` are module constants,
 pre-registered, and unchanged. No `tier2_measured_thresholds.json` exists.
+
+
+### 3.3 Pillar 2 -- per-block non-linear slot mixer: NEGATIVE (empirical, NOT a proven ceiling)
+
+Two structured arms are now measured on the identical fixture. Their failures have
+DIFFERENT status and must not be merged.
+
+| arm | mechanism | test 1-step | test 3-step | gap | params |
+|---|---|---|---|---|---|
+| linear (reference) | dual-form ridge | 0.315731 | 0.145739 | -- | -- |
+| mlp (flat) | 512-2 MLP | 0.483063 | 0.196783 | +0.298111 | 787968 |
+| mlp+identity-skip | 512-2 MLP + skip | 0.480529 | 0.226031 | +0.219416 | 787968 |
+| resonator | rotor + mask + shift (all linear) | 0.223327 | 0.088508 | +0.004597 | 643 |
+| mlp-per-block | resonator + per-block GELU mixer | 0.052690 | 0.056038 | +0.022602 | 1195 |
+
+Receipt: `receipts/tier2_blockmix_cpu_12000.json`. d=512, nb=64, steps=12000, device cpu,
+seeds train [11,22,33,44] / test [55,66], rc=1, verdict `NONLINEAR_KILLED_AT_THIS_SCALE`. The three arms
+measured in the previous receipt reproduced their committed values EXACTLY
+(0.196783, 0.226031, 0.088508).
+
+Pre-registered condition, fixed BEFORE the run: `test3 > 0.226 AND gap < 0.25`. Measured
+0.056038. **CONDITION FAILS.**
+
+The distinction that must survive to the next session:
+
+- The `resonator` failure is PROVEN, not merely measured. `R`, `Pi`, `T` are all linear,
+  the update is a linear combination, and the exit `normalize` changes radius only while
+  cosine reads direction. The composite cannot leave the linear class, so the 0.280/0.232
+  ceiling applies to it.
+- The `mlp-per-block` failure is EMPIRICAL ONLY. The arm was verified to leave the linear
+  class (direction-proportionality 1.461e-01 off zero-init, vs 8.2e-08 for the linear arm),
+  and the mixer was instantiated (+552 params, exactly as designed). Nothing here shows a
+  ceiling. It scored 0.052690 on ONE step -- below the linear
+  reference (0.315731) and below every other arm -- while fitting its own pairs
+  worse than the resonator (loss 3.57e-03 vs
+  3.01e-03). That is an optimisation failure on this fixture, not
+  a class bound.
