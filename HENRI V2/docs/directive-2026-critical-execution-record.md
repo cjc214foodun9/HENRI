@@ -308,16 +308,37 @@ counted as a coupling.
 | Pillar | Module | Production importers | Production call sites | Verdict |
 |---|---|---|---|---|
 | 1 | `henri_scene_binder.py` | 1 (`tools/measure_functional_pipeline.py:24`) | `henri_functional_pipeline.py:139,147,149,170` | COUPLED (injected) |
-| 3 | `arc_sagnac_veto.py` | 0 | `evaluate_veto(` in `basal_boundary_engine.py` = 0 | ORPHANED |
+| 3 | `arc_sagnac_veto.py` | 2 (`henri_dual_speed_harness.py`, `production_arc_run.py`) | `production_arc_run.py:2598`, guarded by `HENRI_ARC_SAGNAC_VETO` (default OFF) | COUPLED, default-OFF |
 | 3 | `henri_thermo_langevin.py` | 0 | 4 importers, all under `experiments/verification/` | ORPHANED |
 | 5 | `zone_c_causal_engram_dag.py` | 0 | 2 importers, both under `experiments/verification/` | ORPHANED (flag default OFF) |
 | 5 | `zone_c_attractor_pruner.py` | 0 | 1 importer, `tests/unit/test_architectural_milestones.py` | ORPHANED |
 
-**Finding 1 -- the Sagnac veto has no production consumer.** `arc_sagnac_veto.py`
-defines `evaluate_veto(candidate_wave, axiom_wave, world_wave, epsilon_hard)` and
-returns `(delta_axiom, delta_epistemic, hard_veto_triggered, status)`. The file its
-own docstring names as the consumer, `basal_boundary_engine.py`, calls it **0**
-times. An earlier candidate-consumer list was docstring mentions, not calls.
+**Finding 1 -- CORRECTED. An earlier revision of this section called the Sagnac
+veto ORPHANED. That verdict was WRONG and is retracted here.** `arc_sagnac_veto.py`
+IS imported on production paths. `production_arc_run.py:2587` imports it and
+`production_arc_run.py:2598` calls it:
+
+```python
+from arc_sagnac_veto import apply_advisory_rerank, evaluate_veto
+_da, _de, _trig, _st = evaluate_veto(_wave.detach(), _axiom_ref, _world_ref)
+```
+
+guarded by `if (HENRI_ARC_SAGNAC_VETO and policy_mode() != "action1" and not psg_engaged)`
+where `HENRI_ARC_SAGNAC_VETO = os.environ.get("HENRI_ARC_SAGNAC_VETO", "0") == "1"`
+(`production_arc_run.py:278`). The coupling is REAL but DEFAULT-OFF.
+`henri_dual_speed_harness.py:64,67` also imports and binds it, and
+`henri_functional_pipeline.py:130-131` forwards a `veto_fn` into `AgentialChain`
+(`tests/unit/test_functional_pipeline.py:169` asserts a live `sagnac_veto` stage).
+
+The sub-claim that survives is narrower: the file the module's own docstring names
+as its consumer, `basal_boundary_engine.py`, calls `evaluate_veto(` **0** times. The
+earlier ORPHANED verdict generalised from that one file to the whole codebase --
+verification scope too narrow, the same defect class this record polices.
+
+**How the error passed the gate.** The landing gate checked only the sub-claim
+(`basal_boundary_engine.py = 0`). A gate that verifies a true sentence can still
+pass a false conclusion drawn from it. The corrected gate checks the module-wide
+importer count, the specific call site, and the flag default.
 
 **Finding 2 -- the thermodynamic sink is diagnostics-only.** All four importers of
 `henri_thermo_langevin` live under `experiments/verification/`
@@ -352,9 +373,16 @@ the veto-and-sink loop, not another wrapper.
 |---|---|
 | 1 Hierarchy | COUPLED via injection; still lacks multiscale Jordan-curve nesting |
 | 2 World model | built and MEASURED NEGATIVE at this scale (section 3.3) |
-| 3 Sagnac veto + sink | components present; the loop is absent (Findings 1 and 2) |
+| 3 Sagnac veto + sink | veto COUPLED but default-OFF; sink ORPHANED; the loop is absent (Findings 1 and 2) |
 | 4 Hopfield egress | hardened; PROVISIONAL, promotion gate UNMET |
 | 5 Causal DAG | components present; not on any production path (Finding 3) |
 
 Two of five pillars remain unmade as loops. Step 4 stays blocked behind Step 3's
 0.92 contract, which no measured arm has met.
+
+### Correction log
+
+- 2026-10-01: `arc_sagnac_veto.py` verdict changed ORPHANED -> COUPLED, default-OFF,
+  after a MODULE-WIDE importer scan found `production_arc_run.py:2598`. The
+  sub-claim about `basal_boundary_engine.py` (0 calls) was and remains true; the
+  generalisation from it was not. Gate scope widened from single-file to module-wide.
