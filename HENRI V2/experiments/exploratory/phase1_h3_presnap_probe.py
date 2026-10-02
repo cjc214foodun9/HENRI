@@ -188,9 +188,11 @@ def h3b_within_cell_blindness(gen):
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="H3 pre-snap probe kill test")
     parser.add_argument("--out", default=None)
+    parser.add_argument("--seed", type=int, default=RUN_SEED,
+                        help="RunManifest seed_seq; default is the sealed D=2048 seed")
     args = parser.parse_args(argv)
 
-    manifest = RunManifest(seed_seq=RUN_SEED)
+    manifest = RunManifest(seed_seq=args.seed)
     manifest.apply("h3_presnap_probe")
     gen = torch.Generator().manual_seed(manifest.seed_for("h3_presnap_probe"))
 
@@ -251,7 +253,8 @@ def main(argv=None) -> int:
             "shift_at": SHIFT_AT, "drift": DRIFT, "noise": NOISE,
             "cov_rel_threshold": COV_REL_THRESHOLD,
             "snap_change_fraction": SNAP_CHANGE_FRACTION,
-            "run_seed": RUN_SEED,
+            "run_seed": args.seed,
+            "dim_env": os.environ.get("HENRI_ZA_DIM", "(default)"),
         },
         "detection": {
             "presnap_detect_step": cov_detect,
