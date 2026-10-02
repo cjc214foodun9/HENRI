@@ -353,38 +353,53 @@ class SpatialCliffordTokenizer:
     def decode_canvas(self, psi: torch.Tensor, chunk: int = 256) -> Tuple[List[List[int]], float]:
         """Explicit, MEASURED inverse probe. NOT asserted to be exact.
 
-        Correlates the field against each cell's position code, then snaps the
-        result to the nearest value code by maximum cosine. Returns
-        (grid, cell_accuracy_against_nothing) -- the caller supplies ground
-        truth; this returns the raw grid and the mean peak cosine as a
-        confidence diagnostic.
+        CORRECTED 2026-10-01 after the round-trip gate falsified v1.
+        v1 collapsed the per-cell correlation with `.sum()` into a 0-dim
+        tensor and then tried to reshape it to [1, B, S]. That is a shape
+        error at best and a semantic error in general: with the per-cell
+        structure summed away, EVERY cell would decode from the same scalar
+        and the probe would return a constant grid.
 
-        The superposition is holographic and lossy. This probe exists so the
-        round-trip can be REPORTED rather than assumed.
+        Correct structure. Encoding is a superposition over cells,
+            z = sum_cells phasor(value_c) * phasor(pos_c),
+        so decoding cell (x, y) means correlating z against the JOINT code
+            w_v(x, y) = phasor(value_v) * phasor(pos_{x,y}),
+        and taking argmax_v |<z, w_v>|. The self term (correct cell, correct
+        value) is exactly +B*S in phase; a wrong value is a structured
+        random-phase sum (GROUP mode gives phasor((v'-v)*w_v), energy
+        ~sqrt(B*S) per other cell), and other cells contribute random-phase
+        walks. The margin is measured per call and returned.
+
+        HONEST LIMITS. Superposition is holographic and lossy. Cross-cell
+        crowding grows with the cell count, and the reserved DC slot is
+        deliberately down-weighted, so this probe is NOT a faithful inverse.
+        Accuracy is MEASURED by the caller and pinned at a measured floor; it
+        is never asserted to be exact. `chunk` bounds memory for large V.
         """
         z = psi.reshape(self.num_blocks, self.block_slots).to(torch.complex64)
         s = self.modulus
+        bs = float(self.num_blocks * self.block_slots)
+        vcodes = self._phasor(self.value_phase[: self.vocab_size])  # [V, B, S]
         grid: List[List[int]] = []
-        cosines: List[float] = []
-        # Precompute value code phasors once.
-        codes = self._phasor(self.value_phase[: self.vocab_size])  # [V, B, S]
+        margins: List[float] = []
         for y in range(s):
             row: List[int] = []
             for x in range(s):
                 pos = self._phasor(
                     float(x) * self.wx + float(y) * self.wy
                 )  # [B, S]
-                corr = (torch.conj(pos) * z).sum() / float(self.num_blocks * self.block_slots)
-                # Nearest value code by |<corr, code>|.
-                sim = torch.abs(
-                    (torch.conj(codes) * corr.reshape(1, self.num_blocks, self.block_slots))
-                    .sum(dim=(1, 2))
-                )
+                joint = vcodes * pos.unsqueeze(0)                  # [V, B, S]
+                # <z, joint_v> = sum_{b,s} conj(joint_v) * z
+                sim = torch.abs((torch.conj(joint) * z.unsqueeze(0)).sum(dim=(1, 2)))
                 best = int(torch.argmax(sim).item())
                 row.append(best)
-                cosines.append(float(sim[best].item() / (corr.abs() + 1e-12)))
+                if sim.numel() > 1:
+                    top2 = torch.topk(sim, 2).values
+                    margins.append(float((top2[0] - top2[1]).item() / bs))
+                else:
+                    margins.append(1.0)
             grid.append(row)
-        return grid, (sum(cosines) / len(cosines) if cosines else 0.0)
+        return grid, (sum(margins) / len(margins) if margins else 0.0)
 
     # ------------------------------------------------------------- report
     def dimension_note(self) -> str:
