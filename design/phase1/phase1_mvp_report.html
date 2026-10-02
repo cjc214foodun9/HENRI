@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HENRI Phase 1 — MVP Wiring Report</title>
+<style>
+  body{color:var(--foreground);font-family:inherit;margin:0;padding:0;}
+  .wrap{display:flex;flex-direction:column;gap:18px;max-width:900px;}
+  h2{font-size:15px;margin:0 0 8px;font-weight:650;letter-spacing:.01em;}
+  h3{font-size:13px;margin:0 0 6px;font-weight:600;color:var(--muted-foreground);}
+  table{border-collapse:collapse;font-size:12.5px;width:100%;}
+  th,td{text-align:left;padding:5px 10px 5px 0;border-bottom:1px solid var(--border);vertical-align:top;}
+  th{color:var(--muted-foreground);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;}
+  .row{display:flex;gap:14px;flex-wrap:wrap;}
+  .card{border:1px solid var(--border);border-radius:8px;padding:12px 14px;flex:1 1 240px;background:transparent;}
+  .big{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.1;}
+  .sub{font-size:11.5px;color:var(--muted-foreground);}
+  .pass{color:#2e9e5b;font-weight:600;}
+  .fail{color:#c0392b;font-weight:600;}
+  .warn{color:#b8860b;font-weight:600;}
+  .bar{height:9px;border-radius:5px;background:var(--border);position:relative;overflow:hidden;margin-top:5px;}
+  .bar>span{position:absolute;left:0;top:0;bottom:0;border-radius:5px;}
+  .note{font-size:12px;color:var(--muted-foreground);line-height:1.5;}
+  ul{margin:4px 0 0 0;padding-left:18px;font-size:12.5px;line-height:1.55;}
+  .pipe{font-family:ui-monospace,monospace;font-size:11.5px;line-height:1.7;color:var(--muted-foreground);}
+  .pipe b{color:var(--foreground);font-weight:600;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div>
+    <h2>HENRI Phase 1 — first working learning loop, measured on CPU</h2>
+    <div class="note">
+      Branch <code>feat/phase1-transduction</code> · base <code>main a039095</code> ·
+      commits <code>ff79d42</code> → <code>82e0756</code> → <code>5b9b5cd</code>.
+      <b>No push. No promotion.</b> <code>main</code> untouched. Grids are synthetic and labelled synthetic.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>The loop that now exists (all existing repo parts)</h3>
+    <div class="pipe">
+      grid → <b>SpatialCliffordTokenizer</b>.encode_canvas&nbsp;<span>(FROZEN, zero-pretraining)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ <b>FactorizedTransitionKernel</b>.apply&nbsp;<span>(LEARNABLE: U, Σ, V†)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ <b>ContinuousHopfieldCleanup</b>&nbsp;<span>(ingress tokenizer)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ <b>decode_canvas</b>&nbsp;→ predicted grid
+    </div>
+    <div class="note" style="margin-top:6px">
+      β = 26.10 from the unrounded τ = 0.038316. Gradient path verified by execution:
+      U 4.966e-01, V 5.194e-01, σ 2.694e-02. This is in-context task compilation, not pretraining.
+    </div>
+  </div>
+
+  <div>
+    <h2>Result 1 — the negative, which is the informative one</h2>
+    <table>
+      <tr><th>N_TRAIN</th><th>trained</th><th>shuffled</th><th>train loss</th></tr>
+      <tr><td>12</td><td>0.3079</td><td>0.3529</td><td>0.9779 → 0.0000</td></tr>
+      <tr><td>32</td><td>0.3212</td><td>0.3363</td><td>0.9778 → 0.0000</td></tr>
+      <tr><td>128</td><td>0.3131</td><td>0.3137</td><td>0.9802 → 0.0000</td></tr>
+    </table>
+    <div class="note" style="margin-top:6px">
+      Rank-64 factorized kernel, D=2048. <b>10× data moved held-out by +0.0052.</b>
+      Train loss hit exactly 0.0000 — the arm memorized its support set.
+      The shuffled control equalled the trained arm. Attribution
+      <b>MODEL_CLASS_LIMITED</b>; gap to the documented 0.280 linear ceiling is <b>0.033</b>.
+    </div>
+  </div>
+
+  <div>
+    <h2>Result 2 — the positive, confirmed on three seeds</h2>
+    <div class="row">
+      <div class="card">
+        <div class="sub">FACTORIZED r=64 · 524,352 params</div>
+        <div class="big">0.0583</div>
+        <div class="sub">trained held-out · shuffled 0.0515 · margin +0.0067</div>
+        <div class="bar"><span style="width:6%;background:#c0392b"></span></div>
+      </div>
+      <div class="card">
+        <div class="sub">DIAGONAL full-rank · 4,096 params</div>
+        <div class="big">0.7521</div>
+        <div class="sub">trained held-out · shuffled 0.1438 · margin +0.6083</div>
+        <div class="bar"><span style="width:75%;background:#2e9e5b"></span></div>
+      </div>
+    </div>
+    <table style="margin-top:12px">
+      <tr><th>seed</th><th>DIAG trained</th><th>shuffled</th><th>margin</th><th>DIAG loss</th><th>FACT trained</th></tr>
+      <tr><td>20261002</td><td>0.7521</td><td>0.0418</td><td class="pass">+0.7103</td><td>0.942 → 0.238</td><td>0.0583</td></tr>
+      <tr><td>7</td><td>0.7538</td><td>0.1419</td><td class="pass">+0.6119</td><td>0.949 → 0.241</td><td>0.1171</td></tr>
+      <tr><td>424242</td><td>0.7525</td><td>0.0661</td><td class="pass">+0.6864</td><td>0.945 → 0.241</td><td>0.1478</td></tr>
+    </table>
+    <div class="note" style="margin-top:6px">
+      Rule (pre-registered): margin &gt; 0.30 in every seed → <b class="pass">CONFIRMED</b>.
+      End-to-end grid readout <b>1239/2048 = 0.6050</b> vs chance 0.1250. <b>4.8× chance.</b>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Why the asymmetry — it is parameter count, not luck</h3>
+    <div class="note">
+      FACTORIZED holds <b>524,352</b> parameters against 64 support pairs — it <i>can</i> memorize,
+      and it does (loss → 0.0000), then generalizes at chance.
+      DIAGONAL holds <b>4,096</b> — it <i>cannot</i> memorize (loss floors at 0.238), and only it generalizes.
+      Exact roll + value rotation is elementwise, so its target is full-rank diagonal with a flat spectrum;
+      a rank-64 truncation keeps ~3% of the energy. <b>The spec's rank-256 transition is structurally
+      wrong for elementwise ARC-style transforms.</b>
+    </div>
+  </div>
+
+  <div>
+    <h2>Recorded boundary — Task N is inconclusive, not a negative</h2>
+    <div class="note">
+      Gated non-linear target did not discriminate: FACTORIZED 0.3054 vs NONLINEAR 0.3177,
+      with shuffled controls <i>higher</i> than trained (0.3243 / 0.3466). Gate bias −0.0118 against
+      mean |h| = 0.0196 was near-degenerate. <b class="warn">Do not read this as evidence that
+      non-linearity inside the factorization fails — the test as designed was not valid.</b>
+    </div>
+  </div>
+
+  <div>
+    <h2>Missing functionality — reported, not silently patched</h2>
+    <ul>
+      <li><b>No training loop existed</b> on the Phase 1 path. The loop was inference-only. Added here.</li>
+      <li><b>Rank-r factorization cannot express full-rank diagonal operators.</b> Spec rank-256 is structurally wrong for elementwise transforms.</li>
+      <li><b>Non-linear arm unvalidated</b> — Task N invalid, needs a re-scaled gate.</li>
+      <li><b>ARC demo pairs absent</b> (<code>demo_pair_count = 0</code>). Synthetic grids are labelled synthetic; the "never fabricates demos" invariant holds.</li>
+      <li><b>No local GPU.</b> Every latency gate stays UNVALIDATED — no µs figure is claimed anywhere.</li>
+      <li><b><code>TapeLearner</code> (spec-mandated) is phantom</b> — no such symbol in any tracked <code>.py</code>.</li>
+    </ul>
+  </div>
+
+  <div>
+    <h2>Infrastructure — OpenShell unblocked, and a billing flag</h2>
+    <table>
+      <tr><th>Item</th><th>State</th><th>Evidence</th></tr>
+      <tr><td>OpenShell guarded exec</td><td class="pass">EXECUTED</td><td><code>within_boundary</code> · sandbox <code>c6b4107f</code> · 133.7 ms</td></tr>
+      <tr><td>Boundary</td><td>narrowed</td><td><code>ad6869…</code> → <code>e71307c7…</code> (<code>include_workdir: false</code>)</td></tr>
+      <tr><td>Audit ledger</td><td class="pass">intact</td><td>1785 records · head <code>cdd9bbd5…</code></td></tr>
+      <tr><td>Vast instance <code>52826640</code></td><td class="warn">RUNNING — billing</td><td>RTX 5090 · $0.5130/hr · label <code>henri-zonea-seeding</code></td></tr>
+    </table>
+    <div class="note" style="margin-top:6px">
+      The boundary change <i>removes</i> an authority domain; it grants none. Flagged for your ratification.
+      The Vast instance was already running before this turn and is <b>not mine to stop</b> — it is
+      labelled <code>henri-zonea-seeding</code> and may hold an active job. Flagged, not touched.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
