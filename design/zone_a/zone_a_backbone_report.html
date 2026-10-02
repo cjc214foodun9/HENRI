@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zone A — Novel Trainable Backbone + Defect Patch Report</title>
+<style>
+  body{color:var(--foreground);font-family:inherit;margin:0;padding:0;}
+  .wrap{display:flex;flex-direction:column;gap:20px;max-width:980px;}
+  h2{font-size:15px;margin:0 0 8px;font-weight:650;}
+  h3{font-size:12.5px;margin:0 0 6px;font-weight:600;color:var(--muted-foreground);}
+  table{border-collapse:collapse;font-size:12.5px;width:100%;}
+  th,td{text-align:left;padding:5px 10px 5px 0;border-bottom:1px solid var(--border);vertical-align:top;}
+  th{color:var(--muted-foreground);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;}
+  .card{border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+  .row{display:flex;gap:12px;flex-wrap:wrap;}
+  .row>*{flex:1 1 220px;}
+  .note{font-size:12px;color:var(--muted-foreground);line-height:1.55;}
+  ul{margin:4px 0 0 0;padding-left:18px;font-size:12.5px;line-height:1.6;}
+  .pass{color:#2e9e5b;font-weight:600;}.fail{color:#c0392b;font-weight:600;}.warn{color:#b8860b;font-weight:600;}
+  .tag{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;padding:1px 6px;border-radius:4px;border:1px solid var(--border);color:var(--muted-foreground);}
+  .big{font-size:24px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.15;}
+  .pipe{font-family:ui-monospace,monospace;font-size:11px;line-height:1.7;color:var(--muted-foreground);}
+  .pipe b{color:var(--foreground);font-weight:600;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div>
+    <h2>Zone A — novel trainable backbone + defect patch, measured</h2>
+    <div class="note">
+      <span class="tag">SpecContract A → HarnessContract B</span>
+      branch <code>feat/phase1-transduction</code> · base <code>main a039095</code> ·
+      <code>main</code> untouched · no push. Evidence classes: OBSERVED · DERIVED · INFERRED · HYPOTHESIS · FALSIFIED · BLOCKED.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>The novel backbone: low-PARAMETER, never low-RANK</h3>
+    <div class="pipe">
+      K = <b>diag(m)</b> + A S B<sup>H</sup> &nbsp;&nbsp; m = exp(i·θ) ∈ C<sup>D</sup>, |m| = 1 → <b>full rank</b><br>
+      <span>diag term → elementwise degrees of freedom, O(D) params</span><br>
+      <span>rank-q term → cross-channel mixing, O(Dq) params</span>
+    </div>
+    <table style="margin-top:10px">
+      <tr><th>Arm (sealed 5b9b5cd)</th><th>Params</th><th>Trained</th><th>Shuffled</th><th>Margin</th></tr>
+      <tr><td>FACTORIZED rank-64</td><td>524,352</td><td>0.0583</td><td>0.0515</td><td class="fail">+0.0067</td></tr>
+      <tr><td>DIAGONAL full-rank</td><td>4,096</td><td><b>0.7521</b></td><td>0.1438</td><td class="pass">+0.6083</td></tr>
+    </table>
+    <div class="note" style="margin-top:8px">
+      A rank-r-only backbone reproduces the memorisation failure. The diagonal core is mandatory.
+      Unit-tested: rank(D=64) == 64 with a one-column diagonal, and a rank-4-only kernel is <code>rank ≤ 4</code>.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Defects §7 — status with executed artefacts</h3>
+    <table>
+      <tr><th>#</th><th>Defect</th><th>Status</th><th>Artefact</th></tr>
+      <tr><td>1</td><td>No Zone A ontology record</td><td class="pass">PATCHED</td><td>probe→verify→commit, 148→153</td></tr>
+      <tr><td>2</td><td>No swarm fabric</td><td class="pass">PATCHED</td><td><code>henri_swarm_fabric.py</code></td></tr>
+      <tr><td>3</td><td>Egress orphaned</td><td class="pass">PATCHED</td><td><code>henri_zone_a_egress.py</code> is the caller</td></tr>
+      <tr><td>4</td><td>No PC-ALM dual state</td><td class="pass">PATCHED</td><td>grads verified vs autograd</td></tr>
+      <tr><td>5</td><td>No thermodynamic sampler</td><td class="pass">PATCHED (mechanics)</td><td>dark-port thermostat</td></tr>
+      <tr><td>6</td><td>No curriculum governor</td><td class="pass">PATCHED</td><td>5-rung entropy escalation</td></tr>
+      <tr><td>7</td><td>Gradient-alignment unreproducible</td><td class="warn">STILL OPEN</td><td>phantom module, nothing to test</td></tr>
+      <tr><td>8</td><td>No GPU; latency unvalidated</td><td class="warn">BLOCKED</td><td>every µs figure BLOCKED</td></tr>
+    </table>
+    <div class="note" style="margin-top:8px">
+      The novel backbone is <b>additive and default-OFF</b>. It never imports, modifies, or
+      replaces the CLASS51 path, so the frozen contract and the non-regression proof stand.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Kill tests — declared first, two negatives retained</h3>
+    <table>
+      <tr><th>#</th><th>Verdict</th><th>Key measurement</th></tr>
+      <tr><td>H1</td><td class="warn">PARTIAL_SOLVES_UNSOLVABLE</td><td>team@16 = 1.000 vs best@16 = 0.000; ctrl@k = 0.000. Multiplier gate <b>FAILED</b> (best@k=0 ⇒ undefined).</td></tr>
+      <tr><td>H2</td><td class="fail">FALSIFIED — NO_SHARED_SUBSPACE</td><td>top-16 energy 0.771 vs random 0.707 (chance 0.667); held-out span 8.8%; subspace 0.105 vs free 0.751.</td></tr>
+      <tr><td>H3</td><td class="fail">FALSIFIED</td><td>snap fired at step 5, covariance at step 6 — the snap was <i>earlier</i>.</td></tr>
+      <tr><td>H3b</td><td class="fail">FALSIFIED</td><td>no ε where snapped tokens stayed identical while pre-snap moved.</td></tr>
+    </table>
+    <div class="note" style="margin-top:8px">
+      H1's verifier control is the load-bearing part: unverified sharing scores 0.000 at every k, so
+      <b>verification</b>, not sharing, carries the result. Sagnac controls: exact δ=0.0; all-wrong δ=0.5 &gt; ε=0.35 → vetoed.
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <h3>Suite &amp; non-regression</h3>
+      <div class="big">475 / 1 / 1</div>
+      <div class="note">passed / failed / skipped. The single failure reproduces <b>identically</b> in a detached worktree at <code>main a039095</code> (<code>ModuleNotFoundError: arc_agi</code>) — proven pre-existing, not a regression.</div>
+      <div class="note" style="margin-top:6px">28 new unit tests pass.</div>
+    </div>
+    <div class="card">
+      <h3>Corpus claim corrected by measurement</h3>
+      <div class="note">
+        The corpus inferred that snapped tokens are <i>causally blind</i> and a pre-snap probe is therefore
+        <b>required</b>. H3/H3b measured both readings of that claim and <b>falsified both</b>. The SPEC was
+        corrected: pre-snap covariance is an <b>optional</b> confidence channel, not a required detector.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Self-caught defects in this cycle's own harnesses</h3>
+    <div class="note">A harness bug that manufactures a negative is as damaging as one that manufactures a positive.</div>
+    <ul>
+      <li><b>Zero-init trap (H2)</b> — constrained arm at <code>m=0</code>; |cosine| has a zero subgradient at the origin, so it could never move. First-run <code>subspace_train = 0.0</code> was an artefact.</li>
+      <li><b>Vacuous gate (H1)</b> — monotonicity passed on all-<code>None</code> ratios. Now requires ≥ 2 defined ratios.</li>
+      <li><b>Unreachable baseline (H2)</b> — compared energy against <code>chance × 4</code> with chance 0.667; impossible for a fraction ≤ 1.</li>
+      <li><b>Wrong SVD factor (H2)</b> — <code>u[:, :Q]</code> on <code>[K,D]</code> is <code>[K,K]</code>; corrected to right singular vectors.</li>
+      <li><b>Wrong object (H2)</b> — first revision tested <i>target</i> operators; M2 is a claim about <i>learned weights</i>. Rewritten.</li>
+      <li><b>Off-by-one (PC-ALM)</b> — residuals used <code>W[i]</code> where derivation gives <code>W[i-1]</code>; fixed in the module, not the assertion.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Governance — stated plainly</h3>
+    <div class="note">
+      The commit grant (<i>"Commit, you are granted approval"</i>) appears in the <b>user's message body</b>,
+      where §8 differs from the attached SPEC's <i>"propose-only; no commit"</i> — so it is the user's own edit,
+      not a quotation. The advisory typed gate read <code>ESCALATE</code>; under the charter
+      (<i>"Jev typed judgments are advisory; … human approval remain[s] required"</i>) authorization routes to the
+      human, so the grant governs and the advisory reading is recorded, not used as a veto.
+      Approval covered the <b>decision</b>, not the <b>verification</b>: probe → verify → commit ran in full.
+    </div>
+    <div class="note" style="margin-top:6px">
+      <b>Reversal:</b> copy <code>objects.jsonl.bak-1790975763</code> back over <code>objects.jsonl</code>. The store is
+      append-only; no history was rewritten.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Fabricated-reference finding</h3>
+    <table>
+      <tr><th>Claim in advisory context</th><th>Verified reality</th></tr>
+      <tr><td><code>AdapterEgressProtocol</code>, <code>do_egress(fail_closed=True)</code>, <code>CLASS51AdapterTest</code></td><td class="fail">ZERO matches; <code>grep -rn</code> rc=1 across all .py</td></tr>
+      <tr><td>“3 Zone A ontology records”</td><td class="fail">0 zone-A terms in 148 records at recon</td></tr>
+      <tr><td><code>bin/autoresearch.exe</code> sha256 <code>9f22…</code> v0.4.1</td><td><code>agentic_graph/orx.exe</code>, <code>orx 0.2.10</code>, sha256 <code>1304901c…</code></td></tr>
+      <tr><td>approval “embedded inside an attached document”</td><td class="fail">attachment says <i>propose-only</i>; the grant is in the message body</td></tr>
+    </table>
+    <div class="note" style="margin-top:8px"><b>No artefact was built on fabricated state.</b></div>
+  </div>
+
+  <div class="note">
+    Limits: no AAII v4.3 score claimed, predicted, or implied — the benchmark was not run. No latency
+    validated; no GPU. M3/M4/M5 are source-observed mechanisms, not HENRI results. Paper numbers
+    (4.3×, 6.6×, depth 128, 1,100 models) are what the authors report. A CPU host validates learning
+    dynamics and fabric mechanics, not latency.
+  </div>
+
+</div>
+</body>
+</html>

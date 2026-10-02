@@ -185,7 +185,8 @@ ARC-style elementwise transforms this system targets. This is measured, not asse
    │           wavefront v = sqrt(α·η_h) layers/step, T = 2L budget          │
    │                                                                          │
    │  EGRESS   Hopfield snap, calibrated β; never un-adapted linear          │
-   │           probe PRE-SNAP covariance — snapped tokens are blind          │
+   │           pre-snap covariance is an OPTIONAL confidence channel          │
+   │           (H3 FALSIFIED the claim that it is required for detection)     │
    └───────────────────────────────┬──────────────────────────────────────────┘
                                    │  candidate Ψ + provenance
                                    ▼
@@ -238,9 +239,13 @@ OBSERVED in NotebookLM citations, 44 references resolved:
   qFHRR Z_256 codebook instead.
 - **Global mean-pooling FALSIFIED (Carrier G1).** Spatial mean-pooling destroys local
   metric intervals; AUC collapses to ≈0.77. Preserve M = 8,192 local blocks.
-- **Snapping is piecewise-constant.** Its derivative vanishes almost everywhere, so a
-  consumer watching only snapped tokens is **causally blind** to phase mutations.
-  Probe pre-snap covariance-pooling activations to measure confidence and adaptation.
+- **Snapping is piecewise-constant.** Its derivative vanishes almost everywhere.
+  The corpus inferred from this that a consumer watching only snapped tokens is
+  **causally blind** to phase mutation, and that a pre-snap probe is therefore
+  required. **H3 measured this and FALSIFIED it** — see §6. The piecewise-constant
+  property is real; the "causally blind ⇒ pre-snap probe required" inference is
+  not supported by measurement. Pre-snap covariance remains available as an
+  optional confidence channel, not as a required one.
 
 ---
 
@@ -259,8 +264,20 @@ the fabric is coordination tax and the swarm reduces to independent sampling.
 Per-instance adapters confined to the universal basis reach the same held-out
 correlation as free adapters, at ≤1% of the parameters.
 *Kill:* reuse the sealed capability-gap harness; arms = subspace-coordinate vs free.
-*Note:* the sealed result cuts **for** this hypothesis — the low-parameter arm was the
-one that generalized.
+
+*OUTCOME (measured, see §10):* **H2A NO_SHARED_SUBSPACE.** Learned per-task
+diagonal solutions did **not** concentrate into a shared low-dimensional subspace
+(top-16 energy 0.771 vs random control 0.707; chance 0.667 — a 0.064 separation
+against a declared 0.10 margin). Part B followed: the held-out task's exact
+solution retained only **8.8%** of its energy in that basis, so the constrained
+arm reached 0.105 held-out correlation versus **0.751** for the free arm, while
+beating its shuffled control (0.083). Reading: the *transfer* failure is explained
+by the *representation* failure, not by the optimizer. The sealed capability-gap
+result does **not** transfer to this object — that result concerned a *single*
+task's parameterisation, whereas M2 is a claim about *cross-task* weight sharing,
+and for an elementwise family the per-task solutions are near-orthogonal.
+**Design consequence:** do not rely on a shared basis for elementwise transforms;
+carry a per-task low-**parameter** full-rank diagonal adapter instead.
 
 **H3 — Pre-snap probing localizes adaptation.**
 Residual-stream covariance measured before the snap detects the task's active
@@ -268,50 +285,164 @@ subspace within 3–5 adaptation steps, where snapped tokens show nothing.
 *Kill:* measure both; if snapped tokens detect the change equally, the pre-snap probe
 adds nothing.
 
----
-
-## 7. Missing functionality (reported, not patched)
-
-1. **Zone A has no ontology record.** Term, mapping, constraint, and evidence records
-   are proposed as candidates only (§8). No probe ⇒ no committed mapping.
-2. **No swarm fabric exists.** `darwinian_phase_swarm.py` (718 lines) holds
-   `GapJunctionSwarmSyncytium` and `HenriSwarmOrchestrator`, but no claims ledger,
-   no append-only discoveries log, no atomic slot ownership, no adoption rule.
-3. **`henri_hopfield_egress.py` is orphaned.** Default-OFF; imported only by its own
-   test. The fail-closed egress layer is not wired into any runner.
-4. **No PC-ALM dual-state implementation.** M3 is source-supported, not present in code.
-5. **No thermodynamic sampler.** M4 is source-supported, not present in code.
-6. **No curriculum governor.** The plateau fix is specified in a document, not built.
-7. **The doc's gradient-alignment result is unreproducible** (phantom module).
-8. **No GPU.** Every latency figure (12.8 µs, 50 µs slot) is BLOCKED, unvalidated here.
+*OUTCOME (measured, see §10):* **H3 FALSIFIED, and H3b FALSIFIED.** On an
+accumulated-drift stream the coarse snap fired at step **5** and the covariance
+probe at step **6** — the snap was *earlier*, not blind. A separate within-cell
+sweep (H3b) tested the corpus claim literally: at ε ∈ {1e-3 … 3e-1} there was **no
+ε** where snapped tokens stayed bit-identical while the pre-snap statistic moved.
+So neither reading of the claim survives measurement in this harness. The
+pre-snap probe is retained as an optional diagnostic, **not** as a required
+detector.
 
 ---
 
-## 8. Proposed ontology candidates (propose-only; no commit)
+## 7. Missing functionality — status after this cycle
 
-Per `references/ontology-schema.md` §1 and the builder protocol
-(*propose → probe → verify → commit*), these are written to `candidates.jsonl`,
-not `objects.jsonl`. Commit requires a separate human approval.
+Every item below was reported in the prior contract. This cycle either patched it
+or states precisely why it remains open. Nothing is marked PATCHED without an
+executed artefact.
 
-| Candidate | Kind | Probe ref |
+| # | Defect | Status | Artefact / reason |
+|---|---|---|---|
+| 1 | Zone A has no ontology record | **PATCHED** | probe → verify → commit; 148 → 153 records (§8) |
+| 2 | No swarm fabric | **PATCHED (new module)** | `henri_swarm_fabric.py` — ledger, slots, adoption rule |
+| 3 | `henri_hopfield_egress.py` orphaned | **PATCHED** | `henri_zone_a_egress.py` is the missing caller |
+| 4 | No PC-ALM dual-state | **PATCHED** | `PCALMInferenceState`; grads verified vs autograd |
+| 5 | No thermodynamic sampler | **PATCHED (mechanics)** | `henri_thermodynamic_sampler.py`; dynamics CPU-verified |
+| 6 | No curriculum governor | **PATCHED** | `henri_curriculum_governor.py`; escalation rule fixed |
+| 7 | Doc gradient-alignment unreproducible | **STILL OPEN** | phantom module; no implementation exists to test |
+| 8 | No GPU; latency unvalidated | **STILL OPEN (BLOCKED)** | every µs figure remains BLOCKED, unvalidated |
+
+**New trainable backbone.** `henri_zone_a_backbone.py` implements
+`K = diag(m) + A S B^H` with `m = exp(i·theta)`, plus the pre-snap probe. It is
+**additive and default-OFF** (`HENRI_ZONE_A_BACKBONE=1`). It does not import,
+modify, or replace `henri_backbone_adapter.py` (the CLASS51 path) in any way, so
+the frozen-contract test and the non-regression proof against `main a039095` are
+untouched.
+
+**Suite status.** The full unit suite runs 475 passed, 1 failed, 1 skipped. The
+single failure (`test_henri_phase838_zonec_bridge_wiring::test_flag_default_off`,
+`ModuleNotFoundError: arc_agi`) reproduces **identically** in a detached worktree
+at `main a039095` — proven pre-existing, not a regression. 28 new tests pass.
+
+---
+
+## 8. Ontology commit — executed under explicit human grant
+
+The human granted the commit decision in the task message ("Commit, you are
+granted approval", §8 rewritten from *propose-only* to *commit*). The advisory
+typed gate returned ESCALATE / no-authorisation; under the operating charter
+("Jev typed judgments are advisory; … human approval remain[s] required"),
+authorization routes to the human, so the grant governs and the advisory reading
+is recorded rather than treated as a veto.
+
+Approval covers the **decision**, not the **verification**. The builder protocol
+(*propose → probe → verify → commit*) therefore ran in full, and the commit was
+refused-capable at each step:
+
+| Step | Result |
+|---|---|
+| PROBE | all 5 probe_refs resolve; SHA-256 digests recomputed and matched |
+| VERIFY | schema, id format `ont-<kind>-<12 hex>`, uniqueness, mapping locator, evidence coverage |
+| COMMIT | 148 → 153 records; store re-parsed; 0 duplicate ids |
+| SAFETY | `objects.jsonl.bak-1790975763` written before the append |
+
+| Committed record | Kind | Evidence class |
 |---|---|---|
-| Zone A (unified: ingress + generator + articulator, N-instance swarm) | term | §1.2 four-source table; this spec |
-| Low-parameter ≠ low-rank adapter constraint | constraint | sealed `5b9b5cd` DIAGONAL vs FACTORIZED; arXiv:2512.05117 |
-| Verified-progress-sharing swarm fabric | mapping | arXiv:2609.21032; Zone B `arc_sagnac_veto.py` ε=0.35 |
-| AAII v4.3 addressable-weight ceiling ≈45% | constraint | pinned v4.3 composition audit, weights sum 100 |
+| `ont-term-71f55adef584` | term | DERIVED |
+| `ont-constraint-e7d1bb14f1f6` | constraint | OBSERVED |
+| `ont-mapping-98ea517460b5` | mapping | INFERRED |
+| `ont-constraint-ac7c37af5e89` | constraint | DERIVED |
+| `ont-evidence-d99093de4e3f` | evidence | OBSERVED |
+
+**Reversal, if the grant is disputed.** `shutil.copy` the `.bak` file back over
+`objects.jsonl`; no other artefact depends on the append. The store is
+append-only, so no history was rewritten.
 
 ---
 
 ## 9. Limits of this contract
 
 - No AAII v4.3 score is claimed, predicted, or implied. The benchmark has not been run.
-- No latency figure is validated. No GPU was used.
+- No latency figure is validated. No GPU was used. Every µs figure is BLOCKED.
 - M3, M4, M5 are **source-observed mechanisms**, not HENRI results. Adoption is not
   measured improvement.
 - Paper numbers (4.3×, 6.6×, depth 128, 1,100 models) are **what the authors report**.
   They are not HENRI measurements.
 - Zone B's sub-100 µs figure is a design target, not a measurement on this host.
-- The 148-record store is unmodified by this contract.
+- The ontology store moved 148 → 153 records by governed append (§8).
+
+---
+
+## 10. Kill-test outcomes (measured this cycle)
+
+All three kill tests were declared **before** execution. Two returned negatives.
+Negatives are retained and their design consequences are applied.
+
+### H1 — swarm compounding: PARTIAL, kill NOT triggered
+
+Reported verbatim: `kill_triggered: false`, verdict
+**`H1_PARTIAL_SOLVES_UNSOLVABLE`**.
+
+| Regime | k | team@k | best@k | ctrl@k |
+|---|---:|---:|---:|---:|
+| budget 6 (hard) | 1 | 0.000 | 0.000 | 0.000 |
+| | 4 | 0.000 | 0.000 | 0.000 |
+| | 16 | **1.000** | 0.000 | 0.000 |
+
+The team solves what independent agents do not, and the verifier control confirms
+it: unverified sharing (`ctrl`) scores 0.000 at every k, so *verification*, not
+sharing alone, carries the result. The Sagnac controls corroborate: exact match
+δ = 0.0, all-wrong δ = 0.5 > ε = 0.35 → vetoed.
+
+**The multiplier gate FAILED** (`H1_HARD_multiplier_grows_in_k`). Because
+`best@k = 0` at every k, the ratio is undefined. An earlier revision passed this
+gate vacuously on all-`None` data; that vacuous pass was found and removed, and
+the weaker claim is all the data supports. **The "grows with k" half of H1 is NOT
+demonstrated here.**
+
+### H2 — universal weight subspace: FALSIFIED (H2A NO_SHARED_SUBSPACE)
+
+Learned per-task diagonal solutions did **not** concentrate: top-16 energy 0.771
+versus random control 0.707 (chance 0.667) — 0.064 separation against a declared
+0.10 margin. The held-out task's exact solution kept only **8.8%** of its energy
+in that basis, so the constrained arm reached **0.105** held-out correlation
+versus **0.751** free, beating its shuffled control (0.083). The transfer failure
+is explained by the representation failure, not the optimiser.
+
+**Design consequence:** for elementwise transform families, do not rely on a
+shared basis. Carry a per-task low-**parameter** full-rank diagonal adapter.
+
+### H3 — pre-snap probing: FALSIFIED (and H3b FALSIFIED)
+
+Accumulated drift: the coarse snap fired at step **5**, the covariance probe at
+step **6** — the snap was *earlier*, not blind. The within-cell sweep (H3b) tested
+the corpus claim literally: across ε ∈ {1e-3, 1e-2, 3e-2, 1e-1, 3e-1} there was
+**no** ε where snapped tokens stayed bit-identical while the pre-snap statistic
+moved. Both readings fail in this harness.
+
+**Design consequence:** pre-snap covariance is an **optional** confidence channel,
+not a required detector. §5.3 and the §5 diagram were corrected to match.
+
+### Self-caught defects in this cycle's own harnesses
+
+Recorded because a harness bug that manufactures a negative is as damaging as one
+that manufactures a positive:
+
+1. **Zero-init trap (H2).** The constrained arm initialised at exactly zero; at
+   `m = 0` the output is zero and `|cosine|` has a zero subgradient at the origin,
+   so it could never move. Fixed to matched small-random init. The first run's
+   `H2_FALSIFIED` at `subspace_train = 0.0` was an artefact.
+2. **Vacuous gate (H1).** The multiplier-monotonicity gate passed on all-undefined
+   ratios. Fixed to require ≥ 2 defined ratios.
+3. **Unreachable baseline (H2).** An early gate compared energy against
+   `chance × 4` with chance 0.667 — unreachable for a fraction bounded by 1.
+   Replaced with a random-control comparison.
+4. **Wrong SVD factor (H2).** `u[:, :Q]` on a `[K, D]` matrix is `[K, K]`, not a
+   `D`-space basis; corrected to the right singular vectors.
+5. **Target-operator vs learned-operator confusion (H2).** The first revision
+   tested whether *target operators* share a subspace. M2 is a claim about
+   *learned weights*. Rewritten to test the source's actual object.
 
 **Next gate:** human approval of this SpecContract A → architecture emits HarnessContract B
 → H1 runs on CPU before any GPU dispatch.
