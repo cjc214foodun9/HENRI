@@ -1,0 +1,161 @@
+<mxfile host="henri-arbiter" modified="2026-10-02T00:00:00.000Z" agent="henri-bundle" version="24.0.0">
+  <diagram id="zoneA-arch-01" name="Zone A Perfected Microarchitecture">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tA" value="PROJECT HENRI — PERFECTED ZONE A MICROARCHITECTURE" style="text;html=1;align=center;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="800" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="tB" value="SpecContract A · SPEC-2026-10-02-ZONE-A · base main a039095 · HEAD 5b9b5cd · no implementation authority" style="text;html=1;align=center;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="350" y="52" width="900" height="20" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="grpShared" value="SHARED — ONE COPY ON DIE" style="swimlane;html=1;startSize=28;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="100" width="1480" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="nBackbone" value="Frozen VLA backbone&#10;Qwen3-VL-4B-Instruct&#10;CLASS51 · zero trainable backbone params" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;" vertex="1" parent="grpShared">
+          <mxGeometry x="30" y="40" width="250" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="nBasis" value="Universal subspace basis {U_j}&#10;arXiv:2512.05117&#10;pinned to L2 (cf. P_inv 33.55 MB fp16)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;" vertex="1" parent="grpShared">
+          <mxGeometry x="300" y="40" width="250" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="nTok" value="SpatialCliffordTokenizer&#10;frozen bytes · D = 65,536&#10;M = 8,192 local Cl(3,0) blocks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;" vertex="1" parent="grpShared">
+          <mxGeometry x="570" y="40" width="250" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="nZoneC" value="Zone C holographic cache&#10;2.0 ms retrieval budget&#10;δ-mem ≤128 KB, &lt;15 µs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;" vertex="1" parent="grpShared">
+          <mxGeometry x="840" y="40" width="250" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="nSnapShared" value="Calibrated Hopfield egress&#10;shared codebook&#10;never un-adapted linear" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;" vertex="1" parent="grpShared">
+          <mxGeometry x="1110" y="40" width="250" height="66" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="grpLeaf" value="ZONE A LEAF CELL ×N   (N ∈ [100, 2000])   — lean, hyperfocused, disposable" style="swimlane;html=1;startSize=28;fillColor=#fff8e1;strokeColor=#d6b656;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="250" width="1480" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="nIngress" value="INGRESS&#10;2D grid → C^65,536&#10;incommensurate carriers&#10;ωx/ωy ∉ ℚ&#10;inner product −0.001853&#10;16/16 invertibility" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=center;" vertex="1" parent="grpLeaf">
+          <mxGeometry x="30" y="45" width="250" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="nAdapter" value="ADAPTER θ_i  (load-bearing)&#10;K = diag(m) + U Σ V†&#10;low-PARAMETER, full-rank&#10;~10^5 coords / instance&#10;NOT ~10^9" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=center;fontStyle=1;" vertex="1" parent="grpLeaf">
+          <mxGeometry x="310" y="45" width="250" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="nCredit" value="CREDIT — PC-ALM&#10;arXiv:2605.31022&#10;dual state λ in SRAM&#10;e_i = λ_i + ρ·r_i&#10;wavefront v = √(α·η_h)&#10;T = 2L budget&#10;no backprop" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;align=center;" vertex="1" parent="grpLeaf">
+          <mxGeometry x="590" y="45" width="250" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="nEgress" value="EGRESS&#10;Hopfield snap, calibrated β&#10;PROBE PRE-SNAP covariance&#10;snapped tokens are&#10;causally blind&#10;(piecewise-constant)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=center;" vertex="1" parent="grpLeaf">
+          <mxGeometry x="870" y="45" width="250" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="nCompile" value="IN-CONTEXT COMPILE&#10;one-shot Procrustes&#10;W_task = Y_demo X_demo†&#10;O(r²D) FLOPs&#10;zero pretraining preserved" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=center;" vertex="1" parent="grpLeaf">
+          <mxGeometry x="1150" y="45" width="250" height="130" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="grpB" value="ZONE B — DIFFRACTIVE + SAGNAC HOMODYNE VERIFIER (the asset)" style="swimlane;html=1;startSize=28;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="510" width="1480" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="nVeto" value="Δ_Sagnac &gt; 0.35&#10;DARK-PORT VETO&#10;search-time prune&#10;energy → thermal sink" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=center;" vertex="1" parent="grpB">
+          <mxGeometry x="120" y="42" width="300" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="nPass" value="Δ_Sagnac ≤ 0.0431&#10;CONSTRUCTIVE PASS&#10;egress-grade&#10;candidate survives" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;" vertex="1" parent="grpB">
+          <mxGeometry x="500" y="42" width="300" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="nCost" value="per-candidate verdict&#10;sub-100 µs design target&#10;UNVALIDATED on this host&#10;(no GPU)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;align=center;dashed=1;" vertex="1" parent="grpB">
+          <mxGeometry x="880" y="42" width="300" height="72" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="grpFab" value="SWARM FABRIC — VERIFIED PROGRESS SHARING (arXiv:2609.21032)" style="swimlane;html=1;startSize=28;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="700" width="1480" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="nLedger" value="append-only DISCOVERIES ledger&#10;Zone C-backed&#10;no write collisions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;" vertex="1" parent="grpFab">
+          <mxGeometry x="40" y="42" width="300" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="nClaims" value="claims record&#10;{candidate Ψ, ΔΦ, verdict,&#10;provenance hash}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;" vertex="1" parent="grpFab">
+          <mxGeometry x="380" y="42" width="300" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="nAdopt" value="HARD RULE&#10;adopt a peer result ONLY after&#10;own Zone B re-verify&#10;NEVER on consensus" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=center;fontStyle=1;" vertex="1" parent="grpFab">
+          <mxGeometry x="720" y="42" width="330" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="nScale" value="multiplier GROWS with k&#10;4.3× at k=3 · 6.6× at k=5&#10;(authors' report, not HENRI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;" vertex="1" parent="grpFab">
+          <mxGeometry x="1090" y="42" width="330" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="grpFals" value="CORPUS FALSIFICATIONS THAT CONSTRAIN THE DESIGN" style="swimlane;html=1;startSize=28;fillColor=#ffe6e6;strokeColor=#b85450;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="890" width="1480" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="f1" value="Un-adapted linear egress&#10;FALSIFIED&#10;I(Ψ;Y) → 0&#10;uniform noise, score 0.0%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6e6;strokeColor=#b85450;fontSize=10;align=center;" vertex="1" parent="grpFals">
+          <mxGeometry x="30" y="40" width="270" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="f2" value="BPE token snapping&#10;FALSIFIED&#10;Δ ≥ 0.35 false vetoes&#10;use qFHRR Z_256" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6e6;strokeColor=#b85450;fontSize=10;align=center;" vertex="1" parent="grpFals">
+          <mxGeometry x="330" y="40" width="270" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="f3" value="Global mean-pooling&#10;FALSIFIED (Carrier G1)&#10;local metric intervals lost&#10;AUC ≈ 0.77" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6e6;strokeColor=#b85450;fontSize=10;align=center;" vertex="1" parent="grpFals">
+          <mxGeometry x="630" y="40" width="270" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="f4" value="Rank-r-only kernel&#10;FALSIFIED (sealed 5b9b5cd)&#10;DIAG 0.7521 vs FACT 0.0583&#10;elementwise needs full rank" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6e6;strokeColor=#b85450;fontSize=10;align=center;" vertex="1" parent="grpFals">
+          <mxGeometry x="930" y="40" width="270" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="f5" value="Stationary 1D byte-tape&#10;FALSIFIED (Stage-0)&#10;99.66% flat plateau&#10;need multiscale generator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6e6;strokeColor=#b85450;fontSize=10;align=center;" vertex="1" parent="grpFals">
+          <mxGeometry x="1230" y="40" width="230" height="72" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="grpScope" value="AAII v4.3 — HONEST SCOPE (DERIVED; weights sum = 100)" style="swimlane;html=1;startSize=28;fillColor=#e6f2ff;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1060" width="1480" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="s1" value="TOOL-GATED&#10;40%&#10;AA-Briefcase 15&#10;GDPval 10&#10;AutomationBench 5&#10;Terminal-Bench 10" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=center;" vertex="1" parent="grpScope">
+          <mxGeometry x="40" y="38" width="290" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="s2" value="KNOWLEDGE-CONFLICTED&#10;15%&#10;AA-Omniscience&#10;needs parametric facts&#10;violates zero-pretraining" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=center;" vertex="1" parent="grpScope">
+          <mxGeometry x="360" y="38" width="290" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="s3" value="ZONE A ADDRESSABLE&#10;≈45%&#10;SciCode · GDP.pdf&#10;AA-LCR · HLE · CritPt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=center;fontStyle=1;" vertex="1" parent="grpScope">
+          <mxGeometry x="680" y="38" width="290" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="s4" value="SOTA #1 IS A SYSTEM TARGET&#10;not a Zone A target&#10;needs tool harness +&#10;knowledge channel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=center;fontStyle=1;" vertex="1" parent="grpScope">
+          <mxGeometry x="1000" y="38" width="300" height="66" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="eTokL" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#6c8ebf;strokeWidth=2;" edge="1" parent="1" source="nTok" target="nIngress">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eIngAdp" value="Ψ_in" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#d79b00;" edge="1" parent="1" source="nIngress" target="nAdapter">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eAdpCre" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#82b366;" edge="1" parent="1" source="nAdapter" target="nCredit">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eCreEgr" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#9673a6;" edge="1" parent="1" source="nCredit" target="nEgress">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eEgrComp" value="candidate" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#d79b00;strokeWidth=2;" edge="1" parent="1" source="nEgress" target="nCompile">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eCompVeto" value="candidate Ψ + provenance" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;entryX=0;entryY=0.5;strokeColor=#b85450;strokeWidth=2;" edge="1" parent="1" source="nCompile" target="nVeto">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eVetoPass" value="verify" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#b85450;" edge="1" parent="1" source="nVeto" target="nPass">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ePassLedger" value="verified discovery" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#82b366;strokeWidth=2;" edge="1" parent="1" source="nPass" target="nLedger">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eLedgerClaims" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#82b366;" edge="1" parent="1" source="nLedger" target="nClaims">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eClaimsAdopt" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#82b366;" edge="1" parent="1" source="nClaims" target="nAdopt">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eAdoptBack" value="build on survivors" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;strokeColor=#82b366;strokeWidth=2;dashed=1;" edge="1" parent="1" source="nAdopt" target="nAdapter">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eZoneCB" value="Holo-Fetch priors" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;strokeColor=#6c8ebf;dashed=1;" edge="1" parent="1" source="nZoneC" target="nCredit">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eBackboneAdp" value="frozen features" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#6c8ebf;dashed=1;" edge="1" parent="1" source="nBackbone" target="nAdapter">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eBasisAdp" value="spectral coords" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#6c8ebf;dashed=1;" edge="1" parent="1" source="nBasis" target="nCompile">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
