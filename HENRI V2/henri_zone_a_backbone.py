@@ -15,9 +15,12 @@ Design law (sealed measurement, commit 5b9b5cd):
 Components
     ZoneATransitionOperator   trainable kernel; complex; full-rank diagonal core.
     PCALMInferenceState       layer-local dual-state credit (arXiv:2605.31022).
-    PreSnapCovarianceProbe    causal-blindness fix: snapped tokens are piecewise
-                              constant, so a consumer of snapped tokens is blind
-                              to phase mutation before the snap.
+    PreSnapCovarianceProbe    pre-snap spectrum as an OPTIONAL confidence
+                              channel.  It never materialises a [D, D] tensor:
+                              at D=65536 that is 32 GiB and OOMs a 32 GB GPU.
+                              H3/H3b FALSIFIED the claim that snapped tokens
+                              are causally blind, so this is not a required
+                              readout (see the class docstring).
     ZoneABackbone            composes operator + probe behind one default-OFF gate.
 
 Hard invariants
@@ -342,37 +345,117 @@ class PCALMInferenceState:
 class PreSnapCovarianceProbe:
     """Measure the residual stream BEFORE the snap.
 
-    The Hopfield snap is piecewise constant: its derivative vanishes almost
-    everywhere, so a consumer watching only snapped tokens is causally blind to
-    phase mutation.  This probe tracks the pre-snap residual covariance spectrum
-    and detects the change in the task-active subspace.
+    This probe tracks the pre-snap residual covariance spectrum so the consumer
+    can read a confidence channel.  It does NOT claim the snap is blind: H3 and
+    H3b FALSIFIED that claim at D=2048 (snap window 5 steps, covariance 6; no
+    within-cell blind zone at eps <= 0.3).  Treat this as an optional extra
+    channel, not a required readout.
+
+    MEMORY CONTRACT (D=65536 blocker).  The naive form `cov = rc^H rc` is a
+    [D, D] tensor: at D=65536 that is 32 GiB complex64, before a second [D, D]
+    EMA accumulator and the eigensolver workspace.  It cannot run on a 32 GB
+    GPU.  This probe never materialises a D x D tensor.
     """
 
-    def __init__(self, dim: int, k: int = 4, ema: float = 0.5) -> None:
+    # Largest stacked residual budget, in rows.  Bounds the retained state at
+    # max_rows * dim * 8 bytes (512 x 65536 x 8 B = 256 MiB at D=65536).
+    MAX_ROWS = 512
+    # Fail-closed ceiling on the stacked working set.
+    MAX_BYTES = 1 << 30
+
+    def __init__(
+        self,
+        dim: int,
+        k: int = 4,
+        ema: float = 0.5,
+        max_rows: Optional[int] = None,
+    ) -> None:
         if dim <= 0:
             raise ZoneABackboneError("dim must be positive")
+        if not 0.0 < ema < 1.0:
+            raise ZoneABackboneError("ema must lie strictly inside (0, 1)")
         self.dim = int(dim)
         self.k = int(k)
         self.ema = float(ema)
-        self._sigma: Optional[torch.Tensor] = None
+        self.max_rows = int(max_rows if max_rows is not None else self.MAX_ROWS)
+        if self.max_rows < 2:
+            raise ZoneABackboneError("max_rows must be >= 2")
+        self._blocks: List[Tuple[torch.Tensor, int]] = []
         self._history: List[torch.Tensor] = []
 
     @torch.no_grad()
     def observe(self, residual: torch.Tensor) -> torch.Tensor:
-        """Update the running covariance and return the top-k eigenvalue spectrum."""
+        """Update the running covariance and return the top-k eigenvalue spectrum.
+
+        Why this is exact and cheap.  The EMA covariance is a WEIGHTED SUM of
+        per-call covariances `C_i = R_i^H R_i / (n_i - 1)`:
+
+            Sigma_T = w_0 C_0 + sum_{i>=1} w_i C_i
+            w_0 = ema**T ,  w_i = (1 - ema) * ema**(T - i)
+
+        A weighted sum of Gram matrices is itself the Gram of a stacked,
+        weighted residual matrix:
+
+            Sigma_T = Rs^H Rs ,  Rs = concat_i [ sqrt(w_i / (n_i - 1)) * R_i ]
+
+        The non-zero eigenvalues of `Rs^H Rs` equal the squared singular values
+        of `Rs`.  So the spectrum is obtained EXACTLY from `svdvals` on
+        `[Ntot, D]`, with memory O(Ntot * D) instead of O(D^2).
+
+        Truncation is declared: only the last `max_rows` residual rows are kept.
+        While every block is retained the result is exact, and it matches the
+        old dense path (see test_probe_spectrum_matches_dense_path).
+        """
         r = _to_complex(residual).reshape(-1, self.dim)
         if r.shape[0] < 2:
             raise ZoneABackboneError("need >= 2 samples to form a covariance")
         rc = r - r.mean(dim=0, keepdim=True)
-        cov = rc.conj().transpose(0, 1) @ rc / float(r.shape[0] - 1)
-        if self._sigma is None:
-            self._sigma = cov
-        else:
-            self._sigma = self.ema * self._sigma + (1.0 - self.ema) * cov
-        evals = torch.linalg.eigvalsh(self._sigma).flip(0).real
-        spec = evals[: self.k]
+        self._blocks.append((rc, int(rc.shape[0])))
+        self._evict()
+        spec = self._spectrum()
         self._history.append(spec.clone())
         return spec
+
+    def _evict(self) -> None:
+        """Drop the oldest blocks until the retained row count is bounded."""
+        total = sum(n for _b, n in self._blocks)
+        while len(self._blocks) > 1 and total > self.max_rows:
+            _b, n = self._blocks.pop(0)
+            total -= n
+
+    def _weights(self) -> List[float]:
+        """EMA weights for the retained blocks, oldest first.
+
+        Exact reproduction of `Sigma <- ema*Sigma + (1-ema)*C` when no block has
+        been evicted: the weights sum to 1 for every T.
+        """
+        t = len(self._blocks) - 1
+        w = [self.ema ** t]
+        for i in range(1, t + 1):
+            w.append((1.0 - self.ema) * (self.ema ** (t - i)))
+        return w
+
+    def _spectrum(self) -> torch.Tensor:
+        """Top-k eigenvalues of the EMA covariance, never touching D x D."""
+        ntot = sum(n for _b, n in self._blocks)
+        need = ntot * self.dim * 8
+        if need > self.MAX_BYTES:
+            raise ZoneABackboneError(
+                f"stacked residual working set {need} B exceeds cap "
+                f"{self.MAX_BYTES} B; lower max_rows or dim"
+            )
+        parts = []
+        for (b, n), wi in zip(self._blocks, self._weights()):
+            scale = (wi / float(n - 1)) ** 0.5
+            if scale > 0.0:
+                parts.append(b * scale)
+        rs = torch.cat(parts, dim=0)                # [Ntot, D]
+        sv = torch.linalg.svdvals(rs)               # descending, exact
+        return (sv[: self.k] ** 2).real.contiguous()
+
+    def state_shapes(self) -> List[Tuple[int, ...]]:
+        """Shapes of every retained tensor.  Proves no [D, D] state exists."""
+        return [tuple(b.shape) for b, _n in self._blocks]
 
     def subspace_shift(self) -> Optional[float]:
         """Spectral shift between the last two observations, or None if <2 seen."""

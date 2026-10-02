@@ -20,6 +20,7 @@ from henri_zone_a_backbone import (
     PCALMInferenceState,
     PreSnapCovarianceProbe,
     ZoneABackboneDisabledError,
+    ZoneABackboneError,
     ZoneATransitionOperator,
     ZoneABackbone,
     zone_a_backbone_enabled,
@@ -252,6 +253,85 @@ def test_probe_returns_topk_spectrum():
     spec = probe.observe(torch.randn(32, D))
     assert spec.shape[0] == 4
     assert torch.all(spec[:-1] >= spec[1:] - 1e-6), "eigenvalues must be descending"
+
+
+def test_probe_spectrum_matches_dense_path():
+    """D=65536 FIX. The bounded spectrum must equal the dense [D, D] eigvalsh.
+
+    This is the equivalence that licenses replacing `eigvalsh(rc^H rc)` with
+    `svdvals(rc)**2`.  Without it the memory fix is an unverified rewrite.
+    """
+    D, N, k = 24, 40, 5
+    g = torch.Generator().manual_seed(7)
+    r = torch.randn(N, D, generator=g).to(torch.complex64)
+    rc = r - r.mean(dim=0, keepdim=True)
+    cov = rc.conj().transpose(0, 1) @ rc / float(N - 1)      # dense reference
+    ref = torch.linalg.eigvalsh(cov).flip(0).real[:k]
+    probe = PreSnapCovarianceProbe(dim=D, k=k, ema=0.5)
+    got = probe.observe(r)
+    assert torch.allclose(got, ref, rtol=1e-4, atol=1e-6), (got, ref)
+
+
+def test_probe_ema_matches_dense_ema_across_observations():
+    """The stacked EMA must reproduce the dense EMA when no block is evicted."""
+    D, k, ema = 16, 4, 0.6
+    g = torch.Generator().manual_seed(11)
+    blocks = [torch.randn(8, D, generator=g).to(torch.complex64) for _ in range(4)]
+    sigma = None
+    for b in blocks:
+        rc = b - b.mean(dim=0, keepdim=True)
+        c = rc.conj().transpose(0, 1) @ rc / float(b.shape[0] - 1)
+        sigma = c if sigma is None else ema * sigma + (1.0 - ema) * c
+    ref = torch.linalg.eigvalsh(sigma).flip(0).real[:k]
+    probe = PreSnapCovarianceProbe(dim=D, k=k, ema=ema, max_rows=4096)
+    for b in blocks:
+        got = probe.observe(b)
+    assert torch.allclose(got, ref, rtol=1e-4, atol=1e-6), (got, ref)
+
+
+def test_probe_state_is_not_quadratic_in_D():
+    """SHAPE GUARD. At D=8192 the retained state must stay O(N*D), never D*D."""
+    D = 8192
+    probe = PreSnapCovarianceProbe(dim=D, k=4)
+    probe.observe(torch.randn(32, D))
+    shapes = probe.state_shapes()
+    assert shapes, "no state retained"
+    for s in shapes:
+        assert len(s) == 2 and s[1] == D, s
+    total = sum(s[0] * s[1] for s in shapes)
+    assert total < (D * D) // 100, f"state {total} is not bounded vs D^2={D * D}"
+
+
+def test_probe_evicts_to_retained_row_budget():
+    """Truncation is bounded and declared; at least one block is always kept."""
+    D = 8
+    probe = PreSnapCovarianceProbe(dim=D, k=2, max_rows=20)
+    for _ in range(5):
+        probe.observe(torch.randn(10, D))
+    shapes = probe.state_shapes()
+    assert sum(s[0] for s in shapes) <= 20
+    assert len(shapes) == 2
+
+
+def test_probe_fails_closed_on_bad_ema_and_rows():
+    with pytest.raises(ZoneABackboneError):
+        PreSnapCovarianceProbe(dim=8, ema=1.0)
+    with pytest.raises(ZoneABackboneError):
+        PreSnapCovarianceProbe(dim=8, ema=0.0)
+    with pytest.raises(ZoneABackboneError):
+        PreSnapCovarianceProbe(dim=8, max_rows=1)
+
+
+def test_probe_worst_case_memory_at_full_D():
+    """D=65536 retained state must fit a 32 GB card with room to spare."""
+    D = 65536
+    probe = PreSnapCovarianceProbe(dim=D, k=8)
+    rows = probe.max_rows
+    retained_bytes = rows * D * 8          # complex64
+    assert retained_bytes <= 256 * 1024**2, retained_bytes
+    dense_bytes = D * D * 8
+    assert dense_bytes > 30 * 1024**3      # the path we refuse to take
+    assert retained_bytes * 100 < dense_bytes
 
 
 # ------------------------------------------------------ swarm fabric
