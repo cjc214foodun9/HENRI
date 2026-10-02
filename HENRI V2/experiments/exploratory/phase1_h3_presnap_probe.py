@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -56,7 +57,8 @@ sys.path.insert(0, str(_V2))
 from henri.determinism import RunManifest                 # noqa: E402
 from henri_zone_a_backbone import PreSnapCovarianceProbe  # noqa: E402
 
-DIM = 512
+DIM = int(os.environ.get("HENRI_ZA_DIM", "512"))
+SUBSPACE_K = 32
 STEPS = 24
 N_SAMPLES = 64
 SHIFT_AT = 4                # the stream starts drifting at this step
@@ -69,8 +71,17 @@ COV_REL_THRESHOLD = 0.25    # relative change in the top-k covariance spectrum
 SNAP_CHANGE_FRACTION = 0.10  # fraction of samples that must re-snap to fire
 
 
-def old_subspace_basis(dim, gen):
-    q, _ = torch.linalg.qr(torch.randn(dim, dim, generator=gen))
+def old_subspace_basis(dim, gen, ncols=64):
+    """Orthonormal basis for the OLD/NEW subspaces.
+
+    MEMORY CONTRACT.  The subspace we need is only 2*k columns wide (k=32), so
+    the QR must be taken on [D, ncols].  The historical form
+    `qr(randn(D, D))` allocates a [D, D] matrix: 32 GiB at D=65536, which is the
+    same defect class as the probe's dense covariance.  Never build a [D, D].
+    """
+    if ncols < 2 * SUBSPACE_K:
+        raise ValueError(f"need >= {2 * SUBSPACE_K} columns, got {ncols}")
+    q, _ = torch.linalg.qr(torch.randn(dim, ncols, generator=gen))
     return q
 
 
