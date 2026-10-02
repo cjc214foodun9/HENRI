@@ -1,0 +1,49 @@
+{
+  "task": "SPEC-2026-10-01-PHASE1-TRANSDUCTION/multiseed-confirm",
+  "rule": "diag margin > 0.3 every seed",
+  "seeds": [
+    20261002,
+    7,
+    424242
+  ],
+  "rows": [
+    {
+      "seed": 20261002,
+      "diag_trained": 0.7521,
+      "diag_shuffled": 0.0418,
+      "diag_margin": 0.7103,
+      "diag_loss_first": 0.9423,
+      "diag_loss_last": 0.2379,
+      "fact_trained": 0.0583,
+      "fact_loss_first": 0.9804,
+      "fact_loss_last": -0.0,
+      "margin_ok": true
+    },
+    {
+      "seed": 7,
+      "diag_trained": 0.7538,
+      "diag_shuffled": 0.1419,
+      "diag_margin": 0.6119,
+      "diag_loss_first": 0.9485,
+      "diag_loss_last": 0.2406,
+      "fact_trained": 0.1171,
+      "fact_loss_first": 0.9808,
+      "fact_loss_last": -0.0,
+      "margin_ok": true
+    },
+    {
+      "seed": 424242,
+      "diag_trained": 0.7525,
+      "diag_shuffled": 0.0661,
+      "diag_margin": 0.6864,
+      "diag_loss_first": 0.945,
+      "diag_loss_last": 0.2405,
+      "fact_trained": 0.1478,
+      "fact_loss_first": 0.9811,
+      "fact_loss_last": -0.0,
+      "margin_ok": true
+    }
+  ],
+  "verdict": "CONFIRMED",
+  "out": ""
+}
