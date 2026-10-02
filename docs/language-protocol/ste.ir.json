@@ -1,0 +1,28 @@
+{
+ "schema":"drawio-skill/diagram-ir/v1",
+ "metadata":{"title":"HENRI language and visual tracks","description":"Fixed prefix and task-tail policy; visual freedom; independent proof. Native middleware remains unattached."},
+ "nodes":[
+ {"id":"prefix","label":"Cache + HENRI-STE-V1","kind":"artifact","properties":{"evidence":"OBSERVED installed policy; fixed per session"}},
+ {"id":"tail","label":"Task state / source refs","kind":"artifact","properties":{"evidence":"OBSERVED ContextPacker tail changes only"}},
+ {"id":"ops","label":"Operational prose","kind":"process","properties":{"evidence":"Soft 20/25 word targets; selected advisory checks"}},
+ {"id":"formal","label":"Formal code / math","kind":"artifact","properties":{"evidence":"Exact identifiers, schemas, code and equations"}},
+ {"id":"visual","label":"Visual / HITL report","kind":"artifact","properties":{"evidence":"Unrestricted prose/layout; accessible safety text"}},
+ {"id":"checker","label":"Advisory checker","kind":"module","properties":{"evidence":"Tested patterns; no full compliance or authorization"}},
+ {"id":"prover","label":"Approval / policy proof","kind":"process","properties":{"evidence":"Existing independent gate; language cannot grant permission"}},
+ {"id":"sandbox","label":"Sandbox blocked / no execution","kind":"process","properties":{"evidence":"OBSERVED guard blocked before execution"}},
+ {"id":"middleware","label":"Native L7 not attached","kind":"module","properties":{"evidence":"BLOCKED authenticated gRPC registration/policy absent"}},
+ {"id":"ontology","label":"Cited terms / ontology","kind":"store","properties":{"evidence":"Source/definition/POS links, not ASD approval"}}
+ ],
+ "edges":[
+ {"id":"prefix-tail","source":"prefix","target":"tail","label":"append only","kind":"sync"},
+ {"id":"tail-ops","source":"tail","target":"ops","label":"declared track","kind":"sync"},
+ {"id":"tail-formal","source":"tail","target":"formal","label":"exact bytes","kind":"sync"},
+ {"id":"tail-visual","source":"tail","target":"visual","label":"user explanation","kind":"sync"},
+ {"id":"ops-checker","source":"ops","target":"checker","label":"style advice","kind":"sync"},
+ {"id":"checker-prover","source":"checker","target":"prover","label":"no authority transfer","kind":"sync"},
+ {"id":"prover-sandbox","source":"prover","target":"sandbox","label":"BLOCKED not Ready","kind":"sync"},
+ {"id":"ontology-ops","source":"ontology","target":"ops","label":"defined technical terms","kind":"sync"},
+ {"id":"ontology-formal","source":"ontology","target":"formal","label":"source refs","kind":"sync"},
+ {"id":"middleware-checker","source":"middleware","target":"checker","label":"proposed future consumer","kind":"async"}
+ ]
+}

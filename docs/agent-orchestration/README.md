@@ -2,6 +2,12 @@
 
 Approved scope: default-profile instructions, editable diagrams, real Jev typed advice, and a local OpenShell WSL pilot. Engineering extension: the fixed bundle also includes henri-engineering. See ../project-memory/ for reviewed source records, CodeGraph receipts, independent review, and ontology linkage. Honcho is installed but offline and blocked on host compatibility; no remote-memory claim. This branch does not change HENRI mathematics, graph schemas, benchmark evaluators, the MoA roster, or Vast deployment. No main merge is authorized.
 
+## Language and visual extension
+
+HENRI-STE-V1 keeps operational prose concise and formal bytes exact. Substantive user/HITL reports use editable diagrams and accessible HTML.
+Visual prose and layout remain unrestricted. Native L7 language middleware is not attached; the command consumer uses advisory host preflight.
+See ../language-protocol/ for source corrections, executed checks, visual report, and explicit limits.
+
 ## Operating stack
 
 `stable prefix → deterministic evidence → Jev typed advice → acting root/approval → complete-policy prover → qualified local sandbox → real receipts → audit decision`

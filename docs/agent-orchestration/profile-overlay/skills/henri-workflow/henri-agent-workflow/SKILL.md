@@ -10,6 +10,10 @@ category: henri-workflow
 
 Freeze the existing system prefix, tool/schema order, and model roster. Load the bundle once; append task state and new evidence last. Keep static instructions and custom JSON serialization stable. Use deterministic collection and bounded deltas before inference. No padding, empty warm-ups, or loss of correctness/security for hit rate. Measure real provider reads/writes, eligibility, and cost; prefix hashes are not hits. Jev memoization is application caching, not provider KV caching. Full protocol: henri-agent-integration/references/cache-maximization-playbook.md.
 
+Language follows HENRI-STE-V1 after cache rules. Use soft operational targets and preserve formal bytes.
+Use diagrams and accessible HTML for substantive user reports. Visual layout and prose remain unrestricted.
+Policy: henri-soul/references/language-visual-protocol.md.
+
 Entry: henri-soul. The fixed bundle contains five HENRI core skills plus diagram priority, explicit upstream Draw.io, and System 1/OpenShell operations. See the actual bundle file for order.
 
 | Policy | Owner |

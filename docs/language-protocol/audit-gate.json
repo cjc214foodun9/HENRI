@@ -1,0 +1,18 @@
+{
+  "scope": "HENRI-STE-V1 default-profile instructions/advisory consumers/visual report; no main/L7/permission/roster change",
+  "source_commit": "26de5ec0a573dca8dcb5ff96638a416115bfa91a",
+  "language_script_sha256": "c2755f674f23f487d9196323a930dd62bf36ce4865f71eaef25b52d71e35a5f6",
+  "checker_tests": 16,
+  "tests_return_code": 0,
+  "frozen_contracts": "PASS",
+  "overlay_files": 62,
+  "native_l7": "BLOCKED_NOT_ATTACHED",
+  "sandbox": "BLOCKED_COMPLETED_NOT_READY",
+  "formal_visual_bytes": "preserved",
+  "moa_advice": "rejected truncated semantic proposal",
+  "grounding_event": "987637253d2f5b86562395aa520daaa6d95efb18fb1052cbc70dc30c6cbefa55",
+  "benefit": "HYPOTHESIS",
+  "review_sha256": "df39985392bc58bb395fa65d066ffd72d6e1ed670bd4c79a16ac8bfca496333e",
+  "audit_event": "24237f6f66967599bb193caab19cd149dddf5bd52e8b1cac3a5c20a6acd85ffb",
+  "chain": "chain intact: 1780 records, head 24237f6f66967599\u2026"
+}

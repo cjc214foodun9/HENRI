@@ -1,0 +1,70 @@
+<mxfile host="drawio-skill" agent="diagram-ir" version="3.0.0">
+  <diagram id="system" name="System">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="prefix" value="Cache + HENRI-STE-V1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="prefix" data-kind="artifact" data-properties="{&quot;evidence&quot;:&quot;OBSERVED installed policy; fixed per session&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;OBSERVED installed policy; fixed per session&quot;}" data-source-label="Cache + HENRI-STE-V1" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\ste-visual\\ste.ir.json&quot;}">
+          <mxGeometry x="60" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="tail" value="Task state / source refs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="tail" data-kind="artifact" data-properties="{&quot;evidence&quot;:&quot;OBSERVED ContextPacker tail changes only&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;OBSERVED ContextPacker tail changes only&quot;}" data-source-label="Task state / source refs" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\ste-visual\\ste.ir.json&quot;}">
+          <mxGeometry x="290" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ops" value="Operational prose" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="ops" data-kind="process" data-properties="{&quot;evidence&quot;:&quot;Soft 20/25 word targets; selected advisory checks&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;Soft 20/25 word targets; selected advisory checks&quot;}" data-source-label="Operational prose" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\ste-visual\\ste.ir.json&quot;}">
+          <mxGeometry x="520" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="formal" value="Formal code / math" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="formal" data-kind="artifact" data-properties="{&quot;evidence&quot;:&quot;Exact identifiers, schemas, code and equations&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;Exact identifiers, schemas, code and equations&quot;}" data-source-label="Formal code / math" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\ste-visual\\ste.ir.json&quot;}">
+          <mxGeometry x="750" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="visual" value="Visual / HITL report" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="visual" data-kind="artifact" data-properties="{&quot;evidence&quot;:&quot;Unrestricted prose/layout; accessible safety text&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;Unrestricted prose/layout; accessible safety text&quot;}" data-source-label="Visual / HITL report" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\ste-visual\\ste.ir.json&quot;}">
+          <mxGeometry x="60" y="230" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="checker" value="Advisory checker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="checker" data-kind="module" data-properties="{&quot;evidence&quot;:&quot;Tested patterns; no full compliance or authorization&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;Tested patterns; no full compliance or authorization&quot;}" data-source-label="Advisory checker" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\ste-visual\\ste.ir.json&quot;}">
+          <mxGeometry x="290" y="230" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="prover" value="Approval / policy proof" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="prover" data-kind="process" data-properties="{&quot;evidence&quot;:&quot;Existing independent gate; language cannot grant permission&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;Existing independent gate; language cannot grant permission&quot;}" data-source-label="Approval / policy proof" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\ste-visual\\ste.ir.json&quot;}">
+          <mxGeometry x="520" y="230" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="sandbox" value="Sandbox blocked / no execution" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="sandbox" data-kind="process" data-properties="{&quot;evidence&quot;:&quot;OBSERVED guard blocked before execution&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;OBSERVED guard blocked before execution&quot;}" data-source-label="Sandbox blocked / no execution" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\ste-visual\\ste.ir.json&quot;}">
+          <mxGeometry x="750" y="230" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="middleware" value="Native L7 not attached" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="middleware" data-kind="module" data-properties="{&quot;evidence&quot;:&quot;BLOCKED authenticated gRPC registration/policy absent&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;BLOCKED authenticated gRPC registration/policy absent&quot;}" data-source-label="Native L7 not attached" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\ste-visual\\ste.ir.json&quot;}">
+          <mxGeometry x="60" y="380" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ontology" value="Cited terms / ontology" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1" data-model-id="ontology" data-kind="store" data-properties="{&quot;evidence&quot;:&quot;Source/definition/POS links, not ASD approval&quot;}" data-source-properties="{&quot;evidence&quot;:&quot;Source/definition/POS links, not ASD approval&quot;}" data-source-label="Cited terms / ontology" data-provenance="{&quot;path&quot;:&quot;C:\\Users\\chan\\henri-telemetry\\ste-visual\\ste.ir.json&quot;}">
+          <mxGeometry x="290" y="380" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-0" value="append only" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="prefix" target="tail" data-model-id="prefix-tail" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="append only">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-1" value="declared track" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="tail" target="ops" data-model-id="tail-ops" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="declared track">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-2" value="exact bytes" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="tail" target="formal" data-model-id="tail-formal" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="exact bytes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-3" value="user explanation" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="tail" target="visual" data-model-id="tail-visual" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="user explanation">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-4" value="style advice" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="ops" target="checker" data-model-id="ops-checker" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="style advice">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-5" value="no authority transfer" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="checker" target="prover" data-model-id="checker-prover" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="no authority transfer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-6" value="BLOCKED not Ready" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="prover" target="sandbox" data-model-id="prover-sandbox" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="BLOCKED not Ready">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-7" value="defined technical terms" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="ontology" target="ops" data-model-id="ontology-ops" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="defined technical terms">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-8" value="source refs" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="ontology" target="formal" data-model-id="ontology-formal" data-kind="sync" data-properties="{}" data-source-properties="{}" data-source-label="source refs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-system-9" value="proposed future consumer" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="middleware" target="checker" data-model-id="middleware-checker" data-kind="async" data-properties="{}" data-source-properties="{}" data-source-label="proposed future consumer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

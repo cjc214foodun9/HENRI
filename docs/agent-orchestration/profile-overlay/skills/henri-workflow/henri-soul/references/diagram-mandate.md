@@ -1,9 +1,12 @@
-# Diagram priority for HENRI
+# Visual reports for HENRI
 
-Cache first: use a stable diagram/source inventory and node IDs. Pass artifact paths, hashes, counts, and bounded captions to models, not full XML or repeated image bytes. Render deterministically. Diagrams do not override numeric evidence or security gates.
-
-For structured material, deliver a diagram beside concise text. Architecture, trust boundaries, sequences, branches, lifecycle, hierarchy, and provenance use editable Draw.io first through henri-diagrams and explicit drawio-skill invocation. Measured curves and distributions use deterministic plots from real receipts. Do not draw irrelevant decoration for linear facts.
-
-Preferred output: .drawio plus self-contained Story HTML when the native exporter is absent. If native draw.io is present, produce the requested image/SVG/PDF and inspect it. PenEcho or inline HTML can supplement interaction; Mermaid is a portable fallback. Never infer GUI/export/MCP availability from skill installation.
-
-Show OBSERVED, DERIVED, INFERRED, HYPOTHESIS, FALSIFIED, or BLOCKED on the relevant layer. Source-parsed import edges are not measured runtime calls. Mark proposed and unavailable services explicitly. Preserve stable provenance without credentials or benchmark answers. Check layout by real render/DOM or vision; stop after two repairs. Save editable sources and exact output paths.
+Keep the cache prefix fixed. Append artifact refs and bounded captions last.
+Use editable Draw.io for structure. Use creative/claude-design for accessible HTML and interactive explanations.
+Use measured plots for numerical data. Do not invent values or draw an inferred path as observed.
+Substantive user delivery and HITL choices must use a visual report with a text alternative.
+The visual track has no STE word, noun-group, or layout limits. Keep safety, evidence, and secret controls.
+A short acknowledgment can use plain text. Immediate safety text and viewer/accessibility failures must not wait for a render.
+Do not use a fake approval button. Use the actual approval transport.
+Retain source provenance, editable files, exact IDs, and evidence classes. Validate the real renderer and test interactions.
+No extra design fan-out or model change follows from loading creative/claude-design.
+Full language policy: language-visual-protocol.md.

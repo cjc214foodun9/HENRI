@@ -10,6 +10,15 @@ category: henri-workflow
 
 Freeze the existing system prefix, tool/schema order, and model roster. Load the bundle once; append task state and new evidence last. Keep static instructions and custom JSON serialization stable. Use deterministic collection and bounded deltas before inference. No padding, empty warm-ups, or loss of correctness/security for hit rate. Measure real provider reads/writes, eligibility, and cost; prefix hashes are not hits. Jev memoization is application caching, not provider KV caching. Full protocol: henri-agent-integration/references/cache-maximization-playbook.md.
 
+## Language and visual tracks
+
+Use HENRI-STE-V1 with the cache contract. Use short active sentences for operational prose.
+Target 20 words per instruction and 25 words per description. Use one task per sentence.
+Preserve formal code, equations, identifiers, and quotes. Define technical nouns in the ontology.
+Use editable diagrams and accessible HTML for substantive user reports and human decisions.
+Visual prose and layout remain unrestricted. Keep immediate safety text and a text alternative.
+Style findings do not prove compliance or permit execution. Read henri-soul/references/language-visual-protocol.md.
+
 MoA combines tool-less reference advice with one acting aggregator. This skill owns roster and wire policy. Do not copy dated model lists into SOUL, bundle, triad.
 
 ## Resolve
@@ -35,6 +44,10 @@ Use henri-system1 for every eligible finite model judgment before a generative e
 Solo tools for reads/edits/retrieval/routine debugging. Delegate independent questions. Use MoA for load-bearing derivation, cross-file audit, or two genuine repair failures. Limit explicit escalations to three/session and one/STRACE cycle. Already-selected MoA can fan out every user turn; this policy does not override runtime. No nested MoA, silent model change, or unmeasured entropy/consensus gate.
 
 Prefer user_turn cadence. No mid-session roster toggles. Announce degraded refs; missing advice is not agreement.
+
+## Packet language
+
+Use scripts/henri_moa_packet.py for a fixed HENRI-STE-V1 header and bounded task tail. Keep reference roles and source refs stable. References do not receive SOUL; the packet must contain this language policy. Keep formal bytes exact. Style advice never counts as agreement or execution. Do not auto-regenerate an advisor response for word count alone.
 
 ## Packet
 

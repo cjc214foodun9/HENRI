@@ -1,0 +1,25 @@
+{
+  "scope": "real hook tail and real Jev owner caller; no action authorization",
+  "target": "user_message",
+  "guide_present": true,
+  "hook_sha256": "99b60ad475369abba53f02a17fda001aa9059753769e575b54bc8f0783e5f41c",
+  "context_sha256": "1b40997bfa103d3ed7997e8b9093a628d4ba8a0047e6b5f601bb3337be7adada",
+  "typed_advice": {
+    "answer": {
+      "choice": "RESEARCH",
+      "confidence": 0.88,
+      "probabilities": {
+        "ARBITRATION": 0.03,
+        "ARCHITECTURE": 0.06,
+        "INTEGRATION": 0,
+        "RESEARCH": 0.91
+      },
+      "type": "choice"
+    },
+    "application_cache_hit": false,
+    "authorization": false,
+    "generation_id": "gen-dec-1790960740-2IF3XgdLWyFxDdHmArWx",
+    "kind": "owner",
+    "status": "ADVISORY"
+  }
+}

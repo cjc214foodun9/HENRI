@@ -1,0 +1,60 @@
+{
+  "model": "z-ai/glm-5.3-flash",
+  "provider": "openrouter",
+  "usage": {
+    "input_tokens": 554,
+    "output_tokens": 320,
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "reasoning_tokens": 298,
+    "request_count": 1,
+    "raw_usage": null
+  },
+  "cost_usd": 0.0003025425,
+  "cost_status": "estimated",
+  "static_prefix_sha256": "def21e67ca1f9190736bc21e5ad5f376ab5d37154e81cf82a067762540b274e1",
+  "original_language_assessment": {
+    "version": "HENRI-STE-V1",
+    "track": "operational",
+    "mode": "description",
+    "status": "NO_SELECTED_FINDINGS",
+    "findings": [],
+    "sentences_assessed": 6,
+    "protected_lines": 0,
+    "input_sha256": "1485927ea4b007f757f6913ca1165e92c39c593301d80c0dc8f1fe77013c1112",
+    "output_sha256": "1485927ea4b007f757f6913ca1165e92c39c593301d80c0dc8f1fe77013c1112",
+    "rewritten": false,
+    "authorization": false,
+    "full_ste_compliance": false,
+    "coverage": "selected patterns and heuristic counts; not full dictionary, syntax, meaning, or noun groups"
+  },
+  "language": {
+    "version": "HENRI-STE-V1",
+    "track": "operational",
+    "mode": "description",
+    "status": "ADVISORY",
+    "findings": [
+      {
+        "rule": "unclosed_identifier",
+        "review": "The output may be truncated. Do not adopt it as an instruction."
+      }
+    ],
+    "sentences_assessed": 6,
+    "protected_lines": 0,
+    "input_sha256": "1485927ea4b007f757f6913ca1165e92c39c593301d80c0dc8f1fe77013c1112",
+    "output_sha256": "1485927ea4b007f757f6913ca1165e92c39c593301d80c0dc8f1fe77013c1112",
+    "rewritten": false,
+    "authorization": false,
+    "full_ste_compliance": false,
+    "coverage": "selected patterns and heuristic counts; not full dictionary, syntax, meaning, or noun groups"
+  },
+  "language_assessment_revision": {
+    "checker_sha256": "c2755f674f23f487d9196323a930dd62bf36ce4865f71eaef25b52d71e35a5f6",
+    "scope": "reassessment of exact original text; no API rerun",
+    "supersedes": "original_language_assessment"
+  },
+  "advice_accepted": false,
+  "reason": "truncated semantic error; language finding is not a proof verdict",
+  "command_guard_status": "BLOCKED",
+  "command_guard_exit_code": 2
+}

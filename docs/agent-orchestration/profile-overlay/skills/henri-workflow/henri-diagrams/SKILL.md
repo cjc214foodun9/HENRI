@@ -11,9 +11,18 @@ category: henri-workflow
 
 Load this policy once. Keep the existing prefix and schema order stable; append task state last. Do not paste XML, images, full graph dumps, or repeated render logs into model context. Reuse stable node IDs and cached source inventories. Hashes prove artifact identity, not provider cache hits. Protocol: henri-agent-integration/references/cache-maximization-playbook.md.
 
+## Language and visual tracks
+
+Use HENRI-STE-V1 with the cache contract. Use short active sentences for operational prose.
+Target 20 words per instruction and 25 words per description. Use one task per sentence.
+Preserve formal code, equations, identifiers, and quotes. Define technical nouns in the ontology.
+Use editable diagrams and accessible HTML for substantive user reports and human decisions.
+Visual prose and layout remain unrestricted. Keep immediate safety text and a text alternative.
+Style findings do not prove compliance or permit execution. Read henri-soul/references/language-visual-protocol.md.
+
 ## When to use
 
-Produce an editable diagram for architecture, workflow, trust boundaries, lineage, causal hypotheses, state machines, or module relations. Use measured plots for numeric results. A diagram must add decision-relevant information; no decorative graph requirement for linear facts.
+Produce an editable diagram for architecture, workflow, trust boundaries, lineage, causal hypotheses, state machines, or module relations. Use measured plots for numeric results. Use a visual report for substantive HENRI status and HITL decisions. Use creative/claude-design for HTML, not the ambiguous bare name. Layout and explanatory prose are unrestricted; preserve source truth, safety text, and accessible alternatives. A short acknowledgment or viewer failure can use plain text. No decorative graph or forced design fan-out.
 
 ## Procedure
 

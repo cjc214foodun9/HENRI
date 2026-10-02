@@ -12,6 +12,15 @@ Freeze the existing system prefix, tool/schema order, and model roster. Load the
 
 A holon is a bounded workflow inside a parent workflow. Skills define roles, not running agents/services. Parents receive contracts/artifact refs, not raw traces/private reasoning. Workflow: henri-soul. Approval/delivery: integration. Semantics: ontology.
 
+## Language and visual tracks
+
+Use HENRI-STE-V1 with the cache contract. Use short active sentences for operational prose.
+Target 20 words per instruction and 25 words per description. Use one task per sentence.
+Preserve formal code, equations, identifiers, and quotes. Define technical nouns in the ontology.
+Use editable diagrams and accessible HTML for substantive user reports and human decisions.
+Visual prose and layout remain unrestricted. Keep immediate safety text and a text alternative.
+Style findings do not prove compliance or permit execution. Read henri-soul/references/language-visual-protocol.md.
+
 ## Stores
 
 Drive = originals/revisions; Obsidian = readable source/decision/conflict projections; NotebookLM = cited retrieval/synthesis; typed ontology = terms/mappings/constraints/evidence; audit chain = hash-linked governance; graph schemas = control-plane envelopes, not A/B/C; STRACE = derived failure analysis; time-series = operational telemetry; optional TrustGraph = verified relationship/agent flows; Zone C = latent/reference artifacts, not engineering notes.

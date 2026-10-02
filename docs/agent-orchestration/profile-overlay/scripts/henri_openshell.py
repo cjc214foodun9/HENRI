@@ -6,6 +6,7 @@ calls or establish remote Vast/GPU isolation. No probabilistic authorization.
 from __future__ import annotations
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -32,10 +33,16 @@ def _invoke(config,args,timeout=30):
     return subprocess.run(prefix+args,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=timeout)
 
 
-def guarded_execute(command,timeout=30):
+def guarded_execute(command,timeout=30,description=None):
     if not isinstance(command,list) or not command or not all(isinstance(x,str) and x and '\x00' not in x for x in command):
         raise ValueError('nonempty command argv required')
     if not 1<=timeout<=120: raise ValueError('timeout must be 1..120')
+    language = None
+    if description is not None:
+        spec = importlib.util.spec_from_file_location('henri_guard_language', Path(__file__).with_name('henri_language.py'))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        language = mod.assess(description, track='operational', mode='procedure')
     home=_home(); config=json.loads((home/'henri-openshell.json').read_text(encoding='utf-8'))
     if config.get('enabled') is not True: raise RuntimeError('pilot consumer disabled')
     if command[0] not in config['allowed_executables']:
@@ -47,7 +54,8 @@ def guarded_execute(command,timeout=30):
     run=home/'logs/henri-openshell'/uuid.uuid4().hex
     run.mkdir(parents=True,exist_ok=False)
     receipt={'scope':'local WSL sandbox consumer only; not host-wide/Vast/GPU verification',
-        'command':command,'gateway':config['gateway'],'sandbox':config['sandbox'],'status':'BLOCKED','exit_code':2}
+        'command':command,'gateway':config['gateway'],'sandbox':config['sandbox'],'status':'BLOCKED','exit_code':2,
+        'language_check':language,'language_scope':'host advisory preflight; not attached Supervisor middleware'}
     try:
         result=_invoke(config,['-g',config['gateway'],'sandbox','get',config['sandbox'],'-o','json'])
         (run/'sandbox.json').write_text(result.stdout,encoding='utf-8')
@@ -93,10 +101,11 @@ def guarded_execute(command,timeout=30):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--timeout',type=int,default=30)
+    p.add_argument('--description',help='Short operational description; style findings are advisory.')
     p.add_argument('command',nargs=argparse.REMAINDER)
     a=p.parse_args(); cmd=a.command
     if cmd and cmd[0]=='--': cmd=cmd[1:]
-    try: result=guarded_execute(cmd,a.timeout)
+    try: result=guarded_execute(cmd,a.timeout,description=a.description)
     except Exception as e: result={'status':'BLOCKED','exit_code':2,'error':str(e)[:500]}
     print(json.dumps(result,indent=2,ensure_ascii=False))
     return result['exit_code'] if isinstance(result.get('exit_code'),int) else 2

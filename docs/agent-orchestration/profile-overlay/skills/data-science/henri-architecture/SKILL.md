@@ -10,6 +10,15 @@ category: data-science
 
 Freeze the existing system prefix, tool/schema order, and model roster. Load the bundle once; append task state and new evidence last. Keep static instructions and custom JSON serialization stable. Use deterministic collection and bounded deltas before inference. No padding, empty warm-ups, or loss of correctness/security for hit rate. Measure real provider reads/writes, eligibility, and cost; prefix hashes are not hits. Jev memoization is application caching, not provider KV caching. Full protocol: henri-agent-integration/references/cache-maximization-playbook.md.
 
+## Language and visual tracks
+
+Use HENRI-STE-V1 with the cache contract. Use short active sentences for operational prose.
+Target 20 words per instruction and 25 words per description. Use one task per sentence.
+Preserve formal code, equations, identifiers, and quotes. Define technical nouns in the ontology.
+Use editable diagrams and accessible HTML for substantive user reports and human decisions.
+Visual prose and layout remain unrestricted. Keep immediate safety text and a text alternative.
+Style findings do not prove compliance or permit execution. Read henri-soul/references/language-visual-protocol.md.
+
 Consume frozen SpecContract A without changing its API. Own caller audit, design, and bounded implementation. Emit HarnessContract B and changed paths. Workflow owner: henri-soul.
 
 ## HOLONIC STATIC PREAMBLE — shared contract header

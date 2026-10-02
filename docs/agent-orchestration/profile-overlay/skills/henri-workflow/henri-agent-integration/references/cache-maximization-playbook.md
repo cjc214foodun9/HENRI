@@ -1,5 +1,12 @@
 # Cache-first HENRI protocol
 
+## Language policy
+
+Keep HENRI-STE-V1 fixed beside the cache contract. Append only task data and source refs.
+Use short active operational prose. Preserve formal bytes and unrestricted visual explanations.
+Do not rewrite old turns, replace identifiers, or generate repeated grammar repairs to increase cache reuse.
+Full policy: henri-soul/references/language-visual-protocol.md.
+
 ## Binding order
 
 Correctness, security, approval, and evidence outrank cache reuse. Within those limits, minimize billed input and preserve reusable prefixes. Instructions cannot guarantee a provider cache hit. Never pad prompts, issue meaningless warm-ups, retain irrelevant text, or suppress evidence to inflate hit rate.

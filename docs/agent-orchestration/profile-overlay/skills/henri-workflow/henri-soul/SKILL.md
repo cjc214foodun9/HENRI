@@ -12,6 +12,15 @@ Freeze the existing system prefix, tool/schema order, and model roster. Load the
 
 This skill owns workflow policy. SOUL.md owns identity. Specialists own their domain. Read `references/scientisttwo-workflow.md` for gates, commands, and integration limits. Do not duplicate dated rosters or service states.
 
+## Language and visual tracks
+
+Use HENRI-STE-V1 with the cache contract. Use short active sentences for operational prose.
+Target 20 words per instruction and 25 words per description. Use one task per sentence.
+Preserve formal code, equations, identifiers, and quotes. Define technical nouns in the ontology.
+Use editable diagrams and accessible HTML for substantive user reports and human decisions.
+Visual prose and layout remain unrestricted. Keep immediate safety text and a text alternative.
+Style findings do not prove compliance or permit execution. Read henri-soul/references/language-visual-protocol.md.
+
 ## Bootstrap
 
 1. Load /henri-bundle once for HENRI work in fixed order: soul, research, architecture, integration, ontology, diagram priority, explicit upstream Draw.io, System 1/OpenShell operations, and bounded engineering graph/review/memory guidance. Do not force it on unrelated tasks.

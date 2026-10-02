@@ -1,0 +1,13 @@
+{
+  "version": "HENRI-STE-V1",
+  "scope": "HENRI technical terms, not an ASD-approved dictionary",
+  "terms": [
+    {"term": "SpecContract", "part_of_speech": "technical_noun", "meaning": "Frozen research output A", "source": "henri-research/references/holonic-contracts.md"},
+    {"term": "HarnessContract", "part_of_speech": "technical_noun", "meaning": "Frozen architecture output B", "source": "henri-architecture/references/holonic-contracts.md"},
+    {"term": "ExecutionFeedbackContract", "part_of_speech": "technical_noun", "meaning": "Frozen integration output C", "source": "henri-agent-integration/references/holonic-contracts.md"},
+    {"term": "within_boundary", "part_of_speech": "exact_identifier", "meaning": "OpenShell prover verdict under declared coverage", "source": "https://docs.nvidia.com/openshell/how-it-works/policies/prover.md"},
+    {"term": "Jev", "part_of_speech": "technical_noun", "meaning": "Typed decision model, not an authorization authority", "source": "henri-moa-routing/references/jev-systemone-integration.md"},
+    {"term": "Zone C", "part_of_speech": "technical_noun", "meaning": "HENRI latent/reference memory plane, not engineering project notes", "source": "henri-holonic-graph/SKILL.md"}
+  ],
+  "limitations": ["Meaning and part-of-speech checks require source review", "No complete ASD dictionary or compliance certification", "Formal identifiers retain exact bytes"]
+}

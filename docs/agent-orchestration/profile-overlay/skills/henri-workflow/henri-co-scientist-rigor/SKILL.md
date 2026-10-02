@@ -12,6 +12,15 @@ Freeze the existing system prefix, tool/schema order, and model roster. Load the
 
 Foundation: ScientistTwo arXiv:2609.19644v1 §3.2 baselines, §3.4 ablations, §§3.5–3.6 review experiments, Table 7/Appendix B integrity. Earlier co-scientist/TrueSkill proposals remain historical and conditional, not this paper's method.
 
+## Language and visual tracks
+
+Use HENRI-STE-V1 with the cache contract. Use short active sentences for operational prose.
+Target 20 words per instruction and 25 words per description. Use one task per sentence.
+Preserve formal code, equations, identifiers, and quotes. Define technical nouns in the ontology.
+Use editable diagrams and accessible HTML for substantive user reports and human decisions.
+Visual prose and layout remain unrestricted. Keep immediate safety text and a text alternative.
+Style findings do not prove compliance or permit execution. Read henri-soul/references/language-visual-protocol.md.
+
 ## Four checks
 
 | Check | Evidence |

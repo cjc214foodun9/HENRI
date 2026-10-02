@@ -11,6 +11,15 @@ category: henri-workflow
 
 Keep role/rubric/schema/model versions stable. Append only the bounded state and source hashes. Batch independent questions sharing state. Use exact-request application memoization, not a claimed Jev provider cache. Changed evidence invalidates reuse. Security, authorization, correctness, and human approval outrank caching. Full protocol: henri-agent-integration/references/cache-maximization-playbook.md.
 
+## Language and visual tracks
+
+Use HENRI-STE-V1 with the cache contract. Use short active sentences for operational prose.
+Target 20 words per instruction and 25 words per description. Use one task per sentence.
+Preserve formal code, equations, identifiers, and quotes. Define technical nouns in the ontology.
+Use editable diagrams and accessible HTML for substantive user reports and human decisions.
+Visual prose and layout remain unrestricted. Keep immediate safety text and a text alternative.
+Style findings do not prove compliance or permit execution. Read henri-soul/references/language-visual-protocol.md.
+
 ## Eligible System 1 work
 
 Every model-based judgment that fits an approved finite answer space uses Jev first: owner routing, MoA escalation advice, failure taxonomy, evidence-kind labeling, store triage, and policy-risk advice. Use the existing active-profile scripts/henri_system1.py caller and its named rubric registry. The enabled henri-control-plane plugin appends owner advice in a fresh Hermes HENRI turn; its typed tool handles the other rubric kinds. The acting agent consumes the result and performs the next authorized step; no automatic production dispatcher is implied. It is a cache-safe user-tail hook, not a generative MoA slot or a host-wide interception layer.

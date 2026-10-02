@@ -1,0 +1,22 @@
+{
+  "scope": "real committed ContextPacker; no production scheduler or model score",
+  "static_prefix_sha256": "809697d5022b647eddfb7b39312d355443805d773fd67d87f57f88f62c092565",
+  "same_static_prefix": true,
+  "different_task_tail": true,
+  "source_sha256": "e9579cc22a78be436574808448954a2dfd7006f41b273ea87415aedacec77dba",
+  "language_review": {
+    "version": "HENRI-STE-V1",
+    "track": "operational",
+    "mode": "procedure",
+    "status": "NO_SELECTED_FINDINGS",
+    "findings": [],
+    "sentences_assessed": 1,
+    "protected_lines": 0,
+    "input_sha256": "adab5d0a8b4f5e873085e4225f5fdc070750781283fc803ae0f61733dc37919f",
+    "output_sha256": "adab5d0a8b4f5e873085e4225f5fdc070750781283fc803ae0f61733dc37919f",
+    "rewritten": false,
+    "authorization": false,
+    "full_ste_compliance": false,
+    "coverage": "selected patterns and heuristic counts; not full dictionary, syntax, meaning, or noun groups"
+  }
+}

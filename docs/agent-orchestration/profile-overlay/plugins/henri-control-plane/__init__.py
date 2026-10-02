@@ -53,7 +53,8 @@ def pre_llm(**kwargs):
             result={'status':'BLOCKED','error_type':type(e).__name__,'authorization':False}
     summary={k:result.get(k) for k in ('status','kind','generation_id','application_cache_hit','answer','authorization') if k in result}
     _record({'event':'JEV_OWNER_ADVISORY','session_id':kwargs.get('session_id'),'task_sha256':hashlib.sha256(message.encode()).hexdigest(),'result':summary})
-    return {'context':_SCAFFOLD+'\nHENRI TYPED ADVICE: '+json.dumps(summary,sort_keys=True),'target':'user_message'}
+    language_guide=_load('henri_language').SCAFFOLD
+    return {'context':_SCAFFOLD+'\n'+language_guide+'\nHENRI TYPED ADVICE: '+json.dumps(summary,sort_keys=True),'target':'user_message'}
 
 
 def handle_decision(params,**kwargs):
@@ -73,7 +74,7 @@ def handle_decision(params,**kwargs):
 def handle_sandbox(params,**kwargs):
     del kwargs
     try:
-        result=_load('henri_openshell').guarded_execute(params['command'],timeout=params.get('timeout',30))
+        result=_load('henri_openshell').guarded_execute(params['command'],timeout=params.get('timeout',30),description=params.get('description'))
     except Exception as e:
         result={'status':'BLOCKED','error_type':type(e).__name__,'error':str(e)[:300],'exit_code':2}
     _record({'event':'OPENSHELL_TOOL','status':result.get('status'),'exit_code':result.get('exit_code'),'receipt':result.get('receipt')})
@@ -85,6 +86,6 @@ def register(ctx):
       'parameters':{'type':'object','properties':{'state':{'type':'object'},'kind':{'type':'string','enum':['owner','escalation','failure','evidence','store','policy_risk']},'session_id':{'type':'string','maxLength':256}},'required':['state','kind'],'additionalProperties':False}}
     ctx.register_tool(name='henri_system1_decide',toolset='henri-control-plane',schema=schema,handler=handle_decision)
     schema={'name':'henri_guarded_exec','description':'Run an explicitly authorized command only in the configured OpenShell sandbox after complete effective-policy containment check. Any gate failure blocks; no host fallback.',
-      'parameters':{'type':'object','properties':{'command':{'type':'array','items':{'type':'string'},'minItems':1},'timeout':{'type':'integer','minimum':1,'maximum':120}},'required':['command'],'additionalProperties':False}}
+      'parameters':{'type':'object','properties':{'command':{'type':'array','items':{'type':'string'},'minItems':1},'timeout':{'type':'integer','minimum':1,'maximum':120},'description':{'type':'string','maxLength':2000}},'required':['command'],'additionalProperties':False}}
     ctx.register_tool(name='henri_guarded_exec',toolset='henri-control-plane',schema=schema,handler=handle_sandbox)
     ctx.register_hook('pre_llm_call',pre_llm)

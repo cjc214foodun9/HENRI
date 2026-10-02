@@ -14,6 +14,15 @@ STRACE (arXiv:2607.07702) analyzes agent trajectories; it is not Linux strace. U
 
 Trigger: two same-class failures or two genuine repairs without external gain. No traces means BLOCKED. Reuse prior if topology unchanged. One trace/named manifestation can go directly to slice; existing attribution can go directly to proposal.
 
+## Language and visual tracks
+
+Use HENRI-STE-V1 with the cache contract. Use short active sentences for operational prose.
+Target 20 words per instruction and 25 words per description. Use one task per sentence.
+Preserve formal code, equations, identifiers, and quotes. Define technical nouns in the ontology.
+Use editable diagrams and accessible HTML for substantive user reports and human decisions.
+Visual prose and layout remain unrestricted. Keep immediate safety text and a text alternative.
+Style findings do not prove compliance or permit execution. Read henri-soul/references/language-visual-protocol.md.
+
 ## Tools and stages
 
 Inspect installed scripts/trace_reducer.py and scripts/causal_slice.py --help. Use real corpus and verified EDG. Output outside Git at C:/Users/chan/henri-telemetry/strace_output/<run_id>/.
