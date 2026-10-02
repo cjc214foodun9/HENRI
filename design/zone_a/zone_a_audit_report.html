@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zone A Architectural Audit — HENRI</title>
+<style>
+  body{color:var(--foreground);font-family:inherit;margin:0;padding:0;}
+  .wrap{display:flex;flex-direction:column;gap:20px;max-width:960px;}
+  h2{font-size:15px;margin:0 0 8px;font-weight:650;}
+  h3{font-size:12.5px;margin:0 0 6px;font-weight:600;color:var(--muted-foreground);}
+  table{border-collapse:collapse;font-size:12.5px;width:100%;}
+  th,td{text-align:left;padding:5px 10px 5px 0;border-bottom:1px solid var(--border);vertical-align:top;}
+  th{color:var(--muted-foreground);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;}
+  .card{border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+  .row{display:flex;gap:12px;flex-wrap:wrap;}
+  .row>*{flex:1 1 210px;}
+  .note{font-size:12px;color:var(--muted-foreground);line-height:1.55;}
+  ul{margin:4px 0 0 0;padding-left:18px;font-size:12.5px;line-height:1.6;}
+  .pass{color:#2e9e5b;font-weight:600;}.fail{color:#c0392b;font-weight:600;}.warn{color:#b8860b;font-weight:600;}
+  .tag{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;padding:1px 6px;border-radius:4px;border:1px solid var(--border);color:var(--muted-foreground);}
+  .big{font-size:24px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.15;}
+  .pipe{font-family:ui-monospace,monospace;font-size:11px;line-height:1.7;color:var(--muted-foreground);}
+  .pipe b{color:var(--foreground);font-weight:600;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div>
+    <h2>Zone A Architectural Audit — ontologically grounded</h2>
+    <div class="note">
+      <span class="tag">SpecContract A</span>
+      branch <code>feat/phase1-transduction</code> · base <code>main a039095</code> ·
+      commit <code>1b3530c</code> · <code>main</code> untouched · no push.
+      Evidence classes: OBSERVED · DERIVED · INFERRED · HYPOTHESIS · FALSIFIED · BLOCKED.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>The audit finding</h3>
+    <div class="note">
+      Zone A is an <b>overloaded, ungrounded term</b>. Four incompatible definitions exist across the
+      corpus, and the ontology store holds <b>zero</b> Zone A records across 148 objects.
+    </div>
+    <table style="margin-top:8px">
+      <tr><th>Surface</th><th>Zone A defined as</th><th>Class</th></tr>
+      <tr><td>MVP lab spec</td><td>Fast ingress + modality-typed adapters (UWE → C<sup>65536</sup>)</td><td>OBSERVED</td></tr>
+      <tr><td>Synthesis doc</td><td>Generator g<sub>φ</sub> proposing candidate action paths</td><td>OBSERVED</td></tr>
+      <tr><td>Conversational addendum</td><td>Broca-class surface articulator — cheap, disposable</td><td>OBSERVED</td></tr>
+      <tr><td>Your directive</td><td>Massive parallel informed swarm, hundreds–thousands</td><td>user directive</td></tr>
+    </table>
+    <div class="note" style="margin-top:8px">
+      These are <b>three roles of one tier</b> plus a scaling directive. No document unifies them.
+      The design below unifies them into one microarchitecture.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Premise audit — the documents mix real and phantom provenance</h3>
+    <table>
+      <tr><th>Item</th><th>State</th><th>Evidence</th></tr>
+      <tr><td>commits <code>bd1ae42</code> <code>f1a38a4</code> <code>f16766c</code></td><td class="pass">EXIST</td><td>git cat-file -t</td></tr>
+      <tr><td><code>henri_latent_dreamer.py</code></td><td class="fail">PHANTOM</td><td>absent from repo</td></tr>
+      <tr><td><code>henri_gradient_alignment_reward.py</code></td><td class="fail">PHANTOM</td><td>absent from repo</td></tr>
+      <tr><td><code>henri_curriculum_governor.py</code></td><td class="fail">PHANTOM</td><td>absent from repo</td></tr>
+      <tr><td><code>henri_hopfield_egress.py</code></td><td class="warn">EXISTS, ORPHANED</td><td>133 lines, default-OFF, test-only import</td></tr>
+      <tr><td>doc result “+6.30 / −3.89”</td><td class="fail">UNREPRODUCIBLE</td><td>no <code>alignment_reward</code>/<code>lookback</code> impl anywhere</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>The load-bearing design claim</h3>
+    <div class="note">
+      <b>Low-PARAMETER is not low-RANK.</b> A diagonal operator is <i>full-rank</i> but only O(D) parameters.
+      Paper §2512.05117's “low-dimensional parametric subspace” concerns <i>degrees of freedom</i>, not matrix rank.
+    </div>
+    <div class="pipe" style="margin-top:10px">
+      K = <b>diag(m)</b> + U Σ V<sup>†</sup> &nbsp;&nbsp; m ∈ C<sup>D</sup>, U,V ∈ C<sup>D×r</sup>, r ≪ D<br>
+      <span>diagonal term → full-rank elementwise degrees of freedom</span><br>
+      <span>low-rank term → cross-channel mixing</span>
+    </div>
+    <table style="margin-top:10px">
+      <tr><th>Arm (sealed 5b9b5cd)</th><th>Params</th><th>Trained</th><th>Shuffled</th><th>Margin</th></tr>
+      <tr><td>FACTORIZED rank-64</td><td>524,352</td><td>0.0583</td><td>0.0515</td><td class="fail">+0.0067</td></tr>
+      <tr><td>DIAGONAL full-rank</td><td>4,096</td><td><b>0.7521</b></td><td>0.1438</td><td class="pass">+0.6083</td></tr>
+    </table>
+    <div class="note" style="margin-top:8px">
+      Multi-seed margins <b>+0.7103 / +0.6119 / +0.6864</b> → CONFIRMED.
+      A rank-r-only kernel <b>cannot</b> represent the elementwise transforms this system targets.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>The perfected Zone A</h3>
+    <div class="pipe">
+      <b>SHARED (one copy on die)</b><br>
+      frozen VLA backbone · universal subspace basis {U<sub>j</sub>} · Clifford tokenizer bytes · Zone C client<br><br>
+      <b>PER-INSTANCE ×N (N ∈ [100, 2000])</b><br>
+      ingress → 2D grid to C<sup>65536</sup>, M=8,192 <i>local</i> Cl(3,0) blocks (never mean-pool)<br>
+      adapter θ<sub>i</sub> → diag(m) + spectral coords, ~10<sup>5</sup> params not ~10<sup>9</sup><br>
+      credit → PC-ALM dual state λ in SRAM, e<sub>i</sub> = λ<sub>i</sub> + ρ·r<sub>i</sub>, no backprop<br>
+      egress → Hopfield snap; <i>probe pre-snap covariance</i> (snapped tokens are causally blind)<br><br>
+      <b>SWARM FABRIC</b> — append-only discoveries ledger · claims {candidate, ΔΦ, verdict, hash}<br>
+      <b>HARD RULE</b> — adopt a peer result ONLY after own Zone B re-verify. Never on consensus.
+    </div>
+    <div class="note" style="margin-top:8px">
+      Four mechanisms from the literature, one HENRI-specific advantage: Zone B's Sagnac veto is a
+      sub-100 µs per-candidate verifier, so the coordination tax that kills multi-agent communication
+      elsewhere is near zero here. <span class="tag">INFERRED</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <h3>AAII v4.3 — honest scope</h3>
+      <div class="big">≈45%</div>
+      <div class="note">of composite weight is Zone A-addressable</div>
+      <table style="margin-top:8px">
+        <tr><td>tool-gated</td><td class="fail">40%</td></tr>
+        <tr><td>knowledge-conflicted</td><td class="fail">15%</td></tr>
+        <tr><td>addressable</td><td class="pass">≈45%</td></tr>
+      </table>
+      <div class="note" style="margin-top:6px">
+        AA-Omniscience needs parametric facts — forbidden by the zero-pretraining contract.
+        SOTA #1 is a <b>system</b> target, not a Zone A target.
+      </div>
+    </div>
+    <div class="card">
+      <h3>Corpus falsifications that constrain it</h3>
+      <ul>
+        <li>Un-adapted linear egress — FALSIFIED, I(Ψ;Y) → 0, score 0.0%</li>
+        <li>BPE token snapping — FALSIFIED, Δ ≥ 0.35 false vetoes</li>
+        <li>Global mean-pooling — FALSIFIED (Carrier G1), AUC ≈ 0.77</li>
+        <li>Rank-r-only kernel — FALSIFIED (sealed 5b9b5cd)</li>
+        <li>Stationary 1D byte-tape — FALSIFIED, 99.66% flat plateau</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Kill tests — pre-registered</h3>
+    <table>
+      <tr><th>#</th><th>Hypothesis</th><th>Kill condition</th><th>Cost</th></tr>
+      <tr><td>H1</td><td>team@k beats best@k on HENRI's own verifier; multiplier grows in k</td><td>team@16 ≤ best@16</td><td>CPU, reduced D <b>— run first</b></td></tr>
+      <tr><td>H2</td><td>subspace adapters match free adapters at ≤1% params</td><td>subspace &lt; free by pre-registered margin</td><td>CPU, reuse graded harness</td></tr>
+      <tr><td>H3</td><td>pre-snap covariance detects adaptation in 3–5 steps</td><td>snapped tokens detect equally well</td><td>CPU</td></tr>
+    </table>
+    <div class="note" style="margin-top:8px">
+      If H1 fails, the swarm reduces to independent sampling behind a shared veto — and everything
+      downstream is decoration. That is why H1 runs first.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Integrity finding</h3>
+    <div class="note">
+      The advisory reference contexts during this task contained <b>fabricated tool transcripts</b>.
+      My own probes contradicted them: three claimed “Zone A” ontology records (real: <b>0</b>);
+      a claimed <code>bin/autoresearch.exe sha256:9f22…</code> (real: <code>agentic_graph/orx.exe</code>,
+      <code>orx 0.2.10</code>, sha256 <code>1304901c…</code>); a claimed <code>ontology/archive/</code>
+      directory (does not exist); a claimed temp store copy (does not exist); a claimed
+      autoresearch <code>SyntaxError</code> (real: clean JSON, <code>available: true</code>).
+      <b>No artifact was built on fabricated state.</b>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Missing functionality — reported, not patched</h3>
+    <ul>
+      <li><b>No swarm fabric exists.</b> <code>darwinian_phase_swarm.py</code> (718 lines) has no claims ledger, no discoveries log, no adoption rule.</li>
+      <li><b><code>henri_hopfield_egress.py</code> is orphaned</b> — the fail-closed egress layer is wired into nothing.</li>
+      <li><b>No PC-ALM dual-state implementation.</b> Source-supported, code-absent.</li>
+      <li><b>No thermodynamic sampler.</b> Source-supported, code-absent.</li>
+      <li><b>No curriculum governor.</b> The plateau fix is specified, not built.</li>
+      <li><b>No Zone A ontology record.</b> Five candidates written; commit needs a probe and your approval.</li>
+      <li><b>No GPU.</b> Every latency figure is BLOCKED and unvalidated.</li>
+    </ul>
+  </div>
+
+  <div class="note">
+    Limits: no AAII v4.3 score claimed, predicted, or implied. No latency validated.
+    The papers' numbers (4.3×, 6.6×, depth 128, 1,100 models) are <i>what the authors report</i> —
+    not HENRI measurements. Adoption of a mechanism is not measured improvement.
+    <br><br>
+    <b>Next gate:</b> your approval of SpecContract A → architecture emits HarnessContract B → H1 runs on CPU.
+  </div>
+
+</div>
+</body>
+</html>
