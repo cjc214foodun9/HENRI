@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -66,9 +67,9 @@ from henri.ingress.spatial_tokenizer import SpatialCliffordTokenizer  # noqa: E4
 from henri.determinism import RunManifest                            # noqa: E402
 
 MODULUS = 8
-NUM_BLOCKS = 256
+NUM_BLOCKS = int(os.environ.get("HENRI_ZA_NUM_BLOCKS", "256"))
 BLOCK_SLOTS = 8
-DIM = NUM_BLOCKS * BLOCK_SLOTS      # 2048
+DIM = NUM_BLOCKS * BLOCK_SLOTS      # 2048 at default; 65536 at NUM_BLOCKS=8192
 Q = 16                              # subspace dimension under test
 N_TASKS = 24
 N_FIT = 96
