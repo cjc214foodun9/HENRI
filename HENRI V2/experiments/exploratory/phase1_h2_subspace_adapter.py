@@ -183,9 +183,11 @@ def learned_solution(xs, ys, seed, steps=STEPS, lr=LR):
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="H2 universal weight subspace kill test")
     parser.add_argument("--out", default=None)
+    parser.add_argument("--seed", type=int, default=RUN_SEED,
+                        help="RunManifest seed_seq; default is the sealed D=2048 seed")
     args = parser.parse_args(argv)
 
-    manifest = RunManifest(seed_seq=RUN_SEED)
+    manifest = RunManifest(seed_seq=args.seed)
     manifest.apply("h2_subspace_adapter")
     gen = torch.Generator().manual_seed(manifest.seed_for("h2_subspace_adapter"))
 
@@ -276,7 +278,8 @@ def main(argv=None) -> int:
         "config": {
             "dim": DIM, "q": Q, "n_tasks": len(train_triples),
             "test_task": list(TEST_TASK), "n_fit": N_FIT, "n_test": N_TEST,
-            "margin": MARGIN, "run_seed": RUN_SEED,
+            "margin": MARGIN, "run_seed": args.seed,
+            "num_blocks_env": os.environ.get("HENRI_ZA_NUM_BLOCKS", "(default)"),
         },
         "part_a_learned_subspace": {
             "top_q_energy_learned": round(energy_learned, 6),
