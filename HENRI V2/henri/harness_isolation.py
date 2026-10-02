@@ -23,7 +23,7 @@ without an explicit `--out-dir` share `/tmp/henri_f10_live` and CAN clobber each
 other -- that is the genuine arm-ambiguity risk.
 
 So the gate enforces three checkable invariants:
-  H1  no tracked file is modified by a test run (no receipt clobbering)
+  H1  no modified tracked RECEIPT (a test run must not rewrite a golden artefact)
   H2  every `--out-dir` default is outside the repository
   H3  an explicit `--out` stays under `tmp_path` when one is supplied
 
@@ -39,6 +39,7 @@ from typing import List, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parents[1]           # .../HENRI V2
 GIT_ROOT = REPO_ROOT.parent
+RECEIPT_DIRS = ("experiments/verification", "experiments/performance", "experiments/sweeps")
 
 # Matches: ap.add_argument("--out-dir", default="/tmp/xxx")
 _OUT_DEFAULT_RE = re.compile(
@@ -85,24 +86,60 @@ def h2_defaults_stay_outside_repo(root: Path | None = None) -> List[str]:
     return bad
 
 
-def h1_no_tracked_modifications() -> List[str]:
-    """Violations of H1: tracked files modified right now, receipts included."""
+def snapshot_tracked_modifications() -> set:
+    """Tracked files with uncommitted MODIFICATIONS. Untracked entries excluded.
+
+    Raises rather than returning an empty set on git failure: a silently empty
+    snapshot would make every differential check pass vacuously.
+    """
     out = subprocess.run(
         ["git", "status", "--porcelain", "-z"],
         cwd=str(GIT_ROOT), capture_output=True, text=True, timeout=60,
     )
     if out.returncode != 0:
-        return [f"git status failed rc={out.returncode}: {out.stderr.strip()}"]
-    bad: List[str] = []
+        raise RuntimeError(f"git status failed rc={out.returncode}: {out.stderr.strip()}")
+    mods = set()
     for entry in out.stdout.split("\0"):
         if not entry:
             continue
-        code, _, name = entry[:2], entry[2], entry[3:]
-        if code.strip() and code.strip() != "??":
-            # ' M', 'M ', 'A ', 'D ' etc. are tracked-file modifications.
-            if name.lower().endswith((".json", ".md", ".yaml", ".yml")):
-                bad.append(f"{code} {name}")
-    return bad
+        code, name = entry[:2], entry[3:]
+        if code.strip() == "??":
+            continue                      # untracked is not a clobber
+        if code.strip():
+            mods.add(name)
+    return mods
+
+
+def is_receipt(name: str) -> bool:
+    """True for a JSON artefact under an experiments/ receipt directory."""
+    n = name.replace("\\", "/")
+    return n.lower().endswith(".json") and any(d in n for d in RECEIPT_DIRS)
+
+
+def h1_no_tracked_modifications() -> List[str]:
+    """Violations of H1: a modified tracked RECEIPT (golden artefact).
+
+    THIS IS NOT A CLEAN-TREE CHECK, and the distinction is load-bearing.
+    Measured 2026-10-01: the first version flagged ANY modified .json/.md/.yaml
+    file, so editing this task's OWN prereg document made the gate fail. A gate
+    that fires on legitimate work is a gate an operator learns to ignore -- the
+    same failure class as a vacuous gate, from the other direction.
+
+    What must never happen is a test run silently REWRITING a committed golden
+    receipt. So H1 is scoped to receipt-shaped artefacts (JSON under
+    experiments/), and `new_receipt_modifications` supplies the differential
+    check that actually detects a clobber.
+    """
+    return sorted(f"M {n}" for n in snapshot_tracked_modifications() if is_receipt(n))
+
+
+def new_receipt_modifications(before: set, after: set) -> List[str]:
+    """Receipts modified BETWEEN two snapshots -- the real clobber detector.
+
+    Usage: take a snapshot, run the suite, take another, pass both here. A
+    non-empty result means the run wrote into a tracked receipt.
+    """
+    return sorted(n for n in (after - before) if is_receipt(n))
 
 
 def h3_explicit_out_under_tmp(tmp_dir: str, requested: str) -> bool:

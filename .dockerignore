@@ -1,0 +1,24 @@
+# Keep the build context small. The image COPYs an explicit 7-path allowlist;
+# everything else in the tree is excluded so the daemon does not ship
+# checkpoints, datasets, or vendor checkouts.
+.git
+.gitattributes
+.worktrees
+**/__pycache__
+**/*.pyc
+**/*.pt
+**/*.pth
+**/*.zip
+**/*.tgz
+**/*.png
+**/*.pdf
+**/checkpoints
+**/data
+**/telemetry
+**/agentic_graph
+**/environment_files
+**/Obsidian_Vault
+**/Drive_*
+docs
+*.drawio
+*.html

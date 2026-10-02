@@ -1,0 +1,63 @@
+# HENRI Phase 1 CPU verification image.
+#
+# WHAT THIS PROVES: dependency closure and byte-reproducibility of the Phase 1
+# gates in a clean Linux environment. It does NOT prove model performance,
+# GPU behaviour, or latency. The CUDA image is Dockerfile.vast (separate).
+#
+# WHY A SEPARATE CPU IMAGE: Dockerfile.vast starts from a CUDA devel base and
+# installs triton; that is correct for Vast but unavailable/unnecessary for the
+# CPU-only Phase 1 gates. A CPU image is the one that can actually be built and
+# verified on this host.
+#
+# BUILD (from the repository root, i.e. the worktree root):
+#   docker build -f Dockerfile.phase1-cpu -t henri-phase1-cpu:<sha> .
+# RUN:
+#   docker run --rm henri-phase1-cpu:<sha>
+
+FROM python:3.11-slim
+
+ARG GIT_SHA=unknown
+LABEL org.henri.spec="SPEC-2026-10-01-PHASE1-TRANSDUCTION" \
+      org.henri.image.role="phase1-cpu-verification" \
+      org.henri.git_sha="${GIT_SHA}" \
+      org.opencontainers.image.description="Phase 1 CPU gate image; not a performance or GPU claim"
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH="/work/HENRI V2"
+
+# CPU PyTorch explicitly, from the CPU wheel index. Without the index pin, pip
+# can resolve a CUDA wheel into a CPU image (multi-GB, unusable here).
+RUN python -m pip install --upgrade pip \
+ && python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+      "torch==2.6.0" \
+ && python -m pip install "numpy>=2.1" "pytest>=8.0" "psutil>=5.9"
+
+WORKDIR /work/HENRI V2
+
+# JSON-array COPY form: the repository path contains a space ("HENRI V2").
+COPY ["HENRI V2/henri", "/work/HENRI V2/henri"]
+COPY ["HENRI V2/factorized_transition_kernel.py", "/work/HENRI V2/"]
+COPY ["HENRI V2/hopfield_cleanup.py", "/work/HENRI V2/"]
+COPY ["HENRI V2/tests/unit/test_phase1_ingress_and_kernel.py", "/work/HENRI V2/tests/unit/"]
+COPY ["HENRI V2/tests/unit/test_phase1_demo_contract.py", "/work/HENRI V2/tests/unit/"]
+COPY ["HENRI V2/tests/unit/test_phase1_determinism.py", "/work/HENRI V2/tests/unit/"]
+COPY ["HENRI V2/tests/unit/test_phase1_roundtrip.py", "/work/HENRI V2/tests/unit/"]
+COPY ["HENRI V2/tests/unit/test_phase1_hopfield_contract.py", "/work/HENRI V2/tests/unit/"]
+
+# Non-root runtime.
+RUN useradd --create-home --uid 10001 henri
+USER henri
+
+# The listed tests are pure logic gates. test_phase1_harness_isolation is
+# intentionally EXCLUDED: it audits the live git worktree, which does not exist
+# inside the image.
+CMD ["python", "-m", "pytest", \
+     "tests/unit/test_phase1_ingress_and_kernel.py", \
+     "tests/unit/test_phase1_demo_contract.py", \
+     "tests/unit/test_phase1_determinism.py", \
+     "tests/unit/test_phase1_roundtrip.py", \
+     "tests/unit/test_phase1_hopfield_contract.py", \
+     "-q", "--tb=short", "-p", "no:cacheprovider"]

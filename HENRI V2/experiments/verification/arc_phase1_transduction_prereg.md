@@ -94,3 +94,120 @@ module `HENRI V2/factorized_transition_kernel.py`, tests, harness isolation audi
 OUT of scope (requires separate authorization): Docker/NVIDIA Container Toolkit,
 TimescaleDB + pgvector, Vast GPU dispatch, Triton kernels, any promotion to
 `main`, any latency figure, any external benchmark score.
+
+---
+
+## 6. Round-trip extension (added 2026-10-01, AFTER the section-3 gates passed)
+
+Gate contract addendum: `SPEC-2026-10-01-PHASE1-TRANSDUCTION/roundtrip`.
+Module under test: `HENRI V2/tests/unit/test_phase1_roundtrip.py`.
+
+Purpose: prove the discrete -> continuous -> discrete loop CLOSES on CPU at
+reduced dimension before any GPU or ARC attempt.
+
+    grid --encode--> psi [D complex] --TRANSITION--> psi' --SNAP--> index --decode--> grid'
+
+### 6.1 Declared reduced-D configuration
+
+| Parameter | Value |
+|---|---|
+| num_blocks | 256 |
+| block_slots | 8 (the specification's rank-8 block) |
+| modulus (canvas) | 8 (roll arm) / 16 (decode arm) |
+| D complex | 2048 |
+| D real (interleaved) | 4096 |
+| beta | 26.10 = 1/tau with tau = 0.038316 |
+
+### 6.2 API contract, established by executed probe (not by docstring)
+
+`ContinuousHopfieldCleanup(dim=D)` is a REAL-space module of width D. For
+COMPLEX waves of complex dimension Dc the contract is **dim == 2*Dc**:
+
+- `store_engrams(complex [M, Dc])` -> float32 interleaved `[M, 2*Dc]`
+  (`view_as_real`); the imaginary part IS preserved. Probed: `matches
+  view_as_real(Im preserved)? True`.
+- `retrieve(complex [Dc])` -> `(complex [Dc], weights [M])`; the dimension IS
+  preserved. Probed: input 32 -> output `(32,)`.
+
+Calls that pass `dim == Dc` for a complex-Dc wave are MIS-SIZED. That produces
+a `(Dc/2,)` output and an apparent "dimension halving", which is a CALL-SITE
+error, not a module defect. The gate pins the contract (RT-G2/R5) so the
+mis-sized form cannot be reintroduced as a "discovery".
+
+### 6.3 Gates (names match the test functions EXACTLY)
+
+Doc–code alignment is enforced: each gate below names the real test in
+`tests/unit/test_phase1_roundtrip.py`.
+
+| Test | Statement | Must-fail control |
+|---|---|---|
+| `test_r1_codebook_index_recovery` | `snap(encode(g_j))` -> index j, 8 candidates | — |
+| `test_r1b_foreign_wave_and_random_codebook_control` | a wave outside the codebook, and a RANDOM codebook, both retrieve less confidently | self 1.000 vs foreign 0.406 vs random 0.114 |
+| `test_r2_noise_tolerance_sweep` | recovery vs eps in {0, .05, .10, .20, .40} | mild-noise floor >= 0.75 |
+| `test_r2b_argmax_is_beta_invariant_weight_entropy_is_not` | argmax identical across beta; entropy not | **proves a top-1 result CANNOT validate tau** |
+| `test_r3_roll_transition_arm` | `snap(apply_roll(psi_j))` == index of `roll_canvas(g_j)` | operator err <= 1e-4 |
+| `test_r3b_wrong_sign_roll_misses` | the conjugate multiplier must be a different wave | distance > 1e-2, worse retrieval |
+| `test_r4_norm_preserved_at_every_stage` | unit L2 at encode, transition, after snap | err <= 1e-5 |
+| `test_r5_adapter_contract_exact_inverse` | complex -> real interleaved -> complex EXACT; agrees with module `_flatten` | dis-agreement fails |
+| `test_r5b_layout_mismatch_degrades_retrieval` | a concat (re|im) layout must retrieve worse than interleave | wrong layout must degrade |
+| `test_r6_determinism_via_run_manifest` | two manifests identical; distinct components distinct | uses `henri/determinism.py` (not dead code) |
+| `test_r7_capacity_declaration_and_no_extrapolation` | M/D sparse at reduced D; production D BLOCKED | asserts D != 65536 |
+| `test_r8a_index_decode_is_exact_by_construction` | decode via codebook INDEX is exact | — |
+| `test_r8b_decode_canvas_cell_accuracy_measured` | lossy probe accuracy MEASURED, floor 0.70 | below floor fails |
+| `test_r9_unseen_transformed_state_recovers_at_chance` | **boundary**: transformed state ABSENT from the codebook recovers at ~chance | rate < 0.5 |
+
+### 6.4 Measured results (OBSERVED, CPU, this session)
+
+- R1 codebook index recovery: 8/8.
+- R1b controls: self 1.0000 vs foreign 0.4064 vs random-codebook 0.1136.
+- R2 noise tolerance at beta 26.10: `{0.0: 1.0, 0.05: 1.0, 0.10: 1.0, 0.20: 1.0, 0.40: 1.0}`.
+- R2b **beta-invariance**: argmax identical `[5, 5, 5, 5]` across beta in
+  {26.10, 8.0, 2.0, 0.5} while weight entropy moved `0.0 -> 2.7624`. This is
+  the evidence that a top-1 round-trip CANNOT validate tau.
+- R3 roll-transition arm: snap(apply_roll(psi_j)) == codebook index of
+  roll_canvas(g_j), operator error ~3e-07 (P1-G3 re-confirmed at this D).
+- R7 capacity: M=16, D=2048, M/D=7.81e-03, crosstalk bound 0.0520.
+- R8b decode_canvas mean cell accuracy 0.9355 (floor 0.70).
+- **R9 boundary: 7/40 = 0.175 vs chance 0.125.** The loop does NOT generalize
+  to a transformed state absent from the codebook.
+
+**Decode accuracy is CANVAS-SIZE DEPENDENT — the floor is config-bound.**
+Measured over 40 seeds per config (`pin_gate_floor.py`, this session):
+
+| canvas | cells | vocab | min | mean | max | chance |
+|---|---|---|---|---|---|---|
+| 8x8 (GATE CONFIG) | 64 | 9 | **0.8594** | 0.9391 | 0.9844 | 0.1111 |
+| 8x8 | 64 | 6 | 0.8125 | 0.9047 | 0.9844 | 0.1667 |
+| 16x16 | 256 | 9 | **0.5000** | 0.5601 | 0.6016 | 0.1111 |
+
+The `DECODE_FLOOR = 0.70` in the gate is pinned from the 8x8 minimum and is
+NOT transferable: at 16x16 the same probe bottomed at 0.5000 and the floor
+would fail. Holographic cross-cell crowding grows with the cell count, which
+is exactly why the floor must be quoted WITH its canvas. Any future change to
+`MODULUS` in the gate invalidates `DECODE_FLOOR` and requires re-measurement.
+
+### 6.5 Honest limits of this extension
+
+1. The identity arm is tautological BY DESIGN and is retained only as the
+   declared control. The roll arm (R3) is the real loop proof; it reuses the
+   P1-G3 exact-operator result rather than assuming it.
+2. `decode_canvas` is holographic and LOSSY. Its accuracy is measured per run
+   and pinned at a floor; it is never asserted to be exact.
+3. No learned transition is tested. R3 uses a FIXED, analytically exact
+   operator. A learned rank-r kernel is the next step and is NOT validated here.
+4. CPU only at reduced D. No latency claim, no GPU claim, and **no
+   extrapolation to D=65,536** (the M=10000/D=65536 gate remains UNMET).
+5. R9 is a LIMITATION, not a win. Phase 1 closes the loop for states present in
+   the codebook. In-context task compilation is what would extend it, and that
+   is NOT established by this document.
+
+## 7. Environment artifacts (same commit)
+
+- `Dockerfile.phase1-cpu` — CPU verification image (python:3.11-slim + CPU
+  torch). Built and RUN: **55 passed in 10.59s**, container exit 0.
+- `.dockerignore` — excludes checkpoints, data, telemetry, vendor trees.
+- `Dockerfile.vast` (pre-existing, NOT modified) — GPU image for Vast.
+
+The CPU image proves dependency closure and reproducibility. It does NOT prove
+model performance, GPU behaviour, or latency.
+
