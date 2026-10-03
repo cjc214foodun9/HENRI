@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HENRI MVP: what works, what does not, and the one open question</title>
+<style>
+  :root { --ink:#14171c; --dim:#5b6470; --line:#dfe3e8; --ok:#0f6b3d;
+          --bad:#a3231f; --warn:#8a5a00; --bg:#fbfbfc; }
+  body { max-width: 62rem; margin: 0 auto; padding: 2rem 1.25rem 4rem;
+         font: 16px/1.6 -apple-system, "Segoe UI", Roboto, sans-serif;
+         color: var(--ink); background: var(--bg); }
+  h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 .35rem; }
+  h2 { font-size: 1.15rem; margin: 2.25rem 0 .6rem; padding-bottom: .3rem;
+       border-bottom: 2px solid var(--line); }
+  h3 { font-size: 1rem; margin: 1.5rem 0 .4rem; }
+  p.lede { color: var(--dim); margin: 0 0 1.5rem; }
+  table { border-collapse: collapse; width: 100%; margin: .75rem 0 1rem;
+          font-size: .93rem; }
+  th, td { border: 1px solid var(--line); padding: .45rem .6rem; text-align: left;
+           vertical-align: top; }
+  th { background: #f2f4f6; font-weight: 600; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  code, .mono { font-family: ui-monospace, Consolas, monospace; font-size: .88em; }
+  pre { background:#f2f4f6; border:1px solid var(--line); border-left 3px solid var(--dim);
+        padding:.7rem .85rem; overflow-x:auto; font-size:.85rem; }
+  .ok  { color: var(--ok); font-weight:600; }
+  .bad { color: var(--bad); font-weight:600; }
+  .warn{ color: var(--warn); font-weight:600; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink);
+         background:#fff; padding:.85rem 1rem; margin:1rem 0; }
+  .box.alert { border-left-color: var(--bad); }
+  .box.good  { border-left-color: var(--ok); }
+  ul { padding-left: 1.3rem; }
+  .alt { color: var(--dim); font-size: .9rem; }
+  footer { margin-top:3rem; padding-top:1rem; border-top:1px solid var(--line);
+           color:var(--dim); font-size:.85rem; }
+</style>
+</head>
+<body>
+
+<h1>HENRI MVP: what works, what does not, and the one open question</h1>
+<p class="lede">Status report for operator decision. Every number below comes from a
+committed receipt on this host, not from a model summary.</p>
+
+<div class="box alert">
+  <strong>Read this first.</strong> The approved scope (<em>A-K4 plus MVP wiring</em>)
+  is complete and committed at <span class="mono">f721879</span>. One question
+  remains open, it is outside that scope, and it is the question that decides
+  whether HENRI's core thesis survives contact with measurement.
+  <strong>I have not started it and I am asking for your decision.</strong>
+</div>
+
+<h2>1. Verified state</h2>
+<table>
+  <tr><th>Item</th><th>Value</th><th>How verified</th></tr>
+  <tr><td>Branch head</td><td class="mono">f721879</td><td>local = remote readback</td></tr>
+  <tr><td><span class="mono">main</span></td><td class="mono">a039095</td><td>untouched all session</td></tr>
+  <tr><td>Working tree</td><td>clean (0 paths)</td><td><span class="mono">git status --porcelain</span></td></tr>
+  <tr><td>Audit ledger</td><td>1821 records, chain intact</td><td><span class="mono">henri_audit.py verify</span></td></tr>
+  <tr><td>Evidence tracked</td><td>13 artifacts</td><td>explicit allowlist commits</td></tr>
+  <tr><td>Billing</td><td>$0 (no GPU instance)</td><td>all runs local CPU</td></tr>
+</table>
+
+<h2>2. What works — measured</h2>
+
+<h3>2.1 Retrieval transfers content to novel questions</h3>
+<p>Three rungs, same verdict each time. Rows isolated in a dedicated family and
+deleted after the run.</p>
+<table>
+  <tr><th>Rung</th><th>dim</th><th>Condition</th><th class="n">A0</th><th class="n">A1</th>
+      <th class="n">A2</th><th class="n">gain</th><th>Verdict</th></tr>
+  <tr><td>R1</td><td class="n">1024</td><td>structured</td><td class="n">15</td>
+      <td class="n">9</td><td class="n">15</td><td class="n">+40%</td>
+      <td class="ok">SUPPORTED</td></tr>
+  <tr><td>R1</td><td class="n">1024</td><td>unstructured</td><td class="n">15</td>
+      <td class="n">15</td><td class="n">15</td><td class="n">0%</td>
+      <td class="bad">FALSIFIED</td></tr>
+  <tr><td>R2</td><td class="n">4096</td><td>structured</td><td class="n">15</td>
+      <td class="n">9</td><td class="n">16</td><td class="n">+40%</td>
+      <td class="ok">SUPPORTED</td></tr>
+  <tr><td>R2</td><td class="n">4096</td><td>unstructured</td><td class="n">15</td>
+      <td class="n">15</td><td class="n">15</td><td class="n">0%</td>
+      <td class="bad">FALSIFIED</td></tr>
+  <tr><td>R3</td><td class="n">32768</td><td>structured</td><td class="n">15</td>
+      <td class="n">9</td><td class="n">16</td><td class="n">+40%</td>
+      <td class="ok">SUPPORTED</td></tr>
+  <tr><td>R3</td><td class="n">32768</td><td>unstructured</td><td class="n">15</td>
+      <td class="n">15</td><td class="n">16</td><td class="n">0%</td>
+      <td class="bad">FALSIFIED</td></tr>
+</table>
+<p class="alt">A0 = cold start, A1 = retrieval-assisted, A2 = shuffled-structure control.
+The unstructured half is the control <em>succeeding</em>: retrieval carries content
+only when the family shares structure. A generic warm start would help both.</p>
+
+<h3>2.2 Retrieved context improves a generated answer (A-K4)</h3>
+<p>Frozen <span class="mono">Qwen2.5-1.5B-Instruct</span>, 1,543,714,304 params,
+<span class="mono">unexpected_key_count=0</span>, CPU, $0.</p>
+<table>
+  <tr><th>Arm</th><th>Context given to the frozen backbone</th><th class="n">Content hit rate</th></tr>
+  <tr><td>A0</td><td>none</td><td class="n">0.000</td></tr>
+  <tr><td><strong>A1</strong></td><td>correct retrieved chunk</td><td class="n ok">0.833</td></tr>
+  <tr><td>A2</td><td>mismatched chunk (target source excluded)</td><td class="n">0.083</td></tr>
+</table>
+<pre>A-K4a  A1 - A0 = +0.833  >= 0.50   PASS
+A-K4b  A1 - A2 = +0.750  >= 0.25   PASS
+A-K4c  negatives 0.000 / 0.083 <= 0.25   PASS
+A-K4d  determinism = 1.000               PASS
+P0     positive control                  PASS
+verdict = AK4_PASS_CONTEXT_IMPROVES_GENERATED_ANSWER</pre>
+
+<h3>2.3 The MVP answers end to end</h3>
+<pre>query   : "Which database stores Zone C engrams?"
+answer  : "TimescaleDB"
+context : fact_01.txt:0, char_span 0:118, cosine 0.2665
+model   : Qwen2ForCausalLM, 1,543,714,304 params, unexpected_key_count=0
+RC      : 0</pre>
+
+<h2>3. What does NOT work — the honest half</h2>
+
+<h3>3.1 Round-tripping words through the codebook works. Doing so inside a phrase does not.</h3>
+<table>
+  <tr><th>Pre-registered check</th><th>Result</th><th>Pass</th></tr>
+  <tr><td>Q1 content rate above permutation null (every template)</td>
+      <td>0.32–0.63 vs null_max ~0.03</td><td class="ok">yes</td></tr>
+  <tr><td><strong>Q2 specificity positive margin</strong></td>
+      <td><strong>−0.16, +0.15, −0.21, −0.35, −0.25</strong></td>
+      <td class="bad">NO</td></tr>
+  <tr><td>Q3 random-wave control below treatment</td><td>0.000–0.006</td><td class="ok">yes</td></tr>
+  <tr><td>Q4 round-trip exact</td><td>1.000 (156/156)</td><td class="ok">yes</td></tr>
+</table>
+<p><strong>verdict = <span class="bad">CLOSED_VOCAB_EGRESS_FAIL</span></strong>
+— committed and sealed as a negative result. Bare words round-trip perfectly;
+the same words inside a carrier phrase lose their identity. The carrier tokens
+dominate the readout.</p>
+
+<h3>3.2 The metric originally registered for this question was itself broken</h3>
+<p>A pre-registered gate for the egress question sat unrun for four months.
+Its import was broken by one line (<span class="mono">parents[1]</span> pointed at
+<em>experiments/</em> instead of <em>HENRI V2</em>). When it finally ran, it
+falsified its own premise:</p>
+<table>
+  <tr><th>Arm</th><th>treatment</th><th>random-wave control</th></tr>
+  <tr><td>fractional_shift</td><td class="n">0.233</td><td class="n bad">0.592</td></tr>
+  <tr><td>phasor_bind</td><td class="n">0.117</td><td class="n bad">0.700</td></tr>
+</table>
+<p class="mono">VACUOUS_DISTINCT_COUNT_NOT_INFORMATIVE</p>
+<p>The random control beat the treatment. Counting distinct top-1 tokens is not
+evidence of semantic content. A-K4 was therefore re-specified to score
+<em>content presence</em> with two negative controls. The instrument changed;
+the kill did not weaken.</p>
+
+<h2>4. Defects found and fixed — four in my own code</h2>
+<table>
+  <tr><th>#</th><th>Defect</th><th>Evidence</th><th>Fix</th></tr>
+  <tr><td>1</td><td>Contaminated negative control</td>
+      <td class="mono">hit_A2 = 0.500</td>
+      <td>exclude target source → 0.083</td></tr>
+  <tr><td>2</td><td>Silent no-op ingest</td>
+      <td class="mono">tx=COMMITTED, written=1</td>
+      <td>removed conflicting row; verified count</td></tr>
+  <tr><td>3</td><td>Retrieval-scope contamination</td>
+      <td>stray probe row in top-3</td>
+      <td>dedicated domain</td></tr>
+  <tr><td>4</td><td>Blind-load produced random weights</td>
+      <td class="mono">11.994B from a 1.5B dir</td>
+      <td>exact-architecture gate</td></tr>
+  <tr><td>5</td><td>Orphaned process held host at 94% RAM</td>
+      <td>21.63 GiB RSS</td><td>killed by PID</td></tr>
+  <tr><td>6</td><td>Receipt digest mismatch</td>
+      <td class="mono">CRLF vs LF</td>
+      <td>scheme documented in commit</td></tr>
+</table>
+
+<h2>5. The one open question — your decision</h2>
+
+<div class="box">
+  <p><strong>Does a Zone C wave drive generation directly, with no text
+  intermediary?</strong></p>
+  <p>This is HENRI's differentiating claim. It is <em>not</em> what sections
+  2.2 and 2.3 measured. Those measured text-context retrieval — a working
+  memory layer on a frozen backbone. That is real and useful. It is not
+  holographic memory shaping a latent space.</p>
+</div>
+
+<table>
+  <tr><th></th><th>Path A — memory layer</th><th>Path B — wave-driven</th></tr>
+  <tr><td>What it is</td><td>Zone C retrieval → text → frozen backbone</td>
+      <td>Zone C wave → model state, no text step</td></tr>
+  <tr><td>Status</td><td class="ok">Working today</td>
+      <td class="bad">Unproven; one related path already FAILED</td></tr>
+  <tr><td>Evidence</td><td>+83 pts content hit, replicated ladder</td>
+      <td>closed-vocab specificity FAIL; 32000-token path unmeasured</td></tr>
+  <tr><td>Cost to advance</td><td>data + backbone work</td>
+      <td>~$0, local, decisive</td></tr>
+  <tr><td>Risk</td><td>never becomes SOTA on its own</td>
+      <td>may falsify the core thesis</td></tr>
+</table>
+
+<h3>Readiness: the test is cheap and the weights are on this host</h3>
+<pre>CKPT (unbinder) : HENRI V2/models/henri_decoder_checkpoint.pt
+found at        : aaii-v43, zone-a-selfplay   799,034,119 bytes
+this worktree   : ABSENT (copy or run in place)
+path in code    : g4_armu_unbinder_diag.py:24
+design lead     : closed-vocab failure mode says the carrier tokens dominate
+                  the readout -> test readout normalization / carrier
+                  suppression FIRST, not blind retraining</pre>
+
+<p><strong>Why I am asking rather than running it:</strong> SpecContract A's
+approval was scope-limited to <em>A-K4 plus MVP wiring</em>. Arm B is new
+research scope with a new kill design. Approval is required for load-bearing
+experiments, and I enforced that gate all session. I am not going to breach it
+on the last step.</p>
+
+<h2>6. What this is not</h2>
+<ul>
+  <li><strong>Not a SOTA claim.</strong> No benchmark was run.</li>
+  <li><strong>Not AAII v4.3.</strong> At most <strong>25%</strong> of that composite
+      is locally reproducible. The harness <em>refuses</em> to emit a composite score —
+      75% of index weight is externally graded or private.</li>
+  <li><strong>Not end-task capability.</strong> The ladder used a synthetic clustered
+      family; A-K4 used a 6-fact corpus and 12 items. Both are OBSERVED mechanism
+      evidence on toy data. If any summary drops that qualifier, it overclaims.</li>
+  <li><strong>Not latency.</strong> Unmeasured, per your instruction.</li>
+</ul>
+
+<footer>
+  Commits: <span class="mono">7a44d5f</span> (A-K4) ·
+  <span class="mono">33ed8d7</span> (contract) ·
+  <span class="mono">2879d11</span> (report) ·
+  <span class="mono">6796def</span> (MVP) ·
+  <span class="mono">f721879</span> (Arm B negative).<br>
+  Approval <span class="mono">#10b2d1f45cd8626c</span> ·
+  A-K4 verdict <span class="mono">#2e1e68c29838fb8e</span> ·
+  Arm B seal <span class="mono">#37b7c09ce0f78275</span>.<br>
+  Ledger 1821, chain intact. <span class="mono">main a039095</span> untouched.
+</footer>
+
+</body>
+</html>
