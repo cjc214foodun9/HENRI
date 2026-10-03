@@ -1,0 +1,145 @@
+{
+  "conclusions": {
+    "Q1_content_above_null_every_template": true,
+    "Q2_specificity_positive_margin": false,
+    "Q3_random_control_below_treatment": true,
+    "Q4_roundtrip_exact": true,
+    "control_max_rate": 0.00641025641025641,
+    "treatment_min_rate": 0.32051282051282054
+  },
+  "evidence_class": "OBSERVED",
+  "preregistration": {
+    "N_null": 200,
+    "alpha": 0.01,
+    "path": "HoloEgressCodebook (closed vocab, tokenizer-derived)",
+    "position_binding": "fractional_shift",
+    "seeds": [
+      20261003,
+      20261004,
+      20261005
+    ],
+    "templates": [
+      "the {w} report",
+      "{w} is the word",
+      "describe {w} now"
+    ]
+  },
+  "results": {
+    "20261003": {
+      "control": {
+        "content_hit_rate": 0.0,
+        "distinct_ratio": 0.5384615384615384
+      },
+      "roundtrip_dupes": 0,
+      "roundtrip_rate": 1.0,
+      "templates": {
+        "describe {w} now": {
+          "above_null": true,
+          "hits": 61,
+          "margin_mean": -0.20551214386255312,
+          "null_max": 0.02564102564102564,
+          "null_mean": 0.0062499999999999995,
+          "null_p99": 0.02564102564102564,
+          "rate": 0.391025641025641
+        },
+        "the {w} report": {
+          "above_null": true,
+          "hits": 74,
+          "margin_mean": -0.15879520238974157,
+          "null_max": 0.03205128205128205,
+          "null_mean": 0.006698717948717949,
+          "null_p99": 0.03205128205128205,
+          "rate": 0.47435897435897434
+        },
+        "{w} is the word": {
+          "above_null": true,
+          "hits": 99,
+          "margin_mean": 0.14686076304851434,
+          "null_max": 0.02564102564102564,
+          "null_mean": 0.005897435897435898,
+          "null_p99": 0.02564102564102564,
+          "rate": 0.6346153846153846
+        }
+      },
+      "vocab": 156
+    },
+    "20261004": {
+      "control": {
+        "content_hit_rate": 0.0,
+        "distinct_ratio": 0.6217948717948718
+      },
+      "roundtrip_dupes": 0,
+      "roundtrip_rate": 1.0,
+      "templates": {
+        "describe {w} now": {
+          "above_null": true,
+          "hits": 50,
+          "margin_mean": -0.39547207722297084,
+          "null_max": 0.02564102564102564,
+          "null_mean": 0.0062499999999999995,
+          "null_p99": 0.02564102564102564,
+          "rate": 0.32051282051282054
+        },
+        "the {w} report": {
+          "above_null": true,
+          "hits": 73,
+          "margin_mean": -0.17699591013101432,
+          "null_max": 0.03205128205128205,
+          "null_mean": 0.00641025641025641,
+          "null_p99": 0.02564102564102564,
+          "rate": 0.46794871794871795
+        },
+        "{w} is the word": {
+          "above_null": true,
+          "hits": 96,
+          "margin_mean": 0.14759993247496775,
+          "null_max": 0.02564102564102564,
+          "null_mean": 0.0071794871794871795,
+          "null_p99": 0.02564102564102564,
+          "rate": 0.6153846153846154
+        }
+      },
+      "vocab": 156
+    },
+    "20261005": {
+      "control": {
+        "content_hit_rate": 0.00641025641025641,
+        "distinct_ratio": 0.6025641025641025
+      },
+      "roundtrip_dupes": 0,
+      "roundtrip_rate": 1.0,
+      "templates": {
+        "describe {w} now": {
+          "above_null": true,
+          "hits": 66,
+          "margin_mean": -0.246554862230252,
+          "null_max": 0.02564102564102564,
+          "null_mean": 0.005641025641025641,
+          "null_p99": 0.02564102564102564,
+          "rate": 0.4230769230769231
+        },
+        "the {w} report": {
+          "above_null": true,
+          "hits": 60,
+          "margin_mean": -0.3503145621373103,
+          "null_max": 0.02564102564102564,
+          "null_mean": 0.0065064102564102565,
+          "null_p99": 0.02564102564102564,
+          "rate": 0.38461538461538464
+        },
+        "{w} is the word": {
+          "above_null": true,
+          "hits": 79,
+          "margin_mean": -0.0767729924275325,
+          "null_max": 0.02564102564102564,
+          "null_mean": 0.006602564102564102,
+          "null_p99": 0.02564102564102564,
+          "rate": 0.5064102564102564
+        }
+      },
+      "vocab": 156
+    }
+  },
+  "scope_limit": "Closed vocabulary (156 words), tokenizer-derived codebook, CPU. Does NOT address the open-vocabulary ARM_U unbinder path (32000 tokens) where top1_token_unique=1 was recorded. ARM B remains UNMEASURED for open-vocabulary text.",
+  "verdict": "CLOSED_VOCAB_EGRESS_FAIL:Q2_specificity_positive_margin"
+}
