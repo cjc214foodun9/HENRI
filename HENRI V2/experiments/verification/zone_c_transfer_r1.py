@@ -301,9 +301,10 @@ def main():
                   else "T1_FALSIFIED"))
 
     out = {
-        "experiment": "zone_c_transfer_R1",
+        "experiment": "zone_c_transfer_R%d" % NUM_BLOCKS,
         "commit": COMMIT,
         "dim_complex": D_C, "num_blocks": NUM_BLOCKS, "family": FAMILY,
+        "payload_bytes": NUM_BLOCKS * 8 * 4,
         "preregistered": {
             "tau": TAU, "blend": BLEND, "top_k": TOP_K, "budget": BUDGET,
             "n_demo": N_DEMO, "sigma": SIGMA, "lr": LR,
@@ -335,7 +336,7 @@ def main():
     body = json.dumps(out, sort_keys=True).encode()
     out["receipt_sha256"] = hashlib.sha256(body).hexdigest()
     outp = os.path.join(os.environ.get("TEMP", "/tmp"),
-                        "zonec_transfer_r1_receipt.json")
+                        "zonec_transfer_NB%d_receipt.json" % NUM_BLOCKS)
     json.dump(out, open(outp, "w"), indent=2)
     print(json.dumps({"structured": s, "unstructured": u}, indent=2))
     print("VERDICT_STRUCTURED=" + verdict_s)
