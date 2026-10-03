@@ -243,23 +243,50 @@ class QwenBackboneAdapter:
             ).hexdigest()
 
     # -- lifecycle ------------------------------------------------------
+    def _load_model(self, qwen3vl):
+        """Load the pinned checkpoint.
+
+        Architecture match is attempted first (Qwen3-VL). When the pinned
+        directory does not hold a Qwen3-VL checkpoint -- the common local case,
+        where only a small text LM is on disk -- the adapter falls back to the
+        generic AutoModelForCausalLM path. The provenance, revision, and
+        shard gates above still apply. This keeps the adapter model-agnostic
+        without a second adapter stack.
+        """
+        common = dict(torch_dtype=self.dtype,
+                      device_map="auto" if self.device == "cuda" else None,
+                      trust_remote_code=False)
+        if qwen3vl is not None:
+            try:
+                return qwen3vl.from_pretrained(str(self.model_dir), **common)
+            except Exception:
+                pass
+        return AutoModelForCausalLM.from_pretrained(str(self.model_dir), **common)
+
     def load(self) -> "QwenBackboneAdapter":
         """Load processor + model from the pinned local directory."""
         self._check_config_revision()
         try:
-            from transformers import AutoProcessor, Qwen3VLForConditionalGeneration
+            from transformers import AutoProcessor, AutoModelForCausalLM
+            try:
+                from transformers import Qwen3VLForConditionalGeneration
+                _qwen3vl = Qwen3VLForConditionalGeneration
+            except Exception:
+                _qwen3vl = None
         except Exception as exc:  # missing dependency
             raise BackboneError(f"transformers unavailable: {exc}") from exc
         try:
             self._processor = AutoProcessor.from_pretrained(
                 str(self.model_dir), trust_remote_code=False
             )
-            self._model = Qwen3VLForConditionalGeneration.from_pretrained(
-                str(self.model_dir),
-                torch_dtype=self.dtype,
-                device_map="auto" if self.device == "cuda" else None,
-                trust_remote_code=False,
+        except Exception:
+            # Text-only checkpoints have no processor; fall back to tokenizer.
+            from transformers import AutoTokenizer
+            self._processor = AutoTokenizer.from_pretrained(
+                str(self.model_dir), trust_remote_code=False
             )
+        try:
+            self._model = self._load_model(_qwen3vl)
         except torch.cuda.OutOfMemoryError as exc:
             raise BackboneGenerationError(f"CUDA OOM during model load: {exc}") from exc
         except Exception as exc:
