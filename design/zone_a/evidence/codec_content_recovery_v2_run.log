@@ -1,0 +1,21 @@
+== CODEC CONTENT RECOVERY v2 (centroid, no optimizer) ==
+   D=65536 blocks=8192 slots=8 pairs=40 train_t=6 eval_t=3
+   candidate pairs=2016  using=40  (same-template A/B; shared tokens kept)
+
+   REAL codec waves                : acc=0.642 (sd 0.192)  margin=+0.0081
+   SHF  content-destroyed control  : acc=0.500 (sd 0.183)  margin=+0.0001
+   POS  scale ladder -- DETECTION FLOOR:
+           16 blocks ( 0.20% of wave) : acc=0.688  margin=+0.0019
+           32 blocks ( 0.39% of wave) : acc=0.808  margin=+0.0032
+           64 blocks ( 0.78% of wave) : acc=0.933  margin=+0.0058  <-- floor
+          128 blocks ( 1.56% of wave) : acc=0.996  margin=+0.0118
+          256 blocks ( 3.12% of wave) : acc=1.000  margin=+0.0235
+         1024 blocks (12.50% of wave) : acc=1.000  margin=+0.0883
+
+   G2 content present   REAL>=0.80 : 0.642 -> FAIL
+   G3 control collapsed SHF <= 0.60 : 0.500 -> PASS
+
+   VERDICT = INSTRUMENT_CANNOT_RESOLVE_CODEC_SCALE
+   Detection floor is 64 blocks (0.78% of wave), ABOVE the codec's one-word footprint of 16 blocks (0.20%). The instrument can only see class signal at or above 0.8%, so it cannot resolve the codec at its native capacity. REAL/SHF below are therefore NOT interpreted. Measured instrument limit, not a codec finding.
+   evidence_class=DERIVED  cost=0 USD
+RC=1
