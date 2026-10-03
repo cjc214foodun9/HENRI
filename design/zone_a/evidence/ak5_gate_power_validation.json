@@ -1,0 +1,41 @@
+{
+  "schema": "henri.ak5-gate-power-validation.v2",
+  "ts_utc": "2026-10-03T11:35:00Z",
+  "artifact": "HENRI V2/experiments/verification/ak5_gate_power_probe_v2.py",
+  "question": "Can the A-K5 gate form detect arrangement-borne content at all?",
+  "why_it_matters": "A FAIL verdict is only meaningful if the gate COULD return PASS on a known content-bearing input. v1 could not answer this (vacuous by construction: no positive pairs, saturated metric, permutation-invariant readout).",
+  "config": {"D": 8192, "blocks": 1024, "block_dim": 8, "H": 256, "V": 512, "contents": 12, "per_content": 4, "noise": 0.05, "seed": 20261003},
+  "result": {
+    "real": {"within": 0.9805, "between": 0.3739, "sep": 0.6065},
+    "ctrl": {"within": 0.3762, "between": 0.3772, "sep": -0.0009},
+    "GP1_sep_real_ge_0.20": {"value": 0.6065, "pass": true},
+    "GP2_sep_ctrl_le_0.05": {"value": -0.0009, "pass": true},
+    "GP3_within_real_le_0.999": {"value": 0.9805, "pass": true},
+    "self_check_within_gt_0.50": {"value": 0.9805, "pass": true},
+    "verdict": "GATE_POWER_OK",
+    "exit_code": 0
+  },
+  "conclusion": "A gate of this form CAN separate arrangement-borne content from the same-family content-destroyed control, with dynamic range (within 0.98 not pinned at 1.0) and a control that genuinely destroys the signal (sep 0.6065 -> -0.0009).",
+  "consequences": {
+    "for_ak5_verdict": "The A-K5 measurement was NOT vacuous as an instrument. The gate could have returned PASS had the checkpoint carried content. So A-K5's negative is a statement about the artifact, not about the metric.",
+    "for_the_contract": "The Q1/Q2/SAME-FAMILY-CONTROL design used by A-K4/A-K5 is validated as a content test. It may be reused for the approval-gated content-grounded experiment without redesign.",
+    "for_the_next_experiment": "The content-grounded head test can proceed on the same metric and control. The remaining blockers are provenance and scope, not instrument power."
+  },
+  "combined_final_state_of_the_egress_question": {
+    "instrument": "VALIDATED (GATE_POWER_OK, this receipt)",
+    "artifact_under_test": "INVALID (trained on random waves, random labels, salted-hash target ids; see ak5_provenance_correction.json)",
+    "family_match": "NO (dense Gaussian training vs sparse block-structured codec waves)",
+    "content_grounded_head_on_host": "NONE EXISTS (both ~799MB artifacts share the identical 4-key random-wave lineage)",
+    "verdict": "AK5_BLOCKED_DEGENERATE_TRAINING_TARGET_AND_FAMILY_MISMATCH",
+    "wave_to_text_egress_status": "UNMEASURED, not FALSIFIED"
+  },
+  "surviving_positive_evidence": {
+    "zonec_retrieval_ladder": "R1/R2/R3 (dim 1024/4096/32768) T1_SUPPORTED +40%, unstructured T1_FALSIFIED",
+    "ak4_text_splice_egress": "PASS, +83 points content hit rate",
+    "mvp": "answers end to end with verified provenance, RC=0",
+    "codec_determinism": "zone_c_world_knowledge_codec.py:62 uses hashlib.sha256, process-independent; R1-R3/A-K4 are NOT contaminated by salted hashing (checked)"
+  },
+  "scope_impact": "No optimizer step, no checkpoint, no store, no network. Pure function. Local CPU. USD 0.",
+  "evidence_class": "DERIVED (synthetic readout; no trained artifact)",
+  "honest_limit": "This validates the METRIC. It does not make the A-K5 checkpoint informative, and it does not prove wave->text egress works. Wave->text egress remains unmeasured."
+}
