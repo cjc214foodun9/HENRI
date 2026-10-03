@@ -1,0 +1,53 @@
+{
+  "schema": "henri.codec-content-recovery.v2.1",
+  "ts_utc": "2026-10-03T12:20:00Z",
+  "artifact": "HENRI V2/experiments/verification/codec_content_recovery_v2.py",
+  "log": "design/zone_a/evidence/codec_content_recovery_v2_run.log",
+  "verdict": "INSTRUMENT_CANNOT_RESOLVE_CODEC_SCALE",
+  "answers_question": "Does the codec wave family carry recoverable token content?",
+  "answer": "UNRESOLVED_BY_THIS_METHOD -- NOT a codec finding. The instrument's measured detection floor (64 blocks, 0.78% of wave) lies ABOVE the codec's native one-word discriminative footprint (16 blocks, 0.20%). REAL/SHF are therefore not interpreted.",
+  "config": {
+    "D": 65536, "blocks": 8192, "slots": 8, "pairs": 40,
+    "train_templates": 6, "eval_templates": 3,
+    "method": "nearest-centroid, NO optimizer",
+    "noise_frac": 0.9883, "seed": 20261002
+  },
+  "measured": {
+    "REAL_codec_waves": {"acc": 0.642, "sd": 0.192, "margin": 0.0081},
+    "SHF_content_destroyed": {"acc": 0.500, "sd": 0.183, "margin": 0.0001,
+                              "note": "EXACTLY chance -- control is valid"},
+    "POS_ladder": {
+      "16":   {"acc": 0.688, "margin": 0.0019, "pct_of_wave": 0.20},
+      "32":   {"acc": 0.808, "margin": 0.0032, "pct_of_wave": 0.39},
+      "64":   {"acc": 0.933, "margin": 0.0058, "pct_of_wave": 0.78, "is_floor": true},
+      "128":  {"acc": 0.996, "margin": 0.0118, "pct_of_wave": 1.56},
+      "256":  {"acc": 1.000, "margin": 0.0235, "pct_of_wave": 3.12},
+      "1024": {"acc": 1.000, "margin": 0.0883, "pct_of_wave": 12.50}
+    }
+  },
+  "instrument_is_not_vacuous": "POS ladder is strictly monotone (0.688 -> 1.000) and SHF sits at exactly 0.500. The metric detects injected class signal and the same-family control destroys it.",
+  "directional_hint_NOT_a_result": "REAL (0.642, margin +0.0081) exceeds SHF (0.500, margin +0.0001) and its margin is ~4x the POS-16 margin. Consistent with a weak real content signal at the codec's one-word scale, but it does NOT clear the pre-registered 0.80 bar and the floor rule forbids interpreting it. Recorded as a hint for a more sensitive follow-up, not as evidence.",
+  "rejected_verdict_retained": {
+    "file": "codec_content_recovery_scaffold.py",
+    "printed": "CODEC_WAVES_CARRY_NO_RECOVERABLE_TOKEN",
+    "status": "REFUSED",
+    "reason": "Its shuffled control memorized to train loss 0.0010 while real waves stalled at 4.4151. Unexplained asymmetry: cannot separate 'no content' from 'optimizer failed at this scale'. DEFECT DISCLOSURE header added; file retained per retain-the-rejected-family rule."
+  },
+  "gate_power_validated_separately": {
+    "file": "ak5_gate_power_probe_v2.py",
+    "verdict": "GATE_POWER_OK",
+    "detail": "real sep +0.6065 vs same-family control -0.0009"
+  },
+  "evidence_class": "DERIVED",
+  "cost_usd": 0,
+  "limits": [
+    "CPU only. Nearest-centroid cannot exploit nonlinear content structure.",
+    "40 pairs, 6 train / 3 eval templates, single seed.",
+    "Self-consistency (centroid) is an honest positive control, not a learned readout.",
+    "Does NOT measure whether a TRAINED head could recover content; only whether raw centroid geometry separates."
+  ],
+  "next_fork_is_user_decision": [
+    "If content is assumed present: train a minimal content-grounded egress head on the codec's OWN wave family with a reproducible sha256 token-to-id mapping, then re-run the pre-registered Q1-Q4 against a same-family control. NEW SCOPE -- requires explicit operator approval.",
+    "If the 1.17%-content / 98.83%-filler ratio is judged disqualifying: that is a memory-design decision, not a probe decision."
+  ]
+}
