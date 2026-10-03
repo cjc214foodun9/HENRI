@@ -244,30 +244,80 @@ class QwenBackboneAdapter:
 
     # -- lifecycle ------------------------------------------------------
     def _load_model(self, qwen3vl):
-        """Load the pinned checkpoint.
+        """Load the pinned checkpoint under an EXACT architecture gate.
 
-        Architecture match is attempted first (Qwen3-VL). When the pinned
-        directory does not hold a Qwen3-VL checkpoint -- the common local case,
-        where only a small text LM is on disk -- the adapter falls back to the
-        generic AutoModelForCausalLM path. The provenance, revision, and
-        shard gates above still apply. This keeps the adapter model-agnostic
-        without a second adapter stack.
+        MEASURED DEFECT (2026-10-03).  A blind
+        `Qwen3VLForConditionalGeneration.from_pretrained(qwen2_dir)` does NOT
+        raise on transformers 5.14.1.  It silently constructs a randomly
+        initialized Qwen3-VL skeleton, reports every real checkpoint weight as
+        UNEXPECTED and every language/visual weight as MISSING, and yields a
+        11.994B model from a 1.5B directory.  The earlier try/except fallback
+        never fired because no exception was raised.
+
+        A model that loads with random weights is worse than a fail-closed
+        error: downstream generation looks successful and is meaningless.
+        So the architecture is read from config.json and matched EXACTLY.
+        No blind try is permitted.
         """
+        cfg_path = self.model_dir / "config.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        arch = (cfg.get("architectures") or [None])[0]
+        if not arch:
+            raise BackboneProvenanceError(
+                f"config.json has no architectures entry: {cfg_path}")
+
+        if arch == "Qwen3VLForConditionalGeneration":
+            if qwen3vl is None:
+                raise BackboneError(
+                    "checkpoint requires Qwen3VLForConditionalGeneration, "
+                    "but transformers does not provide it")
+            loader = qwen3vl
+        else:
+            from transformers import AutoModelForCausalLM
+            loader = None  # resolved below to keep the import local
+
         common = dict(torch_dtype=self.dtype,
                       device_map="auto" if self.device == "cuda" else None,
-                      trust_remote_code=False)
-        if qwen3vl is not None:
-            try:
-                return qwen3vl.from_pretrained(str(self.model_dir), **common)
-            except Exception:
-                pass
-        return AutoModelForCausalLM.from_pretrained(str(self.model_dir), **common)
+                      trust_remote_code=False,
+                      output_loading_info=True)
+        if loader is not None:
+            model, info = loader.from_pretrained(str(self.model_dir), **common)
+        else:
+            model, info = AutoModelForCausalLM.from_pretrained(
+                str(self.model_dir), **common)
+
+        actual_class = type(model).__name__
+        if actual_class != arch:
+            raise BackboneProvenanceError(
+                f"architecture mismatch: config declares {arch!r} but the "
+                f"loaded class is {actual_class!r}; refusing a substituted model")
+
+        # SECOND GATE -- the class-name check alone is INSUFFICIENT.
+        # Measured: config.json edited to declare Qwen3VL over qwen2 weights
+        # still loads class Qwen3VLForConditionalGeneration, so the name check
+        # passes and yields 11.994B of RANDOM parameters. The class name is
+        # derived from the same file as the claim, so it cannot audit the claim.
+        # The real invariant: a frozen backbone loads with ZERO newly
+        # initialized parameters.
+        missing = [str(k) for k in (info.get("missing_keys") or [])]
+        mismatched = [str(k) for k in (info.get("mismatched_keys") or [])]
+        errors = [str(k) for k in (info.get("error_msgs") or [])]
+        if missing or mismatched or errors:
+            raise BackboneProvenanceError(
+                f"checkpoint did not fully load: {len(missing)} missing, "
+                f"{len(mismatched)} mismatched, {len(errors)} errors. A frozen "
+                f"backbone must load with zero newly initialized parameters. "
+                f"first_missing={missing[:3]}"
+            )
+        # Keep a count for the caller without changing the telemetry schema.
+        self._unexpected_key_count = len(info.get("unexpected_keys") or [])
+        return model
 
     def load(self) -> "QwenBackboneAdapter":
         """Load processor + model from the pinned local directory."""
         self._check_config_revision()
         try:
-            from transformers import AutoProcessor, AutoModelForCausalLM
+            from transformers import AutoModelForCausalLM, AutoProcessor
             try:
                 from transformers import Qwen3VLForConditionalGeneration
                 _qwen3vl = Qwen3VLForConditionalGeneration
