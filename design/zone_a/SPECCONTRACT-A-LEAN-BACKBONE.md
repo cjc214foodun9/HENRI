@@ -152,6 +152,31 @@ Four reasons this shape, each tied to a measured constraint:
 | A-K4 | Retrieved context must improve a **generated** answer: content-presence rate with correct evidence exceeds the no-evidence arm by ≥0.50 | the recorded egress defect: 16/16 chunks gave the same top-1 token |
 | A-K5 | Matched ablation: Zone C conditioning ON vs OFF | no gain ⇒ memory layer does not transfer at this scale |
 
+**A-K5 / ARM B — RECLASSIFIED 2026-10-03 after provenance audit.**
+
+Do NOT read the block below as evidence about wave→text egress in principle.
+The checkpoint under test was never trained on a valid content→token mapping.
+See `design/zone_a/evidence/ak5_provenance_correction.json`.
+
+- `train_henri_decoder.py:54` used `target_id = hash(text_target) % 32000`. CPython
+  `hash()` of `str` is **salted per-process**, so the label→text mapping is not
+  reproducible and is not invertible from the checkpoint.
+- `train_sgld_500_runner.py:86,88` trained on **random** waves and **random** labels.
+- The prior receipt `A2_MOCK_VOCABULARY_FINDING_20260916T181541Z.json` records the
+  **same sha256** with `verdict = MOCK_TARGET_VOCABULARY_CONFIRMED`,
+  `distinct_training_classes = 35 / 32000`, `recoverable_from_checkpoint = false`.
+- `henri_discrete_egress_flag.py` docstring: **Decision 2 (approved 2026-09-11)
+  ordered the discrete-token egress path removed from the live path.** The unbinder
+  is a default-OFF, decision-removed path.
+
+Corrected classification: **`AK5_BLOCKED_DEGENERATE_TRAINING_TARGET`** — not
+`AK5_EGRESS_FAIL`. The arithmetic is unchanged and correct; the interpretation is
+narrowed. Wave→text egress remains **UNMEASURED**, not FALSIFIED. A readout trained
+on 35 salted-hash classes out of 32000 cannot carry compositional content by
+construction. Training a content-grounded head is **NEW SCOPE** and needs approval.
+
+The v1 result follows, retained unaltered for the record.
+
 **A-K5 / ARM B RESULT (2026-10-03) — ran and FAILED. Negative result, retained.**
 Implementation: `HENRI V2/experiments/verification/ak5_armb_egress_gate.py`.
 Receipt: `design/zone_a/evidence/ak5_armb_egress_receipt.json`

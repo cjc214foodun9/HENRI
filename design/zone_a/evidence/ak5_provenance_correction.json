@@ -1,0 +1,95 @@
+{
+  "schema": "henri.ak5-provenance-correction.v1",
+  "ts_utc": "2026-10-03T10:40:00Z",
+  "supersedes_interpretation_of": "AK5_EGRESS_FAIL:Q1_separation+Q2_margin",
+  "corrected_interpretation": "AK5_BLOCKED_DEGENERATE_TRAINING_TARGET",
+  "why": "The checkpoint under test was never trained on a valid content->token mapping. Its measured content-blindness is a property of its training target, not evidence about wave->text egress in principle.",
+
+  "checkpoint": {
+    "path_carried": "HENRI V2/models/henri_decoder_checkpoint.pt",
+    "bytes": 799034119,
+    "sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
+    "keys": ["down_proj.weight", "layer_norm.bias", "layer_norm.weight", "lm_head.weight"],
+    "shapes": {"down_proj": [2048, 65536], "lm_head": [32000, 2048]},
+    "identical_in": ["aaii-v43", "phase1-transduction", "zone-a-selfplay"],
+    "note_integer_truncated_twin": {
+      "path": "HENRI 7B SWARM/HENRI V2/checkpoints/henri_egress_unbinder_sgld_500.pt",
+      "bytes": 799034179,
+      "bytes_delta": 60
+    }
+  },
+
+  "finding_1_degenerate_target_salted_hash": {
+    "source_file": "HENRI V2/scripts/training/train_henri_decoder.py",
+    "source_line": 54,
+    "rule": "target_id = hash(text_target) % vocab_size",
+    "defect": "CPython hash() of str is SALTED per-process (PYTHONHASHSEED). The label->text mapping is not reproducible and cannot be inverted from the checkpoint.",
+    "declared_vocab_size": 32000,
+    "distinct_training_classes": 35,
+    "coverage_ratio": 0.00109,
+    "corroborating_receipt": "HENRI V2/experiments/verification/A2_MOCK_VOCABULARY_FINDING_20260916T181541Z.json",
+    "same_checkpoint_sha256": true,
+    "prior_verdict": "MOCK_TARGET_VOCABULARY_CONFIRMED",
+    "prior_tests": {"T1_small_class_list": true, "T2_process_salted": true, "T3_unrecoverable": true},
+    "prior_measured": {"recoverable_from_checkpoint": false, "hash_ids_stable_across_processes": false, "id_set_overlap": 0, "distinct_top1_live": 7}
+  },
+
+  "finding_2_degenerate_target_random": {
+    "source_file": "HENRI V2/scripts/training/train_sgld_500_runner.py",
+    "source_lines": [86, 87, 88, 159],
+    "rule": "X_demo = F.normalize(torch.randn(batch_size, D)); a_target = torch.randint(0, vocab_size, ...)",
+    "defect": "Waves and labels are BOTH random. There is no content->token correspondence in the training signal at all.",
+    "saves_to": "models/henri_decoder_checkpoint.pt"
+  },
+
+  "finding_3_path_ordered_removed": {
+    "flag_file": "HENRI V2/henri_discrete_egress_flag.py",
+    "flag": "HENRI_STRIP_DISCRETE_EGRESS",
+    "default": "OFF (strip inert)",
+    "decision": "Decision 2, approved 2026-09-11",
+    "order": "discrete BPE projection matrices, top-k logit sorts, and token unbinding heads removed from the LIVE path; classes and weights retained, live construction disabled",
+    "sites": "16 live construction sites in 14 files (AST-measured, receipt e6_d2_ast_sites.json)",
+    "consequence": "The HENRINeuralEgressUnbinder is a DEFAULT-OFF, decision-removed discrete-token path."
+  },
+
+  "coincidence_disclosure": {
+    "my_ak5_distinct_top1": 7,
+    "prior_receipt_distinct_top1_live": 7,
+    "variance": "The two probes used different wave sets. I did NOT verify identical wave sets, so I record this as CORROBORATING, not conclusive. The mechanism conclusion rests on the training-target analysis, which stands on its own."
+  },
+
+  "what_survives": {
+    "ak5_arithmetic": "unchanged and correct: real 0.5193 vs same-family shuffled 0.5501 (Q1 delta -0.031); margin 0.2175 vs 0.1709 (Q2 delta +0.047)",
+    "d0_artifact_trained": "true (rel_delta 1.007 / 1.146) -- it IS a trained artifact; it was trained on a degenerate target",
+    "q4_wave_reaches_head": "true (+0.201 / +0.265 / +0.284) -- wiring and signal path are live",
+    "ak4_text_splice": "unaffected; A-K4 measured a different mechanism and its PASS stands",
+    "zonec_ladder": "unaffected"
+  },
+
+  "what_does_NOT_survive": {
+    "claim": "that wave->text egress is falsified in principle",
+    "reason": "The instrument had no content->token mapping to recover. A readout trained on 35 salted-hash classes cannot carry compositional content by construction. This measurement cannot speak to a correctly-specified egress head.",
+    "therefore": "wave->text egress remains UNMEASURED, not FALSIFIED."
+  },
+
+  "operator_named_defect_explained": {
+    "operator_statement": "wave-to-text egress currently yields top1_token_unique = 1 across 16 distinct waves",
+    "explanation": "Consistent with a 35-of-32000 class target under a salted hash. Collapse is the EXPECTED symptom of the degenerate target, not independent evidence of an architectural defect."
+  },
+
+  "governance_note": {
+    "conflict": "The operator names wave-to-text egress as the governing A-K4/A-K5 target. Decision 2 (approved 2026-09-11) orders the discrete-token egress path removed from the live path.",
+    "resolution": "Latest operator instruction wins (recorded standing rule). Both records are preserved; neither is deleted.",
+    "new_training_needed": true,
+    "approval_required": "Training a content-grounded unbinder is NEW scope and requires explicit operator approval."
+  },
+
+  "next_correct_action": {
+    "recommended": "Train a minimal content-grounded egress head on the codec's own wave family with a valid token->text mapping (reproducible id assignment, full-context targets), then re-run the A-K5 gate with the same pre-registered Q1-Q4 and same-family content-destroyed control.",
+    "rejected_first": "Carrier-suppression residual probe. Rejected because a checkpoint with no content->token mapping has no content to suppress a carrier for; the probe would be motion.",
+    "cost": "local, $0 for the read-only analysis; training cost is separate and needs approval",
+    "why_not_a_third_architecture": "Two adjacent egress paths already failed specificity. A third untested architecture is motion, not progress."
+  },
+
+  "evidence_class": "OBSERVED (source reads) + DERIVED (reclassification logic)"
+}
