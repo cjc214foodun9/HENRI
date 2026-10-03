@@ -39,23 +39,89 @@
 </head>
 <body>
 
-<h1>A-K5 Arm B: the wave-to-text bridge fails specificity</h1>
-<p class="lede">The make-or-break measurement. Ran on the path you named.
-Verdict: <strong class="bad">FAIL</strong> — recorded as a negative result.
+<h1>A-K5 Arm B: the wave-to-text test was BLOCKED, not falsified</h1>
+<p class="lede">The make-or-break measurement. Ran on the path you named, then a
+provenance audit reclassified it. Corrected verdict:
+<strong class="warn">BLOCKED — degenerate training target</strong>.
 Local CPU, $0, read-only.</p>
 
 <div class="box alert">
-  <strong>Headline.</strong> The unbinder artifact <em>is</em> trained, and the
-  wave <em>does</em> reach it. But a <strong>content-destroyed control separates
-  as much or more</strong> than real content-bearing waves. The readout moves,
-  and it does not move <em>because of content</em>.
+  <strong>Headline.</strong> The gate ran and its arithmetic is correct: a
+  content-destroyed control separates <em>as much or more</em> than real
+  content-bearing waves. But the provenance audit shows the checkpoint under test
+  was <strong>never trained on a valid content&rarr;token mapping</strong>. Its
+  content-blindness is a property of its <em>training target</em>, not evidence
+  about wave&rarr;text egress in principle.
+  <br><br>
+  <strong>Wave&rarr;text egress is UNMEASURED, not FALSIFIED.</strong>
 </div>
+
+<h2>0. Provenance audit — why the verdict changed</h2>
+<p>All four findings read from source. Checkpoint sha256
+<span class="mono">75572389083455a3&hellip;</span>, 799,034,119 B, identical in
+<span class="mono">aaii-v43</span>, <span class="mono">phase1-transduction</span>,
+and <span class="mono">zone-a-selfplay</span>.</p>
+
+<table>
+  <tr><th>#</th><th>Evidence</th><th>Consequence</th></tr>
+  <tr>
+    <td>1</td>
+    <td><span class="mono">train_sgld_500_runner.py:86,88</span><br>
+        <span class="mono">X_demo = F.normalize(torch.randn(&hellip;))</span><br>
+        <span class="mono">a_target = torch.randint(0, vocab_size, &hellip;)</span></td>
+    <td><strong>Random waves, random labels.</strong> No content&rarr;token
+        correspondence exists in the training signal at all. This runner saves to
+        <span class="mono">models/henri_decoder_checkpoint.pt</span> at line 159.</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td><span class="mono">train_henri_decoder.py:54</span><br>
+        <span class="mono">target_id = hash(text_target) % 32000</span></td>
+    <td>CPython <span class="mono">hash()</span> of <span class="mono">str</span> is
+        <strong>salted per-process</strong>. The label&rarr;text mapping is not
+        reproducible and is not recoverable from the checkpoint.</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td><span class="mono">A2_MOCK_VOCABULARY_FINDING_20260916T181541Z.json</span><br>
+        same sha256 &middot; <span class="mono">MOCK_TARGET_VOCABULARY_CONFIRMED</span><br>
+        <span class="mono">distinct_training_classes 35 / 32000</span><br>
+        <span class="mono">recoverable_from_checkpoint: false</span></td>
+    <td>A <strong>prior</strong> receipt independently recorded the same
+        checkpoint as a mock vocabulary &mdash; 35 classes out of 32000
+        (coverage 0.00109), not invertible.</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td><span class="mono">henri_discrete_egress_flag.py</span><br>
+        <span class="mono">HENRI_STRIP_DISCRETE_EGRESS</span> default-<strong>OFF</strong><br>
+        docstring: "Decision 2 (approved 2026-09-11) orders the discrete BPE
+        projection matrices, top-k logit sorts, and token unbinding heads removed
+        from the live path"</td>
+    <td>The unbinder is a <strong>default-OFF, decision-removed</strong> path.
+        16 construction sites in 14 files.</td>
+  </tr>
+</table>
+
+<div class="box">
+  <strong>Your named defect is explained by finding 1&ndash;3.</strong>
+  <span class="mono">top1_token_unique = 1</span> is the <em>expected</em> symptom
+  of a readout trained on ~35 salted-hash classes out of 32000 with random waves.
+  Collapse is a property of the target, not independent evidence of an
+  architectural fault.
+</div>
+
+<p class="alt"><strong>Coincidence, disclosed not leaned on:</strong> my gate
+measured <span class="mono">distinct_top1 = 7</span>; the prior receipt recorded
+<span class="mono">distinct_top1_live = 7</span>. Different wave sets, so I record
+this as <em>corroborating</em>, not conclusive. The conclusion rests on the
+training-target analysis, which stands alone.</p>
 
 <h2>1. What was measured — and why it is not A-K4</h2>
 <p>You named the defect: <em>"wave-to-text egress currently yields
 <code>top1_token_unique=1</code> across 16 distinct waves."</em> That is the
 <span class="mono">HENRINeuralEgressUnbinder</span> path
-(<span class="mono">d_model=65536 → d_hidden=2048 → vocab_size=32000</span>).</p>
+(<span class="mono">d_model=65536 &rarr; d_hidden=2048 &rarr; vocab_size=32000</span>).</p>
 <p>A-K4 measured <strong>text splicing</strong> — retrieve a chunk, put its text in
 the prompt. A different mechanism. This gate measures the bridge itself.</p>
 
