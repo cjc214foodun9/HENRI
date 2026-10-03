@@ -21,10 +21,18 @@ sys.path.insert(0, HENRI_V2)
 
 import torch
 
-D = 1024
+# lr and obs_noise MUST be re-calibrated when D changes. At dim 1024 the
+# frozen constants were lr=0.15, obs_noise=3.0. The dynamic range shifts with
+# D, so R3 (32768) requires its own calibration before any verdict.
+D = int(os.environ.get("XFER_CALIB_DIM", "1024"))
 TWO_PI = 6.283185307179586
-SEEDS = (20261002, 20261003, 20261004)
-FIT_BUDGET = 400
+SEEDS = tuple(int(s) for s in os.environ.get(
+    "XFER_CALIB_SEEDS", "20261002,20261003,20261004").split(","))
+FIT_BUDGET = int(os.environ.get("XFER_CALIB_FIT_BUDGET", "400"))
+LRS = tuple(float(x) for x in os.environ.get(
+    "XFER_CALIB_LRS", "0.05,0.15,0.30,0.60").split(","))
+NOISES = tuple(float(x) for x in os.environ.get(
+    "XFER_CALIB_NOISES", "0.0,1.0,2.0,3.0").split(","))
 
 
 def unit(m):
@@ -72,9 +80,10 @@ def task(seed, off=0):
     return g, torch.rand(D, generator=g) * TWO_PI
 
 
-print("== D2: fit-from-random-init vs LR (sigma=0.30, budget=%d) ==" % FIT_BUDGET)
+print("== D2: fit-from-random-init vs LR (sigma=0.30, budget=%d, dim=%d) =="
+      % (FIT_BUDGET, D))
 best_lr = None
-for lr in (0.05, 0.15, 0.30, 0.60):
+for lr in LRS:
     got = []
     for s in SEEDS:
         g, base = task(s)
@@ -88,8 +97,8 @@ for lr in (0.05, 0.15, 0.30, 0.60):
         best_lr = lr
 print("  -> best_lr =", best_lr)
 
-print("\n== D1: cold-start steps vs observation noise (lr=%.2f) ==" % best_lr)
-for noise in (0.0, 1.0, 2.0, 3.0):
+print("\n== D1: cold-start steps vs observation noise (lr=%s) ==" % best_lr)
+for noise in NOISES:
     cs, st = [], []
     for s in SEEDS:
         g, base = task(s)
