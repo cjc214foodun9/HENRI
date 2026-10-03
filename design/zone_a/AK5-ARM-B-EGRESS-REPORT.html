@@ -138,7 +138,10 @@ the prompt. A different mechanism. This gate measures the bridge itself.</p>
   <tr><td>Optimizer steps</td><td class="n">0</td><td>read-only</td></tr>
 </table>
 
-<h2>2. Result</h2>
+<h2>2. Result — v1 measurement, retained unaltered</h2>
+<p class="alt">Read this section with §0 in view: the arithmetic below is correct and
+committed, but the artifact it measured had no content&rarr;token mapping. §7 and §8
+carry the corrected reading.</p>
 <table>
   <tr><th>Check</th><th>Measured</th><th class="n">Threshold</th><th>Pass</th></tr>
   <tr><td colspan="4" style="background:#f8f9fa"><strong>D0 — is the artifact trained?</strong></td></tr>
@@ -182,11 +185,16 @@ self_consistent (independently recomputed) = True</pre>
   <li><strong>The wave reaches the head.</strong> Rotation sensitivity is
       <span class="mono">+0.201 / +0.265 / +0.284</span>. The bridge is wired and
       the signal arrives.</li>
-  <li><strong>The readout does not carry content.</strong> Shuffle the 8192 blocks
-      of each real wave — every block vector and the unit norm survive, only the
-      arrangement dies — and the logits separate <em>more</em> than the real
-      waves do (&Delta; = &minus;0.031). <strong>When the control matches or beats
-      the treatment, the measurement is not evidence of content.</strong></li>
+  <li><strong>The readout does not carry content — on these waves, for this
+      artifact.</strong> Shuffle the 8192 blocks of each real wave — every block
+      vector and the unit norm survive, only the arrangement dies — and the logits
+      separate <em>more</em> than the real waves do (&Delta; = &minus;0.031).
+      <strong>When a control matches or beats the treatment, the measurement is
+      not evidence of content.</strong>
+      <br><span class="warn">Narrowed by §0:</span> the artifact was trained on
+      random waves with random labels, so it could not have carried content on any
+      wave family. This finding is a property of the artifact, not of the
+      mechanism.</li>
 </ol>
 
 <div class="box">
@@ -248,26 +256,67 @@ git log -S "Scope of approval"
   <tr><td>The wave→text bridge is wired and live</td>
       <td class="ok">PROVEN (Q4)</td></tr>
   <tr><td>The wave→text bridge carries <strong>content</strong></td>
-      <td class="bad">NOT SUPPORTED — control matches/beats treatment</td></tr>
+      <td class="warn">UNMEASURED — the checkpoint under test was trained on
+      random waves and random labels (see §0), so its negative is not evidence
+      about the mechanism</td></tr>
+  <tr><td>The measurement instrument itself</td>
+      <td class="ok">VALIDATED — gate power <span class="mono">GATE_POWER_OK</span>
+      (sep +0.6065 real vs &minus;0.0009 control)</td></tr>
   <tr><td>AAII v4.3 SOTA on a 5090</td>
       <td class="bad">NOT ESTABLISHED — at most 25% locally reproducible</td></tr>
 </table>
 
 <div class="box good">
-  <strong>Design consequence.</strong> The failure is <em>readout</em> — not
-  wiring, not training absence. Per spec the next probe is
-  <strong>carrier suppression / readout normalization</strong> against the same
-  shuffled control. <em>Not</em> retraining. <em>Not</em> a third untested egress
-  architecture — two have now failed the same specificity test, so a third
-  would be motion, not progress.
+  <strong>Design consequence — revised after the provenance audit.</strong>
+  The v1 reading ("the failure is <em>readout</em>") does <strong>not</strong>
+  survive. The checkpoint had no content&rarr;token mapping to read: it was trained
+  on random waves and random labels, and its ids came from a salted hash. Two
+  defects, either sufficient — degenerate target, and a representation-family
+  mismatch (dense Gaussian training vs sparse block-structured codec waves).
+  <br><br>
+  <strong>Rejected:</strong> carrier-suppression / readout normalization on
+  <em>this</em> checkpoint. A readout with no content&rarr;token mapping has no
+  content to emerge, so the probe would produce a second uninformative negative.
+  <br><br>
+  <strong>Correct next action (NEW SCOPE — approval required):</strong> train a
+  minimal content-grounded egress head on the codec's <em>own</em> wave family with
+  a reproducible token&harr;id mapping, then re-run the <em>same</em>
+  pre-registered Q1&ndash;Q4 against the <em>same</em> validated same-family
+  content-destroyed control.
 </div>
 
+<h2>8. Gate power — could this gate have detected content at all?</h2>
+<p>Without this check, a FAIL is ambiguous: it could mean "no content in the
+artifact" or "the instrument is vacuous". v1 of the power probe returned
+<span class="mono">AK5_GATE_VACUOUS</span> — and that was an artifact of the probe,
+not a finding: it had no positive pairs, so its all-pairs metric saturated in high
+dimension. v2 corrected that and returned clean, unsaturated numbers.</p>
+<pre>REAL : within=0.9805  between=0.3739  sep=+0.6065
+CTRL : within=0.3762  between=0.3772  sep=-0.0009
+GP1 sep_real >= 0.20 : +0.6065  PASS
+GP2 sep_ctrl <= 0.05 : -0.0009  PASS
+GP3 within   <= 0.999:  0.9805  PASS
+self-check within > 0.50 : PASS
+verdict = GATE_POWER_OK</pre>
+<p>The gate <em>can</em> separate arrangement-borne content, with real dynamic
+range and a control that destroys the signal. So A-K5's negative is a statement
+about the <strong>artifact</strong>, not about the metric. Both failed probes are
+retained and committed as records.</p>
+
 <footer>
-  Commit <span class="mono">c14dfca</span> ·
-  receipt <span class="mono">design/zone_a/evidence/ak5_armb_egress_receipt.json</span> ·
-  seal <span class="mono">#69f787768f17626a</span> · scope correction
-  <span class="mono">#34d83df014443865</span>.<br>
-  Ledger 1824, chain intact. <span class="mono">main a039095</span> untouched.
+  Commits <span class="mono">c14dfca</span> (gate) ·
+  <span class="mono">57433b5</span> (report) ·
+  <span class="mono">e2ab7b1</span>, <span class="mono">b79fd38</span> (power
+  probes) · <span class="mono">97e429b</span> (provenance v2).<br>
+  Receipts <span class="mono">design/zone_a/evidence/ak5_armb_egress_receipt.json</span>,
+  <span class="mono">ak5_provenance_correction.json</span>,
+  <span class="mono">ak5_gate_power_probe_defect.json</span>,
+  <span class="mono">ak5_gate_power_validation.json</span>.<br>
+  Seals <span class="mono">#69f787768f17626a</span> (A-K5 v1) ·
+  <span class="mono">#314f5cb0c7ee2d85</span> (reclassification) ·
+  <span class="mono">#34d83df014443865</span> (scope correction) ·
+  <span class="mono">#11dd5dde84db22fb</span> (gate power).<br>
+  Ledger 1827, chain intact. <span class="mono">main a039095</span> untouched.
   Nothing billing.
 </footer>
 
