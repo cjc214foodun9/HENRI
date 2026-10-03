@@ -425,14 +425,32 @@ shared basis. Carry a per-task low-**parameter** full-rank diagonal adapter.
 
 ### H3 — pre-snap probing: FALSIFIED (and H3b FALSIFIED)
 
-Accumulated drift: the coarse snap fired at step **5**, the covariance probe at
-step **6** — the snap was *earlier*, not blind. The within-cell sweep (H3b) tested
-the corpus claim literally: across ε ∈ {1e-3, 1e-2, 3e-2, 1e-1, 3e-1} there was
+**The comparison is SCALE-DEPENDENT.** Two scales, same verdict, different shape:
+
+| dim | presnap step | snap step | reading |
+|---|---:|---:|---|
+| 512 | 6 | 7 | pre-snap earlier by 1 |
+| 65536 | 5 | 2 | **snap earlier by 3** |
+
+At D=512 the earlier revision measured snap step **5**, covariance step **6**.
+At D=65536 the pre-snap statistic **does** detect within 5 steps
+(`H3_PRESNAP_DETECTS_WITHIN_5` = true), so the corpus sentence
+"pre-snap covariance detects adaptation in 3–5 steps" holds **literally**.
+What fails is the **comparative** claim: the snap responds earlier
+(step 2 vs step 5). `H3_PRESNAP_FASTER_THAN_SNAP` = false at both scales.
+
+`H3_SNAP_IS_BLIND_EARLY` = false. The within-cell sweep (H3b) tested the
+corpus claim literally: across ε ∈ {1e-3, 1e-2, 3e-2, 1e-1, 3e-1} there was
 **no** ε where snapped tokens stayed bit-identical while the pre-snap statistic
-moved. Both readings fail in this harness.
+moved. Both channels moved together and monotonically
+(token_change 0.015625 → 0.34375; presnap_rel 0.000167 → 0.084854).
+Both readings fail in this harness.
 
 **Design consequence:** pre-snap covariance is an **optional** confidence channel,
 not a required detector. §5.3 and the §5 diagram were corrected to match.
+Full-D receipt: `design/zone_a/evidence/h3_fullD_seed20261002.json`,
+sha256 `fe69f09cc8e0e053541039e958c1a394f3954e2fbf88471faef1f11b8ac6c1ec`.
+Hardware: CPU only — no GPU, no latency claim.
 
 ### Self-caught defects in this cycle's own harnesses
 
