@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A-K4 egress gate: does retrieved context improve a generated answer?</title>
+<style>
+:root{--fg:var(--foreground,#e8e6e3);--mut:var(--muted-foreground,#9a958e);--acc:var(--accent,#6aa9ff);--bd:var(--border,#3a3a3a);--card:var(--card,#1a1a1a)}
+body{font:15px/1.55 ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif;color:var(--fg);margin:0;padding:0}
+h1{font-size:1.5rem;margin:0 0 .3rem}
+h2{font-size:1.1rem;margin:1.6rem 0 .5rem;border-bottom:1px solid var(--bd);padding-bottom:.3rem}
+.sub{color:var(--mut);font-size:.9rem;margin-bottom:1.2rem}
+table{border-collapse:collapse;width:100%;margin:.7rem 0}
+th,td{border:1px solid var(--bd);padding:.42rem .6rem;text-align:left;font-size:.88rem}
+th{background:color-mix(in srgb,var(--card) 80%,transparent)}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+.pass{color:#59d98a;font-weight:600}.fail{color:#ff7b72;font-weight:600}
+.box{border:1px solid var(--bd);border-left:3px solid var(--acc);padding:.7rem .9rem;margin:.8rem 0;border-radius:3px}
+.warn{border-left-color:#ffb454}
+.crit{border-left-color:#ff7b72}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.86em;background:color-mix(in srgb,var(--card) 70%,transparent);padding:.1em .35em;border-radius:3px}
+.hi{font-size:1.05rem;font-weight:600}
+</style>
+</head>
+<body>
+
+<h1>A-K4 egress gate — PASS</h1>
+<p class="sub">Retrieved Zone C context measurably and deterministically improves a generated answer.
+SpecContract A approved and executed. 2026-10-03. Commit <code>7a44d5f</code> / <code>33ed8d7</code>.</p>
+
+<div class="box">
+<p class="hi">Verdict: <span class="pass">AK4_PASS_CONTEXT_IMPROVES_GENERATED_ANSWER</span></p>
+<p>Retrieval value is established end to end for the first time. Latency deliberately unmeasured per operator instruction.</p>
+</div>
+
+<h2>1. The question, answered</h2>
+<p>Question: does retrieved context change a generated answer for the better? Measured answer: <strong>yes</strong>, and by a wide margin.</p>
+<table>
+<tr><th>Arm</th><th>Context delivered to the frozen backbone</th><th>Content hit rate</th></tr>
+<tr><td>A0</td><td>none</td><td class="n">0.000</td></tr>
+<tr><td><strong>A1</strong></td><td>correct retrieved chunk</td><td class="n"><strong>0.833</strong></td></tr>
+<tr><td>A2</td><td>mismatched chunk (excludes target source)</td><td class="n">0.083</td></tr>
+</table>
+
+<h2>2. Pre-registered kills — all pass</h2>
+<table>
+<tr><th>Kill</th><th>Rule</th><th>Measured</th><th>Result</th></tr>
+<tr><td>K4a</td><td>A1 − A0 ≥ 0.50</td><td class="n">+0.833</td><td class="pass">PASS</td></tr>
+<tr><td>K4b</td><td>A1 − A2 ≥ 0.25</td><td class="n">+0.750</td><td class="pass">PASS</td></tr>
+<tr><td>K4c</td><td>A0 ≤ 0.25 and A2 ≤ 0.25</td><td class="n">0.000 / 0.083</td><td class="pass">PASS</td></tr>
+<tr><td>K4d</td><td>determinism ≥ 1.00</td><td class="n">1.000</td><td class="pass">PASS</td></tr>
+<tr><td>P0</td><td>positive control: non-empty, not all ABSTAIN</td><td class="n">nonempty 1.000</td><td class="pass">PASS</td></tr>
+</table>
+<p>Model: frozen Qwen2.5-1.5B-Instruct, 1,543,714,304 params, <code>unexpected_key_count=0</code>, architecture <code>Qwen2ForCausalLM</code>. CPU only. $0.</p>
+
+<h2>3. The metric had to be amended — on evidence</h2>
+<p>A pre-registered gate for this exact question had been sitting unrun for 4 months. Its import was broken:
+<code>parents[1]</code> pointed at <code>experiments/</code> instead of <code>HENRI V2</code>, so it raised
+<code>ModuleNotFoundError</code> and never started. One line to fix.</p>
+<p>Once it ran, it falsified its own premise:</p>
+<table>
+<tr><th>Arm</th><th>distinct_ratio (treatment)</th><th>random-wave control</th><th>Verdict</th></tr>
+<tr><td>fractional_shift</td><td class="n">0.233</td><td class="n">0.592</td><td class="fail">VACUOUS</td></tr>
+<tr><td>phasor_bind</td><td class="n">0.117</td><td class="n">0.700</td><td class="fail">VACUOUS</td></tr>
+</table>
+<p><strong>The random control beat the treatment.</strong> Counting distinct top-1 tokens is not evidence of semantic content — it is the known argmax-invariance defect. So A-K4 was re-specified to score <em>content presence</em> in the generated answer, with A0 and A2 as negative controls. The kill did not weaken; the instrument did. This amendment is recorded in the contract with its evidence.</p>
+
+<h2>4. Defect found by my own smoke run, fixed before the verdict</h2>
+<div class="box crit">
+<p><strong>A2 was contaminated.</strong> The first version reused another item's context. With 6 chunks and <code>k=3</code>, every context already contains 3 of 6 facts, so A2 shared about half its evidence with A1.</p>
+<p>Evidence: <code>hit_A2 = 0.500</code> exactly — the contamination signature. After excluding the target source: <code>hit_A2 = 0.083</code>.</p>
+</div>
+<p>Two further real defects surfaced and were fixed:</p>
+<ul>
+<li><strong>Silent no-op ingest.</strong> <code>ON CONFLICT (chunk_id) DO NOTHING</code> made a re-ingest report <code>tx=COMMITTED, written=1</code> while changing nothing in the database. The report said success; the store disagreed.</li>
+<li><strong>Retrieval-scope contamination.</strong> <code>query_corpus</code> filters by domain only, not by source set. An earlier probe row in the same domain entered top-3 and made <code>build_context</code> fail closed on a missing file.</li>
+</ul>
+
+<h2>5. What this proves — and what it does not</h2>
+<table>
+<tr><th>Path</th><th>Status</th><th>Meaning</th></tr>
+<tr><td><strong>Arm A</strong> — retrieved text context to frozen backbone</td><td class="pass">PROVEN</td><td>Retrieval value is real end to end.</td></tr>
+<tr><td><strong>Arm B</strong> — Zone C wave conditioning to text</td><td class="warn" style="color:#ffb454">UNMEASURED</td><td>Not exercised by this run.</td></tr>
+</table>
+<div class="box warn">
+<p>The <code>top1_token_unique=1</code> defect lives on the unknown-attribution unbinder path (<code>down_proj [2048,65536] to lm_head [32000,2048]</code>). This PASS does <strong>not</strong> clear that bridge.</p>
+<p>If Arm A works and Arm B fails, the defect is the <strong>bridge</strong>, not Zone C retrieval — a different fix on a different timescale. Do not read this result as clearing the wave-to-text bridge.</p>
+</div>
+
+<h2>6. Scope boundary</h2>
+<p>OBSERVED mechanism evidence on a <strong>6-fact synthetic corpus, 12 items</strong>, single frozen 1.5B model, CPU, three seeds' worth of determinism but one model. This is <strong>not</strong> end-task capability. It is not an AAII v4.3 score, and no SOTA claim follows. Latency is unmeasured by operator decision.</p>
+
+<h2>7. Governance</h2>
+<table>
+<tr><th>Item</th><th>Value</th></tr>
+<tr><td>Approval event</td><td><code>#10b2d1f45cd8626c</code> (chain 1816 to 1817)</td></tr>
+<tr><td>Run verdict event</td><td><code>#2e1e68c29838fb8e</code> (chain 1818 to 1819)</td></tr>
+<tr><td>Receipt sha256 (LF)</td><td><code>8d731a1052015367c5c9aec496be28004fe81e85a9ba84e784d712b91df59ecb</code></td></tr>
+<tr><td>Commits</td><td><code>7a44d5f</code>, <code>33ed8d7</code></td></tr>
+<tr><td>Remote</td><td>equals local <code>33ed8d7</code></td></tr>
+<tr><td>Billing</td><td>none; no GPU instance</td></tr>
+</table>
+<p class="sub">Contract: <code>design/zone_a/SPECCONTRACT-A-LEAN-BACKBONE.md</code> (now APPROVED, scope-limited: A-K4 plus MVP wiring, local, $0; no training runs, no GPU spend authorised).</p>
+
+<h2>8. Next decision</h2>
+<p>The MVP delivery path is now clear and proven: retrieve from Zone C, deliver as text, generate. That is a working HENRI model loop today.</p>
+<p>The open research question is Arm B — whether a Zone C wave can be conditioned into the model without a text intermediary. That is a separate kill with its own design.</p>
+
+</body>
+</html>
