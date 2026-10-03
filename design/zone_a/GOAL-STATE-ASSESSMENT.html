@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HENRI goal-state assessment: AAII v4.3 and the missing architecture</title>
+<style>
+ body{font-family:var(--foreground, system-ui);max-width:60rem;margin:0 auto;line-height:1.55;padding:1rem}
+ h1{font-size:1.5rem;border-bottom:2px solid var(--border,#ccc);padding-bottom:.3rem}
+ h2{font-size:1.15rem;margin-top:1.8rem}
+ table{border-collapse:collapse;width:100%;margin:.8rem 0;font-size:.92rem}
+ th,td{border:1px solid var(--border,#ccc);padding:.35rem .5rem;text-align:left;vertical-align:top}
+ th{background:var(--accent,#eef)}
+ .tag{font-size:.75rem;font-weight:700;padding:.1rem .4rem;border-radius:.2rem;white-space:nowrap}
+ .ob{background:#d8f0d8;border:1px solid #4a4}.de{background:#e8e8f8;border:1px solid #44a}
+ .ds{background:#fdf3d0;border:1px solid #ca4}.ab{background:#f8d8d8;border:1px solid #a44}
+ .bl{background:#e0e0e0;border:1px solid #888}
+ .verdict{border-left:5px solid #a44;background:#fdf0f0;padding:.7rem .9rem;margin:1rem 0}
+ .good{border-left:5px solid #4a4;background:#f0faf0;padding:.7rem .9rem;margin:1rem 0}
+ code{font-family:ui-monospace,monospace;font-size:.88em;background:var(--card,#f4f4f4);padding:.05rem .25rem}
+ pre{background:var(--card,#f4f4f4);padding:.6rem;overflow-x:auto;font-size:.85rem}
+ .small{font-size:.85rem;color:var(--muted-foreground,#555)}
+</style>
+</head>
+<body>
+
+<h1>HENRI goal-state assessment: is AAII v4.3 SOTA realistic?</h1>
+<p class="small">Cycle 2026-10-03. HEAD <code>4a0ccd8</code>; <code>main a039095</code> untouched.
+Ledger 1807 records. Every claim below carries its evidence class.</p>
+
+<div class="verdict">
+<h3 style="margin-top:0">Verdict: not realistic as built, and not probable without a new outer layer</h3>
+<p><strong>HENRI today is a research kernel and a memory subsystem. It is not a vision-language-action model.</strong>
+The repo holds no vision encoder, no language backbone in the load path, no action decoder, and no
+model-scale training pipeline. AAII v4.3 scores frontier multimodal reasoning models.
+Two empirical hypotheses are <em>already falsified</em> at production scale. No benchmark was run.</p>
+<p>This is not a dismissal. The memory architecture is genuinely differentiated and is a
+<em>component</em> a VLA needs. The correct claim is: <strong>HENRI can plausibly be a novel
+continual-learning memory layer for a frontier-class backbone. It cannot be the backbone on current evidence.</strong></p>
+</div>
+
+<h2>1. What this cycle produced (all four actions)</h2>
+<table>
+<tr><th>#</th><th>Action</th><th>Result</th><th>Class</th></tr>
+<tr><td>1</td><td>Repo-wide <code>[D,D]</code> guard</td><td>619 files scanned; kill-proof fires; 1 production hit found <em>and fixed</em>; pytest 1 passed</td><td><span class="tag ob">OBSERVED</span></td></tr>
+<tr><td>2</td><td>Dev TimescaleDB stack</td><td><strong>Already up.</strong> Docker 29.5.2; <code>henri-zonec-dev</code> healthy; 13 tables; <code>timescaledb</code>+<code>vector</code>; 9 engrams; 11 axioms</td><td><span class="tag ob">OBSERVED</span></td></tr>
+<tr><td>3</td><td>Writer/reader dimension + device</td><td>Roundtrip 7/7 PASS; payload 262144 B bit-exact; codec CPU-only; mixed-width rows <strong>silently dropped</strong></td><td><span class="tag ob">OBSERVED</span></td></tr>
+<tr><td>4</td><td>Novel-question transfer test</td><td>Pre-registered design K1–K4; mechanism probe 14/14 PASS (top-1 self-match 1.000000)</td><td><span class="tag ds">DESIGN</span></td></tr>
+</table>
+
+<h2>2. What the repository actually contains</h2>
+<table>
+<tr><th>Component</th><th>Present?</th><th>Evidence</th></tr>
+<tr><td>Clifford-tokenized wave state, D=65536</td><td>Yes</td><td>8192 blocks × 8 slots; roundtrip bit-exact</td></tr>
+<tr><td>Full-rank transition at O(D) params</td><td>Yes</td><td><code>K = diag(m) + A S B†</code>; DIAGONAL 0.7521 vs shuffled 0.1438</td></tr>
+<tr><td>Sagnac veto, Hopfield egress</td><td>Yes</td><td>Δ=0.35 fail-closed; β=26.10</td></tr>
+<tr><td>Zone C holographic memory (TimescaleDB)</td><td>Yes</td><td>9 engrams, 11 axioms, HNSW over 2000-dim projection</td></tr>
+<tr><td>Vision encoder</td><td><strong>No</strong></td><td>None in tree. The backbone adapter would supply one; it has never loaded</td></tr>
+<tr><td>Language backbone in the load path</td><td><strong>No</strong></td><td><code>HENRI_BACKBONE</code> read but <strong>set nowhere</strong>; no Qwen3-VL weights on disk</td></tr>
+<tr><td>Action decoder / VLA output</td><td>Partial</td><td>ARC action heads exist at toy scale; no continuous action policy</td></tr>
+<tr><td>Model-scale training loop</td><td><strong>No</strong></td><td>Optimizer loops exist in <code>experiments/</code> only, toy scale</td></tr>
+<tr><td>AAII v4.3 evaluation harness</td><td><strong>No</strong></td><td><code>g3_aaii_scaffold.py</code> is <em>staging</em>: ≤2 items/constituent, diagnostic-only</td></tr>
+<tr><td>World-knowledge harness, ever executed</td><td><strong>No</strong></td><td>Zero receipts on disk</td></tr>
+</table>
+
+<h2>3. The empirical record — falsifications are assets</h2>
+<p>A program that kills its own hypotheses is healthier than one that never tests them.</p>
+<table>
+<tr><th>Hypothesis</th><th>Verdict</th><th>Scale</th></tr>
+<tr><td>H2 — universal weight subspace</td><td><code>H2A_NO_SHARED_SUBSPACE</code></td><td>D=65536, 3 seeds, free_test 0.748–0.754 vs subspace 0.043–0.051</td></tr>
+<tr><td>H3 — pre-snap detects drift earlier</td><td><code>H3_FALSIFIED</code></td><td>D=65536, snap answers at step 2 vs presnap 5</td></tr>
+<tr><td>Latency gate ≤50 µs</td><td>FAIL</td><td>195.55 µs p50 measured, launch included</td></tr>
+<tr><td>L1 12.8 µs</td><td><span class="tag bl">BLOCKED</span></td><td>Kernel is design-only; not validatable</td></tr>
+<tr><td>E2E Zone A→B→C pipeline</td><td><code>OBSERVED_WIRING_ONLY</code></td><td>5/5 stages engaged, <code>score_claim: null</code>, reduced scale</td></tr>
+</table>
+
+<h2>4. What AAII v4.3 SOTA would require</h2>
+<table>
+<tr><th>Requirement</th><th>Status</th><th>Class</th></tr>
+<tr><td>A model that emits answers</td><td>Adapter default-OFF, never enabled, no receipt</td><td><span class="tag ab">ABSENT</span></td></tr>
+<tr><td>Vision encoder</td><td>Not in tree; weight load never verified</td><td><span class="tag ab">ABSENT</span></td></tr>
+<tr><td>Frontier language weights</td><td>Only Qwen2.5-1.5B-Instruct and a 27B GGUF on disk</td><td><span class="tag ab">ABSENT</span></td></tr>
+<tr><td>Instruction-scale training data</td><td>Not present</td><td><span class="tag ab">ABSENT</span></td></tr>
+<tr><td>Training compute</td><td>Tested envelope: one RTX 5090, 32 GiB host</td><td><span class="tag de">DERIVED</span></td></tr>
+<tr><td>Scoring eval harness</td><td><code>g3</code> stages ≤2 items/constituent; no scoring</td><td><span class="tag ds">SCAFFOLD</span></td></tr>
+<tr><td>Continual-learning mechanism</td><td>Zone C retrieval conditioning</td><td><span class="tag ds">DESIGN</span></td></tr>
+</table>
+<p class="small"><strong>DERIVED note.</strong> Frontier-class pretraining consumes thousands of GPUs for weeks.
+One RTX 5090 is orders of magnitude short. This is an order-of-magnitude comparison, not a measurement.</p>
+
+<h2>5. The genuinely differentiated asset</h2>
+<div class="good">
+<p><strong>Zone C is the novel part.</strong> It is a 65536-dim engram store with 2000-dim HNSW retrieval,
+provable round-trip fidelity, and boundary axioms that condition a step. Three properties are
+unusual together:</p>
+<ol>
+<li><strong>Storage without VRAM residency.</strong> The corpus never loads whole. Write does <code>.cpu()</code>;
+read uses <code>np.frombuffer</code> on CPU. Only individual 256 KiB engrams cross to VRAM to condition a step.</li>
+<li><strong>Full-rank reshaping at O(D) parameters.</strong> The DIAGONAL finding: rank and parameter count
+differ. A phase operator reshapes local geometry at ~10<sup>5</sup> params, not 10<sup>9</sup>.</li>
+<li><strong>Enforced memory contract.</strong> The 32 GiB crash is now structurally impossible:
+guard test, kill-proof, and a fail-closed cap in the thermostat.</li>
+</ol>
+</div>
+
+<h2>6. Two honest architectures</h2>
+<pre>
+A. HENRI AS MEMORY LAYER  (plausible, testable soon)
+   frontier backbone ──> wave state ──> Zone C memory ──> conditioned step
+   (Qwen3-VL etc.)                      (this repo)       (this repo)
+   Missing: backbone enabled, weights fetched, transfer evidence
+   Cost: eval is local; backbone inference needs 1 GPU
+
+B. HENRI AS ITS OWN MODEL  (not supported)
+   everything in A, PLUS: vision encoder, LM head, action decoder,
+   instruction corpus, model-scale training, AAII harness
+   Missing: all six. Evidence: none.
+</pre>
+<p><strong>Path A is the only one with a short falsifiable next step.</strong> Path B is a research
+program, not a near-term deliverable, and should not be described as probable.</p>
+
+<h2>7. What the project is missing, ranked by leverage</h2>
+<table>
+<tr><th>#</th><th>Missing piece</th><th>Why it is the binding constraint</th></tr>
+<tr><td>1</td><td><strong>Transfer evidence for Zone C</strong></td><td>The one unproven pillar of the vision. Design exists; mechanism probe PASSES. Run K1–K4 at local scale, free.</td></tr>
+<tr><td>2</td><td><strong>Enabled backbone with pinned weights</strong></td><td>Turns the pipeline into something that emits tokens. No benchmark claim follows without it.</td></tr>
+<tr><td>3</td><td><strong>A scoring eval harness</strong></td><td><code>g3</code> stages but does not score. Without it, no progress is measurable.</td></tr>
+<tr><td>4</td><td><strong>Compute envelope</strong></td><td>One GPU and 32 GiB bound every experiment. Orders of magnitude short of a frontier training claim.</td></tr>
+<tr><td>5</td><td><strong>Action-space contract</strong></td><td>"Action" is ARC-grid today. A VLA needs continuous or tokenized action policy.</td></tr>
+<tr><td>6</td><td><strong>Training data pipeline</strong></td><td>No instruction-scale corpus; the online-compilation premise needs demonstration pairs at scale.</td></tr>
+</table>
+
+<h2>8. Recommended next gate</h2>
+<p>Run the transfer test at R1 (dim 2048, local, $0) with the pre-registered kills.
+It is the only action that can <em>move</em> the goal-state assessment. Everything else
+adds structure; this adds evidence.</p>
+<p class="small">Governance: this assessment is advisory. Deterministic schema, proof, and security checks
+plus human approval remain required. Jev typed advice is not permission. No benchmark score,
+no SOTA claim, and no AAII v4.3 result is asserted anywhere above.</p>
+
+</body>
+</html>
