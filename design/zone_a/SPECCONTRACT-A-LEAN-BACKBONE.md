@@ -75,8 +75,22 @@ Four reasons this shape, each tied to a measured constraint:
 | A-K1 | Backbone loads with zero newly-initialized params | gate already implemented in `henri_backbone_adapter.py`; missing/mismatched keys raise |
 | A-K2 | Bit-exact output parity at fixed seed across two loads | mismatch ⇒ non-determinism, stop |
 | A-K3 | Fits 32 GB at declared quant **with** declared context | OOM ⇒ shrink or drop a rung |
-| A-K4 | Emits distinct top-1 tokens above floor on ≥100 prompts | the recorded egress defect: 16/16 chunks gave the same top-1 token |
+| A-K4 | Retrieved context must improve a **generated** answer: content-presence rate with correct evidence exceeds the no-evidence arm by ≥0.50 | the recorded egress defect: 16/16 chunks gave the same top-1 token |
 | A-K5 | Matched ablation: Zone C conditioning ON vs OFF | no gain ⇒ memory layer does not transfer at this scale |
+
+**A-K4 METRIC AMENDED (2026-10-03) — evidence-based, disclosed.**
+The original A-K4 wording above ("emits distinct top-1 tokens above floor") was
+**falsified as a metric** by the pre-registered `m1_open_answer_gate.py`, first
+executed 2026-10-03. Verdict for both position-binding arms:
+`VACUOUS_DISTINCT_COUNT_NOT_INFORMATIVE`. The random-wave arm scored
+`distinct_ratio` 0.59 (fractional_shift) and 0.70 (phasor_bind) while the
+treatment scored 0.23 and 0.12 — the **negative control beat the treatment**.
+So distinct-top-1 count is not evidence of semantic content; it is the known
+`argmax is beta-invariant` defect. A-K4 therefore scores **content presence in
+the generated answer**, with A0 (no evidence) and A2 (mismatched evidence) as
+negative controls. The kill is unchanged in kind: context must improve the
+answer. Only the metric changed, and it changed because a measured control beat
+the treatment. Implementation: `HENRI V2/experiments/verification/ak4_egress_gate.py`.
 
 **A-K4 is the binding one.** Wave-to-text egress currently does not discriminate
 (`top1_token_unique = 1` across 16 distinct chunk waves). That blocks ~60% of AAII

@@ -48,14 +48,16 @@ from pathlib import Path
 
 import torch
 
-# UHR-05 defect fix (RELOCATED-RELATIVE-IMPORT): parents[1] was correct for this
-# script's ORIGINAL location one level below the package root. After relocation into
-# experiments/verification/, parents[1] is `experiments/` and the import below failed
-# with ModuleNotFoundError, so the gate could not run at all (rc=1, no receipt).
-# Insert the package root as well; parents[1] is kept for any sibling import.
-_PKG_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_PKG_ROOT))
+# MERGED during the rebase onto main (d97ddd94). Both sides fixed the same
+# RELOCATED-RELATIVE-IMPORT defect: after this gate moved into
+# experiments/verification/, `parents[1]` is `experiments/`, so
+# `import henri_vla_tokenizer` raised ModuleNotFoundError and the gate could
+# not start at all (rc=1, no receipt). Main inserts the package root only;
+# our branch also kept the sibling path. Keep both, package root FIRST so
+# the top-level module always wins.
+_PKG_ROOT = str(Path(__file__).resolve().parents[2])
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, _PKG_ROOT)
 import henri_vla_tokenizer as vt
 
 # ------------------------------------------------------------ pre-registration

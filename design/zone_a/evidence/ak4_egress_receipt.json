@@ -1,0 +1,361 @@
+{
+  "A2_sources": {
+    "How many blocks organize a HENRI wave?": [
+      "fact_01.txt",
+      "fact_03.txt"
+    ],
+    "How many dimensions does a single HENRI wave have?": [
+      "fact_02.txt",
+      "fact_03.txt"
+    ],
+    "How many slots does each HENRI block contain?": [
+      "fact_01.txt",
+      "fact_02.txt",
+      "fact_03.txt"
+    ],
+    "What algebra type is used per HENRI block?": [
+      "fact_01.txt",
+      "fact_02.txt"
+    ],
+    "What index type is used for Zone C retrieval?": [
+      "fact_01.txt",
+      "fact_02.txt",
+      "fact_03.txt"
+    ],
+    "What is the ambient dimension of a HENRI wave state?": [
+      "fact_02.txt",
+      "fact_03.txt"
+    ],
+    "What is the block count of a full HENRI wave?": [
+      "fact_01.txt",
+      "fact_03.txt"
+    ],
+    "What is the slot count per HENRI block?": [
+      "fact_01.txt",
+      "fact_02.txt",
+      "fact_03.txt"
+    ],
+    "What persistent store holds Zone C engrams?": [
+      "fact_01.txt",
+      "fact_02.txt",
+      "fact_03.txt"
+    ],
+    "Which ANN index type does Zone C retrieval use?": [
+      "fact_01.txt",
+      "fact_02.txt",
+      "fact_03.txt"
+    ],
+    "Which Clifford algebra does each HENRI block carry?": [
+      "fact_01.txt",
+      "fact_02.txt"
+    ],
+    "Which database stores Zone C engrams?": [
+      "fact_01.txt",
+      "fact_02.txt",
+      "fact_03.txt"
+    ]
+  },
+  "elapsed_s": 82.54,
+  "evidence_class": "OBSERVED",
+  "items": [
+    {
+      "A0": "ABSTAIN.",
+      "A1": "Based on the evidence provided:\n\n- The HENRI wave state has 65536 dimensions.\n- This number represents the ambient dimension of a single HENRI wave.\n\nTherefore, the ambient dimension of a HENRI wave state is **65536**.",
+      "A1_repeat": "Based on the evidence provided:\n\n- The HENRI wave state has 65536 dimensions.\n- This number represents the ambient dimension of a single HENRI wave.\n\nTherefore, the ambient dimension of a HENRI wave state is **65536**.",
+      "A2": "ABSTAIN",
+      "A2_sources": [
+        "fact_02.txt",
+        "fact_03.txt"
+      ],
+      "accept": [
+        "65536",
+        "65,536"
+      ],
+      "deterministic": true,
+      "h0": false,
+      "h1": true,
+      "h2": false,
+      "q": "What is the ambient dimension of a HENRI wave state?",
+      "source": "fact_01.txt"
+    },
+    {
+      "A0": "ABSTAIN. The given evidence does not provide any information about the number of dimensions that a single HENRI wave has. Therefore, it is impossible to determine the correct answer based solely on this evidence.",
+      "A1": "Based on the evidence provided:\n\n- A HENRI wave has 65536 dimensions.\n- This number represents the ambient dimension of a single HENRI wave.\n\nTherefore, the answer to how many dimensions a single HENRI wave has is **65536**.",
+      "A1_repeat": "Based on the evidence provided:\n\n- A HENRI wave has 65536 dimensions.\n- This number represents the ambient dimension of a single HENRI wave.\n\nTherefore, the answer to how many dimensions a single HENRI wave has is **65536**.",
+      "A2": "ABSTAIN",
+      "A2_sources": [
+        "fact_02.txt",
+        "fact_03.txt"
+      ],
+      "accept": [
+        "65536",
+        "65,536"
+      ],
+      "deterministic": true,
+      "h0": false,
+      "h1": true,
+      "h2": false,
+      "q": "How many dimensions does a single HENRI wave have?",
+      "source": "fact_01.txt"
+    },
+    {
+      "A0": "ABSTAIN.",
+      "A1": "Based on the evidence provided:\n\n- A HENRI wave is described as having 8192 blocks.\n- Each block holds eight slots.\n- The total number of blocks in a full HENRI wave is given as 8192.\n\nTherefore, the answer to how many blocks organize a HENRI wave is **8192**.",
+      "A1_repeat": "Based on the evidence provided:\n\n- A HENRI wave is described as having 8192 blocks.\n- Each block holds eight slots.\n- The total number of blocks in a full HENRI wave is given as 8192.\n\nTherefore, the answer to how many blocks organize a HENRI wave is **8192**.",
+      "A2": "ABSTAIN",
+      "A2_sources": [
+        "fact_01.txt",
+        "fact_03.txt"
+      ],
+      "accept": [
+        "8192",
+        "8,192"
+      ],
+      "deterministic": true,
+      "h0": false,
+      "h1": true,
+      "h2": false,
+      "q": "How many blocks organize a HENRI wave?",
+      "source": "fact_02.txt"
+    },
+    {
+      "A0": "ABSTAIN. The given evidence does not provide any information about the block count of a full HENRI wave.",
+      "A1": "ABSTAIN",
+      "A1_repeat": "ABSTAIN",
+      "A2": "ABSTAIN",
+      "A2_sources": [
+        "fact_01.txt",
+        "fact_03.txt"
+      ],
+      "accept": [
+        "8192",
+        "8,192"
+      ],
+      "deterministic": true,
+      "h0": false,
+      "h1": false,
+      "h2": false,
+      "q": "What is the block count of a full HENRI wave?",
+      "source": "fact_02.txt"
+    },
+    {
+      "A0": "ABSTAIN.",
+      "A1": "Cl(3,0)",
+      "A1_repeat": "Cl(3,0)",
+      "A2": "ABSTAIN",
+      "A2_sources": [
+        "fact_01.txt",
+        "fact_02.txt"
+      ],
+      "accept": [
+        "cl(3,0)",
+        "clifford",
+        "3,0"
+      ],
+      "deterministic": true,
+      "h0": false,
+      "h1": true,
+      "h2": false,
+      "q": "Which Clifford algebra does each HENRI block carry?",
+      "source": "fact_03.txt"
+    },
+    {
+      "A0": "ABSTAIN.",
+      "A1": "Clifford algebra of type Cl(3,0)",
+      "A1_repeat": "Clifford algebra of type Cl(3,0)",
+      "A2": "ABSTAIN",
+      "A2_sources": [
+        "fact_01.txt",
+        "fact_02.txt"
+      ],
+      "accept": [
+        "cl(3,0)",
+        "clifford"
+      ],
+      "deterministic": true,
+      "h0": false,
+      "h1": true,
+      "h2": false,
+      "q": "What algebra type is used per HENRI block?",
+      "source": "fact_03.txt"
+    },
+    {
+      "A0": "ABSTAIN.",
+      "A1": "Each HENRI block contains 8 slots.",
+      "A1_repeat": "Each HENRI block contains 8 slots.",
+      "A2": "Each HENRI block contains 8 slots.",
+      "A2_sources": [
+        "fact_01.txt",
+        "fact_02.txt",
+        "fact_03.txt"
+      ],
+      "accept": [
+        "8 slots",
+        "eight slots"
+      ],
+      "deterministic": true,
+      "h0": false,
+      "h1": true,
+      "h2": true,
+      "q": "How many slots does each HENRI block contain?",
+      "source": "fact_04.txt"
+    },
+    {
+      "A0": "ABSTAIN.",
+      "A1": "The slot count per HENRI block is 8.",
+      "A1_repeat": "The slot count per HENRI block is 8.",
+      "A2": "ABSTAIN",
+      "A2_sources": [
+        "fact_01.txt",
+        "fact_02.txt",
+        "fact_03.txt"
+      ],
+      "accept": [
+        "8 slots",
+        "eight slots",
+        "8)"
+      ],
+      "deterministic": true,
+      "h0": false,
+      "h1": false,
+      "h2": false,
+      "q": "What is the slot count per HENRI block?",
+      "source": "fact_04.txt"
+    },
+    {
+      "A0": "ABSTAIN.",
+      "A1": "TimescaleDB",
+      "A1_repeat": "TimescaleDB",
+      "A2": "ABSTAIN",
+      "A2_sources": [
+        "fact_01.txt",
+        "fact_02.txt",
+        "fact_03.txt"
+      ],
+      "accept": [
+        "timescaledb",
+        "timescale"
+      ],
+      "deterministic": true,
+      "h0": false,
+      "h1": true,
+      "h2": false,
+      "q": "Which database stores Zone C engrams?",
+      "source": "fact_05.txt"
+    },
+    {
+      "A0": "ABSTAIN.",
+      "A1": "TimescaleDB with the pgvector extension.",
+      "A1_repeat": "TimescaleDB with the pgvector extension.",
+      "A2": "ABSTAIN",
+      "A2_sources": [
+        "fact_01.txt",
+        "fact_02.txt",
+        "fact_03.txt"
+      ],
+      "accept": [
+        "timescaledb",
+        "timescale"
+      ],
+      "deterministic": true,
+      "h0": false,
+      "h1": true,
+      "h2": false,
+      "q": "What persistent store holds Zone C engrams?",
+      "source": "fact_05.txt"
+    },
+    {
+      "A0": "ABSTAIN.",
+      "A1": "HNSW",
+      "A1_repeat": "HNSW",
+      "A2": "ABSTAIN",
+      "A2_sources": [
+        "fact_01.txt",
+        "fact_02.txt",
+        "fact_03.txt"
+      ],
+      "accept": [
+        "hnsw"
+      ],
+      "deterministic": true,
+      "h0": false,
+      "h1": true,
+      "h2": false,
+      "q": "Which ANN index type does Zone C retrieval use?",
+      "source": "fact_06.txt"
+    },
+    {
+      "A0": "ABSTAIN.",
+      "A1": "HNSW",
+      "A1_repeat": "HNSW",
+      "A2": "ABSTAIN",
+      "A2_sources": [
+        "fact_01.txt",
+        "fact_02.txt",
+        "fact_03.txt"
+      ],
+      "accept": [
+        "hnsw"
+      ],
+      "deterministic": true,
+      "h0": false,
+      "h1": true,
+      "h2": false,
+      "q": "What index type is used for Zone C retrieval?",
+      "source": "fact_06.txt"
+    }
+  ],
+  "model": {
+    "architecture": "Qwen2ForCausalLM",
+    "load_status": "LOADED",
+    "loaded_from": "C:\\Users\\chan\\.cache\\huggingface\\hub\\models--Qwen--Qwen2.5-1.5B-Instruct\\snapshots\\989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+    "total_params": 1543714304,
+    "unexpected_key_count": 0
+  },
+  "preregistration": {
+    "K4a_min": 0.5,
+    "K4b_min": 0.25,
+    "K4c_max": 0.25,
+    "domain": "computing",
+    "max_new_tokens": 16,
+    "n_items": 12,
+    "scoring": "content_presence_not_argmax",
+    "vacuity_rule": "zero retrieved chunks for any A1 item -> NO VERDICT"
+  },
+  "retrieval": {
+    "items": 12,
+    "matched_source": {
+      "How many blocks organize a HENRI wave?": "fact_02.txt",
+      "How many dimensions does a single HENRI wave have?": "fact_01.txt",
+      "How many slots does each HENRI block contain?": "fact_04.txt",
+      "What algebra type is used per HENRI block?": "fact_03.txt",
+      "What index type is used for Zone C retrieval?": "fact_06.txt",
+      "What is the ambient dimension of a HENRI wave state?": "fact_01.txt",
+      "What is the block count of a full HENRI wave?": "fact_02.txt",
+      "What is the slot count per HENRI block?": "fact_04.txt",
+      "What persistent store holds Zone C engrams?": "fact_05.txt",
+      "Which ANN index type does Zone C retrieval use?": "fact_06.txt",
+      "Which Clifford algebra does each HENRI block carry?": "fact_03.txt",
+      "Which database stores Zone C engrams?": "fact_05.txt"
+    },
+    "zero_context_items": []
+  },
+  "scope_limit": "6-fact synthetic corpus, 12 items, CPU, frozen 1.5B. Mechanism evidence, not end-task capability. Latency NOT measured.",
+  "summary": {
+    "A1_abstain_ratio": 0.08333333333333333,
+    "A1_nonempty_ratio": 1.0,
+    "K4a": true,
+    "K4b": true,
+    "K4c": true,
+    "K4d": true,
+    "P0_positive_control": true,
+    "determinism": 1.0,
+    "hit_A0": 0.0,
+    "hit_A1": 0.8333333333333334,
+    "hit_A2": 0.08333333333333333,
+    "k4a_gain_A1_over_A0": 0.8333333333333334,
+    "k4b_gain_A1_over_A2": 0.75,
+    "n": 12,
+    "verdict": "AK4_PASS_CONTEXT_IMPROVES_GENERATED_ANSWER"
+  }
+}
