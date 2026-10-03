@@ -53,7 +53,9 @@ import torch
 import zone_c_segment_cache as zsc
 from zone_c_env import resolve_zone_c_dsn
 
-NUM_BLOCKS = 256
+# R1 = 256 (dim 1024 complex).  R3 = 8192 (dim 32768 complex), the stored
+# engram width the reader validates: 8192 * 8 * 4 = 262144 bytes.
+NUM_BLOCKS = int(os.environ.get("XFER_NUM_BLOCKS", "256"))
 SLOTS = 4
 D_C = NUM_BLOCKS * SLOTS          # 1024 complex parameters
 FAMILY = "ast"

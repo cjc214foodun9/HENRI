@@ -75,6 +75,17 @@ class BackboneTelemetry:
     trainable_params: int = 0
     total_params: int = 0
     generation: dict[str, Any] = field(default_factory=dict)
+    # MEASURED DEFECT FIX (2026-10-03): model_id carries the DECLARED identity
+    # (default DEFAULT_MODEL_ID). A directory holding a different checkpoint
+    # therefore produced a receipt that named Qwen3-VL-8B while 1543714304
+    # parameters of Qwen2.5-1.5B were loaded. Rather than overwrite a declared
+    # field, the VERIFIED identity is now reported alongside it:
+    #   loaded_from  -> absolute resolved directory actually read
+    #   architecture -> class returned by from_pretrained
+    #   unexpected_key_count -> checkpoint keys ignored during the load
+    loaded_from: str = ""
+    architecture: str = ""
+    unexpected_key_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -87,6 +98,9 @@ class BackboneTelemetry:
             "trainable_params": self.trainable_params,
             "total_params": self.total_params,
             "generation": dict(self.generation),
+            "loaded_from": self.loaded_from,
+            "architecture": self.architecture,
+            "unexpected_key_count": self.unexpected_key_count,
         }
 
 
@@ -351,6 +365,11 @@ class QwenBackboneAdapter:
         self.telemetry.checkpoint_load_status = "LOADED"
         self.telemetry.total_params = total
         self.telemetry.trainable_params = 0
+        # Bind the VERIFIED identity, not only the declared one.
+        self.telemetry.loaded_from = str(self.model_dir.resolve())
+        self.telemetry.architecture = type(self._model).__name__
+        self.telemetry.unexpected_key_count = int(
+            getattr(self, "_unexpected_key_count", 0))
         self.telemetry.device = str(next(self._model.parameters()).device)
         self.telemetry.dtype = str(self.dtype)
         self.telemetry.generation = {
