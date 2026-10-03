@@ -1,0 +1,114 @@
+{
+  "gate": "A-K5_ARM_B_EGRESS",
+  "commit": "69e5f3e",
+  "ckpt_path": "HENRI V2/models/henri_decoder_checkpoint.pt",
+  "ckpt_sha256_prefix": "75572389083455a371546b40500b6614",
+  "device": "cpu",
+  "strip_flag": "UNSET",
+  "seeds": [
+    20261002,
+    20261003,
+    20261004
+  ],
+  "ckpt_bytes": 799034119,
+  "dsn_set": true,
+  "n_real_waves": 10,
+  "wave_ids": [
+    "fact_01.txt:0",
+    "fact_02.txt:0",
+    "fact_03.txt:0",
+    "fact_04.txt:0",
+    "fact_05.txt:0",
+    "fact_06.txt:0",
+    "engram:0c3358be-afa0-489c-a4cf-cdd249eae0c6",
+    "engram:98314f6f-14b8-4cc8-b409-7cbc2ab5032e",
+    "engram:b7153b30-3ec2-4b8b-bcc6-1aa390fdf50b",
+    "engram:ca7b35b2-7773-4c83-af84-d4fdb169ea21"
+  ],
+  "ckpt_keys": [
+    "down_proj.weight",
+    "layer_norm.bias",
+    "layer_norm.weight",
+    "lm_head.weight"
+  ],
+  "missing_keys": [],
+  "unexpected_keys": [],
+  "D0_artifact": {
+    "down_proj.weight": {
+      "present": true,
+      "shape": [
+        2048,
+        65536
+      ],
+      "ckpt_std": 0.01891866,
+      "fresh_std": 0.00225529,
+      "rel_delta": 1.00713431,
+      "near_identical_to_fresh": false
+    },
+    "lm_head.weight": {
+      "present": true,
+      "shape": [
+        32000,
+        2048
+      ],
+      "ckpt_std": 0.0227266,
+      "fresh_std": 0.01275781,
+      "rel_delta": 1.14555076,
+      "near_identical_to_fresh": false
+    },
+    "layer_norm.weight": {
+      "present": true,
+      "shape": [
+        2048
+      ],
+      "ckpt_std": 0.02110339,
+      "fresh_std": 0.0,
+      "rel_delta": 0.04077419,
+      "near_identical_to_fresh": false
+    }
+  },
+  "D0_trained": true,
+  "reproduced_top1_token_unique": 7,
+  "reproduced_top1_tokens": [
+    12043,
+    9237,
+    12043,
+    10882,
+    28697,
+    28163,
+    24381,
+    20832,
+    24381,
+    20832
+  ],
+  "Q1_separation": {
+    "real": 0.519284,
+    "shuffled_same_family_PRIMARY": 0.550131,
+    "random_gaussian_secondary": 0.575332,
+    "delta_vs_shuffled": -0.030847,
+    "delta_vs_random": -0.056049,
+    "threshold": 0.1,
+    "pass": false
+  },
+  "Q2_margin": {
+    "real": 0.217533,
+    "shuffled_same_family_PRIMARY": 0.170919,
+    "random_gaussian_secondary": 0.28025,
+    "delta_vs_shuffled": 0.046614,
+    "delta_vs_random": -0.062716,
+    "threshold": 0.1,
+    "pass": false
+  },
+  "Q3_determinism": {
+    "bit_exact": true
+  },
+  "Q4_rotation_margin_shift": [
+    0.201499,
+    0.265285,
+    0.284087
+  ],
+  "Q4_pass": true,
+  "verdict": "AK5_EGRESS_FAIL:Q1_separation+Q2_margin",
+  "elapsed_s": 3.33,
+  "receipt_sha256": "a043ebacea9b3795aeeab717f4e70f51259b806c8a2a7849d7ee05f819095a20"
+}

@@ -152,6 +152,57 @@ Four reasons this shape, each tied to a measured constraint:
 | A-K4 | Retrieved context must improve a **generated** answer: content-presence rate with correct evidence exceeds the no-evidence arm by ≥0.50 | the recorded egress defect: 16/16 chunks gave the same top-1 token |
 | A-K5 | Matched ablation: Zone C conditioning ON vs OFF | no gain ⇒ memory layer does not transfer at this scale |
 
+**A-K5 / ARM B RESULT (2026-10-03) — ran and FAILED. Negative result, retained.**
+Implementation: `HENRI V2/experiments/verification/ak5_armb_egress_gate.py`.
+Receipt: `design/zone_a/evidence/ak5_armb_egress_receipt.json`
+(`receipt_sha256 a043ebacea9b3795aeeab717f4e70f51259b806c8a2a7849d7ee05f819095a20`).
+Scope: read-only, no optimizer step, local CPU, $0. Artifact:
+`henri_decoder_checkpoint.pt`, 799034119 B, sha256 prefix `75572389083455a3`
+(identical in `aaii-v43` and `zone-a-selfplay`).
+
+This gate measures the path the operator named — wave → text through
+`HENRINeuralEgressUnbinder` (`d_model=65536, d_hidden=2048, vocab_size=32000`) —
+not the text-splicing path A-K4 measured.
+
+| Check | Measured | Pass |
+|---|---|---|
+| D0 artifact trained (`rel_delta` > 0.5) | 1.007 (down_proj), 1.146 (lm_head) | **yes** |
+| Q1 separation vs same-family shuffled control | 0.519 vs 0.550 → **−0.031** | **NO** |
+| Q1 separation vs random control | 0.519 vs 0.575 → −0.056 | NO |
+| Q2 margin vs same-family shuffled control | 0.218 vs 0.171 → +0.047 (< 0.10) | **NO** |
+| Q2 margin vs random control | 0.218 vs 0.280 → −0.063 | NO |
+| Q3 determinism | bit-exact true | yes |
+| Q4 rotation sensitivity | +0.201 / +0.265 / +0.284 | yes |
+
+**Verdict: `AK5_EGRESS_FAIL:Q1_separation+Q2_margin`.**
+
+Three findings, stated exactly:
+
+1. **The artifact IS trained** (D0 passes). So the failure is not an untrained
+   head, and the verdict is admissible.
+2. **The wave DOES reach the head** (Q4 passes; rotation moves the margin by
+   0.20–0.28). The bridge is wired and live.
+3. **The readout does not carry content.** Content-destroyed *same-family* waves
+   — 8192 blocks shuffled, preserving every block vector and unit norm — separate
+   **as much or more** than real content-bearing waves (Δ = −0.031). When the
+   control beats or matches the treatment, the measurement is not evidence of
+   content. This is the same failure signature as the closed-vocab path
+   (specificity margin −0.21): **the readout is dominated by bulk block
+   statistics that survive content destruction.**
+
+**Did not reproduce the recorded count.** The recorded defect is
+`top1_token_unique = 1` across 16 distinct waves. This run measured
+`top1_token_unique = 7` across 10 distinct waves (tokens 12043, 9237, 10882,
+28697, 28163, 24381, 20832; two tokens repeat). Collapse is present (7 < 10) but
+not total. The original count is **not reproduced here** and must not be quoted
+as this run's result.
+
+**Design consequence.** The failure mode is readout, not wiring and not training
+absence. Per spec the next probe is **carrier suppression / readout
+normalization** against the same shuffled control — not retraining, and not a new
+egress architecture. Two independent egress paths now fail the same specificity
+test, so a third untested path is not the next move.
+
 **A-K4 METRIC AMENDED (2026-10-03) — evidence-based, disclosed.**
 The original A-K4 wording above ("emits distinct top-1 tokens above floor") was
 **falsified as a metric** by the pre-registered `m1_open_answer_gate.py`, first
