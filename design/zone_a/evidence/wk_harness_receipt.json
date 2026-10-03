@@ -1,0 +1,56 @@
+{
+  "schema": "henri.world-knowledge-harness-receipt.v1",
+  "commit": "edb07ee",
+  "what": "Remedy 3: world-knowledge harness executed end to end. Zero prior receipts.",
+  "steps": {
+    "ingest": {
+      "mode": "real",
+      "encoder": null,
+      "tx": "COMMITTED",
+      "manifest_domain": "computing",
+      "source_id": "facts.txt",
+      "source_sha256": "c398d02276b00b105bd0ef53dcdd5b574d67b659fb9a4ceff606349e6f8ffdbc",
+      "source_bytes": 1110,
+      "note": "mode=real was BLOCKED_NO_ENCODER until K5_INGEST_ENCODER=1. Fixture mode was tried first and its row DELETED: the fixture projection differs from the query codec, so it cannot be retrieved."
+    },
+    "query": {
+      "domain": "computing",
+      "k": 2,
+      "returned": 1,
+      "chunk_id": "facts.txt:0",
+      "char_span": "0:1110",
+      "chunk_sha256_matches_manifest": true,
+      "cosine": 0.06231020685412336
+    },
+    "generate": {
+      "answer": "The HENRI wave state has 65536 dimensions.",
+      "answer_chars": 42,
+      "provenance_chunks": 1,
+      "device": "cpu",
+      "dtype": "torch.bfloat16",
+      "total_params": 1543714304,
+      "trainable_params": 0
+    }
+  },
+  "grounded": true,
+  "limits": [
+    "Corpus is 1 operator-authored note in domain 'computing'. Not a knowledge base.",
+    "The answer restates retrieved text; it is retrieval grounding, not capability.",
+    "No AAII score. No benchmark score. No SOTA claim.",
+    "CPU only. The 1.5B text model is not a VLA backbone."
+  ],
+  "known_defect": {
+    "field": "telemetry.model_id",
+    "observed": "Qwen/Qwen3-VL-8B-Instruct",
+    "loaded_dir_was": "Qwen2.5-1.5B-Instruct",
+    "cause": "model_id reports the DEFAULT_MODEL_ID constant, not the loaded directory.",
+    "impact": "provenance mislabel. total_params (1543714304) is correct, so the count is right while the identity string is wrong.",
+    "status": "RECORDED, NOT FIXED"
+  },
+  "self_caught_defects_this_cycle": [
+    "Blind Qwen3VL load over a qwen2 checkpoint did NOT raise; it built a randomly initialized 11.994B skeleton. Prior generate output RETRACTED. Fixed by an exact architecture gate plus a zero-missing-keys gate.",
+    "Class-name-only arch check was INSUFFICIENT: config.json edited to declare Qwen3VL over qwen2 weights passed it. Gate 2 refuses it (706 missing keys).",
+    "An orphaned 21.63 GiB process survived its killed session and held the host at 94% RAM. Killed by PID; RAM returned to 25%."
+  ],
+  "receipt_sha256": "6e3345f58ace050bcdf0b33402660c65f01d04adeab43d164995a3475bc1b03f"
+}
