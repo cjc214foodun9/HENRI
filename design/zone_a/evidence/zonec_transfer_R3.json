@@ -1,0 +1,108 @@
+{
+  "experiment": "zone_c_transfer_R8192",
+  "commit": "42c2d943408237c595a4af4c9ac4179b8a9921ef",
+  "dim_complex": 32768,
+  "num_blocks": 8192,
+  "family": "ast",
+  "payload_bytes": 262144,
+  "preregistered": {
+    "tau": 0.9,
+    "blend": 0.3,
+    "top_k": 4,
+    "budget": 120,
+    "n_demo": 4,
+    "sigma": 0.3,
+    "lr": 0.15,
+    "obs_noise": 3.0,
+    "calibration_ref": "zone_c_transfer_r1_calibrate.py (run before freeze)",
+    "calibration_lr_choice": "0.05 fails 0/3 seeds; 0.15 converges 3/3",
+    "calibration_noise_choice": "0.0 is vacuous (corr 1.0000); 3.0 gives A0 steps 16/11/17",
+    "delta_k1_frac": 0.15,
+    "delta_k2_frac": 0.075,
+    "seeds": [
+      20261002,
+      20261003,
+      20261004
+    ],
+    "sample_definition": "one gradient presentation of a 64-example batch",
+    "query_signal": "demos only; m_true never used to build a query",
+    "mechanism": "m_init = unit((1-0.3)*m_hat + 0.3*mean(retrieved))"
+  },
+  "conditions": {
+    "structured": {
+      "summary": {
+        "median_steps": {
+          "A0": 15.0,
+          "A1": 9.0,
+          "A2": 16.0,
+          "A3": 16.0
+        },
+        "mean_final_corr": {
+          "A0": 0.9024789702768127,
+          "A1": 0.9031255921969811,
+          "A2": 0.9028977751731873,
+          "A3": 0.9029724104329944
+        },
+        "n_per_arm": {
+          "A0": 192,
+          "A1": 192,
+          "A2": 192,
+          "A3": 192
+        },
+        "K1": true,
+        "K2": true,
+        "K3": true,
+        "K4": true
+      },
+      "ingested": 192,
+      "n_novel": 192,
+      "retrieval_integrity": true,
+      "nonvacuous": true,
+      "deleted": 192
+    },
+    "unstructured": {
+      "summary": {
+        "median_steps": {
+          "A0": 15.0,
+          "A1": 15.0,
+          "A2": 16.0,
+          "A3": 16.0
+        },
+        "mean_final_corr": {
+          "A0": 0.9028043442716202,
+          "A1": 0.9027928595120708,
+          "A2": 0.9030647684509555,
+          "A3": 0.902739132133623
+        },
+        "n_per_arm": {
+          "A0": 192,
+          "A1": 192,
+          "A2": 192,
+          "A3": 192
+        },
+        "K1": false,
+        "K2": false,
+        "K3": true,
+        "K4": false
+      },
+      "ingested": 192,
+      "n_novel": 192,
+      "retrieval_integrity": true,
+      "nonvacuous": true,
+      "deleted": 192
+    }
+  },
+  "store_rows_before": 9,
+  "family_ast_before": 0,
+  "store_rows_after": 9,
+  "family_ast_after": 0,
+  "verdict_structured": "T1_SUPPORTED",
+  "verdict_unstructured": "T1_FALSIFIED",
+  "interpretation": "A structured pass with an unstructured fail shows the mechanism exploits shared task structure: the cache transfers content, not a generic warm start. Both passes or both fails are weaker.",
+  "limits": [
+    "Synthetic clustered diagonal-operator family; not the full HENRI model.",
+    "CPU only. No latency claim, no benchmark score, no AAII result.",
+    "R1 is dim 1024. A pass at R1 is NOT a pass at R3 (dim 65536)."
+  ],
+  "receipt_sha256": "c9de9188c5731e051c5c534d8bc5383b7f8cf73d20702bea7297d4d4813ba467"
+}
