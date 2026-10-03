@@ -36,7 +36,11 @@ from pathlib import Path
 
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# DEFECT FIXED (2026-10-03): parents[1] is experiments/, so `import
+# henri_vla_tokenizer` raised ModuleNotFoundError. This is why the gate was
+# "never run" for 4 months -- it could not start. parents[2] is HENRI V2.
+_HENRI_V2 = str(Path(__file__).resolve().parents[2])
+sys.path.insert(0, _HENRI_V2)
 import henri_vla_tokenizer as vt
 
 # ------------------------------------------------------------ pre-registration
