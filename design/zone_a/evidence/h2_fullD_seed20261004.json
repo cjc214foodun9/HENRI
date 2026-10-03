@@ -1,0 +1,57 @@
+{
+  "experiment": "H2_universal_weight_subspace",
+  "preregistered_kill": "subspace < free by margin",
+  "config": {
+    "dim": 65536,
+    "q": 16,
+    "n_tasks": 24,
+    "test_task": [
+      2,
+      2,
+      3
+    ],
+    "n_fit": 96,
+    "n_test": 32,
+    "margin": 0.05,
+    "run_seed": 20261004,
+    "num_blocks_env": "8192"
+  },
+  "part_a_learned_subspace": {
+    "top_q_energy_learned": 0.757739,
+    "top_q_energy_random_control": 0.673767,
+    "chance_level_q_over_k": 0.666667
+  },
+  "part_b_transfer": {
+    "results": {
+      "free_train": 0.75452,
+      "free_test": 0.753799,
+      "subspace_train": 0.058326,
+      "subspace_test": 0.047585,
+      "shuffled_test": 0.083823,
+      "mean_per_task_fit_learned": 0.810318
+    },
+    "held_out_solution_span_energy": 0.039017,
+    "held_out_solution_span_residual": 0.980297
+  },
+  "params": {
+    "free_real": 131072,
+    "subspace_real": 32,
+    "subspace_fraction": 0.000244
+  },
+  "gates": {
+    "H2A_LEARNED_CONCENTRATES_VS_RANDOM": false,
+    "H2A_RANDOM_CONTROL_NEAR_CHANCE": true,
+    "H2_SUBSPACE_MATCHES_FREE": false,
+    "H2_PARAMS_LE_1PCT": true,
+    "H2_SUBSPACE_BEATS_SHUFFLED": false,
+    "H2_FREE_BEATS_SHUFFLED": true
+  },
+  "verdict": "H2A_NO_SHARED_SUBSPACE",
+  "limits": [
+    "CPU only; reduced dimension; no GPU; no latency claim.",
+    "Diagonal hypothesis class, not a trained foundation backbone.",
+    "M2 is a claim about learned weight matrices; this instantiates the",
+    "closest testable analogue in HENRI's elementwise task family.",
+    "No ARC score, no SOTA claim."
+  ]
+}

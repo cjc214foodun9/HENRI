@@ -1,0 +1,123 @@
+{
+  "experiment": "H3_presnap_probe",
+  "preregistered_kill": "snapped tokens detect equally well",
+  "config": {
+    "dim": 65536,
+    "steps": 24,
+    "n_samples": 64,
+    "shift_at": 4,
+    "drift": 0.12,
+    "noise": 0.05,
+    "cov_rel_threshold": 0.25,
+    "snap_change_fraction": 0.1,
+    "run_seed": 20261002,
+    "dim_env": "65536"
+  },
+  "detection": {
+    "presnap_detect_step": 5,
+    "snap_detect_step": 2,
+    "presnap_statistic": [
+      0.0,
+      0.2164,
+      0.2234,
+      0.2254,
+      0.2223,
+      0.2994,
+      0.379,
+      0.4425,
+      0.4782,
+      0.4793,
+      0.4355,
+      0.3691,
+      0.2983,
+      0.2892,
+      0.2451,
+      0.2552,
+      0.2622,
+      0.2686,
+      0.2572,
+      0.2729,
+      0.2814,
+      0.2531,
+      0.2568,
+      0.278
+    ],
+    "snap_rechange_fraction": [
+      0.0,
+      0.0781,
+      0.1406,
+      0.0781,
+      0.0938,
+      0.125,
+      0.0781,
+      0.0938,
+      0.3906,
+      0.9219,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gates": {
+    "H3_PRESNAP_DETECTS_WITHIN_5": true,
+    "H3_PRESNAP_FASTER_THAN_SNAP": false,
+    "H3_SNAP_IS_BLIND_EARLY": false,
+    "H3b_WITHIN_CELL_BLINDNESS_EXISTS": false
+  },
+  "h3b_within_cell": {
+    "sweep": [
+      {
+        "eps": 0.001,
+        "token_change_fraction": 0.015625,
+        "presnap_spectrum_rel_change": 0.000167
+      },
+      {
+        "eps": 0.01,
+        "token_change_fraction": 0.015625,
+        "presnap_spectrum_rel_change": 0.00149
+      },
+      {
+        "eps": 0.03,
+        "token_change_fraction": 0.03125,
+        "presnap_spectrum_rel_change": 0.002844
+      },
+      {
+        "eps": 0.1,
+        "token_change_fraction": 0.15625,
+        "presnap_spectrum_rel_change": 0.014825
+      },
+      {
+        "eps": 0.3,
+        "token_change_fraction": 0.34375,
+        "presnap_spectrum_rel_change": 0.084854
+      }
+    ],
+    "blind_zone_exists": false,
+    "blind_zone_eps": []
+  },
+  "verdict": "H3_FALSIFIED",
+  "interpretation": [
+    "H3 (accumulated drift detection) is FALSIFIED: the coarse snap DOES",
+    "respond to large drift, and slightly earlier than the covariance probe.",
+    "That is a real negative for the 'pre-snap is faster' claim as written.",
+    "H3b tests the corpus claim literally: within-cell blindness. If a",
+    "mutation leaves snapped tokens bit-identical while the pre-snap",
+    "statistic moves, the probe carries information the snap cannot."
+  ],
+  "limits": [
+    "CPU only; synthetic stream; detection thresholds declared, not tuned.",
+    "Tests detectability mechanics, not model quality.",
+    "No GPU; no latency claim."
+  ]
+}
