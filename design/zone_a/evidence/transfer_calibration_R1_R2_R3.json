@@ -1,0 +1,41 @@
+{
+  "schema": "henri.transfer-calibration-evidence.v1",
+  "commit": "ef9eba8",
+  "purpose": "Record the pre-freeze calibration for each transfer rung. Calibration is a HARD gate: two vacuity defects were caught this way and a third is possible if constants are reused blindly across scale.",
+  "calibration_script": "HENRI V2/experiments/verification/zone_c_transfer_r1_calibrate.py",
+  "rungs": {
+    "R1": {
+      "dim_complex": 1024, "num_blocks": 256,
+      "fit_lr": {"0.05": "0/3 converged in 400 steps", "0.15": "3/3, steps 54/53/61", "0.30": "3/3, steps 14/14/15", "0.60": "3/3, steps 5/5/5"},
+      "obs_noise": {"0.0": "corr 1.0000 EXACT, A0 steps [1,1,1] -> VACUOUS", "1.0": "corr 0.9004, A0 [1,1,1]", "2.0": "corr 0.6797, A0 [8,6,6]", "3.0": "corr 0.5174, A0 [16,11,17] -> USED"},
+      "chosen": {"lr": 0.15, "obs_noise": 3.0},
+      "verdict": "T1_SUPPORTED structured; T1_FALSIFIED unstructured",
+      "receipt_sha256_prefix": "f196de7ea2f7f300"
+    },
+    "R2": {
+      "dim_complex": 4096, "num_blocks": 1024,
+      "fit_lr": {"0.15": "3/3 converged, steps 55/54/54", "0.30": "3/3, steps 14/14/14"},
+      "obs_noise": {"0.0": "corr 1.0000 EXACT, A0 [1,1,1] -> VACUOUS", "2.0": "corr 0.6861, A0 [7,7,6]", "3.0": "corr 0.5192, A0 [15,15,15] -> USED"},
+      "chosen": {"lr": 0.15, "obs_noise": 3.0},
+      "status": "run launched at commit ef9eba8; receipt zonec_transfer_NB1024_receipt.json"
+    },
+    "R3": {
+      "dim_complex": 32768, "num_blocks": 8192,
+      "fit_lr": {"0.15": "3/3 converged, steps 57/56/57", "0.30": "3/3, steps 15/14/15", "0.60": "3/3, steps 5/5/5"},
+      "obs_noise": {"0.0": "corr 1.0000 EXACT, A0 [1,1,1] -> VACUOUS", "2.0": "corr 0.6806, A0 [7,7,7]", "3.0": "corr 0.5114, A0 [16,15,16] -> USED", "5.0": "corr 0.3304, A0 [28,28,29]"},
+      "chosen": {"lr": 0.15, "obs_noise": 3.0},
+      "note": "R3 is the production-analogue rung: num_blocks=8192 gives the stored engram width the reader validates (8192*8*4 = 262144 bytes)."
+    }
+  },
+  "finding": {
+    "statement": "The R1 constants (lr=0.15, obs_noise=3.0) transfer across a 32x scale change.",
+    "evidence_class": "OBSERVED",
+    "why_calibration_stays_mandatory": "obs_noise=0.0 recovers the operator EXACTLY at every rung (corr 1.0000, A0 steps [1,1,1]), which starts every arm at tau and makes the test vacuous. That failure is invisible without running the calibration. Reusing constants without checking would risk a third silent vacuity."
+  },
+  "memory_note": "_proj_matrix(65536) materializes [2000,65536] f32 = 500 MB, cached. Measured host headroom before each run; never spawn during another full-D job.",
+  "limits": [
+    "Synthetic clustered diagonal-operator family; not the full HENRI model.",
+    "CPU only. No latency, benchmark, or AAII claim.",
+    "An R1 pass is NOT an R3 pass. Report the rung."
+  ]
+}
