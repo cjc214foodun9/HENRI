@@ -364,7 +364,17 @@ append-only, so no history was rewritten.
 ## 9. Limits of this contract
 
 - No AAII v4.3 score is claimed, predicted, or implied. The benchmark has not been run.
-- No latency figure is validated. No GPU was used. Every µs figure is BLOCKED.
+- Latency **is now measured** on one RTX 5090 (§11). No gate passes. No second GPU class
+  was tested; these are software kernels, not optoelectronic hardware.
+- L1's **12.8 µs stays BLOCKED, not refuted.** The persistent kernel it names is
+  design-only (`tau_budget_analysis` is analytic). Timing `fused_relax` — the
+  one-launch-per-step *correctness* path — would measure a different quantity and
+  manufacture a pass. Not done.
+- D22's unified **50 µs gate is a different quantity** (Phase 8.18 SU(3) Triton kernel,
+  27.79 µs, ledger `69313c8`, JSON sha256 `b51a0e09…`). §11's 195.55 µs does **not**
+  refute it. Neither direction was substituted.
+- Full-D H2/H3 ran **one seed** each (20261002). A 3-seed replication was requested and
+  is incomplete. H2 seeds 20261003/20261004 ran (CPU, free).
 - M3, M4, M5 are **source-observed mechanisms**, not HENRI results. Adoption is not
   measured improvement.
 - Paper numbers (4.3×, 6.6×, depth 128, 1,100 models) are **what the authors report**.

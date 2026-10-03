@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HENRI end-to-end and the Zone C boundary-vector cache</title>
+<style>
+  :root{--ink:#12161c;--mut:#5a6472;--line:#d7dde5;--bg:#f7f9fb;--ok:#0b6e4f;
+        --warn:#8a5a00;--bad:#a12828;--acc:#1f4f8f;--card:#fff;}
+  *{box-sizing:border-box}
+  body{margin:0;padding:2.2rem 1.2rem 4rem;background:var(--bg);color:var(--ink);
+       font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  main{max-width:960px;margin:0 auto}
+  h1{font-size:1.7rem;line-height:1.25;margin:0 0 .35rem}
+  h2{font-size:1.18rem;margin:2.3rem 0 .7rem;padding-top:1rem;border-top:2px solid var(--line)}
+  h3{font-size:1rem;margin:1.4rem 0 .4rem}
+  p,li{max-width:76ch}
+  .sub{color:var(--mut);font-size:.94rem;margin:0 0 1.4rem}
+  code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+  code{background:#eaeef3;padding:.08rem .3rem;border-radius:3px;font-size:.89rem}
+  pre{background:#0f1319;color:#e6edf3;padding:.9rem 1rem;border-radius:7px;overflow-x:auto;font-size:.85rem}
+  pre code{background:none;color:inherit;padding:0}
+  table{border-collapse:collapse;width:100%;margin:.8rem 0 1.1rem;font-size:.92rem;background:var(--card)}
+  th,td{border:1px solid var(--line);padding:.5rem .6rem;text-align:left;vertical-align:top}
+  th{background:#eef2f6;font-weight:600}
+  .tag{display:inline-block;font-size:.71rem;font-weight:700;letter-spacing:.04em;padding:.1rem .42rem;border-radius:3px}
+  .ok{background:#d8f0e6;color:var(--ok)} .wr{background:#fbeecd;color:var(--warn)}
+  .bd{background:#f8dcdc;color:var(--bad)} .ds{background:#dde8f6;color:var(--acc)}
+  .co{border-left:4px solid var(--acc);background:var(--card);padding:.85rem 1rem;margin:1.1rem 0;border-radius:0 6px 6px 0}
+  .co.bad{border-left-color:var(--bad)} .co.warn{border-left-color:var(--warn)} .co.good{border-left-color:var(--ok)}
+  .co h4{margin:.1rem 0 .4rem;font-size:.97rem}
+  .flow td{border:none;border-bottom:1px solid var(--line);padding:.42rem .5rem}
+  .flow tr:last-child td{border-bottom:none}
+  .flow{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:1rem;overflow-x:auto}
+  .zone{font-weight:700;white-space:nowrap}
+  .where{font-family:ui-monospace,monospace;font-size:.83rem}
+  .vr{color:var(--bad);font-weight:600} .db{color:var(--acc);font-weight:600} .cpu{color:var(--ok);font-weight:600}
+  .small{font-size:.87rem;color:var(--mut)}
+  @media(max-width:640px){body{padding:1.2rem .8rem 3rem}table{font-size:.84rem}}
+</style>
+</head>
+<body>
+<main>
+
+<h1>HENRI end-to-end and the Zone C boundary-vector cache</h1>
+<p class="sub">Report 2026-10-03 &middot; branch <code>feat/phase1-transduction</code> &middot; base <code>main a039095</code> (untouched)<br>
+Evidence: <span class="tag ok">OBSERVED</span> measured &middot; <span class="tag ds">DESIGNED</span> not run &middot;
+<span class="tag wr">BLOCKED</span> cannot run here &middot; <span class="tag bd">FALSIFIED</span> tested, failed</p>
+
+<div class="co good">
+<h4>Headline</h4>
+<p>The storage and retrieval path already honors your constraint. The 65,536-dimension vector never enters GPU VRAM on
+that path. The 32&nbsp;GiB crash came from an <em>experiment harness</em>, not from Zone C. That harness is now fixed.</p>
+</div>
+
+<h2>1. What happened in the last run</h2>
+
+<table>
+<tr><th>Action</th><th>Outcome</th><th>Class</th></tr>
+<tr><td>Latency probe, RTX 5090</td><td>Measured. Committed <code>b66d443</code>, receipt <code>f3935352fe46b9a0&hellip;</code></td><td><span class="tag ok">OBSERVED</span></td></tr>
+<tr><td>H2 at full D=65536</td><td>Three seeds completed, free on CPU. All <code>H2A_NO_SHARED_SUBSPACE</code></td><td><span class="tag ok">OBSERVED</span></td></tr>
+<tr><td>H3 at full D=65536</td><td>Crashed. Requested 34,359,738,368 bytes.</td><td><span class="tag bd">FAILED</span></td></tr>
+<tr><td>H3 after fix</td><td>Completes. Committed <code>431845a</code>. Receipt <code>fe69f09cc8e0e053&hellip;</code></td><td><span class="tag ok">OBSERVED</span></td></tr>
+</table>
+
+<div class="co bad">
+<h4>The number states the whole defect</h4>
+<pre><code>34359738368 bytes / 8 = 4,294,967,296 = 65536^2 = D x D</code></pre>
+<p>A <code>D x D</code> complex64 object at <code>D=65536</code> is 32&nbsp;GiB. The host has 31&nbsp;GiB. The allocator
+refused with <code>DefaultCPUAllocator: not enough memory</code>. The host then page-thrashed.</p>
+</div>
+
+<p>The defect sat in two lines of the H3 harness:</p>
+<pre><code>base_cov.conj().transpose(0, 1) @ base_cov   # [D,64] @ [64,D] -> [D,D]</code></pre>
+<p>The fix computes a <code>[64,64]</code> Gram instead. The nonzero eigenvalues of <code>X^H X</code> equal those of
+<code>X X^H</code>. <code>N=64 &lt;&lt; D=65536</code>, so the result is <strong>exact, not approximate</strong>.</p>
+
+<h2>2. HENRI end-to-end as a machine-learning algorithm</h2>
+
+<table>
+<tr><th>Stage</th><th>Mechanism</th><th>Class</th></tr>
+<tr><td><strong>Ingress</strong></td><td>Clifford tokenizer Cl(3,0): 8192 blocks x 8 slots = 65,536 complex dimensions. Unit per-block norm.</td><td><span class="tag ok">OBSERVED</span></td></tr>
+<tr><td><strong>Transition</strong></td><td><code>K = diag(m) + A S B&dagger;</code>, <code>m = exp(i&theta;)</code>, <code>|m| = 1</code>. Full rank at O(D) parameters.</td><td><span class="tag ok">OBSERVED</span></td></tr>
+<tr><td><strong>Veto</strong></td><td>Sagnac homodyne, <code>&Delta; = 0.35</code>, fail-closed. Match &delta;=0.0 passes; all-wrong &delta;=0.5 blocks.</td><td><span class="tag ok">OBSERVED</span></td></tr>
+<tr><td><strong>Egress</strong></td><td>Hopfield cleanup, <code>&beta; = 26.10</code>, <code>dim = 2D</code>. Snaps the wave to a codebook.</td><td><span class="tag ok">OBSERVED</span></td></tr>
+<tr><td><strong>Memory</strong></td><td>Zone C TimescaleDB. Append-only engram store. Boundary axioms shape EFE scoring.</td><td><span class="tag ds">DESIGNED</span></td></tr>
+</table>
+
+<p>Why the transition kernel takes that shape. A sealed measurement (<code>5b9b5cd</code>) forces it:</p>
+<table>
+<tr><th>Arm</th><th>Params</th><th>Trained</th><th>Shuffled</th><th>Margin</th></tr>
+<tr><td>FACTORIZED r=64</td><td>524,352</td><td>0.0583</td><td>0.0515</td><td>+0.0067 memorizes</td></tr>
+<tr><td>DIAGONAL full-rank</td><td>4,096</td><td><strong>0.7521</strong></td><td>0.1438</td><td><strong>+0.6083 learns</strong></td></tr>
+</table>
+<p>Rank and parameter count differ. A diagonal operator is full-rank at O(D) cost. Reading
+&ldquo;low-dimensional subspace&rdquo; as &ldquo;everything is low-rank&rdquo; fails for elementwise transforms.</p>
+
+<div class="co warn">
+<h4>Wiring is not capability</h4>
+<p>The CPU end-to-end rig exists and ran: <code>experiments/verification/zone_abc_cpu_e2e_observed.json</code>.
+All five stages report <code>ENGAGED</code>, <code>errors: []</code>. But the receipt declares
+<code>evidence_class: OBSERVED_WIRING_ONLY</code> and <code>score_claim: null</code>. It also runs at reduced scale
+(<code>num_blocks=256</code>, <code>d_model=2048</code>), not 65,536. It proves the pipe connects. It does not prove
+HENRI solves anything.</p>
+</div>
+
+<h2>3. Your Zone C design, checked against code</h2>
+
+<table>
+<tr><th>Your requirement</th><th>Status in code</th><th>Evidence</th></tr>
+<tr><td>65,536-dim vectors stored in Zone C TimescaleDB</td>
+    <td><strong>Already true</strong></td>
+    <td><code>phylogenetic_engrams_65536.engram_wave_bytes BYTEA</code>. Payload <code>[8192,8]</code> float32 = 262,144 bytes. Schema comment states this exact contract.</td></tr>
+<tr><td>Never loaded into GPU VRAM</td>
+    <td><strong>Already true on the storage path</strong></td>
+    <td><code>wave_to_bytes</code> calls <code>.cpu()</code>. <code>bytes_to_wave</code> uses <code>np.frombuffer</code> on CPU. <code>decode_wave_payload</code> the same. No CUDA transfer in the engram read path.</td></tr>
+<tr><td>Indexed for fast retrieval at high dimension</td>
+    <td><strong>Already true</strong></td>
+    <td><code>semantic_index VECTOR(2000)</code> with an HNSW index. Query encodes a wave, projects to 2000 dims, then fetches the full BYTEA only for top-k.</td></tr>
+<tr><td>Boundary-inducing vectors that shape the latent space</td>
+    <td><strong>Partly built</strong></td>
+    <td><code>boundary_axioms</code> table plus <code>zone_c_boundary_axiom_loader.py</code>. 11 canonical axioms. They feed EFE pragmatic scoring at <code>production_arc_run.py:1879</code>.</td></tr>
+<tr><td>Fast topology learning for a novel question</td>
+    <td><strong>Not demonstrated</strong></td>
+    <td>Retrieval bridge is default-OFF (<code>HENRI_ZONEC_BRIDGE=0</code>). No measurement shows a novel question solved faster because of Zone C.</td></tr>
+</table>
+
+<div class="co good">
+<h4>The enabling lemma is already measured</h4>
+<p>The memory split works because no dense square is ever formed. My full-D probe retained <strong>24 MiB</strong> where the
+dense form would need 34.4&nbsp;GiB. One working wave is <strong>0.5&nbsp;MiB</strong>. The projection matrix is
+<code>[2000, 65536]</code> = <strong>500&nbsp;MiB</strong>. Nothing here is a 32&nbsp;GiB object.</p>
+</div>
+
+<h3>What lives where</h3>
+<table>
+<tr><th>Object</th><th>Shape</th><th>Size</th><th>Lives in</th></tr>
+<tr><td>Stored engram vectors</td><td><code>[N, 8192, 8]</code> f32</td><td>N x 256 KiB</td><td><span class="db">TimescaleDB</span></td></tr>
+<tr><td>HNSW index vectors</td><td><code>[N, 2000]</code> f32</td><td>N x 8 KiB</td><td><span class="db">TimescaleDB pgvector</span></td></tr>
+<tr><td>Projection matrix</td><td><code>[2000, 65536]</code> f32</td><td>500 MiB</td><td><span class="cpu">CPU (follows input device)</span></td></tr>
+<tr><td>Boundary axioms</td><td><code>[11, 8192, 8]</code> f32</td><td>2.75 MiB</td><td><span class="vr">GPU VRAM when enabled</span></td></tr>
+<tr><td>One working wave</td><td><code>[1, 65536]</code> c64</td><td>0.5 MiB</td><td><span class="cpu">CPU or streamed</span></td></tr>
+<tr><td>Retrieved top-k engram</td><td><code>[8192, 8]</code> f32</td><td>256 KiB each</td><td><span class="vr">Copied to VRAM to condition</span></td></tr>
+<tr><td>Any <code>[D, D]</code> object</td><td>square</td><td>32 GiB</td><td><span class="vr">must never exist</span></td></tr>
+</table>
+<div class="co warn">
+<h4>Precise correction to the "never in VRAM" rule</h4>
+<p>Your stored corpus is never loaded whole. That part holds. But a per-step conditioning vector does cross into VRAM.
+<code>production_arc_run.py:1843</code> runs <code>recalled = _hits[0][0].to(DEVICE)</code>, then blends
+<code>state_wave = 0.7*state_wave + 0.3*recalled</code>. The same pattern appears at line 1437 for <code>goal_wave</code>.</p>
+<p>That transfer is <strong>256 KiB</strong>, not 32 GiB. So the rule you want is narrower than "never":</p>
+<ul>
+<li><strong>Never</strong> load the stored corpus whole. Already true.</li>
+<li><strong>Never</strong> form any <code>[D, D]</code> object. This is the 32 GiB crash. Fix landed (<code>431845a</code>).</li>
+<li><strong>Allowed</strong> to transfer a handful of individual 256 KiB engrams to condition one step.</li>
+</ul>
+</div>
+
+<div class="co good">
+<h4>Your constraint holds for the corpus</h4>
+<p>The write path calls <code>.cpu()</code>. The read path uses <code>np.frombuffer</code> on CPU. The 2000-dim HNSW index
+does the search. The full 65,536-dim BYTEA is fetched only for the top-k rows. That is the design you describe, and it is
+already in the code.</p>
+</div>
+
+<h2>4. The gap I must name</h2>
+<p>Your vision has four parts. Three are built. One is not.</p>
+<ul>
+<li><strong>Storage.</strong> Built. Full-D vectors persist as BYTEA.</li>
+<li><strong>Never in VRAM.</strong> Built on the retrieval path. Verified in source.</li>
+<li><strong>Boundary vectors.</strong> Partly built. Eleven fixed axioms exist. They are canonical, not learned per task.</li>
+<li><strong>Fast topology learning.</strong> Not built. No experiment ties Zone C retrieval to better novel-question
+performance. This is the central claim, and it is untested.</li>
+</ul>
+
+<div class="co warn">
+<h4>Operational note</h4>
+<p>Docker Desktop is not running on this host. The live TimescaleDB container is therefore down. The engram store is not
+serving right now. <code>docker/zonec-dev/docker-compose.yml</code> holds the development stack.</p>
+</div>
+
+<h2>5. Structural risk of the same defect class</h2>
+<p>The 32&nbsp;GiB crash was one instance of a pattern. A repo scan found other literal
+<code>[D, D]</code> constructions:</p>
+<table>
+<tr><th>File</th><th>Line</th><th>Guarded?</th></tr>
+<tr><td><code>henri_functor_flow.py</code></td><td><code>torch.randn(D, D, device=device)</code></td><td>Small D today (128). No guard.</td></tr>
+<tr><td><code>henri_geodesic_covariance_alignment.py</code></td><td><code>torch.randn(D, D, device=device)</code></td><td>Small D today (64). No guard.</td></tr>
+<tr><td><code>tests/contract/test_g1_topological_engine.py</code></td><td><code>torch.randn(D, D, generator=g)</code></td><td>Small D today. No guard.</td></tr>
+</table>
+<p>A single guard test would forbid any <code>[D, D]</code> allocation at production <code>D</code>. That protects your
+Zone C contract structurally, not by convention.</p>
+
+<h2>6. Not established</h2>
+<ul>
+<li>No latency gate passes. 195.55&nbsp;&micro;s against a 50&nbsp;&micro;s target is a real FAIL.</li>
+<li>The 12.8&nbsp;&micro;s figure stays <span class="tag wr">BLOCKED</span>. Its persistent kernel is design-only.</li>
+<li>The D22 50&nbsp;&micro;s gate measures a different object. Not refuted.</li>
+<li>Three seeds ran for H2. One seed ran for H3. No three-seed H3 replication exists.</li>
+<li>No benchmark score. No AAII v4.3 result. No SOTA claim.</li>
+<li>No optoelectronic hardware. These are software kernels on one GPU.</li>
+</ul>
+
+<h2>7. Next actions</h2>
+<table>
+<tr><th>#</th><th>Action</th><th>Why</th></tr>
+<tr><td>1</td><td>Add a repo-wide <code>[D, D]</code> guard test</td><td>Protects the Zone C memory contract</td></tr>
+<tr><td>2</td><td>Start the dev TimescaleDB stack</td><td>Your vectors must be stored; the store is down</td></tr>
+<tr><td>3</td><td>Read the writer and reader to confirm stored dimension and device</td><td>Settles the never-in-VRAM claim in code</td></tr>
+<tr><td>4</td><td>Design a novel-question transfer test through Zone C retrieval</td><td>Tests the one unproven part of your vision</td></tr>
+</table>
+
+<p class="small">Governance: Jev typed advice is advisory. Deterministic schema, proof, and security checks plus human
+approval remain required. Missing model advice is not agreement.</p>
+
+</main>
+</body>
+</html>
