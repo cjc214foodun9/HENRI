@@ -1,95 +1,125 @@
 {
-  "schema": "henri.ak5-provenance-correction.v1",
-  "ts_utc": "2026-10-03T10:40:00Z",
-  "supersedes_interpretation_of": "AK5_EGRESS_FAIL:Q1_separation+Q2_margin",
-  "corrected_interpretation": "AK5_BLOCKED_DEGENERATE_TRAINING_TARGET",
-  "why": "The checkpoint under test was never trained on a valid content->token mapping. Its measured content-blindness is a property of its training target, not evidence about wave->text egress in principle.",
+  "schema": "henri.ak5-provenance-correction.v2",
+  "ts_utc": "2026-10-03T11:05:00Z",
+  "supersedes": "henri.ak5-provenance-correction.v1",
+  "corrects_interpretation_of": "AK5_EGRESS_FAIL:Q1_separation+Q2_margin",
+  "corrected_classification": "AK5_BLOCKED_DEGENERATE_TRAINING_TARGET_AND_FAMILY_MISMATCH",
+  "headline": "The A-K5 checkpoint was never trained on a valid content->token mapping, and no content-grounded egress head exists on this host. Wave->text egress is UNMEASURED, not FALSIFIED.",
 
-  "checkpoint": {
+  "checkpoint_under_test": {
     "path_carried": "HENRI V2/models/henri_decoder_checkpoint.pt",
     "bytes": 799034119,
     "sha256": "75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060",
-    "keys": ["down_proj.weight", "layer_norm.bias", "layer_norm.weight", "lm_head.weight"],
-    "shapes": {"down_proj": [2048, 65536], "lm_head": [32000, 2048]},
-    "identical_in": ["aaii-v43", "phase1-transduction", "zone-a-selfplay"],
-    "note_integer_truncated_twin": {
-      "path": "HENRI 7B SWARM/HENRI V2/checkpoints/henri_egress_unbinder_sgld_500.pt",
-      "bytes": 799034179,
-      "bytes_delta": 60
-    }
+    "state_dict_keys": ["down_proj.weight", "layer_norm.weight", "layer_norm.bias", "lm_head.weight"],
+    "shapes": {"down_proj.weight": [2048, 65536], "layer_norm.weight": [2048], "layer_norm.bias": [2048], "lm_head.weight": [32000, 2048]},
+    "identical_in": ["aaii-v43", "phase1-transduction", "zone-a-selfplay"]
   },
 
-  "finding_1_degenerate_target_salted_hash": {
+  "finding_1_random_waves_random_labels": {
+    "source_file": "HENRI V2/scripts/training/train_sgld_500_runner.py",
+    "source_lines": {"86": "X_demo = F.normalize(torch.randn(batch_size, D, device=device), p=2, dim=-1)",
+                     "87": "Y_demo = F.normalize(torch.randn(batch_size, D, device=device), p=2, dim=-1)",
+                     "88": "a_target = torch.randint(0, vocab_size, (batch_size,), device=device)",
+                     "159": "torch.save(unbinder.state_dict(), \"models/henri_decoder_checkpoint.pt\")"},
+    "defect": "Dense Gaussian waves and uniformly random labels. No content->token correspondence exists in the training signal at all.",
+    "consequence": "No content can be present in the readout, regardless of wave family or readout design."
+  },
+
+  "finding_2_salted_hash_target": {
     "source_file": "HENRI V2/scripts/training/train_henri_decoder.py",
     "source_line": 54,
     "rule": "target_id = hash(text_target) % vocab_size",
-    "defect": "CPython hash() of str is SALTED per-process (PYTHONHASHSEED). The label->text mapping is not reproducible and cannot be inverted from the checkpoint.",
+    "defect": "CPython hash() of str is SALTED per-process (PYTHONHASHSEED). Label->text is not reproducible and is not invertible from the checkpoint.",
     "declared_vocab_size": 32000,
     "distinct_training_classes": 35,
-    "coverage_ratio": 0.00109,
-    "corroborating_receipt": "HENRI V2/experiments/verification/A2_MOCK_VOCABULARY_FINDING_20260916T181541Z.json",
+    "coverage_ratio": 0.00109
+  },
+
+  "finding_3_prior_receipt": {
+    "receipt": "HENRI V2/experiments/verification/A2_MOCK_VOCABULARY_FINDING_20260916T181541Z.json",
     "same_checkpoint_sha256": true,
     "prior_verdict": "MOCK_TARGET_VOCABULARY_CONFIRMED",
     "prior_tests": {"T1_small_class_list": true, "T2_process_salted": true, "T3_unrecoverable": true},
     "prior_measured": {"recoverable_from_checkpoint": false, "hash_ids_stable_across_processes": false, "id_set_overlap": 0, "distinct_top1_live": 7}
   },
 
-  "finding_2_degenerate_target_random": {
-    "source_file": "HENRI V2/scripts/training/train_sgld_500_runner.py",
-    "source_lines": [86, 87, 88, 159],
-    "rule": "X_demo = F.normalize(torch.randn(batch_size, D)); a_target = torch.randint(0, vocab_size, ...)",
-    "defect": "Waves and labels are BOTH random. There is no content->token correspondence in the training signal at all.",
-    "saves_to": "models/henri_decoder_checkpoint.pt"
-  },
-
-  "finding_3_path_ordered_removed": {
+  "finding_4_decision_2_path_removed": {
     "flag_file": "HENRI V2/henri_discrete_egress_flag.py",
     "flag": "HENRI_STRIP_DISCRETE_EGRESS",
     "default": "OFF (strip inert)",
     "decision": "Decision 2, approved 2026-09-11",
     "order": "discrete BPE projection matrices, top-k logit sorts, and token unbinding heads removed from the LIVE path; classes and weights retained, live construction disabled",
     "sites": "16 live construction sites in 14 files (AST-measured, receipt e6_d2_ast_sites.json)",
-    "consequence": "The HENRINeuralEgressUnbinder is a DEFAULT-OFF, decision-removed discrete-token path."
+    "consequence": "HENRINeuralEgressUnbinder is a default-OFF, decision-removed discrete-token path."
   },
 
-  "coincidence_disclosure": {
-    "my_ak5_distinct_top1": 7,
-    "prior_receipt_distinct_top1_live": 7,
-    "variance": "The two probes used different wave sets. I did NOT verify identical wave sets, so I record this as CORROBORATING, not conclusive. The mechanism conclusion rests on the training-target analysis, which stands on its own."
+  "finding_5_no_content_grounded_head_exists_on_host": {
+    "method": "glob all *.pt under the four worktrees; filter by name keyword egress|unbind|decoder|lm_head|vocab; inspect state_dict keys and shapes metadata only (no full load of large files)",
+    "result": "Exactly three name-matching artifacts: henri_egress_unbinder_sgld_500.pt (799034179 B), henri_decoder_checkpoint.pt (799034119 B), tmp_sans_head.pt (3093 B, a test fixture).",
+    "key_finding": "The two ~799 MB artifacts carry the IDENTICAL 4-key state dict with IDENTICAL shapes. They are the same architecture and the same lineage (the random-wave SGLD runner).",
+    "consequence": "There is NO trained, content-grounded wave->token head on this host to measure. A-K5 could not have been run against one."
   },
 
-  "what_survives": {
-    "ak5_arithmetic": "unchanged and correct: real 0.5193 vs same-family shuffled 0.5501 (Q1 delta -0.031); margin 0.2175 vs 0.1709 (Q2 delta +0.047)",
+  "finding_6_codec_family_is_deterministic_not_salted": {
+    "source_file": "HENRI V2/zone_c_world_knowledge_codec.py",
+    "source_line": 62,
+    "rule": "_feature_hash(feature) = int.from_bytes(hashlib.sha256(feature.encode('utf-8')).digest()[:8], 'big')",
+    "note": "Codec hashing is sha256 -- DETERMINISTIC and process-independent. The salted-hash defect is confined to train_henri_decoder.py:54, a different file.",
+    "consequence_for_prior_evidence": "R1/R2/R3 ladder and A-K4 are reproducible and NOT contaminated by salted hashing. This was checked, not assumed.",
+    "wave_family": {
+      "construction": "per-feature sha256 -> LCG expansion (LCG_MUL=2654435761, LCG_ADD=40503, WAVE_EXPAND=16) -> 16 (block, slot) positions per feature -> signed accumulation -> per-block L2 normalise",
+      "shape": "[8192, 8] = 65536 complex-as-real float32 rows",
+      "character": "SPARSE, BLOCK-STRUCTURED indicator vector",
+      "contrast": "The A-K5 checkpoint was trained on F.normalize(torch.randn(batch_size, 65536)) -- DENSE GAUSSIAN."
+    }
+  },
+
+  "two_defects_not_one": {
+    "defect_a": "degenerate training target (random waves, random labels, salted hash id)",
+    "defect_b": "representation-family mismatch (dense Gaussian training vs sparse block-structured codec waves)",
+    "note": "Either defect alone is sufficient to make the A-K5 measurement uninformative about the mechanism."
+  },
+
+  "what_survives_unchanged": {
+    "ak5_arithmetic": "real 0.5193 vs same-family shuffled 0.5501 (Q1 delta -0.031); margin 0.2175 vs 0.1709 (Q2 delta +0.047)",
     "d0_artifact_trained": "true (rel_delta 1.007 / 1.146) -- it IS a trained artifact; it was trained on a degenerate target",
     "q4_wave_reaches_head": "true (+0.201 / +0.265 / +0.284) -- wiring and signal path are live",
-    "ak4_text_splice": "unaffected; A-K4 measured a different mechanism and its PASS stands",
-    "zonec_ladder": "unaffected"
+    "ak4_text_splice": "PASS, unaffected (different mechanism)",
+    "zonec_ladder": "R1/R2/R3 PASS at three scales, unaffected",
+    "mvp": "answers end to end with verified provenance, unaffected"
   },
 
-  "what_does_NOT_survive": {
+  "what_does_not_survive": {
     "claim": "that wave->text egress is falsified in principle",
-    "reason": "The instrument had no content->token mapping to recover. A readout trained on 35 salted-hash classes cannot carry compositional content by construction. This measurement cannot speak to a correctly-specified egress head.",
-    "therefore": "wave->text egress remains UNMEASURED, not FALSIFIED."
+    "corrected_status": "UNMEASURED",
+    "reason": "The instrument had no content->token mapping to recover, and was trained on a different wave family than the one tested."
   },
 
   "operator_named_defect_explained": {
     "operator_statement": "wave-to-text egress currently yields top1_token_unique = 1 across 16 distinct waves",
-    "explanation": "Consistent with a 35-of-32000 class target under a salted hash. Collapse is the EXPECTED symptom of the degenerate target, not independent evidence of an architectural defect."
+    "explanation": "The expected symptom of a readout trained on ~35 salted-hash classes out of 32000 with random waves. Collapse is a property of the target, not independent evidence of an architectural fault."
   },
 
-  "governance_note": {
-    "conflict": "The operator names wave-to-text egress as the governing A-K4/A-K5 target. Decision 2 (approved 2026-09-11) orders the discrete-token egress path removed from the live path.",
-    "resolution": "Latest operator instruction wins (recorded standing rule). Both records are preserved; neither is deleted.",
-    "new_training_needed": true,
-    "approval_required": "Training a content-grounded unbinder is NEW scope and requires explicit operator approval."
+  "rejected_next_steps": {
+    "carrier_suppression_residual_probe_on_this_checkpoint": "Rejected. A readout trained on random waves and random labels has no content->token mapping to recover, so carrier suppression cannot reveal content. The probe would measure a degenerate instrument and produce a second uninformative negative.",
+    "third_egress_architecture": "Rejected. Two adjacent egress paths already failed specificity. A third untested architecture is motion, not progress."
   },
 
   "next_correct_action": {
-    "recommended": "Train a minimal content-grounded egress head on the codec's own wave family with a valid token->text mapping (reproducible id assignment, full-context targets), then re-run the A-K5 gate with the same pre-registered Q1-Q4 and same-family content-destroyed control.",
-    "rejected_first": "Carrier-suppression residual probe. Rejected because a checkpoint with no content->token mapping has no content to suppress a carrier for; the probe would be motion.",
-    "cost": "local, $0 for the read-only analysis; training cost is separate and needs approval",
-    "why_not_a_third_architecture": "Two adjacent egress paths already failed specificity. A third untested architecture is motion, not progress."
+    "step": "Train a minimal content-grounded egress head on the codec's OWN wave family with a reproducible token->text mapping, then re-run the SAME pre-registered Q1-Q4 with the SAME same-family content-destroyed control.",
+    "prerequisites": ["reproducible (sha256 or explicit table) token<->id mapping, not Python hash()", "codec-family waves, not dense Gaussian", "full-vocabulary or domain-scoped targets with real coverage"],
+    "cost": "local CPU possible at reduced D; full-D on Vast CUDA",
+    "status": "NEW SCOPE -- EXPLICIT OPERATOR APPROVAL REQUIRED",
+    "not_authorized": ["any optimizer step", "any GPU spend", "any change to production egress paths"]
   },
 
-  "evidence_class": "OBSERVED (source reads) + DERIVED (reclassification logic)"
+  "governance": {
+    "standing_conflict": "The operator names wave->text egress as the governing A-K4/A-K5 target. Decision 2 (approved 2026-09-11) ordered the discrete-token egress path removed from the live path.",
+    "resolution": "Latest operator instruction wins. Both records preserved; neither deleted.",
+    "self_defect_corrected_this_session": "The approved-scope narrowing ('A-K4 plus MVP wiring') was authored by the acting agent in commit 33ed8d7, not stated by the operator. Corrected and sealed #34d83df014443865.",
+    "ledger_seals": ["#34d83df014443865 (scope correction)", "#69f787768f17626a (AK5 v1 verdict)", "#314f5cb0c7ee2d85 (AK5 reclassification)"]
+  },
+
+  "evidence_class": "OBSERVED (source reads, state_dict metadata) + DERIVED (reclassification logic)",
+  "cost_incurred": "USD 0 local read-only"
 }
