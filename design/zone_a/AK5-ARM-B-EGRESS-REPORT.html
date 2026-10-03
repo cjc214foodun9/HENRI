@@ -198,14 +198,22 @@ self_consistent (independently recomputed) = True</pre>
 </ol>
 
 <div class="box">
-  <strong>Two independent egress paths now fail the same test.</strong>
+  <strong>Two egress attempts produced a negative. They do not share a root cause.</strong>
   <table style="margin:.6rem 0 0">
-    <tr><th>Path</th><th>Specificity margin</th></tr>
-    <tr><td>Closed-vocabulary codebook</td><td class="n bad">&minus;0.21</td></tr>
-    <tr><td>Wave → unbinder (this gate)</td><td class="n bad">&minus;0.031</td></tr>
+    <tr><th>Path</th><th>Measured</th><th>Cause</th></tr>
+    <tr><td>Closed-vocabulary codebook</td><td class="n bad">&minus;0.21</td>
+        <td>exact-string lookup; no cross-form generalization<br>
+            <span class="alt">(its 156/156 round-trip is true BY CONSTRUCTION —
+            <span class="mono">codebook_M[k] = P(encode(manifest[k]))</span>)</span></td></tr>
+    <tr><td>Wave &rarr; unbinder (this gate)</td><td class="n bad">&minus;0.031</td>
+        <td class="warn">BLOCKED — degenerate training target and a
+            representation-family mismatch, not a readout finding</td></tr>
   </table>
-  <p class="alt" style="margin:.5rem 0 0">The readout is dominated by bulk block
-  statistics that survive content destruction.</p>
+  <p class="alt" style="margin:.5rem 0 0">The <em>numbers</em> agree; the
+  <em>causes</em> do not. An earlier version of this box implied one shared
+  architectural fault. The evidence does not support that, so the implication is
+  withdrawn. See
+  <span class="mono">evidence/closed_vocab_probe_qualification.json</span>.</p>
 </div>
 
 <h2>4. I did not reproduce the recorded count</h2>

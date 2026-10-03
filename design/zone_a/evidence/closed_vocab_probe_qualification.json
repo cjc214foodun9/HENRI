@@ -1,0 +1,62 @@
+{
+  "schema": "henri.closed-vocab-probe-qualification.v1",
+  "ts_utc": "2026-10-03T11:50:00Z",
+  "artifact_qualified": "HENRI V2/experiments/verification/armB_closed_vocab_egress_probe.py",
+  "verdict_under_review": "CLOSED_VOCAB_EGRESS_FAIL:Q2_specificity_positive_margin",
+  "reason_for_review": "The same defect class found in A-K5 (a test whose instrument cannot express the property) appears in this probe. Both negatives needed qualification before being read as evidence about wave->text egress.",
+
+  "finding_1_roundtrip_is_tautological": {
+    "code": "henri_vla_tokenizer.py:535-549 (identity_round_trip) and :441-443 (docstring)",
+    "docstring_quote": "codebook_M[k] = P(encode(manifest[k])) ... entry k has cosine 1.0 against itself and strictly less against every other entry, so this must be 100% unless two manifest entries are identical strings",
+    "measurement": "156/156 = 1.000 (Q4 PASS)",
+    "defect": "The codebook entry for token k IS the projected encode of that exact string. Round-trip success is guaranteed BY CONSTRUCTION. Q4 is a self-consistency check on the construction, NOT a content test.",
+    "consequence": "Q4 PASS carries no information about egress capability. It must not be cited as evidence that the closed-vocab path works.",
+    "self_admitted": true
+  },
+
+  "finding_2_salted_hash_null_seed": {
+    "code_line": "armB_closed_vocab_egress_probe.py:102",
+    "expression": "null = perm_null(idxs, V, N_NULL, seed + hash(tmpl) % 1000)",
+    "defect": "hash(tmpl) is CPython's SALTED str hash (PYTHONHASHSEED). The permutation-null seed is therefore NOT reproducible across processes.",
+    "severity": "MINOR. The null remains a valid null in form; only the exact draw varies. It does not invalidate the null distribution.",
+    "same_defect_class_as": "scripts/training/train_henri_decoder.py:54 (target_id = hash(text_target) % 32000), the A-K5 checkpoint's training target",
+    "note": "A defect in MY probe, not in the codebook under test."
+  },
+
+  "finding_3_cross_form_mismatch": {
+    "codebook_entries": "BARE tokens: manifest[k] = the token string itself (line 69 builds the codebook from the bare word list)",
+    "queries": "CARRIER-WRAPPED: line 98 encodes tmpl.format(w=w) for TEMPLATES = ('the {w} report', '{w} is the word', 'describe {w} now')",
+    "defect": "Entries are bare; queries are carrier-wrapped. A carrier query shares only the word-feature plus n-gram features the bare entry does not contain.",
+    "consequence": "Q1/Q2 measure CROSS-FORM GENERALIZATION, not bare-token retrieval. The measured failure is scoped to that harder task."
+  },
+
+  "what_the_negative_actually_means": {
+    "corrected_statement": "HoloEgressCodebook is an EXACT-STRING LOOKUP, not a decoder. It returns entry k only for the exact wave of manifest[k] (tautologically). Inside a carrier phrase the specificity margin is NEGATIVE on most templates (observed means roughly -0.16, +0.15, -0.21, -0.35, -0.25 across seed/template combinations).",
+    "therefore": "The codebook has no demonstrated compositional unbinding ability.",
+    "but": "This is a property of THIS codebook design (tokenizer-derived nearest-neighbour table), not a measurement of wave->text egress in principle."
+  },
+
+  "correction_to_prior_framing": {
+    "prior_claim": "Two independent egress paths now fail the same specificity test (closed-vocab -0.21; unbinder -0.031).",
+    "corrected_claim": "The shared numeric outcome is real, but the two failures have DIFFERENT causes and neither tests wave->text egress in principle.",
+    "ak5_unbinder": "BLOCKED -- degenerate training target (random waves, random labels, salted-hash ids) AND representation-family mismatch (dense Gaussian training vs sparse block-structured codec waves). Status UNMEASURED.",
+    "closed_vocab_codebook": "Negative -- exact-string lookup with no cross-form generalization. This is a real limitation of that design.",
+    "shared_root_cause": "NONE established. The prior framing implied a common architectural fault; the evidence does not support that implication."
+  },
+
+  "what_survives": {
+    "ak4_text_splice": "PASS, unaffected (different mechanism: retrieved text into the prompt)",
+    "zonec_ladder": "R1/R2/R3 T1_SUPPORTED +40%, unstructured T1_FALSIFIED, three scales",
+    "mvp": "answers end to end with verified provenance",
+    "codec_determinism": "zone_c_world_knowledge_codec.py:62 uses hashlib.sha256 -- deterministic; R1-R3/A-K4 not contaminated by salted hashing"
+  },
+
+  "status_of_wave_to_text_egress": "UNMEASURED. Two adjacent attempts produced one BLOCKED artifact and one design-limited negative. Neither is a test of the mechanism.",
+  "next_action": {
+    "step": "Train a minimal content-grounded egress head on the codec's OWN wave family with a reproducible token<->id mapping, then re-run the SAME pre-registered Q1-Q4 against the SAME validated same-family content-destroyed control.",
+    "instrument": "VALIDATED (see ak5_gate_power_validation.json, GATE_POWER_OK)",
+    "status": "NEW SCOPE - EXPLICIT OPERATOR APPROVAL REQUIRED"
+  },
+  "evidence_class": "OBSERVED (source reads) + DERIVED (qualification logic)",
+  "cost_incurred": "USD 0 local read-only"
+}
