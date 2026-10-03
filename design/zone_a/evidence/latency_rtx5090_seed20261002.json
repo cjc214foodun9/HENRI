@@ -1,0 +1,230 @@
+{
+  "D": 65536,
+  "batch": 96,
+  "blocked": {
+    "L1_basal_persistent_kernel_12_8us": "BLOCKED \u2014 the persistent fused kernel in basal_triton_kernel.py is DESIGN-ONLY (analytic tau_budget_analysis). fused_relax is the one-launch-per-step CORRECTNESS path; timing it would substitute a different quantity and produce a false pass.",
+    "ZoneC_retrieval_p50": "BLOCKED on this host \u2014 needs the production PostgreSQL store (zone_c_env.py / 10,703-row store). Already OBSERVED at 4.955 ms in phase 8.38; not re-measured here."
+  },
+  "code_sha": "b988113f10bba164abce66beb46932cc4745d10b",
+  "contract": "design/zone_a/HARNESS-CONTRACT-B.md",
+  "device": {
+    "compute_capability": "12.0",
+    "cuda": "13.0",
+    "free_vram_gib": 30.86,
+    "name": "NVIDIA GeForce RTX 5090",
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 4, 16, 580.173.02",
+    "python": "3.12.3",
+    "sm_count": 170,
+    "torch": "2.12.0+cu130",
+    "total_vram_gib": 31.36
+  },
+  "experiment": "zone_a_gpu_harness",
+  "gates": {
+    "L2_hopfield_snap_p50_le_50us": false,
+    "L2_zone_a_step_p50_le_50us": false,
+    "L3_sagnac_veto_p50_le_100us": false,
+    "L3_sagnac_veto_p99_le_200us": false,
+    "probe_full_D_no_DxD_state": true
+  },
+  "iters": 300,
+  "latency": {
+    "L2_hopfield_snap_batch1": {
+      "max_us": 458.848,
+      "min_us": 248.992,
+      "n": 300,
+      "name": "<lambda>",
+      "p50_us": 252.256,
+      "p95_us": 284.192,
+      "p99_us": 313.472
+    },
+    "L2_pcalm_infer": {
+      "max_us": 5597.472,
+      "min_us": 4582.08,
+      "n": 75,
+      "name": "<lambda>",
+      "p50_us": 4674.272,
+      "p95_us": 5016.928,
+      "p99_us": 5547.744
+    },
+    "L3_sagnac_veto": {
+      "max_us": 415.584,
+      "min_us": 221.344,
+      "n": 300,
+      "name": "<lambda>",
+      "p50_us": 225.664,
+      "p95_us": 242.784,
+      "p99_us": 275.104
+    },
+    "L5_presnap_probe_full_D": {
+      "max_us": 125264.732,
+      "min_us": 21007.999,
+      "n": 75,
+      "name": "<lambda>",
+      "p50_us": 87753.731,
+      "p95_us": 113110.657,
+      "p99_us": 121284.737
+    },
+    "L5_presnap_probe_state_shapes": [
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ]
+    ],
+    "L5_zone_a_operator_batch1": {
+      "max_us": 1157.536,
+      "min_us": 193.44,
+      "n": 300,
+      "name": "<lambda>",
+      "p50_us": 195.552,
+      "p95_us": 205.728,
+      "p99_us": 235.264
+    },
+    "L5_zone_a_operator_batch96": {
+      "max_us": 1470.336,
+      "min_us": 507.52,
+      "n": 300,
+      "name": "<lambda>",
+      "p50_us": 512.576,
+      "p95_us": 521.376,
+      "p99_us": 530.592
+    }
+  },
+  "limits": [
+    "Software kernel latency on one RTX 5090; not hardware, not another GPU.",
+    "L1 (12.8 us) and Zone C p50 are BLOCKED, not measured.",
+    "H2/H3 at full D are replications: kill conditions unchanged from D=2048.",
+    "No model-quality or benchmark score is claimed anywhere."
+  ],
+  "mixing_rank": 64,
+  "receipt_sha256": "1d7d36d27571fd4ede7f69363084655abe268fef981eede151a238b89c94f569",
+  "scope": "DIGITAL-TWIN SOFTWARE KERNEL latency on one RTX 5090; not optoelectronic hardware",
+  "seeds": [
+    20261002
+  ],
+  "verdict": "LATENCY_GATES_FAIL",
+  "warmup": 50
+}
