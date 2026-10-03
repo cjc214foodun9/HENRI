@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codec content recovery: the instrument measured its own floor</title>
+<style>
+  :root{--ink:#14171c;--mut:#5b6470;--line:#dfe3e8;--bg:#fbfcfd;
+        --ok:#0f7a3d;--bad:#b02525;--warn:#8a5a00;--acc:#1b4f9c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  main{max-width:960px;margin:0 auto;padding:2.2rem 1.3rem 4rem}
+  h1{font-size:1.62rem;line-height:1.25;margin:0 0 .5rem;letter-spacing:-.015em}
+  h2{font-size:1.12rem;margin:2.1rem 0 .7rem;padding-bottom:.32rem;
+     border-bottom:1px solid var(--line)}
+  .lede{font-size:1.02rem;color:var(--mut);margin:0 0 1.1rem}
+  table{border-collapse:collapse;width:100%;margin:.7rem 0;font-size:.93rem}
+  th,td{border:1px solid var(--line);padding:.44rem .6rem;text-align:left;
+        vertical-align:top}
+  th{background:#f2f4f7;font-weight:600}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  .ok{color:var(--ok);font-weight:600}
+  .bad{color:var(--bad);font-weight:600}
+  .warn{color:var(--warn);font-weight:600}
+  .box{border:1px solid var(--line);background:#fff;border-radius:8px;
+       padding:.9rem 1.05rem;margin:1rem 0}
+  .box.hi{border-left:4px solid var(--acc)}
+  .box.stop{border-left:4px solid var(--warn);background:#fffdf6}
+  .alt{font-size:.9rem;color:var(--mut)}
+  code{background:#f2f4f7;padding:.09em .34em;border-radius:4px;
+       font-size:.88em;font-family:ui-monospace,Consolas,monospace}
+  pre{background:#14171c;color:#e6e9ee;padding:.85rem 1rem;border-radius:8px;
+      overflow-x:auto;font-size:.84rem;line-height:1.5}
+  ul{margin:.45rem 0 .45rem 1.1rem;padding:0}
+  li{margin:.26rem 0}
+  footer{margin-top:2.6rem;padding-top:.9rem;border-top:1px solid var(--line);
+         font-size:.86rem;color:var(--mut)}
+  .skip{position:absolute;left:-9999px}
+  .skip:focus{left:.5rem;top:.5rem;background:#fff;padding:.5rem;z-index:9;
+              border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<main id="main">
+
+<h1>Codec content recovery: the instrument measured its own detection floor</h1>
+<p class="lede">Question: does the S4 codec wave family carry recoverable token
+content? Answer: <strong>this method cannot resolve that at the codec's native
+scale.</strong> The instrument is valid &mdash; it detected every injected
+signature above 0.78% of the wave. The codec's own one-word footprint is
+0.20%. That gap is the result.</p>
+
+<div class="box hi">
+  <strong>Measured, not inferred.</strong>
+  <ul>
+    <li>Positive control is strictly monotone: <code>0.688 &rarr; 1.000</code>
+        across six rungs.</li>
+    <li>Same-family content-destroyed control sits at <strong>exactly 0.500</strong>
+        (margin <code>+0.0001</code>). Valid negative.</li>
+    <li>Detection floor: <strong>64 blocks = 0.78%</strong> of the wave.</li>
+    <li>Codec one-word footprint: <strong>16 blocks = 0.20%</strong>.</li>
+  </ul>
+  Floor above footprint &rArr; real-wave numbers are <strong>not
+  interpreted</strong>. Verdict <code>INSTRUMENT_CANNOT_RESOLVE_CODEC_SCALE</code>
+  is a limitation of the <em>method</em>, not a finding about the codec.
+</div>
+
+<h2>1. Full ladder, 40 pairs</h2>
+<p><code>D=65536</code>, <code>blocks=8192</code>, <code>slots=8</code>,
+6 train / 3 eval templates, seed 20261002. Nearest-centroid. No optimizer.</p>
+
+<table>
+  <tr><th>Arm</th><th class="n">Accuracy</th><th class="n">SD</th>
+      <th class="n">Margin</th><th>Reading</th></tr>
+  <tr><td>REAL codec waves</td><td class="n">0.642</td><td class="n">0.192</td>
+      <td class="n">+0.0081</td><td class="alt">not interpreted (below floor)</td></tr>
+  <tr><td>SHF content-destroyed</td><td class="n">0.500</td><td class="n">0.183</td>
+      <td class="n">+0.0001</td><td class="alt">exactly chance &mdash; control valid</td></tr>
+</table>
+
+<table>
+  <tr><th>POS rung</th><th class="n">% of wave</th><th class="n">Accuracy</th>
+      <th class="n">Margin</th><th></th></tr>
+  <tr><td>16 blocks</td><td class="n">0.20%</td><td class="n">0.688</td>
+      <td class="n">+0.0019</td><td class="alt">chance</td></tr>
+  <tr><td>32 blocks</td><td class="n">0.39%</td><td class="n">0.808</td>
+      <td class="n">+0.0032</td><td></td></tr>
+  <tr><td><strong>64 blocks</strong></td><td class="n">0.78%</td>
+      <td class="n"><strong>0.933</strong></td><td class="n">+0.0058</td>
+      <td class="warn">detection floor</td></tr>
+  <tr><td>128 blocks</td><td class="n">1.56%</td><td class="n">0.996</td>
+      <td class="n">+0.0118</td><td></td></tr>
+  <tr><td>256 blocks</td><td class="n">3.12%</td><td class="n">1.000</td>
+      <td class="n">+0.0235</td><td></td></tr>
+  <tr><td>1024 blocks</td><td class="n">12.50%</td><td class="n">1.000</td>
+      <td class="n">+0.0883</td><td></td></tr>
+</table>
+
+<pre>VERDICT = INSTRUMENT_CANNOT_RESOLVE_CODEC_SCALE
+Detection floor is 64 blocks (0.78% of wave), ABOVE the codec's one-word
+footprint of 16 blocks (0.20%). REAL/SHF below are therefore NOT interpreted.
+Measured instrument limit, not a codec finding.</pre>
+
+<h2>2. Directional hint &mdash; explicitly not a result</h2>
+<p>REAL <code>0.642</code> vs SHF <code>0.500</code>, and REAL's margin
+(<code>+0.0081</code>) is roughly 4&times; the POS-16 margin
+(<code>+0.0019</code>). That is <em>consistent with</em> a weak content signal
+at the codec's native scale. It does not clear the pre-registered 0.80 bar, and
+the floor rule forbids interpreting it. Recorded as a hint for a more sensitive
+follow-up. <strong>It is not evidence.</strong></p>
+
+<h2>3. Codec wave structure, measured</h2>
+<table>
+  <tr><th>Property</th><th class="n">Value</th></tr>
+  <tr><td>nonzeros per wave</td><td class="n">8192 (one slot per block)</td></tr>
+  <tr><td>nonzero fraction</td><td class="n">0.125</td></tr>
+  <tr><td>filler fraction, <code>'alpha'</code></td><td class="n">0.9980</td></tr>
+  <tr><td>filler fraction, <code>'the alpha report'</code></td><td class="n">0.9883</td></tr>
+  <tr><td>blocks carrying 3-word content</td><td class="n">96 / 8192 = 1.17%</td></tr>
+</table>
+<p class="alt">A single feature expands to 16 blocks (<code>WAVE_EXPAND=16</code>).
+Everything else is the <code>empty</code> branch writing hash-derived slots.
+That 98.83% filler ratio is the structural fact the follow-up decision turns on.</p>
+
+<h2>4. Instrument validation &mdash; four probes, two verdicts refused</h2>
+<table>
+  <tr><th>Probe</th><th>Printed</th><th>Disposition</th></tr>
+  <tr><td>gate-power v1</td><td class="bad">AK5_GATE_VACUOUS</td>
+      <td class="warn">REFUSED &mdash; no positive pairs; both arms pinned at the
+      cosine ceiling (1.0002 / 1.0002)</td></tr>
+  <tr><td>gate-power v2</td><td class="ok">GATE_POWER_OK</td>
+      <td class="ok">ACCEPTED &mdash; sep +0.6065 vs &minus;0.0009</td></tr>
+  <tr><td>codec scaffold v1</td><td class="bad">...NO_RECOVERABLE_TOKEN</td>
+      <td class="warn">REFUSED &mdash; its shuffled control memorized to
+      train loss 0.0010 while real waves stalled at 4.4151</td></tr>
+  <tr><td>codec v2 (this run)</td><td class="warn">INSTRUMENT_CANNOT_RESOLVE_CODEC_SCALE</td>
+      <td class="ok">ACCEPTED &mdash; POS monotone and SHF at chance</td></tr>
+</table>
+<p class="alt">The refused scaffold is committed with a
+<code>DEFECT DISCLOSURE</code> header at <code>ed89692</code>. The rejected
+family is retained, not deleted.</p>
+
+<h2>5. What this does and does not settle</h2>
+<table>
+  <tr><th>Question</th><th>Status</th></tr>
+  <tr><td>Zone C retrieval transfers content to novel questions</td>
+      <td class="ok">PROVEN (+40%, three scales)</td></tr>
+  <tr><td>Retrieved text improves a generated answer</td>
+      <td class="ok">PROVEN (A-K4: 0.000 &rarr; 0.833 &rarr; 0.083)</td></tr>
+  <tr><td>MVP answers end to end with provenance</td>
+      <td class="ok">PROVEN ("TimescaleDB", RC=0)</td></tr>
+  <tr><td>Wave &rarr; text bridge carries content</td>
+      <td class="warn">UNMEASURED (degenerate artifact)</td></tr>
+  <tr><td>Codec waves carry recoverable token content</td>
+      <td class="warn">UNRESOLVED by this method</td></tr>
+  <tr><td>AAII v4.3 SOTA on a 5090</td>
+      <td class="bad">NOT ESTABLISHED (25% local ceiling)</td></tr>
+</table>
+
+<div class="box stop">
+  <strong>The next step is a decision, not another probe.</strong>
+  <ul>
+    <li><strong>Path A</strong> &mdash; treat content as present and train a
+        content-grounded egress head on the codec's <em>own</em> wave family with
+        a reproducible <code>sha256</code> token&rarr;id mapping, then re-run the
+        pre-registered Q1&ndash;Q4 against a validated same-family control.
+        <strong>NEW SCOPE &mdash; needs explicit approval.</strong></li>
+    <li><strong>Path B</strong> &mdash; judge the 1.17%-content / 98.83%-filler
+        ratio disqualifying. That is a <em>memory-design</em> decision, not a
+        probe decision.</li>
+    <li><strong>Not a path</strong> &mdash; a third instrument iteration. Two
+        same-class repairs are already in, and neither produced external gain.</li>
+  </ul>
+</div>
+
+<footer>
+  <p>Commit <code>a5171f5</code> &middot; receipt
+  <code>design/zone_a/evidence/codec_content_recovery_v2_receipt.json</code>
+  &middot; log sha256 <code>2cda817f127d5316</code> &middot; seal
+  <code>#aeccc75e05d66c26</code>, ledger 1830 &middot; evidence class DERIVED
+  &middot; cost $0 &middot; CPU only &middot; <code>main a039095</code> untouched.</p>
+  <p class="alt">Limits: 40 pairs, single seed, nearest-centroid cannot exploit
+  nonlinear content structure. Self-consistency is an honest positive control,
+  not a learned readout. This does not measure whether a <em>trained</em> head
+  could recover content &mdash; only whether raw centroid geometry separates at
+  the codec's native scale.</p>
+</footer>
+
+</main>
+</body>
+</html>
