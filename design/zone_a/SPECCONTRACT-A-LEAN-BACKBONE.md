@@ -222,11 +222,35 @@ Three findings, stated exactly:
 not total. The original count is **not reproduced here** and must not be quoted
 as this run's result.
 
-**Design consequence.** The failure mode is readout, not wiring and not training
-absence. Per spec the next probe is **carrier suppression / readout
-normalization** against the same shuffled control — not retraining, and not a new
-egress architecture. Two independent egress paths now fail the same specificity
-test, so a third untested path is not the next move.
+**Design consequence — REVISED 2026-10-03 after the provenance audit.**
+The v1 statement ("the failure mode is readout, not wiring and not training
+absence") does **not** survive. Corrected:
+
+- **Unbinder (this gate):** `AK5_BLOCKED_DEGENERATE_TRAINING_TARGET`. The
+  checkpoint was trained on **random** waves and **random** labels with
+  salted-hash ids, and no content-grounded head exists on this host. Its negative
+  is a property of the artifact, not of the mechanism.
+- **Closed-vocabulary codebook:** a real but *different* limitation —
+  exact-string lookup with no cross-form generalization. Its `156/156` round-trip
+  is **true by construction** (`codebook_M[k] = P(encode(manifest[k]))`), so Q4 is
+  a self-consistency check, not a content test.
+- **Shared root cause: NONE established.** An earlier version of this paragraph
+  implied one. That implication is withdrawn; the numbers agree, the causes do not.
+  See `evidence/closed_vocab_probe_qualification.json`.
+
+**Rejected:** carrier suppression / readout normalization on *this* checkpoint. A
+readout with no content→token mapping has no content to emerge, so the probe would
+produce a second uninformative negative. A third untested egress architecture is
+also rejected: motion, not progress.
+
+**Gate power is VALIDATED** (`GATE_POWER_OK`: sep +0.6065 real vs −0.0009 control),
+so the A-K5 metric is reusable as-is for the approval-gated work.
+
+**Next correct action (NEW SCOPE — approval required).** Train a minimal
+content-grounded egress head on the codec's **own** wave family with a reproducible
+token↔id mapping, then re-run the **same** pre-registered Q1–Q4 against the
+**same** validated same-family content-destroyed control. Wave→text egress remains
+**UNMEASURED**, not FALSIFIED.
 
 **A-K4 METRIC AMENDED (2026-10-03) — evidence-based, disclosed.**
 The original A-K4 wording above ("emits distinct top-1 tokens above floor") was
