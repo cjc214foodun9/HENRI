@@ -1,0 +1,302 @@
+Sat Oct  3 01:01:31 UTC 2026
+Hit:1 http://archive.ubuntu.com/ubuntu noble InRelease
+Hit:2 http://archive.ubuntu.com/ubuntu noble-updates InRelease
+Hit:3 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64  InRelease
+Hit:4 http://security.ubuntu.com/ubuntu noble-security InRelease
+Hit:5 http://archive.ubuntu.com/ubuntu noble-backports InRelease
+Reading package lists...
+W: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
+Reading package lists...
+Building dependency tree...
+Reading state information...
+openssh-server is already the newest version (1:9.6p1-3ubuntu13.19).
+tmux is already the newest version (3.4-1ubuntu0.1).
+wget is already the newest version (1.21.4-1ubuntu4.5).
+curl is already the newest version (8.5.0-2ubuntu10.15).
+less is already the newest version (590-2ubuntu2.1).
+locales is already the newest version (2.39-0ubuntu8.9).
+sudo is already the newest version (1.9.15p5-3ubuntu5.24.04.3).
+software-properties-common is already the newest version (0.99.49.4).
+0 upgraded, 0 newly installed, 0 to remove and 99 not upgraded.
+Reading package lists...
+Building dependency tree...
+Reading state information...
+git is already the newest version (1:2.43.0-1ubuntu7.3).
+rsync is already the newest version (3.2.7-1ubuntu1.5).
+0 upgraded, 0 newly installed, 0 to remove and 99 not upgraded.
+rm: cannot remove '/etc/forward_port2': No such file or directory
+ONSTART_STARTED Sat Oct  3 01:01:37 UTC 2026
+Server listening on 0.0.0.0 port 22.
+Server listening on :: port 22.
+Sat Oct  3 01:01:37 UTC 2026
+SSH_KEY_MODES_REPAIRED Sat Oct  3 01:01:37 UTC 2026
+BACKSTOP_ARMED 3300s
+Warning: Permanently added 'ssh6.vast.ai' (ED25519) to the list of known hosts.
+Cloning into '/workspace/henri-src'...
+Updating files:   0% (2/1488)Updating files:   1% (15/1488)Updating files:   2% (30/1488)Updating files:   3% (45/1488)Updating files:   4% (60/1488)Updating files:   5% (75/1488)Updating files:   6% (90/1488)Updating files:   7% (105/1488)Updating files:   8% (120/1488)Updating files:   9% (134/1488)Updating files:  10% (149/1488)Updating files:  11% (164/1488)Updating files:  12% (179/1488)Updating files:  13% (194/1488)Updating files:  14% (209/1488)Updating files:  15% (224/14
+HEAD is now at b988113 fix(zone-a): add CPU smoke path to harness + in-repo API audit
+EXPECT_SHA=b988113f10bba164abce66beb46932cc4745d10b
+CHECKOUT_SHA=b988113f10bba164abce66beb46932cc4745d10b
+SHA_MATCH_PASS
+TORCH 2.12.0+cu130 cuda_avail True cuda 13.0
+NVIDIA GeForce RTX 5090, 32607 MiB, 12.0
+CUDA_COMPLEX_SVDVALS_OK (64,) 71.58248138427734
+LATENCY_BEGIN
+{
+  "code_sha": "b988113f10bba164abce66beb46932cc4745d10b",
+  "device": {
+    "compute_capability": "12.0",
+    "cuda": "13.0",
+    "free_vram_gib": 30.86,
+    "name": "NVIDIA GeForce RTX 5090",
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 4, 16, 580.173.02",
+    "python": "3.12.3",
+    "sm_count": 170,
+    "torch": "2.12.0+cu130",
+    "total_vram_gib": 31.36
+  },
+  "gates": {
+    "L2_hopfield_snap_p50_le_50us": false,
+    "L2_zone_a_step_p50_le_50us": false,
+    "L3_sagnac_veto_p50_le_100us": false,
+    "L3_sagnac_veto_p99_le_200us": false,
+    "probe_full_D_no_DxD_state": true
+  },
+  "receipt_sha256": "1d7d36d27571fd4ede7f69363084655abe268fef981eede151a238b89c94f569",
+  "verdict": "LATENCY_GATES_FAIL"
+}
+receipt: /workspace/latency.json
+LATENCY_END rc=1
+LATENCY_JSON_BEGIN
+{
+  "D": 65536,
+  "batch": 96,
+  "blocked": {
+    "L1_basal_persistent_kernel_12_8us": "BLOCKED \u2014 the persistent fused kernel in basal_triton_kernel.py is DESIGN-ONLY (analytic tau_budget_analysis). fused_relax is the one-launch-per-step CORRECTNESS path; timing it would substitute a different quantity and produce a false pass.",
+    "ZoneC_retrieval_p50": "BLOCKED on this host \u2014 needs the production PostgreSQL store (zone_c_env.py / 10,703-row store). Already OBSERVED at 4.955 ms in phase 8.38; not re-measured here."
+  },
+  "code_sha": "b988113f10bba164abce66beb46932cc4745d10b",
+  "contract": "design/zone_a/HARNESS-CONTRACT-B.md",
+  "device": {
+    "compute_capability": "12.0",
+    "cuda": "13.0",
+    "free_vram_gib": 30.86,
+    "name": "NVIDIA GeForce RTX 5090",
+    "nvidia_smi": "NVIDIA GeForce RTX 5090, 4, 16, 580.173.02",
+    "python": "3.12.3",
+    "sm_count": 170,
+    "torch": "2.12.0+cu130",
+    "total_vram_gib": 31.36
+  },
+  "experiment": "zone_a_gpu_harness",
+  "gates": {
+    "L2_hopfield_snap_p50_le_50us": false,
+    "L2_zone_a_step_p50_le_50us": false,
+    "L3_sagnac_veto_p50_le_100us": false,
+    "L3_sagnac_veto_p99_le_200us": false,
+    "probe_full_D_no_DxD_state": true
+  },
+  "iters": 300,
+  "latency": {
+    "L2_hopfield_snap_batch1": {
+      "max_us": 458.848,
+      "min_us": 248.992,
+      "n": 300,
+      "name": "<lambda>",
+      "p50_us": 252.256,
+      "p95_us": 284.192,
+      "p99_us": 313.472
+    },
+    "L2_pcalm_infer": {
+      "max_us": 5597.472,
+      "min_us": 4582.08,
+      "n": 75,
+      "name": "<lambda>",
+      "p50_us": 4674.272,
+      "p95_us": 5016.928,
+      "p99_us": 5547.744
+    },
+    "L3_sagnac_veto": {
+      "max_us": 415.584,
+      "min_us": 221.344,
+      "n": 300,
+      "name": "<lambda>",
+      "p50_us": 225.664,
+      "p95_us": 242.784,
+      "p99_us": 275.104
+    },
+    "L5_presnap_probe_full_D": {
+      "max_us": 125264.732,
+      "min_us": 21007.999,
+      "n": 75,
+      "name": "<lambda>",
+      "p50_us": 87753.731,
+      "p95_us": 113110.657,
+      "p99_us": 121284.737
+    },
+    "L5_presnap_probe_state_shapes": [
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ],
+      [
+        16,
+        65536
+      ]
+    ],
+    "L5_zone_a_operator_batch1": {
+      "max_us": 1157.536,
+      "min_us": 193.44,
+      "n": 300,
+      "name": "<lambda>",
+      "p50_us": 195.552,
+      "p95_us": 205.728,
+      "p99_us": 235.264
+    },
+    "L5_zone_a_operator_batch96": {
+      "max_us": 1470.336,
+      "min_us": 507.52,
+      "n": 300,
+      "name": "<lambda>",
+      "p50_us": 512.576,
+      "p95_us": 521.376,
+      "p99_us": 530.592
+    }
+  },
+  "limits": [
+    "Software kernel latency on one RTX 5090; not hardware, not another GPU.",
+    "L1 (12.8 us) and Zone C p50 are BLOCKED, not measured.",
+    "H2/H3 at full D are replications: kill conditions unchanged from D=2048.",
+    "No model-quality or benchmark score is claimed anywhere."
+  ],
+  "mixing_rank": 64,
+  "receipt_sha256": "1d7d36d27571fd4ede7f69363084655abe268fef981eede151a238b89c94f569",
+  "scope": "DIGITAL-TWIN SOFTWARE KERNEL latency on one RTX 5090; not optoelectronic hardware",
+  "seeds": [
+    20261002
+  ],
+  "verdict": "LATENCY_GATES_FAIL",
+  "warmup": 50
+}LATENCY_JSON_END
+FULLD_BEGIN
+
