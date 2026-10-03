@@ -66,7 +66,16 @@ DEFAULT_SEEDS = (20261002, 20261003, 20261004)
 
 
 # ------------------------------------------------------------------ receipts
-def device_receipt() -> dict:
+def device_receipt(dev: str = "cuda", use_cuda: bool = True) -> dict:
+    """Device receipt. A CPU receipt is explicitly labelled a smoke run."""
+    if not use_cuda:
+        return {
+            "name": "cpu (SMOKE ONLY - carries no latency verdict)",
+            "torch": torch.__version__,
+            "cuda": torch.version.cuda,
+            "python": platform.python_version(),
+            "smoke_run": True,
+        }
     if not torch.cuda.is_available():
         raise RuntimeError("no CUDA device; this harness requires the GPU")
     p = torch.cuda.get_device_properties(0)
@@ -122,27 +131,39 @@ def summarize(name: str, times_ms: list) -> dict:
     }
 
 
-def bench(fn, *, warmup: int = WARMUP, iters: int = ITERS) -> dict:
-    """Time `fn` with CUDA events. One serial call per sample, launch included."""
+def bench(fn, *, warmup: int = WARMUP, iters: int = ITERS, use_cuda: bool = True) -> dict:
+    """Time `fn`. One serial call per sample, launch included.
+
+    CUDA path uses events plus synchronize. The CPU path exists ONLY for local
+    entrypoint smoke tests and is labelled non-measurement in the receipt.
+    """
     fn()
-    torch.cuda.synchronize()
+    if use_cuda:
+        torch.cuda.synchronize()
     for _ in range(warmup):
         fn()
-    torch.cuda.synchronize()
-    times = []
-    for _ in range(iters):
-        s = torch.cuda.Event(enable_timing=True)
-        e = torch.cuda.Event(enable_timing=True)
-        s.record()
-        fn()
-        e.record()
+    if use_cuda:
         torch.cuda.synchronize()
-        times.append(s.elapsed_time(e))
+    times = []
+    if use_cuda:
+        for _ in range(iters):
+            s = torch.cuda.Event(enable_timing=True)
+            e = torch.cuda.Event(enable_timing=True)
+            s.record()
+            fn()
+            e.record()
+            torch.cuda.synchronize()
+            times.append(s.elapsed_time(e))
+    else:
+        for _ in range(iters):
+            t0 = time.perf_counter()
+            fn()
+            times.append((time.perf_counter() - t0) * 1000.0)
     return summarize(getattr(fn, "__name__", "call"), times)
 
 
 # ------------------------------------------------------------------- latency
-def latency_section(dev: str) -> dict:
+def latency_section(dev: str, use_cuda: bool = True) -> dict:
     out = {}
     g = torch.Generator(device="cpu").manual_seed(20261002)
 
@@ -152,34 +173,56 @@ def latency_section(dev: str) -> dict:
     x1 = torch.randn(1, D, generator=g).to(dev).to(torch.complex64)
     xb = torch.randn(BATCH, D, generator=g).to(dev).to(torch.complex64)
     with torch.no_grad():
-        out["L5_zone_a_operator_batch1"] = bench(lambda: op.apply(x1))
-        out["L5_zone_a_operator_batch%d" % BATCH] = bench(lambda: op.apply(xb))
+        out["L5_zone_a_operator_batch1"] = bench(lambda: op.apply(x1), use_cuda=use_cuda)
+        out["L5_zone_a_operator_batch%d" % BATCH] = bench(
+            lambda: op.apply(xb), use_cuda=use_cuda)
 
     # ---- L3: Zone B Sagnac veto, one candidate ------------------------------
     cand = torch.randn(D, generator=g).to(dev).to(torch.complex64)
     axi = torch.randn(D, generator=g).to(dev).to(torch.complex64)
     wrld = torch.randn(D, generator=g).to(dev).to(torch.complex64)
-    out["L3_sagnac_veto"] = bench(lambda: evaluate_veto(cand, axi, wrld))
+    out["L3_sagnac_veto"] = bench(lambda: evaluate_veto(cand, axi, wrld),
+                                  use_cuda=use_cuda)
 
-    # ---- L2: egress snap + one PC-ALM inference step ------------------------
+    # ---- L2: egress snap + one PC-ALM inference run -------------------------
+    # Hopfield cleanup stores real rows of width 2D (the real view of a complex
+    # D-wave) and therefore must be FED a complex wave of width D. Feeding a real
+    # [., D] wave is a shape error, caught by the local API audit.
     hp = ContinuousHopfieldCleanup(dim=2 * D).to(dev)
     mem = torch.randn(64, 2 * D, generator=g).to(dev)
     hp.store_engrams(mem)
-    wave = torch.randn(1, D, generator=g).to(dev)
-    out["L2_hopfield_snap_batch1"] = bench(lambda: hp.retrieve(wave))
+    wave = torch.randn(1, D, generator=g).to(dev).to(torch.complex64)
+    out["L2_hopfield_snap_batch1"] = bench(lambda: hp.retrieve(wave), use_cuda=use_cuda)
 
+    # PCALMInferenceState exposes .run(x, y), NOT .infer(x, y).
     W = [torch.randn(256, 256, generator=g).to(dev) for _ in range(4)]
     st = PCALMInferenceState(W, rho=1.0, eta_h=0.05, steps=8)
     xs = torch.randn(8, 256, generator=g).to(dev)
     ys = torch.randn(8, 256, generator=g).to(dev)
-    out["L2_pcalm_infer"] = bench(lambda: st.infer(xs, ys), warmup=20, iters=100)
+    out["L2_pcalm_infer"] = bench(lambda: st.run(xs, ys),
+                                  warmup=max(2, warmup_small(WARMUP)),
+                                  iters=max(3, warmup_small(ITERS)),
+                                  use_cuda=use_cuda)
 
     # ---- pre-snap probe at full D (memory contract, on device) --------------
     probe = PreSnapCovarianceProbe(dim=D, k=8, ema=0.3)
     hr = torch.randn(16, D, generator=g).to(dev).to(torch.complex64)
-    out["L5_presnap_probe_full_D"] = bench(lambda: probe.observe(hr), warmup=10, iters=50)
+    out["L5_presnap_probe_full_D"] = bench(lambda: probe.observe(hr),
+                                           warmup=max(2, warmup_small(WARMUP)),
+                                           iters=max(3, warmup_small(ITERS)),
+                                           use_cuda=use_cuda)
     out["L5_presnap_probe_state_shapes"] = probe.state_shapes()
     return out
+
+
+def warmup_small(n: int) -> int:
+    """Warmup/iters for the SLOW ops (PC-ALM inference, full-D probe).
+
+    One such call costs 10-100x a single kernel launch, so a full WARMUP/ITERS
+    budget would dominate wall time and inflate the receipt.  Quarter budget
+    with floors that keep the sample valid.
+    """
+    return max(2, n // 4)
 
 
 def blockers() -> dict:
@@ -229,18 +272,23 @@ def main(argv=None) -> int:
     ap.add_argument("--seeds", default=",".join(str(s) for s in DEFAULT_SEEDS))
     ap.add_argument("--skip-h2h3", action="store_true",
                     help="latency only (fast smoke path)")
+    ap.add_argument("--allow-cpu", action="store_true",
+                    help="SMOKE ONLY: exercise the receipt path on CPU. The "
+                         "receipt is labelled smoke_run and carries no latency "
+                         "verdict.")
     args = ap.parse_args(argv)
 
     seeds = [int(s) for s in args.seeds.split(",") if s.strip()]
     workdir = Path(args.out).parent if args.out else Path.cwd()
     workdir.mkdir(parents=True, exist_ok=True)
 
-    if not torch.cuda.is_available():
+    use_cuda = torch.cuda.is_available()
+    if not use_cuda and not args.allow_cpu:
         print(json.dumps({"verdict": "INFRASTRUCTURE_BLOCKED",
                           "reason": "torch.cuda.is_available() is False"}))
         return 1
 
-    dev = "cuda"
+    dev = "cuda" if use_cuda else "cpu"
     receipt = {
         "experiment": "zone_a_gpu_harness",
         "contract": "design/zone_a/HARNESS-CONTRACT-B.md",
@@ -250,9 +298,9 @@ def main(argv=None) -> int:
         "D": D, "mixing_rank": MIXING_RANK, "batch": BATCH,
         "warmup": WARMUP, "iters": ITERS,
         "seeds": seeds,
-        "device": device_receipt(),
+        "device": device_receipt(dev, use_cuda=use_cuda),
     }
-    receipt["latency"] = latency_section(dev)
+    receipt["latency"] = latency_section(dev, use_cuda=use_cuda)
     receipt["blocked"] = blockers()
 
     if not args.skip_h2h3:
@@ -282,7 +330,9 @@ def main(argv=None) -> int:
     }
     receipt["gates"] = gates
     ok = all(gates.values())
-    receipt["verdict"] = "LATENCY_GATES_PASS" if ok else "LATENCY_GATES_FAIL"
+    base = "LATENCY_GATES_PASS" if ok else "LATENCY_GATES_FAIL"
+    # A CPU receipt MUST NOT be readable as a latency verdict.
+    receipt["verdict"] = base if use_cuda else f"SMOKE_ONLY_{base}_NOT_A_VERDICT"
     receipt["limits"] = [
         "Software kernel latency on one RTX 5090; not hardware, not another GPU.",
         "L1 (12.8 us) and Zone C p50 are BLOCKED, not measured.",
