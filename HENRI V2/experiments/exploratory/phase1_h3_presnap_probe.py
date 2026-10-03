@@ -131,6 +131,23 @@ def snap_tokens(h, codebook):
     return sim.argmax(dim=-1)
 
 
+def top_spectrum(x, n_eig=8):
+    """Top-`n_eig` eigenvalues of the [D, D] sample covariance WITHOUT building it.
+
+    MEMORY CONTRACT (measured failure).  The historical form
+    `(x - mean).conj().T @ (x - mean)` allocates [D, D].  At D=65536 that is
+    65536^2 * 8 = 34,359,738,368 bytes = 32 GiB, and the host dies with
+    `DefaultCPUAllocator: not enough memory`.  It crashed H3 on 2026-10-03.
+
+    The nonzero eigenvalues of X^H X ([D, D]) equal those of X X^H ([N, N]).
+    N_SAMPLES=64 << D=65536, so the [N, N] Gram is EXACT, not an approximation,
+    and its top-`n_eig` eigenvalues are identical to the covariance's.
+    """
+    xc = x - x.mean(0, keepdim=True)                  # [N, D]
+    gram = xc @ xc.conj().transpose(0, 1)             # [N, N], Hermitian PSD
+    return torch.linalg.eigvalsh(gram).flip(0).real[:n_eig] / (x.shape[0] - 1)
+
+
 def h3b_within_cell_blindness(gen):
     """The corpus claim AS LITERALLY STATED: within-cell blindness.
 
@@ -153,9 +170,7 @@ def h3b_within_cell_blindness(gen):
     codebook = make_codebook(basis, m=64)
 
     tok0 = snap_tokens(h0, codebook)
-    base_cov = (h0 - h0.mean(0, keepdim=True))
-    base_cov = base_cov.conj().transpose(0, 1) @ base_cov / (N_SAMPLES - 1)
-    base_spec = torch.linalg.eigvalsh(base_cov).flip(0).real[:8]
+    base_spec = top_spectrum(h0)
 
     sweep = []
     for eps in (1e-3, 1e-2, 3e-2, 1e-1, 3e-1):
@@ -164,9 +179,7 @@ def h3b_within_cell_blindness(gen):
         h1 = h0 + eps * delta
         tok1 = snap_tokens(h1, codebook)
         tok_change = float((tok0 != tok1).to(torch.float32).mean())
-        c1 = (h1 - h1.mean(0, keepdim=True))
-        c1 = c1.conj().transpose(0, 1) @ c1 / (N_SAMPLES - 1)
-        s1 = torch.linalg.eigvalsh(c1).flip(0).real[:8]
+        s1 = top_spectrum(h1)
         pre_rel = float((s1 - base_spec).norm() / (base_spec.norm() + 1e-12))
         sweep.append({
             "eps": eps,
