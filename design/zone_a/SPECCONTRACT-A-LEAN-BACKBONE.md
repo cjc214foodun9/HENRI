@@ -1,7 +1,42 @@
-# SpecContract A — lean backbone for a 32 GB RTX 5090 (PROPOSED)
+# SpecContract A — lean backbone for a 32 GB RTX 5090 (APPROVED)
 
-Status: **PROPOSED**. Research holon output. Consumes architecture and integration.
-Not approved. No implementation is authorised by this document.
+Status: **APPROVED** by the operator on 2026-10-03. Approval event
+`#10b2d1f45cd8626c` in the hash-linked ledger (chain 1816 → 1817).
+Scope of approval: the A-K4 egress kill plus MVP wiring, local and $0.
+Latency claims are explicitly **DEPRIORITIZED** by the operator. The goal is a
+working HENRI MVP model, not a latency result.
+This approval does **NOT** authorise training runs, backbone training, or GPU spend.
+
+## A-K4 RESULT (2026-10-03) — ran and PASSED
+
+Measured on a 6-fact synthetic corpus, 12 items, CPU, frozen
+Qwen2.5-1.5B-Instruct (1,543,714,304 params, `unexpected_key_count=0`):
+
+| arm | context delivered | hit rate |
+|---|---|---:|
+| A0 | none | **0.000** |
+| A1 | correct retrieved chunk | **0.833** |
+| A2 | mismatched chunk (excludes target source) | **0.083** |
+
+`K4a +0.833 PASS · K4b +0.750 PASS · K4c PASS · K4d determinism 1.000 PASS`
+Verdict `AK4_PASS_CONTEXT_IMPROVES_GENERATED_ANSWER`.
+Receipt `design/zone_a/evidence/ak4_egress_receipt.json`,
+sha256(LF) `8d731a1052015367c5c9aec496be28004fe81e85a9ba84e784d712b91df59ecb`.
+
+### What this PASSES, and what it does NOT
+
+**It proves ARM A**: retrieved context delivered to the frozen backbone as
+**raw text** measurably and deterministically improves a generated answer.
+That is retrieval VALUE established end to end.
+
+**It does NOT prove ARM B**: Wave-to-text egress via Zone C wave
+**conditioning**. The `top1_token_unique = 1` defect was measured on the ARM_U
+unbinder path (`down_proj [2048,65536] → lm_head [32000,2048]`), and A-K4 as run
+does not exercise that path. **ARM B remains UNMEASURED.**
+
+This distinction is load-bearing. If Arm A works and Arm B fails, the defect is
+the **bridge**, not Zone C retrieval — a different fix on a different timescale.
+Do not read this PASS as clearing the wave-to-text bridge.
 Evidence classes: OBSERVED (repo/measured), INFERRED (external sources, untested here),
 DERIVED (arithmetic), HYPOTHESIS, BLOCKED.
 
