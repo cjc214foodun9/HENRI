@@ -1,0 +1,50 @@
+{
+  "schema": "henri.ak5-gate-power-probe-defect.v1",
+  "ts_utc": "2026-10-03T11:20:00Z",
+  "artifact": "HENRI V2/experiments/verification/ak5_gate_power_probe.py",
+  "status": "FAILED PROBE -- ESTABLISHES NOTHING",
+  "observed_output": {
+    "q1_separation": {"real": 1.0002, "control": 1.0002, "delta": -0.0000, "floor": 0.10, "gate": "FAIL"},
+    "q2_margin": {"real": 0.1526, "control": 0.1609, "delta": -0.0083, "floor": 0.10, "gate": "FAIL"},
+    "printed_verdict": "AK5_GATE_VACUOUS",
+    "exit_code": 1,
+    "config": {"D": 8192, "blocks": 1024, "block_dim": 8, "vocab": 4096, "n": 24, "seeds": [20261002, 20261003, 20261004]}
+  },
+  "defects_in_this_probe": {
+    "D1_no_positive_pairs": {
+      "description": "Q1 is a mean pairwise cosine distance over ALL sample pairs, but all 24 samples carry DISTINCT content. Every pair is a different-content pair, so the mean tends to ~1.0 BY CONSTRUCTION whether or not content exists.",
+      "consequence": "The metric cannot discriminate content-bearing from content-free input. This is a metric-design defect, not a property of the gate under test."
+    },
+    "D2_saturated_readout": {
+      "description": "W is drawn at scale 0.02 against VOCAB=4096, producing near-orthogonal logit vectors for any input. Both arms sit at the metric ceiling (~1.0).",
+      "consequence": "Even a correctly-designed metric would have no dynamic range with this readout scale."
+    },
+    "D3_readout_not_tied_to_content_definition": {
+      "description": "Content was defined as the per-block slot pattern, but the synthetic readout pools over blocks with independently random per-block weights. Pooling makes the output distribution approximately permutation-invariant, so the block-shuffle control is close to a no-op in distribution.",
+      "consequence": "The control cannot separate because the readout was never made sensitive to the content the control destroys."
+    }
+  },
+  "correct_interpretation": "AK5_GATE_VACUOUS is NOT established. The printed verdict is an artifact of this probe. Gate power remains UNVALIDATED: unknown whether the A-K5 gate could detect content.",
+  "impact_on_ak5_verdict": {
+    "effect": "NONE",
+    "reason": "The corrected classification AK5_BLOCKED_DEGENERATE_TRAINING_TARGET rests on the provenance audit in evidence/ak5_provenance_correction.json (findings 1-5): random waves, random labels, salted-hash target ids, and no content-grounded wave->token head existing on this host. Those findings are independent of gate power.",
+    "verdict_unchanged": "AK5_BLOCKED_DEGENERATE_TRAINING_TARGET_AND_FAMILY_MISMATCH"
+  },
+  "correct_design_for_reuse": {
+    "principle": "A verdict gate needs a power check with POSITIVE pairs, not a single all-pairs mean.",
+    "requirements": [
+      "positive pairs: same content, independent noise; measure within-content similarity",
+      "negative pairs: different content; measure between-content similarity",
+      "report separation between the two distributions (e.g. AUC or mean gap), not a saturated all-pairs mean",
+      "verify the control actually destroys the positive-pair similarity before trusting it as a control",
+      "confirm dynamic range: neither arm pinned at a metric ceiling or floor"
+    ]
+  },
+  "process_lessons": {
+    "lesson_1": "A gate-power check must itself be validated. A probe that cannot pass on a KNOWN-positive input cannot certify or condemn the gate it tests.",
+    "lesson_2": "Saturated metrics (both arms at ceiling) are a probe defect signal. Check dynamic range before reading any delta.",
+    "lesson_3": "Reporting a probe's verdict without checking the probe's own validity would have propagated a false conclusion into the contract."
+  },
+  "evidence_class": "OBSERVED (probe output) + DERIVED (defect analysis)",
+  "cost_incurred": "USD 0 local"
+}
