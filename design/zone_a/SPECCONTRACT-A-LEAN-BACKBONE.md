@@ -37,6 +37,45 @@ does not exercise that path. **ARM B remains UNMEASURED.**
 This distinction is load-bearing. If Arm A works and Arm B fails, the defect is
 the **bridge**, not Zone C retrieval — a different fix on a different timescale.
 Do not read this PASS as clearing the wave-to-text bridge.
+
+## CLOSED-VOCAB EGRESS PROBE (2026-10-03) — ran and FAILED
+
+A third egress path exists that the `top1_token_unique=1` diagnostic did **not**
+measure: `HoloEgressCodebook` (`henri_vla_tokenizer.py:433`), a CLOSED 156-word
+vocabulary whose codebook is **derived from the tokenizer**, not random.
+Probe: `experiments/verification/armB_closed_vocab_egress_probe.py`.
+3 seeds x 3 carrier templates x 200-permutation null.
+
+| Check | Rule | Result |
+|---|---|---|
+| Q1 content above null | rate > null_max, every template | **PASS** (0.32-0.63 vs null_max ~0.03) |
+| Q2 specificity | mean margin own-index vs best-wrong > 0 | **FAIL** (+0.15, -0.16, -0.21, -0.18, -0.40, -0.25, -0.35, -0.08) |
+| Q3 random control | control < treatment | **PASS** (control 0.000-0.006) |
+| Q4 round-trip | bare-word identity == 1.0 | **PASS** (156/156 = 1.000) |
+
+Verdict `CLOSED_VOCAB_EGRESS_FAIL:Q2_specificity_positive_margin`.
+Receipt `design/zone_a/evidence/armB_closed_vocab_receipt.json`,
+sha256 `a49620be91ddb9c3e5aad8a4d951369fd3030696ea1a2c4ad840782d7b32bfe3`.
+
+**What this means.** Bare manifest words round-trip **perfectly** (156/156). The
+same words embedded in a carrier phrase recover at only **0.32-0.63**, far above
+chance but with a **negative mean specificity margin on most templates** — the
+own-index logit does not reliably exceed the best wrong index. The readout is
+**bimodal**: a subset of words is cleanly recovered, the rest are not recovered
+at all. That is **not a working egress**.
+
+**Position dependence observed (not yet a kill).** The only template with a
+positive margin on two of three seeds places the target word **first**
+(`{w} is the word`, 0.51-0.63). Mid-phrase templates (`the {w} report`,
+`describe {w} now`) are negative on all seeds. Consistent with a
+`position_binding="fractional_shift"` artifact, but this is an observation at
+n=3 seeds and is **not** established.
+
+**Scope.** This is NOT the open-vocabulary ARM_U unbinder path
+(`down_proj [2048,65536]`, 32000 tokens) where `top1_token_unique=1` was
+recorded. **ARM B remains UNMEASURED for open-vocabulary text.** A closed
+156-word vocabulary is a far easier problem than 32000-token generation, so a
+pass here would not have implied a pass there.
 Evidence classes: OBSERVED (repo/measured), INFERRED (external sources, untested here),
 DERIVED (arithmetic), HYPOTHESIS, BLOCKED.
 
