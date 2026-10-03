@@ -173,23 +173,31 @@ already in the code.</p>
 performance. This is the central claim, and it is untested.</li>
 </ul>
 
-<div class="co warn">
-<h4>Operational note</h4>
-<p>Docker Desktop is not running on this host. The live TimescaleDB container is therefore down. The engram store is not
-serving right now. <code>docker/zonec-dev/docker-compose.yml</code> holds the development stack.</p>
+<div class="co good">
+<h4>Operational note — corrected 2026-10-03</h4>
+<p>The dev store is <strong>up and serving</strong>. <code>docker info</code> reports 29.5.2. Container
+<code>henri-zonec-dev</code> is healthy on <code>localhost:5434</code>, database <code>henri_zonec_dev</code>.
+13 tables exist. Extensions <code>timescaledb</code> and <code>vector</code> are present.
+The store holds <strong>9 engrams</strong> and <strong>11 boundary axioms</strong>.</p>
+<p>An earlier revision of this page stated the store was down. That was true when the page was
+drafted and false when it was committed. The corrected figure is above. Stack definition:
+<code>docker/zonec-dev/docker-compose.yml</code>.</p>
 </div>
 
-<h2>5. Structural risk of the same defect class</h2>
-<p>The 32&nbsp;GiB crash was one instance of a pattern. A repo scan found other literal
-<code>[D, D]</code> constructions:</p>
+<h2>5. Structural risk of the same defect class — CLOSED</h2>
+<p>The 32&nbsp;GiB crash was one instance of a pattern. A repo scan of
+<strong>619 Python files</strong> found 46 such constructions. The disposition of each is now declared.</p>
 <table>
-<tr><th>File</th><th>Line</th><th>Guarded?</th></tr>
-<tr><td><code>henri_functor_flow.py</code></td><td><code>torch.randn(D, D, device=device)</code></td><td>Small D today (128). No guard.</td></tr>
-<tr><td><code>henri_geodesic_covariance_alignment.py</code></td><td><code>torch.randn(D, D, device=device)</code></td><td>Small D today (64). No guard.</td></tr>
-<tr><td><code>tests/contract/test_g1_topological_engine.py</code></td><td><code>torch.randn(D, D, generator=g)</code></td><td>Small D today. No guard.</td></tr>
+<tr><th>Disposition</th><th>Count</th><th>Basis</th></tr>
+<tr><td><code>GUARDED</code> + fixed</td><td>1</td><td><code>adaptive_viscoelastic_thermostat.py:113</code> — <code>W.T @ W</code> formed a 17.2&nbsp;GiB object at <code>d_model=65536</code>. Now refuses fail-closed above <code>STIEFEL_MAX_SQUARE_ELEMS</code>.</td></tr>
+<tr><td><code>ALLOWED</code> (declared small bound)</td><td>3</td><td><code>henri_functor_flow.py</code> D=128; <code>henri_geodesic_covariance_alignment.py</code> D=64; <code>test_g1_topological_engine.py</code> D=64. Each carries its bound in the allowlist.</td></tr>
+<tr><td><code>SMALL</code> (auto-resolved)</td><td>4</td><td>Bound literal ≤ 4096, no unresolved rebind.</td></tr>
+<tr><td><code>REVIEW</code> (not production-reachable)</td><td>38</td><td>Tests and <code>_archive/</code>. Not reachable from <code>production_arc_run.py</code> or <code>unified_henri_vla_engine.py</code>.</td></tr>
 </table>
-<p>A single guard test would forbid any <code>[D, D]</code> allocation at production <code>D</code>. That protects your
-Zone C contract structurally, not by convention.</p>
+<p>The guard <code>HENRI V2/tests/contract/test_no_dxd_allocation.py</code> enforces this repo-wide.
+It carries a <strong>kill-proof</strong>: the detector must fire on the pre-fix H3 construction. A guard
+never shown to fire is a style check, not proof. The scan asserts <code>n &gt; 500</code> files walked,
+so it cannot pass by walking nothing — the first revision did exactly that.</p>
 
 <h2>6. Not established</h2>
 <ul>
@@ -201,13 +209,13 @@ Zone C contract structurally, not by convention.</p>
 <li>No optoelectronic hardware. These are software kernels on one GPU.</li>
 </ul>
 
-<h2>7. Next actions</h2>
+<h2>7. Next actions — status after this cycle</h2>
 <table>
-<tr><th>#</th><th>Action</th><th>Why</th></tr>
-<tr><td>1</td><td>Add a repo-wide <code>[D, D]</code> guard test</td><td>Protects the Zone C memory contract</td></tr>
-<tr><td>2</td><td>Start the dev TimescaleDB stack</td><td>Your vectors must be stored; the store is down</td></tr>
-<tr><td>3</td><td>Read the writer and reader to confirm stored dimension and device</td><td>Settles the never-in-VRAM claim in code</td></tr>
-<tr><td>4</td><td>Design a novel-question transfer test through Zone C retrieval</td><td>Tests the one unproven part of your vision</td></tr>
+<tr><th>#</th><th>Action</th><th>Status</th></tr>
+<tr><td>1</td><td>Add a repo-wide <code>[D, D]</code> guard test</td><td><span class="tag go">DONE</span> 619 files, kill-proof fires, 1 production hit found and fixed</td></tr>
+<tr><td>2</td><td>Start the dev TimescaleDB stack</td><td><span class="tag go">ALREADY UP</span> verified healthy, seeded, 9 engrams + 11 axioms</td></tr>
+<tr><td>3</td><td>Read the writer and reader to confirm stored dimension and device</td><td><span class="tag go">DONE</span> roundtrip bit-exact 262144 B, CPU-only, mixed-width rows silently dropped</td></tr>
+<tr><td>4</td><td>Design a novel-question transfer test through Zone C retrieval</td><td><span class="tag gn">DESIGN ONLY</span> <code>NOVEL-QUESTION-TRANSFER-DESIGN.md</code>; mechanism probe PASS 14/14</td></tr>
 </table>
 
 <p class="small">Governance: Jev typed advice is advisory. Deterministic schema, proof, and security checks plus human

@@ -11,6 +11,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, Tuple, Optional, Any, List
 
+# Fail-closed cap for project_stiefel_manifold. 8192^2 = 67108864 elements
+# = 268435456 bytes (256 MiB) in float32. A [D, D] block at D=65536 would be
+# 4294967296 elements = 16 GiB, which is 64x over this bound.
+STIEFEL_MAX_SQUARE_ELEMS = 67_108_864
+
 
 def _haar_forward(x: torch.Tensor) -> Tuple[torch.Tensor, List[torch.Tensor]]:
     """Orthonormal 1D Haar transform. Returns (coarse, detail_bands) where
@@ -107,6 +112,17 @@ class AdaptiveViscoelasticThermostat(nn.Module):
         rows, cols = W.shape
         if rows < cols:
             W = W.T
+        # MEMORY CONTRACT (measured 2026-10-03): the Newton-Schulz product
+        # below forms a [cols, cols] object. At d_model=65536 that object is
+        # 65536^2*4 = 17179869184 bytes (16 GiB) and it page-thrashed the host
+        # when unguarded. Refuse fail-closed instead of allocating.
+        _side = W.shape[1]
+        if _side * _side > STIEFEL_MAX_SQUARE_ELEMS:
+            raise ValueError(
+                f"project_stiefel_manifold refuses square block {_side}x{_side} "
+                f"({_side * _side} elems, {_side * _side * 4} bytes); "
+                f"STIEFEL_MAX_SQUARE_ELEMS={STIEFEL_MAX_SQUARE_ELEMS}"
+            )
             
         identity = torch.eye(W.shape[1], device=W.device, dtype=W.dtype)
         for _ in range(self.stiefel_iters):
