@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zone C transfer ladder: does retrieval actually transfer?</title>
+<style>
+  body { color: var(--foreground); font-size: 14px; line-height: 1.55; max-width: 980px; }
+  h1 { font-size: 20px; margin: 0 0 2px; }
+  h2 { font-size: 15px; margin: 26px 0 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+  h3 { font-size: 13px; margin: 16px 0 6px; }
+  p, li { color: var(--foreground); }
+  .sub { color: var(--muted-foreground); font-size: 12px; margin: 0 0 14px; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 12px; font-size: 13px; }
+  th, td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: var(--card); font-weight: 600; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  code { font-size: 12.5px; }
+  .pass { color: #1a7f37; font-weight: 600; }
+  .fail { color: #b3261e; font-weight: 600; }
+  .warn { color: #9a6700; font-weight: 600; }
+  .box { border: 1px solid var(--border); border-left-width: 3px; padding: 9px 12px; margin: 12px 0; border-radius: 4px; }
+  .key { border-left-color: #1a7f37; }
+  .lim { border-left-color: #9a6700; }
+  .bad { border-left-color: #b3261e; }
+  .small { font-size: 12px; color: var(--muted-foreground); }
+  pre { background: var(--card); border: 1px solid var(--border); padding: 8px 10px; overflow-x: auto; font-size: 12.5px; border-radius: 4px; }
+  .ladder { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 4px; }
+  .rung { flex: 1 1 210px; border: 1px solid var(--border); border-radius: 5px; padding: 9px 11px; background: var(--card); }
+  .rung h4 { margin: 0 0 4px; font-size: 12.5px; letter-spacing: .02em; }
+  .num { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .lbl { font-size: 11.5px; color: var(--muted-foreground); }
+  ul { padding-left: 20px; }
+</style>
+</head>
+<body>
+
+<h1>Zone C transfer ladder &mdash; does retrieval actually transfer?</h1>
+<p class="sub">CPU only &middot; $0 compute &middot; live dev TimescaleDB &middot; three seeds per rung &middot; pre-registered kills &middot; HEAD <code>cbf3cd5</code></p>
+
+<div class="box key">
+<h3 style="margin-top:0">Answer</h3>
+<p><strong>Yes &mdash; when and only when the family shares structure.</strong> Retrieval cut samples-to-criterion by <strong>40%</strong> in every rung tested.
+Carried the same way, retrieval gave <strong>0%</strong> benefit where families shared nothing.</p>
+<p>The negative half is the stronger evidence. A generic warm-start would help both conditions. This does not, so the gain is retrieved <em>content</em>.</p>
+</div>
+
+<h2>1. The ladder</h2>
+<div class="ladder">
+  <div class="rung"><h4>R1 &mdash; dim 1024</h4><div class="num pass">+40%</div><div class="lbl">A0 15 &rarr; A1 9 &middot; structured</div></div>
+  <div class="rung"><h4>R2 &mdash; dim 4096</h4><div class="num pass">+40%</div><div class="lbl">A0 15 &rarr; A1 9 &middot; structured</div></div>
+  <div class="rung"><h4>R3 &mdash; dim 32768</h4><div class="num pass">+40%</div><div class="lbl">A0 15 &rarr; A1 9 &middot; structured</div></div>
+</div>
+<p class="small">R3 payload is 262,144 bytes = 8192 &times; 8 &times; 4 &mdash; the real stored engram width the reader validates.</p>
+
+<h2>2. Full medians, read from the receipts</h2>
+<table>
+<tr><th>Rung</th><th class="n">dim</th><th>Condition</th><th class="n">A0 cold</th><th class="n">A1 retrieve</th><th class="n">A2 shuffled</th><th class="n">A3 oracle</th><th class="n">A0&minus;A1</th><th class="n">A2&minus;A1</th><th>Verdict</th></tr>
+<tr><td>R1</td><td class="n">1024</td><td>structured</td><td class="n">15</td><td class="n"><b>9</b></td><td class="n">15</td><td class="n">16</td><td class="n">6 (40.0%)</td><td class="n">6</td><td class="pass">T1_SUPPORTED</td></tr>
+<tr><td>R1</td><td class="n">1024</td><td>unstructured</td><td class="n">15</td><td class="n">15</td><td class="n">15</td><td class="n">16</td><td class="n">0 (0.0%)</td><td class="n">0</td><td class="fail">T1_FALSIFIED</td></tr>
+<tr><td>R2</td><td class="n">4096</td><td>structured</td><td class="n">15</td><td class="n"><b>9</b></td><td class="n">16</td><td class="n">16</td><td class="n">6 (40.0%)</td><td class="n">7</td><td class="pass">T1_SUPPORTED</td></tr>
+<tr><td>R2</td><td class="n">4096</td><td>unstructured</td><td class="n">15</td><td class="n">15</td><td class="n">15</td><td class="n">16</td><td class="n">0 (0.0%)</td><td class="n">0</td><td class="fail">T1_FALSIFIED</td></tr>
+<tr><td>R3</td><td class="n">32768</td><td>structured</td><td class="n">15</td><td class="n"><b>9</b></td><td class="n">16</td><td class="n">16</td><td class="n">6 (40.0%)</td><td class="n">7</td><td class="pass">T1_SUPPORTED</td></tr>
+<tr><td>R3</td><td class="n">32768</td><td>unstructured</td><td class="n">15</td><td class="n">15</td><td class="n">16</td><td class="n">16</td><td class="n">0 (0.0%)</td><td class="n">1</td><td class="fail">T1_FALSIFIED</td></tr>
+</table>
+<p class="small">A1 beats the shuffled-axiom control A2 by 6&ndash;7 steps. That control is what rules out "any context helps".</p>
+
+<h2>3. Kill results</h2>
+<table>
+<tr><th>Kill</th><th>Rule</th><th>R1</th><th>R2</th><th>R3</th></tr>
+<tr><td>K1</td><td>A1 beats A0 by &ge;15%</td><td class="pass">pass</td><td class="pass">pass</td><td class="pass">pass</td></tr>
+<tr><td>K2</td><td>A1 beats shuffled A2</td><td class="pass">pass</td><td class="pass">pass</td><td class="pass">pass</td></tr>
+<tr><td>K3</td><td>retrieval integrity holds</td><td class="pass">pass</td><td class="pass">pass</td><td class="pass">pass</td></tr>
+<tr><td>K4</td><td>non-vacuous, rows deleted</td><td class="pass">pass</td><td class="pass">pass</td><td class="pass">pass</td></tr>
+<tr><td colspan="2"><b>structured verdict</b></td><td class="pass">SUPPORTED</td><td class="pass">SUPPORTED</td><td class="pass">SUPPORTED</td></tr>
+<tr><td colspan="2"><b>unstructured verdict</b></td><td class="fail">FALSIFIED</td><td class="fail">FALSIFIED</td><td class="fail">FALSIFIED</td></tr>
+</table>
+<p class="small">Every rung: <code>ingested=192 novel=192 deleted=192</code>, <code>retrieval_integrity=True</code>, <code>nonvacuous=True</code>. Store returned 9&nbsp;&rarr;&nbsp;9 rows, family <code>ast</code> 0&nbsp;&rarr;&nbsp;0.</p>
+
+<h2>4. Calibration &mdash; a hard gate, not a formality</h2>
+<p>Two vacuity defects sat in the first draft. Both were caught by smoke test before any verdict.</p>
+<table>
+<tr><th>Defect</th><th>Symptom</th><th>Cause</th><th>Fix</th></tr>
+<tr><td>D1</td><td>all arms started at &tau;</td><td>for a diagonal operator the noise-free least-squares estimate recovers <code>m</code> <b>exactly</b> &mdash; measured correlation <code>1.0000</code></td><td><code>obs_noise=3.0</code> &rarr; corr 0.51</td></tr>
+<tr><td>D2</td><td><code>ingested=0</code>, nothing to retrieve</td><td>fit-from-random-init never converged at <code>lr=0.05</code> (0/3 seeds)</td><td><code>lr=0.15</code> &rarr; converged 3/3</td></tr>
+</table>
+<p><strong>The same constants transferred unchanged</strong> across 1024 &rarr; 4096 &rarr; 32768 complex dims. The learning dynamics are scale-stable over this range. A run that ingests nothing now yields <code>VACUOUS_NO_INGESTION</code>, never a verdict.</p>
+
+<h2>5. What this does not show</h2>
+<div class="box lim">
+<ul>
+<li><strong>Synthetic task.</strong> Clustered diagonal-operator family. Not a benchmark, not natural language, not vision.</li>
+<li><strong>OBSERVED mechanism, not end-task capability.</strong> A pass here does not predict an R3-equivalent on real data.</li>
+<li><strong>No latency claim.</strong> The 50&nbsp;&micro;s gate still fails at 195.55&nbsp;&micro;s.</li>
+<li><strong>No AAII v4.3 score.</strong> At most 25% of the composite is locally reproducible; the harness refuses to emit a composite.</li>
+<li><strong>Egress is untested.</strong> Retrieval supplies context. Whether that context improves a generated answer is a separate, unrun experiment &mdash; and it is the binding constraint.</li>
+</ul>
+</div>
+
+<h2>6. Governance</h2>
+<table>
+<tr><th>Item</th><th>Value</th></tr>
+<tr><td>HEAD / main</td><td><code>cbf3cd5</code> &middot; <code>main a039095</code> untouched</td></tr>
+<tr><td>Remote readback</td><td>local <code>cbf3cd5</code> = remote <code>cbf3cd5</code></td></tr>
+<tr><td>Evidence</td><td>3 tracked receipts: <code>zonec_transfer_R1/R2/R3.json</code></td></tr>
+<tr><td>R3 runner digest</td><td><code>c9de9188c5731e05&hellip;813ba467</code> (self-consistent, recomputed)</td></tr>
+<tr><td>Ledger</td><td>1815 records, chain intact</td></tr>
+<tr><td>Tests</td><td>adapter 13 passed &middot; K5 13 passed, 1 skipped &middot; <code>[D,D]</code> guard PASS</td></tr>
+<tr><td>Billing</td><td><code>[]</code></td></tr>
+</table>
+<p class="small">The <code>[D,D]</code> memory contract held at production width &mdash; the 32&nbsp;GiB failure class did not recur.</p>
+
+<h2>7. Ledger records &mdash; both attributed</h2>
+<p>Record <b>1813</b> is my ladder seal. Record <b>1814</b> is <em>not</em> mine: <code>actor=context_watchdog</code>, <code>action=CONTEXT_HANDOFF_CREATED</code>, <code>session=20261001_221754_163809</code>. Read back before sealing on top. Record <b>1815</b> is the R3 seal.</p>
+
+<h2>8. Next action</h2>
+<p><strong>Test egress.</strong> Retrieval is established. The unanswered question is whether retrieved context changes a generated answer for the better. SpecContract A kill <b>A-K4</b> governs this &mdash; wave-to-text egress currently yields <code>top1_token_unique=1</code> across 16 distinct waves.</p>
+<p class="small">That kill, not the backbone size, is the binding constraint on the AAII ambition.</p>
+
+</body>
+</html>
