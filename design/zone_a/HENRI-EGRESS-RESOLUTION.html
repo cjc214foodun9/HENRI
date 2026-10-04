@@ -489,10 +489,10 @@
     <thead><tr><th>next action</th><th>bound</th><th>cost</th><th>gate</th></tr></thead>
     <tbody>
       <tr>
-        <td><strong>A.</strong> Ship the typed head into the MVP path (tool IDs then arguments)</td>
-        <td>Supported: 0.9844 / 0.9922 on held-out; irreducible from here at $0</td>
+        <td><strong>A.</strong> <span class="mono">DONE</span> &mdash; typed egress head shipped and wired into the MVP entrypoint</td>
+        <td>Measured: <span class="mono">henri_mvp.py snap</span> &rarr; <span class="mono">ACCEPT fact 5, margin 0.1127</span>, provenance <span class="mono">fact_06.txt sha256 093c0da2&hellip;</span> matching the manifest exactly; off-domain query &rarr; <span class="mono">REFUSE margin 0.0133</span>. Fail-closed verified.</td>
         <td>$0</td>
-        <td>MVP answers with per-field provenance, RC=0</td>
+        <td class="ok">MET &mdash; committed <span class="mono">000f36b</span>, sealed <span class="mono">#2a9d86d6347b2ef9</span></td>
       </tr>
       <tr>
         <td><strong>B.</strong> Power the A/B to 20&ndash;50 samples/class, then judge ARM-H fairly</td>
