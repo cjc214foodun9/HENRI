@@ -1,0 +1,32 @@
+{
+  "schema": "henri.claim-amendment.v1",
+  "date_utc": "2026-10-03",
+  "claim_amended": "DETERMINISTIC_CENTROID_RECOVERS_CONTENT",
+  "was_asserted": {
+    "text": "centroid recovers content at 0.9375 on held-out templates, training-free; blueprint's flat-linear diagnosis REJECTED",
+    "scale": "smoke V=16 (0.9688) and V=32 (0.9375)",
+    "commit": "0c82a93"
+  },
+  "now_measured": {
+    "scale": "V=512, held-out templates, chance 0.0020",
+    "centroid_raw": 0.5449,
+    "centroid_actres": 0.7314,
+    "centroid_control": 0.0029,
+    "verdict": "NEITHER_CLEARS",
+    "pre_registered_bar": 0.80
+  },
+  "reason": "The 0.9375 headline was measured at smoke scale only. The full V=512 run was in flight and unread when commit 0c82a93 was written. The full run contradicts the headline.",
+  "amended_claim": "On the shipped encode_egress() family, a training-free nearest-centroid recovers word content at 272x chance on held-out templates at V=512 (raw 0.5449), and 30x at V=32. This is BELOW the pre-registered 0.80 gate. The egress gate is NOT cleared.",
+  "what_survives": [
+    "HASH_FILL_IS_THE_SNR_DEFECT: removing the codec fill lifts a linear head 6x (0.0586 -> 0.3516) with clean controls",
+    "the encode_egress() fix is additive and verified; encode() is unchanged",
+    "codec word content is real and linearly decodable above chance at every scale tested",
+    "BETA_IS_NOT_THE_SNAP_MECHANISM: argmax is beta-invariant"
+  ],
+  "what_is_withdrawn": [
+    "the implicit reading that the egress gate passes at smoke scale",
+    "any use of 0.9375/0.9844 as a headline result"
+  ],
+  "class": "applying the session refusal discipline to my own success claim, not only to failures",
+  "analogy": "same class as the A-K4 metric amendment forced by the M1 gate falsifier"
+}

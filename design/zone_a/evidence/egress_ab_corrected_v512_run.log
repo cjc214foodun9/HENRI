@@ -1,0 +1,32 @@
+=== CORRECTED-FAMILY A/B (shipped encode_egress) ===
+   NB=8192 BD=8 DC=32768  V=512 (typed manifold <= 512)  templates=5
+   train templates=3  held-out templates=2  chance=0.0020
+   train (1536, 32768, 2)  held-out (1024, 32768, 2)
+   action resolution: centered per template; train (1536, 32768, 2)
+   ARM-L linear       train=1.0000  held-out=0.1484  ctrl=0.0020
+   ARM-R action-res   train=1.0000  held-out=0.3857  ctrl=0.0039
+
+   ARM-H hopfield lr sweep (each point is a fresh model)
+      lr=0.02000   train=1.0000  held-out=0.0029  ctrl=0.0020
+      lr=0.00077   train=0.0820  held-out=0.0020  ctrl=0.0000
+      lr=0.00020   train=0.0033  held-out=0.0020  ctrl=0.0020
+      lr=0.00005   train=0.0033  held-out=0.0039  ctrl=0.0020
+   ARM-H hopfield     train=1.0000  held-out=0.0029  ctrl=0.0020  (best lr=0.02000)
+   centroid raw           held-out=0.5449
+   centroid actres        held-out=0.7314
+   centroid CONTROL       held-out=0.0029  (per-sample block perm)
+
+=== beta sweep on the trained Hopfield codebook (held-out) ===
+   beta=     1.0  acc=0.0020
+   beta=     5.0  acc=0.0020
+   beta=    10.0  acc=0.0020
+   beta=    26.1  acc=0.0020
+   beta=    50.0  acc=0.0020
+   beta=   100.0  acc=0.0020
+
+=== VERDICT (pre-registered) ===
+   chance=0.0020  controls_at_chance=True
+   linear=0.1484  hopfield=0.0029  action-res=0.3857
+   centroid=0.5449 (ctrl 0.0029)
+   -> NEITHER_CLEARS: egress content remains UNRESOLVED at this capacity
+RC=0

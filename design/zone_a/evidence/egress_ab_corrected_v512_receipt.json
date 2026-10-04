@@ -1,0 +1,36 @@
+{
+  "schema": "henri.egress-readout-ab.v1",
+  "artifact": "HENRI V2/experiments/verification/egress_readout_ab_corrected.py",
+  "runlog": "design/zone_a/evidence/egress_ab_corrected_v512_run.log",
+  "author_commit": "0c82a93",
+  "date_utc": "2026-10-03",
+  "authorization": {
+    "operator": "2026-10-03 grant of Path A and the blueprint executive instructions",
+    "blueprint_sha256": "9f3cd5cd6116e8e2f1c1f77a0c2ae9c2fc03f6c9dbd90bf59b0243af4ce6b7bf"
+  },
+  "config": {"V": 512, "steps": 300, "batch": 128, "templates": 5, "train_templates": 3, "held_out_templates": 2},
+  "chance": 0.0020,
+  "controls_at_chance": true,
+  "arms_held_out": {
+    "ARM-L linear":     {"train": 1.0000, "held_out": 0.1484, "ctrl": 0.0020},
+    "ARM-R action-res": {"train": 1.0000, "held_out": 0.3857, "ctrl": 0.0039},
+    "ARM-H hopfield":   {"train": 1.0000, "held_out": 0.0029, "ctrl": 0.0020, "best_lr": 0.02}
+  },
+  "centroid": {"raw_held_out": 0.5449, "actres_held_out": 0.7314, "control_held_out": 0.0029},
+  "pre_registered_bar": 0.80,
+  "verdict": "NEITHER_CLEARS",
+  "beta_sweep_trained_codebook": "flat 0.0020 (= chance) for beta in {1,5,10,26.1,50,100}",
+  "caveats": [
+    "actres applies per-template centering, which needs the template label at inference. raw 0.5449 is the deployment number; actres 0.7314 is oracle-assisted.",
+    "trained arms see 1536/512 = 3 samples per class. A starved trained arm is not evidence about that architecture. ARM-H is UNINTERPRETABLE, not falsified.",
+    "the beta sweep is flat at chance because the host wave fed to the codebook carries the ARM-H initialization; it reproduces Q1 beta-invariance on a trained codebook."
+  ],
+  "supersedes": {
+    "claim": "DETERMINISTIC_CENTROID_RECOVERS_CONTENT",
+    "asserted_at": "smoke V=16/32",
+    "asserted_in_commit": "0c82a93",
+    "why_superseded": "the 0.9375/0.9844 figures were smoke scale; the V=512 run was in flight and UNREAD at the time of that commit"
+  },
+  "retained_observation": "post-fix content decodes 272x chance at V=512 (raw 0.5449) and 30x at V=32 (0.9375) on held-out TEMPLATES with clean controls. Real signal. Below the pre-registered bar at production vocabulary.",
+  "class": "amendment of my own success claim; same discipline as the A-K4 metric amendment"
+}
