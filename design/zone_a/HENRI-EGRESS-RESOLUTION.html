@@ -458,8 +458,8 @@
       <tr><td>Blueprint &ldquo;Hopfield Lexical Snap is the egress fix&rdquo;</td><td class="bad">NOT SUPPORTED (HOP 2&times; chance)</td></tr>
       <tr><td>Superposition mechanism behind the manifold fall</td><td class="bad">NOT CONFIRMED</td></tr>
       <tr><td>Typed decomposition beats flat at equal ingredients</td><td class="bad">NOT SUPPORTED (+0.0020, under 1 SE)</td></tr>
-      <tr><td>Stage 6: EFE probe selection beats greedy (K=6, real corpus facts)</td><td class="warn">BOUNDED &mdash; separates at ONE derived rung (0.45) only; not at the measured operating accuracy 0.8043, nor at 0.55/0.65/0.80</td></tr>
-      <tr><td>Stage 6: info beats rand on mean probes</td><td class="ok">OBSERVED at every rung, both K=6 and K=512</td></tr>
+      <tr><td>Stage 6: EFE probe selection beats greedy (K=6, real corpus facts)</td><td class="warn">WITHDRAWN AS A GENERAL CLAIM &mdash; separates on 3 of 8 seeds at disagreeing rungs (0.45/0.35/0.45); control seed reproduces the original exactly, so this is seed variance, not code drift</td></tr>
+      <tr><td>Stage 6: info beats rand on mean probes</td><td class="ok">OBSERVED 40 PASS / 0 FAIL across 8 seeds &times; 5 rungs</td></tr>
       <tr><td>Stage 6: EFE beats greedy at the blueprint's K&le;512 bound</td><td class="bad">NOT ESTABLISHED &mdash; INSTRUMENT_CANNOT_RESOLVE_EFE</td></tr>
       <tr><td>Stage 6: CRN / N_MC=64-128 repair would resolve K=512</td><td class="bad">REFUTED BY MEASUREMENT &mdash; median pinned at 2.0 for all policies at both rungs; escalation cancelled</td></tr>
       <tr><td>Blueprint &ldquo;a linear operator cannot compute multi-step reasoning&rdquo;</td><td class="warn">PARTLY SUPPORTED &mdash; not about linearity: the typed head IS linear and reaches 0.98. Support is for <em>recursive look selection</em> at degraded accuracy only</td></tr>
@@ -546,16 +546,22 @@
     Stage 6 is unblocked for typed actions &mdash; but not for 32,000-token text.
   </p>
   <p class="small">
-    <strong>Stage 6 is now measured, not just unblocked.</strong> EFE probe selection beats greedy
-    at one derived K=6 rung (0.45) and at no rung at or above the measured operating accuracy
-    &mdash; at K=6 or at K=512. The pre-registered K=512 instrument returns
+    <strong>Stage 6 is now measured, not just unblocked &mdash; and its one positive result was
+    tested and withdrawn.</strong> A single-seed run reported EFE probe selection beating greedy at
+    one derived K=6 rung (0.45). An 8-seed isolation run with the original config restored
+    &mdash; control seed reproduces the original exactly, so the code is RNG-faithful &mdash; found
+    that <strong>separation fires on 3 of 8 seeds at rungs that disagree</strong>, with no stable
+    operating point. What replicated: <span class="mono">info</span> beats
+    <span class="mono">rand</span>, 40 PASS / 0 FAIL. So the honest standing claim is narrower
+    than a separation claim: <em>at the operating point greedy suffices; info's gain over random
+    is real and repeatable, but no EFE advantage over greedy is established at any tested
+    accuracy.</em> At K=512 the pre-registered instrument returns
     <span class="mono">INSTRUMENT_CANNOT_RESOLVE_EFE</span>, and the named
     <span class="mono">N_MC</span> escalation is <strong>cancelled by measurement</strong>, not by
     budget: the median steps-to-criterion is pinned at 2.0 for all three policies at both rungs, so
     the statistic has no dynamic range at K=512. Repairing that needs a <em>new pre-registered
-    metric</em>, which is a scope decision, not a run. The honest standing claim is therefore:
-    <em>at the operating point greedy suffices; recursion pays only when single-look accuracy is
-    degraded.</em>
+    metric</em>, which is a scope decision, not a run. The <span class="mono">G-AI-1</span> gate was
+    <strong>not moved</strong> after seeing results.
   </p>
 
   <p class="small">
