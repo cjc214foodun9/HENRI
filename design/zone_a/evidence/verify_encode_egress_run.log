@@ -1,0 +1,19 @@
+A1 encode() RETRIEVAL CONTRACT
+   identical>=0.999       True
+   end_1edit>=0.80        True
+   reversal<=0.60         True
+   random_cross<=0.20     True
+   fragment>2*random      True
+   geometry = {'identical': 1.0, 'end_1edit': 0.904762, 'reversal': 0.47619, 'random_cross': 0.031579, 'fragment_retrieval': 0.322749}
+
+A2 encode_egress() == probe ZERO variant, byte-exact: True
+      max abs diff = 0.000e+00
+
+A3 patch is REAL (encode != encode_egress): True
+      rows all-zero : stored=0  egress=8096
+      egress active rows = 96 of 8192 (1.17%)
+
+A4 stored engram round-trip
+      bytes=262144  reshape=(8192, 8)  round-trip=True
+
+ALL CHECKS PASS = True

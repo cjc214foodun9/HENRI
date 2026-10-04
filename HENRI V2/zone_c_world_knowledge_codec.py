@@ -152,6 +152,28 @@ class CompositionalTextCodec:
         proj = _l2(_proj_accum(proj_feats, self.proj_dim)).astype(np.float32)
         return rows.astype(np.float32).tobytes(), proj
 
+    def encode_egress(self, text: str) -> np.ndarray:
+        """EGRESS variant: content-only rows, NO hash fill. Returns [8192, 8] f32.
+
+        WHY. encode() fills every empty row with a slot seeded from hash(text).
+        That fill is a RETRIEVAL-side contract: it satisfies the row_unit gate
+        (every row nonzero, unit norm) that keeps the HNSW projection stable.
+        The EGRESS path inherits it as noise. Measured 2026-10-03, K-SNR probe:
+        removing the fill lifts a flat linear head 6x on held-out templates
+        (0.0586 -> 0.3516, controls at chance), and the mechanism predicts the
+        effect size (96/sqrt(8192) vs 96/sqrt(96)).
+
+        This method is ADDITIVE. encode() is unchanged, so retrieval, ingestion,
+        and every stored engram keep identical bytes. Only the egress read path
+        uses this. Rows with no feature stay ZERO, so block support carries
+        content instead of text-hash noise.
+        """
+        acc = _wave_accum(features_of(text, ngram_max=3))
+        rows = acc.reshape(NUM_BLOCKS, BLOCK_DIM).copy()
+        norms = np.linalg.norm(rows, axis=1, keepdims=True)
+        np.divide(rows, norms, out=rows, where=norms > 1e-9)
+        return rows.astype(np.float32)
+
     def geometry(self) -> dict[str, float]:
         s = "the quick brown fox jumps over the lazy dog near the riverbank"
         s_end1 = "the quick brown fox jumps over the lazy dog near the riverbanl"
