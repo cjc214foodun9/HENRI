@@ -441,6 +441,80 @@
     refuted by run, not by argument.
   </p>
 
+  <h3>2.10 The blueprint's central prescription: the Hopfield Lexical Snap resolves to nearest-prototype</h3>
+  <p>
+    Section&nbsp;2.4 of the blueprint names three immediate actions. Items&nbsp;1&ndash;2 are the
+    Continuous Modern Hopfield Network at <span class="mono">&beta;*&nbsp;=&nbsp;26.10</span>.
+    The corrected-family A/B left that arm <span class="mono">UNINTERPRETABLE</span> &mdash;
+    starved at 3 training samples per class &mdash; not refuted. This run gives it 32 templates
+    per word.
+  </p>
+  <table>
+    <thead><tr><th>read</th><th>train</th><th>held-out</th><th>control</th><th>&times;&nbsp;chance</th></tr></thead>
+    <tbody>
+      <tr><td>nearest prototype <span class="mono">t=0</span></td><td class="mono">0.9995</td><td class="mono">0.9883</td><td class="mono">0.0176</td><td class="mono">63.2</td></tr>
+      <tr><td><span class="mono">+</span> Hopfield refine <span class="mono">t=1..3</span></td><td class="mono">0.9990</td><td class="mono">0.9883</td><td class="mono">0.0156</td><td class="mono">63.2</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Config: V&nbsp;=&nbsp;64 words, 32 train + 8 held-out templates, 2048 train / 512 held-out
+    waves, <span class="mono">&beta;*&nbsp;=&nbsp;26.10</span>, seed&nbsp;<span class="mono">20261004</span>,
+    real <span class="mono">encode_egress()</span> waves. Control is a per-sample
+    <em>block</em> permutation. <span class="mono">G-B1 PASS, G-B2 PASS, G-B3 PASS,
+    G-B4 FAIL, G-B5 PASS &rarr; PROTOTYPE_WORKS_REFINEMENT_INERT</span>.
+  </p>
+  <p class="small">
+    <strong>The codebook works and is training-free. Iteration adds exactly zero</strong> &mdash;
+    and the zero is structural, not a defect. Measured: the representation moves substantially
+    (<span class="mono">rel&nbsp;||dF||/||F||&nbsp;=&nbsp;1.080624 / 0.148953 / 0.041052</span>)
+    while the argmax <strong>never flips</strong> (<span class="mono">0/512</span> at every step).
+    At <span class="mono">&beta;=26.10</span> the softmax is near one-hot, so
+    <span class="mono">Z &larr; M_k</span> &mdash; the nearest prototype &mdash; and re-reading a
+    prototype returns that prototype's own class. <strong>The refinement is a fixed-point map.</strong>
+    <span class="mono">G-B4</span> is vacuous by design at any <span class="mono">&beta; &gg; 1</span>.
+  </p>
+  <p class="small">
+    This is the <strong>third independent confirmation</strong> that
+    <span class="mono">&beta;*&nbsp;=&nbsp;26.10</span> is argsmax-inert: (1)&nbsp;the
+    <span class="mono">k-beta</span> probe, identical across <span class="mono">&beta; 0.5..1000</span>;
+    (2)&nbsp;the typed-manifold <span class="mono">G-B5</span> self-check; (3)&nbsp;this
+    fully-powered <span class="mono">V=64</span> run. <em>Not claimed:</em> Hopfield associative
+    memory fails in general. The blueprint's <em>specified</em> configuration is equivalent to
+    nearest-prototype lookup. Storing patterns, or small <span class="mono">&beta;</span>, is untested.
+  </p>
+
+  <h3>2.11 The constant crosstalk is common mode &mdash; and removing it does not help</h3>
+  <p>
+    The V-sweep reported a constant <span class="mono">~0.2&ndash;0.34</span> mean
+    <span class="mono">|</span>off-diagonal cosine<span class="mono">|</span> between class
+    prototypes, flat in V. A flat constant is not a capacity effect; it is a fixed bias.
+    Hypothesis: template words (<em>the</em>, <em>report</em>, <em>read</em>, &hellip;) appear in
+    every sample regardless of target word, so they contribute a <strong>common mode</strong>.
+  </p>
+  <table>
+    <thead><tr><th>scale</th><th>crosstalk before</th><th>after</th><th>cut</th><th>held-out before</th><th>after</th></tr></thead>
+    <tbody>
+      <tr><td><span class="mono">V=128</span></td><td class="mono">0.2086</td><td class="mono">0.0209</td><td class="mono">10.0&times;</td><td class="mono">0.9248</td><td class="mono">0.9180</td></tr>
+      <tr><td><span class="mono">V=256</span></td><td class="mono">0.2049</td><td class="mono">0.0186</td><td class="mono">11.0&times;</td><td class="mono">0.8916</td><td class="mono">0.8872</td></tr>
+      <tr><td>within-word</td><td class="mono">0.1401</td><td class="mono">0.1469</td><td class="mono">unchanged</td><td colspan="2">signature of a shared component</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Mean subtracted on <strong>train only</strong>; no held-out row touches it
+    (<span class="mono">G-C2 PASS</span>); controls pinned at chance both before and after
+    (<span class="mono">G-C4 PASS</span>). <span class="mono">G-C1 PASS, G-C3 PASS &rarr;
+    CROSSTALK_IS_COMMON_MODE</span>.
+  </p>
+  <p class="small">
+    <strong>Two-part answer, and the second part refutes my own follow-on hypothesis.</strong>
+    Part&nbsp;1 confirmed: the crosstalk <em>is</em> a shared common mode and it <em>is</em>
+    removable. Part&nbsp;2 refuted: removing it does <strong>not</strong> raise the ceiling &mdash;
+    accuracy moves slightly <em>down</em> at both scales. The ~0.2 crosstalk was
+    <strong>not</strong> the binding constraint. The ceiling lies elsewhere. This is a
+    post-hoc feature transform in the probe only; <span class="mono">encode()</span> and
+    <span class="mono">encode_egress()</span> are unchanged.
+  </p>
+
   <h2>3. Evidence status</h2>
   <table>
     <thead><tr><th>claim</th><th>class</th></tr></thead>
