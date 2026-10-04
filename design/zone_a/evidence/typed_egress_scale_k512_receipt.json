@@ -1,0 +1,76 @@
+{
+  "schema": "henri.typed-egress-scale.v1",
+  "artifact": "HENRI V2/experiments/verification/typed_egress_scale_k512.py",
+  "module_under_test": "HENRI V2/henri_typed_egress.py (SHIPPED)",
+  "runlog": "design/zone_a/evidence/typed_egress_scale_k512_run.log",
+  "date_utc": "2026-10-03",
+  "authorization": {
+    "operator": "2026-10-03 grant of Path A and the executive instructions of HENRI-ARCH-2026-SYSTEMIC-EVALUATION-V3 (message body)",
+    "blueprint_sha256": "9f3cd5cd6116e8e2f1c1f77a0c2ae9c2fc03f6c9dbd90bf59b0243af4ce6b7bf",
+    "blueprint_bound": "sec 2.4: codebook size K <= 512 (domain-specific typed primitives)"
+  },
+  "design": {
+    "manifolds": {"tools": 32, "args": 16, "joint": 512},
+    "atomic_ingredients": 48,
+    "held_FIXED_vs_the_earlier_refusal": "the 512-way manifold AND the 48 atomic ingredients are identical for BOTH arms. Only the DECISION STRUCTURE differs. This isolates decomposition from manifold size and from ingredient count -- the two confounds that produced the earlier TABLE_REPORTED.",
+    "readout": "training-free nearest class mean (no optimizer, no lr)",
+    "templates": {"train": 4, "held_out": 2},
+    "rows": {"train": 2048, "held_out": 1024, "control": 1024},
+    "chance": 0.001953125,
+    "control": "per-sample block permutation of the same wave family"
+  },
+  "result": {
+    "TYPED_tool":  {"train": 1.0000, "held_out": 0.9844, "control": 0.03027, "x_chance": 504.0},
+    "TYPED_arg":   {"train": 1.0000, "held_out": 0.9922, "control": 0.05957, "x_chance": 508.0},
+    "TYPED_joint": {"train": 1.0000, "held_out": 0.9766, "control": 0.00293, "x_chance": 500.0},
+    "FLAT_512way": {"train": 1.0000, "held_out": 0.9746, "control": 0.00195, "x_chance": 499.0},
+    "typed_minus_flat_joint": 0.0020
+  },
+  "controls": {
+    "all_at_chance": true,
+    "typed_tool": "0.97x its own chance",
+    "typed_arg": "0.95x its own chance",
+    "typed_joint": "1.50x joint chance",
+    "flat_joint": "1.00x joint chance",
+    "worst_ratio": 1.50,
+    "gate": "< 3.00x"
+  },
+  "verdict": "FLAT_SUFFICES_AT_48_INGREDIENTS",
+  "gate": "G-SC-FLAT: flat joint >= 0.80 AND typed - flat < 0.10",
+  "gate_value": "flat 0.9746 >= 0.80 and delta +0.0020 < 0.10",
+  "why_this_is_the_right_gate_to_land_on": "the arms are within 0.002 at n=1024 (1 SE ~ 0.005), so they are INDISTINGUISHABLE. Claiming a typed advantage would be claiming a difference smaller than one standard error.",
+
+  "DECOMPOSITION_REFUSED_FOR_ACCURACY": {
+    "statement": "at 48 atomic ingredients a single flat 512-way head already reaches 0.9746, so typed decomposition adds no accuracy. The blueprint's rationale for item 3 was that a large flat manifold is less accurate; at this ingredient count that premise does not hold.",
+    "ingredient_caveat_is_what_makes_this_sharper": "the capacity sweep showed flat 512-way over 512 ARBITRARY tokens falls to 0.5449. So the manifold size is NOT the controlling variable -- the ATOMIC INGREDIENT COUNT is (ingredient_count_law_probe.py: 513 ingredients 0.5146 -> 72 ingredients 0.9287, manifold held at 512)."
+  },
+
+  "WHAT_TYPED_DECOMPOSITION_IS_STILL_FOR": {
+    "not_accuracy": "measured: no accuracy gain at 48 ingredients",
+    "but_still_required_for": [
+      "strong typing -- a 512-way unconstrained index cannot express 'this output must be a valid tool id', whereas two heads each validated against their own closed manifold can",
+      "fail-closed routing -- per-field margins (tool m, arg m) let a consumer refuse one field without discarding the other; a joint argmax offers no such decomposition",
+      "verified coordinates -- the blueprint names validated spatial coordinates, which need range checks a joint label cannot carry",
+      "auditability -- an action log records (field, id, margin) per field"
+    ],
+    "reading": "the measured value of typed outputs is SAFETY AND ROUTING, not accuracy. That is a corrected rationale, not a refutation of the blueprint item."
+  },
+
+  "D23_SELF_CAUGHT_DEFECT_FIXED_BEFORE_THE_RUN": {
+    "first_draft": "tight = min(joint_ctrl, tool_ctrl, arg_ctrl, flat_ctrl); ctl_ok = tight < 3 * CHANCE",
+    "fault_1": "min() reports the BEST control, so an elevated control is hidden -- a gate that can only pass",
+    "fault_2": "per-field controls were compared against the JOINT chance (1/512), but tool chance is 1/32 and arg chance is 1/16. At 32x16 the tool threshold would have been 3/512 = 0.0059 against a tool chance of 0.031 -- an impossible bar that min() then masked.",
+    "fix": "every control is compared against 3x ITS OWN field's chance, and the WORST ratio is reported",
+    "caught_by": "running the smoke and reading the output against the code, before the real run"
+  },
+
+  "honest_limits": [
+    "single corpus, 4 train templates per class",
+    "n=1024 held-out -> 1 SE ~ 0.005, so the +0.0020 delta is not resolvable and is NOT claimed as a difference in either direction",
+    "CPU only; not a latency claim",
+    "this is a typed-manifold result, NOT a 32,000-token wave->text result"
+  ],
+  "cost": {"gpu_usd": 0, "cpu_only": true, "store": false, "checkpoint": false, "network": false},
+  "evidence_class": "OBSERVED",
+  "class": "a pre-registered gate that fires for the FLAT arm and thereby corrects the rationale for typed outputs"
+}

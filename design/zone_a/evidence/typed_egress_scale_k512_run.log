@@ -1,0 +1,24 @@
+=== TYPED EGRESS AT THE BLUEPRINT BOUND (K <= 512) ===
+   NB=8192  tools 32-way  args 16-way  joint 512-way
+   atomic ingredients 48  chance 0.00195
+   module: SHIPPED HENRI V2/henri_typed_egress.py   readout: training-free centroid
+   corpus: 2048 train, 1024 held-out, 1024 control   built in 0.9s
+
+   arm                      train  held-out  control  x chance
+   TYPED tool              1.0000    0.9844   0.0303    504.0x
+   TYPED arg               1.0000    0.9922   0.0596    508.0x
+   TYPED joint             1.0000    0.9766   0.0029    500.0x
+   FLAT 512-way            1.0000    0.9746   0.0020    499.0x
+
+=== VERDICT (pre-registered) ===
+   control typed tool   0.03027  vs chance 0.03125  = 0.97x  OK
+   control typed arg    0.05957  vs chance 0.06250  = 0.95x  OK
+   control typed joint  0.00293  vs chance 0.00195  = 1.50x  OK
+   control flat joint   0.00195  vs chance 0.00195  = 1.00x  OK
+   controls_at_chance=True  (worst typed joint at 1.50x, gate < 3.00x)
+   typed joint 0.9766   flat joint 0.9746   delta +0.0020
+   -> FLAT_SUFFICES_AT_48_INGREDIENTS: flat 0.9746 at 48 atomic
+      ingredients. Type the OUTPUT for safety and routing, not for accuracy.
+
+   elapsed 7.2s   cost $0   CPU only
+RC=0
