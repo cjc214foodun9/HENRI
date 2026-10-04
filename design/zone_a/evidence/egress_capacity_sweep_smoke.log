@@ -1,0 +1,12 @@
+=== V-SWEEP CAPACITY PROBE (shipped encode_egress) ===
+   NB=8192 BD=8 DC=32768  WAVE_EXPAND=16  templates=5
+
+       V  blocks_used  collide%     raw  actres    ctrl  offdiag|cos|
+      16          256      3.1%  0.9688  0.9688  0.1250       0.34972
+      32          512      6.2%  0.9375  0.9844  0.0000       0.34341
+
+=== VERDICT (pre-registered) ===
+   chance(V=512)=0.0312  all_controls_at_chance=True
+      V=16   raw=0.9688 actres=0.9688 ctrl=0.1250 offdiag=0.34972
+      V=32   raw=0.9375 actres=0.9844 ctrl=0.0000 offdiag=0.34341
+   -> CURVE_MEASURED: no mechanism claimed; report the curve as-is
