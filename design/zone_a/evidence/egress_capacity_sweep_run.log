@@ -1,0 +1,23 @@
+=== V-SWEEP CAPACITY PROBE (shipped encode_egress) ===
+   NB=8192 BD=8 DC=32768  WAVE_EXPAND=16  templates=5
+
+       V  blocks_used  collide%     raw  actres    ctrl  offdiag|cos|
+      16          256      3.1%  0.9688  0.9688  0.1250       0.34972
+      32          512      6.2%  0.9375  0.9844  0.0000       0.34341
+      64         1024     12.5%  0.9453  0.9766  0.0156       0.34260
+     128         2048     25.0%  0.8789  0.9375  0.0156       0.34302
+     256         4096     50.0%  0.6973  0.8496  0.0059       0.34207
+     512         8192    100.0%  0.5449  0.7178  0.0000       0.34213
+
+=== VERDICT (pre-registered) ===
+   chance(V=512)=0.0020  all_controls_at_chance=True
+      V=16   raw=0.9688 actres=0.9688 ctrl=0.1250 offdiag=0.34972
+      V=32   raw=0.9375 actres=0.9844 ctrl=0.0000 offdiag=0.34341
+      V=64   raw=0.9453 actres=0.9766 ctrl=0.0156 offdiag=0.34260
+      V=128  raw=0.8789 actres=0.9375 ctrl=0.0156 offdiag=0.34302
+      V=256  raw=0.6973 actres=0.8496 ctrl=0.0059 offdiag=0.34207
+      V=512  raw=0.5449 actres=0.7178 ctrl=0.0000 offdiag=0.34213
+   -> CAPACITY_LAW_CONFIRMED: egress clears 0.80 at small typed
+      manifolds and fails at V=512 where blocks_collide=
+      100.0%. Typed-manifold decomposition is the fix.
+RC=0
