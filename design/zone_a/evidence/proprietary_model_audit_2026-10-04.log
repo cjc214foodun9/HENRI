@@ -1,0 +1,49 @@
+torch: 2.13.0+cpu | cuda: False
+
+==============================================================================
+V5. CHECKPOINT INVENTORY vs FILE SIZE (arithmetic)
+==============================================================================
+   tensors=4  keys=['down_proj.weight', 'layer_norm.bias', 'layer_norm.weight', 'lm_head.weight']
+   params=199,757,824  data_bytes=799,031,296
+   file_bytes=799,034,119  delta=2,823  <- pickle metadata only
+   sha256=75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060
+   -> 218 tensors is IMPOSSIBLE for this file.
+
+==============================================================================
+LOAD THE PROPRIETARY DECODER
+==============================================================================
+   load_state_dict -> missing: [] unexpected: []
+
+==============================================================================
+V1. DETERMINISM  (same wave twice -> same logits)
+==============================================================================
+   identical: True | max|d|: 0.0 | argmax: 6783 6783
+
+==============================================================================
+V2. DISCRIMINATION  (different text -> different output?)
+==============================================================================
+   argmax=6783    mean|dlogit|=0.000000   |w|=37757.8945  Foodservice is the largest channel for shell e
+   argmax=12043   mean|dlogit|=0.357307   |w|=37757.7070  The effective date is December 15, 2022
+   argmax=10332   mean|dlogit|=0.349595   |w|=37725.5156  def return import math
+   DISTINCT argmax across texts: 3 of 3
+   -> constant function? no
+
+==============================================================================
+V3. TEST-TIME ADAPTATION  (does SGLD change parameters?)
+==============================================================================
+[HENRIUnifiedEgressTransducer] Loaded validated decoder checkpoint: path=C:\Users\chan\henri-worktrees\phase1-transduction\HENRI V2\models\henri_decoder_checkpoint.pt sha256=75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060
+   transducer constructed; checkpoint_load_status = LOADED
+   adapt_in_context -> {'avg_adapt_loss': 7.281077861785889, 'total_yield_events': 2, 'adapted_pairs_count': 1}
+   params changed: 1 of 4 | max|dparam| = 8.639e-02
+   -> adaptation engages? YES
+
+==============================================================================
+V4. THE TRAINING OBJECTIVE  (is the checkpoint reproducible?)
+==============================================================================
+   label expression: ['hash(text_target) % vocab_size']
+   hash()%32000 across 3 processes: ['23119', '24976', '28171']
+   stable? NO  <-- LABELS NOT REPRODUCIBLE
+   corpus in trainer: 0 inline words;  tokenizer present: False
+
+VIABILITY: FUNCTIONING
+DONE

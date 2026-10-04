@@ -1,0 +1,59 @@
+==============================================================================
+U1. WHAT CODEC DOES THE TRAINER USE?
+==============================================================================
+  trainer imports: ['os', 'sys', 'time', 'math', 'argparse', 'datetime', 'torch', 'torch.nn', 'torch.nn.functional', 'henri_decoder', 'zone_c_epistemic_axiom_harness']
+  trainer instantiates: [('qFHRREpistemicCodec', 'd_model=65536, device=device'), ('HENRINeuralEgressUnbinder', 'd_model=65536, d_hidden=2048, vocab_size=32000, device=device')]
+  zone_c_epistemic_axiom_harness members: ['Any', 'AxiomCategory', 'AxiomRecord', 'D_MODEL', 'Dict', 'DynamicActiveKnowledgeBuffer', 'Enum', 'F', 'HolographicTaskFunctorCompiler', 'K_BINS', 'List', 'Optional', 'SegmentCache', 'TAU_SAGNAC_VETO', 'Tuple', 'ZoneCEpistemicDatabase', 'hashlib', 'json', 'math', 'nn', 'np', 'psycopg', 'qFHRREpistemicCodec', 'time', 'torch']
+  qFHRREpistemicCodec found
+    methods: ['T_destination', 'add_module', 'apply', 'bfloat16', 'bind_hadamard', 'buffers', 'call_super_init', 'children', 'compile', 'compute_similarity', 'cpu', 'cuda', 'double', 'dump_patches', 'encode_text', 'eval', 'extra_repr', 'float', 'forward', 'get_buffer', 'get_extra_state', 'get_parameter', 'get_submodule', 'half', 'ipu', 'load_state_dict', 'modules', 'mtia', 'named_buffers', 'named_children', 'named_modules', 'named_parameters', 'parameters', 'register_backward_hook', 'register_buffer', 'register_forward_hook', 'register_forward_pre_hook', 'register_full_backward_hook', 'register_full_backward_pre_hook', 'register_load_state_dict_post_hook', 'register_load_state_dict_pre_hook', 'register_module', 'register_parameter', 'register_state_dict_post_hook', 'register_state_dict_pre_hook', 'requires_grad_', 'set_extra_state', 'set_submodule', 'share_memory', 'state_dict', 'to', 'to_empty', 'train', 'type', 'unbind_hadamard', 'xpu', 'zero_grad']
+    encode_text present? True
+    encode_text sig: (self, text: str) -> torch.Tensor
+    encode_text('def') -> (65536,)
+
+==============================================================================
+U2. IS THERE ONE CLASS THAT COMPOSES THE FULL PIPELINE?
+==============================================================================
+  complex_phase_transition.py::NativeComplexWaveTransition  parts=2  lines=209
+  henri_calibrated_action_head.py::StiefelActionProactor  parts=2  lines=36
+  henri_decoder.py::HENRINeuralEgressUnbinder  parts=2  lines=258
+  henri_functor_flow.py::DiagrammaticEgressEvaluator  parts=2  lines=71
+  hodge_dual_ingress_transducer.py::HodgeDualIngressTransducer  parts=2  lines=96
+  wave_jepa.py::WaveJEPA  parts=3  lines=118
+  experiments/verification/arc_f10_live_engine.py::PatchIngress  parts=2  lines=51
+  experiments/verification/arc_f9_1_riemannian_engine.py::RiemannianPolicyEngine  parts=2  lines=85
+  experiments/verification/arc_f9_active_policy_engine.py::ActivePolicyEngine  parts=3  lines=85
+  experiments/verification/egress_readout_ab_corrected.py::Hop  parts=2  lines=18
+  experiments/verification/typed_egress_readout_ab.py::LinearHead  parts=2  lines=15
+
+==============================================================================
+U3. LEARNED-DYNAMICS FORWARD SIGNATURES
+==============================================================================
+  henri_zone_a_backbone.ZoneATransitionOperator.forward(self, x: 'torch.Tensor') -> 'torch.Tensor'
+  factorized_transition_kernel.FactorizedTransitionKernel.forward(self, *input: Any) -> None
+  complex_phase_transition.NativeComplexWaveTransition.forward(self, state_wave: 'torch.Tensor', action_wave: 'torch.Tensor') -> 'torch.Tensor'
+  henri_semantic_backbone.FactorizedSemanticWaveAdapter.forward(self, embeddings: 'torch.Tensor') -> 'torch.Tensor'
+  henri_semantic_backbone.FrozenSemanticBackbone.forward(self, *args: 'Any', attention_mask: 'Optional[torch.Tensor]' = None, **kwargs: 'Any') -> 'torch.Tensor'
+  efe_planner.LowRankCoupledTransition.forward(self, state_wave: torch.Tensor, action_wave: torch.Tensor) -> torch.Tensor
+  wave_jepa: classes= ['Dict', 'F', 'HENRIVisionEncoder', 'Optional', 'RecursiveDualEDMD', 'Tuple', 'WaveJEPA']
+
+==============================================================================
+U4. DOES THE FULL TRANSDUCER LOAD THE CHECKPOINT?
+==============================================================================
+[HENRIUnifiedEgressTransducer] Loaded validated decoder checkpoint: path=C:\Users\chan\henri-worktrees\phase1-transduction\HENRI V2\models\henri_decoder_checkpoint.pt sha256=75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060
+  constructed HENRIUnifiedEgressTransducer
+  has _load_checkpoint: True
+[HENRIUnifiedEgressTransducer] Loaded validated decoder checkpoint: path=C:\Users\chan\henri-worktrees\phase1-transduction\HENRI V2\models\henri_decoder_checkpoint.pt sha256=75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a974060
+  checkpoint_load_status: LOADED
+  checkpoint_sha256: 75572389083455a3
+  telemetry: {'checkpoint_policy': 'auto', 'checkpoint_load_status': 'LOADED', 'checkpoint_path': 'C:\\Users\\chan\\henri-worktrees\\phase1-transduction\\HENRI V2\\m', 'checkpoint_sha256': '75572389083455a371546b40500b6614abfc3a245cfa0db9eba74c183a97', 'checkpoint_state_dict_sha256': '72cf3ab5a18b2f9ece83107e080b1af640098b44a1325902edb4ed64f463', 'runtime_d_model': '65536', 'runtime_hidden_dim': '2048', 'runtime_vocab_size': '32000', 'checkpoint_metadata': "{'schema_id': 'henri.decoder-checkpoint.v1-legacy', 'd_model", 'trained_decoder_active': 'True', 'decoder_state': 'TRAINED_DECODER'}
+  decode error: DecoderEgressFailClosedError generic marker egress disabled by default; set HENRI_SYNTHETIC_EGRESS=1 for synthetic fixtures only
+
+==============================================================================
+U5. OFF-THE-SHELF LEAKS IN LIVE PATHS (non-test, non-experiment)
+==============================================================================
+  henri_backbone_adapter.py                                ['AutoProcessor', 'AutoTokenizer', 'Qwen/Qwen3-VL-8B-Instruct', 'Qwen2', 'Qwen3-VL', 'Qwen3-VL-8B', 'Qwen3VL', 'Qwen3VLForConditionalGeneration', 'QwenBackboneAdapter', 'from_pretrained', 'transformers']
+  henri_mvp.py                                             ['Qwen2', 'QwenBackboneAdapter']
+  zone_c_world_knowledge_encoder_pin.py                    ['Qwen/Qwen3-VL-8B-Instruct']
+  zone_c_world_knowledge_harness.py                        ['QwenBackboneAdapter']
+
+FINAL_GAP_DONE
