@@ -385,13 +385,26 @@
     Noise per rung is calibrated so single-look argmax accuracy hits a set target.
   </p>
   <p class="small">
-    <strong>K=6, real corpus facts</strong> (400 trials/rung, 5 rungs):
-    <span class="mono">G-AI-1</span> (info median &le; 0.75&times;greedy) fires at
-    <strong>one rung only</strong>, 0.45 &mdash; <span class="mono">info 2.0 vs greedy 3.0</span>
-    probes. At the <strong>measured operating accuracy 0.8043</strong> and at every rung &ge;&nbsp;0.55
-    it does <em>not</em> beat greedy. What held at <em>every</em> rung: info beats random on mean
-    probes (1.45/1.67 &hellip; 4.57/7.58). K=6 result is <span class="mono">DERIVED</span>: it
-    tests the decision rule, not hardware.
+    <strong>K=6, real corpus facts</strong> (400 trials/rung, 5 rungs). A first single-seed run
+    reported <span class="mono">G-AI-1</span> firing at one rung (0.45,
+    <span class="mono">info 2.0 vs greedy 3.0</span>). <strong>That headline is withdrawn as a
+    general claim.</strong> Re-running the identical config across <strong>8 seeds</strong>
+    (<span class="mono">D2&ndash;D43</span> discipline: the 3-seed attempt before it was
+    confounded &mdash; it changed seed <em>and</em> CRN <em>and</em> ladder at once):
+  </p>
+  <p class="small">
+    <span class="mono">20261003 NO_SEPARATION &middot; 20261004 SEPARATES@0.45 [CONTROL] &middot;
+    20261005 SEPARATES@0.35 &middot; 20261006&ndash;09 NO_SEPARATION &middot; 20261010
+    SEPARATES@0.45</span>. The control seed reproduces the original <em>exactly</em>, so the code
+    is RNG-faithful and seed variance &mdash; not code drift &mdash; is the operative cause.
+    Separation fires on <strong>3 of 8 seeds at rungs that disagree</strong>; there is no stable
+    operating point. The original was a <strong>knife-edge</strong>
+    (<span class="mono">info 2.0 &le; 0.75&times;3.0 = 2.25</span>, one median step from failing).
+    What <em>did</em> replicate perfectly: <span class="mono">info</span> beats
+    <span class="mono">rand</span> on mean probes, <strong>40 PASS / 0 FAIL</strong> across 8 seeds
+    &times; 5 rungs. K=6 result is <span class="mono">DERIVED</span>: it tests the decision rule,
+    not hardware. The <span class="mono">G-AI-1</span> gate was <strong>not moved</strong> after
+    seeing results.
   </p>
   <p class="small">
     <strong>K=512</strong> (the blueprint's own bound; real waves, <em>synthetic</em> labels, so also
