@@ -1,0 +1,81 @@
+{
+  "schema": "henri.bench.harness.v1",
+  "written_utc": "2026-10-04",
+  "authorization": {
+    "operator": "2026-10-04 message body: build the full-featured dataset benchmarking harness; stage the MVP to prepare to benchmark AAII v4.3.",
+    "bounded_by": "HANDOFF-2026-10-04.md: no GPU spend without separate explicit approval; no AAII SOTA claim."
+  },
+  "target": {
+    "index_name": "Artificial Analysis Intelligence Index",
+    "acronym": "AAII",
+    "version": "4.3.2",
+    "pinned_from": "HENRI V2/benchmarks/spec/AGENT_benchmarking.pdf.txt line 7",
+    "quote": "Status: Included in Artificial Analysis Intelligence Index v4.3.2 at 15% weighting.",
+    "doc_sha256_verified": true,
+    "acronym_in_docs_literally": false,
+    "acronym_note": "The expression 'Artificial Analysis Intelligence Index' names the suite; 'AAII' is the operator shorthand. A grep for AAII returns 0 and is NOT evidence of absence."
+  },
+  "spec_status": {
+    "overall": "METHODOLOGY_ONLY",
+    "meaning": "Method, prompts, scoring rules, judge panels, run counts, and turn limits are pinned verbatim from the five operator PDFs. The DATASETS and HARNESSES are NOT in those documents -- every one is given as a URL only.",
+    "n_evals_pinned": 10,
+    "n_scoreable_now": 0,
+    "blocked_methodology_only": 9,
+    "blocked_unavailable": 1,
+    "note": "critpt needs an external grading API (case-by-case authorization), so it is not self-scoreable at all."
+  },
+  "delivered": {
+    "HENRI V2/benchmarks/spec_registry.py": "10 evaluations with pinned methodology: dataset/harness URLs, metric, grading, runs/task, turn limit, index weight where stated. Unstated weights stay None.",
+    "HENRI V2/benchmarks/harness_core.py": "henri.bench.v1 schema; Gate with mandatory fail_if; refusal on empty fail_if, missing metric, and non-finite metric (D51); dynamic-range guard (D46); deterministic sha256 split; Holm-Bonferroni correction; anti-laundering final_verdict().",
+    "HENRI V2/benchmarks/adapters.py": "TaskAdapter contract. assert_ready() refuses to score any adapter whose dataset is not pinned by sha256. AAIIAdapter carries real spec metadata and cannot emit a number.",
+    "HENRI V2/benchmarks/runner.py": "Multi-seed runner with paired controls, CRN, measured determinism (D62), and fail-closed gates.",
+    "design/zone_a/bench_gates_v1.json": "Pre-registered BEFORE the first run: G-TOOL-1/2/3, G-SPEC-1. Every gate names the observation that makes it fail.",
+    "design/zone_a/extract_aaii_spec.py": "PDF -> text + MANIFEST with dual sha256 (source PDF and extracted text). Runs in the WORKTREE, not the main checkout."
+  },
+  "instrument_validation": {
+    "task": "local/egress_managed (LOCAL synthetic, ground truth, disjoint train/test)",
+    "K_512_8_seeds": {
+      "hash_mean_acc": 0.5791,
+      "managed_mean_acc": 1.0,
+      "chance_mean_acc": 0.0031,
+      "chance_analytic": 0.00195,
+      "arm_spread": 0.4209,
+      "saturation_flag": 0.0,
+      "determinism_max_delta": 0.0,
+      "unpinned_adapters_scored": 0.0,
+      "gates": "4/4 PASSED",
+      "receipt": "design/zone_a/evidence/bench_egress_managed_k512_receipt.json"
+    },
+    "K_64_8_seeds": {
+      "hash_mean_acc": 0.9961, "managed_mean_acc": 1.0,
+      "arm_spread": 0.0039, "saturation_flag": 1.0,
+      "gates": "4/4 PASSED",
+      "note": "CEILING EFFECT. At K=64 both encoders saturate, so the task cannot resolve them. The harness DISCLOSES this in limitations rather than reporting a meaningless win.",
+      "receipt": "design/zone_a/evidence/bench_egress_managed_k64_receipt.json"
+    }
+  },
+  "test_results": {
+    "harness_core_selftest": "12/12 PASS",
+    "test_henri_managed_egress": "8/8 PASS",
+    "test_henri_mvp_managed": "21/21 PASS",
+    "seal_gate": "PASS -- 7 sealed pairs consistent"
+  },
+  "defects_self_caught": [
+    {"id": "D62", "defect": "runner defaulted determinism_max_delta to 0.0 via setdefault, making G-TOOL-3 a gate that cannot fail -- the exact defect class this session exists to kill.", "fix": "Determinism is now MEASURED: the managed arm is rebuilt from scratch and two accuracies plus two allocator digests are compared. The metric is absent when it cannot be computed, and the gate then fails closed."},
+    {"id": "D63", "defect": "Ceiling guard used 1 - max(managed, hash), which flagged K=512 as saturated merely because managed was perfect -- ignoring that hash=0.579 proves the task discriminates.", "fix": "Headroom is now the SPREAD across solver arms. K=512 correctly reports arm_spread 0.4209, saturation_flag 0.0."},
+    {"id": "D64", "defect": "Gate dataclass rejected the 'note' field present in the pre-registration file (TypeError). Unknown gate fields were also silently ignored.", "fix": "note is a real field; load_gates() now REJECTS unknown keys loudly so a typo cannot silently drop a constraint."},
+    {"id": "D65", "defect": "wave_features() returns [32768,2]; the centroid agent sized its centroid matrix 1-D and crashed.", "fix": "reshape(-1) at both fit and predict."}
+  ],
+  "not_claimed": [
+    "No AAII v4.3.2 score of any kind. final_verdict() returns NOT_A_BENCHMARK_RESULT for every unpinned adapter.",
+    "No SOTA claim on any track.",
+    "No GPU run. torch reports 2.13.0+cpu, cuda False. No store write.",
+    "No claim that the real AAII harnesses (Stirrup, E2B, mini-swe-agent) are reproduced. They are referenced, not reimplemented.",
+    "The LOCAL synthetic task is an instrument check, NOT a benchmark result."
+  ],
+  "next_safe_actions": [
+    "Fetch and pin one public AAII dataset (AA-LCR or SciCode), sha256 each file, flip that adapter to DATASET_PINNED, and re-run to prove the real path end to end.",
+    "Wire the remaining adapters as their datasets land.",
+    "GPU benchmarking and any AAII SOTA claim remain behind the operator budget checkpoint (option D)."
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "schema": "henri.bench.gates.v1",
+  "written_utc": "2026-10-04",
+  "written_before_first_run": true,
+  "authorization": {
+    "operator": "2026-10-04 message body: build the full-featured dataset benchmarking harness; stage the MVP to be prepared to benchmark AAII v4.3.",
+    "bounded_by": "HANDOFF-2026-10-04.md. No GPU spend without a separate explicit approval (option D). No AAII SOTA claim."
+  },
+
+  "target_index": {
+    "name": "Artificial Analysis Intelligence Index",
+    "acronym": "AAII",
+    "version": "4.3.2",
+    "pinned_from": "HENRI V2/benchmarks/spec/AGENT_benchmarking.pdf.txt line 7",
+    "quote": "Status: Included in Artificial Analysis Intelligence Index v4.3.2 at 15% weighting.",
+    "spec_status": "METHODOLOGY_ONLY",
+    "spec_status_meaning": "Method, prompts, and scoring rules are pinned. NO dataset and NO executable harness are present in the attached documents. Every dataset and harness is referenced by URL only.",
+    "anti_laundering": "While spec_status != IMPLEMENTED, final_verdict() MUST return NOT_A_BENCHMARK_RESULT. An AAII number cannot be produced from this harness in its current state."
+  },
+
+  "claims_under_test": [
+    "C1: The harness separates a known-good solver from a chance-level agent on a task family with known ground truth.",
+    "C2: The harness refuses to emit a benchmark result for any adapter whose dataset is not pinned by sha256.",
+    "C3: The harness fails closed on a non-finite metric rather than comparing it (D51).",
+    "C4: A gate with an empty fail_if is rejected at construction (D40/D47 class)."
+  ],
+
+  "gates": [
+    {
+      "id": "G-TOOL-1",
+      "statement": "The instrument separates a perfect solver from a chance agent.",
+      "metric": "solver_minus_chance",
+      "op": ">=",
+      "threshold": 0.30,
+      "fail_if": "solver_minus_chance < 0.30, i.e. the harness cannot distinguish skill from guessing and has no instrument power.",
+      "min_dynamic_range": 0.30,
+      "note": "D46 ceiling-effect guard: if both agents score 1.0, the instrument has no headroom and the result is void."
+    },
+    {
+      "id": "G-TOOL-2",
+      "statement": "The chance agent sits near its analytic chance rate.",
+      "metric": "chance_abs_error",
+      "op": "<=",
+      "threshold": 0.12,
+      "fail_if": "chance_abs_error > 0.12, i.e. the scoring path leaks the answer and the negative control is broken."
+    },
+    {
+      "id": "G-TOOL-3",
+      "statement": "Determinism: the same seed yields the same score across two processes.",
+      "metric": "determinism_max_delta",
+      "op": "<=",
+      "threshold": 0.0,
+      "fail_if": "determinism_max_delta > 0.0, i.e. the run is not reproducible and no receipt can be trusted."
+    },
+    {
+      "id": "G-SPEC-1",
+      "statement": "An unpinned AAII adapter yields no score.",
+      "metric": "unpinned_adapters_scored",
+      "op": "==",
+      "threshold": 0.0,
+      "fail_if": "unpinned_adapters_scored != 0, i.e. a fabricated benchmark number can be produced. This is the gravest failure mode."
+    }
+  ],
+
+  "falsifiers": [
+    "A gate with empty fail_if that still returns a verdict -> G-TOOL-4 fails.",
+    "A non-finite metric that is compared instead of refused -> G-TOOL-5 fails.",
+    "Two identical seeds producing different scores -> G-TOOL-3 fails.",
+    "Any AAII adapter returning a numeric score while spec_status is METHODOLOGY_ONLY -> G-SPEC-1 fails."
+  ],
+
+  "not_claimed": [
+    "No AAII v4.3.2 score of any kind.",
+    "No SOTA claim on any track.",
+    "No GPU run; no store write.",
+    "No claim that the real AAII harness (Stirrup, E2B, mini-swe-agent) has been reproduced. Those are external and are referenced, not reimplemented."
+  ],
+
+  "environment_pinned": {
+    "python": "3.11",
+    "numpy": "2.4.3",
+    "scipy": "1.17.1",
+    "scikit_learn": "1.9.0",
+    "huggingface_hub": "1.24.0",
+    "datasets": "MISSING",
+    "torch": "2.13.0+cpu (cuda False)",
+    "note": "CPU only. torch has no CUDA. Any GPU run requires the Vast path and explicit approval."
+  }
+}

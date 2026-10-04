@@ -1,0 +1,207 @@
+{
+  "schema": "henri.bench.v1",
+  "written_utc": "2026-10-04T18:02:25Z",
+  "adapter_id": "local/egress_managed",
+  "spec_status": "IMPLEMENTED",
+  "dataset_sha256": {
+    "0": "fb6e991926055fb85326546ccf2f58b0cd232f1e4839c131bd698e6f3e067eda",
+    "1": "81f89aca2f5fccb76b6750e39b0f5988f0ad52e89eaa0653aa74a15e4dee05b1",
+    "2": "b162da2b86b3f291b718f811110d74d1383e1d4d28d3a510f24dd952c2d890f1",
+    "3": "af398681c70984115b5ed6128a526c635daa4c13b122c4e4fe533921d8ae255c",
+    "4": "3c6f316133af8e84bb4be0e5d7cb1abb5b0caae5d06de64386f9b376895755ae",
+    "5": "a1ca65c45df6022be70cc678449a54130b864a69be148bbec6d489fa05af3c29",
+    "6": "e9d5daa907c6e9fc9b1d1f9cbf3182c1e6734032771fc500461139f883d4fb2f",
+    "7": "55f987e9f8d4df464c43aa5ea820514fbcb7beca468f4d7d619108a95da48e2c"
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "n_seeds": 8,
+  "metrics": {
+    "solver_minus_chance": 0.9969482421875,
+    "chance_abs_error": 0.0013427734375,
+    "oracle_abs_error": 0.0,
+    "managed_mean_acc": 1.0,
+    "hash_mean_acc": 0.5791015625,
+    "managed_minus_hash": 0.4208984375,
+    "chance_mean_acc": 0.0030517578125,
+    "chance_analytic": 0.001953125,
+    "unpinned_adapters_scored": 0.0,
+    "solver_headroom": 0.4208984375,
+    "saturation_flag": 0.0,
+    "determinism_max_delta": 0.0,
+    "_dynamic_range": {
+      "solver_minus_chance": 0.9990234375,
+      "chance_abs_error": 0.0048828125
+    },
+    "arm_spread": 0.4208984375
+  },
+  "per_seed_aggregate": {
+    "chance": {
+      "n": 8,
+      "mean": 0.003052,
+      "se": 0.000624,
+      "ci95": [
+        0.001828,
+        0.004275
+      ],
+      "min": 0.000977,
+      "max": 0.006836,
+      "spread": 0.005859
+    },
+    "oracle": {
+      "n": 8,
+      "mean": 1.0,
+      "se": 0.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "min": 1.0,
+      "max": 1.0,
+      "spread": 0.0
+    },
+    "hash": {
+      "n": 8,
+      "mean": 0.579102,
+      "se": 0.0,
+      "ci95": [
+        0.579102,
+        0.579102
+      ],
+      "min": 0.579102,
+      "max": 0.579102,
+      "spread": 0.0
+    },
+    "managed": {
+      "n": 8,
+      "mean": 1.0,
+      "se": 0.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "min": 1.0,
+      "max": 1.0,
+      "spread": 0.0
+    }
+  },
+  "gates": [
+    {
+      "id": "G-TOOL-1",
+      "statement": "The instrument separates a perfect solver from a chance agent.",
+      "metric": "solver_minus_chance",
+      "op": ">=",
+      "threshold": 0.3,
+      "value": 0.9969482421875,
+      "fail_if": "solver_minus_chance < 0.30, i.e. the harness cannot distinguish skill from guessing and has no instrument power.",
+      "passed": true
+    },
+    {
+      "id": "G-TOOL-2",
+      "statement": "The chance agent sits near its analytic chance rate.",
+      "metric": "chance_abs_error",
+      "op": "<=",
+      "threshold": 0.12,
+      "value": 0.0013427734375,
+      "fail_if": "chance_abs_error > 0.12, i.e. the scoring path leaks the answer and the negative control is broken.",
+      "passed": true
+    },
+    {
+      "id": "G-TOOL-3",
+      "statement": "Determinism: the same seed yields the same score across two processes.",
+      "metric": "determinism_max_delta",
+      "op": "<=",
+      "threshold": 0.0,
+      "value": 0.0,
+      "fail_if": "determinism_max_delta > 0.0, i.e. the run is not reproducible and no receipt can be trusted.",
+      "passed": true
+    },
+    {
+      "id": "G-SPEC-1",
+      "statement": "An unpinned AAII adapter yields no score.",
+      "metric": "unpinned_adapters_scored",
+      "op": "==",
+      "threshold": 0.0,
+      "value": 0.0,
+      "fail_if": "unpinned_adapters_scored != 0, i.e. a fabricated benchmark number can be produced. This is the gravest failure mode.",
+      "passed": true
+    }
+  ],
+  "gate_errors": [],
+  "controls": {
+    "chance": "random label, must land near 1/K",
+    "oracle": "perfect label, must land at 1.0 (scoring wiring check)",
+    "crn": "all arms share the split and instances per seed"
+  },
+  "provenance": {
+    "task_id": "local/egress_managed",
+    "K": 512,
+    "n_train_per_class": 6,
+    "n_test_per_class": 2,
+    "corpus_sha256_by_seed": {
+      "0": "fb6e991926055fb85326546ccf2f58b0cd232f1e4839c131bd698e6f3e067eda",
+      "1": "81f89aca2f5fccb76b6750e39b0f5988f0ad52e89eaa0653aa74a15e4dee05b1",
+      "2": "b162da2b86b3f291b718f811110d74d1383e1d4d28d3a510f24dd952c2d890f1",
+      "3": "af398681c70984115b5ed6128a526c635daa4c13b122c4e4fe533921d8ae255c",
+      "4": "3c6f316133af8e84bb4be0e5d7cb1abb5b0caae5d06de64386f9b376895755ae",
+      "5": "a1ca65c45df6022be70cc678449a54130b864a69be148bbec6d489fa05af3c29",
+      "6": "e9d5daa907c6e9fc9b1d1f9cbf3182c1e6734032771fc500461139f883d4fb2f",
+      "7": "55f987e9f8d4df464c43aa5ea820514fbcb7beca468f4d7d619108a95da48e2c"
+    },
+    "encoder_arms": [
+      "hash (shipped encode_egress)",
+      "managed (encode_managed_checked, oov=hash)"
+    ],
+    "head": "TypedEgressHead-compatible nearest centroid via wave_features",
+    "arm_meta": {
+      "managed": [
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        }
+      ]
+    },
+    "gates_file": "bench_gates_v1.json",
+    "gates_file_sha256": "51cd993a9525db9f07df9a0bf03531eaaa8c35052b9929c108063d3bb429c94a",
+    "spec_registry_headline": "METHODOLOGY PINNED. DATASETS AND HARNESSES ARE NOT IN THE ATTACHED DOCUMENTS. No AAII v4.3.2 score can be reported until each dataset is fetched and pinned by sha256."
+  },
+  "limitations": [
+    "LOCAL synthetic task. This is NOT an AAII v4.3.2 result.",
+    "Templates are generated; no human-authored items.",
+    "Dataset pinned by generator seed + canonical sha256, not by an external download.",
+    "managed arm uses oov='hash' so unseen test features fall back to shipped addressing; mean oov_rate is reported in arm_meta.",
+    "Arm spread 0.4209 (hash 0.5791 -> managed 1.0000, oracle 1.0000): the task DOES resolve the two encoders at this K."
+  ],
+  "verdict": "PASSED",
+  "note": "spec_status is IMPLEMENTED; the verdict is meaningful.",
+  "gates_passed": 4,
+  "gates_total": 4
+}
