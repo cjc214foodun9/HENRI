@@ -1,0 +1,55 @@
+{
+  "schema": "henri.stage6-isolation.v1",
+  "artifact": "HENRI V2/experiments/verification/henri_stage6_active_inference.py",
+  "runlog": "design/zone_a/evidence/stage6_isolation_run.log",
+  "runner": "C:/Users/chan/AppData/Local/Temp/sm6_iso3.sh",
+  "date_utc": "2026-10-04",
+  "authorization": {
+    "operator_approval": "2026-10-03 message body: Path A and the executive instructions of HENRI-ARCH-2026-SYSTEMIC-EVALUATION-V3",
+    "scope": "replication of the K=6 Stage 6 result the blueprint's Stage 6 names; local CPU; no store write; no GPU"
+  },
+  "question": "Does the K=6 rung-0.45 separation REPLICATE, or is it seed variance?",
+  "why_prior_attempt_was_confounded": "The 3-seed run changed THREE things at once (seed, D42 common-random-numbers, ladder composition which shifts the rng stream). That is not a seed-only test.",
+  "config_restored_exactly_from_commit": "9ffe662",
+  "config": {
+    "SM6_CRN": "0 (pre-D42 per-candidate draw scheme)",
+    "SM6_LADDER": "0.80,0.65,0.55,0.45,0.35",
+    "SM6_TRIALS": 400,
+    "SM6_MC": 4,
+    "SM6_PROBES": 24,
+    "SM6_CORPUS": "real (6 archived A-K4 facts, real codec waves)"
+  },
+  "control_check": {
+    "seed": 20261004,
+    "why_this_seed": "SEED default at 9ffe662 is int(os.environ.get('SM6_SEED','20261004')); the original run set no SM6_SEED. Verified by `git show 9ffe662:...| grep SM6_SEED`. Both MoA references asserted 20261003; that is WRONG and contradicts the measurement.",
+    "result": "EFE_SEPARATES_FROM_GREEDY at single-look acc 0.45 (info 2.0 vs greedy 3.0 probes)",
+    "matches_original": true,
+    "conclusion": "The code is RNG-faithful. D38 (project-once) and D42 (CRN, disabled here) did NOT shift behaviour. Seed variance is therefore the operative explanation, not code drift."
+  },
+  "per_seed_verdict": {
+    "20261003": "NO_SEPARATION_DETECTED",
+    "20261004": "EFE_SEPARATES at 0.45 (info 2.0 vs greedy 3.0) [CONTROL]",
+    "20261005": "EFE_SEPARATES at 0.35 (info 3.0 vs greedy 4.0)",
+    "20261006": "NO_SEPARATION_DETECTED",
+    "20261007": "NO_SEPARATION_DETECTED",
+    "20261008": "NO_SEPARATION_DETECTED",
+    "20261009": "NO_SEPARATION_DETECTED",
+    "20261010": "EFE_SEPARATES at 0.45 (info 2.0 vs greedy 3.0)"
+  },
+  "robust_statistic": {
+    "G-AI-4 info mean < rand mean": "40 PASS / 0 FAIL  (8 seeds x 5 rungs) -- REPLICATES PERFECTLY",
+    "G-AI-1 info median <= 0.75*greedy": "PASS at 3 of 40 seed-rung evaluations (seeds 20261004@0.45, 20261005@0.35, 20261010@0.45)",
+    "G-AI-2 rand median > greedy": "FAIL at 8 of 40 rung-evaluations (control could not lose there)"
+  },
+  "verdict": "STAGE6_SEPARATION_SEED_SENSITIVE",
+  "amendment": {
+    "was": "EFE_SEPARATES_FROM_GREEDY at 0.45 (single seed, 9ffe662, sealed #d00750edffd2050f)",
+    "now": "No robust greedy separation. info beats rand at every seed and rung (40/40). The greedy separation fires on 3 of 8 seeds at INCONSISTENT rungs. The original was a KNIFE-EDGE: info 2.0 <= 0.75*3.0 = 2.25, one median step from failing. A knife-edge that reproduces on 3/8 seeds is real but not reliable."
+  },
+  "honest_limits": [
+    "8 seeds at 400 trials/rung; median granularity is 1 probe, so the G-AI-1 gate is coarse.",
+    "Rung disagreement (0.45 vs 0.35) means the effect has no stable operating point.",
+    "The original receipt (9ffe662) recorded 'single seed' but NOT the seed VALUE -- D44. It was reconstructible only from `git show` of the code at that commit. A receipt must record its seed.",
+    "I did not move the G-AI-1 gate after seeing results. Widening it would be a post-hoc threshold change."
+  ]
+}
