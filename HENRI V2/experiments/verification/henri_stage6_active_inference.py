@@ -212,8 +212,18 @@ def calibrate_sigma(W, target, rng, U=None, n_dir=16, m=1500):
     return 0.5 * (lo + hi)
 
 
-def loglik(W, u, y, sigma2):
-    return -((y - W @ u) ** 2) / (2.0 * sigma2)
+def loglik(scol, y, sigma2):
+    """Column log-likelihood [K] for reading y.
+
+    D38 SELF-CAUGHT DEFECT. This was loglik(W, u, y, sigma2) and computed `W @ u`
+    -- a K x 65536 matmul (512 x 65536 at K=512) -- INSIDE the Monte Carlo loop,
+    N_MC times per candidate, for every candidate at every step. The projection is
+    CONSTANT for a given probe q, so that recomputation was pure waste: at K=512 it
+    is ~4x redundant work per candidate and it left the run at 683-768% CPU with no
+    rung printed after 10 minutes. FIXED by projecting once in eval_rung (Sd = W @ U.T)
+    and indexing the column here.
+    """
+    return -((y - scol) ** 2) / (2.0 * sigma2)
 
 
 def post_from(logl):
@@ -222,7 +232,7 @@ def post_from(logl):
     return p / p.sum()
 
 
-def run_policy(policy, W, U, sigma, rng):
+def run_policy(policy, W, U, Sd, sigma, rng):
     K = W.shape[0]
     tgt = int(rng.integers(K))
     used = np.zeros(len(U), dtype=bool)
@@ -244,8 +254,8 @@ def run_policy(policy, W, U, sigma, rng):
                 acc_val = 0.0
                 for _ in range(N_MC):
                     k = int(rng.choice(K, p=b))
-                    y = float(W[k] @ U[q] + sigma * rng.standard_normal())
-                    post = post_from(logb + loglik(W, U[q], y, sigma2))
+                    y = float(Sd[k, q] + sigma * rng.standard_normal())
+                    post = post_from(logb + loglik(Sd[:, q], y, sigma2))
                     if policy == "info":
                         acc_val += -np.sum(post * np.log(post + 1e-12))
                     else:
@@ -255,8 +265,8 @@ def run_policy(policy, W, U, sigma, rng):
                     best_val, best = val, q
             p = int(best)
         used[p] = True
-        y = float(W[tgt] @ U[p] + sigma * rng.standard_normal())
-        logb = logb + loglik(W, U[p], y, sigma2)
+        y = float(Sd[tgt, p] + sigma * rng.standard_normal())
+        logb = logb + loglik(Sd[:, p], y, sigma2)
         post = post_from(logb)
         if step == 1:
             acc1 = int(np.argmax(post) == tgt)
@@ -272,12 +282,15 @@ def run_policy(policy, W, U, sigma, rng):
 def eval_rung(target, W, U, rng):
     # D35: calibrate on the SAME directions the experiment evaluates.
     sigma = calibrate_sigma(W, target, rng, U=U)
+    # D38: project ONCE. Sd[k, j] = <w_k, u_j>; every per-look reading and every
+    # log-likelihood column comes from this array instead of recomputing W @ u.
+    Sd = W @ U.T
     out = {}
     for pol in ("greedy", "info", "rand"):
         st = np.empty(N_TRIALS, dtype=np.int64)
         a1 = a2 = af = 0
         for j in range(N_TRIALS):
-            s_, c1, c2, cf = run_policy(pol, W, U, sigma, rng)
+            s_, c1, c2, cf = run_policy(pol, W, U, Sd, sigma, rng)
             st[j] = s_
             a1 += c1
             a2 += c2
