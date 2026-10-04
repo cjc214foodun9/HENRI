@@ -1,0 +1,34 @@
+real prose: 992 unique sentences from 19 committed documents
+
+   content_frac  real prose        0.014162  (1.4162%)
+   content_frac  synthetic template 0.001709  (0.1709%)
+   ratio                            8.29x
+
+   entities with >= 6 unambiguous sentences: 4/10
+      TimescaleDB    9 sentences   <-- KEPT
+      BaTiO3         1 sentences
+      Hopfield      19 sentences   <-- KEPT
+      Sagnac        12 sentences   <-- KEPT
+      Kuramoto       0 sentences
+      Clifford       2 sentences
+      Qwen           6 sentences   <-- KEPT
+      BTO            2 sentences
+      FHRR           0 sentences
+      pgvector       2 sentences
+
+   LEAVE-ONE-OUT over all 46 unambiguous sentences:
+      held-out per entity: TimescaleDB=9  Hopfield=19  Sagnac=12  Qwen=6
+      LOO centroid : 0.8043  (37/46)   3.2x chance
+      LOO control  : 0.3478  (16/46)   1.39x chance
+      binomial p(>= 37 of 46 | chance=0.2500) = 4.750e-15
+
+   K = 4 entities   chance = 0.2500
+   train 12   held-out 12   control 12
+   centroid held-out : 0.6667   (2.7x chance)
+   control           : 0.1667   (0.67x chance)
+
+   === VERDICT (pre-registered) ===
+   G-RP-1 real prose richer than synthetic : PASS   (1.4162% vs 0.1709%)
+   G-RP-2 holdout n=12 >= 0.80, ctrl < 3x  : FAIL
+   G-RP-3 LOO >= 0.80, ctrl < 3x           : PASS   (0.8043, 37/46)
+   VERDICT = REAL_PROSE_TRANSFER_CONFIRMED

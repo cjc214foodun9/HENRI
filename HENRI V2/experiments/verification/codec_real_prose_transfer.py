@@ -203,6 +203,38 @@ def main():
     acc = centroid_acc(Xtr, ytr, Xte, yte, K)
     ctrl = centroid_acc(Xtr, ytr, Xc, yte, K)
 
+    # ---- 3. LEAVE-ONE-OUT over ALL unambiguous sentences.
+    # D29 SELF-CAUGHT DEFECT. The holdout above used only N_TRAIN+N_TEST=6
+    # sentences per entity, so n=12 held-out -- too small to decide anything
+    # (the run correctly returned TABLE_REPORTED). LOO uses every sentence once
+    # as a test point, which is the efficient use of the same deterministic
+    # labels and needs no new data.
+    RB, Y = [], []
+    for e in keep:
+        for s in buckets[e]:
+            RB.append(rows_of(codec.encode_egress(s)))
+            Y.append(idx[e])
+    Y = np.array(Y)
+    F = np.stack([features(r) for r in RB])
+    hits = chits = 0
+    for i in range(len(Y)):
+        tr = np.arange(len(Y)) != i
+        Cm = _unit_rows(np.stack([F[tr][Y[tr] == k].mean(0) for k in range(K)]))
+        hits += int(int(np.argmax(_unit_rows(F[i:i + 1])[0] @ Cm.T)) == Y[i])
+        rp = RB[i][rng.permutation(NB), :]
+        chits += int(int(np.argmax(_unit_rows(features(rp)[None, :])[0] @ Cm.T)) == Y[i])
+    loo, looc = hits / len(Y), chits / len(Y)
+    # binomial tail vs chance, no scipy
+    from math import comb
+    p_tail = sum(comb(len(Y), j) * chance ** j * (1 - chance) ** (len(Y) - j)
+                 for j in range(hits, len(Y) + 1))
+    print(f"\n   LEAVE-ONE-OUT over all {len(Y)} unambiguous sentences:")
+    print(f"      held-out per entity: "
+          + "  ".join(f"{e}={len(buckets[e])}" for e in keep))
+    print(f"      LOO centroid : {loo:.4f}  ({hits}/{len(Y)})   {loo/chance:.1f}x chance")
+    print(f"      LOO control  : {looc:.4f}  ({chits}/{len(Y)})   {looc/chance:.2f}x chance")
+    print(f"      binomial p(>= {hits} of {len(Y)} | chance={chance:.4f}) = {p_tail:.3e}")
+
     print(f"\n   K = {K} entities   chance = {chance:.4f}")
     print(f"   train {Xtr.shape[0]}   held-out {Xte.shape[0]}   control {Xc.shape[0]}")
     print(f"   centroid held-out : {acc:.4f}   ({acc/chance:.1f}x chance)")
@@ -210,13 +242,16 @@ def main():
 
     g1 = rn > sn
     g2 = (acc >= 0.80) and (ctrl < 3 * chance)
+    g3 = (loo >= 0.80) and (looc < 3 * chance)
     print("\n   === VERDICT (pre-registered) ===")
     print(f"   G-RP-1 real prose richer than synthetic : {'PASS' if g1 else 'FAIL'}"
           f"   ({rn*100:.4f}% vs {sn*100:.4f}%)")
-    print(f"   G-RP-2 held-out >= 0.80 and ctrl < 3x   : {'PASS' if g2 else 'FAIL'}")
-    if g1 and g2:
+    print(f"   G-RP-2 holdout n=12 >= 0.80, ctrl < 3x  : {'PASS' if g2 else 'FAIL'}")
+    print(f"   G-RP-3 LOO >= 0.80, ctrl < 3x           : {'PASS' if g3 else 'FAIL'}"
+          f"   ({loo:.4f}, {hits}/{len(Y)})")
+    if g1 and g3:
         print("   VERDICT = REAL_PROSE_TRANSFER_CONFIRMED")
-    elif g2:
+    elif g1 and g2:
         print("   VERDICT = DECODABLE_BUT_CONTENT_FRAC_NOT_HIGHER")
     else:
         print("   VERDICT = TABLE_REPORTED")
