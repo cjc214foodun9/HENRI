@@ -1,0 +1,110 @@
+{
+  "hle": {
+    "schema": "henri.bench.local-proxy.v1",
+    "written_utc": "2026-10-04",
+    "eval_id": "hle",
+    "scorer": "normalized_exact_match",
+    "scorer_is_lower_bound_of": "AAII external equality-checker / grading model (GPT-5.6 Luna medium). Any model score computed with this scorer UNDERSTATES the official metric.",
+    "n_items_total": 2500,
+    "n_items_with_image": 342,
+    "n_items_text_only": 2158,
+    "arms": {
+      "oracle_self": {
+        "accuracy": 1.0,
+        "n_eligible": 2499,
+        "n_excluded_empty_gold": 1,
+        "n_hit": 2499
+      },
+      "abstain": {
+        "accuracy": 0.0,
+        "n_eligible": 2499,
+        "n_excluded_empty_gold": 1,
+        "n_hit": 0
+      },
+      "rotate_1": {
+        "accuracy": 0.014805922368947578,
+        "n_eligible": 2499,
+        "n_excluded_empty_gold": 1,
+        "n_hit": 37
+      }
+    },
+    "gates": [
+      {
+        "gate": "G-PROXY-ORACLE",
+        "observed": 1.0,
+        "passed": true
+      },
+      {
+        "gate": "G-PROXY-ABSTAIN",
+        "observed": 0.0,
+        "passed": true
+      },
+      {
+        "gate": "G-PROXY-CONTROL",
+        "observed": 0.014805922368947578,
+        "passed": true
+      }
+    ],
+    "gates_passed": true,
+    "gates_failed": [],
+    "not_claimed": [
+      "NOT an AAII v4.3.2 score.",
+      "No model was run. Arms are deterministic controls, not a model.",
+      "Normalized exact match is a STRICT LOWER BOUND on the official judge."
+    ]
+  },
+  "aa-omniscience": {
+    "schema": "henri.bench.local-proxy.v1",
+    "written_utc": "2026-10-04",
+    "eval_id": "aa-omniscience",
+    "scorer": "normalized_exact_match",
+    "scorer_is_lower_bound_of": "AAII external equality-checker / grading model (GPT-5.6 Luna medium). Any model score computed with this scorer UNDERSTATES the official metric.",
+    "n_items_total": 600,
+    "n_items_with_image": 0,
+    "n_items_text_only": 600,
+    "arms": {
+      "oracle_self": {
+        "accuracy": 1.0,
+        "n_eligible": 599,
+        "n_excluded_empty_gold": 1,
+        "n_hit": 599
+      },
+      "abstain": {
+        "accuracy": 0.0,
+        "n_eligible": 599,
+        "n_excluded_empty_gold": 1,
+        "n_hit": 0
+      },
+      "rotate_1": {
+        "accuracy": 0.00333889816360601,
+        "n_eligible": 599,
+        "n_excluded_empty_gold": 1,
+        "n_hit": 2
+      }
+    },
+    "gates": [
+      {
+        "gate": "G-PROXY-ORACLE",
+        "observed": 1.0,
+        "passed": true
+      },
+      {
+        "gate": "G-PROXY-ABSTAIN",
+        "observed": 0.0,
+        "passed": true
+      },
+      {
+        "gate": "G-PROXY-CONTROL",
+        "observed": 0.00333889816360601,
+        "passed": true
+      }
+    ],
+    "gates_passed": true,
+    "gates_failed": [],
+    "not_claimed": [
+      "NOT an AAII v4.3.2 score.",
+      "No model was run. Arms are deterministic controls, not a model.",
+      "Normalized exact match is a STRICT LOWER BOUND on the official judge."
+    ]
+  }
+}
