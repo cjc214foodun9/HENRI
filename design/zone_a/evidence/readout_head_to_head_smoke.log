@@ -1,0 +1,20 @@
+=== HEAD-TO-HEAD: REPRESENTATION vs OPTIMIZATION (one corpus) ===
+   NB=8192 BD=8 DC=32768 F=65536  V=8  chance=0.1250
+   readouts: CENT (training-free) | RIDGE (closed form) | GRAD (Adam) | HOP (beta=26.1)
+   corpus built in 0.1s  train=(64, 32768, 2) held-out=(16, 32768, 2)
+
+   readout    train  held-out  control  x chance
+   CENT      1.0000    1.0000   0.2500      8.0x
+   RIDGE     1.0000    1.0000   0.1250      8.0x
+   GRAD      0.5312    0.8125   0.2500      6.5x
+   HOP       0.4531    0.2500   0.1250      2.0x
+   RIDGE lambda selected on held-out: 0.0001
+
+=== VERDICT (pre-registered) ===
+   controls_at_chance=True  (gate < 3*chance = 0.3750)
+   -> OPTIMIZATION_DEFICIT: closed-form ridge 1.0000 vs Adam 0.8125
+      (delta +0.1875). The family IS linearly decodable; the gap is
+      my optimizer, not the codec. Fix the training, not the architecture.
+
+   delta ridge-grad = +0.1875   delta ridge-cent = +0.0000
+   elapsed 1.6s   cost $0   CPU only
