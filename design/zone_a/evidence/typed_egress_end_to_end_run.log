@@ -1,0 +1,32 @@
+=== TYPED EGRESS, END TO END (real codec waves, no training) ===
+   fields: tool 8-way  arg 4-way   joint 32-way   chance 0.0312
+   decode target: 2 typed fields, NOT 32000 tokens
+
+   fit: 128 train waves, 64 held-out waves
+   accuracy  tool  train 1.0000  held-out 1.0000
+   accuracy  arg   train 1.0000  held-out 1.0000
+   joint           train 1.0000  held-out 1.0000
+   CONTROL (block-permuted)  tool 0.0781  arg 0.2031  joint 0.0312   <- must sit at chance
+
+   typed decisions on HELD-OUT templates (margin floor 0.02):
+      'now open file 0 the target 0'  truth('open file 0', 'target 0')
+         -> tool='open file 0' (m=+0.1536)  arg='target 0' (m=+0.1141)  ACCEPT ok
+      'now open file 1 the target 0'  truth('open file 1', 'target 0')
+         -> tool='open file 1' (m=+0.1616)  arg='target 0' (m=+0.0874)  ACCEPT ok
+      'now open file 2 the target 0'  truth('open file 2', 'target 0')
+         -> tool='open file 2' (m=+0.1892)  arg='target 0' (m=+0.0741)  ACCEPT ok
+      'now open file 3 the target 0'  truth('open file 3', 'target 0')
+         -> tool='open file 3' (m=+0.1500)  arg='target 0' (m=+0.0899)  ACCEPT ok
+      'now open file 4 the target 0'  truth('open file 4', 'target 0')
+         -> tool='open file 4' (m=+0.1699)  arg='target 0' (m=+0.1023)  ACCEPT ok
+      'now open file 5 the target 0'  truth('open file 5', 'target 0')
+         -> tool='open file 5' (m=+0.1739)  arg='target 0' (m=+0.1049)  ACCEPT ok
+   display/scorer consistency: 6/6 correct  agrees with score()  OK
+
+   fail-closed checks:
+      unfit snap raises: TypedEgressHead is not fitted; call fit() first
+      open-vocab content_id('novel-token-xyz', 8) = 3  (collision_count=1 on the closed set; typed_vocab is the bijective path)
+
+=== VERDICT ===
+   held-out joint 1.0000 vs chance 0.0312; control joint 0.0312
+   -> PASS: typed egress works on held-out templates, control at chance
