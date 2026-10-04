@@ -1,0 +1,9 @@
+=== henri_typed_egress test suite (real codec waves) ===
+   T1 typed_vocab: 32 names -> 32 distinct ids  OK
+   T2 content_id collisions on 32 names / 32 buckets: 11 (distinct ids 21/32)
+   T3 wave_features: shape (32768, 2)  ||f||=1.000000  finite  deterministic  OK
+   T4 centroid head: train 1.0000  held-out 1.0000  chance 0.0312
+   T5 control: permuted 0.0469  vs real 1.0000  chance 0.0312
+   T6 refusals: unfit snap, unseen class, empty/1-way manifold  all raise  OK
+
+=== 6/6 passed, 0 failed ===

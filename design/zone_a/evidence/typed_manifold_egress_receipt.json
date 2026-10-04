@@ -1,0 +1,44 @@
+{
+  "schema": "henri.typed-manifold-egress.v1",
+  "artifact": "HENRI V2/experiments/verification/typed_manifold_egress_test.py",
+  "runlog": "design/zone_a/evidence/typed_manifold_egress_run.log",
+  "smokelog": "design/zone_a/evidence/typed_manifold_egress_smoke.log",
+  "date_utc": "2026-10-03",
+  "authorization": {
+    "operator": "2026-10-03 grant of Path A and the executive instructions of HENRI-ARCH-2026-SYSTEMIC-EVALUATION-V3 (message body)",
+    "blueprint_sha256": "9f3cd5cd6116e8e2f1c1f77a0c2ae9c2fc03f6c9dbd90bf59b0243af4ce6b7bf",
+    "blueprint_item": "sec 2.4 item 3: restrict outputs to strongly typed decision manifolds"
+  },
+  "receipt_gap_CLOSED": "This receipt was MISSING. The run log was committed at a843e1b without a receipt pinning its numbers. Found by a content check that grepped this filename and returned empty. Recorded now.",
+  "design": {
+    "readout": "deterministic nearest-centroid, TRAINING-FREE (no optimizer, no lr)",
+    "manifolds": {"tool": 32, "arg": 16, "flat_joint": 512},
+    "templates": 5, "train_templates": 3, "held_out_templates": 2,
+    "codec_method": "encode_egress (shipped, 1529b50)",
+    "control": "per-sample block permutation of the same wave family",
+    "atomic_ingredients": {"typed": 48, "flat_same_corpus": 48}
+  },
+  "result_full_scale": {
+    "tool_32_way":  {"chance": 0.0312, "raw": 0.9502, "ctrl": 0.0381, "x_chance": 30.5},
+    "arg_16_way":   {"chance": 0.0625, "raw": 0.9951, "ctrl": 0.0713, "x_chance": 15.9},
+    "flat_joint_512_way": {"chance": 0.0020, "raw": 0.8857, "ctrl": 0.0029, "x_chance": 442.9},
+    "controls_at_chance": true
+  },
+  "result_smoke_joint32": {
+    "tool_8_way": {"chance": 0.1250, "raw": 1.0000, "ctrl": 0.0625},
+    "arg_4_way":  {"chance": 0.2500, "raw": 0.9844, "ctrl": 0.2188},
+    "flat_joint_32_way": {"chance": 0.0312, "raw": 0.9688, "ctrl": 0.0312}
+  },
+  "gate_outcome": "TABLE_REPORTED",
+  "why_no_claim": "pre-registered G-T-SUP required flat_joint < 0.80 to claim that DECOMPOSITION helps. Measured flat_joint = 0.8857. The gate does NOT fire, so no claim is made that typed decomposition beats flat on this corpus.",
+  "why_that_refusal_was_informative": "a flat 512-way head at only 48 atomic ingredients clears 0.80 with a training-free readout. That contradicted the capacity sweep's flat 512-way value of 0.5449 at 512 arbitrary tokens, which is what forced ingredient_count_law_probe.py (manifold held at 512, ingredients varied 513 -> 48; raw 0.5146 -> 0.8857). The refusal produced the next experiment.",
+  "what_this_establishes_for_the_blueprint": {
+    "supported": "sec 2.4 item 3 in the sense that matters operationally: at typed manifold sizes the egress clears 0.80 TRAINING-FREE on held-out templates with controls at chance (tool 0.9502, arg 0.9951). Small typed manifolds are decodable.",
+    "not_established": "that decomposition is superior to a flat head at the SAME atomic vocabulary. The gate could not test that because flat also passed.",
+    "ingredient_caveat": "these heads share one corpus with 48 atomic ingredients; the 512-arbitrary-token regime is covered by the capacity sweep (0.5449), not by this run"
+  },
+  "readout_choice_justified_retroactively": "This run used the training-free centroid. readout_head_to_head.py (35f22bc) later showed that choice was correct: at V=64 the centroid reaches 0.9141 while Adam training reaches only 0.4062. The training-free readout is the measured fix, not a convenience.",
+  "cost": {"gpu_usd": 0, "cpu_only": true, "store": false, "checkpoint": false},
+  "evidence_class": "OBSERVED (real codec waves, sha256 labels, same-family control)",
+  "class": "receipt written after the fact to close a provenance gap; the gate refusal is retained, not softened"
+}
