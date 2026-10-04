@@ -1,0 +1,30 @@
+L1 geometry()
+   {'identical': 0.9999999403953552, 'end_1edit': 0.9047618508338928, 'reversal': 0.476190447807312, 'random_cross': 0.031579479575157166, 'fragment_retrieval': 0.322748601436615}
+
+L2 decode
+   bytes            = 262144
+   reshape          = (8192, 8) float32
+   round-trip ok    = True
+   projection       = (2000,) nnz=5
+
+L3 per-block nonzero counts
+   blocks           = 8192
+   blocks with 0 nz = 0
+   blocks with 1 nz = 8192
+   blocks with >1 nz= 0
+   total nnz        = 8192 / 65536  frac=0.1250
+
+L4 signal footprint
+   'the alpha report'      active blocks = 8192
+   'the alpha bravo report' active blocks = 8192
+   'alpha is the word'      active blocks = 8192
+   A & B shared            = 8192   (alpha common)
+   A - B                   = 0
+
+L5 same word, different template
+    alpha: template1= 8192  template2= 8192  shared= 8192  jaccard=1.0000
+    bravo: template1= 8192  template2= 8192  shared= 8192  jaccard=1.0000
+
+L6 complex convention
+   [8192,8] f32 -> view complex64 -> (8192, 4) = 32768 complex values
+   codebook K=512 x 32768 complex64 = 128.0 MiB
