@@ -1,0 +1,54 @@
+{
+  "schema": "henri.stage6-active-inference.k512.crn.v1",
+  "artifact": "HENRI V2/experiments/verification/henri_stage6_active_inference.py",
+  "runlog": "design/zone_a/evidence/stage6_k512_crn_run.log",
+  "date_utc": "2026-10-04",
+  "commit_under_test": "1867613",
+  "corpus_mode": "typed",
+  "K": 512,
+  "K_decomposition": "32 tools x 16 args",
+  "wave_dim": 65536,
+  "waves": "REAL codec.encode_egress output",
+  "labels": "SYNTHETIC (512 tool/arg combinations)",
+  "evidence_class": "DERIVED",
+  "warning": "Synthetic labels over real waves. NOT real prose, NOT the MVP workload.",
+  "config": {"crn": true, "ladder": [0.55, 0.45], "trials_per_rung": 300, "n_probes": 24,
+             "n_mc": 32, "criterion": 0.95, "max_steps": 12, "elapsed_s": 816.0},
+  "rungs": [
+    {"single_look_acc": 0.55, "sigma": 0.00001,
+     "greedy": {"median": 2.0, "mean": 3.54, "acc1": 0.5700, "acc2": 0.9267, "acc_final": 0.9267},
+     "info":   {"median": 2.0, "mean": 3.32, "acc1": 0.5133, "acc2": 0.9167, "acc_final": 0.9167},
+     "rand":   {"median": 2.0, "mean": 3.69, "acc1": 0.5267, "acc2": 0.8733, "acc_final": 0.8733},
+     "G_AI_1": false, "G_AI_2": false, "G_AI_3": true, "G_AI_4": true},
+    {"single_look_acc": 0.45, "sigma": 0.00002,
+     "greedy": {"median": 2.0, "mean": 4.19, "acc1": 0.4767, "acc2": 0.8700, "acc_final": 0.8700},
+     "info":   {"median": 2.0, "mean": 3.85, "acc1": 0.4500, "acc2": 0.8833, "acc_final": 0.8833},
+     "rand":   {"median": 2.0, "mean": 3.88, "acc1": 0.4567, "acc2": 0.9100, "acc_final": 0.9133},
+     "G_AI_1": false, "G_AI_2": false, "G_AI_3": true, "G_AI_4": true}
+  ],
+  "verdict": "INSTRUMENT_CANNOT_RESOLVE_EFE",
+  "finding": "COMMON RANDOM NUMBERS DID NOT RESTORE RESOLUTION AT K=512.",
+  "diagnosis": {
+    "observation": "median probes-to-criterion is 2.0 for ALL THREE policies at BOTH rungs",
+    "interpretation": "the steps-to-criterion STATISTIC itself saturates at K=512: the criterion post.max >= 0.95 is reached within 2 looks for over half the trials under every policy, so the statistic cannot register a policy difference whatever the policy does",
+    "why_mc_cannot_fix_this": "a pinned median is a property of the statistic, not of the ranking variance. MC=64 or MC=128 cannot move a median that every policy already attains at step 2. The MC escalation named in the K=512 receipt as the next step is therefore CANCELLED as the repair.",
+    "cross_check": "at K=6 the same statistic DID separate (rung 0.45: greedy median 3.0, info 2.0, rand 4.0). So the limitation is K-dependent and belongs to the metric, not to EFE."
+  },
+  "what_holds_across_both_K": {
+    "G_AI_4": "info mean probes < rand mean probes at every rung, at both K=6 and K=512 (K=512: 3.32<3.69 and 3.85<3.88). A modest, repeatable effect.",
+    "G_AI_1": "info never beats greedy on the median at K=512. No separation."
+  },
+  "established": [],
+  "not_established": [
+    "any K=512 policy ranking",
+    "that EFE beats greedy at the blueprint's K<=512 bound",
+    "that CRN at MC=32 ranks candidates well enough to matter at K=512 (the statistic cannot tell us either way)"
+  ],
+  "gates_unchanged": true,
+  "gates_list": ["G-AI-1", "G-AI-2", "G-AI-3", "G-AI-4", "LADDER", "CRITERION", "MAX_STEPS"],
+  "possible_repairs_not_taken": [
+    "a finer statistic than the median (e.g. the full steps distribution, or mean with a CI) -- NOTE: the mean does not separate either at rung 0.45 (rand 3.88 < greedy 4.19)",
+    "raising CRITERION above 0.95 to re-open headroom -- this CHANGES A PRE-REGISTERED GATE and must be pre-registered as a new experiment, not applied post hoc to rescue a null"
+  ],
+  "billing": [], "gpu_used": false, "store_written": false, "main_touched": false
+}
