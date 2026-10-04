@@ -96,6 +96,11 @@ LADDER = [float(x) for x in
 N_PROBES = int(os.environ.get("SM6_PROBES", "24"))
 N_TRIALS = int(os.environ.get("SM6_TRIALS", "500"))
 N_MC = int(os.environ.get("SM6_MC", "6"))        # MC samples for policy look-ahead
+# D42: common random numbers for policy ranking. Defined HERE because the first
+# D42 patch wired USE_CRN into run_policy() without defining it -- the third
+# instance of the partial-patch failure mode (D27, D41, D42). Caught by grepping
+# for the definition before running, not by the interpreter at runtime.
+USE_CRN = os.environ.get("SM6_CRN", "1") != "0"
 CRITERION = float(os.environ.get("SM6_CRITERION", "0.95"))     # belief threshold
 MAX_STEPS = int(os.environ.get("SM6_MAXSTEPS", "12"))
 SEED = int(os.environ.get("SM6_SEED", "20261004"))
@@ -249,13 +254,28 @@ def run_policy(policy, W, U, Sd, sigma, rng):
             p = int(rng.choice(cand))
         else:
             b = post_from(logb)
+            # D42 COMMON RANDOM NUMBERS. The policy only needs to RANK candidates, but
+            # each candidate q drew its OWN (k, noise) samples, so ranking noise was the
+            # full per-candidate MC variance. At K=512 with N_MC=4 that variance
+            # exceeded the signal (D39: entropy sd 0.3028, spread across candidates
+            # 1.1813, mean 0.7176 -- spread > mean), so the policy could not rank.
+            # Drawing the SAME (k, noise) sequence for every q pairs the draws: the
+            # shared randomness cancels in the DIFFERENCES, which is all ranking uses.
+            # Zero extra cost. SM6_CRN=0 restores the old unpaired scheme for A/B.
+            if USE_CRN:
+                ks = rng.choice(K, size=N_MC, p=b)
+                ns = rng.standard_normal(N_MC)
             best, best_val = -1, -np.inf
             for q in cand:
+                col = Sd[:, q]
                 acc_val = 0.0
-                for _ in range(N_MC):
-                    k = int(rng.choice(K, p=b))
-                    y = float(Sd[k, q] + sigma * rng.standard_normal())
-                    post = post_from(logb + loglik(Sd[:, q], y, sigma2))
+                for t in range(N_MC):
+                    if USE_CRN:
+                        y = float(col[int(ks[t])] + sigma * ns[t])
+                    else:
+                        y = float(col[int(rng.choice(K, p=b))]
+                                  + sigma * rng.standard_normal())
+                    post = post_from(logb + loglik(col, y, sigma2))
                     if policy == "info":
                         acc_val += -np.sum(post * np.log(post + 1e-12))
                     else:
