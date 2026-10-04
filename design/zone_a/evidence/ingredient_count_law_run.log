@@ -1,0 +1,15 @@
+=== INGREDIENT-COUNT LAW (manifold fixed at 512) ===
+   NB=8192 BD=8 DC=32768  joint=512  templates=5
+
+    tools  args  classes  ingred   chance     raw    ctrl
+      512     1      512     513   0.0020  0.5146  0.0020
+      256     2      512     258   0.0020  0.7529  0.0020
+       64     8      512      72   0.0020  0.9287  0.0029
+       32    16      512      48   0.0020  0.8857  0.0029
+
+=== VERDICT (pre-registered) ===
+   controls_at_chance=True
+   ingredient-sorted raw: ['48:0.8857', '72:0.9287', '258:0.7529', '513:0.5146']
+   monotone_non_increasing=False  span=0.4141
+   -> TABLE_REPORTED: no pre-registered condition met; no claim
+RC=0

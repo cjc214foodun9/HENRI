@@ -1,0 +1,61 @@
+{
+  "schema": "henri.ingredient-count-law.v1",
+  "artifact": "HENRI V2/experiments/verification/ingredient_count_law_probe.py",
+  "runlog": "design/zone_a/evidence/ingredient_count_law_run.log",
+  "date_utc": "2026-10-03",
+  "authorization": {
+    "operator": "2026-10-03 grant of Path A and the blueprint executive instructions",
+    "blueprint_sha256": "9f3cd5cd6116e8e2f1c1f77a0c2ae9c2fc03f6c9dbd90bf59b0243af4ce6b7bf"
+  },
+  "design": {
+    "manifold_HELD_FIXED": 512,
+    "varied": "atomic ingredient count (N_TOOL + N_ARG)",
+    "readout": "deterministic nearest-centroid (no optimizer -> no lr/starvation confound)",
+    "templates": 5, "train_templates": 3, "held_out_templates": 2,
+    "chance": 0.0020,
+    "codec_method": "encode_egress (shipped, 1529b50)",
+    "control": "per-sample block permutation of the same wave family"
+  },
+  "curve": [
+    {"tools": 512, "args": 1,  "classes": 512, "ingredients": 513, "raw": 0.5146, "ctrl": 0.0020},
+    {"tools": 256, "args": 2,  "classes": 512, "ingredients": 258, "raw": 0.7529, "ctrl": 0.0020},
+    {"tools": 64,  "args": 8,  "classes": 512, "ingredients": 72,  "raw": 0.9287, "ctrl": 0.0029},
+    {"tools": 32,  "args": 16, "classes": 512, "ingredients": 48,  "raw": 0.8857, "ctrl": 0.0029}
+  ],
+  "controls_at_chance": true,
+  "span": 0.4141,
+  "gate_outcome": "TABLE_REPORTED",
+  "why_no_claim": "pre-registered G-I-LAW required monotone non-increasing in ingredient count AND raw(513)<=0.70 AND raw(48)>=0.80. The endpoints pass (0.5146<=0.70, 0.8857>=0.80) but monotonicity FAILS: sorted ascending by ingredients, raw = 48:0.8857, 72:0.9287, 258:0.7529, 513:0.5146. The 48-vs-72 pair inverts. Conjunctive gate -> no claim.",
+
+  "RESOLVES_THE_ORIGINAL_CONTRADICTION": {
+    "flat_512_typed_test_48_ingredients": 0.8857,
+    "flat_512_v_sweep_512_arbitrary_tokens": 0.5449,
+    "same_manifold_size": 512,
+    "gap": 0.3408,
+    "now_explained": "the discriminating variable is the number of distinct ATOMIC INGREDIENTS, not manifold cardinality. Reproduced in one controlled sweep at fixed manifold size."
+  },
+
+  "INGREDIENT_EFFECT_IS_REAL": {
+    "statement": "with the manifold HELD at 512 and the readout rule HELD fixed, raw accuracy moves 0.5146 -> 0.9287 as atomic ingredients move 513 -> 72. Span 0.4141.",
+    "monotone_region": "monotone non-increasing for ingredient counts >= 72: 72:0.9287 > 258:0.7529 > 513:0.5146",
+    "the_inversion": "the 48-vs-72 pair inverts (0.8857 < 0.9287). Held-out n=1024, SE_diff ~= 0.0128, so the gap is ~3.4 SE. A REAL inversion, not sampling noise. My monotone formalization does not predict it.",
+    "interpretation_LABELLED_NOT_A_FINDING": "both 48 and 72 sit in the near-ceiling regime (0.886, 0.929), so ordering inside that regime is compressed and may be governed by a different term than total ingredient count. This is a reading, not a measured mechanism."
+  },
+
+  "CROSS_CHECK_WITH_V_SWEEP": {
+    "v_sweep_512_arbitrary": 0.5449,
+    "this_probe_513_ingredients": 0.5146,
+    "agreement": "within 0.030 on independently built corpora",
+    "v_sweep_128": 0.8789,
+    "this_probe_72": 0.9287, "this_probe_48": 0.8857,
+    "note": "consistent direction across both corpus families"
+  },
+
+  "BLUEPRINT_RELATION": {
+    "supported": "sec 2.4 item 3, typed decision manifolds -- now with a measured lever. Typed decomposition makes the atomic vocabulary SMALL BY CONSTRUCTION, and small atomic vocabularies sit near ceiling. At (32 tools x 16 args) the heads score 0.9502 (32-way) and 0.9951 (16-way) vs 0.8857 for the flat joint on the SAME corpus.",
+    "rejected": "the causal autopsy. The bottleneck was encode() hash-filling 8096/8192 rows (HASH_FILL_IS_THE_SNR_DEFECT), upstream of the readout.",
+    "untested": "the Hopfield Lexical Snap. beta is argmax-invariant; beta*=26.10 remains externally asserted, unverified on host."
+  },
+
+  "class": "large controlled effect with a refused claim: endpoints satisfy the pre-registered gate, monotonicity does not"
+}
