@@ -318,7 +318,15 @@ def main():
               f"  (info {out['info']['mean']:.2f} vs rand {out['rand']['mean']:.2f})")
 
     print("\n   === VERDICT (pre-registered) ===")
-    print(f"   rungs where the control could lose (G-AI-2): {saturating or 'NONE'}")
+    # D36 SELF-CAUGHT DEFECT (fifth run). The label printed above `saturating`, but
+    # `saturating` collects rungs where g2 is FALSE, i.e. where random did NOT beat
+    # greedy = where the control COULD NOT lose. The label said the opposite.
+    # Verified against this run: g2 is False only at 0.65, and it PASSES at 0.80,
+    # 0.55, 0.45 and 0.35. The verdict branch was correct; only the text was wrong.
+    print(f"   rungs where the control COULD NOT lose (G-AI-2 false): "
+          f"{saturating or 'NONE'}")
+    print(f"   rungs where the control COULD lose (G-AI-2 true): "
+          f"{[r[0] for r in rows if r[4]] or 'NONE'}")
     print(f"   rungs with policy separation (G-AI-1+G-AI-2): {separating or 'NONE'}")
     if separating:
         best = max(separating)

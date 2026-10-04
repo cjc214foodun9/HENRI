@@ -1,0 +1,65 @@
+{
+  "schema": "henri.stage6-active-inference.v1",
+  "artifact": "HENRI V2/experiments/verification/henri_stage6_active_inference.py",
+  "runlog": "design/zone_a/evidence/stage6_active_inference_run.log",
+  "commit": "803f91a",
+  "date_utc": "2026-10-04",
+  "question": "does minimising Expected Free Energy select probes better than greedy, on a channel calibrated to the MEASURED single-look accuracy?",
+  "blueprint_clause": "HENRI-ARCH-2026-SYSTEMIC-EVALUATION-V3 sec 1.4 / Stage 6: 'it lacks a recursive active inference loop to execute step-by-step state manipulation ... minimising Expected Free Energy G across candidate options pi'",
+  "labelling": "DERIVED, NOT OBSERVED. Gaussian likelihood over the REAL codec waves (the 6 archived corpus facts, real encode_egress output), with the noise scale calibrated per rung. No physical claim. This tests the DECISION RULE.",
+  "setup": {
+    "K": 6, "wave_dim": 65536, "channel_ambiguity_mean_abs_offdiag_cos": 0.18199,
+    "measured_single_look_LOO": 0.8043, "ladder": [0.80, 0.65, 0.55, 0.45, 0.35],
+    "trials_per_rung": 400, "probes": 24, "mc": 4, "criterion": 0.95, "max_steps": 12,
+    "policies": {"info": "expected information gain (entropy of the look-ahead posterior)",
+                 "greedy": "expected top-1 posterior", "rand": "uniform random probe"}
+  },
+  "results": [
+    {"single_look": 0.80, "sigma": 0.00041, "greedy_median": 1.0, "info_median": 1.0, "rand_median": 2.0,
+     "info_mean": 1.45, "rand_mean": 1.67, "rand_acc1": 0.7800, "GA1": false, "GA2": true, "GA3": true, "GA4": true},
+    {"single_look": 0.65, "sigma": 0.00083, "greedy_median": 2.0, "info_median": 2.0, "rand_median": 2.0,
+     "info_mean": 1.57, "rand_mean": 2.25, "rand_acc1": 0.6375, "GA1": false, "GA2": false, "GA3": true, "GA4": true},
+    {"single_look": 0.55, "sigma": 0.00123, "greedy_median": 2.0, "info_median": 2.0, "rand_median": 3.0,
+     "info_mean": 2.00, "rand_mean": 2.90, "rand_acc1": 0.5775, "GA1": false, "GA2": true, "GA3": true, "GA4": true},
+    {"single_look": 0.45, "sigma": 0.00198, "greedy_median": 3.0, "info_median": 2.0, "rand_median": 4.0,
+     "info_mean": 2.51, "rand_mean": 4.22, "rand_acc1": 0.4525, "GA1": true, "GA2": true, "GA3": true, "GA4": true},
+    {"single_look": 0.35, "sigma": 0.00355, "greedy_median": 5.0, "info_median": 4.0, "rand_median": 7.0,
+     "info_mean": 4.57, "rand_mean": 7.58, "rand_acc1": 0.3250, "GA1": false, "GA2": true, "GA3": true, "GA4": true}
+  ],
+  "verdict": "EFE_SEPARATES_FROM_GREEDY at single-look acc 0.45 (info 2.0 vs greedy 3.0 probes, 0.67x)",
+  "THE_HONEST_READING": {
+    "at_the_measured_operating_point": "NO separation. At the system's measured single-look accuracy (0.8043) and at every rung >= 0.55, info does NOT beat greedy (G-AI-1 FAIL): info 1.0 vs greedy 1.0 at 0.80; 2.0 vs 2.0 at 0.65 and 0.55.",
+    "where_separation_appears": "only at rung 0.45, where the channel is calibrated to be much NOISIER than the real system. That rung is a derived counterfactual, not the system's operating regime.",
+    "so": "the blueprint's Stage 6 decision rule is NOT shown to help at the operating point the system actually measures. It helps only in a derived noisier regime. Claiming 'Stage 6 validated' from this would overstate the result.",
+    "what_DOES_hold_at_every_rung": "info beats RANDOM on mean probes at all 5 rungs (G-AI-4 PASS): 1.45 vs 1.67, 1.57 vs 2.25, 2.00 vs 2.90, 2.51 vs 4.22, 4.57 vs 7.58. Expected-information selection is a real information-seeking policy; it is simply not better than the greedy rule here.",
+    "why_greedy_may_be_competitive": "with K=6 the expected-top-1 posterior criterion and the entropy criterion often agree on which probe to pick; and the criterion reaches 0.95 in few looks. A larger K or a stricter criterion could separate them. That is a stated hypothesis, not measured."
+  },
+  "gates": {
+    "G-AI-1_info_median_le_075_greedy": "PASS at 1 of 5 rungs (0.45 only)",
+    "G-AI-2_rand_median_gt_greedy": "PASS at 4 of 5 rungs (fails at 0.65 where both are 2.0)",
+    "G-AI-3_calibration_rand_acc1": "PASS at ALL 5 rungs after D35",
+    "G-AI-4_info_mean_lt_rand_mean": "PASS at ALL 5 rungs"
+  },
+  "self_caught_instrument_defects": {
+    "D31": "RETRACTED false defect. I claimed abs(mean) understated ambiguity; measured signed mean 0.181986 == abs mean 0.181986. All off-diagonal cosines are positive (0.0902..0.3156) because the codec fills empty rows with hash(text)-derived +1.0 slots, so nothing cancels. The original value was correct and my 'fix' was a no-op. Kept the abs() form as the right general definition.",
+    "D32": "design defect: at the measured accuracy the task SATURATED (every policy <=2 looks, acc@2=1.0000) so the control could not lose. Fixed with the accuracy ladder.",
+    "D33": "calibrated sigma on ONE direction, evaluated on N_PROBES different ones; single-look accuracy is direction-dependent (acc@1 0.8250 vs 0.80; 0.5250 vs 0.40). Fixed by averaging over directions.",
+    "D34": "checked INFO's acc@1 against the rung target, but info and greedy CHOOSE better-than-average directions and must exceed an average-direction calibration (rung 0.80: info 0.8500, rand 0.7667). Calibration was correct; the gate measured policy quality. Fixed to judge calibration on rand and made the selection advantage its own gate (G-AI-4).",
+    "D35": "calibration and evaluation drew DIFFERENT direction sets, so realized accuracy drifted past the gate at 2 of 5 rungs (0.6100 vs 0.55; 0.5200 vs 0.45) while 3 matched exactly. Fixed by calibrating on the SAME directions the run evaluates. Result: G-AI-3 PASS at all 5 rungs.",
+    "D36": "display defect: the summary printed 'rungs where the control could lose' from the list that actually holds rungs where the control could NOT lose. Inverted label; the verdict branch was correct. Fixed to print both lists explicitly."
+  },
+  "honest_limits": [
+    "DERIVED: the channel is a calibrated Gaussian likelihood over real waves, not a physical measurement",
+    "K=6; the blueprint's typed manifolds are up to K=512",
+    "the separating rung (0.45) does not correspond to the system's measured operating accuracy (0.8043)",
+    "single seed; 400 trials per rung (median granularity 1 probe)",
+    "this is a DECISION-RULE result and says nothing about wave->text egress"
+  ],
+  "cost": {"gpu_usd": 0, "cpu_only": true, "store_write": false, "training": false},
+  "authorization": {
+    "operator": "2026-10-03 grant of Path A and the executive instructions of HENRI-ARCH-2026-SYSTEMIC-EVALUATION-V3 (message body)",
+    "approval_seal": "#2ddbaa8bee737803",
+    "blueprint_sha256": "9f3cd5cd6116e8e2f1c1f77a0c2ae9c2fc03f6c9dbd90bf59b0243af4ce6b7bf",
+    "clause": "Stage 6 / sec 1.4, the third named component"
+  }
+}
