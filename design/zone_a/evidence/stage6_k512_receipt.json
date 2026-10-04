@@ -1,0 +1,66 @@
+{
+  "schema": "henri.stage6-active-inference.k512.v1",
+  "artifact": "HENRI V2/experiments/verification/henri_stage6_active_inference.py",
+  "runlog": "design/zone_a/evidence/stage6_k512_run.log",
+  "date_utc": "2026-10-04",
+  "commit_under_test": "ce98030",
+  "corpus_mode": "typed",
+  "K": 512,
+  "K_decomposition": "32 tools x 16 args",
+  "wave_dim": 65536,
+  "waves": "REAL codec.encode_egress output (scope=egress, hash fill stripped)",
+  "labels": "SYNTHETIC (the 512 tool/arg combinations)",
+  "evidence_class": "DERIVED",
+  "warning": "Synthetic labels over real waves. This is NOT real prose and is not the MVP workload.",
+  "config": {"ladder": [0.65, 0.55, 0.45], "trials_per_rung": 300, "n_probes": 24, "n_mc": 4,
+             "criterion": 0.95, "max_steps": 12, "elapsed_s": 369.7},
+  "channel": {"signed_mean_offdiag_cos": 0.20269, "abs_mean_offdiag_cos": 0.20269,
+              "any_negative_offdiag": false,
+              "note": "signed == abs and no negative off-diagonals, because the codec fills empty rows with +1.0 slots. D31 retracted again here."},
+  "rungs": [
+    {"single_look_acc": 0.65, "sigma": 0.00001,
+     "greedy": {"median": 2.0, "mean": 3.15, "acc1": 0.6267, "acc2": 0.9033},
+     "info":   {"median": 2.0, "mean": 3.65, "acc1": 0.6467, "acc2": 0.9033},
+     "rand":   {"median": 2.0, "mean": 3.15, "acc1": 0.6233, "acc2": 0.9133},
+     "G_AI_1": false, "G_AI_2": false, "G_AI_3": true, "G_AI_4": false},
+    {"single_look_acc": 0.55, "sigma": 0.00001,
+     "greedy": {"median": 2.0, "mean": 3.66, "acc1": 0.5633, "acc2": 0.8967},
+     "info":   {"median": 2.0, "mean": 3.68, "acc1": 0.5433, "acc2": 0.8833},
+     "rand":   {"median": 2.0, "mean": 3.93, "acc1": 0.5367, "acc2": 0.8900},
+     "G_AI_1": false, "G_AI_2": false, "G_AI_3": true, "G_AI_4": true},
+    {"single_look_acc": 0.45, "sigma": 0.00002,
+     "greedy": {"median": 2.0, "mean": 3.97, "acc1": 0.4567, "acc2": 0.9100},
+     "info":   {"median": 2.0, "mean": 3.63, "acc1": 0.4900, "acc2": 0.9067},
+     "rand":   {"median": 2.0, "mean": 3.67, "acc1": 0.4133, "acc2": 0.8967},
+     "G_AI_1": false, "G_AI_2": false, "G_AI_3": false, "G_AI_4": true}
+  ],
+  "verdict_as_printed": "NO_SEPARATION_DETECTED",
+  "verdict_corrected": "INSTRUMENT_CANNOT_RESOLVE_EFE",
+  "verdict_correction_reason": "D40. The print branch tested `saturating` (rungs where G-AI-2 is FALSE = the control could NOT lose). G-AI-2 failed at all three rungs and passed at none, so the measured state IS the instrument-cannot-resolve condition named in the pre-registered docstring. The printed label was wrong; the underlying numbers are valid and are preserved verbatim in the run log.",
+  "measured_cause": {
+    "defect": "D39",
+    "finding": "N_MC=4 cannot rank 24 candidate probes at K=512.",
+    "entropy_estimate_at_MC4": {"mean": 0.7176, "sd": 0.3028, "spread_max_minus_min": 1.1813},
+    "entropy_estimate_at_MC64": {"mean": 0.7358, "sd": 0.0778, "spread_max_minus_min": 0.2655},
+    "interpretation": "At MC=4 the estimate is 3.9x noisier and the spread ACROSS candidates (1.1813) exceeds the MEAN (0.7176), so the info policy cannot rank candidates. The observed info-vs-rand differences at K=512 are therefore noise, not a statement about Expected Free Energy."
+  },
+  "calibration_verified": {"sigma_used": 6.329e-06,
+    "self_check": "re-simulating calibrate_sigma's own model gives 0.4542 against a 0.45 target; 0.4567 at 1.46e-05",
+    "note": "calibrate_sigma is correct at K=512. An early assertion that the steps-to-criterion metric was 'degenerate at K=512' was refuted by measurement (P(post.max >= 0.95 after one look) = 0.08, not ~1) and never entered the repository."},
+  "established": [],
+  "not_established": [
+    "that EFE beats greedy at K=512 (instrument cannot resolve; D39)",
+    "that EFE is WORSE than random at K=512 (same instrument limit)",
+    "any K=512 policy ranking"
+  ],
+  "next": {
+    "instrument_repair": "re-run at N_MC=64 or 128, optionally with common random numbers across candidates so the shared draws cancel in the ranking differences",
+    "gates_unchanged": "G-AI-1..G-AI-4, LADDER, CRITERION, MAX_STEPS all stay as pre-registered; only N_MC changes"
+  },
+  "authorization": {
+    "operator_approval_text": "i hereby grant approval to execute the path A and/or the executive instructions and insights in the attached document",
+    "evidence": "design/zone_a/evidence/HENRI-ARCH-2026-SYSTEMIC-EVALUATION-V3.md sha256 9f3cd5cd6116e8e2f1c1f77a0c2ae9c2fc03f6c9dbd90bf59b0243af4ce6b7bf",
+    "scope": "blueprint sec 1.4 / Stage 6 -- hierarchical active inference over the latent wave core"
+  },
+  "billing": [], "gpu_used": false, "store_written": false
+}

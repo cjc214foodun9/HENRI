@@ -332,6 +332,10 @@ def main():
 
     rows, separating, saturating = [], [], []
     for tgt_acc in LADDER:
+        # D41 SELF-CAUGHT DEFECT. The D40 patch that fixed the verdict branch also
+        # DELETED this call, leaving `out` and `sigma` undefined -- a partial patch,
+        # the same failure mode as D27. Restored, and the smoke run below proves the
+        # script executes end to end before any result is recorded.
         sigma, out = eval_rung(tgt_acc, W, U, rng)
         g = out["greedy"]["median"]
         i = out["info"]["median"]
@@ -380,8 +384,10 @@ def main():
     # 0.55, 0.45 and 0.35. The verdict branch was correct; only the text was wrong.
     print(f"   rungs where the control COULD NOT lose (G-AI-2 false): "
           f"{saturating or 'NONE'}")
+    # D41: `can_lose` was referenced by the verdict branch but never defined.
+    can_lose = [r[0] for r in rows if r[4]]
     print(f"   rungs where the control COULD lose (G-AI-2 true): "
-          f"{[r[0] for r in rows if r[4]] or 'NONE'}")
+          f"{can_lose or 'NONE'}")
     print(f"   rungs with policy separation (G-AI-1+G-AI-2): {separating or 'NONE'}")
     if separating:
         best = max(separating)
@@ -389,12 +395,12 @@ def main():
         print(f"   VERDICT = EFE_SEPARATES_FROM_GREEDY at single-look acc {best:.2f}"
               f"  (info {row[2]['info']['median']:.1f} vs "
               f"greedy {row[2]['greedy']['median']:.1f} probes)")
-    elif saturating:
+    elif can_lose:
         print("   VERDICT = NO_SEPARATION_DETECTED "
-              "(control can lose, but info does not beat greedy)")
+              "(the control CAN lose somewhere, but info does not beat greedy)")
     else:
         print("   VERDICT = INSTRUMENT_CANNOT_RESOLVE_EFE "
-              "(the task saturates at every rung; control cannot lose)")
+              "(no rung where the control can lose; the metric cannot discriminate)")
     print(f"   elapsed {time.time() - t0:.1f}s")
     return 0
 
