@@ -560,7 +560,8 @@
 
   <h3>3.2 Instrument defects caught before they could mislead</h3>
   <p class="small">
-    Self-caught defects this session span <span class="mono">D2&ndash;D45</span>.
+    Self-caught defects this session span <span class="mono">D2&ndash;D52</span> at time of writing
+    (a snapshot, like the footer pills &mdash; the count rises with each new catch).
     The last three are the most transferable: a replication that <em>omitted its regression
     control</em> because the original seed was assumed rather than read from source; a receipt that
     recorded &ldquo;single seed&rdquo; but never the seed <em>value</em>; and a report that said
@@ -600,16 +601,16 @@
         <td class="ok">MET &mdash; committed <span class="mono">000f36b</span>, sealed <span class="mono">#2a9d86d6347b2ef9</span></td>
       </tr>
       <tr>
-        <td><strong>B.</strong> Power the A/B to 20&ndash;50 samples/class, then judge ARM-H fairly</td>
-        <td>~10k&ndash;25k waves; deterministic corpus build</td>
+        <td><strong>B.</strong> <span class="mono">DONE</span> &mdash; the Hopfield arm at adequate data</td>
+        <td>V=64, 32 templates/word, 2048 train / 512 held-out. Prototype <span class="mono">0.9883</span> held-out (63.2&times; chance, ctrl <span class="mono">0.0176</span>); Hopfield refine adds exactly <span class="mono">0.0</span> (<span class="mono">0/512</span> argmax flips &mdash; structural). Resolves the blueprint's central prescription to nearest-prototype lookup.</td>
         <td>$0</td>
-        <td>controls at chance, else UNINTERPRETABLE stands</td>
+        <td class="ok">ROBUST <span class="mono">UNINTERPRETABLE &rarr; PROTOTYPE_WORKS_REFINEMENT_INERT</span> &mdash; committed <span class="mono">b1ba247</span>, sealed <span class="mono">#5b1d17d9326088b8</span></td>
       </tr>
       <tr>
-        <td><strong>C.</strong> Cut the constant code crosstalk (~0.343) in the codec</td>
-        <td>Encoder change; <span class="mono">encode()</span> retrieval contract must hold</td>
+        <td><strong>C.</strong> <span class="mono">DONE</span> &mdash; source of the constant crosstalk</td>
+        <td>Hypothesis tested: template words appear in every sample and contribute a common mode. Train-only mean subtraction cuts <span class="mono">mean|offdiag|</span> by <span class="mono">10&ndash;11&times;</span> (V=128/256) with no leak and controls at chance &mdash; but accuracy moves slightly <em>down</em>.</td>
         <td>$0</td>
-        <td>encode() geometry gates still pass</td>
+        <td class="warn"><span class="mono">CROSSTALK_IS_COMMON_MODE</span> &mdash; part 1 confirmed, <strong>part 2 refuted my own follow-on hypothesis</strong>. Committed <span class="mono">7ad2710</span>, sealed <span class="mono">#9d4f9141c7a8f851</span>. <span class="mono">encode()</span>/<span class="mono">encode_egress()</span> unchanged.</td>
       </tr>
       <tr>
         <td><strong>D.</strong> GPU validation of a passing configuration</td>
