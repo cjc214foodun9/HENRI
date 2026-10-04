@@ -1,0 +1,46 @@
+=== PATH A: CONTENT-GROUNDED EGRESS HEAD + PRE-REGISTERED D0/Q1-Q4 ===
+   NB=8192 BD=8 DC=32768  V=64  steps=300  batch=64  lr=0.02
+   chance=0.0156   probe_waves=16   beta=26.1
+   corpus built in 0.5s  train=(512, 32768, 2) held-out=(128, 32768, 2) probe=(16, 32768, 2)
+   probe tokens = min(V, N_PROBE) = 16   (denominators below use 16)
+
+   --- ARM LIN ---
+   D0 trained check      : 0.9998  (floor 0.5) -> True
+   top1_token_unique     : pre 10/16  post 13/16   <- operator's metric
+   acc  train / held-out / ctrl : 1.0000 / 0.4062 / 0.0000   chance 0.0156
+   Q1 separation  RAW    : real 0.0087  ctrl 0.0096  delta -0.0008 (floor +0.10)
+   Q1 separation  CENTER : real 1.0658  ctrl 1.0579  delta +0.0080  [diagnostic]
+   Q2 margin             : real 0.6122  ctrl 0.0888  delta +0.5234 (floor +0.10)
+   Q3 determinism        : True
+   Q4 sensitivity        : True  shifts [0.54188, 0.53723, 0.47771]
+
+   --- ARM HOP ---
+   D0 trained check      : 0.0542  (floor 0.5) -> False
+   top1_token_unique     : pre 14/16  post 12/16   <- operator's metric
+   acc  train / held-out / ctrl : 1.0000 / 0.0312 / 0.0391   chance 0.0156
+   Q1 separation  RAW    : real 0.1667  ctrl 0.2238  delta -0.0571 (floor +0.10)
+   Q1 separation  CENTER : real 1.0659  ctrl 1.0660  delta -0.0001  [diagnostic]
+   Q2 margin             : real 9.9479  ctrl 6.4069  delta +3.5409 (floor +0.10)
+   Q3 determinism        : True
+   Q4 sensitivity        : True  shifts [3.55298, 0.37532, 4.76239]
+
+=== VERDICT (pre-registered) ===
+   LIN: FAIL   (accuracy 0.4062, unique post 13/16)
+   HOP: FAIL   (accuracy 0.0312, unique post 12/16)
+
+   operator symptom top1_token_unique=1 across 16 distinct waves:
+      LIN: post-training unique = 13/16
+      HOP: post-training unique = 12/16
+   best arm by held-out accuracy: LIN at 0.4062
+
+   Q1 METRIC VALIDITY NOTE:
+      raw Q1 places the CONTROL above the real arm at both smoke scales.
+      Q1 scores logit dispersion; correct classification makes logits
+      mutually similar, so Q1 is UNINFORMATIVE for a trained head.
+      Direct metrics separate: held-out accuracy and unique-token count.
+   -> SYMPTOM_DOES_NOT_REPRODUCE: content-grounded training yields distinct,
+      decodable outputs. The A-K5 collapse was a property of the degenerate
+      artifact, not of the egress mechanism.
+
+   elapsed 10.1s  cost $0  CPU only
+RC=0

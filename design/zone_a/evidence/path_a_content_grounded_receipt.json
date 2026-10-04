@@ -1,0 +1,88 @@
+{
+  "schema": "henri.path-a-egress.v1",
+  "artifact": "HENRI V2/experiments/verification/path_a_content_grounded_egress.py",
+  "runlog": "design/zone_a/evidence/path_a_v64_run.log",
+  "date_utc": "2026-10-03",
+  "authorization": {
+    "operator": "2026-10-03 grant of Path A and the executive instructions of HENRI-ARCH-2026-SYSTEMIC-EVALUATION-V3 (message body)",
+    "blueprint_sha256": "9f3cd5cd6116e8e2f1c1f77a0c2ae9c2fc03f6c9dbd90bf59b0243af4ce6b7bf"
+  },
+  "config": {
+    "V": 64, "steps": 300, "batch": 64, "lr": 0.02, "beta": 26.10,
+    "train_templates": 8, "test_templates": 2, "held_out": true,
+    "train_rows": 512, "held_out_rows": 128, "probe_rows": 16,
+    "chance": 0.015625,
+    "codec_method": "encode_egress (shipped, 1529b50)",
+    "control": "per-sample block permutation of the same wave family"
+  },
+
+  "operators_symptom_answer": {
+    "symptom_as_reported": "wave-to-text egress yields top1_token_unique=1 across 16 distinct waves",
+    "measured_post_training": {"LIN": "13/16", "HOP": "12/16"},
+    "verdict": "SYMPTOM_DOES_NOT_REPRODUCE",
+    "reading": "the collapse to a single token does not occur when the head is trained on REAL content on the codec's OWN wave family. The A-K5 collapse was a property of the degenerate artifact (random waves, random labels, salted hash(text)%32000 ids, dense-Gaussian family mismatch), not of the egress mechanism."
+  },
+
+  "arms": {
+    "LIN": {
+      "d0_trained": 0.9998, "d0_pass": true,
+      "acc_train": 1.0000, "acc_held_out": 0.4062, "acc_control": 0.0000,
+      "held_out_over_chance": 26.0,
+      "unique_pre": "10/16", "unique_post": "13/16",
+      "q1_raw_delta": -0.0008, "q1_center_delta": 0.0080,
+      "q2_margin_delta": 0.5234, "q3_determinism": true, "q4_sensitivity": true
+    },
+    "HOP": {
+      "d0_trained": 0.0542, "d0_pass": false,
+      "acc_train": 1.0000, "acc_held_out": 0.0312, "acc_control": 0.0391,
+      "held_out_over_chance": 2.0,
+      "unique_pre": "14/16", "unique_post": "12/16",
+      "q1_raw_delta": -0.0571, "q1_center_delta": -0.0001,
+      "q2_margin_delta": 3.5409, "q3_determinism": true, "q4_sensitivity": true
+    }
+  },
+
+  "pre_registered_gate_outcome": {
+    "gate": "copied verbatim from ak5_armb_egress_gate.py lines 44-59; PASS only if D0 AND Q1 AND Q2 AND Q3 AND Q4",
+    "raw_verdict": "FAIL for both arms, on Q1",
+    "but_Q1_is_invalid_here": "see D18 below. The FAIL is NOT evidence about egress."
+  },
+
+  "D18_FINDING_Q1_INVALID_FOR_A_TRAINED_HEAD": {
+    "observation": "raw Q1 places the CONTROL above the real arm at BOTH smoke scales and at V=64. LIN: real 0.0087 vs ctrl 0.0096. At V=8: real 0.1271 vs ctrl 0.4172 while LIN held-out was 0.8125 and the control sat at chance.",
+    "mechanism": "training drives logits toward class-peaked (near one-hot) vectors. Near-one-hot vectors are mutually SIMILAR, so CORRECT classification LOWERS pairwise cosine distance. The misclassified control produces diffuse, more varied logits, so it scores HIGHER. Q1 as defined scores logit DISPERSION, not class information.",
+    "further_evidence": "as training sharpens, raw Q1 falls for BOTH arms (V=64 values 0.0087 and 0.1667). At V=64 the LIN logits are effectively one-hot, so all pairwise distances collapse toward 0.",
+    "centering_does_not_fix_it": "center deltas +0.0080 (LIN) and -0.0001 (HOP); still below the 0.10 floor.",
+    "why_gate_power_validation_does_not_transfer": "ak5_gate_power_validation.json certified GATE_POWER_OK on a SYNTHETIC readout with no training. Trained arms sit in a different logit regime. The certification does not carry over.",
+    "consequence": "the direct quantities DO separate and are the informative ones: held-out accuracy 0.4062 vs 0.0000 control; unique-token count 13/16 vs the operator's 1/16. Report the gate FAIL and the Q1 invalidity together.",
+    "class": "applying the A-K4 metric-amendment discipline to a pre-registered gate component"
+  },
+
+  "D19_FINDING_D0_MISCALIBRATED_FOR_A_MAGNITUDE_READOUT": {
+    "observation": "HOP reports D0 = 0.0542 (below the 0.5 floor, so 'untrained') while fitting the 512-row train set at accuracy 1.0000.",
+    "mechanism": "the Hopfield codebook is read as beta * |<m, x>| with beta = 26.10 and unit-variance init, so |<m,x>| ~ 1.28 and a 5% relative change in m shifts the score by ~0.064, which beta amplifies to ~1.67 -- enough to flip argmax between classes. Relative weight-norm change is therefore far too coarse a training detector for a high-beta magnitude readout.",
+    "consequence": "D0 as specified cannot adjudicate the HOP arm. Its 'UNINTERPRETABLE' status therefore stands for a THIRD independent reason: (1) earlier starvation at 3 samples/class, (2) this D0 mis-calibration, (3) held-out exactly at chance.",
+    "not_claimed": "this does NOT excuse HOP's chance-level held-out result. It only means D0 is the wrong instrument to call it 'untrained'.",
+    "class": "instrument calibration"
+  },
+
+  "OPEN_FINDING_TRAINED_LIN_UNDERPERFORMS_THE_TRAINING_FREE_CENTROID": {
+    "comparison": "at V=64 the egress capacity sweep measured the training-free nearest-centroid at raw 0.9453 on held-out templates. This trained linear head reaches 0.4062 on held-out templates at the same V.",
+    "caveat": "DIFFERENT corpora and readout parameterizations, so this is a hypothesis, not a controlled comparison. The trained head is real-valued and unsigned (einsum without conjugate symmetry); the centroid uses per-class means of L2-normalized features.",
+    "why_it_matters": "if it replicates on one corpus it means gradient training on few templates per class OVERFITS (train 1.0000) while a fixed class-mean classifier generalizes. That would be an actionable design result.",
+    "status": "HYPOTHESIS, requires a head-to-head run on one corpus"
+  },
+
+  "what_is_established": {
+    "symptom": "top1_token_unique=1 DOES NOT reproduce on content-grounded training (13/16 and 12/16)",
+    "content_grounded_generalization": "LIN 26x chance on held-out TEMPLATES with the control at 0.0000",
+    "memorization_disclosure": "LIN train accuracy is 1.0000, so 0.4062 is the honest generalization number and it is NOT a working egress",
+    "controls": "block-permutation control at 0.0000 (LIN) and 0.0391 (HOP) against chance 0.0156"
+  },
+  "what_is_NOT_established": {
+    "working_egress": "0.4062 held-out is 26x chance but far below a usable bar; no working wave->text egress is claimed",
+    "hopfield_as_the_mechanism": "UNINTERPRETABLE for three independent reasons",
+    "typed_manifold_benefit_at_this_scale": "not tested in this run"
+  },
+  "cost": {"gpu_usd": 0, "cpu_only": true, "store": false, "checkpoint": false, "network": false}
+}
