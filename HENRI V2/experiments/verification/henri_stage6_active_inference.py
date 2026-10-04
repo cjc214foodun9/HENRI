@@ -117,6 +117,35 @@ def fact_waves():
     return W, texts
 
 
+# --------------------------------------------------------------- corpus modes
+# SM6_CORPUS=real  -> the 6 archived corpus facts (K=6). DEFAULT.
+# SM6_CORPUS=typed -> 32 tools x 16 args = 512 joint labels (K=512), where the
+#   WAVES are still REAL codec.encode_egress output but the LABELS are synthetic.
+#   Built because the Stage 6 run at K=6 named its own falsifiable follow-up:
+#   "with K=6 the entropy and expected-top-1 criteria often agree ... a larger K
+#   (the blueprint's typed manifolds reach 512) could separate them."
+#   Labelled honestly: real waves, synthetic labels. Not real prose.
+TOOLS = [f"tool_{i:02d}" for i in range(32)]
+ARGS = [f"arg_{i:02d}" for i in range(16)]
+TEMPLATES = ["the {t} call", "{t} then {a}", "run {t} with {a}",
+             "apply {t} to {a}", "{a} via {t}", "invoke {t} on {a}"]
+
+
+def typed_waves():
+    """K=512: real codec waves over 32 tools x 16 args, synthetic labels."""
+    codec = C.get_codec()
+    W, labels = [], []
+    for ti, t in enumerate(TOOLS):
+        for ai, a in enumerate(ARGS):
+            txt = TEMPLATES[(ti + ai) % len(TEMPLATES)].format(t=t, a=a)
+            e = np.asarray(codec.encode_egress(txt), dtype="<f4").reshape(-1)
+            W.append(e.astype(np.float64))
+            labels.append(ti * len(ARGS) + ai)
+    W = np.stack(W)
+    W /= np.linalg.norm(W, axis=1, keepdims=True)
+    return W, labels
+
+
 def channel_ambiguity(W):
     """Mean ABSOLUTE off-diagonal cosine.
 
@@ -262,11 +291,24 @@ def eval_rung(target, W, U, rng):
 def main():
     t0 = time.time()
     rng = np.random.default_rng(SEED)
-    W, _ = fact_waves()
-    K, D = W.shape
-    amb = channel_ambiguity(W)
-    print(f"facts K={K}  wave dim={D}   (REAL codec.encode_egress output)")
-    print(f"   channel ambiguity mean|off-diag cos| = {amb:.5f}   (D31 fixed)")
+    mode = os.environ.get("SM6_CORPUS", "real").lower()
+    if mode == "typed":
+        W, labels = typed_waves()
+        K, D = W.shape
+        amb = channel_ambiguity(W)
+        S = W @ W.T
+        mask = ~np.eye(K, dtype=bool)
+        print(f"corpus=typed  K={K} (32 tools x 16 args)  wave dim={D}")
+        print("   REAL codec.encode_egress waves; SYNTHETIC labels. Not real prose.")
+        print(f"   signed mean off-diag cos = {float(S[mask].mean()):+.5f}")
+        print(f"   abs    mean off-diag cos = {amb:+.5f}   (D31 test at this K)")
+        print(f"   any NEGATIVE off-diagonal cosines: {bool((S[mask] < 0).any())}")
+    else:
+        W, _ = fact_waves()
+        K, D = W.shape
+        amb = channel_ambiguity(W)
+        print(f"corpus=real  K={K}  wave dim={D}   (REAL codec.encode_egress output)")
+        print(f"   channel ambiguity mean|off-diag cos| = {amb:.5f}")
     print(f"   measured single-look LOO accuracy     = {MEASURED_SINGLE_LOOK}")
     print(f"   ladder over single-look accuracy      = {LADDER}")
     print(f"   trials/rung={N_TRIALS}  probes={N_PROBES}  MC={N_MC}  "
