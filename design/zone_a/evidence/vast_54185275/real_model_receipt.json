@@ -1,0 +1,62 @@
+{
+  "schema": "henri.bench.real-model-exercise.v1",
+  "written_utc": "2026-10-04",
+  "eval_id": "aa-omniscience",
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "dtype": "bfloat16",
+  "decoding": "greedy",
+  "scorer": "benchmarks.local_proxy.norm (normalized exact match)",
+  "not_claimed": [
+    "NOT an AAII v4.3.2 score; official grading uses an external grading model.",
+    "Local proxy is a STRICT LOWER BOUND on the official judge.",
+    "Exercises the harness end-to-end against a real pretrained model; that is all."
+  ],
+  "host": {
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "capability": [
+      12,
+      0
+    ],
+    "torch": "2.12.0+cu130",
+    "tf32": false
+  },
+  "load_s": 5.3,
+  "n_items": 120,
+  "n_hit": 1,
+  "accuracy": 0.008333333333333333,
+  "elapsed_s": 25.8,
+  "s_per_item": 0.215,
+  "examples": [
+    {
+      "q": "Under U.S. GAAP (ASC Topic 606), which reference explicitly lists the two criter",
+      "gold": "ASC 606-10-25-15",
+      "pred": "The two criteria are control and standalone selling price.",
+      "hit": false
+    },
+    {
+      "q": "What is the exact effective date (month, day, year) for annual periods\u2014fiscal ye",
+      "gold": "December 15, 2022",
+      "pred": "The exact effective date for fiscal years beginning after De",
+      "hit": false
+    },
+    {
+      "q": "Under U.S. GAAP (ASC 340-30), how many categories of deposit arrangements are id",
+      "gold": "4",
+      "pred": "5",
+      "hit": false
+    },
+    {
+      "q": "Under current IFRS accounting standards, what exact phrase must an entity includ",
+      "gold": "an explicit and unreserved statement of such compliance",
+      "pred": "\"Compliance with International Financial Reporting Standards",
+      "hit": false
+    },
+    {
+      "q": "Under U.S. GAAP in effect as of October 2025, which paragraph identifier in ASC ",
+      "gold": "ASC 340-40-25-6",
+      "pred": "ASC 340-40(d)(1)(i)",
+      "hit": false
+    }
+  ],
+  "status": "OK"
+}
