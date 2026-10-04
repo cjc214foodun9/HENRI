@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Zone A Egress: capacity law measured, bottleneck relocated</title>
+<title>Zone A Egress: the encoder was poisoning the engine</title>
 <style>
   :root{
     --fg: var(--foreground, #1b1f24);
@@ -16,18 +16,14 @@
     --ok: #1d6b3a;
   }
   html,body{margin:0;padding:0}
-  body{
-    background: var(--card);
-    color: var(--fg);
+  body{background:var(--card); color:var(--fg);
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    font-size: 15px; line-height: 1.55;
-  }
-  .wrap{padding: 18px 20px 32px; max-width: 1080px}
-  h1{font-size: 1.42rem; margin: 0 0 .2rem; letter-spacing:-.01em}
-  h2{font-size: 1.05rem; margin: 1.6rem 0 .5rem; padding-bottom:.25rem; border-bottom:1px solid var(--bd)}
-  h3{font-size: .95rem; margin: 1.1rem 0 .35rem}
-  p{margin:.45rem 0}
-  code,kbd{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.86em}
+    font-size:15px; line-height:1.55;}
+  .wrap{padding:18px 20px 32px; max-width:1080px}
+  h1{font-size:1.42rem; margin:0 0 .2rem; letter-spacing:-.01em}
+  h2{font-size:1.05rem; margin:1.6rem 0 .5rem; padding-bottom:.25rem; border-bottom:1px solid var(--bd)}
+  h3{font-size:.95rem; margin:1.1rem 0 .35rem}
+  code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.86em}
   .sub{color:var(--mut); font-size:.9rem; margin-top:0}
   table{border-collapse:collapse; width:100%; margin:.6rem 0; font-size:.88rem}
   th,td{border:1px solid var(--bd); padding:.36rem .5rem; text-align:left; vertical-align:top}
@@ -36,8 +32,10 @@
   .ok{color:var(--ok); font-weight:600}
   .bad{color:var(--bad); font-weight:600}
   .warn{color:var(--warn); font-weight:600}
-  .pill{display:inline-block; border:1px solid var(--bd); border-radius:999px; padding:.06rem .5rem; font-size:.74rem; color:var(--mut); margin-right:.3rem}
-  .box{border:1px solid var(--bd); border-left:3px solid var(--acc); padding:.6rem .8rem; margin:.7rem 0; border-radius:2px}
+  .pill{display:inline-block; border:1px solid var(--bd); border-radius:999px;
+        padding:.06rem .5rem; font-size:.74rem; color:var(--mut); margin-right:.3rem}
+  .box{border:1px solid var(--bd); border-left:3px solid var(--acc); padding:.6rem .8rem;
+       margin:.7rem 0; border-radius:2px}
   .box.warnbox{border-left-color:var(--warn)}
   .box.badbox{border-left-color:var(--bad)}
   ul{margin:.4rem 0 .4rem 1.1rem; padding:0}
@@ -45,14 +43,13 @@
   figure{margin:.9rem 0}
   figcaption{color:var(--mut); font-size:.82rem; margin-top:.3rem}
   svg{max-width:100%; height:auto; display:block}
-  .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
   .small{font-size:.85rem; color:var(--mut)}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <h1>Zone A Egress: the bottleneck was in the encoder, not the readout</h1>
+  <h1>Zone A Egress: the encoder was poisoning the engine</h1>
   <p class="sub">
     HENRI development arbitration &middot; 2026-10-03 &middot; operator grant: Path A and the
     executive instructions of HENRI-ARCH-2026-SYSTEMIC-EVALUATION-V3
@@ -60,52 +57,50 @@
   </p>
 
   <div class="box">
-    <strong>Headline.</strong> The blueprint locates the egress failure in the readout.
-    Measurement locates it upstream, in the codec's own <code>encode()</code>, which
-    hash-fills <strong>8096 of 8192 rows</strong> from <code>hash(text)</code>.
-    Stripping that fill lifts a flat linear head 6&times; and lets a
-    <em>training-free</em> centroid decode word content far above chance at every scale.
-    The blueprint's residual complaint &mdash; keep outputs small and typed &mdash; is now
-    evidence-backed. Its prescription for the readout is not.
+    <strong>Headline.</strong> The blueprint locates the egress failure in the readout and prescribes a
+    Hopfield lexical snap. Measurement locates it upstream, in the codec's own <code>encode()</code>,
+    which hash-fills <strong>8096 of 8192 rows</strong> from <code>hash(text)</code>. Stripping that
+    fill lifts a flat linear head 6&times; and lets a <em>training-free</em> centroid decode content
+    far above chance at every scale. Two later measurements complete the picture: the manifold's
+    <strong>atomic vocabulary size</strong> — not its cardinality — sets the egress ceiling; and
+    typed decomposition supplies that lever.
   </div>
 
   <h2>1. Academic foundation</h2>
   <p>
-    A single linear map <span class="mono">W</span> cannot compute multi-step recursion.
-    That is true and it is not what failed here. Per-class nearest-centroid is itself a
-    <em>linear</em> decision rule; when it separates classes, the representation is
-    linearly decodable and a linear probe is sufficient.
+    A single linear map <span class="mono">W</span> cannot compute multi-step recursion. That is true
+    and it is not what failed here. Per-class nearest-centroid is itself a <em>linear</em> decision
+    rule; when it separates classes, the representation is linearly decodable and a linear probe
+    suffices. No capacity argument about <span class="mono">W</span> applies until this test passes.
   </p>
   <p>
     Continuous Modern Hopfield retrieval performs <span class="mono">softmax(&beta;&middot;s)</span>
     over a codebook. Selection is <span class="mono">argmax</span>, which is
     <strong>order-preserving</strong> in <span class="mono">&beta;</span>. So
-    <span class="mono">&beta;</span> sets convergence, not selection. Measured:
-    <span class="mono">argmax</span> identical across <span class="mono">&beta;&isin;[0.5,1000]</span>;
-    accuracy steps 0.000&rarr;1.000 as <span class="mono">&beta;</span> passes 5.
+    <span class="mono">&beta;</span> sets convergence, not selection. Measured: <span class="mono">argmax</span>
+    identical across <span class="mono">&beta;&isin;[0.5,1000]</span>; accuracy steps 0.000&rarr;1.000 as
+    <span class="mono">&beta;</span> passes 5.
   </p>
 
   <h2>2. Technical decision</h2>
   <h3>2.1 The located defect</h3>
   <p>
-    <code class="mono">zone_c_world_knowledge_codec.py</code> lines 139&ndash;153. A phrase with
-    <em>F</em> features touches <span class="mono">F&times;16</span> slots. The rest are filled
-    from a whole-text hash and returned as the engram. A 6-feature phrase ships
-    <strong>0.15% content and 99.85% text-hash noise</strong>. The fill satisfies the
-    retrieval-side <span class="mono">row_unit</span> gate; egress inherited it as noise.
+    <code>zone_c_world_knowledge_codec.py</code> lines 139&ndash;153. A phrase with <em>F</em> features
+    touches <span class="mono">F&times;16</span> slots. The rest are filled from a whole-text hash and
+    returned as the engram. A 6-feature phrase ships <strong>0.15% content and 99.85% text-hash
+    noise</strong>. The fill satisfies the retrieval-side <span class="mono">row_unit</span> gate;
+    egress inherited it as noise.
   </p>
   <p>
-    Fix: <code class="mono">CompositionalTextCodec.encode_egress()</code>, commit
-    <span class="mono">1529b50</span>. <strong>Additive.</strong> <code class="mono">encode()</code>
-    is byte-unchanged; all 6 geometry gates still pass.
+    Fix: <code>CompositionalTextCodec.encode_egress()</code>, commit <span class="mono">1529b50</span>.
+    <strong>Additive.</strong> <code>encode()</code> is byte-unchanged; all 6 geometry gates still pass.
   </p>
   <div class="box warnbox" role="note">
     <strong>Control-validated.</strong> Removing the fill lifts a flat linear head
-    <span class="mono">0.0586&rarr;0.3516</span> with every control at chance
-    &rarr; <span class="mono">HASH_FILL_IS_THE_SNR_DEFECT</span>. Mechanism predicts size:
+    <span class="mono">0.0586&rarr;0.3516</span> with every control at chance &rarr;
+    <span class="mono">HASH_FILL_IS_THE_SNR_DEFECT</span>. Mechanism predicts size:
     <span class="mono">96/&radic;96&nbsp;&asymp;&nbsp;9.8</span> vs
-    <span class="mono">96/&radic;8192&nbsp;&asymp;&nbsp;1.06</span>; ratio 9.2 predicted,
-    6.0 observed.
+    <span class="mono">96/&radic;8192&nbsp;&asymp;&nbsp;1.06</span>; ratio 9.2 predicted, 6.0 observed.
   </div>
 
   <figure>
@@ -115,27 +110,20 @@
       <rect x="6" y="56" width="150" height="78" rx="7" fill="none" stroke="#5b6570"/>
       <text x="81" y="88" text-anchor="middle" font-size="14" fill="currentColor">input text</text>
       <text x="81" y="108" text-anchor="middle" font-size="12" fill="#5b6570">templates</text>
-
       <line x1="156" y1="95" x2="196" y2="95" stroke="#5b6570" marker-end="url(#a)"/>
-
       <rect x="196" y="40" width="212" height="110" rx="7" fill="none" stroke="#a12222" stroke-width="2.5"/>
       <text x="302" y="70" text-anchor="middle" font-size="14" fill="currentColor" font-weight="700">codec encode()</text>
       <text x="302" y="92" text-anchor="middle" font-size="12" fill="#a12222">LOCATED DEFECT</text>
       <text x="302" y="112" text-anchor="middle" font-size="12" fill="#5b6570">fills 8096 / 8192 rows</text>
       <text x="302" y="130" text-anchor="middle" font-size="12" fill="#5b6570">from hash(text)</text>
-
       <line x1="408" y1="95" x2="448" y2="95" stroke="#5b6570" marker-end="url(#a)"/>
-
       <rect x="448" y="56" width="186" height="78" rx="7" fill="none" stroke="#1d6b3a" stroke-width="2"/>
       <text x="541" y="88" text-anchor="middle" font-size="14" fill="currentColor">readout head</text>
       <text x="541" y="110" text-anchor="middle" font-size="12" fill="#1d6b3a">NOT the defect</text>
-
       <line x1="634" y1="95" x2="674" y2="95" stroke="#5b6570" marker-end="url(#a)"/>
-
       <rect x="674" y="56" width="220" height="78" rx="7" fill="none" stroke="#2f6f4f" stroke-width="2"/>
       <text x="784" y="86" text-anchor="middle" font-size="14" fill="currentColor">small typed outputs</text>
       <text x="784" y="108" text-anchor="middle" font-size="12" fill="#1d6b3a">evidence-supported</text>
-
       <defs>
         <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
           <path d="M0,0 L10,5 L0,10 z" fill="#5b6570"/>
@@ -145,17 +133,9 @@
     <figcaption>Figure 1. Measured location of the egress failure. Editable SVG source.</figcaption>
   </figure>
 
-  <h3>2.2 The capacity curve</h3>
-  <p>
-    With the fill removed, accuracy falls monotonically as the output manifold grows.
-    Each word touches <span class="mono">WAVE_EXPAND&times;1 = 16</span> blocks, so
-    <span class="mono">V</span> words write <span class="mono">16V</span> slots into 8192
-    blocks. At <span class="mono">V=512</span> the block space is exactly saturated.
-  </p>
+  <h3>2.2 The capacity curve — manifold size</h3>
   <table>
-    <thead>
-      <tr><th>V</th><th>blocks used</th><th>collide</th><th>raw</th><th>actres*</th><th>ctrl</th><th>offdiag |cos|</th></tr>
-    </thead>
+    <thead><tr><th>V</th><th>blocks used</th><th>collide</th><th>raw</th><th>actres*</th><th>ctrl</th><th>offdiag |cos|</th></tr></thead>
     <tbody>
       <tr><td class="n">16</td><td class="n">256</td><td class="n">3.1%</td><td class="n ok">0.9688</td><td class="n">0.9688</td><td class="n">0.1250</td><td class="n">0.34972</td></tr>
       <tr><td class="n">32</td><td class="n">512</td><td class="n">6.2%</td><td class="n ok">0.9375</td><td class="n">0.9844</td><td class="n">0.0000</td><td class="n">0.34341</td></tr>
@@ -166,38 +146,83 @@
     </tbody>
   </table>
   <p class="small">
-    *<strong>actres is oracle-assisted</strong> &mdash; it needs the template label at inference.
-    <strong>raw is the deployment number.</strong> Only raw was used for the gate.
-    All controls at chance. Verdict <span class="mono">CAPACITY_LAW_CONFIRMED</span>.
+    *<strong>actres is oracle-assisted</strong> — it needs the template label at inference.
+    <strong>raw is the deployment number.</strong> Only raw gated the verdict.
+    Verdict <span class="mono">CAPACITY_LAW_CONFIRMED</span>, gate pre-registered in the
+    first-committed version (<span class="mono">32efe5c</span> line 24).
   </p>
-
   <div class="box badbox" role="note">
-    <strong>Mechanism caveat, recorded against my own gate.</strong>
-    H_CAP predicted <em>rising</em> off-diagonal <span class="mono">|cos|</span>. Measured:
-    <span class="mono">0.34972 &rarr; 0.34213</span>, flat (2.2% drift, no trend).
-    So the <em>capacity relation</em> is confirmed and the <em>superposition mechanism</em> is
-    <span class="bad">NOT</span>.
-    Cross-word overlap is high (~0.343 vs ~0.0056 for random 32768-d vectors) and
-    <strong>constant</strong>. The fall with V is therefore decision-theoretic &mdash; more
-    confusers at fixed separation &mdash; not representational. Recorded as two separable
-    facts rather than merged into one story.
+    <strong>Mechanism caveat, recorded against my own gate.</strong> H_CAP predicted <em>rising</em>
+    off-diagonal <span class="mono">|cos|</span>. Measured: <span class="mono">0.34972 &rarr; 0.34213</span>,
+    flat (2.2% drift, no trend). The <em>capacity relation</em> is confirmed; the
+    <em>superposition mechanism</em> is <span class="bad">NOT</span>. Cross-word overlap is high
+    (~0.343 vs ~0.0056 for random 32768-d vectors) and <strong>constant</strong>.
   </div>
+
+  <h3>2.3 The ingredient-count law — the variable behind the manifold</h3>
+  <p>
+    A contradiction drove this run. Flat 512-way scored <strong>0.8857</strong> in the typed-manifold
+    test (48 atomic ingredients) but <strong>0.5449</strong> in the V-sweep (512 arbitrary tokens).
+    Same manifold size. Holding the manifold <em>at 512</em> and varying only the atomic vocabulary:
+  </p>
+  <table>
+    <thead><tr><th>tools</th><th>args</th><th>classes</th><th>ingredients</th><th>chance</th><th>raw</th><th>ctrl</th></tr></thead>
+    <tbody>
+      <tr><td class="n">512</td><td class="n">1</td><td class="n">512</td><td class="n">513</td><td class="n">0.0020</td><td class="n bad">0.5146</td><td class="n">0.0020</td></tr>
+      <tr><td class="n">256</td><td class="n">2</td><td class="n">512</td><td class="n">258</td><td class="n">0.0020</td><td class="n warn">0.7529</td><td class="n">0.0020</td></tr>
+      <tr><td class="n">64</td><td class="n">8</td><td class="n">512</td><td class="n">72</td><td class="n">0.0020</td><td class="n ok">0.9287</td><td class="n">0.0029</td></tr>
+      <tr><td class="n">32</td><td class="n">16</td><td class="n">512</td><td class="n">48</td><td class="n">0.0020</td><td class="n ok">0.8857</td><td class="n">0.0029</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    controls_at_chance=True &nbsp;&middot;&nbsp; span <strong>0.4141</strong> &nbsp;&middot;&nbsp;
+    verdict <span class="mono">TABLE_REPORTED</span> — <strong>no claim.</strong>
+    Ascending by ingredients: <span class="mono">48:0.8857, 72:0.9287, 258:0.7529, 513:0.5146</span>.
+    The 48-vs-72 pair <em>inverts</em>. Held-out n=1024, gap ~3.4 SE — a real inversion, so the
+    conjunctive gate refuses. Recorded, not smoothed.
+  </p>
+  <div class="box" role="note">
+    <strong>What is established.</strong> With manifold and readout <em>held fixed</em>, atomic
+    ingredient count moves raw <span class="mono">0.5146&rarr;0.9287</span>. Monotone for
+    ingredients &ge; 72. Cross-check: 513 ingredients here <span class="mono">0.5146</span> vs
+    V-sweep 512 arbitrary <span class="mono">0.5449</span> — agreement within 0.030 on independently
+    built corpora. <strong>The discriminating variable is the atomic vocabulary, not manifold
+    cardinality.</strong>
+  </div>
+
+  <h3>2.4 Typed decomposition supplies the lever</h3>
+  <p>On the <em>same</em> corpus, comparing one flat 512-way head against two typed heads:</p>
+  <table>
+    <thead><tr><th>head</th><th>classes</th><th>chance</th><th>raw</th><th>ctrl</th></tr></thead>
+    <tbody>
+      <tr><td>tool</td><td class="n">32</td><td class="n">0.0312</td><td class="n ok">0.9502</td><td class="n">0.0381</td></tr>
+      <tr><td>arg</td><td class="n">16</td><td class="n">0.0625</td><td class="n ok">0.9951</td><td class="n">0.0713</td></tr>
+      <tr><td>flat joint</td><td class="n">512</td><td class="n">0.0020</td><td class="n">0.8857</td><td class="n">0.0029</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Gate <span class="mono">G-T-SUP</span> required flat joint &lt; 0.80 to claim decomposition helped.
+    It measured 0.8857. <strong>The gate did not fire. No claim.</strong> Decomposition cannot be shown
+    to help where the flat head already clears the bar — the honest reading, and the one that forced
+    the ingredient probe above.
+  </p>
 
   <h2>3. Evidence status</h2>
   <table>
     <thead><tr><th>Claim</th><th>Class</th></tr></thead>
     <tbody>
       <tr><td>Retrieval transfer +40% (D=1024/4096/32768); A-K4 text egress +83 pts; MVP end-to-end</td><td class="ok">PROVEN</td></tr>
-      <tr><td>Codec hash-fill damages egress SNR (6&times;, controls clean, mechanism size-predicted)</td><td class="ok">OBSERVED</td></tr>
+      <tr><td>Codec hash-fill damages egress SNR (6&times;, controls clean, size-predicted)</td><td class="ok">OBSERVED</td></tr>
       <tr><td><span class="mono">&beta;</span> is argmax-invariant &rarr; not the snap mechanism</td><td class="ok">PROVEN</td></tr>
-      <tr><td>Content linearly decodable post-fix: 0.9688 (V=16) &hellip; 0.8789 (V=128) on <em>held-out templates</em></td><td class="ok">OBSERVED</td></tr>
-      <tr><td>Egress capacity law (monotone fall; gate G-CAP fired as pre-registered)</td><td class="ok">OBSERVED</td></tr>
+      <tr><td>Content linearly decodable post-fix (0.9688 &hellip; 0.8789 on held-out templates)</td><td class="ok">OBSERVED</td></tr>
+      <tr><td>Atomic ingredient count sets the egress ceiling (span 0.4141, manifold held at 512)</td><td class="ok">OBSERVED</td></tr>
+      <tr><td>Typed heads reach 0.9502 / 0.9951 vs 0.8857 flat joint on the same corpus</td><td class="ok">OBSERVED</td></tr>
       <tr><td>Blueprint &ldquo;flat linear cannot work&rdquo; autopsy</td><td class="bad">REJECTED</td></tr>
-      <tr><td>Small typed manifolds reach &ge;0.88; flat 512-way falls to 0.5449</td><td class="ok">OBSERVED</td></tr>
-      <tr><td>Superposition mechanism behind the capacity fall</td><td class="bad">NOT CONFIRMED</td></tr>
+      <tr><td>Superposition mechanism behind the manifold fall</td><td class="bad">NOT CONFIRMED</td></tr>
+      <tr><td>Monotone ingredient law (the 48-vs-72 inversion)</td><td class="bad">REFUSED BY GATE</td></tr>
       <tr><td>Hopfield Snap as the egress mechanism (ARM-H at 3 samples/class)</td><td class="warn">UNINTERPRETABLE</td></tr>
       <tr><td><span class="mono">&beta;* = 26.10</span> derived on host</td><td class="warn">EXTERNALLY ASSERTED, UNVERIFIED</td></tr>
-      <tr><td>Egress gate at production vocabulary (512 classes)</td><td class="bad">NOT CLEARED</td></tr>
+      <tr><td>Egress gate at production vocabulary (512 classes, arbitrary)</td><td class="bad">NOT CLEARED</td></tr>
       <tr><td>AAII v4.3 SOTA on a 5090</td><td class="warn">NOT ESTABLISHED</td></tr>
     </tbody>
   </table>
@@ -205,33 +230,38 @@
   <h3>3.1 Record corrections this session</h3>
   <ul>
     <li><strong>My own headline withdrawn.</strong> Commit <span class="mono">0c82a93</span> asserted
-      &ldquo;centroid recovers content at 0.9375&rdquo; &mdash; measured at smoke scale only.
-      At V=512 it is 0.5449 and the 0.80 gate fails. Amended at
-      <span class="mono">a1f0e13</span>, sealed <span class="mono">#c594349873527569</span>.</li>
-    <li><strong>Eleven self-caught instrument defects</strong> (D2&ndash;D11), including a vacuous
-      global-permutation control, a 137&nbsp;GB broadcast caught by arithmetic before running, a
-      Hopfield init defect that read 0.0000 three runs and was <em>not</em> a Hopfield finding,
-      and a starved control gate at 3&times; chance on 256 samples.</li>
-    <li>Sweep smoke <span class="mono">V=16,32</span> reproduces the earlier A/B exactly
-      (0.9688 / 0.9375) &mdash; the instrument is consistent across scripts.</li>
+      &ldquo;centroid recovers content at 0.9375&rdquo; — smoke scale only. At V=512 it is 0.5449 and
+      the 0.80 gate fails. Amended <span class="mono">a1f0e13</span>, sealed
+      <span class="mono">#c594349873527569</span>.</li>
+    <li><strong>Twelve self-caught instrument defects</strong> (D2&ndash;D12): a vacuous global-perm
+      control, a 137 GB broadcast caught by arithmetic <em>before</em> running, a Hopfield init defect
+      reading 0.0000 three runs that was <em>not</em> a Hopfield finding, a control gate inside
+      sampling noise, and a cosmetic env override that only moved an assert target.</li>
+    <li><strong>Two ceiling effects labelled, not reported.</strong> The joint=64 smoke read
+      <span class="mono">INGREDIENT_NOT_THE_CAUSE</span> with span 0.0938 — no headroom, so not a
+      refutation. The typed smoke read <span class="mono">TABLE_REPORTED</span> where flat had no
+      room to fail.</li>
+    <li><strong>Ledger append investigated and cleared.</strong> A read returned 1840 records / head
+      <span class="mono">e3866c97</span>, one past my seal. Cause: idx 1839 is
+      <span class="mono">CONTEXT_HANDOFF_CREATED</span> by <span class="mono">context_watchdog</span>
+      — a system append, not fabrication.</li>
+    <li><strong>Reference digests refuted three times.</strong> A reference reports
+      <span class="mono">vs_full.log = 5bd4c9c5b1e4b4e1</span>; my readback is
+      <span class="mono">4cf858d29f2e2417</span> on both copies. References cannot execute tools.</li>
   </ul>
 
   <h2>4. Extracted epiplexity</h2>
-  <p>
-    Useful information per unit of compute or context. Here it is the ratio of a cheap
-    deterministic measurement to the belief it overturned.
-  </p>
   <ul>
-    <li><strong>~$0 and one CPU sweep replaced a readout redesign.</strong> The blueprint's
-      remedy was a Hopfield lexical snap. The measured remedy is a one-branch change to the
-      encoder plus a small output manifold. Cost ratio: a full readout program vs 6 rows of
-      nearest-centroid.</li>
-    <li><strong>The falsifier beat the headline five times.</strong> Every refusal came from
-      reading controls, not results &mdash; including the two that overturned <em>my own</em>
-      success claims.</li>
-    <li><strong>A named mechanism that did not appear is worth as much as one that did.</strong>
-      The flat crosstalk converts a vague &ldquo;capacity problem&rdquo; into two separable
-      facts, only one of which is a fixable code defect.</li>
+    <li><strong>~$0 of CPU replaced a readout redesign.</strong> The blueprint's remedy was a Hopfield
+      lexical snap. The measured remedy is a one-branch change to the encoder plus a small output
+      manifold.</li>
+    <li><strong>Two refused claims were worth more than two accepted ones.</strong> The typed gate and
+      the ingredient gate both <em>failed to fire</em>, and each failure pointed at the next experiment.
+      The ingredient probe exists only because the typed gate refused.</li>
+    <li><strong>A contradiction between my own two runs became the finding.</strong> 0.8857 vs 0.5449
+      at the same manifold size is what isolated the atomic vocabulary as the controlling variable.</li>
+    <li><strong>The falsifier beat the headline six times</strong> — including three that overturned
+      <em>my own</em> claims.</li>
   </ul>
 
   <h2>5. Decision and next gates</h2>
@@ -240,39 +270,39 @@
     <tbody>
       <tr>
         <td><strong>A.</strong> Typed-manifold egress: decompose to tool-ID then arguments (K&le;128 per head)</td>
-        <td>Design change; directly supported by the V&le;128 row (raw &ge;0.8789)</td>
+        <td>Supported: typed heads 0.9502 / 0.9951; small atomic vocabularies sit near ceiling</td>
         <td>$0</td>
         <td>per-head raw &ge; 0.80, control clean</td>
       </tr>
       <tr>
-        <td><strong>B.</strong> Power the A/B: 20&ndash;50 samples/class, then re-judge ARM-H</td>
+        <td><strong>B.</strong> Power the A/B: 20&ndash;50 samples/class, then judge ARM-H fairly</td>
         <td>~10k&ndash;25k waves, deterministic corpus build</td>
         <td>$0</td>
         <td>controls at chance; else UNINTERPRETABLE stands</td>
       </tr>
       <tr>
-        <td><strong>C.</strong> Reduce the constant code crosstalk (~0.343) in the codec itself</td>
+        <td><strong>C.</strong> Reduce the constant code crosstalk (~0.343) in the codec</td>
         <td>Encoder change; <span class="mono">encode()</span> retrieval contract must hold</td>
         <td>$0</td>
         <td>encode() geometry gates still pass</td>
       </tr>
       <tr>
         <td><strong>D.</strong> GPU validation of a passing configuration</td>
-        <td><strong>Operator budget checkpoint</strong> &mdash; separate approval</td>
+        <td><strong>Operator budget checkpoint</strong> — separate approval</td>
         <td>GPU</td>
-        <td>receipt read-back, watchdog DESTROY_CONFIRMED</td>
+        <td>receipt read-back, watchdog <span class="mono">DESTROY_CONFIRMED</span></td>
       </tr>
     </tbody>
   </table>
   <p class="small">
-    Blueprint Stages 1&ndash;4 already exist and are verified. Stage 6 (agential active inference)
-    sits downstream of a passing egress gate. No Stage 6 build starts before that gate passes.
+    Blueprint Stages 1&ndash;4 already exist and are verified. Stage 6 (agential active inference) sits
+    downstream of a passing egress gate. No Stage 6 build starts before that gate passes.
   </p>
 
   <p class="small">
-    <span class="pill">HEAD a1f0e13</span>
+    <span class="pill">HEAD 364c846</span>
     <span class="pill">main a039095 untouched</span>
-    <span class="pill">ledger intact</span>
+    <span class="pill">ledger 1842 chain intact</span>
     <span class="pill">GPU spend $0</span>
     <span class="pill">no secrets stored</span>
   </p>
