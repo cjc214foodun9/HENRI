@@ -376,6 +376,45 @@
     direction held; the magnitude was a template artifact.
   </p>
 
+  <h3>2.9 Stage 6: hierarchical active inference &mdash; bounded, not validated</h3>
+  <p>
+    The blueprint's third named component (sec&nbsp;1.4, Stage&nbsp;6) claims the wave core lacks
+    "a recursive active inference loop to execute step-by-step state manipulation." That claim is
+    checkable without any learning. Given a calibrated noisy readout over the <strong>real</strong>
+    codec waves, does Expected&nbsp;Free&nbsp;Energy (EFE) probe selection beat greedy selection?
+    Noise per rung is calibrated so single-look argmax accuracy hits a set target.
+  </p>
+  <p class="small">
+    <strong>K=6, real corpus facts</strong> (400 trials/rung, 5 rungs):
+    <span class="mono">G-AI-1</span> (info median &le; 0.75&times;greedy) fires at
+    <strong>one rung only</strong>, 0.45 &mdash; <span class="mono">info 2.0 vs greedy 3.0</span>
+    probes. At the <strong>measured operating accuracy 0.8043</strong> and at every rung &ge;&nbsp;0.55
+    it does <em>not</em> beat greedy. What held at <em>every</em> rung: info beats random on mean
+    probes (1.45/1.67 &hellip; 4.57/7.58). K=6 result is <span class="mono">DERIVED</span>: it
+    tests the decision rule, not hardware.
+  </p>
+  <p class="small">
+    <strong>K=512</strong> (the blueprint's own bound; real waves, <em>synthetic</em> labels, so also
+    <span class="mono">DERIVED</span>): verdict
+    <span class="mono">INSTRUMENT_CANNOT_RESOLVE_EFE</span>. The control could not lose at any rung,
+    so no policy comparison is meaningful. Cause measured, not assumed
+    (<span class="mono">D39</span>): at <span class="mono">N_MC=4</span> the entropy estimate has
+    sd&nbsp;0.3028 and the spread across 24 candidates is 1.1813 &mdash; <em>larger than the mean
+    0.7176</em>, so the policy cannot rank candidates.
+  </p>
+  <p class="small">
+    <strong>Common random numbers did not repair it</strong>
+    (<span class="mono">SM6_CRN=1</span>, <span class="mono">N_MC=32</span>, 816&nbsp;s,
+    <span class="mono">RC=0</span>): the median stayed <strong>pinned at 2.0 for all three policies
+    at both rungs</strong>. A pinned median is a property of the <em>statistic</em>, not of the
+    ranking variance &mdash; so the named <span class="mono">N_MC=64/128</span> escalation is
+    <strong>cancelled as the repair</strong>. Monte Carlo cannot move a median that every policy
+    already attains at step&nbsp;2. At K=6 the same statistic <em>did</em> separate, so the
+    limitation belongs to the metric and is K-dependent. Raising
+    <span class="mono">CRITERION</span> to re-open headroom would move a pre-registered gate to
+    rescue a null; that is refused, not done.
+  </p>
+
   <h2>3. Evidence status</h2>
   <table>
     <thead><tr><th>claim</th><th>class</th></tr></thead>
@@ -393,6 +432,11 @@
       <tr><td>Blueprint &ldquo;Hopfield Lexical Snap is the egress fix&rdquo;</td><td class="bad">NOT SUPPORTED (HOP 2&times; chance)</td></tr>
       <tr><td>Superposition mechanism behind the manifold fall</td><td class="bad">NOT CONFIRMED</td></tr>
       <tr><td>Typed decomposition beats flat at equal ingredients</td><td class="bad">NOT SUPPORTED (+0.0020, under 1 SE)</td></tr>
+      <tr><td>Stage 6: EFE probe selection beats greedy (K=6, real corpus facts)</td><td class="warn">BOUNDED &mdash; separates at ONE derived rung (0.45) only; not at the measured operating accuracy 0.8043, nor at 0.55/0.65/0.80</td></tr>
+      <tr><td>Stage 6: info beats rand on mean probes</td><td class="ok">OBSERVED at every rung, both K=6 and K=512</td></tr>
+      <tr><td>Stage 6: EFE beats greedy at the blueprint's K&le;512 bound</td><td class="bad">NOT ESTABLISHED &mdash; INSTRUMENT_CANNOT_RESOLVE_EFE</td></tr>
+      <tr><td>Stage 6: CRN / N_MC=64-128 repair would resolve K=512</td><td class="bad">REFUTED BY MEASUREMENT &mdash; median pinned at 2.0 for all policies at both rungs; escalation cancelled</td></tr>
+      <tr><td>Blueprint &ldquo;a linear operator cannot compute multi-step reasoning&rdquo;</td><td class="warn">PARTLY SUPPORTED &mdash; not about linearity: the typed head IS linear and reaches 0.98. Support is for <em>recursive look selection</em> at degraded accuracy only</td></tr>
       <tr><td><span class="mono">&beta;* = 26.10</span> derived on host</td><td class="warn">EXTERNALLY ASSERTED, UNVERIFIED</td></tr>
       <tr><td>32,000-token wave&rarr;text egress</td><td class="bad">NOT DELIVERED (typed fields only)</td></tr>
       <tr><td>Typed validation on the MVP workload</td><td class="bad">NOT POSSIBLE &mdash; that path carries no typed labels; scoring it would mean inventing them</td></tr>
@@ -475,11 +519,23 @@
     sits downstream of a passing egress gate; that gate now passes at typed manifold sizes, so
     Stage 6 is unblocked for typed actions &mdash; but not for 32,000-token text.
   </p>
+  <p class="small">
+    <strong>Stage 6 is now measured, not just unblocked.</strong> EFE probe selection beats greedy
+    at one derived K=6 rung (0.45) and at no rung at or above the measured operating accuracy
+    &mdash; at K=6 or at K=512. The pre-registered K=512 instrument returns
+    <span class="mono">INSTRUMENT_CANNOT_RESOLVE_EFE</span>, and the named
+    <span class="mono">N_MC</span> escalation is <strong>cancelled by measurement</strong>, not by
+    budget: the median steps-to-criterion is pinned at 2.0 for all three policies at both rungs, so
+    the statistic has no dynamic range at K=512. Repairing that needs a <em>new pre-registered
+    metric</em>, which is a scope decision, not a run. The honest standing claim is therefore:
+    <em>at the operating point greedy suffices; recursion pays only when single-look accuracy is
+    degraded.</em>
+  </p>
 
   <p class="small">
-    <span class="pill">HEAD db50638</span>
+    <span class="pill">HEAD d7b7297</span>
     <span class="pill">main a039095 untouched</span>
-    <span class="pill">ledger 1853 chain intact</span>
+    <span class="pill">ledger 1861 chain intact</span>
     <span class="pill">GPU spend $0</span>
     <span class="pill">no secrets stored</span>
   </p>
