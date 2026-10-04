@@ -1,0 +1,1 @@
+Zone C retrieval uses an HNSW index over a 2000 dimensional projection. The ANN index type for Zone C retrieval is HNSW.

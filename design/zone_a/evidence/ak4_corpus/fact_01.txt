@@ -1,0 +1,1 @@
+The HENRI wave state has 65536 dimensions. HENRI stores the wave as a complex vector. The value 65536 is the ambient dimension of a single HENRI wave.

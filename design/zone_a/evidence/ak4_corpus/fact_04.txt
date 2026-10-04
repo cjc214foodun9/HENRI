@@ -1,0 +1,1 @@
+Each HENRI block has 8 slots. The slot count per block is 8. Eight slots times 8192 blocks gives 65536 components.

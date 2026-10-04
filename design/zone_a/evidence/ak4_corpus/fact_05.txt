@@ -1,0 +1,1 @@
+Zone C engrams are stored in TimescaleDB. The persistent store for Zone C is TimescaleDB with the pgvector extension.

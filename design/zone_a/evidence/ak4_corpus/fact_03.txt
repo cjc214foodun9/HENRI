@@ -1,0 +1,1 @@
+Each HENRI block carries a Clifford algebra element of type Cl(3,0). The Clifford algebra used per block is Cl(3,0).
