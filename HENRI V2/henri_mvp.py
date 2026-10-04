@@ -125,6 +125,88 @@ def cmd_ask(args: argparse.Namespace) -> int:
     return 0
 
 
+MARGIN_FLOOR = float(os.environ.get("HENRI_SNAP_MARGIN_FLOOR", "0.05"))
+
+
+def cmd_snap(args: argparse.Namespace) -> int:
+    """Wave -> strongly typed decision manifold. Blueprint sec 2.4 item 3.
+
+    This wires the SHIPPED typed egress head into the MVP entrypoint and exercises
+    the real path end to end on REAL corpus text:
+
+        fact text -> codec.encode_egress() -> TypedEgressHead.fit()
+                  -> .snap(query_text) -> typed field + margin -> accept or REFUSE
+
+    Every decision carries provenance (source file, sha256, margin). The head is
+    training-free nearest class mean, so there is no optimizer and nothing to
+    overfit. Accuracy claims live in the receipts; this command demonstrates the
+    WIRING and the fail-closed behavior, and states its own limit.
+
+    HONEST LIMIT (printed in the output, not buried): the archived A-K4 corpus has
+    one text per class, so a query that restates a fact is near-memorisation. This
+    is a wiring check, NOT an accuracy measurement. Measured accuracy is in
+    design/zone_a/evidence/codec_real_prose_transfer_receipt.json (LOO 0.8043).
+    """
+    import hashlib
+
+    import zone_c_world_knowledge_codec as C
+    from henri_typed_egress import TypedEgressHead
+
+    codec = C.get_codec()
+    cdir = Path(args.corpus_dir)
+    facts = sorted(cdir.glob("fact_*.txt"))
+    if not facts:
+        _emit({"status": "REFUSE", "reason": "no fact_*.txt in corpus dir",
+               "corpus_dir": str(cdir)})
+        return 1
+
+    texts, prov = [], []
+    for p in facts:
+        raw = p.read_text(encoding="utf-8", errors="replace")
+        texts.append(raw.strip())
+        prov.append({"source_id": p.name,
+                     "sha256": hashlib.sha256(
+                         raw.replace("\r\n", "\n").encode("utf-8")).hexdigest(),
+                     "chars": len(raw)})
+
+    K = len(texts)
+    samples = [(codec.encode_egress(t), {"fact": i}) for i, t in enumerate(texts)]
+    head = TypedEgressHead({"fact": K}).fit(samples)
+
+    pred = head.snap(codec.encode_egress(args.query))
+    fid, margin = pred["fact"]
+    refused = margin < MARGIN_FLOOR
+
+    if refused:
+        _emit({"status": "REFUSE",
+               "reason": f"top1 margin {margin:.6f} < floor {MARGIN_FLOOR}",
+               "field": "fact", "candidate": fid, "margin": margin,
+               "corpus_dir": str(cdir), "k": K,
+               "note": "fail-closed: no typed action emitted"})
+        return 0
+
+    _emit({
+        "status": "ACCEPT",
+        "field": "fact",
+        "value": fid,
+        "margin": margin,
+        "margin_floor": MARGIN_FLOOR,
+        "typed_decision": {"fact": fid},
+        "provenance": prov[fid],
+        "query": args.query,
+        "k": K,
+        "chance": 1.0 / K,
+        "path": "codec.encode_egress -> TypedEgressHead.snap (training-free)",
+        "honest_limit": ("1 text per class: a query restating a fact is near-"
+                         "memorisation. Wiring check, NOT an accuracy measurement."),
+        "measured_accuracy_elsewhere": ("LOO 0.8043 (37/46) on real prose, "
+                                        "design/zone_a/evidence/"
+                                        "codec_real_prose_transfer_receipt.json"),
+        "arm": "typed egress (blueprint sec 2.4 item 3); 32k-token text NOT delivered",
+    })
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="henri_mvp")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -138,6 +220,12 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--max-context-chars", type=int, default=3000)
     a.add_argument("--max-new-tokens", type=int, default=32)
     a.set_defaults(fn=cmd_ask)
+
+    s = sub.add_parser("snap", help="wave -> typed decision manifold (training-free)")
+    s.add_argument("--corpus-dir", required=True,
+                   help="directory of fact_*.txt typed-manifold classes")
+    s.add_argument("--query", required=True, help="text to snap to a typed field")
+    s.set_defaults(fn=cmd_snap)
 
     args = p.parse_args(argv)
     return int(args.fn(args))

@@ -1,0 +1,22 @@
+{
+  "arm": "typed egress (blueprint sec 2.4 item 3); 32k-token text NOT delivered",
+  "chance": 0.16666666666666666,
+  "field": "fact",
+  "honest_limit": "1 text per class: a query restating a fact is near-memorisation. Wiring check, NOT an accuracy measurement.",
+  "k": 6,
+  "margin": 0.11266830563545227,
+  "margin_floor": 0.05,
+  "measured_accuracy_elsewhere": "LOO 0.8043 (37/46) on real prose, design/zone_a/evidence/codec_real_prose_transfer_receipt.json",
+  "path": "codec.encode_egress -> TypedEgressHead.snap (training-free)",
+  "provenance": {
+    "chars": 121,
+    "sha256": "093c0da21e3e8dd1233925eaa653986a1c1dfa42b7accfdbfff931272cd4610d",
+    "source_id": "fact_06.txt"
+  },
+  "query": "Which index does Zone C retrieval use?",
+  "status": "ACCEPT",
+  "typed_decision": {
+    "fact": 5
+  },
+  "value": 5
+}

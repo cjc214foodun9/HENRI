@@ -1,0 +1,10 @@
+{
+  "candidate": 2,
+  "corpus_dir": "C:\\Users\\chan\\henri-worktrees\\phase1-transduction\\design\\zone_a\\evidence\\ak4_corpus",
+  "field": "fact",
+  "k": 6,
+  "margin": 0.013264834880828857,
+  "note": "fail-closed: no typed action emitted",
+  "reason": "top1 margin 0.013265 < floor 0.05",
+  "status": "REFUSE"
+}
