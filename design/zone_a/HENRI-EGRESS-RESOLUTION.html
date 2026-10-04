@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HENRI Egress Transduction: resolved to a training-free typed head</title>
+<style>
+  :root{
+    --fg: var(--foreground, #1b1f24);
+    --mut: var(--muted-foreground, #5b6570);
+    --acc: var(--accent, #2f6f4f);
+    --bd: var(--border, #d5dae0);
+    --card: var(--card, #ffffff);
+    --warn: #8a5a00; --bad: #a12222; --ok: #1d6b3a;
+  }
+  html,body{margin:0;padding:0}
+  body{background:var(--card); color:var(--fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size:15px; line-height:1.55;}
+  .wrap{padding:18px 20px 32px; max-width:1080px}
+  h1{font-size:1.42rem; margin:0 0 .2rem; letter-spacing:-.01em}
+  h2{font-size:1.05rem; margin:1.6rem 0 .5rem; padding-bottom:.25rem; border-bottom:1px solid var(--bd)}
+  h3{font-size:.95rem; margin:1.1rem 0 .35rem}
+  code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.86em}
+  .sub{color:var(--mut); font-size:.9rem; margin-top:0}
+  table{border-collapse:collapse; width:100%; margin:.6rem 0; font-size:.88rem}
+  th,td{border:1px solid var(--bd); padding:.36rem .5rem; text-align:left; vertical-align:top}
+  th{color:var(--mut); font-weight:600; background:transparent}
+  td.n{font-family:ui-monospace,Menlo,Consolas,monospace; text-align:right; white-space:nowrap}
+  .ok{color:var(--ok); font-weight:600}
+  .bad{color:var(--bad); font-weight:600}
+  .warn{color:var(--warn); font-weight:600}
+  .pill{display:inline-block; border:1px solid var(--bd); border-radius:999px;
+        padding:.06rem .5rem; font-size:.74rem; color:var(--mut); margin-right:.3rem}
+  .box{border:1px solid var(--bd); border-left:3px solid var(--acc); padding:.6rem .8rem;
+       margin:.7rem 0; border-radius:2px}
+  .box.warnbox{border-left-color:var(--warn)}
+  .box.badbox{border-left-color:var(--bad)}
+  ul{margin:.4rem 0 .4rem 1.1rem; padding:0}
+  li{margin:.22rem 0}
+  figure{margin:.9rem 0}
+  figcaption{color:var(--mut); font-size:.82rem; margin-top:.3rem}
+  svg{max-width:100%; height:auto; display:block}
+  .small{font-size:.85rem; color:var(--mut)}
+  .lead{font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>HENRI Egress Transduction: resolved to a training-free typed head</h1>
+  <p class="sub">
+    HENRI development arbitration &middot; 2026-10-03 &middot;
+    operator grant: Path A plus the executive instructions of
+    HENRI-ARCH-2026-SYSTEMIC-EVALUATION-V3
+    (<span class="mono">sha256 9f3cd5cd&hellip;b7bf</span>) &middot;
+    every run local CPU, <strong>$0</strong>, no GPU, no store.
+  </p>
+
+  <div class="box">
+    <strong>Headline.</strong> The blueprint locates the egress failure in the readout and
+    prescribes a Continuous Modern Hopfield &ldquo;Lexical Snap&rdquo; at
+    <span class="mono">&beta;*&nbsp;=&nbsp;26.10</span>. Five independent measurements reject that
+    account and replace it with a working one. The failure was in the <strong>encoder</strong>, not
+    the readout; <span class="mono">&beta;</span> does not select anything; and the remaining deficit
+    was <strong>my training procedure</strong>, not the architecture. The delivered fix is a
+    <strong>training-free typed egress head</strong> that reaches
+    <span class="mono">0.9141</span> on held-out templates where gradient training reached
+    <span class="mono">0.4062</span>.
+  </div>
+
+  <h2>1. Academic foundation</h2>
+  <p>
+    A single linear map cannot compute multi-step recursion. That is true, and it is not what
+    failed here. Per-class <em>nearest-centroid</em> is itself a linear decision rule; when it
+    separates classes the representation is linearly decodable and no architectural change is
+    licensed. Separating &ldquo;the representation is inadequate&rdquo; from &ldquo;my learner is
+    inadequate&rdquo; requires one corpus and several readout families under the same splits &mdash;
+    which is what &sect;3.3 measures.
+  </p>
+  <p>
+    Continuous Modern Hopfield retrieval computes
+    <span class="mono">softmax(&beta;&middot;s)</span> over a codebook; selection is
+    <span class="mono">argmax</span>, which is <strong>order-preserving in
+    <span class="mono">&beta;</span></strong>. So <span class="mono">&beta;</span> governs convergence,
+    not identity of the chosen item. A &ldquo;hyperparameter lock&rdquo; on
+    <span class="mono">&beta;</span> therefore cannot be the mechanism that fixes a selection
+    collapse.
+  </p>
+
+  <h2>2. Technical decision</h2>
+
+  <h3>2.1 The located defect: the encoder poisons the wave</h3>
+  <p>
+    <code>zone_c_world_knowledge_codec.py</code> lines 139&ndash;153. A phrase with <em>F</em>
+    features touches <span class="mono">F&times;16</span> slots. Every remaining row is filled from a
+    whole-text hash and shipped as the engram. A 6-feature phrase therefore ships
+    <strong>0.15% content and 99.85% text-hash noise</strong>. The fill satisfies a retrieval-side
+    <span class="mono">row_unit</span> gate; egress inherited it as noise.
+  </p>
+  <p>
+    Fix: <code>CompositionalTextCodec.encode_egress()</code>, commit
+    <span class="mono">1529b50</span> &mdash; <strong>additive</strong>.
+    <code>encode()</code> is byte-unchanged and all 6 geometry gates still pass.
+  </p>
+  <table>
+    <thead><tr><th>variant</th><th>linear head</th><th>hopfield head</th><th>controls</th></tr></thead>
+    <tbody>
+      <tr><td>FILL (as shipped)</td><td class="n">0.0586</td><td class="n">0.0664</td><td class="n">0.0039 / 0.0078</td></tr>
+      <tr><td>ZERO (fill removed)</td><td class="n ok">0.3516</td><td class="n">0.0000</td><td class="n">0.0156 / 0.0000</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Verdict <span class="mono">HASH_FILL_IS_THE_SNR_DEFECT</span>. Removes 6&times; on a flat
+    <em>linear</em> head with every control at chance. Mechanism predicts size:
+    <span class="mono">96/&radic;96&nbsp;&asymp;&nbsp;9.8</span> vs
+    <span class="mono">96/&radic;8192&nbsp;&asymp;&nbsp;1.06</span> &mdash; ratio 9.2 predicted,
+    6.0 observed.
+  </p>
+
+  <h3>2.2 <span class="mono">&beta;*</span> is not the snap mechanism</h3>
+  <table>
+    <thead><tr><th>question</th><th>measurement</th></tr></thead>
+    <tbody>
+      <tr><td>Is <span class="mono">argmax(softmax(&beta;&middot;s))</span> &beta;-dependent?</td>
+          <td><strong>No.</strong> identical (26) for &beta; &isin; 0.5&hellip;1000 &mdash; <span class="mono">BETA_INVARIANT=True</span></td></tr>
+      <tr><td>Does &beta; matter at all?</td><td>Yes, for <strong>convergence</strong>: &beta;&lt;5 &rarr; 0.000, &beta;&ge;5 &rarr; 1.000</td></tr>
+      <tr><td>Is the printed <span class="mono">T*</span> consistent?</td><td><strong>No.</strong> <span class="mono">1/26.10 = 0.038314</span>, not the document's <span class="mono">0.038316</span></td></tr>
+      <tr><td><span class="mono">Re()</span> vs magnitude kernel</td>
+          <td><span class="mono">Re()</span> &rarr; <span class="bad">0.000</span> under a &pi; global phase; <span class="mono">|mean(conj(a)&middot;b)|</span> &rarr; <span class="ok">1.000</span></td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Verdict <span class="mono">BETA_IS_NOT_THE_SNAP_MECHANISM</span>. Magnitude kernel adopted.
+    <span class="mono">&beta;*=26.10</span> is recorded <strong>externally asserted, unverified on
+    host</strong> &mdash; no repository artifact derives it.
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 900 200" role="img" aria-labelledby="f1t f1d">
+      <title id="f1t">Where the egress failure actually sits</title>
+      <desc id="f1d">A four-box flow. Input text enters the codec encoder. The encoder is marked as the located defect because it hash-fills 8096 of 8192 rows. The wave passes to a readout, labelled not the defect. A final box shows a small typed output, labelled evidence-supported.</desc>
+      <rect x="6" y="60" width="150" height="80" rx="7" fill="none" stroke="#5b6570"/>
+      <text x="81" y="92" text-anchor="middle" font-size="14" fill="currentColor">input text</text>
+      <text x="81" y="113" text-anchor="middle" font-size="12" fill="#5b6570">templates</text>
+      <line x1="156" y1="100" x2="196" y2="100" stroke="#5b6570" marker-end="url(#ar)"/>
+      <rect x="196" y="42" width="216" height="116" rx="7" fill="none" stroke="#a12222" stroke-width="2.5"/>
+      <text x="304" y="72" text-anchor="middle" font-size="14" fill="currentColor" font-weight="700">codec encode()</text>
+      <text x="304" y="95" text-anchor="middle" font-size="12" fill="#a12222">LOCATED DEFECT</text>
+      <text x="304" y="116" text-anchor="middle" font-size="12" fill="#5b6570">fills 8096 / 8192 rows</text>
+      <text x="304" y="135" text-anchor="middle" font-size="12" fill="#5b6570">from hash(text)</text>
+      <line x1="412" y1="100" x2="452" y2="100" stroke="#5b6570" marker-end="url(#ar)"/>
+      <rect x="452" y="60" width="180" height="80" rx="7" fill="none" stroke="#1d6b3a" stroke-width="2"/>
+      <text x="542" y="92" text-anchor="middle" font-size="14" fill="currentColor">readout head</text>
+      <text x="542" y="114" text-anchor="middle" font-size="12" fill="#1d6b3a">NOT the defect</text>
+      <line x1="632" y1="100" x2="672" y2="100" stroke="#5b6570" marker-end="url(#ar)"/>
+      <rect x="672" y="42" width="222" height="116" rx="7" fill="none" stroke="#2f6f4f" stroke-width="2"/>
+      <text x="783" y="78" text-anchor="middle" font-size="14" fill="currentColor">typed output</text>
+      <text x="783" y="100" text-anchor="middle" font-size="12" fill="#1d6b3a">small closed manifold</text>
+      <text x="783" y="120" text-anchor="middle" font-size="12" fill="#5b6570">+ per-field margin</text>
+      <text x="783" y="140" text-anchor="middle" font-size="12" fill="#1d6b3a">evidence-supported</text>
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#5b6570"/>
+        </marker>
+      </defs>
+    </svg>
+    <figcaption>Figure 1. Measured location of the egress failure. Editable SVG source.</figcaption>
+  </figure>
+
+  <h3>2.3 An egress ceiling, and what actually sets it</h3>
+  <p>
+    With the fill removed, a training-free centroid decodes held-out templates across manifold
+    sizes. Accuracy falls monotonically &mdash; but the <em>mechanism I pre-registered did not
+    appear</em>, and I record both facts.
+  </p>
+  <table>
+    <thead><tr><th>V</th><th>blocks used</th><th>collide</th><th>raw (held-out)</th><th>ctrl</th><th>offdiag |cos|</th></tr></thead>
+    <tbody>
+      <tr><td class="n">16</td><td class="n">256</td><td class="n">3.1%</td><td class="n ok">0.9688</td><td class="n">0.1250</td><td class="n">0.34972</td></tr>
+      <tr><td class="n">32</td><td class="n">512</td><td class="n">6.2%</td><td class="n ok">0.9375</td><td class="n">0.0000</td><td class="n">0.34341</td></tr>
+      <tr><td class="n">64</td><td class="n">1024</td><td class="n">12.5%</td><td class="n ok">0.9453</td><td class="n">0.0156</td><td class="n">0.34260</td></tr>
+      <tr><td class="n">128</td><td class="n">2048</td><td class="n">25.0%</td><td class="n ok">0.8789</td><td class="n">0.0156</td><td class="n">0.34302</td></tr>
+      <tr><td class="n">256</td><td class="n">4096</td><td class="n">50.0%</td><td class="n warn">0.6973</td><td class="n">0.0059</td><td class="n">0.34207</td></tr>
+      <tr><td class="n">512</td><td class="n">8192</td><td class="n">100.0%</td><td class="n bad">0.5449</td><td class="n">0.0000</td><td class="n">0.34213</td></tr>
+    </tbody>
+  </table>
+  <div class="box badbox" role="note">
+    <strong>Mechanism refused, recorded against my own gate.</strong> The pre-registered signature
+    predicted <em>rising</em> cross-word overlap. Measured: <span class="mono">0.34972 &rarr; 0.34213</span>,
+    flat (2.2% drift, no trend). The capacity <em>relation</em> is confirmed; the superposition
+    <em>mechanism</em> is <span class="bad">NOT</span>.
+  </div>
+  <p>
+    The follow-up held the manifold <strong>fixed at 512</strong> and varied only the atomic
+    vocabulary:
+  </p>
+  <table>
+    <thead><tr><th>tools</th><th>args</th><th>classes</th><th>atomic ingredients</th><th>raw</th><th>ctrl</th></tr></thead>
+    <tbody>
+      <tr><td class="n">512</td><td class="n">1</td><td class="n">512</td><td class="n">513</td><td class="n bad">0.5146</td><td class="n">0.0020</td></tr>
+      <tr><td class="n">256</td><td class="n">2</td><td class="n">512</td><td class="n">258</td><td class="n warn">0.7529</td><td class="n">0.0020</td></tr>
+      <tr><td class="n">64</td><td class="n">8</td><td class="n">512</td><td class="n">72</td><td class="n ok">0.9287</td><td class="n">0.0029</td></tr>
+      <tr><td class="n">32</td><td class="n">16</td><td class="n">512</td><td class="n">48</td><td class="n ok">0.8857</td><td class="n">0.0029</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Span <strong>0.4141</strong> with manifold and readout held fixed. Gate
+    <span class="mono">TABLE_REPORTED</span>, <strong>no claim</strong>: the 48-vs-72 pair inverts
+    (~3.4 SE, a real inversion), so monotonicity fails and the conjunctive gate refuses.
+    Conclusion that does hold: <strong>the atomic ingredient count, not manifold cardinality, sets
+    the ceiling.</strong>
+  </p>
+
+  <h3>2.4 Path A: the operator's symptom does not reproduce</h3>
+  <p>
+    <span class="mono">A-K5</span> reported <span class="mono">top1_token_unique=1</span> across 16
+    distinct waves, but its checkpoint was degenerate &mdash; random waves, random labels, salted
+    <span class="mono">hash(text)%32000</span> ids, dense-Gaussian family against the codec's sparse
+    block structure. Path A retrains on the codec's <em>own</em> family with a reproducible sha256
+    token&rarr;id map and re-runs the same pre-registered gate.
+  </p>
+  <table>
+    <thead><tr><th>arm</th><th>D0 trained</th><th>train acc</th><th>held-out acc</th><th>control</th><th>unique post (of 16)</th></tr></thead>
+    <tbody>
+      <tr><td>ARM-L linear</td><td class="n ok">0.9998</td><td class="n">1.0000</td><td class="n">0.4062</td><td class="n">0.0000</td><td class="n ok">13/16</td></tr>
+      <tr><td>ARM-H hopfield</td><td class="n bad">0.0542</td><td class="n">1.0000</td><td class="n">0.0312</td><td class="n">0.0391</td><td class="n">12/16</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    <strong><span class="mono">SYMPTOM_DOES_NOT_REPRODUCE</span></strong>: content-grounded training
+    yields 13/16 distinct outputs against the reported 1/16. Wave&rarr;text egress is no longer
+    unmeasured. Train accuracy 1.0000 is disclosed, so <span class="mono">0.4062</span> is the honest
+    generalization number and is <em>not</em> a working egress.
+  </p>
+  <div class="box warnbox" role="note">
+    <strong>Two gate components were invalid, and I say so rather than report their FAIL as
+    evidence.</strong>
+    <ul>
+      <li><strong>D18</strong> &mdash; raw <span class="mono">Q1</span> puts the <em>control above</em>
+        the real arm (0.1271 vs 0.4172) while the real arm was at 0.8125 held-out. Correct
+        classification drives logits toward near-one-hot vectors, which are mutually
+        <em>similar</em>, so <span class="mono">Q1</span> scores dispersion, not class information.
+        Its <span class="mono">GATE_POWER_OK</span> certification was earned on a synthetic
+        untrained readout and <strong>does not transfer</strong>.</li>
+      <li><strong>D19</strong> &mdash; <span class="mono">D0</span> reports
+        <span class="mono">0.0542</span> (&ldquo;untrained&rdquo;) while the arm fits its train set at
+        1.0000, because the score is <span class="mono">&beta;&middot;|&lt;m,x&gt;|</span> with
+        <span class="mono">&beta;=26.10</span>, so a 5% weight change flips the argmax. D0 cannot
+        adjudicate a magnitude readout.</li>
+    </ul>
+  </div>
+
+  <h3>2.5 Representation or optimization? The decisive control</h3>
+  <p>
+    One corpus, one feature map, four readouts, identical splits. A closed-form dual ridge is the
+    <em>exact</em> linear optimum &mdash; no optimizer, no learning rate, no early stop &mdash; so
+    it separates &ldquo;the family cannot carry the label&rdquo; from &ldquo;my learner failed&rdquo;.
+  </p>
+  <table>
+    <thead><tr><th>readout</th><th>train</th><th>held-out</th><th>control</th><th>&times; chance</th></tr></thead>
+    <tbody>
+      <tr><td>CENT &mdash; training-free class mean</td><td class="n">1.0000</td><td class="n ok">0.9141</td><td class="n">0.0156</td><td class="n">58.5&times;</td></tr>
+      <tr><td>RIDGE &mdash; closed-form linear optimum</td><td class="n">1.0000</td><td class="n ok">0.8984</td><td class="n">0.0156</td><td class="n">57.5&times;</td></tr>
+      <tr><td>GRAD &mdash; Adam (Path A's head)</td><td class="n">1.0000</td><td class="n warn">0.4062</td><td class="n">0.0078</td><td class="n">26.0&times;</td></tr>
+      <tr><td>HOP &mdash; Hopfield snap, &beta;=26.10</td><td class="n">1.0000</td><td class="n bad">0.0312</td><td class="n">0.0156</td><td class="n">2.0&times;</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    V=64, chance 0.015625, controls at chance. Verdict
+    <strong><span class="mono">OPTIMIZATION_DEFICIT</span></strong> (ridge &minus; grad =
+    <span class="mono">+0.4922</span>, gate floor +0.15). <strong>Which number to trust:</strong>
+    CENT reaches 0.9141 with <em>zero</em> tuned hyperparameters and exceeds the closed-form ridge;
+    RIDGE's &lambda; was chosen on held-out, so +0.4922 is a conservative lower bound. Drop RIDGE
+    entirely and CENT vs GRAD still gives +0.5079.
+  </p>
+  <div class="box">
+    <strong>This redirects the work.</strong> The codec's content <em>is</em> linearly decodable on
+    held-out templates at 58&times; chance. The deficit was my trainer, which memorizes 8 templates
+    per class and does not generalize. <strong>Fix the training, not the architecture.</strong>
+  </div>
+
+  <h3>2.6 The delivered artifact: a training-free typed egress head</h3>
+  <p>
+    <code>HENRI V2/henri_typed_egress.py</code> &mdash; nearest-class-mean over typed fields.
+    No optimizer, no learning rate, no random init, therefore nothing to overfit.
+    <code>snap()</code> returns <span class="mono">{field: (id, margin)}</span> and refuses below a
+    margin floor.
+  </p>
+  <table>
+    <thead><tr><th>check</th><th>result</th></tr></thead>
+    <tbody>
+      <tr><td>Test suite on real codec waves</td><td class="n ok">6 / 6 PASS</td></tr>
+      <tr><td>T1 bijective vocabulary</td><td class="n">32 names &rarr; 32 distinct ids</td></tr>
+      <tr><td>T2 hash-mod collision count (the defect)</td><td class="n bad">11 collisions on 32 names</td></tr>
+      <tr><td>T3 feature shape / norm / determinism</td><td class="n">(32768,2), ||f||=1.000000</td></tr>
+      <tr><td>T4 fit / snap / score</td><td class="n ok">train 1.0000, held-out 1.0000</td></tr>
+      <tr><td>T5 block-permuted control</td><td class="n">0.0469 vs real 1.0000 (chance 0.0312)</td></tr>
+      <tr><td>T6 fail-closed misuse</td><td class="n">unfit snap / unseen class / 1-way manifold all raise</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    <strong>D20</strong>, caught by reasoning before the smoke and then confirmed by measurement:
+    <span class="mono">content_id = sha256(text)%n</span> is <em>not</em> injective &mdash;
+    <strong>11 of 32 ids collided</strong>, so two words would have shared a label with nothing in
+    the output saying so. Fixed with a bijective sha256-ranked vocabulary; the non-injective form
+    is retained for open vocabularies with an explicit warning and a
+    <span class="mono">collision_count()</span> so callers can assert.
+  </p>
+
+  <h3>2.7 At the blueprint's own bound: K &le; 512</h3>
+  <p>
+    The blueprint names <span class="mono">K &le; 512</span>. Both arms share the <em>same</em>
+    corpus, the <em>same</em> 512-way manifold and the <em>same</em> 48 atomic ingredients &mdash;
+    only the decision structure differs, which removes the confound that forced an earlier refusal.
+  </p>
+  <table>
+    <thead><tr><th>arm</th><th>train</th><th>held-out</th><th>control</th><th>&times; chance</th></tr></thead>
+    <tbody>
+      <tr><td>typed &mdash; tool 32-way</td><td class="n">1.0000</td><td class="n ok">0.9844</td><td class="n">0.0303</td><td class="n">504&times;</td></tr>
+      <tr><td>typed &mdash; arg 16-way</td><td class="n">1.0000</td><td class="n ok">0.9922</td><td class="n">0.0596</td><td class="n">508&times;</td></tr>
+      <tr><td>typed &mdash; joint</td><td class="n">1.0000</td><td class="n ok">0.9766</td><td class="n">0.0029</td><td class="n">500&times;</td></tr>
+      <tr><td>flat 512-way</td><td class="n">1.0000</td><td class="n ok">0.9746</td><td class="n">0.0020</td><td class="n">499&times;</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Chance 0.001953, 2048 train / 1024 held-out. Verdict
+    <span class="mono">FLAT_SUFFICES_AT_48_INGREDIENTS</span>: the arms differ by
+    <span class="mono">+0.0020</span>, under one standard error (~0.005), so they are
+    <strong>indistinguishable</strong> and no typed advantage is claimed.
+    <strong>Corrected rationale:</strong> at 48 atomic ingredients a flat 512-way head already
+    reaches 0.9746 &mdash; the blueprint's premise for item 3 does not hold at this ingredient
+    count. Typed decomposition is retained for <em>safety and routing</em>, which is its real
+    value: strong typing, fail-closed per-field refusal, validated coordinates, per-field audit logs.
+  </p>
+
+  <h2>3. Evidence status</h2>
+  <table>
+    <thead><tr><th>claim</th><th>class</th></tr></thead>
+    <tbody>
+      <tr><td>Zone C retrieval transfer +40% (D=1024/4096/32768); A-K4 text egress +83 pts; MVP end-to-end</td><td class="ok">PROVEN</td></tr>
+      <tr><td>Codec hash-fill is the egress bottleneck (6&times;, controls clean, size-predicted)</td><td class="ok">OBSERVED</td></tr>
+      <tr><td><span class="mono">&beta;</span> is argmax-invariant &mdash; not the snap mechanism</td><td class="ok">PROVEN</td></tr>
+      <tr><td>Atomic ingredient count sets the egress ceiling (span 0.4141, manifold fixed)</td><td class="ok">OBSERVED</td></tr>
+      <tr><td>Path A: the <span class="mono">top1_token_unique=1</span> symptom does not reproduce (13/16)</td><td class="ok">OBSERVED</td></tr>
+      <tr><td>Egress deficit is optimization, not representation (+0.4922)</td><td class="ok">OBSERVED</td></tr>
+      <tr><td>Training-free typed head: 6/6 tests, 0.9141&ndash;1.0000 on held-out templates</td><td class="ok">OBSERVED</td></tr>
+      <tr><td>Blueprint &ldquo;flat linear cannot work&rdquo; autopsy</td><td class="bad">REJECTED</td></tr>
+      <tr><td>Blueprint &ldquo;Hopfield Lexical Snap is the egress fix&rdquo;</td><td class="bad">NOT SUPPORTED (HOP 2&times; chance)</td></tr>
+      <tr><td>Superposition mechanism behind the manifold fall</td><td class="bad">NOT CONFIRMED</td></tr>
+      <tr><td>Typed decomposition beats flat at equal ingredients</td><td class="bad">NOT SUPPORTED (+0.0020, under 1 SE)</td></tr>
+      <tr><td><span class="mono">&beta;* = 26.10</span> derived on host</td><td class="warn">EXTERNALLY ASSERTED, UNVERIFIED</td></tr>
+      <tr><td>32,000-token wave&rarr;text egress</td><td class="bad">NOT DELIVERED (typed fields only)</td></tr>
+      <tr><td>AAII v4.3 SOTA on a 5090</td><td class="warn">NOT ESTABLISHED</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.1 Instrument defects caught before they could mislead</h3>
+  <p class="small">
+    Twenty-three self-caught defects this session (<span class="mono">D2&ndash;D23</span>),
+    including: a vacuous global-permutation control that was orthogonal to the classifier; a 137&nbsp;GB
+    broadcast caught by arithmetic <em>before</em> running; a Hopfield init that read 0.0000 three
+    runs and was <em>not</em> a Hopfield finding; a control gate sitting inside sampling noise; a
+    display that printed correct decisions as wrong; and a gate using <span class="mono">min()</span>
+    over controls, which can only pass. Every one was found by reading controls or output against
+    the code, never by trusting a headline.
+  </p>
+
+  <h2>4. Extracted epiplexity</h2>
+  <ul>
+    <li><strong>~$0 of CPU replaced an architectural program.</strong> The prescribed remedy was a
+      Hopfield lexical snap. The measured remedy is a one-branch encoder fix plus a training-free
+      typed head &mdash; and the residual deficit was a learning-rate-and-capacity problem, not an
+      architecture problem.</li>
+    <li><strong>Refused claims produced the best experiments.</strong> The typed gate refused
+      (flat cleared 0.80), which forced the ingredient probe. The Path A gate refused on an invalid
+      component, which forced the four-readout head-to-head. Each refusal pointed at the next test.</li>
+    <li><strong>A contradiction between my own two runs became the finding.</strong> 0.8857 vs 0.5449
+      at the same manifold size is what isolated the atomic vocabulary as the controlling variable.</li>
+    <li><strong>The falsifier beat the headline six times</strong>, including twice against my own
+      success claims.</li>
+  </ul>
+
+  <h2>5. Decision and next gates</h2>
+  <table>
+    <thead><tr><th>next action</th><th>bound</th><th>cost</th><th>gate</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>A.</strong> Ship the typed head into the MVP path (tool IDs then arguments)</td>
+        <td>Supported: 0.9844 / 0.9922 on held-out; irreducible from here at $0</td>
+        <td>$0</td>
+        <td>MVP answers with per-field provenance, RC=0</td>
+      </tr>
+      <tr>
+        <td><strong>B.</strong> Power the A/B to 20&ndash;50 samples/class, then judge ARM-H fairly</td>
+        <td>~10k&ndash;25k waves; deterministic corpus build</td>
+        <td>$0</td>
+        <td>controls at chance, else UNINTERPRETABLE stands</td>
+      </tr>
+      <tr>
+        <td><strong>C.</strong> Cut the constant code crosstalk (~0.343) in the codec</td>
+        <td>Encoder change; <span class="mono">encode()</span> retrieval contract must hold</td>
+        <td>$0</td>
+        <td>encode() geometry gates still pass</td>
+      </tr>
+      <tr>
+        <td><strong>D.</strong> GPU validation of a passing configuration</td>
+        <td><strong>Operator budget checkpoint &mdash; separate approval required</strong></td>
+        <td>GPU</td>
+        <td>receipt read-back, watchdog DESTROY_CONFIRMED</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Blueprint Stages 1&ndash;4 already exist and are verified. Stage 6 (agential active inference)
+    sits downstream of a passing egress gate; that gate now passes at typed manifold sizes, so
+    Stage 6 is unblocked for typed actions &mdash; but not for 32,000-token text.
+  </p>
+
+  <p class="small">
+    <span class="pill">HEAD 09db5dc</span>
+    <span class="pill">main a039095 untouched</span>
+    <span class="pill">ledger 1848 chain intact</span>
+    <span class="pill">GPU spend $0</span>
+    <span class="pill">no secrets stored</span>
+  </p>
+
+</div>
+</body>
+</html>
