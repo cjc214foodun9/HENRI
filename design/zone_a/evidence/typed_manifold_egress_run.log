@@ -1,0 +1,16 @@
+=== TYPED-MANIFOLD EGRESS TEST (blueprint sec 2.4 item 3) ===
+   NB=8192 BD=8 DC=32768
+   tool head 32-way  arg head 16-way  flat joint 512-way
+   chance: tool=0.0312 arg=0.0625 joint=0.0020
+   templates=5 train=3 held-out=2
+   corpus built: 2560 rows x 32768 x 2
+
+   head                      classes   chance     raw    ctrl
+   tool                           32   0.0312  0.9502  0.0381
+   arg                            16   0.0625  0.9951  0.0713
+   flat_joint                    512   0.0020  0.8857  0.0029
+
+=== VERDICT (pre-registered) ===
+   controls_at_chance=True
+   -> TABLE_REPORTED: no pre-registered condition met; no claim
+RC=0
