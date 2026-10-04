@@ -1,0 +1,45 @@
+codebook: K=256 D=8192 trials=200 sigma=0.6 steps=12
+codebook bytes: 16777216  (16.0 MiB complex64)
+
+Q1 HARD SNAP  argmax(softmax(beta*s)) vs argmax(s)
+   score vector s = [-0.173, 1.77, 0.899, -0.577] ...
+   argmax(s) = 26
+      beta=0.5      argmax=26
+      beta=1.0      argmax=26
+      beta=2.0      argmax=26
+      beta=5.0      argmax=26
+      beta=10.0     argmax=26
+      beta=26.1     argmax=26
+      beta=50.0     argmax=26
+      beta=100.0    argmax=26
+      beta=1000.0   argmax=26
+   BETA_INVARIANT = True
+
+Q2 ITERATIVE RETRIEVAL  (kernel=re, no global offset)
+       beta      acc    1-step acc
+        0.5    0.010         1.000
+        1.0    0.000         1.000
+        2.0    0.000         1.000
+        5.0    1.000         1.000
+       10.0    1.000         1.000
+       26.1    1.000         1.000
+       50.0    1.000         1.000
+      100.0    1.000         1.000
+     1000.0    1.000         1.000
+
+Q3 KERNEL  Re(Psi^dag M_k)  vs  |mean(conj(Psi)*M_k)|
+   Under a GLOBAL phase offset on the query (no physical meaning in a wave).
+   kernel    glob=0   glob=pi  glob=rand
+       re     1.000     0.000      0.500
+      mag     1.000     1.000      1.000
+
+RECEIPT
+   beta_claim            = 26.10
+   T*_claim printed      = 0.038316
+   T* = 1/26.10 computed = 0.038314
+   match to printed 6dp  = False
+   VERDICT = BETA_IS_NOT_THE_SNAP_MECHANISM
+             argmax is beta-invariant on the whole grid; the discrete
+             snap is caused by argmax, not by beta. beta* cannot
+             'prevent collapse' by this route.
+   Q3 median gap (mag - re) under random global phase = +0.500
