@@ -8,16 +8,40 @@
     "operator": "2026-10-03 grant of Path A and the blueprint executive instructions",
     "blueprint_sha256": "9f3cd5cd6116e8e2f1c1f77a0c2ae9c2fc03f6c9dbd90bf59b0243af4ce6b7bf"
   },
-  "config": {"V": 512, "steps": 300, "batch": 128, "templates": 5, "train_templates": 3, "held_out_templates": 2},
-  "chance": 0.0020,
+  "config": {
+    "V": 512,
+    "steps": 300,
+    "batch": 128,
+    "templates": 5,
+    "train_templates": 3,
+    "held_out_templates": 2
+  },
+  "chance": 0.002,
   "controls_at_chance": true,
   "arms_held_out": {
-    "ARM-L linear":     {"train": 1.0000, "held_out": 0.1484, "ctrl": 0.0020},
-    "ARM-R action-res": {"train": 1.0000, "held_out": 0.3857, "ctrl": 0.0039},
-    "ARM-H hopfield":   {"train": 1.0000, "held_out": 0.0029, "ctrl": 0.0020, "best_lr": 0.02}
+    "ARM-L linear": {
+      "train": 1.0,
+      "held_out": 0.1484,
+      "ctrl": 0.002
+    },
+    "ARM-R action-res": {
+      "train": 1.0,
+      "held_out": 0.3857,
+      "ctrl": 0.0039
+    },
+    "ARM-H hopfield": {
+      "train": 1.0,
+      "held_out": 0.0029,
+      "ctrl": 0.002,
+      "best_lr": 0.02
+    }
   },
-  "centroid": {"raw_held_out": 0.5449, "actres_held_out": 0.7314, "control_held_out": 0.0029},
-  "pre_registered_bar": 0.80,
+  "centroid": {
+    "raw_held_out": 0.5449,
+    "actres_held_out": 0.7314,
+    "control_held_out": 0.0029
+  },
+  "pre_registered_bar": 0.8,
   "verdict": "NEITHER_CLEARS",
   "beta_sweep_trained_codebook": "flat 0.0020 (= chance) for beta in {1,5,10,26.1,50,100}",
   "caveats": [
@@ -32,5 +56,22 @@
     "why_superseded": "the 0.9375/0.9844 figures were smoke scale; the V=512 run was in flight and UNREAD at the time of that commit"
   },
   "retained_observation": "post-fix content decodes 272x chance at V=512 (raw 0.5449) and 30x at V=32 (0.9375) on held-out TEMPLATES with clean controls. Real signal. Below the pre-registered bar at production vocabulary.",
-  "class": "amendment of my own success claim; same discipline as the A-K4 metric amendment"
+  "class": "amendment of my own success claim; same discipline as the A-K4 metric amendment",
+  "digests": {
+    "scheme": "git_stored_lf = sha256 of LF-normalized bytes (what git stores); worktree_raw = sha256 of raw working-tree bytes. A CRLF<->LF difference between them is expected under core.autocrlf=true and is NOT a defect.",
+    "artifacts": {
+      "runlog": {
+        "path": "design/zone_a/evidence/egress_ab_corrected_v512_run.log",
+        "bytes": 1481,
+        "git_stored_lf": "d9d2370ae0a0953dc2d6563874de000b42d52b5c39dc7c1818cca9bf1bcfb973",
+        "worktree_raw": "238ea06fcae47c62c9c21f42be1c59b4c66f9c1b7286b2e21919c693c416282e"
+      },
+      "script": {
+        "path": "HENRI V2/experiments/verification/egress_readout_ab_corrected.py",
+        "bytes": 11629,
+        "git_stored_lf": "63345b34cf4a8d799425b1044f2d03b693b24c660c7682805229f128646f7046",
+        "worktree_raw": "63345b34cf4a8d799425b1044f2d03b693b24c660c7682805229f128646f7046"
+      }
+    }
+  }
 }

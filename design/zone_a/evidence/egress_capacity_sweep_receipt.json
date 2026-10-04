@@ -8,18 +8,84 @@
     "blueprint_sha256": "9f3cd5cd6116e8e2f1c1f77a0c2ae9c2fc03f6c9dbd90bf59b0243af4ce6b7bf"
   },
   "config": {
-    "sweep_V": [16, 32, 64, 128, 256, 512],
-    "templates": 5, "train_templates": 3, "held_out_templates": 2,
-    "NB": 8192, "BD": 8, "DC": 32768, "WAVE_EXPAND": 16,
+    "sweep_V": [
+      16,
+      32,
+      64,
+      128,
+      256,
+      512
+    ],
+    "templates": 5,
+    "train_templates": 3,
+    "held_out_templates": 2,
+    "NB": 8192,
+    "BD": 8,
+    "DC": 32768,
+    "WAVE_EXPAND": 16,
     "codec_method": "encode_egress (shipped, commit 1529b50)"
   },
   "curve": [
-    {"V": 16,  "blocks_used": 256,  "collide": 0.031, "raw": 0.9688, "actres": 0.9688, "ctrl": 0.1250, "offdiag": 0.34972, "chance": 0.0625},
-    {"V": 32,  "blocks_used": 512,  "collide": 0.062, "raw": 0.9375, "actres": 0.9844, "ctrl": 0.0000, "offdiag": 0.34341, "chance": 0.03125},
-    {"V": 64,  "blocks_used": 1024, "collide": 0.125, "raw": 0.9453, "actres": 0.9766, "ctrl": 0.0156, "offdiag": 0.34260, "chance": 0.015625},
-    {"V": 128, "blocks_used": 2048, "collide": 0.250, "raw": 0.8789, "actres": 0.9375, "ctrl": 0.0156, "offdiag": 0.34302, "chance": 0.0078125},
-    {"V": 256, "blocks_used": 4096, "collide": 0.500, "raw": 0.6973, "actres": 0.8496, "ctrl": 0.0059, "offdiag": 0.34207, "chance": 0.00390625},
-    {"V": 512, "blocks_used": 8192, "collide": 1.000, "raw": 0.5449, "actres": 0.7178, "ctrl": 0.0000, "offdiag": 0.34213, "chance": 0.001953125}
+    {
+      "V": 16,
+      "blocks_used": 256,
+      "collide": 0.031,
+      "raw": 0.9688,
+      "actres": 0.9688,
+      "ctrl": 0.125,
+      "offdiag": 0.34972,
+      "chance": 0.0625
+    },
+    {
+      "V": 32,
+      "blocks_used": 512,
+      "collide": 0.062,
+      "raw": 0.9375,
+      "actres": 0.9844,
+      "ctrl": 0.0,
+      "offdiag": 0.34341,
+      "chance": 0.03125
+    },
+    {
+      "V": 64,
+      "blocks_used": 1024,
+      "collide": 0.125,
+      "raw": 0.9453,
+      "actres": 0.9766,
+      "ctrl": 0.0156,
+      "offdiag": 0.3426,
+      "chance": 0.015625
+    },
+    {
+      "V": 128,
+      "blocks_used": 2048,
+      "collide": 0.25,
+      "raw": 0.8789,
+      "actres": 0.9375,
+      "ctrl": 0.0156,
+      "offdiag": 0.34302,
+      "chance": 0.0078125
+    },
+    {
+      "V": 256,
+      "blocks_used": 4096,
+      "collide": 0.5,
+      "raw": 0.6973,
+      "actres": 0.8496,
+      "ctrl": 0.0059,
+      "offdiag": 0.34207,
+      "chance": 0.00390625
+    },
+    {
+      "V": 512,
+      "blocks_used": 8192,
+      "collide": 1.0,
+      "raw": 0.5449,
+      "actres": 0.7178,
+      "ctrl": 0.0,
+      "offdiag": 0.34213,
+      "chance": 0.001953125
+    }
   ],
   "verdict": "CAPACITY_LAW_CONFIRMED",
   "pre_registered_gate": "G-CAP: min(raw for V<=128) >= 0.80 AND raw(V=512) < 0.80",
@@ -29,7 +95,6 @@
     "gate": "per-row ctrl < 3 * chance(V)",
     "loosest_point": "V=16 ctrl 0.1250 = 2.0x its chance 0.0625, within the 3x gate. 4/32 correct, z=1.46 vs chance, not significant. Small-N noise, recorded for completeness."
   },
-
   "MECHANISM_CAVEAT": {
     "status": "SUPERPOSITION MECHANISM NOT CONFIRMED",
     "pre_registered_signature": "H_CAP predicted off-diagonal mean |cos| between per-word centroids RISES with V.",
@@ -39,7 +104,6 @@
     "fact_2_decision": "with constant ~0.343 overlap and V classes, the number of plausible wrong classes grows with V. Accuracy falls as a decision-theoretic capacity effect (more confusers at fixed separation), not as a representational one.",
     "what_this_changes": "The fix for large-V egress is NOT 'reduce collisions' (they are already constant). It is (a) reduce the constant crosstalk in the code, or (b) decompose the output into small typed manifolds so V stays small. The data already supports (b): raw >= 0.8789 for V <= 128."
   },
-
   "raw_vs_actres": "actres applies per-template mean subtraction, which requires the TEMPLATE LABEL at inference (oracle). raw is the deployment number. Only raw was used for the gate. actres is reported as an upper bound under oracle assistance, never as a result.",
   "not_interpretable": {
     "ARM_H_hopfield": "excluded from this sweep by design. At V=512 the A/B gave 3 samples/class (1536 train / 512 classes), which starves a trained arm. Its 0.0029 is UNINTERPRETABLE, not a Hopfield finding. Re-test at 20-50 samples/class before condemning the architecture."
@@ -49,5 +113,22 @@
     "rejected": "the causal autopsy (sec 1.1, 2.3). The bottleneck was the codec's own encode() hash-filling 8096/8192 rows (HASH_FILL_IS_THE_SNR_DEFECT, 6x), located upstream of the readout.",
     "untested": "the Hopfield Lexical Snap as the egress mechanism. beta is argmax-invariant (BETA_IS_NOT_THE_SNAP_MECHANISM); beta*=26.10 remains externally asserted, unverified on host."
   },
-  "class": "confirms the pre-registered capacity gate while refusing to confirm the mechanism the same gate named"
+  "class": "confirms the pre-registered capacity gate while refusing to confirm the mechanism the same gate named",
+  "digests": {
+    "scheme": "git_stored_lf = sha256 of LF-normalized bytes (what git stores); worktree_raw = sha256 of raw working-tree bytes. A CRLF<->LF difference between them is expected under core.autocrlf=true and is NOT a defect.",
+    "artifacts": {
+      "runlog": {
+        "path": "design/zone_a/evidence/egress_capacity_sweep_run.log",
+        "bytes": 1286,
+        "git_stored_lf": "c165c4199fa522ce7cb7640d15865bb5154c60acb45e56aa3a5dbae301863f4c",
+        "worktree_raw": "4cf858d29f2e24177faac5c81be68ebcf6acccc288e1fa8771996086753a181d"
+      },
+      "script": {
+        "path": "HENRI V2/experiments/verification/egress_capacity_sweep.py",
+        "bytes": 6350,
+        "git_stored_lf": "30f5e8e69ba779c8efda11c39f67eee34b39bfcbab6faa17a0725390212ea88a",
+        "worktree_raw": "30f5e8e69ba779c8efda11c39f67eee34b39bfcbab6faa17a0725390212ea88a"
+      }
+    }
+  }
 }
