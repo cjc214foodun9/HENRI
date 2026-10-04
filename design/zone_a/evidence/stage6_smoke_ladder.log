@@ -1,0 +1,51 @@
+facts K=6  wave dim=65536   (REAL codec.encode_egress output)
+   channel ambiguity mean|off-diag cos| = 0.18199   (D31 fixed)
+   measured single-look LOO accuracy     = 0.8043
+   ladder over single-look accuracy      = [0.8, 0.6, 0.45, 0.35, 0.25]
+   trials/rung=300  probes=20  MC=4  criterion=0.95  max_steps=12
+
+   --- rung single-look acc = 0.80  sigma = 0.00042 ---
+      greedy  median=  1.0 mean= 1.43 acc@1=0.8500 acc@2=1.0000 acc_final=1.0000
+      info    median=  1.0 mean= 1.43 acc@1=0.8500 acc@2=1.0000 acc_final=1.0000
+      rand    median=  2.0 mean= 1.68 acc@1=0.7667 acc@2=0.9800 acc_final=1.0000
+      G-AI-1 info<=0.75*greedy : FAIL  (info 1.0 vs greedy 1.0)
+      G-AI-2 random>greedy     : PASS  (rand 2.0 vs greedy 1.0)
+      G-AI-3 calibration       : FAIL  (acc@1 0.8500 vs 0.80)
+
+   --- rung single-look acc = 0.60  sigma = 0.00096 ---
+      greedy  median=  2.0 mean= 1.73 acc@1=0.6900 acc@2=0.9900 acc_final=1.0000
+      info    median=  2.0 mean= 1.70 acc@1=0.7467 acc@2=0.9967 acc_final=1.0000
+      rand    median=  2.0 mean= 2.50 acc@1=0.5800 acc@2=0.8567 acc_final=1.0000
+      G-AI-1 info<=0.75*greedy : FAIL  (info 2.0 vs greedy 2.0)
+      G-AI-2 random>greedy     : FAIL  (rand 2.0 vs greedy 2.0)
+      G-AI-3 calibration       : FAIL  (acc@1 0.7467 vs 0.60)
+
+   --- rung single-look acc = 0.45  sigma = 0.00210 ---
+      greedy  median=  3.0 mean= 2.70 acc@1=0.4633 acc@2=0.7967 acc_final=1.0000
+      info    median=  3.0 mean= 2.60 acc@1=0.5233 acc@2=0.8633 acc_final=1.0000
+      rand    median=  4.0 mean= 4.19 acc@1=0.4167 acc@2=0.6567 acc_final=1.0000
+      G-AI-1 info<=0.75*greedy : FAIL  (info 3.0 vs greedy 3.0)
+      G-AI-2 random>greedy     : PASS  (rand 4.0 vs greedy 3.0)
+      G-AI-3 calibration       : FAIL  (acc@1 0.5233 vs 0.45)
+
+   --- rung single-look acc = 0.35  sigma = 0.00266 ---
+      greedy  median=  3.0 mean= 3.17 acc@1=0.5367 acc@2=0.7433 acc_final=1.0000
+      info    median=  3.0 mean= 3.10 acc@1=0.4900 acc@2=0.7300 acc_final=1.0000
+      rand    median=  5.0 mean= 5.59 acc@1=0.4167 acc@2=0.5900 acc_final=0.9967
+      G-AI-1 info<=0.75*greedy : FAIL  (info 3.0 vs greedy 3.0)
+      G-AI-2 random>greedy     : PASS  (rand 5.0 vs greedy 3.0)
+      G-AI-3 calibration       : FAIL  (acc@1 0.4900 vs 0.35)
+
+   --- rung single-look acc = 0.25  sigma = 0.00678 ---
+      greedy  median= 13.0 mean=10.56 acc@1=0.3067 acc@2=0.4433 acc_final=0.8333
+      info    median= 13.0 mean=10.63 acc@1=0.2600 acc@2=0.3900 acc_final=0.7767
+      rand    median= 13.0 mean=12.24 acc@1=0.2733 acc@2=0.3500 acc_final=0.7367
+      G-AI-1 info<=0.75*greedy : FAIL  (info 13.0 vs greedy 13.0)
+      G-AI-2 random>greedy     : FAIL  (rand 13.0 vs greedy 13.0)
+      G-AI-3 calibration       : PASS  (acc@1 0.2600 vs 0.25)
+
+   === VERDICT (pre-registered) ===
+   rungs where the control could lose (G-AI-2): [0.6, 0.25]
+   rungs with policy separation (G-AI-1+G-AI-2): NONE
+   VERDICT = NO_SEPARATION_DETECTED (control can lose, but info does not beat greedy)
+   elapsed 331.3s
