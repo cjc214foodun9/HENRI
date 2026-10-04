@@ -1,0 +1,34 @@
+=== CORRECTED-FAMILY A/B (shipped encode_egress) ===
+   NB=8192 BD=8 DC=32768  V=32 (typed manifold <= 512)  templates=5
+   train templates=3  held-out templates=2  chance=0.0312
+   train (96, 32768, 2)  held-out (64, 32768, 2)
+   action resolution: centered per template; train (96, 32768, 2)
+   ARM-L linear       train=0.5938  held-out=0.5469  ctrl=0.0312
+   ARM-R action-res   train=1.0000  held-out=0.7500  ctrl=0.0625
+
+   ARM-H hopfield lr sweep (each point is a fresh model)
+      lr=0.02000   train=0.4479  held-out=0.0312  ctrl=0.0156
+      lr=0.00077   train=0.0625  held-out=0.0156  ctrl=0.0156
+      lr=0.00020   train=0.0729  held-out=0.0156  ctrl=0.0625
+      lr=0.00005   train=0.0312  held-out=0.0156  ctrl=0.0156
+   ARM-H hopfield     train=0.4479  held-out=0.0312  ctrl=0.0156  (best lr=0.02000)
+   centroid raw           held-out=0.9375
+   centroid actres        held-out=0.9844
+   centroid CONTROL       held-out=0.0156  (per-sample block perm)
+
+=== beta sweep on the trained Hopfield codebook (held-out) ===
+   beta=     1.0  acc=0.0469
+   beta=     5.0  acc=0.0469
+   beta=    10.0  acc=0.0469
+   beta=    26.1  acc=0.0469
+   beta=    50.0  acc=0.0469
+   beta=   100.0  acc=0.0469
+
+=== VERDICT (pre-registered) ===
+   chance=0.0312  controls_at_chance=True
+   linear=0.5469  hopfield=0.0312  action-res=0.7500
+   centroid=0.9375 (ctrl 0.0156)
+   -> DETERMINISTIC_CENTROID_RECOVERS_CONTENT: 0.9375 on held-out
+      templates, training-free. The egress content IS linearly decodable
+      once the codec fill is removed. Blueprint's 'flat linear cannot
+      work' diagnosis REJECTED on real content.
