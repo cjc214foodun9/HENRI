@@ -1,0 +1,218 @@
+==============================================================================
+A. henri_mvp.py cmd_ask BODY
+==============================================================================
+def cmd_ask(args: argparse.Namespace) -> int:
+    import zone_c_world_knowledge_harness as wkh
+    from henri_backbone_adapter import QwenBackboneAdapter
+
+    # ---- 1. retrieve (fail-closed) ---------------------------------------
+    hits = wkh.query_corpus(args.domain, args.query, args.k,
+                            dsn_env=args.dsn_env)
+    if not hits:
+        _emit({"answer": "ABSTAIN", "reason": "no retrieved chunks",
+               "domain": args.domain, "query": args.query})
+        return 0
+
+    context, used = wkh.build_context(hits, Path(args.files_dir),
+                                      max_chars=args.max_context_chars)
+    if not context:
+        _emit({"answer": "ABSTAIN", "reason": "empty verified context",
+               "domain": args.domain, "query": args.query})
+        return 0
+
+    # ---- 2. generate with ONE adapter instance (frozen, zero-trainable) ---
+    adapter = QwenBackboneAdapter(max_new_tokens=args.max_new_tokens)
+    adapter.load()
+    tel = adapter.telemetry
+    bad = int(getattr(tel, "unexpected_key_count", 0) or 0)
+    if bad != 0:
+        _emit({"answer": "ABSTAIN",
+               "reason": "checkpoint did not load cleanly",
+               "unexpected_key_count": bad})
+        return 1
+
+    text, _meta = adapter.generate_text(
+        PROMPT_TMPL.format(ctx=context, q=args.query))
+
+    _emit({
+        "answer": (text or "").strip(),
+        "query": args.query,
+        "domain": args.domain,
+        "provenance": [{k: c.get(k) for k in _PROV_FIELDS} for c in used],
+        "model": {
+            "architecture": getattr(tel, "architecture", None),
+            "total_params": getattr(tel, "total_params", None),
+            "loaded_from": getattr(tel, "loaded_from", None),
+            "declared_model_id": getattr(tel, "model_id", None),
+            "unexpected_key_count": bad,
+            "checkpoint_load_status": getattr(tel, "checkpoint_load_status", None),
+        },
+        "context_chars": len(context),
+        "max_new_tokens": args.max_new_tokens,
+        "arm": "A (retrieved text context); ARM B wave conditioning UNMEASURED",
+        "latency": "not measured (out of approved scope)",
+    })
+    return 0
+
+
+MARGIN_FLOOR = float(os.environ.get("HENRI_SNAP_MARGIN_FLOOR", "0.05"))
+
+
+
+
+==============================================================================
+B. WHO CONSUMES THE DECODER CHECKPOINT
+==============================================================================
+  henri_decoder.py                                             mentions=1
+  henri_fused_triton_cuda_graph_runner.py                      mentions=1
+  humaneval_wave_ast_runner.py                                 mentions=1
+  experiments/verification/a2_mock_vocabulary_probe.py         mentions=1
+  experiments/verification/a2_provenance_correction_probe.py   mentions=4
+  experiments/verification/a2_retrain_spec_probe.py            mentions=1
+  experiments/verification/a2_writer_provenance_probe.py       mentions=3
+  experiments/verification/ak5_armb_egress_gate.py             mentions=1
+  experiments/verification/basal_drivetrain_supplied_code_audit.py mentions=1
+  experiments/verification/codec_content_recovery_scaffold.py  mentions=1
+  experiments/verification/codec_content_recovery_v2.py        mentions=1
+  experiments/verification/g4_armu_unbinder_diag.py            mentions=1
+  experiments/verification/kaa_a1_multi_ingress.py             mentions=1
+  experiments/verification/kaa_a1_nearfar_probe.py             mentions=1
+  experiments/verification/kaa_egress_probe.py                 mentions=1
+  experiments/verification/probe_deep_egress_identity.py       mentions=1
+  scripts/training/train_henri_decoder.py                      mentions=1
+  scripts/training/train_sgld_500_runner.py                    mentions=2
+  tests/contract/test_benchmark_registry.py                    mentions=0
+
+  4-key owner check (HENRINeuralEgressUnbinder layers):
+      self.down_proj = nn.Linear(d_model, d_hidden, bias=False)
+      self.layer_norm = nn.LayerNorm(d_hidden)
+      self.lm_head = nn.Linear(d_hidden, vocab_size, bias=False)
+
+  HENRIUnifiedEgressTransducer._load_checkpoint:
+      def _load_checkpoint(self, checkpoint_path: str) -> None:
+              """Validate the state dict on CPU before moving validated weights to target device."""
+              path = Path(checkpoint_path)
+              self.checkpoint_path = str(path)
+              if not path.exists():
+                  self.checkpoint_load_status = "SKIPPED_NO_CHECKPOINT"
+                  if self.checkpoint_policy == "required":
+                      raise DecoderCheckpointCompatibilityError(
+                          f"checkpoint missing: checkpoint={path}; policy=required"
+                      )
+                  return
+      
+              try:
+                  self.checkpoint_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+                  try:
+                      payload = torch.load(path, map_location="cpu", weights_only=True)
+                  except TypeError:
+                      payload = torch.load(path, map_location="cpu")
+                  if not isinstance(payload, dict):
+                      raise DecoderCheckpointCompatibilityError(
+                          f"checkpoint payload is not a mapping: checkpoint={path}"
+                      )
+                  state_dict = payload.get("model_state_dict", payload.get("state_dict", payload))
+                  if not isinstance(state_dict, dict):
+                      raise DecoderCheckpointCompatibilityError(
+                          f"checkpoint state_dict is not a mapping: checkpoint={path}"
+
+==============================================================================
+C. ANY END-TO-END TEST THAT LOADS THE DECODER AND SCORES IT?
+==============================================================================
+  ACC-METRIC   production_arc_run.py                                       3434 lines
+  ACC-METRIC   efe_planner.py                                              1762 lines
+  ACC-METRIC   arc_curriculum_replay.py                                    1079 lines
+  ACC-METRIC   arc_egress_contract.py                                      1008 lines
+  ACC-METRIC   henri_decoder.py                                             727 lines
+  ACC-METRIC   humaneval_wave_ast_runner.py                                 508 lines
+  ACC-METRIC   sagnac_mcts_planner.py                                       500 lines
+  ACC-METRIC   tests/contract/test_f4_nonlinear_egress.py                   414 lines
+  ACC-METRIC   experiments/verification/ak5_armb_egress_gate.py             365 lines
+  ACC-METRIC   scripts/build_egress_manifest.py                             337 lines
+  ACC-METRIC   tests/contract/test_sealed_action_egress.py                  336 lines
+  ACC-METRIC   experiments/verification/codec_content_recovery_v2.py        330 lines
+  ACC-METRIC   arc_action_head.py                                           329 lines
+  ACC-METRIC   experiments/verification/kaa_egress_probe.py                 318 lines
+  ACC-METRIC   algebraic_action_head.py                                     277 lines
+  ACC-METRIC   henri_unified_vla.py                                         276 lines
+  ACC-METRIC   experiments/verification/codec_content_recovery_scaffold.py   271 lines
+  ACC-METRIC   experiments/verification/kaa_a1_nearfar_probe.py             268 lines
+  no-metric    experiments/verification/f4_nonlinear_egress_head.py         245 lines
+  ACC-METRIC   tests/contract/test_benchmark_registry.py                    241 lines
+  ACC-METRIC   experiments/verification/verify_egress_closed_loop.py        236 lines
+  ACC-METRIC   henri_dual_speed_harness.py                                  231 lines
+  ACC-METRIC   experiments/verification/a2_mock_vocabulary_probe.py         223 lines
+  ACC-METRIC   experiments/verification/kaa_a1_multi_ingress.py             217 lines
+  ACC-METRIC   tests/unit/test_algebraic_action_head.py                     215 lines
+  ACC-METRIC   experiments/verification/basal_drivetrain_supplied_code_audit.py   214 lines
+  no-metric    henri_fused_triton_cuda_graph_runner.py                      205 lines
+  ACC-METRIC   experiments/verification/a2_writer_provenance_probe.py       204 lines
+  no-metric    experiments/verification/a2_retrain_spec_probe.py            199 lines
+  ACC-METRIC   tests/unit/test_henri_calibrated_action_head.py              195 lines
+  ACC-METRIC   experiments/verification/a2_provenance_correction_probe.py   181 lines
+  ACC-METRIC   scripts/training/train_henri_decoder.py                      175 lines
+  no-metric    e6_d2_differential.py                                        168 lines
+  no-metric    scripts/training/train_sgld_500_runner.py                    166 lines
+  no-metric    execute_authentic_coding_benchmark.py                        159 lines
+  ACC-METRIC   experiments/verification/gen_e6_d2_ast_sites_receipt.py      151 lines
+  no-metric    tests/contract/test_discrete_egress_strip.py                 149 lines
+  no-metric    henri_deep_egress.py                                         145 lines
+  no-metric    tests/contract/test_deep_egress.py                           140 lines
+  ACC-METRIC   henri_api_bridge.py                                          131 lines
+  no-metric    experiments/verification/probe_deep_egress_identity.py       126 lines
+  no-metric    e6_d2_remote.py                                              124 lines
+  ACC-METRIC   experiments/verification/g4_armu_unbinder_diag.py            124 lines
+  ACC-METRIC   arc_score_gate.py                                            117 lines
+  no-metric    tests/contract/test_phase8161_shared_projection.py           114 lines
+  ACC-METRIC   experiments/verification/smoke_unified_vla_cuda.py           113 lines
+  ACC-METRIC   tests/contract/test_arc_integrity_p1.py                       93 lines
+  total files touching the decoder: 47
+  -> decisive: how many MEASURE accuracy on the decoder? 35
+
+==============================================================================
+D. THE REAL LEARNING SURFACE
+==============================================================================
+  declarations found across the tree:
+  test-time adapt fns      34 files   e.g. ['algebraic_action_head.py', 'arc_complex_sidecar.py', 'arc_curriculum_replay.py', 'arc_egress_contract.py']
+  pretraining loops        23 files   e.g. ['adaptive_viscoelastic_thermostat.py', 'henri_decoder.py', 'henri_fused_triton_cuda_graph_runner.py', 'production_arc_run.py']
+  optimizer.step()          2 files   e.g. ['scripts/training/train_henri_decoder.py', 'scripts/training/train_sgld_500_runner.py']
+  loss.backward()          32 files   e.g. ['arc_f8_decodability_probe.py', 'arc_sans_play.py', 'henri_decoder.py', 'henri_functor_flow.py']
+  demo/demo pairs          48 files   e.g. ['arc_egress_contract.py', 'arc_public_ingress.py', 'arc_task_functor.py', 'arc_tripartite_resonator.py']
+  zero-pretrain decl       22 files   e.g. ['cegis_grid_snap.py', 'henri_edmd_predict.py', 'henri_external_outcome_refactor_module.py', 'henri_goal_adapter.py']
+
+==============================================================================
+E. THE TRAINER'S LABEL PATH (degenerate-objective check)
+==============================================================================
+    def generate_qfhrr_training_dataset(codec: qFHRREpistemicCodec, num_samples: int = 1024, device: str = "cuda")
+        print(f"[DATASET] Synthesizing {num_samples} qFHRR wave-token training pairs on {device.upper()}...")
+        tokens_text = [
+        dataset_target_ids = []
+        vocab_size = 32000
+        for i in range(num_samples):
+            text_target = tokens_text[i % len(tokens_text)]
+            # Assign deterministic token ID in [0, vocab_size-1]
+            target_id = hash(text_target) % vocab_size
+            noise = torch.randn_like(text_wave) * 0.05
+            noisy_wave = F.normalize(text_wave + noise, p=2, dim=-1)
+            dataset_target_ids.append(target_id)
+        targets_tensor = torch.tensor(dataset_target_ids, device=device, dtype=torch.long)
+    def train_decoder_mission(epochs: int = 20, batch_size: int = 32, lr: float = 1e-3):
+        unbinder = HENRINeuralEgressUnbinder(d_model=65536, d_hidden=2048, vocab_size=32000, device=device)
+        optimizer = torch.optim.AdamW(unbinder.parameters(), lr=lr, weight_decay=1e-4)
+        criterion = nn.CrossEntropyLoss()
+        num_samples = 1024
+        inputs, targets = generate_qfhrr_training_dataset(codec, num_samples=num_samples, device=device)
+        num_batches = math.ceil(num_samples / batch_size)
+        print(f"[TRAINING] Starting {epochs} Epochs | Batch Size: {batch_size} | Batches/Epoch: {num_batches}\n")
+            permutation = torch.randperm(num_samples, device=device)
+                batch_indices = permutation[b * batch_size : (b + 1) * batch_size]
+                loss = criterion(logits, b_targets)
+            if epoch == 1 or epoch % 5 == 0 or epoch == epochs:
+                print(f"[Epoch {epoch:02d}/{epochs:02d}] Loss: {avg_loss:.6f} | Unbinding Token Accuracy: {acc:6.2
+            "vocab_size": 32000,
+        train_decoder_mission(epochs=args.epochs, batch_size=args.batch_size, lr=args.lr)
+
+  tokenizer anywhere in repo?
+    ['g5_semantic_egress.py', 'g5_separable_codec.py', 'g7_highorder_codec.py', 'henri_ast_grammar_mask.py', 'henri_backbone_adapter.py', 'henri_vla_tokenizer.py', 'o_vsa_ingress_tokenizer.py', 'experiments/verification/a2_retrain_spec_probe.py', 'experiments/verification/g7_v7_remote_probe.py', 'henri/ingress/spatial_tokenizer.py', 'tests/contract/test_arc_curriculum_replay.py', 'tests/contract/test_arc_egress_contract.py', 'tests/contract/test_arc_task_functor.py', 'tests/contract/test_arc_zone_c_freeze.py']
+
+FINAL2_DONE

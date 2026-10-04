@@ -1,0 +1,413 @@
+==============================================================================
+1. EVERY MODEL ARTIFACT IN BOTH TREES
+==============================================================================
+  main       799,034,179  HENRI V2/checkpoints/henri_egress_unbinder_sgld_500.pt
+  worktree   799,034,119  HENRI V2/models/henri_decoder_checkpoint.pt
+  main       799,034,119  .worktrees/semantic-backbone/HENRI V2/models/henri_decoder_checkpoint.pt
+  main       799,034,119  HENRI V2/models/henri_decoder_checkpoint.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_0a538c2c.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_3532043e.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_3af6f8c6.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_569bb2e3.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_6aa200e0.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_747270f2.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_81ffe5db.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_8b4246d2.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_90648259.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_9c889183.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_c477fe6e.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_e904c176.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_f9a85606.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_0a538c2c.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_3532043e.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_3af6f8c6.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_569bb2e3.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_6aa200e0.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_747270f2.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_81ffe5db.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_8b4246d2.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_90648259.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_9c889183.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_c477fe6e.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_e904c176.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_f9a85606.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cn04-2fe56bfb_6aa200e0.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cn04-2fe56bfb_8b4246d2.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cn04-2fe56bfb_90648259.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_cn04-2fe56bfb_c477fe6e.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_dc22-fdcac232_6aa200e0.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_dc22-fdcac232_8b4246d2.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_dc22-fdcac232_90648259.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_dc22-fdcac232_c477fe6e.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ft09-0d8bbf25_8b4246d2.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ft09-0d8bbf25_90648259.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_g50t-5849a774_8b4246d2.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_g50t-5849a774_90648259.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ka59-38d34dbb_8b4246d2.pt
+  main       104,859,636  HENRI V2/field_channel_checkpoints/field_channel_ka59-38d34dbb_90648259.pt
+  main        55,287,808  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_1a5cdff3.pt
+  main        46,373,244  HENRI V2/Drive_Research_Vault/HENRI_Research_Vault/_agentic/vector_index/b9a0c356-626e-41e8-8911-89502ae5d86c/data_level0.bin
+  main        43,683,264  .vault_vector_db/23860788-25e3-4143-bf00-586bfaf8fd70/data_level0.bin
+  main           428,020  .worktrees/semantic-backbone/HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_00f88b1f.pt
+  main           428,020  .worktrees/semantic-backbone/HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_05935970.pt
+  main           428,020  .worktrees/semantic-backbone/HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_132f3d49.pt
+  main           428,020  .worktrees/semantic-backbone/HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_6df7d34e.pt
+  main           428,020  .worktrees/semantic-backbone/HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_ec8df1e6.pt
+  main           428,020  .worktrees/semantic-backbone/HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_f19ba959.pt
+  main           428,020  HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_0a19092a.pt
+  main           428,020  HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_0a19092a.pt
+  main           428,020  HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_d314efc0.pt
+  main           428,020  HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_eb190c20.pt
+  main           237,156  HENRI V2/Drive_Research_Vault/HENRI_Research_Vault/_agentic/vector_index/b9a0c356-626e-41e8-8911-89502ae5d86c/link_lists.bin
+  main           222,372  .vault_vector_db/23860788-25e3-4143-bf00-586bfaf8fd70/link_lists.bin
+  main           167,600  ingest_input/.vault_vector_db/b1c4caf9-cce9-4b47-8813-700a4994dd54/data_level0.bin
+  main           110,676  HENRI V2/Drive_Research_Vault/HENRI_Research_Vault/_agentic/vector_index/b9a0c356-626e-41e8-8911-89502ae5d86c/length.bin
+  main           104,256  .vault_vector_db/23860788-25e3-4143-bf00-586bfaf8fd70/length.bin
+  worktree         3,093  HENRI V2/tests/contract/tmp_sans_head.pt
+  main             3,093  .worktrees/basal-syncytium/HENRI V2/tests/contract/tmp_sans_head.pt
+  main             3,093  .worktrees/semantic-backbone/HENRI V2/tests/contract/tmp_sans_head.pt
+  main             3,093  .worktrees/_baseline_ctrl/HENRI V2/tests/contract/tmp_sans_head.pt
+  main             3,093  HENRI V2/tests/contract/tmp_sans_head.pt
+  main               400  ingest_input/.vault_vector_db/b1c4caf9-cce9-4b47-8813-700a4994dd54/length.bin
+  main               100  .vault_vector_db/23860788-25e3-4143-bf00-586bfaf8fd70/header.bin
+  main               100  HENRI V2/Drive_Research_Vault/HENRI_Research_Vault/_agentic/vector_index/b9a0c356-626e-41e8-8911-89502ae5d86c/header.bin
+  main               100  ingest_input/.vault_vector_db/b1c4caf9-cce9-4b47-8813-700a4994dd54/header.bin
+  main                 0  ingest_input/.vault_vector_db/b1c4caf9-cce9-4b47-8813-700a4994dd54/link_lists.bin
+
+==============================================================================
+2. INSPECT EVERY .pt LARGE ENOUGH TO HOLD 12 BLOCKS
+==============================================================================
+
+  --- main:HENRI V2/checkpoints/henri_egress_unbinder_sgld_500.pt (799,034,179 B) sha=e69a6a6e209e24b3 ---
+    type=dict  top keys: ['down_proj.weight', 'layer_norm.bias', 'layer_norm.weight', 'lm_head.weight']
+    tensors=4  params=199,757,824  data=799,031,296  file=799,034,179  delta=2,883
+    any 'blocks' key? False
+    any 'modulator' key? False
+    any 'qkv'/'attn' key? False
+      down_proj.weight                                 (2048, 65536)
+      layer_norm.weight                                (2048,)
+      layer_norm.bias                                  (2048,)
+      lm_head.weight                                   (32000, 2048)
+
+  --- worktree:HENRI V2/models/henri_decoder_checkpoint.pt (799,034,119 B) sha=75572389083455a3 ---
+    type=dict  top keys: ['down_proj.weight', 'layer_norm.bias', 'layer_norm.weight', 'lm_head.weight']
+    tensors=4  params=199,757,824  data=799,031,296  file=799,034,119  delta=2,823
+    any 'blocks' key? False
+    any 'modulator' key? False
+    any 'qkv'/'attn' key? False
+      down_proj.weight                                 (2048, 65536)
+      layer_norm.weight                                (2048,)
+      layer_norm.bias                                  (2048,)
+      lm_head.weight                                   (32000, 2048)
+
+  --- main:.worktrees/semantic-backbone/HENRI V2/models/henri_decoder_checkpoint.pt (799,034,119 B) sha=75572389083455a3 ---
+    type=dict  top keys: ['down_proj.weight', 'layer_norm.bias', 'layer_norm.weight', 'lm_head.weight']
+    tensors=4  params=199,757,824  data=799,031,296  file=799,034,119  delta=2,823
+    any 'blocks' key? False
+    any 'modulator' key? False
+    any 'qkv'/'attn' key? False
+      down_proj.weight                                 (2048, 65536)
+      layer_norm.weight                                (2048,)
+      layer_norm.bias                                  (2048,)
+      lm_head.weight                                   (32000, 2048)
+
+  --- main:HENRI V2/models/henri_decoder_checkpoint.pt (799,034,119 B) sha=75572389083455a3 ---
+    type=dict  top keys: ['down_proj.weight', 'layer_norm.bias', 'layer_norm.weight', 'lm_head.weight']
+    tensors=4  params=199,757,824  data=799,031,296  file=799,034,119  delta=2,823
+    any 'blocks' key? False
+    any 'modulator' key? False
+    any 'qkv'/'attn' key? False
+      down_proj.weight                                 (2048, 65536)
+      layer_norm.weight                                (2048,)
+      layer_norm.bias                                  (2048,)
+      lm_head.weight                                   (32000, 2048)
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_0a538c2c.pt (104,859,636 B) sha=2b24240200ac7a9b ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_3532043e.pt (104,859,636 B) sha=c919e09a79085cfc ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_3af6f8c6.pt (104,859,636 B) sha=186eaba33c0e3a3c ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_569bb2e3.pt (104,859,636 B) sha=37e5dad7bc300889 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_6aa200e0.pt (104,859,636 B) sha=8d1787831812c11b ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_747270f2.pt (104,859,636 B) sha=327b8bdd4c3f34f0 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_81ffe5db.pt (104,859,636 B) sha=d07d31668d6cf5af ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_8b4246d2.pt (104,859,636 B) sha=70510b2d79e4a420 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_90648259.pt (104,859,636 B) sha=8db418ba956d6a07 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_9c889183.pt (104,859,636 B) sha=f800b524ad097ed5 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_c477fe6e.pt (104,859,636 B) sha=0258e4b21b85cc88 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_e904c176.pt (104,859,636 B) sha=dbc90d94745038f3 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_f9a85606.pt (104,859,636 B) sha=cd712fa7953d2a33 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_0a538c2c.pt (104,859,636 B) sha=6f0ae764e29dc1e1 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_3532043e.pt (104,859,636 B) sha=2427a36fd7c78a99 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_3af6f8c6.pt (104,859,636 B) sha=848f61a700c90d09 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_569bb2e3.pt (104,859,636 B) sha=2d01a1640b9239c7 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_6aa200e0.pt (104,859,636 B) sha=4e40a2029f9ce54b ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_747270f2.pt (104,859,636 B) sha=9b1086f2e4fa6507 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_81ffe5db.pt (104,859,636 B) sha=bf4b56beb817bf94 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_8b4246d2.pt (104,859,636 B) sha=48ee01ba48c5eefb ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_90648259.pt (104,859,636 B) sha=3f8bf4901758e0cd ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_9c889183.pt (104,859,636 B) sha=7383aa101ab1fd79 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_c477fe6e.pt (104,859,636 B) sha=4262aa98fe2fd3f1 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_e904c176.pt (104,859,636 B) sha=6556d1d8c10d8843 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_f9a85606.pt (104,859,636 B) sha=25b541d7b8896f58 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cn04-2fe56bfb_6aa200e0.pt (104,859,636 B) sha=8ce39b703b4370eb ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cn04-2fe56bfb_8b4246d2.pt (104,859,636 B) sha=330ebb62479aa6fa ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cn04-2fe56bfb_90648259.pt (104,859,636 B) sha=145bf66a81985d84 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cn04-2fe56bfb_c477fe6e.pt (104,859,636 B) sha=213dd9d93edf1b42 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_dc22-fdcac232_6aa200e0.pt (104,859,636 B) sha=6ead312a3f6e4952 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_dc22-fdcac232_8b4246d2.pt (104,859,636 B) sha=01170a093b66ca2d ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_dc22-fdcac232_90648259.pt (104,859,636 B) sha=95f2ec5239a16a46 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_dc22-fdcac232_c477fe6e.pt (104,859,636 B) sha=61bd17e396778bd5 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ft09-0d8bbf25_8b4246d2.pt (104,859,636 B) sha=53ac936a353f1293 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ft09-0d8bbf25_90648259.pt (104,859,636 B) sha=4172e0eb6d586a48 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_g50t-5849a774_8b4246d2.pt (104,859,636 B) sha=7cc4a76afc535733 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_g50t-5849a774_90648259.pt (104,859,636 B) sha=cbfa099ee09dc7b0 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ka59-38d34dbb_8b4246d2.pt (104,859,636 B) sha=1e1f214029078353 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ka59-38d34dbb_90648259.pt (104,859,636 B) sha=d3b8abdb960aaf53 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_1a5cdff3.pt (55,287,808 B) sha=f2f7cb19aea654a9 ---
+    weights_only load failed: RuntimeError PytorchStreamReader failed reading zip archive: failed finding central directory
+
+  --- main:.worktrees/semantic-backbone/HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_00f88b1f.pt (428,020 B) sha=5c9164faeefe5087 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:.worktrees/semantic-backbone/HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_05935970.pt (428,020 B) sha=c5d445420b457490 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:.worktrees/semantic-backbone/HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_132f3d49.pt (428,020 B) sha=c0c5bfa7599b5776 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:.worktrees/semantic-backbone/HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_6df7d34e.pt (428,020 B) sha=2994cd920385910c ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:.worktrees/semantic-backbone/HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_ec8df1e6.pt (428,020 B) sha=8210cb0fd0220be2 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:.worktrees/semantic-backbone/HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_f19ba959.pt (428,020 B) sha=923b8eef9c8c2171 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_ar25-0c556536_0a19092a.pt (428,020 B) sha=8736525ded5dae95 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_cd82-fb555c5d_0a19092a.pt (428,020 B) sha=8bd3fbb755ab1b28 ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_d314efc0.pt (428,020 B) sha=d8f80912b98c92be ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- main:HENRI V2/field_channel_checkpoints/field_channel_tr87-cd924810_eb190c20.pt (428,020 B) sha=d54917e52f2cfdec ---
+    type=dict  top keys: ['buffer_size', 'env', 'l3_loss', 'scale', 'wave']
+    not a flat tensor dict
+
+  --- worktree:HENRI V2/tests/contract/tmp_sans_head.pt (3,093 B) sha=a702fb0b58d0cf17 ---
+    type=dict  top keys: ['action_dim', 'action_labels', 'calibration_dataset_digest', 'd_model', 'held_out_accuracy', 'hidden_dim', 'majority_baseline', 'schema_id', 'split_identity', 'state_dict']
+    tensors=2  params=195  data=780  file=3,093  delta=2,313
+    any 'blocks' key? False
+    any 'modulator' key? False
+    any 'qkv'/'attn' key? False
+      head.weight                                      (3, 64)
+      head.bias                                        (3,)
+
+  --- main:.worktrees/basal-syncytium/HENRI V2/tests/contract/tmp_sans_head.pt (3,093 B) sha=6ab60359d451488b ---
+    type=dict  top keys: ['action_dim', 'action_labels', 'calibration_dataset_digest', 'd_model', 'held_out_accuracy', 'hidden_dim', 'majority_baseline', 'schema_id', 'split_identity', 'state_dict']
+    tensors=2  params=195  data=780  file=3,093  delta=2,313
+    any 'blocks' key? False
+    any 'modulator' key? False
+    any 'qkv'/'attn' key? False
+      head.weight                                      (3, 64)
+      head.bias                                        (3,)
+
+  --- main:.worktrees/semantic-backbone/HENRI V2/tests/contract/tmp_sans_head.pt (3,093 B) sha=a702fb0b58d0cf17 ---
+    type=dict  top keys: ['action_dim', 'action_labels', 'calibration_dataset_digest', 'd_model', 'held_out_accuracy', 'hidden_dim', 'majority_baseline', 'schema_id', 'split_identity', 'state_dict']
+    tensors=2  params=195  data=780  file=3,093  delta=2,313
+    any 'blocks' key? False
+    any 'modulator' key? False
+    any 'qkv'/'attn' key? False
+      head.weight                                      (3, 64)
+      head.bias                                        (3,)
+
+  --- main:.worktrees/_baseline_ctrl/HENRI V2/tests/contract/tmp_sans_head.pt (3,093 B) sha=a702fb0b58d0cf17 ---
+    type=dict  top keys: ['action_dim', 'action_labels', 'calibration_dataset_digest', 'd_model', 'held_out_accuracy', 'hidden_dim', 'majority_baseline', 'schema_id', 'split_identity', 'state_dict']
+    tensors=2  params=195  data=780  file=3,093  delta=2,313
+    any 'blocks' key? False
+    any 'modulator' key? False
+    any 'qkv'/'attn' key? False
+      head.weight                                      (3, 64)
+      head.bias                                        (3,)
+
+  --- main:HENRI V2/tests/contract/tmp_sans_head.pt (3,093 B) sha=6ab60359d451488b ---
+    type=dict  top keys: ['action_dim', 'action_labels', 'calibration_dataset_digest', 'd_model', 'held_out_accuracy', 'hidden_dim', 'majority_baseline', 'schema_id', 'split_identity', 'state_dict']
+    tensors=2  params=195  data=780  file=3,093  delta=2,313
+    any 'blocks' key? False
+    any 'modulator' key? False
+    any 'qkv'/'attn' key? False
+      head.weight                                      (3, 64)
+      head.bias                                        (3,)
+
+==============================================================================
+3. DOES ANY henri_decoder.py DEFINE HenriDecoder / n_blocks / FiLM?
+==============================================================================
+  --- worktree: C:/Users/chan/henri-worktrees/phase1-transduction\HENRI V2/henri_decoder.py
+      lines=727  sha16=80625ae582f60551
+      class HenriDecoder       absent
+      n_blocks                 absent
+      TransformerBlock         absent
+      FiLM                     absent
+      modulator                absent
+      MultiheadAttention       absent
+      nn.ModuleList            absent
+      classes: ['DecoderCheckpointCompatibilityError', 'DecoderEgressFailClosedError', 'HENRINeuralEgressUnbinder', 'ASTProductionPhaseCodec', 'PhaseRingCodebookDecoder', 'HENRIUnifiedEgressTransducer']
+  --- main: C:/Users/chan/Desktop/HENRI 7B SWARM\HENRI V2/henri_decoder.py
+      lines=727  sha16=80625ae582f60551
+      class HenriDecoder       absent
+      n_blocks                 absent
+      TransformerBlock         absent
+      FiLM                     absent
+      modulator                absent
+      MultiheadAttention       absent
+      nn.ModuleList            absent
+      classes: ['DecoderCheckpointCompatibilityError', 'DecoderEgressFailClosedError', 'HENRINeuralEgressUnbinder', 'ASTProductionPhaseCodec', 'PhaseRingCodebookDecoder', 'HENRIUnifiedEgressTransducer']
+
+==============================================================================
+4. ANY FILE IN EITHER TREE NAMED train_decoder / *_training?
+==============================================================================
+  worktree: 2
+      HENRI V2/arc_training_graph.py
+      HENRI V2/tests/contract/test_arc_training_graph.py
+  main: 8
+      .worktrees/_baseline_ctrl/HENRI V2/arc_training_graph.py
+      .worktrees/_baseline_ctrl/HENRI V2/tests/contract/test_arc_training_graph.py
+      .worktrees/basal-syncytium/HENRI V2/arc_training_graph.py
+      .worktrees/basal-syncytium/HENRI V2/tests/contract/test_arc_training_graph.py
+      .worktrees/semantic-backbone/HENRI V2/arc_training_graph.py
+      .worktrees/semantic-backbone/HENRI V2/tests/contract/test_arc_training_graph.py
+      HENRI V2/arc_training_graph.py
+      HENRI V2/tests/contract/test_arc_training_graph.py
+
+DISCRIMINATE_DONE
