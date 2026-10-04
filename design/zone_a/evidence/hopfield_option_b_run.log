@@ -1,0 +1,25 @@
+OPTION B: blueprint Hopfield Lexical Snap, beta*=26.1
+   V=64 words, 32 codebook templates, 8 held-out. seed=20261004
+   corpus built in 0.8s  train=(2048, 32768, 2) held-out=(512, 32768, 2)
+
+   --- TRAINING-FREE CODEBOOK (no optimizer, no LR, no init) ---
+   read                          train   held-out   control  x chance
+   nearest prototype t=0        0.9995     0.9883    0.0176      63.2
+   + Hopfield refine t=1        0.9990     0.9883    0.0156      63.2
+   + Hopfield refine t=2        0.9990     0.9883    0.0156      63.2
+   + Hopfield refine t=3        0.9990     0.9883    0.0156      63.2
+   D48 diagnostic   step   rel ||dF||/||F||   argmax flips vs t=0
+                              t=1           1.080624   0/512
+                              t=2           0.148953   0/512
+                              t=3           0.041052   0/512
+
+   === VERDICT (pre-registered) ===
+   G-B1 adequacy   held-out 0.9883 >= 0.25        : PASS
+   G-B2 control    0.0176 < 3x chance 0.0469 : PASS
+   G-B3 memoriz.   train-heldout +0.0112 <= 0.30 : PASS
+   G-B4 refinement |t2-t0| 0.0000 > 2SE 0.0095  : FAIL
+   G-B5 self-check argmax(beta=26.10)==argmax(beta=1.0) : PASS
+   VERDICT = PROTOTYPE_WORKS_REFINEMENT_INERT
+   refinement changed accuracy: NO   (t0=0.9883 t2=0.9883)
+
+   elapsed 5.5s   CPU only, $0

@@ -1,0 +1,74 @@
+{
+  "schema": "henri.hopfield-lexical-snap.option-b.v1",
+  "artifact": "HENRI V2/experiments/verification/hopfield_lexical_snap_option_b.py",
+  "runlog": "design/zone_a/evidence/hopfield_option_b_run.log",
+  "runner_session": "proc_6b8a39f9440c",
+  "date_utc": "2026-10-04",
+  "authorization": {
+    "operator_approval": "path A and/or the executive instructions (message body, 2026-10-03)",
+    "blueprint": "HENRI-ARCH-2026-SYSTEMIC-EVALUATION-V3 sec 2.4 + Stage 5",
+    "scope_note": "Option B: resolve the blueprint's CENTRAL prescription (Continuous Modern Hopfield Lexical Snap, beta*=26.10), measured UNINTERPRETABLE at 3 samples/class in the corrected-family A/B. No GPU. No default change. No store write."
+  },
+  "question": "With adequate data (32 templates/word instead of 4), does the Hopfield Lexical Snap refine a prototype readout?",
+
+  "config": {
+    "V_words": 64,
+    "templates_train": 32,
+    "templates_heldout": 8,
+    "train_rows": 2048,
+    "heldout_rows": 512,
+    "beta": 26.10,
+    "seed": 20261004,
+    "wave_dim": 65536,
+    "codec": "encode_egress() (hash-fill removed)",
+    "control": "per-sample BLOCK permutation (content destroyed, statistically matched)"
+  },
+
+  "result": {
+    "nearest_prototype_t0": {"train": 0.9995, "heldout": 0.9883, "control": 0.0176, "x_chance": 63.2},
+    "hopfield_refine_t1": {"train": 0.9990, "heldout": 0.9883, "control": 0.0156, "x_chance": 63.2},
+    "hopfield_refine_t2": {"train": 0.9990, "heldout": 0.9883, "control": 0.0156, "x_chance": 63.2},
+    "hopfield_refine_t3": {"train": 0.9990, "heldout": 0.9883, "control": 0.0156, "x_chance": 63.2},
+    "chance": 0.015625
+  },
+
+  "gates": {
+    "G-B1_adequacy_heldout_ge_0.25": "PASS (0.9883)",
+    "G-B2_control_lt_3x_chance": "PASS (0.0176 < 0.0469)",
+    "G-B3_memorization_train_minus_heldout_le_0.30": "PASS (+0.0112)",
+    "G-B4_refinement_abs_t2_minus_t0_gt_2SE": "FAIL (0.0000 <= 0.0095)",
+    "G-B5_self_check_argmax_beta26.10_eq_beta1.0": "PASS"
+  },
+
+  "verdict": "PROTOTYPE_WORKS_REFINEMENT_INERT",
+
+  "d48_diagnostic": {
+    "why": "G-B4 returned EXACTLY 0.0000 at t=1,2,3. Exact zero is stronger than below-threshold. Two readings: (a) codebook rows are already fixed points (mechanism), or (b) the update barely moves (defect making G-B4 vacuous). Measured rather than asserted.",
+    "rel_feature_movement": {"t1": 1.080624, "t2": 0.148953, "t3": 0.041052},
+    "argmax_flips_vs_t0": {"t1": "0/512", "t2": "0/512", "t3": "0/512"},
+    "conclusion": "Reading (a). The representation MOVES substantially (rel 1.08 at t=1) while the argmax NEVER flips. Mechanism: at beta=26.10 softmax(beta*S) is near one-hot, so Z <- M_k (the nearest prototype); re-reading a prototype returns that prototype's own class. The refinement is structurally a fixed-point map for the readout. G-B4 is therefore vacuous by DESIGN at any beta >> 1, not by defect of this run."
+  },
+
+  "bearing_on_the_blueprint": {
+    "claim_tested": "sec 2.4 items 1-2: replace flat linear decoders with a Continuous Modern Hopfield Network (Lexical Snap) at beta*=26.10",
+    "finding": "The class-mean codebook works and is TRAINING-FREE (0.9883 held-out, 63.2x chance, control 0.0176). Adding the specified iterative Hopfield refinement at beta*=26.10 changes nothing, for a structural reason.",
+    "third_independent_confirmation": "beta*=26.10 is argmax-invariant. Earlier: (1) k-beta probe BETA_INVARIANT across 0.5..1000; (2) typed-manifold G-B5 self-check; now (3) fully-powered V=64 Option B, 0/512 argmax flips across three refine steps.",
+    "not_claimed": "This does not show Hopfield associative memory fails in general. It shows the blueprint's SPECIFIED configuration (class-mean codebook + beta*=26.10 + softmax iteration) is equivalent to nearest-prototype lookup."
+  },
+
+  "defects_found": {
+    "D46": "V=16 smoke: prototype readout already 1.0000, so refinement had no headroom. A ceiling case, not a finding. Fixed by running the discriminating scale (V=64).",
+    "D47": "Verdict branch printed HOPFIELD_SNAP_WORKS while its own refinement gate G-B4 FAILED -- g4 was not consulted. Same class as D40 (a label that misrepresents the test). Fixed: HOPFIELD_REFINEMENT_WORKS / PROTOTYPE_WORKS_REFINEMENT_INERT / HOPFIELD_SNAP_STILL_STARVED / HOPFIELD_SNAP_REFUTED.",
+    "D48": "My first diagnostic compared refine()'s return ([N,K] SCORES) against features ([N,65536]) and died with a broadcast ValueError. refine() returns Z @ M.T. Added refine_feats() to expose the iterate. Partial-patch class (D27/D41/D42) -- read the function first, smoke before commit."
+  },
+
+  "honest_limits": [
+    "typed-domain labels on REAL codec waves. Not corpus facts.",
+    "single template family; synthetic word list. Not natural language.",
+    "CPU only. No GPU claim. No latency claim.",
+    "V=64, one seed. The prototype/refinement split is structural (0/512 flips), not a marginal effect, so seed sensitivity is unlikely to matter here -- but it is one seed.",
+    "G-B4 being vacuous at beta>>1 means this run CANNOT test whether iteration helps at small beta. That is a different experiment and is not claimed."
+  ],
+
+  "evidence_status": "OBSERVED"
+}
