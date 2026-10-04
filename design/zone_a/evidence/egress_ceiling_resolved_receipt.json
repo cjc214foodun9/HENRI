@@ -4,7 +4,10 @@
     "HENRI V2/experiments/verification/egress_ceiling_binding_probe_v2.py",
     "HENRI V2/experiments/verification/ceiling_resolution_v3.py",
     "HENRI V2/experiments/verification/directive2_partition_test.py",
-    "HENRI V2/experiments/verification/ceiling_law_probe.py"
+    "HENRI V2/experiments/verification/ceiling_law_probe.py",
+    "HENRI V2/experiments/verification/ceiling_shipped_recheck.py",
+    "HENRI V2/experiments/verification/allocator_strategy_diagnostic.py",
+    "HENRI V2/henri_managed_egress.py"
   ],
   "runlogs": [
     "design/zone_a/evidence/egress_ceiling_resolved_run.log"
@@ -55,7 +58,7 @@
         "shuffle_control": 0.0016, "chance": 0.00195,
         "offdiag_cos_hash": 0.4967, "offdiag_cos_managed": 0.4771
       },
-      "statement": "Removing slot collisions recovers 1.0000. Pairwise off-diagonal |cos| is FLAT (0.4967 -> 0.4771) while accuracy moves +0.57. The binding channel is AGGREGATE SLOT COLLISION, not pairwise crosstalk. Crosstalk is now ruled out on the ingredient sweep, where it had never been measured."
+      "statement": "Removing collisions recovers 1.0000. Pairwise off-diagonal |cos| is FLAT (0.4967 -> 0.4771) while accuracy moves +0.57. Crosstalk is ruled out on the ingredient sweep, where it had never been measured. SEE 'MECHANISM_CORRECTION -- crowding is NOT sufficient' BELOW: collision COUNT alone does not determine accuracy, so this statement is a CORRELATE, not the identified mechanism."
     },
 
     "M_sweep_K513_b16": {
@@ -123,9 +126,27 @@
   ],
 
   "determinism_disclosure": {
-    "managed_and_cfree": "DETERMINISTIC given the corpus. Their reported +/- 0.0000 across 8 seeds is a structural zero. The measured variance in every sweep belongs to the hash arm alone.",
-    "effect_on_conclusions": "NONE for the binding claim: managed (0.8252) and cfree (1.0000) each dominate hash (0.4298) by far more than the hash SE (0.0387). The collision mechanism does not depend on the tie-break.",
-    "effect_on_exact_values": "The published managed value uses the pre-fix ascending-slot assignment. The shipped module now has a LIVE seed, so a re-measure will move managed by a small amount. The qualitative ordering is unaffected."
+    "managed_and_cfree": "DETERMINISTIC given the corpus in the ORIGINAL probe (D58: the allocator's heap was keyed (load, slot); heapify orders equal loads by slot ascending, so the seed permutation was discarded). Their reported +/- 0.0000 is a structural zero. All measured variance belongs to the hash arm.",
+    "superseded_by": "D59. The shipped module now has a LIVE seed and a 'contiguous' layout default. Post-D59 re-measure through the SHIPPED module (ceiling_shipped_recheck.py, RC=0): hash 0.5146, managed 0.8027 +/- 0.0202, cfree 1.0000. Ordering cfree >= managed > hash HOLDS; managed - hash = +0.2881 (>> 3 se)."
+  },
+
+  "D58_D59_allocator_regression_and_repair": {
+    "sequence": [
+      "D58: made the seed LIVE by tie-breaking equal-load slots on the seed rank. This ALSO changed which slots a feature takes: b CONTIGUOUS slots became b SCATTERED single slots.",
+      "MEASURED CONSEQUENCE (ceiling_shipped_recheck.py, RC=0, baseline validated at 0.5146): shipped managed fell 0.8252 -> 0.1875, WORSE than the hash baseline. The ordering COLLAPSED (managed - hash = -0.3271).",
+      "D59: repairable. Default layout returned to CONTIGUOUS slots, in a DECORRELATED feature order (sha256 for seed 0, else the seeded permutation). 'scattered' retained but marked MEASURED WORSE.",
+      "VERIFIED after D59 (ceiling_shipped_recheck.py, RC=0): managed 0.8027 +/- 0.0202, cfree 1.0000, ordering HOLDS, managed - hash = +0.2881 (>> 3 se). Unit tests 8/8."
+    ],
+    "note": "Two MoA reference transcripts asserted the ordering was unaffected and managed stays ~0.8252 WITHOUT measuring. Both were wrong between D58 and D59. Their suggestion was a hypothesis; the run decided it."
+  },
+
+  "MECHANISM_CORRECTION -- crowding is NOT sufficient": {
+    "what_i_committed": "The binding channel is AGGREGATE SLOT COLLISION (cfree = 1.0000 everywhere; hash 0.4298 vs managed 0.8252).",
+    "what_the_diagnostic_showed": "allocator_strategy_diagnostic.py (RC=0, K=513, F=9743, b=16) measured three arms with IDENTICAL crowding statistics -- zero_coll=0.0000, mean_collision_partners=23.6, max_mult=3 for all three -- that scored 0.1064 / 0.8115 / 0.2979 (~7x spread).",
+    "CORRECTED_CLAIM": "Collision COUNT alone does NOT determine accuracy. Crowding is a correlate, not the binding functional. The shipped hash assignment (partners 303) is bad and a managed assignment (partners 23.6) is much better, BUT among allocations with the SAME crowding, the assignment's geometry changes accuracy ~7x. Layout (contiguous vs scattered) and feature ORDER both matter, and they interact.",
+    "what_is_established": "Reproducible repair: contiguous slots in a DECORRELATED feature order scores ~0.80-0.83 at K=513, versus 0.51 for the shipped hash and 1.00 for a collision-free (b_eff=D//F) map.",
+    "what_is_NOT_established": "The mechanism. Feature ORDER changes the score 0.1064 -> 0.8115 at fixed crowding and fixed layout. I do not have an identified cause. This is recorded as a reproducible effect WITHOUT a mechanism -- not as an explanation.",
+    "status": "The earlier 'AGGREGATE SLOT COLLISION IS THE BINDING CHANNEL' wording is OVERSTATED and is superseded by this section."
   },
 
   "provenance_warning": {

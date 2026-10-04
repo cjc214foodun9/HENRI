@@ -251,3 +251,57 @@ PASS test_layout_matches_encode_egress
 PASS test_negative_control_shipped_hash_is_crowded
 
 8 passed, 0 failed, 8 total
+
+########## D59 REGRESSION + REPAIR (added 2026-10-04) ##########
+# a55495b shipped the D58 seed fix. That fix ALSO changed which slots a
+# feature takes: CONTIGUOUS b slots -> SCATTERED b single slots.
+# Measured through the SHIPPED module (ceiling_shipped_recheck.py):
+## BEFORE repair (D58 state) -- ordering COLLAPSED
+=== CEILING SHIPPED RECHECK (through henri_managed_egress) ===
+   K_atom=513 classes=512 F=9743 N=2560 D=65536 b=16 D//F=6 seeds=[0, 1, 2, 3, 4, 5, 6, 7]
+   hash    raw=0.5146 (1.4s)
+   managed raw=0.1875+/-0.0246 [0.0693,0.2979] b_eff=16 zero_coll=0.0000 (13.5s)
+   cfree   raw=1.0000+/-0.0000 [1.0000,1.0000] b_eff=6 zero_coll=1.0000 (11.6s)
+
+=== VERDICT ===
+   shipped hash      = 0.5146
+   managed (shipped) = 0.1875 +/- 0.0246 (receipt had 0.8252)
+   cfree   (shipped) = 1.0000 +/- 0.0000 (receipt had 1.0)
+
+   ORDERING cfree >= managed > hash : COLLAPSED -> binding claim in doubt
+   managed - hash = -0.3271  (se~0.0459, WITHIN NOISE)
+   drift vs receipt: managed -0.6377, cfree +0.0000
+
+   wrote C:/Users/chan/Desktop/HENRI 7B SWARM/.shipped_recheck.json
+
+## allocator_strategy_diagnostic.py -- crowding is NOT sufficient
+=== ALLOCATOR STRATEGY DIAGNOSTIC ===
+   classes=512 N=2560 F=9743 b=16 D=65536 slot_load=2.38 blocks_per_feat=2
+   hash          acc=0.5146  (receipt K=513 = 0.5146)
+   packed        acc=0.1064  zero_coll=0.0000 partners=23.6 maxmult=3 blocks_touched=2.00
+   packed_seed   acc=0.8115  zero_coll=0.0000 partners=23.6 maxmult=3 blocks_touched=2.00
+   scattered     acc=0.2979  zero_coll=0.0000 partners=23.6 maxmult=3 blocks_touched=15.99
+
+=== VERDICT ===
+   packed=0.1064  scattered=0.2979  gap=-0.1915
+   H_FOCUS: NOT SUPPORTED -- packing and scattering agree; cause is elsewhere
+   packed_seed=0.8115 vs packed=0.1064 (seeding feature ORDER preserves quality: False)
+   wrote C:/Users/chan/Desktop/HENRI 7B SWARM/.allocator_diag.json
+
+## AFTER repair (D59: contiguous slots, decorrelated feature order)
+=== CEILING SHIPPED RECHECK (through henri_managed_egress) ===
+   K_atom=513 classes=512 F=9743 N=2560 D=65536 b=16 D//F=6 seeds=[0, 1, 2, 3, 4, 5, 6, 7]
+   hash    raw=0.5146 (1.4s)
+   managed raw=0.8027+/-0.0202 [0.6631,0.8389] b_eff=16 zero_coll=0.0000 (12.4s)
+   cfree   raw=1.0000+/-0.0000 [1.0000,1.0000] b_eff=6 zero_coll=1.0000 (11.1s)
+
+=== VERDICT ===
+   shipped hash      = 0.5146
+   managed (shipped) = 0.8027 +/- 0.0202 (receipt had 0.8252)
+   cfree   (shipped) = 1.0000 +/- 0.0000 (receipt had 1.0)
+
+   ORDERING cfree >= managed > hash : HOLDS
+   managed - hash = +0.2881  (se~0.0437, >> 3se)
+   drift vs receipt: managed -0.0225, cfree +0.0000
+
+   wrote C:/Users/chan/Desktop/HENRI 7B SWARM/.shipped_recheck2.json

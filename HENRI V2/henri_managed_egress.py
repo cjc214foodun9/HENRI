@@ -47,6 +47,7 @@ NOT CLAIMED
 """
 from __future__ import annotations
 
+import hashlib
 import heapq
 import os
 import sys
@@ -73,43 +74,80 @@ class AllocationError(ValueError):
 class Allocator:
     """Deterministic feature -> slot map with a realized-crowding report.
 
-    Built once from the CLOSED feature set of a corpus. Greedy least-loaded:
-    each feature takes the b currently-least-used slots. When len(features)*b
-    <= TOTAL_SLOTS this is collision-free by construction; otherwise it
-    minimizes the maximum slot load.
+    Built once from the CLOSED feature set of a corpus.
+
+    layout="contiguous" (DEFAULT, measured-good): each feature owns b slots
+    starting at (pos*b) mod TOTAL_SLOTS, where pos is the feature's position in
+    a DECORRELATED order (sha256 rank at seed 0; seeded permutation otherwise).
+    When len(features)*b <= TOTAL_SLOTS this is collision-free by construction.
+
+    layout="scattered" (MEASURED WORSE, retained for comparison): greedy
+    least-loaded single slots chosen by seed rank. Measured 0.2979 vs 0.8115
+    at K=513, F=9743, b=16, identical crowding.
     """
 
-    def __init__(self, features, b: int = WAVE_EXPAND, seed: int = 0):
+    def __init__(self, features, b: int = WAVE_EXPAND, seed: int = 0,
+                 layout: str = "contiguous"):
         feats = list(dict.fromkeys(features))            # dedupe, keep order
         if b < 1:
             raise AllocationError(f"b must be >= 1, got {b}")
+        if layout not in ("contiguous", "scattered"):
+            raise AllocationError(f"unknown layout {layout!r}")
         self.b = int(b)
         self.seed = int(seed)
+        self.layout = layout
         self.features = feats
         self._slots = {}
-        rng = np.random.default_rng(seed)
-        # D58 SELF-CAUGHT DEFECT. The first draft built the heap as (load, slot).
-        # Heap pop returns the MINIMUM tuple, so with every load at 0 the order
-        # was simply ascending slot index -- the seed permutation was DISCARDED
-        # and the map was seed-INDEPENDENT. A dead parameter promises randomness
-        # that does not exist, and it made the probe 'managed'/'cfree' arms
-        # deterministic (structural-zero SE). Fix: tie-break equal-load slots by
-        # the seed permutation rank, so the seed genuinely selects among them.
-        # Collision-free is PRESERVED: greedy still pops the minimum LOAD, and
-        # the tie-break only chooses among slots that share that load.
-        perm = rng.permutation(TOTAL_SLOTS)
-        rank = np.empty(TOTAL_SLOTS, dtype=np.int64)
-        rank[perm] = np.arange(TOTAL_SLOTS, dtype=np.int64)
-        load = np.zeros(TOTAL_SLOTS, dtype=np.int64)
-        heap = [(0, int(rank[s]), int(s)) for s in range(TOTAL_SLOTS)]
-        heapq.heapify(heap)
-        for f in feats:
-            picked = []
-            for _ in range(self.b):
-                ld, _, s = heapq.heappop(heap)
-                picked.append(s)
-                heapq.heappush(heap, (ld + 1, int(rank[s]), int(s)))
-            self._slots[f] = (np.array(picked, dtype=np.int64), None)
+
+        # D59 SELF-CAUGHT DEFECT -- the D58 fix broke the allocator, and the
+        # repair matters more than D58 did. D58 made the seed LIVE but changed
+        # WHICH slots a feature takes: b CONTIGUOUS slots became b SCATTERED
+        # single slots. Measured through this shipped module
+        # (ceiling_shipped_recheck.py, RC=0):
+        #     pre-D58 contiguous 0.8252   ->   post-D58 scattered 0.1875
+        # which is WORSE than the shipped hash baseline (0.5146).
+        #
+        # allocator_strategy_diagnostic.py then showed collision statistics do
+        # NOT explain it. packed, packed_seed and scattered ALL report
+        # zero_coll=0.000, partners=23.6, maxmult=3 -- identical crowding -- yet
+        # score 0.1064 / 0.8115 / 0.2979. Identical crowding, ~7x spread.
+        #
+        # The binding variable is the ASSIGNMENT'S CORRELATION WITH THE CLASS
+        # STRUCTURE, not any crowding statistic. Corpus-order (first-occurrence)
+        # assignment scores 0.1064; a DECORRELATED order scores 0.8115 with the
+        # same geometry. The mechanism is NOT identified -- this is a
+        # reproducible effect, not an explanation, and it is recorded as such.
+        #
+        # DEFAULT is therefore: contiguous slots, DECORRELATED feature order.
+        if layout == "contiguous":
+            if seed == 0:
+                order = sorted(range(len(feats)),
+                               key=lambda i: hashlib.sha256(
+                                   feats[i].encode()).digest())
+            else:
+                order = [int(x) for x in np.random.default_rng(seed)
+                         .permutation(len(feats))]
+            for pos, fi in enumerate(order):
+                start = (pos * self.b) % TOTAL_SLOTS
+                sl = np.array([(start + k) % TOTAL_SLOTS for k in range(self.b)],
+                              dtype=np.int64)
+                self._slots[feats[fi]] = (sl, None)
+        else:
+            # "scattered" -- retained for comparison. MEASURED WORSE (0.2979 vs
+            # 0.8115 at the same F and b). Do not use as a default.
+            rng = np.random.default_rng(seed)
+            perm = rng.permutation(TOTAL_SLOTS)
+            rank = np.empty(TOTAL_SLOTS, dtype=np.int64)
+            rank[perm] = np.arange(TOTAL_SLOTS, dtype=np.int64)
+            heap = [(0, int(rank[s]), int(s)) for s in range(TOTAL_SLOTS)]
+            heapq.heapify(heap)
+            for f in feats:
+                picked = []
+                for _ in range(self.b):
+                    ld, _, s = heapq.heappop(heap)
+                    picked.append(s)
+                    heapq.heappush(heap, (ld + 1, int(rank[s]), int(s)))
+                self._slots[f] = (np.array(picked, dtype=np.int64), None)
         self._report = self._measure()
 
     # ------------------------------------------------------------- allocation
@@ -176,12 +214,18 @@ def collision_free_b(features, b_max: int = WAVE_EXPAND) -> int:
 
 
 def build_allocator(features, b: int | None = None, seed: int = 0,
-                    require_collision_free: bool = True) -> Allocator:
-    """Build an allocator. b=None picks the largest collision-free b."""
+                    require_collision_free: bool = True,
+                    layout: str = "contiguous") -> Allocator:
+    """Build an allocator. b=None picks the largest collision-free b.
+
+    layout="contiguous" (default) uses contiguous slots in a decorrelated
+    feature order -- the measured-good regime. layout="scattered" is retained
+    for comparison and is MEASURED WORSE.
+    """
     feats = list(dict.fromkeys(features))
     if b is None:
         b = collision_free_b(feats, WAVE_EXPAND)
-    alloc = Allocator(feats, b=b, seed=seed)
+    alloc = Allocator(feats, b=b, seed=seed, layout=layout)
     if require_collision_free:
         alloc.assert_collision_free()
     return alloc
