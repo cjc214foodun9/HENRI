@@ -1,0 +1,1609 @@
+{
+  "schema": "henri.bench.dataset-manifest.v1",
+  "eval_id": "aa-briefcase",
+  "repo": "ArtificialAnalysis/AA-Briefcase-Lite",
+  "source_url": "https://huggingface.co/datasets/ArtificialAnalysis/AA-Briefcase-Lite",
+  "fetched_utc": "2026-10-04T18:09:58Z",
+  "local_dir": "benchmarks/data/aa-briefcase",
+  "n_files": 399,
+  "total_bytes": 104442292,
+  "files": {
+    ".gitattributes": {
+      "sha256": "8a0a2e2f18de183ce97a3d90d8b59b8d0e6eedf517543e4803d9a683ed04bb58",
+      "bytes": 507
+    },
+    "checks.jsonl": {
+      "sha256": "e5a185da4b334afea79d883d81d720b846778d1ca8cab1ded53f999a8a65abd6",
+      "bytes": 385046
+    },
+    "README.md": {
+      "sha256": "f22e69553d1188b6631fae9000f98f606e86105ddc26f5fc40bee4d3589985c8",
+      "bytes": 17059
+    },
+    "tasks.jsonl": {
+      "sha256": "921293201a547e3fcefa1008fd8a0f6ae7a811c6cde7a49d5ba3c0beb6603f77",
+      "bytes": 17373
+    },
+    ".cache/huggingface/.gitignore": {
+      "sha256": "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1",
+      "bytes": 1
+    },
+    ".cache/huggingface/CACHEDIR.TAG": {
+      "sha256": "e8893e2dcb3f4545ef67a0a5b7b769113d38eef1aa61c7c7ba14659b02af955f",
+      "bytes": 195
+    },
+    ".cache/huggingface/download/.gitattributes.metadata": {
+      "sha256": "5277cff90c0ad2b592da7be8a7399abdced8f22a6687d9304f74e069c60a7bc8",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/checks.jsonl.metadata": {
+      "sha256": "e0c54a416abf9d43b040f42c0f964b4f41c63b02a203eaf03ef03971dec9efb7",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/README.md.metadata": {
+      "sha256": "ad0a15a7677349b69f2d2a13a30d12fc11feff158e7ce7cef287c866453109a4",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/tasks.jsonl.metadata": {
+      "sha256": "ed7836a4665d16c09211486bc3978862c6e1c7ab5bb42ba7bc39af8e9117de32",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/grader/grading_rubric_w1.json.metadata": {
+      "sha256": "36f94e5fab546cc7a6a8c41cc53d8d4d3d43aeaaf4327e6ee14aa5b6c1aa500a",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/grader/source_graph_w1.json.metadata": {
+      "sha256": "9941c162304a2cef5883c8566ff1bbdeebb17693e2e227454a30783e47ed4be8",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/grader/traceability_w1.json.metadata": {
+      "sha256": "5a4f01fdd8ff758b113fd2508aadd95c12cf905f8e8b49adecf86873a9eb6d40",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/prompts/eval_submission.txt.metadata": {
+      "sha256": "8a52d3a1930d5bfe8267cf00de74b987753fb619728cb7a2d6a7c0b3bbe0bc60",
+      "bytes": 102
+    },
+    ".cache/huggingface/download/prompts/eval_system.txt.metadata": {
+      "sha256": "3aa4bcbaa064ee99fde6713b7ddf92829b07c989a172852e5a72bcc3062b360e",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/prompts/judge_system.txt.metadata": {
+      "sha256": "7b5d5b4eee9cae2ae6fe8390acdb60c88e065cfb7980ec39e4816cfc58f19e35",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/prompts/judge_user.txt.metadata": {
+      "sha256": "e6dc3601bb22ff746cc00d1853b1f163e52e1b1874493cebbc31c7102c061ba9",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/2025-09-new-zealand-hpai-selfd.pdf.metadata": {
+      "sha256": "e89980c517a254f27b0c39587ac3a46312b5831c6271c1436fbfeb3e1c8b04e6",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/46108-layer-hens-report-final-2012.pdf.metadata": {
+      "sha256": "f1974ee1a5cf65c808b0f5248058980278dfcde613dbd64ff01bda1e651f216f",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/Annual-Grocery-Report-2024-summary-of-key-findings-6-August-2025.pdf.metadata": {
+      "sha256": "9b26856c696b784555ed526dc8e8ab57c4c07dd15d3bf70762796b1135f01e02",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/aunz_poultry_industry_overview.pdf.metadata": {
+      "sha256": "6ac12e6ab526ad1feb51c56257771178b3aeffa92c63672eae81270b1bcec5f0",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/cal_maine_10k_2025.pdf.metadata": {
+      "sha256": "387fdd782560b69adb6d67421fa0a55e60254b5a061933049a032796abffbf64",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/source_files/shared/global_cagefree_transition_snapshot.pdf.metadata": {
+      "sha256": "3a87524cfb1124957d14de6477bf8d8d602f548fdbd711c98d3d5c26241cae41",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/halberd_2025_q1_allhands_deck.pdf.metadata": {
+      "sha256": "d6031a3106913d808a467e9f92da8fe62250b1ab68c798011a5a1b6c27bc7518",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/halberd_analytical_standards.docx.metadata": {
+      "sha256": "4f3d0b6a36f0f1762a046bb94922d7c66023ecd8dd4eaff64c81e1b63fec8f11",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/halberd_brand_guidelines.pdf.metadata": {
+      "sha256": "ad0ddd7f3f82a0cfb4051c507f4aebd9567c9e6831d9016c9f3a3e6887d2b08e",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/halberd_central_financial_assumptions.xlsx.metadata": {
+      "sha256": "51e992da97dc199b8d10632656723eb339ec607ea99cc285846e7b89286165cf",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/halberd_compliance_handbook.docx.metadata": {
+      "sha256": "171a0721b3dd6dd3542dc43d961a0c1ba855db89f64dd06de27a0a09625afa0a",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/halberd_esg_investing_framework.pdf.metadata": {
+      "sha256": "90b3182fa477ec305401ca96b8ef2bd31bdfbbd26ba3eef2f8c901ef1e98f5d6",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/halberd_infosec_onboarding_pack.pdf.metadata": {
+      "sha256": "1617a96bddf86957bd7ee40d8a1a01201e83b92566c57677cea6a7fe846b5305",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/halberd_lp_update_template.docx.metadata": {
+      "sha256": "6a9b6874684fb56e268c0ba632173f20f36516a763aaaad99fae88e023e751f3",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/source_files/shared/halberd_md_weekly_note_archive.eml.metadata": {
+      "sha256": "9dcf842c833f008a87e155fac17c3e2596debb1e8d036d8245ebd3e2a36bc922",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/halberd_org_chart.pdf.metadata": {
+      "sha256": "5c8e5938784486606bf405944aaf9626cc52f4a31bdcedb9437900ca125b751a",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/source_files/shared/halberd_other_deals_pipeline_snapshot.xlsx.metadata": {
+      "sha256": "26dad1fd5f5ecc3f0e7a452a2fbcea7d95112a67c06565b9d8fd73c9e7f8904e",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/halberd_portco_unrelated_board_pack.pdf.metadata": {
+      "sha256": "1c74a0e3a96826cf56293251925512fe4fd4a9ba03c2ad463124937d431a08ac",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/halberd_travel_expense_policy.docx.metadata": {
+      "sha256": "612dfd8318e3e9cf403bbcd3b7d594d42a8e1b174ec1d07f651ed1a4518ee627",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/source_files/shared/industry_analyst_extract_nz_eggs_2025.pdf.metadata": {
+      "sha256": "c3fdf092cec319a633f19628f52837ce0994264a93f4ce14d4de3ff55799022f",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/source_files/shared/industry_newsletter_digest_archive.eml.metadata": {
+      "sha256": "23e5250c50e1eba7be6d87f2336bc9031b4ca0fc092d503402ab67624b757702",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/Market-Study-into-the-retail-grocery-sector-Final-report-8-March-2022.pdf.metadata": {
+      "sha256": "9f1c041f57139e90303007b37d268b0e9a3926e69207ebebd8b68d59e88fb14d",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/navis_capital_zeagold_acquisition.pdf.metadata": {
+      "sha256": "915a5103a8836f1b1974c3d1b430c148b8fe0fcdaee84c49bc64d51ce0baa022",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/nz_barn_info_sheet.pdf.metadata": {
+      "sha256": "4769e793776eab892855fb97badcc0335bd08b92dd7e479f3c3951ee48f0640d",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/nz_colony_info_sheet.pdf.metadata": {
+      "sha256": "8b1b4744a0c9b99910e2be6d74749596ecf328177773ee1bd323fb9dc940bc68",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/nz_conventional_cage_info_sheet.pdf.metadata": {
+      "sha256": "d0fe3033b9bfbafe70563adf3f8678427a3409aa4b08f79962e2334ac7dcba02",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/nz_dietary_trends_survey_2025.pdf.metadata": {
+      "sha256": "46efeded834cdb5eba71fcb7b5e1cca6a884395f4c010245a03f6506b8515ad4",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/source_files/shared/nz_dietary_trends_survey_2025_egg_addendum.pdf.metadata": {
+      "sha256": "da561d0bbe54ea794bae624f23d7059e306e649d65f9dc6f271e4450358c06dc",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/source_files/shared/nz_egg_producers_competitor_overview.pdf.metadata": {
+      "sha256": "5bc64138b451430f1243ff4e27c7d48fc16b227787220fe4a8b7390ca8ee2e87",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/nz_egg_retail_scan_data_q1_2026.xlsx.metadata": {
+      "sha256": "696a44813fb5c79d49a13d71df17a3660bf735c5f7891a6c9cd978de52b1a528",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/nz_egg_sector_industry_briefing_2024.pdf.metadata": {
+      "sha256": "6f2b2beb6cb0162d029bd30c94ab4a631cb74e984a766c17af493f16d5df9000",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/source_files/shared/nz_free_range_info_sheet.pdf.metadata": {
+      "sha256": "ba0596ad64d4f83d11c3fea3c211022f24d51693dafad4ee06cf564371cb4028",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/source_files/shared/nz_supermarkets_cagefree_commitments_summary.pdf.metadata": {
+      "sha256": "1d6082a7b23b7e716924a467a302cef1c6378aadcf1d404afb761c989fb0bc06",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/nz_treasury_demographics_analytical_note_2024.pdf.metadata": {
+      "sha256": "7e5ca9c0286a15482959f154bb6c5ee8d558325c1bf9bfeaf7f75031c52c94ff",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/pe_industry_conference_notes_2025.docx.metadata": {
+      "sha256": "2e7e05ac7f2a63011bb91771830628f804a3455ace79adf4860119e6571dea72",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/source_files/shared/retail_nz_retailing_now_report.pdf.metadata": {
+      "sha256": "ae89ca74401fbb62cbf9dba44323c8514be6969a6fa193668932a45ae05f3e63",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/transcript_ex_egg_farmer.pdf.metadata": {
+      "sha256": "c8567b4a00516ad807e4a5fdfe31d6f1a7cd56777bfc0b5b0cacf0602f24839a",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/transcript_foodservice_broker.pdf.metadata": {
+      "sha256": "33aca4b0b38ecc8c708814fd722cfe5161f02bb80634b6d56228ebc53fc58f71",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/transcript_industry_expert_part1.pdf.metadata": {
+      "sha256": "3a80907a3f9056ceebdaaab8f82893792959a16e0683f9383a3faff30344d678",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/transcript_industry_expert_part2.pdf.metadata": {
+      "sha256": "7a1a08bd9eabf586dc66049107cefafed89910fdc3306d3461a6858a8bbb9b09",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/transcript_industry_expert_part3.pdf.metadata": {
+      "sha256": "50d156d167c8ba3a93bcee88fceb17612422067f333abc01ad179e16b6ecf685",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/transcript_industry_expert_part4.pdf.metadata": {
+      "sha256": "145c54114ba14ec69725133570a308fe783b0d56062c061c31d7a2be13de4bb1",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/transcript_industry_expert_part5.pdf.metadata": {
+      "sha256": "91fee58be7ab412769b484f500e667a689c5d2f07784a266aba85892d21d5bf1",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/transcript_industry_expert_part6.pdf.metadata": {
+      "sha256": "8082284faab6a59f546c3612fa8a4fd479154f16169474af6d11626ee272c4f0",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/transcript_industry_expert_part7.pdf.metadata": {
+      "sha256": "fb744327f50de0faa86d86edd0d38b86099532f9ef6f8b7cece8d6d3a071c2f0",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/transcript_industry_expert_part8.pdf.metadata": {
+      "sha256": "cd675736ec58a93691336e35602e450815c5c79527b7584516e79a141431a429",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/transcript_nz_egg_association.pdf.metadata": {
+      "sha256": "b5945710710bdb9ddce7a2e024983bc05b4e01e540cbace4e0bccfcb345f2b80",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/source_files/shared/transcript_retired_consultant.pdf.metadata": {
+      "sha256": "c378bc5c748901c76fe2b29d81a2600cbd9c70c62c9e83dbbef87bb899dcae43",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/usda_nz_retail_foods_annual_2024.pdf.metadata": {
+      "sha256": "1b4559aa7229bd395d46ccbfbe20cc97559018e839eb4671bd21160a35efa353",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/channels.json.metadata": {
+      "sha256": "df08b1457f47e20840eca81105e34a24c63a251d9fd0f71a0307a4097179d413",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/users.json.metadata": {
+      "sha256": "da5847bb603be92024d90ea15bb9a4fecc245bcd5a5e76f030882a9d6a5b352a",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/albatross-admin/2026-05-04.json.metadata": {
+      "sha256": "c88ff479bd736d4a73b48d303e38cfb273577561c6e40afe5acc28c4d3d01479",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/albatross-admin/2026-05-05.json.metadata": {
+      "sha256": "7f79ffaf83ca7ee6708a24ea9d30fe4575d1881a55602ac16b30c2e1b620c1ec",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/albatross-admin/2026-05-06.json.metadata": {
+      "sha256": "23315c9ec33b998a0e6c8a057c6ac5ed6699921f96b2d074b2de405d86c63380",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/albatross-admin/2026-05-07.json.metadata": {
+      "sha256": "3064bec99b7be57bd0a45674a80dd57c5554d4ddbcfcb22450f82b1e56a7d9d3",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/albatross-deal/2026-05-04.json.metadata": {
+      "sha256": "7f9d9a008e5f16509cf6ad5e8b7474055ef56d588fde6ea7a1f228aad206016a",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/albatross-deal/2026-05-05.json.metadata": {
+      "sha256": "54ffa72e4719c0f20226b185df66b7a3977b0660a7477dffa206f409fc2ca8a1",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/albatross-deal/2026-05-06.json.metadata": {
+      "sha256": "815382129f9f19dbd41238db63b57159a939c106a2be50b648685b5775ee5b85",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/albatross-deal/2026-05-07.json.metadata": {
+      "sha256": "2c816fe95226abbf6fda5e9e356b366ed53d5b212e51ff31ce8d8d7c991a3cb8",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/albatross-deal/2026-05-08.json.metadata": {
+      "sha256": "0b4ed24494d0638a5413e7e6c1071c3191bdc3b7cff795b3f0d547c3c5f8651b",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/book-club/2026-04-02.json.metadata": {
+      "sha256": "b942f9bb2afd991096fb7302c9d68dc91ec11fd8cd7b71dba82bdb977be33194",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/book-club/2026-04-08.json.metadata": {
+      "sha256": "faf97cb122846649a9c6b4a57e58a9b336765c8df7453c4f1a16577817d2e7df",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/book-club/2026-04-15.json.metadata": {
+      "sha256": "cceb885d8dcf6ec0833bb3e45f15b462ea2107e1e47664b8da94f4d37d75d995",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/book-club/2026-04-22.json.metadata": {
+      "sha256": "66e40b3283b4ee456fe2fd06c593a6840a135ad1dff3bd8499d52f3bdfbfaed6",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/book-club/2026-04-25.json.metadata": {
+      "sha256": "9f25b9833a3106997a183b9b1080b013a46d1649ad470a0e507723ed523bbfdc",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/book-club/2026-04-29.json.metadata": {
+      "sha256": "39c8bbefca231c474427d6e7db474fe1070d978d434aed72df860e2e91450734",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-04-01.json.metadata": {
+      "sha256": "9fb0931ca56840fe31e34d2443b3a1ccbc59df6bd6a155a0da1520128625d004",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-04-02.json.metadata": {
+      "sha256": "0b63293a4ab57f22826009f876f51f2c7f53b0907457f700ba59cd6c2ddfe1a6",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-04-03.json.metadata": {
+      "sha256": "b6e557338c8b60c44ec5d3b43945365d65814afad394b47c710a436a3539ccf9",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-04-04.json.metadata": {
+      "sha256": "10af6c2ca349950bac27f8a8d3b554f421624f2fa516d253f70115047a8459e7",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-04-08.json.metadata": {
+      "sha256": "0960a353398a432ad293d612846692fb1eac49d4f9d158a95c6985a7927a6358",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-04-09.json.metadata": {
+      "sha256": "d00ddfae3dce676b1f3f2623b9f2d974c0640aa8c93b29835964298d3919daed",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-04-12.json.metadata": {
+      "sha256": "543e7b5aca843700b4a58216832b310e5cf8913d6cc22925fc0e8632af80974a",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-04-15.json.metadata": {
+      "sha256": "ba129a10f41ce884eb62a5e11407444483144209922ac0a9abf633113378b97f",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-04-18.json.metadata": {
+      "sha256": "3098fd75d367ca041a310ca573854795e485a2846fdfe4063aa1186c1b22abac",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-04-22.json.metadata": {
+      "sha256": "379b4cddac9dffe83cdf8ba199d99e6ff782a59b63826d35512075492ad417c8",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-04-25.json.metadata": {
+      "sha256": "1d03a1bf3d65142e55fac9f2c17aa00a2437087227b6ed1d4aa7d64b9b7f4161",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-04-30.json.metadata": {
+      "sha256": "ce84100025ecdbd9a1ed33e150acce0867a7d5eeab93bdf8e627807e04dfc474",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-05-01.json.metadata": {
+      "sha256": "e0c503621c251a571aa5f4b2e377efdf0cbd24c34d6d0c071844f8eeaf48a5d4",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/culture/2026-05-02.json.metadata": {
+      "sha256": "449c0ebe6fe0409c9bb5a04d10f1eab6e33b5825be5af27ae3426b717c5f0eaa",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-02-02.json.metadata": {
+      "sha256": "d32ded8885ecbd9c44f5644286398bc99446c436c40ffa5cd002ac13d2189df3",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-02-05.json.metadata": {
+      "sha256": "c2096a766eb10338fb932955d2e4126d2bd696a70f14d5a856a3e4a32b00e312",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-02-11.json.metadata": {
+      "sha256": "90434dfb36f7fb69c42cb71675ab849306bcb7d2a25f5fe864fef11720fda275",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-02-17.json.metadata": {
+      "sha256": "503889da571b9cae29065d21d2d7a65c6a1b1d2dc5f2a6a66509291747a35a6d",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-02-23.json.metadata": {
+      "sha256": "c5041b429ed19627ad5433505249812d4e03595375a941e6b1e0554b5457666c",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-02-26.json.metadata": {
+      "sha256": "2e647f4d184ec6b2db084062c1f6fdf70795e934d3d0a0256c9e50cdf3c97ec0",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-03-03.json.metadata": {
+      "sha256": "60813a3721ede120544e389855f0d5c5f4a69481d27db6b01ddf3df343db44c5",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-03-09.json.metadata": {
+      "sha256": "27c66b0178d139890b6aef702504d90bb073869653245515d0357d94d20ebdb1",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-03-13.json.metadata": {
+      "sha256": "0ffdfc3d202c1a659e0d11e12559d1945ce4dd80bf49772d7dc63b3cc716e384",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-03-19.json.metadata": {
+      "sha256": "70940a653818fb84d9fc94186eece347a55d49afe4ec51aa52b1616dd8221a0b",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-03-24.json.metadata": {
+      "sha256": "26d9b103c100fddb4ed9bbf7e510e8d342eafb57b1971489c12e27664bc041e1",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-03-30.json.metadata": {
+      "sha256": "c9e74b788b411626f091e66dc7309304f00b57df505a2e0c0e0eb6f29ebc6be8",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-01.json.metadata": {
+      "sha256": "c0470965c2faf8e5e8a222dace415d2e6faef2bf01e391f77612d005b3d1957f",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-02.json.metadata": {
+      "sha256": "77cfce2337eaab526be9596957de2129e590eaadbcbc79e55be490a3d677f87f",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-03.json.metadata": {
+      "sha256": "8d75397e333c5507a5e2190769b7895fbfef31813f0c8960d24b04ed83a9c488",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-04.json.metadata": {
+      "sha256": "74afea67132e4c21367e176d53117071c0dc5d7cd79bcb9cdb845c2346bda2b1",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-08.json.metadata": {
+      "sha256": "6f36a8fe174915a0ef6e4a15f49e84c82f76c0ce134848930ae6571c82390c7e",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-09.json.metadata": {
+      "sha256": "049e20345f9d3b5764793355cd899cf1f87039bcefd54f0a3960d8ab4950c691",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-10.json.metadata": {
+      "sha256": "49ad4a323b710631f779d030f4937a84f477207e16d50b64087458a41bf5ba19",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-15.json.metadata": {
+      "sha256": "566a5c90b169e64d2548fbabf0d2c7db0c501dcf0ea323c22079b4ec0bf56512",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-16.json.metadata": {
+      "sha256": "17f185f0ca7f2b2a03e25cb6e993781324fa70bad843b9740a692803fdcef3b5",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-17.json.metadata": {
+      "sha256": "57f1ac9bbf022f6093d68a1224c9783349924d033e7da1d29e7390e0bb016b05",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-21.json.metadata": {
+      "sha256": "bd3816a2b6ff156b002ccae63557322e8bebd527966fdaba09eff324a7101b56",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-22.json.metadata": {
+      "sha256": "6604578d207f5a8c343298ea00f8bca2e9a4214d7a5e6045c83b9810460bd0e4",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-23.json.metadata": {
+      "sha256": "ee44e94849324641cbd2b1e4ff20ebcb4505eb8863d32d68fd848fe3a2247305",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-25.json.metadata": {
+      "sha256": "6ece060671461d5d5a35e1d7f6aae0983035f2c1a0f89e11add7cfd6b044bee7",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-29.json.metadata": {
+      "sha256": "b7515cc240fbe11731586c07797922fe1eadf0386deb20edce10dc0b7dd2ebdf",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-04-30.json.metadata": {
+      "sha256": "6ac4e553c7bc6e115a745006a3b55ddb0dbf63013918a89d345dec9bfd67e64d",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/general/2026-05-01.json.metadata": {
+      "sha256": "66b8d54e2247688483752e065cddd4abe15734d8430b7740096327871f6489ab",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/ny-office/2026-04-01.json.metadata": {
+      "sha256": "25e219b090350c5e2b230e00117230f66913d10a1c78632f62f6e09034c0f947",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/ny-office/2026-04-03.json.metadata": {
+      "sha256": "f4657b210e0fb8f04a536623de29a5d02f10d4a8023410b0ca92989bb48488b9",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/ny-office/2026-04-08.json.metadata": {
+      "sha256": "05e591816f5a089b9081a6e4a574e26bc222c1e07bbe94be787ec983929df77b",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/ny-office/2026-04-10.json.metadata": {
+      "sha256": "41ae2ef2958e24479e32dad1acee1f3f535d1765642fdcbee035dd5de13db92e",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/ny-office/2026-04-15.json.metadata": {
+      "sha256": "40c9ae9c4ee0491ced11a45521282f5b260efcc46f1f2aa098a874cc8393fdb3",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/ny-office/2026-04-17.json.metadata": {
+      "sha256": "84bd0df1dd00c62b56383282f43df3bbb7824062801635e71a16f5def2614185",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/ny-office/2026-04-19.json.metadata": {
+      "sha256": "e465edc1a8c5804dd946df355f6674e496f91a1a8a39422bdfa025e8d7fbd274",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/ny-office/2026-04-22.json.metadata": {
+      "sha256": "a5f65b99007924adf03be413ea3c70a572b190e3afa7cb19d108d3045fce15e8",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/ny-office/2026-04-25.json.metadata": {
+      "sha256": "301314f09d03eb92a2ab65c97e1525e93b2dc6af6146d83ad6eb27627e8ca375",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/ny-office/2026-04-29.json.metadata": {
+      "sha256": "fd682efaca866c3137add0db72096ba8a512257b60cecdaaa0e799ee8572cd70",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/ny-office/2026-05-01.json.metadata": {
+      "sha256": "eaebd23e2cdde374b8c552e2888c3a8ed105fe6ede9b1ab686b7e8bb122bf76e",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/travel/2026-04-02.json.metadata": {
+      "sha256": "75fd2f1ca46880e58835791dd058c50a4750e391403f8d902a20df4bd4867873",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/travel/2026-04-03.json.metadata": {
+      "sha256": "7cb9f85ac250000f821cea9c1616cb8cce3f91ca9edcbfa901fdf72fb9a5ab6d",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/travel/2026-04-04.json.metadata": {
+      "sha256": "d174414d60954dc4de2d7e7dc6a588774542036131f2a001540d411ac4802014",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/travel/2026-04-08.json.metadata": {
+      "sha256": "b8416b8ee1fb2eb5fc489c6ce836c5cc88664dd08e68fa7524e8598c95dfa7b3",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/travel/2026-04-12.json.metadata": {
+      "sha256": "eb3678cac1ad1822d724bc3840bb54f9d96aaf098fc848cda0dba630fc3414f6",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/travel/2026-04-15.json.metadata": {
+      "sha256": "ba3f38627d368a9d685b73876964b59c7dffc4d95b8aa21e183d5e05e68e52aa",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/travel/2026-04-18.json.metadata": {
+      "sha256": "97ba32fb820e6a72e9416923cdd7d1d046be9c327fe65c0dd09e50ed92d9b339",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/travel/2026-04-22.json.metadata": {
+      "sha256": "bf96fadbefd3940cbf510bb5765cee8dea6c4194b2b16e55277361fb5429ea10",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/travel/2026-04-25.json.metadata": {
+      "sha256": "f6d6b36bb6f9438d5faa33f20e9311bc72687018436f3124874b819d5ab7b95b",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/shared/slack_export_halberd/travel/2026-04-29.json.metadata": {
+      "sha256": "7495e4331414dc0ec4db60073ceb3f80a637bcb6597bb5ad220107a2b9827f0e",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/source_files/week/aurora_eggs_information_memorandum_draft.pdf.metadata": {
+      "sha256": "297eade91fe7cffd01f94f17aa001ae43520f31691d5ce728379b572260d7fb5",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/week/aurora_eggs_website_snapshot.html.metadata": {
+      "sha256": "4d39e17b67ba65462bcdcc4eb7d8945d7b3681f52cb138814c408cc34f8d07f0",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/source_files/week/broker_outreach_aurora.eml.metadata": {
+      "sha256": "bbe252b821a5b3483ed1d0926af9e9dcc28ca8e4259a04434955a574f7b6dae5",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/week/dealteam_intern_initial_research.docx.metadata": {
+      "sha256": "60ef28f4315398ede4845e45494d9e1334401752876d1e3bf07f0e13eff25f1b",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/week/halberd_business_model_alt_use_annex.eml.metadata": {
+      "sha256": "1d55a63085badf827128610e3b446120054cfedd3bad3ce078d871c2075aa116",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/week/halberd_competitor_precedent_annex.eml.metadata": {
+      "sha256": "4fb172b58a55d5242bf34c68686e1fab5835f2153ee52a418b91456d940348cd",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/week/halberd_consumer_demand_annex.eml.metadata": {
+      "sha256": "65be72ef3989a84dfa4f5942a30bd9786ef711610c19c45905d5393f9507f757",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/week/halberd_deal_pipeline_tracker.xlsx.metadata": {
+      "sha256": "e67ed97521d77b7e3cff77a312b7b1e96ee0e4f65cdecabeff58b571e2cabb53",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/week/halberd_ic_preread_template.docx.metadata": {
+      "sha256": "ce440c507f93f1ddf40d81e762ecf555211411439743381f809ee23294af0d7a",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/source_files/week/halberd_internal_aurora_brief_scanned.pdf.metadata": {
+      "sha256": "5a42ca9453352eaf9095c9889e6dc790089b2f69c35a1c1f761396a1248909b8",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/week/halberd_kickoff_email.eml.metadata": {
+      "sha256": "fe5a26879f4f1d4f3e9e218a0dfefe99f5a008b3d84312f08d1c23d6225c0fd9",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/week/halberd_sector_partner_email.eml.metadata": {
+      "sha256": "a64fdcf56f0281bec25f1a1f525b8d16279086c331cee1ece60180637c518ef4",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/week/halberd_supplier_exposure_annex.eml.metadata": {
+      "sha256": "497b0496b5431cb9c849fb802303d32a93e92199b81cd109ac255eb03016d1db",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/week/halberd_value_chain_margin_annex.eml.metadata": {
+      "sha256": "5e768785324bd20ff3cf563754ff16a1bd054efbf5c326cc1b230836341e3b8c",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/week/kickoff_week_calendar.ics.metadata": {
+      "sha256": "d90edd632f41ee3d58cc4b8c32c7545711d4c7f7c6288e76a6eb845197dd37b3",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/source_files/week/kickoff_week_logistics_email.eml.metadata": {
+      "sha256": "7ef56d0fdc2c7856d744ba09756f562148867af08a63f77e2dc3a0112d131998",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/source_files/week/weekly_pipeline_review_notes.docx.metadata": {
+      "sha256": "072c8a39c66b7a5e44b3c9e4e3469b9f96f32c2fcad4016f8147c7ea594673c6",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/claude-4-opus-thinking/w1_t1/submission/market_overview.pdf.metadata": {
+      "sha256": "c0da97600c1209f86003d3ed6bec59c7491de8d80ff89de58807ffeacfd3430c",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/claude-4-opus-thinking/w1_t1/submission/market_overview.tex.metadata": {
+      "sha256": "4bff242ac7854e0ebc49486c90efae2a17da3fe8ebbb9182940a06ad0f7fe815",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/submissions/claude-4-opus-thinking/w1_t2/submission/market_model.xlsx.metadata": {
+      "sha256": "432f03d923539a564950c68e70309c1c111e28ce7a5a8231aae561b874454ed4",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/claude-4-opus-thinking/w1_t3/submission/target_assessment.pptx.metadata": {
+      "sha256": "304ce622c03f26aa035abf73406818a9c93f54b33bdd110453542c25c008a8e1",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/claude-4-opus-thinking/w1_t4/submission/briefing.mp4.metadata": {
+      "sha256": "8ad2f07dc79289ca63993c76688ffc574b174d6e002eaa1783e19af7e58ee3d1",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/claude-4-opus-thinking/w1_t4/submission/briefing.srt.metadata": {
+      "sha256": "f8edf907ddbfc97195b0dae7f6a1ebaea1eb56748c56bbc28511a60c56e704d8",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/submissions/claude-fable-5/w1_t1/submission/market_overview.pdf.metadata": {
+      "sha256": "1718282a131687d6594aa08d781190b9a57864ea93c8ced0f4e503f48dbb5d92",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/claude-fable-5/w1_t1/submission/market_overview.tex.metadata": {
+      "sha256": "938d054351d733298a45b3470da1811e0cb74e88b885b946367cb50e8093807c",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/submissions/claude-fable-5/w1_t2/submission/market_model.xlsx.metadata": {
+      "sha256": "f58f0943dba9af039c79ee44fc08a7624976f7e42a9ee1512add5080effa0b12",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/submissions/claude-fable-5/w1_t3/submission/target_assessment.pptx.metadata": {
+      "sha256": "29dd3557265ca91d023db61f7a38ff2ac549a6d398486006d3371576966cadbc",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/claude-fable-5/w1_t4/submission/briefing.mp4.metadata": {
+      "sha256": "b07cc4ae1a2cc7b8f75964643c25512e085c30f306a65e1794f47d62172911b1",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/claude-fable-5/w1_t4/submission/briefing.srt.metadata": {
+      "sha256": "55dea381f75a021475d47660fea36aad0af5b6acfa3eb530cb4a1d6667b44ffd",
+      "bytes": 102
+    },
+    ".cache/huggingface/download/submissions/gemini-3-1-pro/w1_t1/submission/market_overview.pdf.metadata": {
+      "sha256": "16c7c6a5ca5f0dcd6525db0aa6850b70bd4d9b9f7e6a70a7ac9bbfa117113877",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/gemini-3-1-pro/w1_t1/submission/market_overview.tex.metadata": {
+      "sha256": "025b5591c8438e3454290def43f6c01f730873254189f4129d32731735c41f67",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/submissions/gemini-3-1-pro/w1_t2/submission/market_model.xlsx.metadata": {
+      "sha256": "a9c2a202217bc7f6cb33b22a1447160d3a0aab6620ff53b9c79d6b53f763b438",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/gemini-3-1-pro/w1_t3/submission/target_assessment.pptx.metadata": {
+      "sha256": "ec9dd9ac73f7f6e7b2096aa4fcd5e4e210a0d0f8f9240dd49e23de95ff10d45f",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/submissions/gemini-3-1-pro/w1_t4/submission/briefing.mp4.metadata": {
+      "sha256": "8d5d539664e3d9081c2176e8535c409c199be565b0a0e5a017692042c965d88c",
+      "bytes": 126
+    },
+    ".cache/huggingface/download/submissions/gemini-3-1-pro/w1_t4/submission/briefing.srt.metadata": {
+      "sha256": "029ea8e09711532dc960b3cd3d887d83ef8d47efe27684a9d1006328dc5a306a",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/submissions/glm-5-2/w1_t1/submission/market_overview.pdf.metadata": {
+      "sha256": "4afb5a8df2c9a87f1f43e38d3b51b1f0c99f80942d8b8798ee8eee3c34b37397",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/glm-5-2/w1_t1/submission/market_overview.tex.metadata": {
+      "sha256": "97bd26b2424eb539835b26023f84619c665001b0f425e48b084786509b842f6b",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/submissions/glm-5-2/w1_t2/submission/market_model.xlsx.metadata": {
+      "sha256": "85c884635abcdaa8b53938409bfeef42ba994fc2f1c2605931fe645a36e676d1",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/glm-5-2/w1_t3/submission/target_assessment.pptx.metadata": {
+      "sha256": "c32babbaebd342a18c2ba66945a2f6343fe4cb820578b78c90bd2a71f9fe7411",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/glm-5-2/w1_t4/submission/briefing.mp4.metadata": {
+      "sha256": "478fb76ae1c433936f8b8d895d72054d4b6fa479339080491fd2f97fb2b498a2",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/glm-5-2/w1_t4/submission/briefing.srt.metadata": {
+      "sha256": "2bc0bfbcf33331c0367bdb125588b51d2389206da206c95e56c760943a28d522",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/submissions/gpt-5-5/w1_t1/submission/market_overview.pdf.metadata": {
+      "sha256": "0b1df155d45173247b94116dbc092a5dcb3c7c0570c7be0cac401a948d89cedc",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/gpt-5-5/w1_t1/submission/market_overview.tex.metadata": {
+      "sha256": "0c320c9ca44e49c44ecb035cc7545741bfc537cdbfeb8cbaff1b8d5e52874300",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/submissions/gpt-5-5/w1_t2/submission/market_model.xlsx.metadata": {
+      "sha256": "c5d07fe3cbbb486bed7323941d0fb68b71a0851a3b536d42badeebcccd1be85f",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/gpt-5-5/w1_t3/submission/target_assessment.pptx.metadata": {
+      "sha256": "44592bd23a99ae9fa8cf6c5ab36942f3d84ac8063b76607ddab2374999c04073",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/gpt-5-5/w1_t4/submission/briefing.mp4.metadata": {
+      "sha256": "6594cd8bbfa094b525524d229a0ea91bbb502d8ed0aad6437fa31b3a4b3dd659",
+      "bytes": 128
+    },
+    ".cache/huggingface/download/submissions/gpt-5-5/w1_t4/submission/briefing.srt.metadata": {
+      "sha256": "9291d6c586c938c27032414517a08cc2dfee73ef7a1d464e4637ad51a53e735d",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/submissions/o3/w1_t2/submission/market_model.xlsx.metadata": {
+      "sha256": "b633e477528a921ac9968d86d22beaf6f3640c1b0824ac0a6bd722aeb384223b",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/submissions/o3/w1_t3/submission/target_assessment.pptx.metadata": {
+      "sha256": "4917da23d12af38dd6b6482f6c5de3f1e97499dfb34a32d7f38cefd33fd79d18",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/submissions/o3/w1_t4/submission/briefing.mp4.metadata": {
+      "sha256": "e5d8c3440e1eff79c20a2da34332adcb907ff4f46ed029075ee21a0a74503794",
+      "bytes": 127
+    },
+    ".cache/huggingface/download/submissions/o3/w1_t4/submission/briefing.srt.metadata": {
+      "sha256": "2fe4da476127dae87c0b8edb39b57b1b12201a876c84efe69d499d73494e9f39",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/summary_docs/scenario_overview.md.metadata": {
+      "sha256": "5496a66e340768528e5767e5b899b08ea17b5977442bae0744617aeceab19a25",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/summary_docs/week_1/week_1_overview.md.metadata": {
+      "sha256": "36da7a1196d68344f65dbc5bd53cab89192a585f9785f754df27671ee158734d",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/tasks/w1_t1.md.metadata": {
+      "sha256": "d8b12f955aaa54fdad6b6602daea293c4cf3ab59301a182ec980dd40bae1ed68",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/tasks/w1_t2.md.metadata": {
+      "sha256": "779a7cd19e9d0f02e0a360347a07b24d7cc8265012f178e7c820ac9b887e26d5",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/tasks/w1_t3.md.metadata": {
+      "sha256": "05f9315e1cca722ff797be7f9540c4d04df188b3c611ac5c1f8125be1ae5a564",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/tasks/w1_t4.md.metadata": {
+      "sha256": "f164ecbdccd0ef1c2535fcb79dde0db9b540d25fb8026f7b7f9f9427295c3d3e",
+      "bytes": 104
+    },
+    ".cache/huggingface/trees/4dec557b47d43867a1648c0974db1d8208c8b677.json": {
+      "sha256": "8c19b5367986498cc4c48c9dea862650f58170db9bcba6cf5e965ec580503761",
+      "bytes": 46427
+    },
+    "grader/grading_rubric_w1.json": {
+      "sha256": "cfbc0c46ff5ebbb76a9be3f3510171841ddb5bd83f699cacb4d8009fa74984a1",
+      "bytes": 395994
+    },
+    "grader/source_graph_w1.json": {
+      "sha256": "ffa248ee2ceaa160c89e3321d55a047f418b9b9af606f1f76845b8b7bc49d49d",
+      "bytes": 99687
+    },
+    "grader/traceability_w1.json": {
+      "sha256": "78d874c531e910560564eb6d415cab8d1f29e56d5481f96e01fc611731cfd33b",
+      "bytes": 300865
+    },
+    "prompts/eval_submission.txt": {
+      "sha256": "570b4110159c7386c40086ba36d7e16c3a68590eb37ed725092587398643bf1a",
+      "bytes": 4339
+    },
+    "prompts/eval_system.txt": {
+      "sha256": "4a5810b567b8e9fb5bad18fafd0da73b54a3081901e9482d6c561eaa257bf36a",
+      "bytes": 867
+    },
+    "prompts/judge_system.txt": {
+      "sha256": "6ca9059efb74cd3d109a9885f94a46a7a7415450370e890f4b66b3d07c8c349d",
+      "bytes": 1171
+    },
+    "prompts/judge_user.txt": {
+      "sha256": "7c689157bf596daba0ebe684117251c41b71b15374d79f557fbb994bf65b0e77",
+      "bytes": 401
+    },
+    "source_files/shared/2025-09-new-zealand-hpai-selfd.pdf": {
+      "sha256": "d8d24981ed4b85e74542d4bc6a8d2e0e2dae998bd666dd8b41bba4963dcb2072",
+      "bytes": 790957
+    },
+    "source_files/shared/46108-layer-hens-report-final-2012.pdf": {
+      "sha256": "745bc219d931456e666d46ff6a7975053a6020beb64c297dd2e1e58e709915ca",
+      "bytes": 140782
+    },
+    "source_files/shared/Annual-Grocery-Report-2024-summary-of-key-findings-6-August-2025.pdf": {
+      "sha256": "928cf59287dee4e16eab66e1d5a0cc5ad636e4c2228577d07733407863a4f14a",
+      "bytes": 1277493
+    },
+    "source_files/shared/aunz_poultry_industry_overview.pdf": {
+      "sha256": "ccacfbb316b02b6fef0bc917e1e2d62228c10f0decb936bf7daf87a8b7958504",
+      "bytes": 6197
+    },
+    "source_files/shared/cal_maine_10k_2025.pdf": {
+      "sha256": "6c0a8b498dba7408f53078b07001a6cef38d6fcd7c304439092dddc5b2f4ee83",
+      "bytes": 746424
+    },
+    "source_files/shared/global_cagefree_transition_snapshot.pdf": {
+      "sha256": "e3dd4c1030987aae52fbccbe163c28c52a062840ec2d4247cc436f3f6d1c6c28",
+      "bytes": 24851
+    },
+    "source_files/shared/halberd_2025_q1_allhands_deck.pdf": {
+      "sha256": "42159442d142aba08232a6c73894d77cc18c9b135ce6b457d8b61a394965dfa1",
+      "bytes": 16369
+    },
+    "source_files/shared/halberd_analytical_standards.docx": {
+      "sha256": "f6d26be3fb6c5dbffe8d15188aa02587299f69f5858d04e151048425bdc7ddcb",
+      "bytes": 47315
+    },
+    "source_files/shared/halberd_brand_guidelines.pdf": {
+      "sha256": "56aaa27d52921465480590df506835abf6decdac0d9f1ab638206f13a30be4f8",
+      "bytes": 18447
+    },
+    "source_files/shared/halberd_central_financial_assumptions.xlsx": {
+      "sha256": "02ad6ecf7b7f7be8845a56ddfd47f43937f58b8818109d50d769cc9b693af22c",
+      "bytes": 10537
+    },
+    "source_files/shared/halberd_compliance_handbook.docx": {
+      "sha256": "60b262a1702678a29d6b33351cd1c04f0fb728adc4c8a4aa24afc57f11463b51",
+      "bytes": 41802
+    },
+    "source_files/shared/halberd_esg_investing_framework.pdf": {
+      "sha256": "b8a9514766fcf5704f08d5b0b1d2b64c30ac596d1c98ecf4d8cc4055786a93e8",
+      "bytes": 8689
+    },
+    "source_files/shared/halberd_infosec_onboarding_pack.pdf": {
+      "sha256": "008c5eb4b1af939c83f9a00d7f5713a961ca2700f63d30c2db5a4b618b031990",
+      "bytes": 10463
+    },
+    "source_files/shared/halberd_lp_update_template.docx": {
+      "sha256": "cbd127cd2e1659b8381858082bb95556b23d02bf74ed7d0916b0a708372704bf",
+      "bytes": 41030
+    },
+    "source_files/shared/halberd_md_weekly_note_archive.eml": {
+      "sha256": "7fd1ba5cded4fa400cb9f746660535554dea93b63341d52b8a646c42077cfb3d",
+      "bytes": 5610
+    },
+    "source_files/shared/halberd_org_chart.pdf": {
+      "sha256": "7b2d12025fb2554f42ac2d6e7ec2139d16d3a19ae3dea9b8099b4cdb3eb4d918",
+      "bytes": 8444
+    },
+    "source_files/shared/halberd_other_deals_pipeline_snapshot.xlsx": {
+      "sha256": "38f3f60bb74c083a2b0ba91aca85974f7e56282a419e1624a525213eb8f99b5a",
+      "bytes": 10896
+    },
+    "source_files/shared/halberd_portco_unrelated_board_pack.pdf": {
+      "sha256": "cd8113a9e475976848b62986e06f1752a2e33bc9f134dde9590e047ec2831dda",
+      "bytes": 7481
+    },
+    "source_files/shared/halberd_travel_expense_policy.docx": {
+      "sha256": "02608071f31475d63779ec82cac62228509ab647e60142fbef7d3a69d58ea856",
+      "bytes": 42724
+    },
+    "source_files/shared/industry_analyst_extract_nz_eggs_2025.pdf": {
+      "sha256": "5edf000b67c9a5a14be609eb4c826817b345d93bbe90835456727df2c86dcf0c",
+      "bytes": 621945
+    },
+    "source_files/shared/industry_newsletter_digest_archive.eml": {
+      "sha256": "054b0f30853e3b4e422a15cd9b38ad608c1e1646ca025dc5983ccaf39a7448c6",
+      "bytes": 2995
+    },
+    "source_files/shared/Market-Study-into-the-retail-grocery-sector-Final-report-8-March-2022.pdf": {
+      "sha256": "7364e735e2c5347268d30233e42751f2a8b630a86d85bd124798126ecb6f91d5",
+      "bytes": 9144634
+    },
+    "source_files/shared/navis_capital_zeagold_acquisition.pdf": {
+      "sha256": "08165ae37c072e6993ca913d09436972df82d51752ab92ca4ccddccd9cd7f7ca",
+      "bytes": 234950
+    },
+    "source_files/shared/nz_barn_info_sheet.pdf": {
+      "sha256": "7827fbe6936062b995bcb1d4b1e50de9c59e186782fad6862868aae5986f1793",
+      "bytes": 5377
+    },
+    "source_files/shared/nz_colony_info_sheet.pdf": {
+      "sha256": "fd67defb6dd088dc8e36f2ec563304184043887ecb8c89fda1c64a6ad7654843",
+      "bytes": 148311
+    },
+    "source_files/shared/nz_conventional_cage_info_sheet.pdf": {
+      "sha256": "1dc22ffa2f6b4997efb505895a54a3c91dd9fca1c89f05e1b4e9f8b7c4ea5e87",
+      "bytes": 145961
+    },
+    "source_files/shared/nz_dietary_trends_survey_2025.pdf": {
+      "sha256": "aa19f30936feec473d8dafdca5586addfbf11eb18009d618e52cb6b5b15cbc26",
+      "bytes": 16706
+    },
+    "source_files/shared/nz_dietary_trends_survey_2025_egg_addendum.pdf": {
+      "sha256": "0af20116ee6e013b5648f038fb35d072f9c9dc509adcc3b940575aa287dec253",
+      "bytes": 24106
+    },
+    "source_files/shared/nz_egg_producers_competitor_overview.pdf": {
+      "sha256": "e734937f79eca04287ae25907958c69236b0aa9e044a28470254fe135a62acb5",
+      "bytes": 22612
+    },
+    "source_files/shared/nz_egg_retail_scan_data_q1_2026.xlsx": {
+      "sha256": "c9378d830ade4e77b2d55faa7abd58d1d495ad09a038e4f1249e4485fded8220",
+      "bytes": 13405
+    },
+    "source_files/shared/nz_egg_sector_industry_briefing_2024.pdf": {
+      "sha256": "fcc14f33477f17b257bfe06c668b23eb0403aa09a40964a38d4be48c0a4b2b2c",
+      "bytes": 852664
+    },
+    "source_files/shared/nz_free_range_info_sheet.pdf": {
+      "sha256": "0b3834a0d9dce5386d6883d10c69a858cd3976f8a8e2202090bf0235b510636d",
+      "bytes": 150357
+    },
+    "source_files/shared/nz_supermarkets_cagefree_commitments_summary.pdf": {
+      "sha256": "1ff59445ec11af896550843f860be0ff19336d83452817377ca71087db01ef21",
+      "bytes": 775113
+    },
+    "source_files/shared/nz_treasury_demographics_analytical_note_2024.pdf": {
+      "sha256": "a2d9e0a5e4188e28d5da931dc187aefd613a80cb3ac2430007b40c2e1d265e70",
+      "bytes": 763259
+    },
+    "source_files/shared/pe_industry_conference_notes_2025.docx": {
+      "sha256": "82428208f4ced1e852fdbf72e725d543c8d4216aa2f41eb58703cd490a822db3",
+      "bytes": 41214
+    },
+    "source_files/shared/retail_nz_retailing_now_report.pdf": {
+      "sha256": "b8e75c2bb2ee3bfa808b380a4650be20af06caaf8c747d7a5587f9676af3622f",
+      "bytes": 5877846
+    },
+    "source_files/shared/transcript_ex_egg_farmer.pdf": {
+      "sha256": "1e3e86d53c47b0acef0062b4366f4e217522ff5f3ad0a0f166627b466b4bff25",
+      "bytes": 10825
+    },
+    "source_files/shared/transcript_foodservice_broker.pdf": {
+      "sha256": "f00eee54cae8fccd715178733313e5321eaa910baff035b870279000a79e0a3b",
+      "bytes": 13277
+    },
+    "source_files/shared/transcript_industry_expert_part1.pdf": {
+      "sha256": "cb7deac96f51620085836610d87a413870d87597bd1792bddcccf60f47f65589",
+      "bytes": 13493
+    },
+    "source_files/shared/transcript_industry_expert_part2.pdf": {
+      "sha256": "a60fca8135d6a84ed6c0a287e1e1510e998dab40f6d1b7aa048ec6026eb75ab7",
+      "bytes": 24057
+    },
+    "source_files/shared/transcript_industry_expert_part3.pdf": {
+      "sha256": "75bd1ba935f6a1603de81e5083da34df6839986c75551fb7580cf1cf5d348492",
+      "bytes": 16949
+    },
+    "source_files/shared/transcript_industry_expert_part4.pdf": {
+      "sha256": "52627cd5d3457918720483dc5bbd02adfcdafee1461c7a81338d2f1816ac4929",
+      "bytes": 19213
+    },
+    "source_files/shared/transcript_industry_expert_part5.pdf": {
+      "sha256": "f0a444c1da0e9ee854448c572d1cdc7ff43ab8110080b30282da867b6bf64e7e",
+      "bytes": 15554
+    },
+    "source_files/shared/transcript_industry_expert_part6.pdf": {
+      "sha256": "2cc6d8894d7d76e4ff092270816321e4f695413df7d06b6cde360c2abfc2177a",
+      "bytes": 15598
+    },
+    "source_files/shared/transcript_industry_expert_part7.pdf": {
+      "sha256": "660f2736ed22f0c2bd991c1b53705bd28550144411c003dc4c40e91c74271b88",
+      "bytes": 18234
+    },
+    "source_files/shared/transcript_industry_expert_part8.pdf": {
+      "sha256": "ea43fdeea5d9212caeab36fadb5079a9120589529cddb27332849117e75604ce",
+      "bytes": 9346
+    },
+    "source_files/shared/transcript_nz_egg_association.pdf": {
+      "sha256": "abb79e20315f85972fef6ed50de49d34aa4d1222a5a8779e1086cff624831f8d",
+      "bytes": 20300
+    },
+    "source_files/shared/transcript_retired_consultant.pdf": {
+      "sha256": "b58f197ef9f57a965738c16d78d26b01b573986ac8d74a8d1dd0d7e68bb27ef5",
+      "bytes": 15606
+    },
+    "source_files/shared/usda_nz_retail_foods_annual_2024.pdf": {
+      "sha256": "570c14c25fc314ecad024ae28a917c6e64440be838edf28b292e1cfe45765865",
+      "bytes": 877231
+    },
+    "source_files/shared/slack_export_halberd/channels.json": {
+      "sha256": "4fbd4b03c0844e97b31f11acb669053c4054be7788769bfd30c1e6db110b0296",
+      "bytes": 3876
+    },
+    "source_files/shared/slack_export_halberd/users.json": {
+      "sha256": "c9a165df5703221c96660602f766fe48db9c68a39416916576d89aeb39568d56",
+      "bytes": 11186
+    },
+    "source_files/shared/slack_export_halberd/albatross-admin/2026-05-04.json": {
+      "sha256": "664b77b8d11b04dc6343b0f13afd6f4e4dd984084311037b966d8ceec60062ae",
+      "bytes": 7025
+    },
+    "source_files/shared/slack_export_halberd/albatross-admin/2026-05-05.json": {
+      "sha256": "d6c96ce0915e7468d15183f06bcbdcd60994e26cd5ab51d5111db0e65f32342d",
+      "bytes": 3429
+    },
+    "source_files/shared/slack_export_halberd/albatross-admin/2026-05-06.json": {
+      "sha256": "70c2f6c8a1660e875f241e2437ee0021887c5c4aae042fed40f4ffc9c0ee17bf",
+      "bytes": 1698
+    },
+    "source_files/shared/slack_export_halberd/albatross-admin/2026-05-07.json": {
+      "sha256": "f670afd432e3f6763cfbf3fa42c1c072882d66ba235cdfef0bc3e2105e1c99dc",
+      "bytes": 2609
+    },
+    "source_files/shared/slack_export_halberd/albatross-deal/2026-05-04.json": {
+      "sha256": "8ab38602ad67a5aa505e47449caf361431aefd13869482acaa96983a22e0df24",
+      "bytes": 8422
+    },
+    "source_files/shared/slack_export_halberd/albatross-deal/2026-05-05.json": {
+      "sha256": "0b1a2a43a4941419ca2ccf9d1777ddd1176ed37537bddaa9bad1187fe91e55a4",
+      "bytes": 7873
+    },
+    "source_files/shared/slack_export_halberd/albatross-deal/2026-05-06.json": {
+      "sha256": "1dbc9914a90cfd2bd85594dfaedd0846d6019cb60a6afd35157eacfa2d16e72e",
+      "bytes": 4911
+    },
+    "source_files/shared/slack_export_halberd/albatross-deal/2026-05-07.json": {
+      "sha256": "fd37d738250a4aaf990677896aeb41d776c1325d2307b8f985db49832c01b3df",
+      "bytes": 1911
+    },
+    "source_files/shared/slack_export_halberd/albatross-deal/2026-05-08.json": {
+      "sha256": "3484db20cd7464c0a5527759ae643f4accb623396c9a76d75a876872759697ee",
+      "bytes": 11770
+    },
+    "source_files/shared/slack_export_halberd/book-club/2026-04-02.json": {
+      "sha256": "f593eb0ca7792db24e6b9c50b344230ac23996277c84e6b4f4851178848f89c2",
+      "bytes": 2486
+    },
+    "source_files/shared/slack_export_halberd/book-club/2026-04-08.json": {
+      "sha256": "58e328a4ed8f8660b29d37fd6eff48056e2cfbfeaad62471c8b7eca9c48f022e",
+      "bytes": 1932
+    },
+    "source_files/shared/slack_export_halberd/book-club/2026-04-15.json": {
+      "sha256": "3ea6437104aa3afc5a02d30ab18057d6f88991552422331ccdd5bf5aca7937bb",
+      "bytes": 2108
+    },
+    "source_files/shared/slack_export_halberd/book-club/2026-04-22.json": {
+      "sha256": "7d4fcfca14e5f0d2742677eb5c8993247cecbf9c56a80673abd58fc87b2c848a",
+      "bytes": 1883
+    },
+    "source_files/shared/slack_export_halberd/book-club/2026-04-25.json": {
+      "sha256": "9ad5099ecfdf0232531f45ea94d726860b88401db01c6c73d4e4756844f25ff6",
+      "bytes": 2457
+    },
+    "source_files/shared/slack_export_halberd/book-club/2026-04-29.json": {
+      "sha256": "72979503f07226b45900f286fb1a57db9223033560e4eeac61579f7e2521874f",
+      "bytes": 2547
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-04-01.json": {
+      "sha256": "66de1554ce70f6d1e002c51f180ef02628a5ceee7e436e5fa73c51ca923523f6",
+      "bytes": 3082
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-04-02.json": {
+      "sha256": "fa42aab1cce7d30b88c5d2bb59941a9957b0aa06ccb7b03c4216e0a74b4ba3f5",
+      "bytes": 2821
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-04-03.json": {
+      "sha256": "d1f796f962dad060d3e1a3efae6184c386d3b9236499e7437bae3b4bd44eb72e",
+      "bytes": 2195
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-04-04.json": {
+      "sha256": "7ea737cefa540acf95e6e7d445edd8cbddeb2ab734b3eba6922b1498491e5474",
+      "bytes": 2634
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-04-08.json": {
+      "sha256": "a65b1121341807f50962c963b3c64f36071d498b195edcc475acb5c8045af092",
+      "bytes": 2829
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-04-09.json": {
+      "sha256": "bfb925a280b28e6a2d1ecd9f5504db11a9c4c7ec8011742152828f37e293a5f6",
+      "bytes": 2693
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-04-12.json": {
+      "sha256": "14363b06d899440ad261dca51e5e0fbf44e8f0a003f6c3c32a077372e996d003",
+      "bytes": 2631
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-04-15.json": {
+      "sha256": "61f93a0b7db3fbe5a7069240cf7eb8a0553410bd000c51c90c2af15311e4af5a",
+      "bytes": 2335
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-04-18.json": {
+      "sha256": "55af585831197c08dc0cb3360f27bee77cb52f089a8f11041b25b6b899508137",
+      "bytes": 2249
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-04-22.json": {
+      "sha256": "ecc92c66dfd6be66571b3dfe3b3de6663df2353661cc92af02c45483d03802ef",
+      "bytes": 1939
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-04-25.json": {
+      "sha256": "a45230d71387d019ced04ffff333c5ec5e607864bc68949eb5b787a3e93c5963",
+      "bytes": 3085
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-04-30.json": {
+      "sha256": "b1b3ad20105c71384808bb360e362f6f20251671967331d79ca7c8b5dc726387",
+      "bytes": 3100
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-05-01.json": {
+      "sha256": "04270c0bac010e2de7862ccf01922fe1979e909df8b298d00ab02ce74eab09aa",
+      "bytes": 1784
+    },
+    "source_files/shared/slack_export_halberd/culture/2026-05-02.json": {
+      "sha256": "b1b377b655057fd9af35172d981e2558c6e28c5d87414fde344d32f473de6721",
+      "bytes": 2513
+    },
+    "source_files/shared/slack_export_halberd/general/2026-02-02.json": {
+      "sha256": "b422bf2d8cf0856c6b82fc4d56396d99da8e2744fe05add99cb855650963be79",
+      "bytes": 2577
+    },
+    "source_files/shared/slack_export_halberd/general/2026-02-05.json": {
+      "sha256": "ef2526b027951e907550a85b4b4ac2f88143eead9098adf3680c3fa394608b1e",
+      "bytes": 2272
+    },
+    "source_files/shared/slack_export_halberd/general/2026-02-11.json": {
+      "sha256": "c1a96bf16c92f922de18bb29f00be1ba3c9669964b57b425f11194feb3c3535b",
+      "bytes": 1432
+    },
+    "source_files/shared/slack_export_halberd/general/2026-02-17.json": {
+      "sha256": "5c98e6d2a05b7939341403a3c681206ead8769381d3aed7ce0fb541f8c859e9c",
+      "bytes": 1622
+    },
+    "source_files/shared/slack_export_halberd/general/2026-02-23.json": {
+      "sha256": "f9365798eb867a5ff006af34e706f867e4e4edb73be031f1c9f9a3f0a8cd817c",
+      "bytes": 1289
+    },
+    "source_files/shared/slack_export_halberd/general/2026-02-26.json": {
+      "sha256": "99953874c3207a06e125f62d83e6ddde09e6a669ba7a438b8cd937bdc682d0e4",
+      "bytes": 1771
+    },
+    "source_files/shared/slack_export_halberd/general/2026-03-03.json": {
+      "sha256": "29f8edf6b48972aebc450a1b601e9f7e632c2a651bca0515f075f0a1f37ea0c5",
+      "bytes": 990
+    },
+    "source_files/shared/slack_export_halberd/general/2026-03-09.json": {
+      "sha256": "a42fa164e0b62dae5260b6b18e71f96ea91b70af4dbc8d90961ebe465174b402",
+      "bytes": 2021
+    },
+    "source_files/shared/slack_export_halberd/general/2026-03-13.json": {
+      "sha256": "656c0b6fa945a0ab96573d5e95dd0d0bd31fc72d41d1a438b9a4121b5678df14",
+      "bytes": 553
+    },
+    "source_files/shared/slack_export_halberd/general/2026-03-19.json": {
+      "sha256": "de305b736cd0c0c9dbdd7f526d4e7d479a86cd5b01200123d20f1a44bdcfcfc9",
+      "bytes": 1700
+    },
+    "source_files/shared/slack_export_halberd/general/2026-03-24.json": {
+      "sha256": "2cf34112bb6f317cd20c003f4220dd25e04dca6a4cf47c2226a625fca656fc50",
+      "bytes": 1143
+    },
+    "source_files/shared/slack_export_halberd/general/2026-03-30.json": {
+      "sha256": "95b30bd573314a419a04137e4ac1007a8ac2b4aa008e7e8f488b28b012955c8b",
+      "bytes": 1888
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-01.json": {
+      "sha256": "3d9dd5ad086a93d037275f054e5f427fe3b572069ed4f2b40ad7af2c0e639ff1",
+      "bytes": 2796
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-02.json": {
+      "sha256": "51f5664681179a6be8ce275a3b14b01a5305db0077fcf516160042773bddaeb3",
+      "bytes": 3169
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-03.json": {
+      "sha256": "25f58762cb3f53d4c7c79ff947a7baee5e1922806529844c0cf14cc345fe6b69",
+      "bytes": 2390
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-04.json": {
+      "sha256": "8527755e6ddf28cbfe5dc5903fd670fe4569dc0d05768956b56f54c2d3931cb1",
+      "bytes": 2217
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-08.json": {
+      "sha256": "df378b45fd3f807f45e33b264425c2796c0700f97722457bf1a6e86630c0bb31",
+      "bytes": 2475
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-09.json": {
+      "sha256": "df4b55724ea186a6e6f35f94609ccc25047147337dc320328f048a1e9f52a7fa",
+      "bytes": 2415
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-10.json": {
+      "sha256": "6d08743f4c5e299f03a64f36109e6ff68d05fe3fd7cadbea5f3e45b03282a958",
+      "bytes": 2145
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-15.json": {
+      "sha256": "a6f67667aca154a7e80b2e3f783c7da96d0162cc1a3bebe8c92eb72a0cdb6524",
+      "bytes": 1857
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-16.json": {
+      "sha256": "94998bb80ecc11164f02d104c74f0e200fd39a5b13d8680cf0209464f7586c86",
+      "bytes": 1394
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-17.json": {
+      "sha256": "6d10eb57e5f10e330bedace31fd61577d5125cac40709338466a64958c899e79",
+      "bytes": 1277
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-21.json": {
+      "sha256": "4ac3f78963671dfb811a02b3da543276f0a47d16d1fe4ee0a8c6c2de26a93737",
+      "bytes": 1939
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-22.json": {
+      "sha256": "9634a84188bc6a5a8fd6053bd06f828259b840875533f73c89eab408e973eff0",
+      "bytes": 4403
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-23.json": {
+      "sha256": "bb5eb4458668c800aee531e021e92372132304aef38f0d4d2c913faf782a5fbe",
+      "bytes": 1149
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-25.json": {
+      "sha256": "0434481b775ef1a14a22e29f38445d933077f2084a128d280e88d899e0e6323d",
+      "bytes": 2252
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-29.json": {
+      "sha256": "b232e24b3a07d4ba9f9b489c1d731c8d93e92daeb8b6f9459d13e2ebe308ff2e",
+      "bytes": 3305
+    },
+    "source_files/shared/slack_export_halberd/general/2026-04-30.json": {
+      "sha256": "dd56a0bce6902c6d6cd0c8f1d172852170de55ae77067a880b7b842b6ea3f0bf",
+      "bytes": 2408
+    },
+    "source_files/shared/slack_export_halberd/general/2026-05-01.json": {
+      "sha256": "a4734a8007851fa91e4e5891e5b7ea85244d6801526a6e757375b7e8fcc4a922",
+      "bytes": 1676
+    },
+    "source_files/shared/slack_export_halberd/ny-office/2026-04-01.json": {
+      "sha256": "6ceae6a214189af996db1dcf9dd938c1a2e595d8da67533869bb9c13853a6ee0",
+      "bytes": 2829
+    },
+    "source_files/shared/slack_export_halberd/ny-office/2026-04-03.json": {
+      "sha256": "4c69d538b6506a3e59ce266e932789a29318e51e021380ca83f07588fd1b3c29",
+      "bytes": 3102
+    },
+    "source_files/shared/slack_export_halberd/ny-office/2026-04-08.json": {
+      "sha256": "21c703688dd27fe6a1b1320a033872b9af2ffac952e2ebcad1f5d454c358a162",
+      "bytes": 2730
+    },
+    "source_files/shared/slack_export_halberd/ny-office/2026-04-10.json": {
+      "sha256": "21cdaf41362907f5699d5ed4f6a78c7559167725e5a0a0925b8ef6e36cad08e1",
+      "bytes": 1969
+    },
+    "source_files/shared/slack_export_halberd/ny-office/2026-04-15.json": {
+      "sha256": "84a422f8d99db69a0e2e70e21d9109a4940efdc8bd562950163530212de4adbf",
+      "bytes": 2498
+    },
+    "source_files/shared/slack_export_halberd/ny-office/2026-04-17.json": {
+      "sha256": "d1a4929870044970a1e08bca1c70d5469f16da8f343ab2f2d4c05850c6433c77",
+      "bytes": 2301
+    },
+    "source_files/shared/slack_export_halberd/ny-office/2026-04-19.json": {
+      "sha256": "69231993c0eade18f84dcedc3e8da339a4230b9685c7b5e1ea5316c7ab0194cb",
+      "bytes": 2371
+    },
+    "source_files/shared/slack_export_halberd/ny-office/2026-04-22.json": {
+      "sha256": "8ad1d0c9421efdb2233e4ec1b5d47b5e262bd02cec45bc7777cca256c5cbdba5",
+      "bytes": 2345
+    },
+    "source_files/shared/slack_export_halberd/ny-office/2026-04-25.json": {
+      "sha256": "a517f07ab911a5825119a3a4972d301c329be77fce3a66553b562304d2bfb854",
+      "bytes": 2583
+    },
+    "source_files/shared/slack_export_halberd/ny-office/2026-04-29.json": {
+      "sha256": "f8e197676b181e26ab41dc979e93eb5906143f63dc80732bdf81b1267af6d71c",
+      "bytes": 1862
+    },
+    "source_files/shared/slack_export_halberd/ny-office/2026-05-01.json": {
+      "sha256": "a6842cf9fb88132727b8e571475502e8536e9c37a331a22f0c0fa91065386c36",
+      "bytes": 1999
+    },
+    "source_files/shared/slack_export_halberd/travel/2026-04-02.json": {
+      "sha256": "dbe07b5450fb6514678f4f66b5fe5766732cf3313dc88cc1b6933d8d9b7b858e",
+      "bytes": 2532
+    },
+    "source_files/shared/slack_export_halberd/travel/2026-04-03.json": {
+      "sha256": "df31ef63481e1da0c943417a95d40e18a42b7fb72d7bde3eb46855dc7605dfee",
+      "bytes": 2318
+    },
+    "source_files/shared/slack_export_halberd/travel/2026-04-04.json": {
+      "sha256": "56d0df329104f1304ce54e945817c265e772a642224571869e40fe1d499eaf9b",
+      "bytes": 2724
+    },
+    "source_files/shared/slack_export_halberd/travel/2026-04-08.json": {
+      "sha256": "def8c678ba2f12e8696ec1852e2a11ca0885ca1034b79725469981a2eee9a100",
+      "bytes": 1656
+    },
+    "source_files/shared/slack_export_halberd/travel/2026-04-12.json": {
+      "sha256": "d689d94adb4be80d3947adc02d055cf2efa5a714d628f9b20c6f19cdacdd3022",
+      "bytes": 1902
+    },
+    "source_files/shared/slack_export_halberd/travel/2026-04-15.json": {
+      "sha256": "1917914b79d4381d832efd0476e51d4d50660fba45eae386ab0a36686103e0e4",
+      "bytes": 1728
+    },
+    "source_files/shared/slack_export_halberd/travel/2026-04-18.json": {
+      "sha256": "282ed20b5198e9e88cc5d48a17b5e14f131fd32160a63167ce5d2e700b26ae7d",
+      "bytes": 1979
+    },
+    "source_files/shared/slack_export_halberd/travel/2026-04-22.json": {
+      "sha256": "1e01e8622410e65d836c9f8ab38668e2b5627cb3882b165d925e828987c4dfa9",
+      "bytes": 2114
+    },
+    "source_files/shared/slack_export_halberd/travel/2026-04-25.json": {
+      "sha256": "98b85f4d7222e511287037f21c6ac0a7460d654c875e1b908cc75557dccbd7f0",
+      "bytes": 1810
+    },
+    "source_files/shared/slack_export_halberd/travel/2026-04-29.json": {
+      "sha256": "0fd1e53279ac65d74d8d1b2f3126a103761f0d21fff1718ea59085f32dee3dce",
+      "bytes": 1903
+    },
+    "source_files/week/aurora_eggs_information_memorandum_draft.pdf": {
+      "sha256": "6a5090153d145bcb2e56d8b306629ae043f9e00ccb589fcb5d09e9a57dcead45",
+      "bytes": 25610
+    },
+    "source_files/week/aurora_eggs_website_snapshot.html": {
+      "sha256": "c474154e7949c01d8d8b07ed025b779855b3bcd0ccc3acbc1b9d0e1514a231ae",
+      "bytes": 22104
+    },
+    "source_files/week/broker_outreach_aurora.eml": {
+      "sha256": "db7606599f84baa50bb74c1411c1e1e24696b768aca82b0d161c0eecbff25680",
+      "bytes": 4540
+    },
+    "source_files/week/dealteam_intern_initial_research.docx": {
+      "sha256": "f7a0905f548d4ece325a50d8c30d83ad9105125787e931029522588940479965",
+      "bytes": 42778
+    },
+    "source_files/week/halberd_business_model_alt_use_annex.eml": {
+      "sha256": "ae3ce158f676560fa6d24980c64d024e19e4f7815b97c141081dbd83785cb692",
+      "bytes": 237703
+    },
+    "source_files/week/halberd_competitor_precedent_annex.eml": {
+      "sha256": "4b9326a071f1eb425344f2918992957621795be1db69ef318308968fae0325ef",
+      "bytes": 467379
+    },
+    "source_files/week/halberd_consumer_demand_annex.eml": {
+      "sha256": "fb6ded62874b2ec5c0355a6494091f30d8051fa061e6a920c7222a72f87b766c",
+      "bytes": 149735
+    },
+    "source_files/week/halberd_deal_pipeline_tracker.xlsx": {
+      "sha256": "9d5a9d567d1cbb4bca4ec30c72f52311ed070482c62cbfa854eaf6c34084b8ac",
+      "bytes": 14672
+    },
+    "source_files/week/halberd_ic_preread_template.docx": {
+      "sha256": "897845839408d800722c061fccf67eea2882248803a1694832dcc0e00d43b929",
+      "bytes": 43785
+    },
+    "source_files/week/halberd_internal_aurora_brief_scanned.pdf": {
+      "sha256": "067cb2ec3effc84a2200bf45024d4a7b9e026aeb5c0fbcba9f71cb31a5e6a8d3",
+      "bytes": 678529
+    },
+    "source_files/week/halberd_kickoff_email.eml": {
+      "sha256": "eff6d52d13c6aa42555d43ce3fa2f2724a119102ee2d76c8fedc69ca3ef43909",
+      "bytes": 3717
+    },
+    "source_files/week/halberd_sector_partner_email.eml": {
+      "sha256": "db8a60fc66764209379b78795a422e3cdd7a4a134b63a1650175b90b8733d497",
+      "bytes": 4940
+    },
+    "source_files/week/halberd_supplier_exposure_annex.eml": {
+      "sha256": "953ca7215238b7dc60c42ac52f184dc317c0a024c34a5e83ec915b9ec3327904",
+      "bytes": 125512
+    },
+    "source_files/week/halberd_value_chain_margin_annex.eml": {
+      "sha256": "92b4b39cb1ab80572be10039c0881e205d824b46610414bbea7798315ae70cc1",
+      "bytes": 114915
+    },
+    "source_files/week/kickoff_week_calendar.ics": {
+      "sha256": "cfec402f527077c37f8875476778e5851a12449f1e6311dddf437dbfaccc3096",
+      "bytes": 5989
+    },
+    "source_files/week/kickoff_week_logistics_email.eml": {
+      "sha256": "75c07d2d0598e264e556d16ab25a800df4aa03966e53d9bb6ad9018a44d8c3c2",
+      "bytes": 4367
+    },
+    "source_files/week/weekly_pipeline_review_notes.docx": {
+      "sha256": "16b666fe63d8d187f69d9ebfac8d003a42637c411d26a4e8bbaef58252c67c6b",
+      "bytes": 41888
+    },
+    "submissions/claude-4-opus-thinking/w1_t1/submission/market_overview.pdf": {
+      "sha256": "a77d65b46ec3eaaf71a73ff5279152ab7b3f7bfa348ced42c6fb5cd2ec5491cb",
+      "bytes": 47164
+    },
+    "submissions/claude-4-opus-thinking/w1_t1/submission/market_overview.tex": {
+      "sha256": "6290aa7fb8b541c1f39ba9756a08add47ec0d366ba5ab51dc4e0dcd1bca6254f",
+      "bytes": 6807
+    },
+    "submissions/claude-4-opus-thinking/w1_t2/submission/market_model.xlsx": {
+      "sha256": "6155a29b018584db9856b725b20f7ef02c9ebff6f45be3da2dfcb23f3d6be5f0",
+      "bytes": 16704
+    },
+    "submissions/claude-4-opus-thinking/w1_t3/submission/target_assessment.pptx": {
+      "sha256": "7b11d6c1af685cf7f3d60771354066da0b22ef2198cbf56b0ee5627c282f1d20",
+      "bytes": 52074
+    },
+    "submissions/claude-4-opus-thinking/w1_t4/submission/briefing.mp4": {
+      "sha256": "df2b968979a82b291d492388144e65a6856588c43696865c167a08f786c06a4d",
+      "bytes": 219924
+    },
+    "submissions/claude-4-opus-thinking/w1_t4/submission/briefing.srt": {
+      "sha256": "880dd9d0bc59256cd9e420d97c21a7e5a75b991b320c7b82fd2571b9a1c59314",
+      "bytes": 767
+    },
+    "submissions/claude-fable-5/w1_t1/submission/market_overview.pdf": {
+      "sha256": "00e44a37beec40bba7e9cf39680bad1c93b0c248d298a79957a9baef783d8c7d",
+      "bytes": 143299
+    },
+    "submissions/claude-fable-5/w1_t1/submission/market_overview.tex": {
+      "sha256": "33adff62f630998648b5721b2c6dc01735523730cee8ff1e391f1f6907048292",
+      "bytes": 54408
+    },
+    "submissions/claude-fable-5/w1_t2/submission/market_model.xlsx": {
+      "sha256": "800a82d1e2a411b175c118ca33bd3b46a7d2cc338b606bc078df6cd5f58262f0",
+      "bytes": 56630
+    },
+    "submissions/claude-fable-5/w1_t3/submission/target_assessment.pptx": {
+      "sha256": "53e03a7fd37674019769a566795c9057284e343df2cf0273c3d2eeadc494a880",
+      "bytes": 116712
+    },
+    "submissions/claude-fable-5/w1_t4/submission/briefing.mp4": {
+      "sha256": "d47171ec5a0ff16499bbce5b1cf7fff6810b695f03f3647274daae9025ea949d",
+      "bytes": 31306494
+    },
+    "submissions/claude-fable-5/w1_t4/submission/briefing.srt": {
+      "sha256": "d266fb8112c7a596c14b0fa6fb04828d86940b725e01b3e3efeef9c09ac3a688",
+      "bytes": 8229
+    },
+    "submissions/gemini-3-1-pro/w1_t1/submission/market_overview.pdf": {
+      "sha256": "89e936332f6c77613f35de94e96e51cf43d4ecd9eaeb220faf54e88a14c1aeec",
+      "bytes": 60188
+    },
+    "submissions/gemini-3-1-pro/w1_t1/submission/market_overview.tex": {
+      "sha256": "5d3213a224a4f51a6ef774e0b7994590a23cf3157e7eec5a796c0b488c038009",
+      "bytes": 9538
+    },
+    "submissions/gemini-3-1-pro/w1_t2/submission/market_model.xlsx": {
+      "sha256": "30cdce5519a2e6d970eb9a76d9cf7dfd6affb2a3677f2bbf199904abd6e8dede",
+      "bytes": 10486
+    },
+    "submissions/gemini-3-1-pro/w1_t3/submission/target_assessment.pptx": {
+      "sha256": "9912daf6f346540d91d7207704b6f0c18c23457bfa7ceda8de7db37197ad98bc",
+      "bytes": 36430
+    },
+    "submissions/gemini-3-1-pro/w1_t4/submission/briefing.mp4": {
+      "sha256": "cc9802dcc762bf9d1dfcb2f27f1f780398ed1e2beb4ce9f6010c0ea5eb6f8b20",
+      "bytes": 599244
+    },
+    "submissions/gemini-3-1-pro/w1_t4/submission/briefing.srt": {
+      "sha256": "109af6b46fd466eabf4d751811dfdd7534bb961dd3f3c00683b3ce85996a6ae7",
+      "bytes": 2967
+    },
+    "submissions/glm-5-2/w1_t1/submission/market_overview.pdf": {
+      "sha256": "b74b8f204f6a737522d3de4ea703dec11daa5e4a2067cad11294af7cf9d058c2",
+      "bytes": 74307
+    },
+    "submissions/glm-5-2/w1_t1/submission/market_overview.tex": {
+      "sha256": "810acc9f7fd742ae4109ef35712d29184e5c0dab80e67b7f656953bfc5667219",
+      "bytes": 24582
+    },
+    "submissions/glm-5-2/w1_t2/submission/market_model.xlsx": {
+      "sha256": "aa6562b3ec0bdf2b90e161d0ccb91c87745fca4d157cdbd0b5fee61a42053442",
+      "bytes": 69826
+    },
+    "submissions/glm-5-2/w1_t3/submission/target_assessment.pptx": {
+      "sha256": "02827bae56d9b8ccb11a626e2e3c2ab5775cd0be3c4899638af8d4b854604b6d",
+      "bytes": 661331
+    },
+    "submissions/glm-5-2/w1_t4/submission/briefing.mp4": {
+      "sha256": "1343936c284c5565d2950ccb9320edbe0e73fc6549e5d70c1746a0f4bee3ae9d",
+      "bytes": 24446020
+    },
+    "submissions/glm-5-2/w1_t4/submission/briefing.srt": {
+      "sha256": "aa901587e7d688a8158633ed7c9eb3cac0b6e58f74da4a4bcd396805ba4b8078",
+      "bytes": 11201
+    },
+    "submissions/gpt-5-5/w1_t1/submission/market_overview.pdf": {
+      "sha256": "d3d0324b81bdbd810953251dcb44fd431b623544bcb6b615ae07dbdc91af11ee",
+      "bytes": 107015
+    },
+    "submissions/gpt-5-5/w1_t1/submission/market_overview.tex": {
+      "sha256": "722a00148a0bf9e80c51ddf081b6ca7b6afc6a44eff987cf569027943f1fb4b1",
+      "bytes": 18684
+    },
+    "submissions/gpt-5-5/w1_t2/submission/market_model.xlsx": {
+      "sha256": "491e4ecd8d7832e74724f043c666a60611d07fbf926f134d54aab365b35c644a",
+      "bytes": 44624
+    },
+    "submissions/gpt-5-5/w1_t3/submission/target_assessment.pptx": {
+      "sha256": "576b9acbbf0b4d8c8c4c5d984eaf97dc86fdc5c8865b01e155ff790cfc802f8d",
+      "bytes": 212629
+    },
+    "submissions/gpt-5-5/w1_t4/submission/briefing.mp4": {
+      "sha256": "efe9587578fbaa99f3f29f00fbe8a39254e6c3469b8dd518d7fc6bde5388d888",
+      "bytes": 18009635
+    },
+    "submissions/gpt-5-5/w1_t4/submission/briefing.srt": {
+      "sha256": "cfa39e2d95fb49ed6c19082d9c6e15bac991bd00726d7ebbbe4910abc849bd8d",
+      "bytes": 8384
+    },
+    "submissions/o3/w1_t2/submission/market_model.xlsx": {
+      "sha256": "be7b96b5f01f50c22207540ef7c02a0f502c95b567255904b08f9e51258ded4e",
+      "bytes": 9838
+    },
+    "submissions/o3/w1_t3/submission/target_assessment.pptx": {
+      "sha256": "179fa0ff4d1fae89093ad37a342e13c492345ac6193eeabef10b52b80b9cc883",
+      "bytes": 64574
+    },
+    "submissions/o3/w1_t4/submission/briefing.mp4": {
+      "sha256": "f6f1daec55bebf637f71748e8f8432c120c9c2eceea28ffa4a604c1baa3dd4a0",
+      "bytes": 1251223
+    },
+    "submissions/o3/w1_t4/submission/briefing.srt": {
+      "sha256": "d044068640bcf6f21c652e87497ec66670b07aebf4b64810fd93b066ac128091",
+      "bytes": 2368
+    },
+    "summary_docs/scenario_overview.md": {
+      "sha256": "d7aebb4f89957722aa144115a30eba14b4780b9573d4dce7e7da6b352c7c67b6",
+      "bytes": 5948
+    },
+    "summary_docs/week_1/week_1_overview.md": {
+      "sha256": "417c1e063c31ad485d79610bf4ec994485f1985e9497d364397efe2718e77ac4",
+      "bytes": 710
+    },
+    "tasks/w1_t1.md": {
+      "sha256": "9c81987ef22cea43c3eba7588d86321e2791122ac96e6c9ea11e7bf58abaf8d4",
+      "bytes": 913
+    },
+    "tasks/w1_t2.md": {
+      "sha256": "43eba0f7a902e66fd415d61447c20d37452f2ee0edb766f4e86ff29bfd121ecf",
+      "bytes": 818
+    },
+    "tasks/w1_t3.md": {
+      "sha256": "dfa43a286d3ed96e98c3a0c5f515b130fda80adc8594e4dacc78c8659b2125f2",
+      "bytes": 687
+    },
+    "tasks/w1_t4.md": {
+      "sha256": "23ad1fc817fa47890ed1eb8e720f3309e119cba9d94fb7751e0d5cbc28011330",
+      "bytes": 716
+    }
+  },
+  "status": "DATASET_PINNED"
+}

@@ -55,7 +55,13 @@ EVALS = [
         dataset_url="https://huggingface.co/datasets/ArtificialAnalysis/AA-Briefcase-Lite",
         harness_url="https://github.com/ArtificialAnalysis/Stirrup",
         evidence=f"{_T}/AGENT_benchmarking.pdf.txt:5-16,110-113",
-        spec_status=STATUS_METHODOLOGY_ONLY,
+        spec_status=STATUS_DATASET_PINNED,
+        pin_record="design/zone_a/evidence/aaii_dataset_pin_aa-briefcase.json",
+        scoreable_official=False, scoreable_local_proxy=False,
+        scoreability_note=("AA-Briefcase-Lite is a PUBLIC EXAMPLE SCENARIO and its README states "
+                           "verbatim it 'is not part of the scored leaderboard'; the four scored "
+                           "scenarios stay private. Pinning this repo buys HARNESS VALIDATION "
+                           "(rubric + evidence chains + 6 frontier submissions), never a score."),
         metric="Elo (Crowd-BT); aggregates analytical Elo, presentation Elo, rubric pass rate",
         grading="rubric binary (panel of 3) + pairwise (analytical, presentation)",
         runs_per_task=1, turns=500, sandbox="E2B, week-scoped, no internet",
@@ -102,7 +108,12 @@ EVALS = [
         dataset_url="https://huggingface.co/datasets/ArtificialAnalysis/AA-Omniscience-Public",
         harness_url=None,
         evidence=f"{_T}/GENERAL_Benchmarking.pdf.txt:2-31",
-        spec_status=STATUS_METHODOLOGY_ONLY,
+        spec_status=STATUS_DATASET_PINNED,
+        pin_record="design/zone_a/evidence/aaii_dataset_pin_aa-omniscience.json",
+        scoreable_official=False, scoreable_local_proxy=True,
+        scoreability_note=("600 public questions with short pinned answers. The official Index needs a "
+                           "GRADING MODEL plus abstention behaviour; a deterministic answer match is "
+                           "ACCURACY ONLY and is not the Omniscience Index."),
         metric=("AA-Omniscience Index: +correct, -hallucinated, abstain neutral. "
                 "Index contributes Accuracy (10%) + Non-Hallucination Rate (5%)"),
         grading="each answer CORRECT | INCORRECT | PARTIAL_ANSWER | NOT_ATTEMPTED; judge GPT-5.6 Luna (medium)",
@@ -131,7 +142,12 @@ EVALS = [
         dataset_url="https://huggingface.co/datasets/ArtificialAnalysis/AA-LCR",
         harness_url=None,
         evidence=f"{_T}/GENERAL_Benchmarking.pdf.txt:101-126",
-        spec_status=STATUS_METHODOLOGY_ONLY,
+        spec_status=STATUS_DATASET_PINNED,
+        pin_record="design/zone_a/evidence/aaii_dataset_pin_aa-lcr.json",
+        scoreable_official=False, scoreable_local_proxy=False,
+        scoreability_note=("100 questions pinned, but each needs its ~100k-token source document set "
+                           "from the extraction zip AND an equality-checker LLM. Neither is present, "
+                           "so this is answerable=False and scoreable=False."),
         metric="pass@1",
         grading="equality-checker LLM GPT-5.6 Luna (medium)",
         runs_per_task=1, turns=1, sandbox=None,
@@ -175,7 +191,12 @@ EVALS = [
         dataset_url="https://huggingface.co/datasets/cais/hle",
         harness_url=None,
         evidence=f"{_T}/SCIENTIFIC_REASONING_Benchmarking.pdf.txt:2-25",
-        spec_status=STATUS_METHODOLOGY_ONLY,
+        spec_status=STATUS_DATASET_PINNED,
+        pin_record="design/zone_a/evidence/aaii_dataset_pin_hle.json",
+        scoreable_official=False, scoreable_local_proxy=True,
+        scoreability_note=("2,500 parquet rows pinned. Official AAII grading uses an equality-checker "
+                           "LLM; a normalized exact match is an APPROXIMATION and must never be "
+                           "reported as the AAII score."),
         metric="pass@1",
         grading="equality checker GPT-5.6 Luna (medium), prompt from Hendrycks et al.",
         runs_per_task=1, turns=1, sandbox=None,

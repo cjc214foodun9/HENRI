@@ -1,0 +1,58 @@
+{
+  "schema": "henri.bench.dataset-pin.v1",
+  "written_utc": "2026-10-04",
+  "eval_id": "hle",
+  "eval_name": "Humanity's Last Exam (HLE)",
+  "index": {
+    "name": "Artificial Analysis Intelligence Index",
+    "version": "4.3.2"
+  },
+  "source": {
+    "repo": "cais/hle",
+    "url": "https://huggingface.co/datasets/cais/hle",
+    "host": "huggingface",
+    "revision": "5a81a4c7271a2a2a312b9a690f0c2fde837e4c29",
+    "fetch_tool": "HENRI V2/benchmarks/fetch_aaii.py",
+    "fetched_utc": "2026-10-04T18:09:32Z"
+  },
+  "assets_pinned": {
+    ".gitattributes": {
+      "bytes": 2461,
+      "sha256": "e7a120ab07b1bc5b486be249e9fc6c83d59448d0093e1dfebe95d1566d9cafc0"
+    },
+    "README.md": {
+      "bytes": 2574,
+      "sha256": "f16f96e69791f83bb835120613fe419233b0345beae7296cce543593c5c57b5a"
+    },
+    "data/test-00000-of-00001.parquet": {
+      "bytes": 274276147,
+      "sha256": "6d0ee0602e8aea6b159509577e884f48ecac7b8e3f6822a35f51335a446c726a"
+    },
+    "eval.yaml": {
+      "bytes": 1118,
+      "sha256": "c8190840d6aa605a13197215da46556cd47f14c81665e929151631293365bf32"
+    }
+  },
+  "n_assets_pinned": 4,
+  "total_bytes_pinned": 274282300,
+  "official_metric": "AAII equality-checker LLM (GPT-5.6 Luna medium per the operator PDF)",
+  "honest_spec_status": {
+    "assets": "DATASET_PINNED",
+    "answerable": true,
+    "scoreable_official": false,
+    "scoreable_local_proxy": true,
+    "local_proxy": "normalized exact match of the model's final answer string against the pinned `answer` field; NO judge LLM.",
+    "local_proxy_caveat": "HLE's official AAII grading uses an equality-checker LLM, so a deterministic match is an APPROXIMATION and must never be reported as the AAII score.",
+    "blocker": "external equality-checker LLM for the official metric"
+  },
+  "dataset_facts": {
+    "n_questions": 2500,
+    "format": "parquet",
+    "note": "evaluation.yaml ships alongside; parquet holds the test split."
+  },
+  "not_claimed": [
+    "No score of any kind.",
+    "No AAII v4.3.2 score.",
+    "No model was run against these items."
+  ]
+}

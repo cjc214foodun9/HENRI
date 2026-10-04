@@ -1,0 +1,57 @@
+{
+  "schema": "henri.bench.dataset-manifest.v1",
+  "eval_id": "hle",
+  "repo": "cais/hle",
+  "source_url": "https://huggingface.co/datasets/cais/hle",
+  "fetched_utc": "2026-10-04T18:09:32Z",
+  "local_dir": "benchmarks/data/hle",
+  "n_files": 11,
+  "total_bytes": 274283606,
+  "files": {
+    ".gitattributes": {
+      "sha256": "e7a120ab07b1bc5b486be249e9fc6c83d59448d0093e1dfebe95d1566d9cafc0",
+      "bytes": 2461
+    },
+    "eval.yaml": {
+      "sha256": "c8190840d6aa605a13197215da46556cd47f14c81665e929151631293365bf32",
+      "bytes": 1118
+    },
+    "README.md": {
+      "sha256": "f16f96e69791f83bb835120613fe419233b0345beae7296cce543593c5c57b5a",
+      "bytes": 2574
+    },
+    ".cache/huggingface/.gitignore": {
+      "sha256": "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1",
+      "bytes": 1
+    },
+    ".cache/huggingface/CACHEDIR.TAG": {
+      "sha256": "e8893e2dcb3f4545ef67a0a5b7b769113d38eef1aa61c7c7ba14659b02af955f",
+      "bytes": 195
+    },
+    ".cache/huggingface/download/.gitattributes.metadata": {
+      "sha256": "d649ab43d93cff794ce8293598839a0ff9a9f06d40bf347b402b1e1e729581ca",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/eval.yaml.metadata": {
+      "sha256": "631070e372a2935e6ebce5884a48b2096244c350916de9af02081a9cd344bb45",
+      "bytes": 102
+    },
+    ".cache/huggingface/download/README.md.metadata": {
+      "sha256": "8651e1ebd7c97e0ffe28506617f658da0448392bce05c1e90718a280bee06644",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/data/test-00000-of-00001.parquet.metadata": {
+      "sha256": "e3045f254f6c95ed7f5cd1278b1e5a40814c7da89a98b6b7bb575a29f02069a8",
+      "bytes": 128
+    },
+    ".cache/huggingface/trees/5a81a4c7271a2a2a312b9a690f0c2fde837e4c29.json": {
+      "sha256": "7704ff11ff1a531416dfc18692b09865cbcc285020ba96bf41d737b16f80b20e",
+      "bytes": 673
+    },
+    "data/test-00000-of-00001.parquet": {
+      "sha256": "6d0ee0602e8aea6b159509577e884f48ecac7b8e3f6822a35f51335a446c726a",
+      "bytes": 274276147
+    }
+  },
+  "status": "DATASET_PINNED"
+}
