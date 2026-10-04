@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blueprint adopted, bottleneck relocated: the codec's own fill is the egress defect</title>
+<style>
+  :root{--fg:var(--foreground);--mut:var(--muted-foreground);--bd:var(--border);--cd:var(--card);--ac:var(--accent)}
+  *{box-sizing:border-box}
+  body{color:var(--fg);margin:0;font:15px/1.55 ui-sans-serif,system-ui,sans-serif}
+  h1{font-size:1.35rem;margin:0 0 .3rem}
+  h2{font-size:1.02rem;margin:1.5rem 0 .45rem;border-bottom:1px solid var(--bd);padding-bottom:.25rem}
+  .sub{color:var(--mut);font-size:.85rem;margin-bottom:1rem}
+  table{border-collapse:collapse;width:100%;font-size:.87rem;margin:.5rem 0}
+  th,td{border:1px solid var(--bd);padding:.34rem .5rem;text-align:left;vertical-align:top}
+  th{background:var(--cd)}
+  code,kbd{font-family:ui-monospace,monospace;font-size:.86em;background:var(--cd);padding:.05em .3em;border-radius:3px}
+  pre{background:var(--cd);border:1px solid var(--bd);border-radius:6px;padding:.6rem;overflow-x:auto;font-size:.82rem}
+  .tag{display:inline-block;font-size:.7rem;padding:.1rem .42rem;border-radius:3px;border:1px solid var(--bd);background:var(--cd);margin-right:.3rem}
+  .card{border:1px solid var(--bd);border-radius:7px;padding:.7rem .85rem;margin:.7rem 0;background:var(--cd)}
+  .big{font-size:1.35rem;font-weight:600}
+  .warn{border-left:3px solid #c98a00;padding-left:.7rem}
+  .ok{border-left:3px solid #2e7d32;padding-left:.7rem}
+</style>
+</head>
+<body>
+
+<h1>Blueprint adopted, bottleneck relocated</h1>
+<p class="sub">Project HENRI &middot; Zone A egress &middot; 2026-10-03 &middot;
+HEAD <code>ac13970</code> &middot; ledger 1834 &middot; cost <strong>$0</strong></p>
+
+<p>Operator approval for Path A and the attached blueprint is anchored to the document hash
+<code>9f3cd5cd&hellip;b7bf</code> and sealed <code>#2ddbaa8bee737803</code>.
+The blueprint is treated as a <strong>hypothesis set</strong>, not a spec.
+Its architecture is adopted. Its autopsy is corrected by measurement.</p>
+
+<h2>1. What the approved document gets wrong</h2>
+<table>
+<tr><th>Claim</th><th>This project's measurement</th></tr>
+<tr><td>&sect;1.1 "A-K4 is the binding kill"</td><td><strong>A-K4 PASSED</strong> &mdash; 0.000 &rarr; 0.833 &rarr; 0.083, determinism 1.000. The blocked gate is <strong>A-K5 Arm B</strong>.</td></tr>
+<tr><td>&sect;2.2 "a linear projection head strips phase; mutual information collapses"</td><td>Competes with the established provenance finding: the A-K5 checkpoint trained on <strong>random waves and random labels</strong>. The degenerate target is <em>established</em>; the readout diagnosis is a <em>hypothesis</em>.</td></tr>
+<tr><td>&sect;5 G2 <code>top1_token_unique &ge; 14/16</code></td><td>Re-adopts the metric family the <strong>M1 gate falsified</strong> (random control 0.592 beat treatment 0.233). G2 must gate on <em>separation versus a content-destroyed control</em>.</td></tr>
+<tr><td>&sect;2.4 <code>&beta;*=26.10</code>, <code>T*=0.038316</code></td><td><strong>Mutually inconsistent.</strong> <code>1/26.10 = 0.038314</code>, not 0.038316. No repo artifact derived 26.10.</td></tr>
+<tr><td>&sect;2.0 "+0.6083 margin"</td><td>No provenance. Sits <strong>0.0018</strong> from this repo's measured <code>+0.6065</code>. Not independent evidence.</td></tr>
+<tr><td>Stage 1 irrational carriers</td><td>Do not survive float at D=65536. Near-integer relations recur.</td></tr>
+</table>
+
+<h2>2. &beta; is not the snap mechanism</h2>
+<pre>Q1  argmax(softmax(&beta;&middot;s))   &beta; = 0.5 &hellip; 1000  &rarr;  identical 26
+    BETA_INVARIANT = True
+    &rarr; the discrete snap is caused by <b>argmax</b>, not by &beta;.
+Q2  iterative convergence IS &beta;-load-bearing:
+    &beta;&lt;5 &rarr; acc 0.000      &beta;&ge;5 &rarr; acc 1.000
+    &rarr; &beta; sets convergence and gradient scale, not selection.
+Q3  blueprint scores Re(&Psi;&dagger;M<sub>k</sub>):  glob=0 1.000, glob=&pi; <b>0.000</b>, random 0.500
+    magnitude |mean(conj(a)&middot;b)|:           1.000, 1.000, 1.000
+    &rarr; adopt the magnitude kernel. A wave system has no absolute phase.</pre>
+<p><strong>Verdict <code>BETA_IS_NOT_THE_SNAP_MECHANISM</code>.</strong>
+<code>&beta;*=26.10</code> is recorded <strong>externally asserted, unverified on host</strong>.
+It is a convergence and gradient-scale knob, not an anti-collapse mechanism.</p>
+
+<h2>3. The bottleneck is upstream of the readout</h2>
+<p>Located in source, <code>zone_c_world_knowledge_codec.py:139&ndash;153</code>:</p>
+<pre>rows = acc.reshape(NUM_BLOCKS, BLOCK_DIM)          # [8192, 8]
+empty = norms &lt; 1e-9
+if empty.any():
+    seed = _feature_hash(text[:64] or "empty")     # &lt;- whole-TEXT hash
+    for k in np.nonzero(empty)[0]:
+        x = (seed * LCG_MUL + int(k) * LCG_ADD) &amp; 0xFFFFFFFF
+        rows[k, x % BLOCK_DIM] = 1.0               # &lt;- hash NOISE, persisted</pre>
+<p>A 6-feature phrase touches <strong>96 of 65536 slots</strong>.
+The other <strong>8096 of 8192 rows</strong> are empty, and <code>encode()</code> fills each
+with a slot derived from the whole-text hash &mdash; then <em>returns that fill as the engram</em>.
+The shipped wave is <strong>0.15% compositional content</strong> and <strong>99.85% text-hash noise</strong>.</p>
+
+<div class="card">
+<p class="big">K-SNR: remove the fill, the flat linear head improves 6&times;</p>
+<table>
+<tr><th>Variant</th><th>ARM-L linear</th><th>ARM-H Hopfield</th><th>control</th></tr>
+<tr><td>FILL (codec as shipped)</td><td>0.0586</td><td>0.0664</td><td>0.0039 / 0.0078</td></tr>
+<tr><td>ZERO (empty rows zeroed)</td><td><strong>0.3516</strong></td><td>0.0000</td><td>0.0156 / 0.0000</td></tr>
+<tr><td colspan="4">chance 0.0078 &middot; held-out templates &middot; controls at chance &middot; &Delta;<sub>linear</sub> = <strong>+0.2930</strong></td></tr>
+</table>
+<p><strong>Verdict <code>HASH_FILL_IS_THE_SNR_DEFECT</code>.</strong></p>
+</div>
+
+<p class="ok"><strong>Mechanism predicts the effect size.</strong>
+Fill SNR &asymp; 96/&radic;8192 &asymp; 1.06. No-fill SNR &asymp; 96/&radic;96 &asymp; 9.8.
+Predicted ratio <strong>9.2</strong>, observed <strong>6.0</strong>. Same order &mdash; this is
+not a fitting artifact.</p>
+
+<p class="warn"><strong>Do not overclaim.</strong> The fill is <em>a</em> cause, not the only cause.
+Linear held-out reaches 0.3516, far below 1.0. Cross-template variance of the 96 feature
+slots remains. ARM-H collapsing to 0.0000 in ZERO is <strong>undiagnosed</strong> and recorded
+as an open observation.</p>
+
+<h2>4. Consequence for the approved blueprint</h2>
+<table>
+<tr><th></th><th>Status</th></tr>
+<tr><td>Strongly typed manifolds, K&le;512 over 32000 tokens</td><td><span class="tag">ADOPT</span> strongest idea in the document</td></tr>
+<tr><td>Hopfield energy readout over flat linear</td><td><span class="tag">ADOPT</span> as a testable upgrade &mdash; but ARM-H lost to ARM-L here</td></tr>
+<tr><td>Magnitude similarity kernel</td><td><span class="tag">ADOPT</span> replaces the document's Re()</td></tr>
+<tr><td>G1 no [D,D], &lt;2 GiB</td><td><span class="tag">ALREADY PASSES</span> codebook 256 MiB at K=512,D=65536</td></tr>
+<tr><td>Stages 1&ndash;4</td><td><span class="tag">ALREADY BUILT</span> verified this session</td></tr>
+<tr><td>"Bottleneck entirely in the readout"</td><td><span class="tag">REJECTED</span> causal form &mdash; bottleneck is upstream</td></tr>
+<tr><td>"Lexical Snap prevents collapse via &beta;"</td><td><span class="tag">REJECTED</span> &beta; is argmax-invariant</td></tr>
+<tr><td>Build all six stages</td><td><span class="tag">REJECTED</span> &sect;2.4 names one immediate action</td></tr>
+</table>
+
+<h2>5. Evidence status</h2>
+<table>
+<tr><th>Claim</th><th>Class</th></tr>
+<tr><td>Zone C retrieval transfers to novel questions (+40% across 3 dims)</td><td><strong>PROVEN</strong></td></tr>
+<tr><td>Retrieved text improves a generated answer (+83 pts)</td><td><strong>PROVEN</strong></td></tr>
+<tr><td>Codec hash-fill damages egress SNR</td><td><strong>OBSERVED</strong> &mdash; controls clean, mechanism predicts size</td></tr>
+<tr><td>&beta; is not the snap mechanism</td><td><strong>PROVEN</strong> by construction</td></tr>
+<tr><td>Blueprint's readout diagnosis</td><td><strong>UNMEASURED</strong> on content-grounded data</td></tr>
+<tr><td>Wave&rarr;text egress works</td><td><strong>UNMEASURED</strong> &mdash; prior artifact degenerate</td></tr>
+<tr><td>AAII v4.3 SOTA on a 5090</td><td><strong>NOT ESTABLISHED</strong></td></tr>
+</table>
+
+<h2>6. Self-caught instrument defects this batch</h2>
+<p>Five. Each was caught by reading controls rather than the headline.</p>
+<table>
+<tr><th>#</th><th>Defect</th><th>Failure mode avoided</th></tr>
+<tr><td>D2</td><td>Global slot permutation as control</td><td>Orthogonal &rarr; linear head learns it away; control reproduces the real number exactly</td></tr>
+<tr><td>D3</td><td><code>[B,V,DC,2]</code> materialization</td><td>&asymp;4.3 GiB OOM &mdash; same class as the [D,D] covariance blowup</td></tr>
+<tr><td>D4</td><td><code>e[:,p]</code> then <code>.view(complex64)</code></td><td>Non-contiguous &rarr; ValueError</td></tr>
+<tr><td>D5</td><td>Per-sample SLOT permutation as control</td><td>Preserved active-block support, which <em>is</em> the signal &rarr; ctrl 0.1367 = 17&times; chance</td></tr>
+<tr><td>D6</td><td><code>sys.path</code> one level short</td><td>ModuleNotFoundError &mdash; my path error, twice</td></tr>
+</table>
+
+<h2>7. Next gate</h2>
+<ol>
+<li><strong>Fix the codec fill for the egress path only</strong> (keep it for retrieval's row_unit gate). Then re-run the readout A/B on the corrected family. <em>Local, $0.</em></li>
+<li><strong>Re-run the readout A/B</strong> on the corrected family, K=512 typed manifold, magnitude kernel, same-family controls.</li>
+<li><strong>GPU spend is a separate operator checkpoint.</strong> Nothing bills now.</li>
+</ol>
+
+<p class="sub">Commits <code>a298c9b</code> &rarr; <code>af3e255</code> &rarr; <code>ac13970</code>.
+Seals <code>#2ddbaa8bee737803</code>, <code>#aeccc75e05d66c26</code>.
+<code>main a039095</code> untouched. Latency deprioritized per standing instruction.</p>
+
+</body>
+</html>
