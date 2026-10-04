@@ -8,23 +8,99 @@
   "blueprint_clause": "HENRI-ARCH-2026-SYSTEMIC-EVALUATION-V3 sec 1.4 / Stage 6: 'it lacks a recursive active inference loop to execute step-by-step state manipulation ... minimising Expected Free Energy G across candidate options pi'",
   "labelling": "DERIVED, NOT OBSERVED. Gaussian likelihood over the REAL codec waves (the 6 archived corpus facts, real encode_egress output), with the noise scale calibrated per rung. No physical claim. This tests the DECISION RULE.",
   "setup": {
-    "K": 6, "wave_dim": 65536, "channel_ambiguity_mean_abs_offdiag_cos": 0.18199,
-    "measured_single_look_LOO": 0.8043, "ladder": [0.80, 0.65, 0.55, 0.45, 0.35],
-    "trials_per_rung": 400, "probes": 24, "mc": 4, "criterion": 0.95, "max_steps": 12,
-    "policies": {"info": "expected information gain (entropy of the look-ahead posterior)",
-                 "greedy": "expected top-1 posterior", "rand": "uniform random probe"}
+    "K": 6,
+    "wave_dim": 65536,
+    "channel_ambiguity_mean_abs_offdiag_cos": 0.18199,
+    "measured_single_look_LOO": 0.8043,
+    "ladder": [
+      0.8,
+      0.65,
+      0.55,
+      0.45,
+      0.35
+    ],
+    "trials_per_rung": 400,
+    "probes": 24,
+    "mc": 4,
+    "criterion": 0.95,
+    "max_steps": 12,
+    "policies": {
+      "info": "expected information gain (entropy of the look-ahead posterior)",
+      "greedy": "expected top-1 posterior",
+      "rand": "uniform random probe"
+    }
   },
   "results": [
-    {"single_look": 0.80, "sigma": 0.00041, "greedy_median": 1.0, "info_median": 1.0, "rand_median": 2.0,
-     "info_mean": 1.45, "rand_mean": 1.67, "rand_acc1": 0.7800, "GA1": false, "GA2": true, "GA3": true, "GA4": true},
-    {"single_look": 0.65, "sigma": 0.00083, "greedy_median": 2.0, "info_median": 2.0, "rand_median": 2.0,
-     "info_mean": 1.57, "rand_mean": 2.25, "rand_acc1": 0.6375, "GA1": false, "GA2": false, "GA3": true, "GA4": true},
-    {"single_look": 0.55, "sigma": 0.00123, "greedy_median": 2.0, "info_median": 2.0, "rand_median": 3.0,
-     "info_mean": 2.00, "rand_mean": 2.90, "rand_acc1": 0.5775, "GA1": false, "GA2": true, "GA3": true, "GA4": true},
-    {"single_look": 0.45, "sigma": 0.00198, "greedy_median": 3.0, "info_median": 2.0, "rand_median": 4.0,
-     "info_mean": 2.51, "rand_mean": 4.22, "rand_acc1": 0.4525, "GA1": true, "GA2": true, "GA3": true, "GA4": true},
-    {"single_look": 0.35, "sigma": 0.00355, "greedy_median": 5.0, "info_median": 4.0, "rand_median": 7.0,
-     "info_mean": 4.57, "rand_mean": 7.58, "rand_acc1": 0.3250, "GA1": false, "GA2": true, "GA3": true, "GA4": true}
+    {
+      "single_look": 0.8,
+      "sigma": 0.00041,
+      "greedy_median": 1.0,
+      "info_median": 1.0,
+      "rand_median": 2.0,
+      "info_mean": 1.45,
+      "rand_mean": 1.67,
+      "rand_acc1": 0.78,
+      "GA1": false,
+      "GA2": true,
+      "GA3": true,
+      "GA4": true
+    },
+    {
+      "single_look": 0.65,
+      "sigma": 0.00083,
+      "greedy_median": 2.0,
+      "info_median": 2.0,
+      "rand_median": 2.0,
+      "info_mean": 1.57,
+      "rand_mean": 2.25,
+      "rand_acc1": 0.6375,
+      "GA1": false,
+      "GA2": false,
+      "GA3": true,
+      "GA4": true
+    },
+    {
+      "single_look": 0.55,
+      "sigma": 0.00123,
+      "greedy_median": 2.0,
+      "info_median": 2.0,
+      "rand_median": 3.0,
+      "info_mean": 2.0,
+      "rand_mean": 2.9,
+      "rand_acc1": 0.5775,
+      "GA1": false,
+      "GA2": true,
+      "GA3": true,
+      "GA4": true
+    },
+    {
+      "single_look": 0.45,
+      "sigma": 0.00198,
+      "greedy_median": 3.0,
+      "info_median": 2.0,
+      "rand_median": 4.0,
+      "info_mean": 2.51,
+      "rand_mean": 4.22,
+      "rand_acc1": 0.4525,
+      "GA1": true,
+      "GA2": true,
+      "GA3": true,
+      "GA4": true
+    },
+    {
+      "single_look": 0.35,
+      "sigma": 0.00355,
+      "greedy_median": 5.0,
+      "info_median": 4.0,
+      "rand_median": 7.0,
+      "info_mean": 4.57,
+      "rand_mean": 7.58,
+      "rand_acc1": 0.325,
+      "GA1": false,
+      "GA2": true,
+      "GA3": true,
+      "GA4": true
+    }
   ],
   "verdict": "EFE_SEPARATES_FROM_GREEDY at single-look acc 0.45 (info 2.0 vs greedy 3.0 probes, 0.67x)",
   "THE_HONEST_READING": {
@@ -55,11 +131,18 @@
     "single seed; 400 trials per rung (median granularity 1 probe)",
     "this is a DECISION-RULE result and says nothing about wave->text egress"
   ],
-  "cost": {"gpu_usd": 0, "cpu_only": true, "store_write": false, "training": false},
+  "cost": {
+    "gpu_usd": 0,
+    "cpu_only": true,
+    "store_write": false,
+    "training": false
+  },
   "authorization": {
     "operator": "2026-10-03 grant of Path A and the executive instructions of HENRI-ARCH-2026-SYSTEMIC-EVALUATION-V3 (message body)",
     "approval_seal": "#2ddbaa8bee737803",
     "blueprint_sha256": "9f3cd5cd6116e8e2f1c1f77a0c2ae9c2fc03f6c9dbd90bf59b0243af4ce6b7bf",
     "clause": "Stage 6 / sec 1.4, the third named component"
-  }
+  },
+  "superseded_by": "design/zone_a/evidence/stage6_isolation_receipt.json",
+  "seed_note": "D44: this receipt recorded single-seed but not the seed VALUE. The seed was the module default (20261004), recoverable via git show 9ffe662; not rewritten here. Seed-robustness measured at the isolation receipt (3 of 8 seeds separated, at disagreeing rungs)."
 }
