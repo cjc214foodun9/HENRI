@@ -1,0 +1,49 @@
+{
+  "schema": "henri.codec-snr-fill.v1",
+  "artifact": "HENRI V2/experiments/verification/codec_snr_fill_probe.py",
+  "runlog": "design/zone_a/evidence/codec_snr_fill_run.log",
+  "date_utc": "2026-10-03",
+  "root_cause_located_in_source": {
+    "file": "HENRI V2/zone_c_world_knowledge_codec.py",
+    "lines": "139-153 (empty branch at 144-149)",
+    "code": "seed = _feature_hash(text[:64] or 'empty'); rows[k, x % BLOCK_DIM] = 1.0",
+    "mechanism": "a 6-feature phrase touches 6*16=96 of 65536 slots. The other 8096 of 8192 rows are EMPTY and encode() fills EACH with a slot derived from the WHOLE-TEXT HASH. The fill is persisted and returned as the engram."
+  },
+  "wave_composition": {
+    "the alpha report": {"features": 6, "feature_slots": 96, "pct_of_65536": 0.146, "filler_slots": 65440},
+    "the alpha bravo report": {"features": 9, "feature_slots": 144, "pct_of_65536": 0.220, "filler_slots": 65392}
+  },
+  "config": {"V": 128, "templates": 5, "train_templates": 3, "held_out_templates": 2,
+             "steps": 300, "batch": 128, "lr": 0.02, "beta": 26.1, "chance": 0.0078},
+  "results": {
+    "FILL": {"linear": {"train": 1.0, "held_out": 0.0586, "ctrl": 0.0039},
+             "hopfield": {"train": 1.0, "held_out": 0.0664, "ctrl": 0.0078}},
+    "ZERO": {"linear": {"train": 1.0, "held_out": 0.3516, "ctrl": 0.0156},
+             "hopfield": {"train": 1.0, "held_out": 0.0, "ctrl": 0.0}}
+  },
+  "delta": {"linear_held_out": 0.2930, "hopfield_held_out": -0.0664},
+  "controls_at_chance": true,
+  "verdict": "HASH_FILL_IS_THE_SNR_DEFECT",
+  "reading": "Zeroing the hash-filled empty rows raises the FLAT LINEAR head 6x on held-out templates (0.0586 -> 0.3516, 45x chance) with clean controls. The codec's row_unit fill is a RETRIEVAL-side contract that damages the EGRESS path.",
+  "quantitative_prediction_check": {
+    "fill_snr_scaling": "signal slots 96 vs filler variance sqrt(8192): SNR ~ 96/sqrt(8192) ~ 1.06",
+    "zero_snr_scaling": "signal slots 96, no filler: SNR ~ 96/sqrt(96) ~ 9.8",
+    "predicted_ratio": 9.2,
+    "observed_ratio": 6.0,
+    "reading": "same order; the mechanism predicts the effect size, it is not a fitting artifact"
+  },
+  "consequences": {
+    "blueprint_diagnosis": "REJECTED in its causal form. Blueprint sec 2.2/2.4 locates the bottleneck in the READOUT (linear projection head). The measured bottleneck is UPSTREAM, in the codec's own wave family. A linear head improves 6x once the codec fill is removed.",
+    "blueprint_readout_claim": "NOT supported in this configuration. ARM-H (Hopfield) did worse than ARM-L (linear) in both variants; it collapsed to 0.0000 in ZERO.",
+    "residual_ceiling": "0.3516 is well short of 1.0. The fill is A cause, not the only cause. Cross-template variance of the 96-slot feature positions remains.",
+    "actionable_fix": "Keep the fill for RETRIEVAL (row_unit gate). Strip it for EGRESS. Or make the fill content-independent (constant seed) so it adds no text-specific noise."
+  },
+  "self_defects_caught": [
+    "D3 [B,V,DC,2] materialization ~4.3 GiB in LinearHead.forward (OOM class of the [D,D] covariance blowup) -> matmul",
+    "D4 e[:, p] non-contiguous then .view(complex64) -> ascontiguousarray",
+    "D5 control used a global slot permutation (orthogonal; linear head learns W'=W P^T; destroys nothing) then a per-sample SLOT permutation (preserves active-block support, which IS the signal in ZERO; ctrl 0.1367 = 17x chance) -> per-sample BLOCK permutation, controls now at chance"
+  ],
+  "not_a_gate": true,
+  "scope": {"no_checkpoint": true, "no_store": true, "cpu_only": true, "cost_usd": 0},
+  "sealed_by": "pending"
+}

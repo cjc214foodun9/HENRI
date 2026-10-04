@@ -1,0 +1,26 @@
+=== K-SNR: does the codec's hash-fill of empty rows destroy egress SNR? ===
+   NB=8192 BD=8 DC=32768 V=128 templates=5
+   features('the alpha report') = ['w:the', 'w:alpha', 'w:report', 'b:the alpha', 'b:alpha report', 't:the alpha report']
+
+=== wave composition ===
+   'the alpha report': 6 features -> 96 feature slots (0.146% of 65536); filler = 65440 slots
+   'the alpha bravo report': 9 features -> 144 feature slots (0.220% of 65536); filler = 65392 slots
+
+=== VARIANT FILL ===
+   train (384, 32768, 2) held-out (256, 32768, 2) chance=0.0078
+   ARM-L linear   train=1.0000  held-out=0.0586  ctrl=0.0039
+   ARM-H hopfield train=1.0000  held-out=0.0664  ctrl=0.0078
+
+=== VARIANT ZERO ===
+   train (384, 32768, 2) held-out (256, 32768, 2) chance=0.0078
+   ARM-L linear   train=1.0000  held-out=0.3516  ctrl=0.0156
+   ARM-H hopfield train=1.0000  held-out=0.0000  ctrl=0.0000
+
+=== VERDICT (pre-registered) ===
+   chance=0.0078  controls-at-chance=True
+   linear  FILL=0.0586 -> ZERO=0.3516  delta=+0.2930
+   hopfield FILL=0.0664 -> ZERO=0.0000  delta=-0.0664
+   -> HASH_FILL_IS_THE_SNR_DEFECT (K-SNR-1): zeroing filler rows
+      raises egress accuracy >= 0.15. The row_unit fill is a
+      retrieval-side contract that damages the egress path.
+RC=0
