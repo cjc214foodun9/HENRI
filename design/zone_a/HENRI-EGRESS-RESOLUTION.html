@@ -334,6 +334,48 @@
     value: strong typing, fail-closed per-field refusal, validated coordinates, per-field audit logs.
   </p>
 
+  <h3>2.8 Real prose: the synthetic result transfers &mdash; with caveats stated</h3>
+  <p>
+    Every result above used template sentences from a closed word list. The typed head had never seen
+    real text. The obvious test &mdash; &ldquo;run it on the MVP queries&rdquo; &mdash;
+    <strong>does not exist</strong>: the MVP path is retrieve &rarr; text &rarr; backbone &rarr;
+    answer and carries <em>no typed labels</em>, so scoring the typed head there would mean inventing
+    labels. This run uses real committed prose instead, with labels from deterministic substring
+    matching.
+  </p>
+  <p class="small">
+    <strong>Method.</strong> 992 unique sentences pooled from 19 committed design documents. Field =
+    &ldquo;entity&rdquo;; label = the ONE entity a sentence mentions, matched by substring. Held-out
+    sentences share an entity with training sentences and share no other tokens. Training-free nearest
+    class mean. Control = the SAME rows under per-sample block permutation.
+  </p>
+  <table>
+    <thead><tr><th>measure</th><th>value</th><th>note</th></tr></thead>
+    <tbody>
+      <tr><td>content_frac real prose</td><td class="n ok">1.4162%</td><td>vs 0.1709% synthetic template &mdash; <strong>8.29&times;</strong></td></tr>
+      <tr><td>LOO centroid (n=46)</td><td class="n ok">0.8043</td><td>37/46, 3.2&times; chance, binomial p = 4.75e-15</td></tr>
+      <tr><td>LOO control</td><td class="n warn">0.3478</td><td>16/46 &mdash; <strong>1.39&times; chance, mildly elevated</strong></td></tr>
+      <tr><td>n=12 holdout</td><td class="n bad">0.6667</td><td>pre-registered 0.80 bar <strong>NOT met</strong></td></tr>
+    </tbody>
+  </table>
+  <div class="box warnbox" role="note">
+    <strong>Verdict <span class="mono">REAL_PROSE_TRANSFER_CONFIRMED</span> &mdash; with two caveats
+    against my own verdict.</strong>
+    <ul>
+      <li>The block-permuted control is <strong>mildly elevated</strong> (16/46 vs 11.5 expected at
+        chance, ~1.5&sigma;, p&asymp;0.06). It clears the pre-registered &lt;3&times; bar but is not
+        cleanly at chance, so a small part of the signal survives block permutation. Disclosed.</li>
+      <li>The n=12 holdout sentences are a <strong>subset</strong> of the 46 LOO sentences, so the two
+        tests are not independent. The LOO PASS does not erase the holdout FAIL. Both are reported; the
+        favourable one was not selected.</li>
+    </ul>
+  </div>
+  <p class="small">
+    <strong>This corrected my own earlier claim.</strong> I had reported &ldquo;98.83% filler&rdquo; from a
+    3-word template. Real prose measures 98.58% unfilled and carries 8.29&times; more codec content. The
+    direction held; the magnitude was a template artifact.
+  </p>
+
   <h2>3. Evidence status</h2>
   <table>
     <thead><tr><th>claim</th><th>class</th></tr></thead>
@@ -345,19 +387,36 @@
       <tr><td>Path A: the <span class="mono">top1_token_unique=1</span> symptom does not reproduce (13/16)</td><td class="ok">OBSERVED</td></tr>
       <tr><td>Egress deficit is optimization, not representation (+0.4922)</td><td class="ok">OBSERVED</td></tr>
       <tr><td>Training-free typed head: 6/6 tests, 0.9141&ndash;1.0000 on held-out templates</td><td class="ok">OBSERVED</td></tr>
+      <tr><td>Typed entity decoding on <strong>real prose</strong>: LOO 0.8043 (37/46), 3.2&times; chance, p=4.75e-15; control 1.39&times; (mildly elevated, disclosed)</td><td class="ok">OBSERVED</td></tr>
+      <tr><td>Real prose carries 8.29&times; more codec content than a 3-word template (1.4162% vs 0.1709%)</td><td class="ok">OBSERVED</td></tr>
       <tr><td>Blueprint &ldquo;flat linear cannot work&rdquo; autopsy</td><td class="bad">REJECTED</td></tr>
       <tr><td>Blueprint &ldquo;Hopfield Lexical Snap is the egress fix&rdquo;</td><td class="bad">NOT SUPPORTED (HOP 2&times; chance)</td></tr>
       <tr><td>Superposition mechanism behind the manifold fall</td><td class="bad">NOT CONFIRMED</td></tr>
       <tr><td>Typed decomposition beats flat at equal ingredients</td><td class="bad">NOT SUPPORTED (+0.0020, under 1 SE)</td></tr>
       <tr><td><span class="mono">&beta;* = 26.10</span> derived on host</td><td class="warn">EXTERNALLY ASSERTED, UNVERIFIED</td></tr>
       <tr><td>32,000-token wave&rarr;text egress</td><td class="bad">NOT DELIVERED (typed fields only)</td></tr>
+      <tr><td>Typed validation on the MVP workload</td><td class="bad">NOT POSSIBLE &mdash; that path carries no typed labels; scoring it would mean inventing them</td></tr>
       <tr><td>AAII v4.3 SOTA on a 5090</td><td class="warn">NOT ESTABLISHED</td></tr>
     </tbody>
   </table>
 
-  <h3>3.1 Instrument defects caught before they could mislead</h3>
+  <h3>3.1 Provenance: the A-K4 corpus lived in volatile TEMP</h3>
+  <p>
+    Reconnaissance found that the corpus behind a <strong>PROVEN</strong> result and the live MVP
+    entrypoint existed only at
+    <span class="mono">C:/Users/chan/AppData/Local/Temp/ak4_corpus</span>.
+    <span class="mono">git ls-files | grep -c ak4_corpus</span> returned <strong>0</strong>. A reboot or
+    a temp cleaner would have destroyed the corpus behind <span class="mono">AK4_PASS</span>
+    (hit_A0 0.000 &rarr; hit_A1 0.833) and <span class="mono">henri_mvp.py ask</span>
+    (&rarr; TimescaleDB, RC=0). Archived at <span class="mono">db50638</span>: 6 facts plus
+    <span class="mono">manifest.jsonl</span>. <span class="mono">.dsn.env</span> was
+    <strong>deliberately excluded</strong> &mdash; the only secret-pattern match in that directory. Same
+    defect class as the unarchived M1 receipt, but under a shipped capability rather than a dead-end probe.
+  </p>
+
+  <h3>3.2 Instrument defects caught before they could mislead</h3>
   <p class="small">
-    Twenty-three self-caught defects this session (<span class="mono">D2&ndash;D23</span>),
+    Twenty-nine self-caught defects this session (<span class="mono">D2&ndash;D29</span>),
     including: a vacuous global-permutation control that was orthogonal to the classifier; a 137&nbsp;GB
     broadcast caught by arithmetic <em>before</em> running; a Hopfield init that read 0.0000 three
     runs and was <em>not</em> a Hopfield finding; a control gate sitting inside sampling noise; a
@@ -418,9 +477,9 @@
   </p>
 
   <p class="small">
-    <span class="pill">HEAD 09db5dc</span>
+    <span class="pill">HEAD db50638</span>
     <span class="pill">main a039095 untouched</span>
-    <span class="pill">ledger 1848 chain intact</span>
+    <span class="pill">ledger 1853 chain intact</span>
     <span class="pill">GPU spend $0</span>
     <span class="pill">no secrets stored</span>
   </p>
