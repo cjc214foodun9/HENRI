@@ -1,0 +1,14 @@
+=== INGREDIENT-COUNT LAW (manifold fixed at 512) ===
+   NB=8192 BD=8 DC=32768  joint=64  templates=5
+
+    tools  args  classes  ingred   chance     raw    ctrl
+       64     1       64      65   0.0156  0.8906  0.0156
+       32     2       64      34   0.0156  0.9375  0.0078
+       16     4       64      20   0.0156  0.9141  0.0078
+        8     8       64      16   0.0156  0.9844  0.0234
+
+=== VERDICT (pre-registered) ===
+   controls_at_chance=True
+   ingredient-sorted raw: ['16:0.9844', '20:0.9141', '34:0.9375', '65:0.8906']
+   monotone_non_increasing=False  span=0.0938
+   -> INGREDIENT_NOT_THE_CAUSE: raw is flat in ingredient count

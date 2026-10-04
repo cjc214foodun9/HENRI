@@ -54,7 +54,20 @@ DC = NB * BD // 2
 codec = C.get_codec()
 
 JOINT = int(os.environ.get("IL_JOINT", "512"))
-CONFIGS = [(512, 1), (256, 2), (64, 8), (32, 16)]
+# D12 SELF-CAUGHT DEFECT. The first draft hardcoded CONFIGS while also reading
+# IL_JOINT from the env, so the smoke run at IL_JOINT=64 died on
+#   AssertionError: (512, 1)
+# The env override was cosmetic -- it changed the assert target but not the grid.
+# Derive the grid from JOINT so a small smoke genuinely exercises the same code.
+_GRID = [(512, 1), (256, 2), (64, 8), (32, 16)]
+CONFIGS = [(t, a) for (t, a) in _GRID if t * a == JOINT]
+if not CONFIGS:                       # small smoke: derive a power-of-two ladder
+    CONFIGS = [(JOINT, 1)]
+    _a = 2
+    while _a * _a <= JOINT:
+        if JOINT % _a == 0:
+            CONFIGS.append((JOINT // _a, _a))
+        _a *= 2
 
 TEMPLATES = ["run {t} on {a}", "please {t} the {a}", "{t} then {a}",
              "execute {t} with {a}", "start {t} for {a}"]
