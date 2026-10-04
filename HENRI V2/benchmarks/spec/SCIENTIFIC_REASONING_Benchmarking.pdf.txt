@@ -1,0 +1,60 @@
+Scientific Reasoning 
+HLE (Humanity's Last Exam) 
+●​
+Description: Recent frontier academic benchmark from the Centre for AI Safety (led by Dan 
+Hendrycks). 
+●​
+Paper: https://arxiv.org/abs/2501.14249v2 
+●​
+Dataset: https://huggingface.co/datasets/cais/hle 
+●​
+Implementation: 
+●​
+2,158 text-only questions across mathematics, humanities and the natural sciences 
+(from the May 2025 revision which contains 2,500 total questions — we use the 
+text-only subset for maximum comparability across models) 
+●​
+We note that the HLE authors disclose that their dataset curation process involved 
+adversarial selection of questions based on tests with GPT-4o, Gemini 1.5 Pro, 
+Claude 3.5 Sonnet, o1, o1-mini, and o1-preview (latter two for text-only questions 
+only). We therefore discourage direct comparison of these models with models that 
+were not used in the HLE curation process, as the dataset is potentially biased 
+against the models used in the curation process. 
+●​
+Evaluated with an equality checker LLM prompt adapted from the original HLE paper, 
+using GPT-5.6 Luna (medium), with pass@1 scoring (find prompt below) 
+CritPt 
+●​
+Description: Research-level physics reasoning benchmark with unpublished, frontier physics 
+problems spanning a wide range of subfields. 
+●​
+Paper: https://arxiv.org/abs/2509.26574 
+●​
+Website: https://critpt.com/ 
+●​
+Repository: https://github.com/CritPt-Benchmark/CritPt 
+●​
+Dataset: https://huggingface.co/datasets/CritPt-Benchmark/CritPt 
+●​
+Implementation: 
+●​
+We implement the 'challenge' level components for all 70 test-set challenges (the 
+example challenge is excluded) in collaboration with the CritPt team 
+●​
+We run 5 repeats for each question with pass@1 scoring 
+●​
+The models are called with a two-step parsing approach, where the first step 
+requests that the model complete the challenge with reasoning, and the second step 
+formats the response into the expected code format for grading (see example prompt 
+for parsing on the CritPt evaluation page) 
+●​
+Token usage and cost estimates reflect both steps (reasoning and answer parsing) 
+●​
+Answer formats include numerical values, symbolic expressions in SymPy, and 
+Python functions (evaluated with test cases) 
+●​
+The official CritPt grading server is used to assess all challenge responses for 
+correctness. Grading API access is granted case by case to approved labs and 
+researchers — email critpt@artificialanalysis.ai to request it, and see the Artificial 
+Analysis API documentation for details 
+ 

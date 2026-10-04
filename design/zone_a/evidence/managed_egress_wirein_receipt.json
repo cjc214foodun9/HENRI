@@ -1,0 +1,47 @@
+{
+  "schema": "henri.managed-egress-wirein.v1",
+  "written_utc": "2026-10-04",
+  "authorization": {
+    "operator_grant": "2026-10-04 message body: 'you are approved to proceed to wire henri_managed_egress into henri_mvp.py as a default-OFF --managed flag'",
+    "scope": "henri_mvp.py snap subcommand; additive; default OFF"
+  },
+  "artifact": [
+    "HENRI V2/henri_managed_egress.py",
+    "HENRI V2/henri_mvp.py",
+    "HENRI V2/tests/unit/test_henri_mvp_managed.py"
+  ],
+  "delivered": {
+    "flag": "--managed (default OFF)",
+    "shipped_path_unchanged": "encoding=='hash'; encode() and encode_egress() byte-unchanged (test codec_not_modified PASS)",
+    "oov_default": "refuse (fail closed)",
+    "oov_escape_hatch": "--managed-oov hash, reports oov_rate",
+    "telemetry_every_invocation": ["encoding", "allocator.digest", "allocator.zero_collision_frac", "allocator.max_multiplicity", "allocator.layout", "allocator.seed", "query_oov_rate", "query_oov_policy"],
+    "new_api": ["Allocator.has", "encode_managed_checked", "oov_features", "allocator_digest", "OOV_POLICIES"]
+  },
+  "test_result": {
+    "suite": "HENRI V2/tests/unit/test_henri_mvp_managed.py",
+    "passed": 21,
+    "failed": 0,
+    "rc": 0
+  },
+  "smoke_real_path": {
+    "corpus": "design/zone_a/evidence/ak4_corpus (6 facts, committed db50638)",
+    "default_hash_in_vocab_query": "REFUSE margin 0.005513 < floor 0.05 (off-domain restatement; fail-closed as designed)",
+    "note": "1 text per class: near-memorisation. Wiring check, NOT an accuracy measurement."
+  },
+  "claims": {
+    "managed_flag_wired": "OBSERVED (21/21 tests, real subprocess path)",
+    "default_path_unchanged": "OBSERVED (test default_encoding_hash, codec_not_modified)",
+    "oov_fails_closed": "OBSERVED (test oov_refuse_no_action)",
+    "query_accuracy_improved_by_managed": "NOT CLAIMED -- 6-class corpus, 1 text/class; no held-out split"
+  },
+  "defects_self_caught": [
+    {"id": "D60", "defect": "build_allocator needs a CLOSED feature set; henri_mvp accepts arbitrary queries. Silent OOV->hash fallback would let --managed pass its gate while doing nothing.", "fix": "encode_managed_checked(oov='refuse'): fail closed by default; explicit hash escape hatch reports oov_rate."},
+    {"id": "D61", "defect": "The REFUSE branch dropped encoding + OOV telemetry, so an operator saw a refusal with no signal the query was 100% out-of-vocabulary.", "fix": "Report encoding, allocator, oov_rate, oov_policy, oov_sample on BOTH accept and refuse paths. Caught by test oov_hash_reports_rate."}
+  ],
+  "not_claimed": [
+    "No AAII v4.3 SOTA result.",
+    "No GPU run; no store write.",
+    "No accuracy improvement over the shipped hash path on this corpus."
+  ]
+}

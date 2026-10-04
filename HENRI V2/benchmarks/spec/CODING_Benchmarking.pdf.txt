@@ -1,0 +1,53 @@
+Coding 
+Terminal-Bench 4.0 
+●​
+Description: The 4.0 release of Terminal-Bench, developed by Stanford University 
+researchers, the Laude Institute, and the open source community. Covers software 
+engineering, system administration, data processing, model training, and security, with each 
+task graded by its own verification suite. 
+●​
+Leaderboard: https://www.tbench.ai/?version=4 
+●​
+Dataset: https://github.com/harbor-framework/terminal-bench 
+●​
+Implementation: 
+●​
+We evaluate the full Terminal-Bench 4.0 dataset (66 tasks) using the mini-swe-agent 
+harness, with pass@1 scoring averaged over 3 repeats per task 
+●​
+Each task has its own set of tests. We follow the Terminal-Bench methodology: a 
+task passes only if every test passes, grading runs in each task's own separate 
+verifier container isolated from the agent's environment, and a verifier that exceeds 
+its timeout counts as a failure 
+●​
+We apply the following constraints on evaluations for the agent: 
+●​
+Maximum agent steps are limited to 500 
+●​
+Task timeouts and sandbox resources follow the upstream task definitions 
+●​
+All other agent configuration follows mini-swe-agent defaults, including the interactive 
+mini config and prompts, the native bash tool, and no context compaction or 
+summarization: the agent always sees its full transcript 
+SciCode 
+●​
+Description: Python programming to solve scientific computing tasks. 
+●​
+Paper: https://arxiv.org/abs/2407.13168 
+●​
+Dataset: https://scicode-bench.github.io/ 
+●​
+Implementation: 
+●​
+We test with scientist-annotated background information included in the prompt 
+●​
+We report sub-problem level scoring 
+●​
+Pass@1 evaluation criteria 
+●​
+SciCode step scripts are graded on isolated executors with a 300-second execution 
+timeout (dataset v1.0.1)​
+​
+​
+ 
+HARNESS: https://github.com/SWE-agent/mini-swe-agent.git  

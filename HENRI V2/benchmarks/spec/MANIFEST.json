@@ -1,0 +1,246 @@
+[
+  {
+    "file": "AGENT benchmarking.pdf",
+    "src_path": "C:/Users/chan/Downloads\\AGENT benchmarking.pdf",
+    "pdf_sha256": "a1aa15213915573d6a91d8cae67d32164ace37e908f2a9a29d7e7b323e3ab9cc",
+    "bytes": 284005,
+    "pages": 13,
+    "text_chars": 25367,
+    "text_sha256": "6f1568b1ab859e5006e45aa17595704153c454bb06a58d17a869b675c3d3ae93",
+    "text_out": "HENRI V2/benchmarks/spec/AGENT_benchmarking.pdf.txt",
+    "term_hits": {
+      "v4.3": {
+        "count": 1,
+        "first_context": "Agents AA-Briefcase v1.1 \u25cf\u200b Status: Included in Artificial Analysis Intelligence Index v4.3.2 at 15% weighting. \u25cf\u200b Description: AA-Briefcase is a new benchmark for testing mode"
+      },
+      "4.3.2": {
+        "count": 1,
+        "first_context": "Agents AA-Briefcase v1.1 \u25cf\u200b Status: Included in Artificial Analysis Intelligence Index v4.3.2 at 15% weighting. \u25cf\u200b Description: AA-Briefcase is a new benchmark for testing model"
+      },
+      "4.3": {
+        "count": 1,
+        "first_context": "Agents AA-Briefcase v1.1 \u25cf\u200b Status: Included in Artificial Analysis Intelligence Index v4.3.2 at 15% weighting. \u25cf\u200b Description: AA-Briefcase is a new benchmark for testing model"
+      },
+      "version": {
+        "count": 1,
+        "first_context": "\u200b Dataset: \u25cf\u200b We evaluate a private 657-task held-out split from AutomationBench dataset version 1.0.6 \u25cf\u200b The tasks cover six business domains: Finance, HR, Marketing, Operation"
+      },
+      "dataset": {
+        "count": 17,
+        "first_context": "for that scope. Whilst Elo scores shift, rank ordering is largely preserved. \u25cf\u200b Example dataset: https://huggingface.co/datasets/ArtificialAnalysis/AA-Briefcase-Lite \u25cf\u200b Agent ha"
+      },
+      "benchmark": {
+        "count": 2,
+        "first_context": "alysis Intelligence Index v4.3.2 at 15% weighting. \u25cf\u200b Description: AA-Briefcase is a new benchmark for testing models on realistic knowledge work tasks in complex projects built"
+      },
+      "harness": {
+        "count": 4,
+        "first_context": "e dataset: https://huggingface.co/datasets/ArtificialAnalysis/AA-Briefcase-Lite \u25cf\u200b Agent harness: https://github.com/ArtificialAnalysis/Stirrup \u25cf\u200b Implementation: \u25cf\u200b Each AA-Bri"
+      },
+      "scoring": {
+        "count": 1,
+        "first_context": "he judge to determine which of Submission A and B better responds to the task. \u25cf\u200b Final Scoring: Our final Elo score is a Bradley-Terry rating computed via maximum likelihood es"
+      },
+      "score": {
+        "count": 7,
+        "first_context": "terministic comparison rather than a judge, so \u25cf\u200b \u03b5=0 \u25cf\u200b \u03b5=0 for that scope. Whilst Elo scores shift, rank ordering is largely preserved. \u25cf\u200b Example dataset: https://huggingface"
+      },
+      "metric": {
+        "count": 2,
+        "first_context": "given rubric check is always graded by the same judge. AA-Briefcase Elo is the headline metric of this evaluation: it aggregates analytical quality Elo, presentation Elo, and ru"
+      },
+      "split": {
+        "count": 3,
+        "first_context": "erminated after 20 minutes. Keep them bounded, persist intermediate results to disk, and split long jobs into smaller steps. ## Submitting your work Finish by calling the `f"
+      },
+      "test": {
+        "count": 2,
+        "first_context": "gence Index v4.3.2 at 15% weighting. \u25cf\u200b Description: AA-Briefcase is a new benchmark for testing models on realistic knowledge work tasks in complex projects built by industry ex"
+      },
+      "held-out": {
+        "count": 1,
+        "first_context": "https://github.com/zapier/AutomationBench \u25cf\u200b Dataset: \u25cf\u200b We evaluate a private 657-task held-out split from AutomationBench dataset version 1.0.6 \u25cf\u200b The tasks cover six busines"
+      },
+      "leaderboard": {
+        "count": 1,
+        "first_context": "using REST APIs as the tool interface. \u25cf\u200b Paper: https://arxiv.org/abs/2604.18934 \u25cf\u200b Leaderboard: https://zapier.com/benchmarks \u25cf\u200b Repository: https://github.com/zapier/Autom"
+      },
+      "standard": {
+        "count": 3,
+        "first_context": "facts such as Slack exports, spreadsheets, PDFs, interview transcripts, market research, standards documents, app-store pages, board materials, emails, and other business records"
+      }
+    }
+  },
+  {
+    "file": "Intelligence Evaluation Principles.pdf",
+    "src_path": "C:/Users/chan/Downloads\\Intelligence Evaluation Principles.pdf",
+    "pdf_sha256": "acca9dc2beb3e83459c2d5e40b6c3e82538d21c652846fc688a9d9a846619644",
+    "bytes": 304043,
+    "pages": 11,
+    "text_chars": 13585,
+    "text_sha256": "4186b18fd9eee3625530cf583c7e14a3a9297d2b357667afcbbecfd68ef9bba2",
+    "text_out": "HENRI V2/benchmarks/spec/Intelligence_Evaluation_Principles.pdf.txt",
+    "term_hits": {
+      "dataset": {
+        "count": 2,
+        "first_context": "ber of test instances across all repeats. We maintain internal copies of all evaluation datasets. The sources of our selected datasets are listed below. For the Artificial Anal"
+      },
+      "benchmark": {
+        "count": 2,
+        "first_context": ", we use a canonical-tokenizer fallback. This contrasts with the approach in performance benchmarking, where we use client-side token counts from the o200k_base tokenizer to stan"
+      },
+      "scoring": {
+        "count": 2,
+        "first_context": "etary models block a certain question may lower scores (this effect is not material) \u25cf\u200b Scoring methodology: We generally use pass@1 scoring across our evaluations, where a mode"
+      },
+      "score": {
+        "count": 5,
+        "first_context": "rrors where all available APIs for proprietary models block a certain question may lower scores (this effect is not material) \u25cf\u200b Scoring methodology: We generally use pass@1 sco"
+      },
+      "pass@": {
+        "count": 4,
+        "first_context": "may lower scores (this effect is not material) \u25cf\u200b Scoring methodology: We generally use pass@1 scoring across our evaluations, where a model must produce the correct answer on i"
+      },
+      "test": {
+        "count": 7,
+        "first_context": "ction Prompted: We evaluate using clear instructions without examples or demonstrations, testing models' ability to follow directions without few-shot learning. This approach ali"
+      },
+      "methodology": {
+        "count": 2,
+        "first_context": "gns with modern instruction-tuned and chat style models. \u25cf\u200b Transparent: We disclose our methodology, including prompt templates, evaluation criteria, and limitations. \u200b General"
+      },
+      "standard": {
+        "count": 2,
+        "first_context": "nce Evaluation Principles Our evaluation approach is guided by four core principles: \u25cf\u200b Standardized: All models are evaluated under identical conditions with consistent promptin"
+      }
+    }
+  },
+  {
+    "file": "SCIENTIFIC REASONING Benchmarking.pdf",
+    "src_path": "C:/Users/chan/Downloads\\SCIENTIFIC REASONING Benchmarking.pdf",
+    "pdf_sha256": "e191c0989309839560ec8d31dc7199b72c4e3693ec3f368de3dd829f8182b063",
+    "bytes": 67511,
+    "pages": 1,
+    "text_chars": 2509,
+    "text_sha256": "ab8ca0b0797f9f0ad2705eb5cb3e9647999952e1e3f6d50346af5f98ea45d498",
+    "text_out": "HENRI V2/benchmarks/spec/SCIENTIFIC_REASONING_Benchmarking.pdf.txt",
+    "term_hits": {
+      "dataset": {
+        "count": 6,
+        "first_context": "for AI Safety (led by Dan Hendrycks). \u25cf\u200b Paper: https://arxiv.org/abs/2501.14249v2 \u25cf\u200b Dataset: https://huggingface.co/datasets/cais/hle \u25cf\u200b Implementation: \u25cf\u200b 2,158 text-only"
+      },
+      "benchmark": {
+        "count": 4,
+        "first_context": "cientific Reasoning HLE (Humanity's Last Exam) \u25cf\u200b Description: Recent frontier academic benchmark from the Centre for AI Safety (led by Dan Hendrycks). \u25cf\u200b Paper: https://arxiv."
+      },
+      "scoring": {
+        "count": 2,
+        "first_context": "LLM prompt adapted from the original HLE paper, using GPT-5.6 Luna (medium), with pass@1 scoring (find prompt below) CritPt \u25cf\u200b Description: Research-level physics reasoning benc"
+      },
+      "pass@": {
+        "count": 2,
+        "first_context": "hecker LLM prompt adapted from the original HLE paper, using GPT-5.6 Luna (medium), with pass@1 scoring (find prompt below) CritPt \u25cf\u200b Description: Research-level physics reasoni"
+      },
+      "test": {
+        "count": 3,
+        "first_context": "that their dataset curation process involved adversarial selection of questions based on tests with GPT-4o, Gemini 1.5 Pro, Claude 3.5 Sonnet, o1, o1-mini, and o1-preview (latter"
+      }
+    }
+  },
+  {
+    "file": "GENERAL Benchmarking.pdf",
+    "src_path": "C:/Users/chan/Downloads\\GENERAL Benchmarking.pdf",
+    "pdf_sha256": "227b6eedca7115c2b4834871b0a7aafe08c37d607fb881f3098d6e21f1bf8bbc",
+    "bytes": 114280,
+    "pages": 3,
+    "text_chars": 5925,
+    "text_sha256": "cc369805bd7d25f6d57a85444487234df436419682b3c217fe3c4ebb5d6edef6",
+    "text_out": "HENRI V2/benchmarks/spec/GENERAL_Benchmarking.pdf.txt",
+    "term_hits": {
+      "dataset": {
+        "count": 5,
+        "first_context": "nknowns across diverse knowledge domains. \u25cf\u200b Paper: https://arxiv.org/abs/2511.13029 \u25cf\u200b Dataset: https://huggingface.co/datasets/ArtificialAnalysis/AA-Omniscience-Public \u25cf\u200b Impl"
+      },
+      "benchmark": {
+        "count": 5,
+        "first_context": "General AA-Omniscience \u25cf\u200b Description: AA-Omniscience is a knowledge and hallucination benchmark that measures factual reliability, rewards precise knowledge, and penalizes inc"
+      },
+      "scoring": {
+        "count": 1,
+        "first_context": "l responses are evaluated using GPT-5.6 Luna (medium) as an equality checker with pass@1 scoring"
+      },
+      "score": {
+        "count": 5,
+        "first_context": "lth, Law, Software Engineering, and Science, Engineering and Mathematics. \u25cf\u200b Models are scored using the AA-Omniscience Index, which assigns points for correct answers, subtract"
+      },
+      "metric": {
+        "count": 3,
+        "first_context": "ct. We score errors, missing attempts, and terminal input failures as zero. \u25cf\u200b Reported metrics: \u25cf\u200b All-pass is the headline metric: the share of all 500 attempts where every cr"
+      },
+      "accuracy": {
+        "count": 1,
+        "first_context": "ex Integration: AA-Omniscience contributes two components to the Intelligence Index: (1) Accuracy - the proportion of correct answers, weighted at 10% of the overall Index, and ("
+      },
+      "pass@": {
+        "count": 1,
+        "first_context": "\u25cf\u200b Model responses are evaluated using GPT-5.6 Luna (medium) as an equality checker with pass@1 scoring"
+      },
+      "test": {
+        "count": 5,
+        "first_context": "Description: Artificial Analysis' implementation of Surge AI's GDP.pdf, a benchmark that tests whether models can reason over long, real-world professional documents and satisfy"
+      }
+    }
+  },
+  {
+    "file": "CODING Benchmarking.pdf",
+    "src_path": "C:/Users/chan/Downloads\\CODING Benchmarking.pdf",
+    "pdf_sha256": "70451022d54a827bcc9534fdc54fc0956f378da26eee49ed43297b0e8a32b6ca",
+    "bytes": 61258,
+    "pages": 1,
+    "text_chars": 1843,
+    "text_sha256": "8623909238d183a5d88a9507549229396090868bdeaf1391021fd4d92270b2d6",
+    "text_out": "HENRI V2/benchmarks/spec/CODING_Benchmarking.pdf.txt",
+    "term_hits": {
+      "version": {
+        "count": 1,
+        "first_context": "each task graded by its own verification suite. \u25cf\u200b Leaderboard: https://www.tbench.ai/?version=4 \u25cf\u200b Dataset: https://github.com/harbor-framework/terminal-bench \u25cf\u200b Implementati"
+      },
+      "dataset": {
+        "count": 4,
+        "first_context": "aded by its own verification suite. \u25cf\u200b Leaderboard: https://www.tbench.ai/?version=4 \u25cf\u200b Dataset: https://github.com/harbor-framework/terminal-bench \u25cf\u200b Implementation: \u25cf\u200b We eva"
+      },
+      "harness": {
+        "count": 2,
+        "first_context": "\u25cf\u200b We evaluate the full Terminal-Bench 4.0 dataset (66 tasks) using the mini-swe-agent harness, with pass@1 scoring averaged over 3 repeats per task \u25cf\u200b Each task has its own se"
+      },
+      "suite": {
+        "count": 1,
+        "first_context": "processing, model training, and security, with each task graded by its own verification suite. \u25cf\u200b Leaderboard: https://www.tbench.ai/?version=4 \u25cf\u200b Dataset: https://github.com/h"
+      },
+      "scoring": {
+        "count": 2,
+        "first_context": "full Terminal-Bench 4.0 dataset (66 tasks) using the mini-swe-agent harness, with pass@1 scoring averaged over 3 repeats per task \u25cf\u200b Each task has its own set of tests. We follow"
+      },
+      "pass@": {
+        "count": 2,
+        "first_context": "te the full Terminal-Bench 4.0 dataset (66 tasks) using the mini-swe-agent harness, with pass@1 scoring averaged over 3 repeats per task \u25cf\u200b Each task has its own set of tests. We"
+      },
+      "train": {
+        "count": 2,
+        "first_context": "ce community. Covers software engineering, system administration, data processing, model training, and security, with each task graded by its own verification suite. \u25cf\u200b Leaderbo"
+      },
+      "test": {
+        "count": 3,
+        "first_context": "ss, with pass@1 scoring averaged over 3 repeats per task \u25cf\u200b Each task has its own set of tests. We follow the Terminal-Bench methodology: a task passes only if every test passes,"
+      },
+      "leaderboard": {
+        "count": 1,
+        "first_context": ", model training, and security, with each task graded by its own verification suite. \u25cf\u200b Leaderboard: https://www.tbench.ai/?version=4 \u25cf\u200b Dataset: https://github.com/harbor-frame"
+      },
+      "methodology": {
+        "count": 1,
+        "first_context": "r 3 repeats per task \u25cf\u200b Each task has its own set of tests. We follow the Terminal-Bench methodology: a task passes only if every test passes, grading runs in each task's own sep"
+      }
+    }
+  }
+]

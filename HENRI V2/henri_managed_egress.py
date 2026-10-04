@@ -151,6 +151,10 @@ class Allocator:
         self._report = self._measure()
 
     # ------------------------------------------------------------- allocation
+    def has(self, feature: str) -> bool:
+        """True iff this feature has a managed slot map."""
+        return feature in self._slots
+
     def slots_of(self, feature: str):
         if feature not in self._slots:
             raise AllocationError(
@@ -254,6 +258,84 @@ def encode_managed(text: str, alloc: Allocator,
     return rows.astype(np.float32)
 
 
+OOV_POLICIES = ("refuse", "hash")
+
+
+def oov_features(text: str, alloc: Allocator, ngram_max: int = 3) -> list[str]:
+    """Features of `text` with no managed slot. Empty list means fully covered."""
+    return [f for f in C.features_of(text, ngram_max=ngram_max)
+            if not alloc.has(f)]
+
+
+def encode_managed_checked(text: str, alloc: Allocator, oov: str = "refuse",
+                           ngram_max: int = 3):
+    """encode_managed + an explicit out-of-vocabulary policy and report.
+
+    WHY THIS EXISTS (D60). build_allocator() needs the CLOSED feature set of a
+    corpus. henri_mvp.py accepts ARBITRARY queries. A query feature that was
+    never allocated has no managed slot. If the code silently fell back to the
+    shipped hash addressing, --managed would PASS its accuracy gate while doing
+    nothing -- a gate that cannot fail, inside the deliverable itself.
+
+    So the default is FAIL CLOSED, matching the typed-egress margin-floor
+    doctrine. `oov="hash"` is the explicit opt-in escape hatch: unknown features
+    take the SHIPPED codec addressing, and the returned report carries oov_rate
+    so the caller can see the degradation instead of guessing.
+
+    Returns (rows[M,BD] float32, report dict). Raises AllocationError under
+    oov="refuse" when any feature is unknown.
+    """
+    if oov not in OOV_POLICIES:
+        raise AllocationError(f"unknown oov policy {oov!r}; use {OOV_POLICIES}")
+    feats = C.features_of(text, ngram_max=ngram_max)
+    known = [f for f in feats if alloc.has(f)]
+    unknown = [f for f in feats if not alloc.has(f)]
+    if unknown and oov == "refuse":
+        head = ", ".join(repr(f) for f in unknown[:5])
+        raise AllocationError(
+            f"{len(unknown)} of {len(feats)} features are not in the allocator "
+            f"({head}{'...' if len(unknown) > 5 else ''}). Build the allocator "
+            "from the full closed corpus, or pass oov='hash' to accept the "
+            "shipped-addressing fallback and read oov_rate.")
+
+    acc = np.zeros(WAVE_DIM, dtype=np.float32)
+    for f in known:
+        sl, sg = alloc.slots_of(f)
+        np.add.at(acc, sl, _signs(sl) if sg is None else sg)
+    if unknown:                       # oov == "hash"
+        acc += C._wave_accum(unknown)
+    rows = acc.reshape(NUM_BLOCKS, BLOCK_DIM).copy()
+    nrm = np.linalg.norm(rows, axis=1, keepdims=True)
+    np.divide(rows, nrm, out=rows, where=nrm > 1e-9)
+
+    report = {
+        "n_features": len(feats),
+        "n_known": len(known),
+        "n_oov": len(unknown),
+        "oov_rate": round(len(unknown) / len(feats), 6) if feats else 0.0,
+        "oov_policy": oov,
+        "oov_sample": unknown[:8],
+    }
+    return rows.astype(np.float32), report
+
+
+def allocator_digest(alloc: Allocator) -> str:
+    """Stable sha256 over the realized map + its parameters.
+
+    Recorded in every managed run so an arm is reproducible and auditable.
+    D59: feature ORDER changes accuracy at fixed geometry, so the order is part
+    of the identity of the map, not an implementation detail.
+    """
+    h = hashlib.sha256()
+    h.update(f"b={alloc.b};seed={alloc.seed};layout={alloc.layout};".encode())
+    for f in alloc.features:
+        sl, _ = alloc._slots[f]
+        h.update(f.encode("utf-8"))
+        h.update(b"|")
+        h.update(np.asarray(sl, dtype=np.int64).tobytes())
+    return h.hexdigest()
+
+
 def managed_vocabulary(texts, b: int | None = None, seed: int = 0) -> Allocator:
     """Build one allocator from every feature of every text. Use for a corpus."""
     feats = []
@@ -274,9 +356,10 @@ def wave_features(rows: np.ndarray) -> np.ndarray:
 
 
 __all__ = ["Allocator", "AllocationError", "build_allocator",
-           "collision_free_b", "encode_managed", "managed_vocabulary",
+           "collision_free_b", "encode_managed", "encode_managed_checked",
+           "oov_features", "allocator_digest", "managed_vocabulary",
            "wave_features", "NUM_BLOCKS", "BLOCK_DIM", "WAVE_EXPAND",
-           "TOTAL_SLOTS"]
+           "TOTAL_SLOTS", "OOV_POLICIES"]
 
 
 if __name__ == "__main__":

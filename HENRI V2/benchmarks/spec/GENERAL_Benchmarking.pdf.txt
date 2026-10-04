@@ -1,0 +1,125 @@
+General 
+AA-Omniscience 
+●​
+Description: AA-Omniscience is a knowledge and hallucination benchmark that measures 
+factual reliability, rewards precise knowledge, and penalizes incorrect guesses or 
+hallucinations. It provides a detailed assessment of a model’s ability to distinguish known 
+from unknowns across diverse knowledge domains. 
+●​
+Paper: https://arxiv.org/abs/2511.13029 
+●​
+Dataset: https://huggingface.co/datasets/ArtificialAnalysis/AA-Omniscience-Public 
+●​
+Implementation: 
+●​
+The benchmark consists of 6,000 questions covering 42 topics, including Business, 
+Humanities and Social Sciences, Health, Law, Software Engineering, and Science, 
+Engineering and Mathematics. 
+●​
+Models are scored using the AA-Omniscience Index, which assigns points for correct 
+answers, subtracts points for hallucinated responses, and keeps abstentions neutral, 
+rewarding abstentions over incorrect guesses 
+●​
+Each answer is graded as either CORRECT, INCORRECT, PARTIAL_ANSWER, or 
+NOT_ATTEMPTED based on the model's response and the ground truth answer. 
+GPT-5.6 Luna (medium) is used as the grading model 
+●​
+Intelligence Index Integration: AA-Omniscience contributes two components to the 
+Intelligence Index: (1) Accuracy - the proportion of correct answers, weighted at 10% 
+of the overall Index, and (2) Non-Hallucination Rate - calculated as 1 minus the 
+hallucination rate, weighted at 5% of the overall Index (AA-Omniscience's 15% 
+share). 
+GDP.pdf 
+●​
+Description: Artificial Analysis' implementation of Surge AI's GDP.pdf, a benchmark that tests 
+whether models can reason over long, real-world professional documents and satisfy 
+task-specific criteria. 
+●​
+Paper: https://arxiv.org/abs/2607.11192 
+●​
+Dataset: surgeai/GDP.pdf 
+●​
+Evaluation set: 100 tasks across ten professional domains, grounded in 4,592 PDF pages 
+and graded against 1,275 criteria. We attempt every task five times, so each model has a 
+fixed denominator of 500 attempts. 
+●​
+Document preparation and delivery: We prepare each source PDF with LiteParse 2.5.0, with 
+English OCR enabled. Every model receives the complete extracted text of every page. 
+When supported by the endpoint, we send page images first in page order, followed by the 
+task and complete extracted text in a single user message. Models without image input 
+receive text alone. We render page images at 150 DPI and reduce them, to a 72 DPI 
+minimum, when model context or provider payload limits require it. We may also convert 
+opaque pages from PNG to JPEG. Where an endpoint caps how many images one request 
+may carry, we combine pages into composite images, two pages per image first and up to 
+four where the cap is tighter, each cell labeled with its page number. Past four pages per 
+
+image, images cover the leading pages only; the remaining pages remain in the extracted 
+text. When either applies, the prompt tells the model that page images are composites and 
+the page number where image coverage stops. If the images cannot fit within context or 
+request-size limits after adaptation, we send the complete extracted text alone. We do not 
+truncate or summarize the extracted text. Models answer in a single turn without browsing or 
+tools.​
+Unlike the Surge AI implementation, we do not use API document input features. These are 
+opaque to the user and sit above the model layer, so they can introduce variation from API 
+product decisions and hosts rather than comparing models apples-to-apples. 
+●​
+Judging: GPT-5.6 Luna Medium judges each criterion independently. Each call receives the 
+task prompt, contestant answer, and one criterion, but not the source PDF or contestant 
+identity. We accept a task grading only when every criterion has a verdict. We score errors, 
+missing attempts, and terminal input failures as zero. 
+●​
+Reported metrics: 
+●​
+All-pass is the headline metric: the share of all 500 attempts where every criterion 
+passes. 
+●​
+Mean Pass is the secondary metric: we compute each attempt's criterion pass rate, 
+then average it with equal weight across tasks and repeats. 
+●​
+Domain cuts use the same task-macro Mean Pass calculation. We do not report 
+domain All-pass. 
+●​
+Cost and speed scope: Published costs cover contestant model calls only and exclude judge 
+calls, PDF preparation, and OCR. We estimate time per task from output-token usage and 
+model output speed. It excludes judge calls, PDF preparation, and OCR, so it is not an 
+end-to-end evaluation timing. 
+Differences from the Surge AI implementation 
+ 
+Artificial Analysis 
+Surge AI 
+Document 
+input 
+Text extracted with LiteParse and OCR, plus page 
+images for image-capable models 
+Raw PDF sent to the 
+provider's document input 
+Judge 
+GPT-5.6 Luna Medium 
+Gemini 3.5 Flash 
+The task set is shared, but the document input and judge differ, so Artificial Analysis and Surge 
+scores are not directly comparable. 
+AA-LCR v1.1 
+●​
+Description: Evaluate long context performance through testing reasoning capabilities across 
+multiple long documents (~100k tokens measured using cl100k_base tokenizer). 
+
+●​
+Changes from AA-LCR: Adds a system prompt to clarify grading instructions, corrects 16 
+answer keys, and grades with GPT-5.6 Luna (medium). Scores are not directly comparable 
+with v1.0. 
+●​
+Dataset: https://huggingface.co/datasets/ArtificialAnalysis/AA-LCR 
+●​
+Implementation: 
+●​
+100 hard text-based questions spanning 7 categories of documents (Company 
+Reports, Industry Reports, Government Consultations, Academia, Legal, Marketing 
+Materials, and Survey Reports) 
+●​
+~100k tokens (measured using cl100k_base tokenizer) of input per question, 
+requiring models to support a minimum 128K context window to score on this 
+benchmark. ~3M total unique input tokens spanning ~230 documents to run the 
+benchmark (output tokens typically vary by model) 
+●​
+Model responses are evaluated using GPT-5.6 Luna (medium) as an equality 
+checker with pass@1 scoring 

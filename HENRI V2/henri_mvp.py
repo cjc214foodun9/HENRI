@@ -170,10 +170,59 @@ def cmd_snap(args: argparse.Namespace) -> int:
                      "chars": len(raw)})
 
     K = len(texts)
-    samples = [(codec.encode_egress(t), {"fact": i}) for i, t in enumerate(texts)]
-    head = TypedEgressHead({"fact": K}).fit(samples)
 
-    pred = head.snap(codec.encode_egress(args.query))
+    # ---- encoding selector: shipped hash (default) or collision-managed -----
+    # DEFAULT IS OFF. The default path is byte-identical to what shipped, so
+    # every prior measurement and every stored engram is unaffected.
+    managed = bool(getattr(args, "managed", False))
+    alloc_info = None
+    qinfo = {"oov_rate": 0.0, "oov_policy": "n/a", "n_oov": 0}
+    if managed:
+        import henri_managed_egress as ME
+        vocab = []
+        for t in texts:
+            vocab.extend(C.features_of(t, ngram_max=3))
+        try:
+            alloc = ME.build_allocator(vocab, b=getattr(args, "managed_b", None),
+                                       seed=getattr(args, "managed_seed", 0),
+                                       layout=getattr(args, "managed_layout",
+                                                      "contiguous"))
+        except ME.AllocationError as exc:
+            _emit({"status": "REFUSE", "reason": f"allocator: {exc}",
+                   "corpus_dir": str(cdir), "k": K})
+            return 1
+        alloc_info = dict(alloc.collision_report())
+        alloc_info.update({"layout": alloc.layout, "seed": alloc.seed,
+                           "digest": ME.allocator_digest(alloc)})
+
+        def _enc(t):
+            return ME.encode_managed_checked(
+                t, alloc, oov=getattr(args, "managed_oov", "refuse"))
+    else:
+        def _enc(t):
+            return codec.encode_egress(t), {"oov_rate": 0.0, "oov_policy": "n/a",
+                                            "n_oov": 0, "n_features": 0,
+                                            "n_known": 0}
+
+    try:
+        samples = []
+        for i, t in enumerate(texts):
+            rows, _ = _enc(t)
+            samples.append((rows, {"fact": i}))
+        head = TypedEgressHead({"fact": K}).fit(samples)
+        qrows, qinfo = _enc(args.query)
+    except Exception as exc:                      # fail closed on OOV etc.
+        if exc.__class__.__name__ == "AllocationError":
+            _emit({"status": "REFUSE", "reason": str(exc),
+                   "field": "fact", "corpus_dir": str(cdir), "k": K,
+                   "encoding": "managed" if managed else "hash",
+                   "note": ("fail-closed: query features are outside the "
+                            "allocator vocabulary. Pass --managed-oov=hash to "
+                            "opt into the shipped-addressing fallback.")})
+            return 0
+        raise
+
+    pred = head.snap(qrows)
     fid, margin = pred["fact"]
     refused = margin < MARGIN_FLOOR
 
@@ -182,6 +231,15 @@ def cmd_snap(args: argparse.Namespace) -> int:
                "reason": f"top1 margin {margin:.6f} < floor {MARGIN_FLOOR}",
                "field": "fact", "candidate": fid, "margin": margin,
                "corpus_dir": str(cdir), "k": K,
+               # D61 SELF-CAUGHT: the first draft dropped the encoding + OOV
+               # telemetry on the REFUSE path, so an operator saw a refusal with
+               # no signal that the query was 100% out-of-vocabulary. The whole
+               # point of the flag is visibility. Report it on BOTH paths.
+               "encoding": "managed" if managed else "hash",
+               "allocator": alloc_info,
+               "query_oov_rate": qinfo.get("oov_rate", 0.0),
+               "query_oov_policy": qinfo.get("oov_policy", "n/a"),
+               "query_oov_sample": qinfo.get("oov_sample", []),
                "note": "fail-closed: no typed action emitted"})
         return 0
 
@@ -196,7 +254,14 @@ def cmd_snap(args: argparse.Namespace) -> int:
         "query": args.query,
         "k": K,
         "chance": 1.0 / K,
-        "path": "codec.encode_egress -> TypedEgressHead.snap (training-free)",
+        "encoding": "managed" if managed else "hash",
+        "allocator": alloc_info,
+        "query_oov_rate": qinfo.get("oov_rate", 0.0),
+        "query_oov_policy": qinfo.get("oov_policy", "n/a"),
+        "path": ("codec.encode_egress -> TypedEgressHead.snap (training-free)"
+                 if not managed else
+                 "encode_managed_checked -> TypedEgressHead.snap "
+                 "(training-free, collision-managed)"),
         "honest_limit": ("1 text per class: a query restating a fact is near-"
                          "memorisation. Wiring check, NOT an accuracy measurement."),
         "measured_accuracy_elsewhere": ("LOO 0.8043 (37/46) on real prose, "
@@ -225,6 +290,22 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--corpus-dir", required=True,
                    help="directory of fact_*.txt typed-manifold classes")
     s.add_argument("--query", required=True, help="text to snap to a typed field")
+    # ---- collision-managed encoding (DEFAULT OFF; additive) ---------------
+    s.add_argument("--managed", action="store_true",
+                   help="use collision-managed slot addressing instead of the "
+                        "shipped hash. Default OFF; shipped path is unchanged.")
+    s.add_argument("--managed-oov", choices=("refuse", "hash"), default="refuse",
+                   help="out-of-vocabulary policy for --managed. 'refuse' fails "
+                        "closed (default); 'hash' falls back to shipped "
+                        "addressing and reports oov_rate.")
+    s.add_argument("--managed-seed", type=int, default=0,
+                   help="allocator seed; 0 uses the deterministic sha256 order")
+    s.add_argument("--managed-b", type=int, default=None,
+                   help="slots per feature; default auto D//F, capped at 16")
+    s.add_argument("--managed-layout", choices=("contiguous", "scattered"),
+                   default="contiguous",
+                   help="contiguous is measured-good; scattered is retained for "
+                        "comparison and measured worse")
     s.set_defaults(fn=cmd_snap)
 
     args = p.parse_args(argv)
