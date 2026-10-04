@@ -1,0 +1,66 @@
+{
+  "schema": "henri.bench.dataset-pin.v1",
+  "written_utc": "2026-10-04",
+  "eval_id": "aa-lcr",
+  "eval_name": "AA-LCR v1.1",
+  "index": {
+    "name": "Artificial Analysis Intelligence Index",
+    "version": "4.3.2"
+  },
+  "source": {
+    "repo": "ArtificialAnalysis/AA-LCR",
+    "url": "https://huggingface.co/datasets/ArtificialAnalysis/AA-LCR",
+    "host": "huggingface",
+    "revision": "9a77ef56b717057ade24ceab4d273712a0b4f19e",
+    "fetch_tool": "HENRI V2/benchmarks/fetch_aaii.py",
+    "fetched_utc": "2026-10-04T18:03:40Z"
+  },
+  "assets_pinned": {
+    ".gitattributes": {
+      "bytes": 2461,
+      "sha256": "e7a120ab07b1bc5b486be249e9fc6c83d59448d0093e1dfebe95d1566d9cafc0"
+    },
+    "AA-LCR_Dataset.csv": {
+      "bytes": 145408,
+      "sha256": "aea5198982436fa774f616964bbeb34716de9e94368a123275b9355765c9b73b"
+    },
+    "README.md": {
+      "bytes": 16803,
+      "sha256": "a07bb0e510eebe33be1290770efe29981374544212f897e68b753a62ca6aeb16"
+    }
+  },
+  "n_assets_pinned": 3,
+  "total_bytes_pinned": 164672,
+  "dataset_identity": {
+    "n_questions": 100,
+    "columns": [
+      "_unnamed_index",
+      "document_category",
+      "document_set_id",
+      "question_id",
+      "question",
+      "answer",
+      "data_source_filenames",
+      "data_source_urls",
+      "input_tokens"
+    ],
+    "note": "9 columns, 100 data rows confirmed by direct read."
+  },
+  "what_pinning_unlocks": "Question and answer keys are hash-pinned, so a receipt can cite them reproducibly.",
+  "what_pinning_does_not_unlock": [
+    "NOT locally answerable: each question needs its ~100k-token source document set from extracted_text/AA-LCR_extracted-text.zip, deliberately NOT fetched.",
+    "NOT locally scoreable: AA-LCR grades with an external LLM equality checker (GPT-5.6 Luna medium per the operator PDF and the repo README). No judge here.",
+    "spec_status stays METHODOLOGY_ONLY for SCORING even though assets are pinned."
+  ],
+  "honest_spec_status": {
+    "assets": "DATASET_PINNED",
+    "answerable": false,
+    "scoreable": false,
+    "blocker": "needs (a) extracted-text document sets and (b) an external LLM judge"
+  },
+  "not_claimed": [
+    "No AA-LCR score.",
+    "No AAII v4.3.2 score.",
+    "No model was run against these items."
+  ]
+}

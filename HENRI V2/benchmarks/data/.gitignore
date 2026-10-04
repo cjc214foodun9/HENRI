@@ -1,0 +1,8 @@
+# Dataset payloads are pinned by sha256 in each MANIFEST.json, not committed.
+# This keeps the repo professional and free of third-party data blobs, while
+# remaining fully reproducible: fetch_aaii.py re-fetches at the pinned revision
+# and MANIFEST.json verifies the result byte for byte.
+*
+!.gitignore
+!**/
+!**/MANIFEST.json

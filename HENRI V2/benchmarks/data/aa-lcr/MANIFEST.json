@@ -1,0 +1,49 @@
+{
+  "schema": "henri.bench.dataset-manifest.v1",
+  "eval_id": "aa-lcr",
+  "repo": "ArtificialAnalysis/AA-LCR",
+  "source_url": "https://huggingface.co/datasets/ArtificialAnalysis/AA-LCR",
+  "fetched_utc": "2026-10-04T18:03:40Z",
+  "local_dir": "benchmarks/data/aa-lcr",
+  "n_files": 9,
+  "total_bytes": 165868,
+  "files": {
+    ".gitattributes": {
+      "sha256": "e7a120ab07b1bc5b486be249e9fc6c83d59448d0093e1dfebe95d1566d9cafc0",
+      "bytes": 2461
+    },
+    "AA-LCR_Dataset.csv": {
+      "sha256": "aea5198982436fa774f616964bbeb34716de9e94368a123275b9355765c9b73b",
+      "bytes": 145408
+    },
+    "README.md": {
+      "sha256": "a07bb0e510eebe33be1290770efe29981374544212f897e68b753a62ca6aeb16",
+      "bytes": 16803
+    },
+    ".cache/huggingface/.gitignore": {
+      "sha256": "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1",
+      "bytes": 1
+    },
+    ".cache/huggingface/CACHEDIR.TAG": {
+      "sha256": "e8893e2dcb3f4545ef67a0a5b7b769113d38eef1aa61c7c7ba14659b02af955f",
+      "bytes": 195
+    },
+    ".cache/huggingface/download/.gitattributes.metadata": {
+      "sha256": "867a86abb1dc6ae4ff6851b5c67cd4c2d517f0329a4a0f088b89db7d71300f59",
+      "bytes": 104
+    },
+    ".cache/huggingface/download/AA-LCR_Dataset.csv.metadata": {
+      "sha256": "a9a73a2af38ac957112c163696f112d36f0e45bbe85dce2077615b0a80ffa0c8",
+      "bytes": 103
+    },
+    ".cache/huggingface/download/README.md.metadata": {
+      "sha256": "a8535150aae520250556e530f81ab9c8f75818307ae9c7aaf519c8ad9c85592d",
+      "bytes": 104
+    },
+    ".cache/huggingface/trees/9a77ef56b717057ade24ceab4d273712a0b4f19e.json": {
+      "sha256": "028c3068b30d5a2fb872ca88507fc7720185ef213573dbc0b27648366810de17",
+      "bytes": 689
+    }
+  },
+  "status": "DATASET_PINNED"
+}
