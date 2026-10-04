@@ -1,0 +1,63 @@
+{
+  "schema": "henri.egress-ceiling-binding.v1",
+  "written_utc": "2026-10-04",
+  "written_before_first_run": true,
+  "authorization": {
+    "operator": "standing grant 2026-10-03: Path A plus blueprint executive instructions",
+    "scope": "CPU only, $0, no GPU, no store write",
+    "excluded": "GPU budget checkpoint (handoff option D) requires separate operator approval"
+  },
+
+  "QUESTION": "What binds the egress ceiling? Crosstalk is ruled out (10-11x cut, no gain).",
+
+  "COMPETING_HYPOTHESES": {
+    "H_COLL": "Block/slot collisions between distinct features bind the ceiling. Predicts a managed (disjoint) assignment recovers accuracy at fixed corpus.",
+    "H_LAMBDA": "Block load lambda = K*b/M binds it. Collinear with K when (M,b) fixed; separable only by varying (M,b) at matched lambda.",
+    "H_HERE": "Neither: the ceiling is combinatorial identifiability (which fields still discriminate), not interference."
+  },
+
+  "FALSIFIER_H_COLL": "If disjoint slot assignment changes held-out accuracy by < 0.05 at K=513, H_COLL is FALSIFIED. No claim survives from a flat disjoint result.",
+
+  "GATES": {
+    "G-C1_baseline_reproduce": {
+      "rule": "shipped encode_egress reproduces the ingredient-sweep receipt within 0.02 at every config",
+      "receipt_targets": {"513": 0.5146, "258": 0.7529, "72": 0.9287, "48": 0.8857},
+      "fail": "INSTRUMENT_INVALID -> nothing read"
+    },
+    "G-C2_controls": {
+      "rule": "every block-permuted control < 3x chance AND the blockperm assignment arm reproduces baseline within 0.03",
+      "fail": "INSTRUMENT_INVALID -> nothing read"
+    },
+    "G-C3_collision_binds": {
+      "rule": "at K=513, disjoint assignment raises held-out raw by >= 0.15 over baseline",
+      "verdict": "COLLISION_BINDS"
+    },
+    "G-C4_collision_falsified": {
+      "rule": "at K=513, |disjoint - baseline| < 0.05",
+      "verdict": "COLLISIONS_NOT_BINDING"
+    },
+    "G-C5_ceiling_effect": {
+      "rule": "at K=72 (near ceiling 0.9287) disjoint changes accuracy by <= 0.03",
+      "note": "ceiling-effect check (D46): no headroom at a near-ceiling point"
+    },
+    "G-C6_finite_guard": {
+      "rule": "every accuracy and every gate input is finite before comparison (D51). Non-finite -> INSTRUMENT_INVALID"
+    },
+    "G-C7_dynamic_range": {
+      "rule": "if all arms score identical within 0.01 at every config, print NO_DYNAMIC_RANGE and read nothing"
+    }
+  },
+
+  "DESIGN": {
+    "corpus": "identical to ingredient_count_law_probe.py; seed 20261003; classes fixed at 512; 5 templates; 3 train / 2 held-out",
+    "arms": {
+      "hash": "shipped encode_egress (baseline)",
+      "blockperm": "same slots under a shared seeded block permutation (isometry control)",
+      "disjoint": "each distinct feature gets 16 unique (block,dim) slots; zero inter-feature overlap"
+    },
+    "readout": "deterministic nearest-centroid, no optimizer",
+    "invariant": "encode() and encode_egress() stay byte-unchanged; all arms are probe-side re-encodes"
+  },
+
+  "WHAT_WOULD_MAKE_THIS_FAIL": "A disjoint arm that moves accuracy by less than 0.05 at K=513 kills H_COLL. I record that outcome as a finding, not as a null to repair."
+}

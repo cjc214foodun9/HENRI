@@ -1,0 +1,144 @@
+{
+  "schema": "henri.egress-ceiling-resolved.v1",
+  "artifact": [
+    "HENRI V2/experiments/verification/egress_ceiling_binding_probe_v2.py",
+    "HENRI V2/experiments/verification/ceiling_resolution_v3.py",
+    "HENRI V2/experiments/verification/directive2_partition_test.py",
+    "HENRI V2/experiments/verification/ceiling_law_probe.py"
+  ],
+  "runlogs": [
+    "design/zone_a/evidence/egress_ceiling_resolved_run.log"
+  ],
+  "date_utc": "2026-10-04",
+  "authorization": {
+    "operator": "standing 2026-10-03 grant: Path A and the executive instructions of HENRI-ARCH-2026-HOPFIELD-SYNTHESIS-V1 (message body)",
+    "blueprint_sha256": "9f3cd5cd6116e8e2f1c1f77a0c2ae9c2fc03f6c9dbd90bf59b0243af4ce6b7bf",
+    "scope": "CPU only, $0, no GPU, no store write",
+    "excluded": "GPU budget checkpoint (handoff option D) needs separate operator approval; AAII v4.3 SOTA claim is BLOCKED (see not_established)"
+  },
+
+  "question": "What binds the Zone A egress ceiling? The handoff rules out crosstalk: cutting inter-prototype |cos| 10-11x did not raise accuracy.",
+
+  "geometry_pinned_from_source": {
+    "file": "HENRI V2/zone_c_world_knowledge_codec.py",
+    "M_NUM_BLOCKS": 8192,
+    "BD_BLOCK_DIM": 8,
+    "b_WAVE_EXPAND": 16,
+    "D": 65536,
+    "unit": "A feature writes b=16 signed SLOTS (block, dim8). Two features interfere IFF they share a SLOT. Sharing a block at different dims is orthogonal.",
+    "pigeonhole_capacity_atoms": 512,
+    "collision_free_feature_capacity": 4096,
+    "note": "K_max = M/b = 512; capacity = D/b = 4096. Pinned from source, not from any document."
+  },
+
+  "experiments": {
+    "E_instrument": "v2 fixed-corpus multi-seed, 8 salts, receipt reproduction gate",
+    "E_M_sweep": "K in {258,513} x M in {8192,16384,32768}, b=16, 8 seeds",
+    "E_b_sweep": "K in {258,513} x b in {4,8,16,32} at FIXED M=8192, 8 seeds",
+    "E_directive2": "4-slot block partition adjudication, K=513, 8 seeds",
+    "E_law": "6 corpora (joint + arbitrary vocab), rho vs lambda fit"
+  },
+
+  "results": {
+    "instrument_reproduction": {
+      "gate": "hash@seed0 vs ingredient_count_law_receipt.json",
+      "pairs": {"513": [0.5146, 0.5146], "258": [0.7529, 0.7529],
+                "72": [0.9287, 0.9287], "48": [0.8857, 0.8857]},
+      "verdict": "EXACT 4/4, |d|=0.0000"
+    },
+
+    "decisive": {
+      "K_513_M_8192_b_16_8seeds": {
+        "hash": 0.4298, "hash_se": 0.0387,
+        "managed_greedy_b16": 0.8252,
+        "cfree_collision_free": 1.0000,
+        "shuffle_control": 0.0016, "chance": 0.00195,
+        "offdiag_cos_hash": 0.4967, "offdiag_cos_managed": 0.4771
+      },
+      "statement": "Removing slot collisions recovers 1.0000. Pairwise off-diagonal |cos| is FLAT (0.4967 -> 0.4771) while accuracy moves +0.57. The binding channel is AGGREGATE SLOT COLLISION, not pairwise crosstalk. Crosstalk is now ruled out on the ingredient sweep, where it had never been measured."
+    },
+
+    "M_sweep_K513_b16": {
+      "M_8192": {"lambda": 1.002, "hash": 0.4298, "cfree": 1.0},
+      "M_16384": {"lambda": 0.501, "hash": 0.7297, "cfree": 1.0},
+      "M_32768": {"lambda": 0.251, "hash": 0.9172, "cfree": 1.0},
+      "prediction_1_test": "Doubling M at fixed K raises held-out accuracy. +30 points per doubling. The hypothesis predicted >=15%. SUPPORTED and exceeded."
+    },
+
+    "b_sweep_M8192": {
+      "K_258": {"b4": 0.8293, "b8": 0.7974, "b16": 0.6729, "b32": 0.3593},
+      "K_513": {"b4": 0.6829, "b8": 0.6237, "b16": 0.4298, "b32": 0.1917},
+      "cfree_every_config": 1.0000,
+      "note": "M and D held fixed. Only b (hence the per-feature slot count) moves. cfree = 1.0000 at EVERY point, including lambda=2.004."
+    },
+
+    "directive2_K513_8seeds": {
+      "hash": 0.4298,
+      "part4_16_blueprint_as_written": 0.1780,
+      "part4_4_load_matched": 0.5323,
+      "part2_8_load_matched": 0.6440,
+      "managed_global_greedy": 0.8252,
+      "cfree": 1.0000,
+      "V_H4_inter_slot_collisions_part4_16": 0,
+      "verdict": "V-H4 PASSES its own metric (inter-slot collisions = 0) while accuracy COLLAPSES from 0.4298 to 0.1780 (-0.2518). The gate cannot fail and does not measure the claim."
+    },
+
+    "law_fit_6_corpora": {
+      "R2_accuracy_vs_rho": 0.9486,
+      "R2_accuracy_vs_lambda": 0.9861,
+      "cfree_all_one": true,
+      "statement": "Both are strong single-variable correlates. lambda (atomic count) fits marginally better than rho (feature count). Neither is established as THE binding functional: 6 collinear points cannot separate them."
+    },
+
+    "inversion_autopsy": {
+      "receipt_claim": "48-vs-72 inverts: 0.8857 < 0.9287, claimed ~3.4 SE, a REAL inversion",
+      "eight_seeds": {"48": 0.8979, "72": 0.8801},
+      "verdict": "FALSIFIED as a real inversion. Under 8 salts the order REVERSES and the gap is under 1 SE. The receipt's inversion is a single-seed artifact."
+    }
+  },
+
+  "gates_pre_registered": {
+    "location": "design/zone_a/ceiling_gates_v1.json",
+    "written_before_first_run": true,
+    "falsifier": "A collision-free arm that moves accuracy by <0.05 at K=513 kills the collision hypothesis.",
+    "outcome": "Falsifier did not fire. cfree moved +0.5702. Collision hypothesis SURVIVES.",
+    "harness_invariant": "blockperm (exact row permutation of [M,BD], signs carried) reproduces hash within float non-associativity (<0.002). Verified as a harness checkpoint, NOT as a scientific control -- algebra guarantees it.",
+    "controls": "shuffle (centroids refit on shuffled train labels) sits at chance at every config."
+  },
+
+  "blueprint_adjudication": {
+    "axiom1_unitary_power_partitioning": "INERT. L is constant per wave across every sweep, so 1/sqrt(L) cannot create a variance in accuracy. Uniform rescaling cannot move an argmax.",
+    "axiom2_finite_block_collision": "CONFIRMED IN MECHANISM, WRONG UNIT. Collisions bind. The unit is the feature SLOT, not the block. Capacity is D/b = 4096 features; the bounded capacity is M/b = 512 atoms.",
+    "directive2_orthogonal_slot_partitions": "REFUTED AS WRITTEN. Confining 512 tools x 16 slots into 2048 blocks raises per-slot load 4x and drops accuracy from 0.4298 to 0.1780. The load-matched variants (part4_4, part2_8) still do not beat the shipped hash. Partitioning is not the lever; load is.",
+    "corrected_directive": "Manage slot load, do not partition blocks. Greedy least-loaded assignment at unchanged b=16 lifts K=513 from 0.4298 to 0.8252 with encode()/encode_egress() byte-unchanged."
+  },
+
+  "self_caught_defects": [
+    {"id": "D53", "defect": "D2 script compared the 8-seed MEAN to a 1-seed receipt value and printed FAIL.", "fix": "Compare seed 0 like-for-like; report salt spread separately. A gate that fails for the wrong reason is the same class as a gate that cannot fail."},
+    {"id": "D54", "defect": "First probe used salted token names containing underscores; clean_text splits them, injecting a shared token that leaked class information (false 0.9844).", "fix": "Tokens must be single alnum words. Run discarded."},
+    {"id": "D55", "defect": "blockperm drew its base from salt=0 while hash drew from salt=seed; the harness invariant compared two different draws.", "fix": "Both draw from the same salt."},
+    {"id": "D56", "defect": "Centroids built over range(K_atomic) instead of all 512 classes, capping accuracy at exactly K/512 (0.5039 = 258/512).", "fix": "Build over the full class count."},
+    {"id": "D57", "defect": "R3_OUT passed an MSYS /c/... path; native python wrote a stray C:\\c\\ tree.", "fix": "Pass C:/ native paths. Stray tree removed."},
+    {"id": "D58", "defect": "The Allocator heap was keyed (load, slot). Heap pop returns the MINIMUM, so with all loads at 0 the pop order was ascending slot index and the seed permutation was DISCARDED -- a dead seed parameter. Consequence: the probe 'managed' and 'cfree' arms are DETERMINISTIC given the corpus, so their multi-seed +/- 0.0000 is a STRUCTURAL ZERO, not a measured spread, and the 8-seed sweep genuinely varies only the 'hash' arm.", "fix": "Tie-break equal-load slots on the seed permutation rank. Collision-free preserved (greedy still pops minimum load). Disclosed below."}
+  ],
+
+  "determinism_disclosure": {
+    "managed_and_cfree": "DETERMINISTIC given the corpus. Their reported +/- 0.0000 across 8 seeds is a structural zero. The measured variance in every sweep belongs to the hash arm alone.",
+    "effect_on_conclusions": "NONE for the binding claim: managed (0.8252) and cfree (1.0000) each dominate hash (0.4298) by far more than the hash SE (0.0387). The collision mechanism does not depend on the tie-break.",
+    "effect_on_exact_values": "The published managed value uses the pre-fix ascending-slot assignment. The shipped module now has a LIVE seed, so a re-measure will move managed by a small amount. The qualitative ordering is unaffected."
+  },
+
+  "provenance_warning": {
+    "observed": "One MoA reference transcript reported a traceback citing a variable 'cfg' and arm numbers (part4_16=0.1644, inter_slot_coll=427, cat dist 1:7/2:8) that disagree with the deterministic corpus. The string 'cfg' does not appear in the artifact. That transcript is FABRICATED.",
+    "action": "Disregarded. Only receipts and run logs count as evidence."
+  },
+
+  "class": "OBSERVED, large effect, with one blueprint remedy REFUTED and one receipt claim FALSIFIED as a single-seed artifact",
+
+  "not_established": [
+    "AAII v4.3 SOTA on a 5090 -- BLOCKED. No AAII v4.3 task definition, harness, split, or baseline exists in any reachable artifact. The repo holds ARC-AGI-3 material, not AAII. Pinning that specification is the prerequisite and needs an operator-supplied source.",
+    "No GPU run occurred. GPU spend remains $0.",
+    "The exact load functional (atom count, feature count, or total writes) is NOT resolved by 6 collinear points.",
+    "encode_egress_managed() is NOT shipped. The fix exists as a probe-side re-encode only; encode()/encode_egress() remain byte-unchanged."
+  ]
+}

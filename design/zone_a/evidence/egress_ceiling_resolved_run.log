@@ -1,0 +1,253 @@
+# Egress ceiling resolution -- run log (CPU, $0, 2026-10-04)
+# Worktree: C:/Users/chan/henri-worktrees/phase1-transduction
+# HEAD at run: a15f88b (feat/phase1-transduction)
+
+########## v2 fixed-corpus multi-seed (K=512, 8 salts) ##########
+# gate: receipt reproduction at seed tag 0, 4/4 configs
+K=513 hash 0.4298+-0.0387 managed 0.8252 cfree 1.0000 offdiag 0.4967->0.4771
+K=258 hash 0.6729+-0.0451 managed 0.8516 cfree 1.0000
+K=72  hash 0.8801+-0.0367 managed 1.0000 cfree 1.0000
+K=48  hash 0.8979+-0.0413 managed 1.0000 cfree 1.0000
+G-C1 PASS 4/4 (0.5146/0.7529/0.9287/0.8857 reproduced exactly)
+
+########## E4: M-sweep, K=513 and K=258, b=16, 8 seeds ##########
+=== CEILING RESOLUTION v3: slot collisions vs lambda ===
+   K=[258, 513] (M,b)=[(8192, 16), (16384, 16), (32768, 16)] seeds=[0, 1, 2, 3, 4, 5, 6, 7] arms=['hash', 'blockperm', 'managed', 'cfree', 'shuffle']
+
+   [harness] max|shipped - probe(8192,16,salt0)| = 0.000e+00 OK
+
+--- K=258 M=8192 b=16 D=65536 lambda=0.504 feature_capacity(D/b)=4096 features=6165 utilization=1.51
+     hash       raw=0.6729+/-0.0451 zero_coll=0.0000 partners=191.6 max_mult=27 (9s)
+     blockperm  raw=0.6720+/-0.0451 zero_coll=0.0000 partners=191.6 max_mult=27 (9s)
+     managed    raw=0.8516+/-0.0000 zero_coll=0.3288 partners=10.7 max_mult=2 (9s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+     shuffle    raw=0.0017+/-0.0004 zero_coll=0.0000 partners=191.6 max_mult=27 (11s)
+
+--- K=258 M=16384 b=16 D=131072 lambda=0.252 feature_capacity(D/b)=8192 features=6165 utilization=0.75
+     hash       raw=0.8339+/-0.0669 zero_coll=0.0000 partners=96.0 max_mult=18 (18s)
+     blockperm  raw=0.8347+/-0.0668 zero_coll=0.0000 partners=96.0 max_mult=18 (17s)
+     managed    raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (18s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (17s)
+     shuffle    raw=0.0024+/-0.0007 zero_coll=0.0000 partners=96.0 max_mult=18 (22s)
+
+--- K=258 M=32768 b=16 D=262144 lambda=0.126 feature_capacity(D/b)=16384 features=6165 utilization=0.38
+     hash       raw=0.9653+/-0.0021 zero_coll=0.0032 partners=48.1 max_mult=12 (47s)
+     blockperm  raw=0.9657+/-0.0020 zero_coll=0.0032 partners=48.1 max_mult=12 (46s)
+     managed    raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (46s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (46s)
+     shuffle    raw=0.0018+/-0.0007 zero_coll=0.0032 partners=48.1 max_mult=12 (57s)
+
+--- K=513 M=8192 b=16 D=65536 lambda=1.002 feature_capacity(D/b)=4096 features=9743 utilization=2.38
+     hash       raw=0.4298+/-0.0387 zero_coll=0.0000 partners=303.4 max_mult=35 (9s)
+     blockperm  raw=0.4283+/-0.0386 zero_coll=0.0000 partners=303.4 max_mult=35 (9s)
+     managed    raw=0.8252+/-0.0000 zero_coll=0.0000 partners=23.6 max_mult=3 (9s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+     shuffle    raw=0.0016+/-0.0006 zero_coll=0.0000 partners=303.4 max_mult=35 (11s)
+
+--- K=513 M=16384 b=16 D=131072 lambda=0.501 feature_capacity(D/b)=8192 features=9743 utilization=1.19
+     hash       raw=0.7297+/-0.0716 zero_coll=0.0000 partners=152.1 max_mult=23 (17s)
+     blockperm  raw=0.7299+/-0.0721 zero_coll=0.0000 partners=152.1 max_mult=23 (17s)
+     managed    raw=0.9678+/-0.0000 zero_coll=0.6816 partners=5.1 max_mult=2 (17s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (17s)
+     shuffle    raw=0.0026+/-0.0006 zero_coll=0.0000 partners=152.1 max_mult=23 (22s)
+
+--- K=513 M=32768 b=16 D=262144 lambda=0.250 feature_capacity(D/b)=16384 features=9743 utilization=0.59
+     hash       raw=0.9172+/-0.0064 zero_coll=0.0001 partners=75.8 max_mult=14 (46s)
+     blockperm  raw=0.9180+/-0.0063 zero_coll=0.0001 partners=75.8 max_mult=14 (47s)
+     managed    raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (47s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (46s)
+     shuffle    raw=0.0026+/-0.0011 zero_coll=0.0001 partners=75.8 max_mult=14 (57s)
+
+=== VERDICT ===
+   K    M      b   lambda  hash        blockperm   managed     cfree       shuffle | zero_coll(hash) partners
+   258  8192   16  0.504   0.6729      0.6720    0.8516    1.0000      0.0017 | 0.0000   191.6
+   258  16384  16  0.252   0.8339      0.8347    1.0000    1.0000      0.0024 | 0.0000   96.0
+   258  32768  16  0.126   0.9653      0.9657    1.0000    1.0000      0.0018 | 0.0032   48.1
+   513  8192   16  1.002   0.4298      0.4283    0.8252    1.0000      0.0016 | 0.0000   303.4
+   513  16384  16  0.501   0.7297      0.7299    0.9678    1.0000      0.0026 | 0.0000   152.1
+   513  32768  16  0.251   0.9172      0.9180    1.0000    1.0000      0.0026 | 0.0001   75.8
+
+   all_finite=True
+   [harness] K=258 |blockperm-hash| = 0.0009 (expect ~0)
+   [control] K=258 shuffle = 0.0017 vs chance 0.0039
+   [harness] K=513 |blockperm-hash| = 0.0015 (expect ~0)
+   [control] K=513 shuffle = 0.0016 vs chance 0.0019
+
+   capacity recovery at K=513 across M (b=16):
+      M=8192   lambda=1.002 zero_coll=0.0000 hash=0.4298 cfree=1.0
+      M=16384  lambda=0.501 zero_coll=0.0000 hash=0.7297 cfree=1.0
+      M=32768  lambda=0.251 zero_coll=0.0001 hash=0.9172 cfree=1.0
+
+   wrote /c/Users/chan/Desktop/HENRI 7B SWARM/.ceiling_v3_Msweep.json
+
+########## E2: b-sweep at FIXED M=8192, D=65536, 8 seeds ##########
+=== CEILING RESOLUTION v3: slot collisions vs lambda ===
+   K=[258, 513] (M,b)=[(8192, 4), (8192, 8), (8192, 16), (8192, 32)] seeds=[0, 1, 2, 3, 4, 5, 6, 7] arms=['hash', 'blockperm', 'managed', 'cfree', 'shuffle']
+
+   [harness] max|shipped - probe(8192,16,salt0)| = 0.000e+00 OK
+
+--- K=258 M=8192 b=4 D=65536 lambda=0.126 feature_capacity(D/b)=16384 features=6165 utilization=0.38
+     hash       raw=0.8293+/-0.0748 zero_coll=0.0050 partners=11.9 max_mult=10 (9s)
+     blockperm  raw=0.8203+/-0.0883 zero_coll=0.0050 partners=11.9 max_mult=10 (9s)
+     managed    raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+     shuffle    raw=0.0016+/-0.0004 zero_coll=0.0050 partners=11.9 max_mult=10 (11s)
+
+--- K=258 M=8192 b=8 D=65536 lambda=0.252 feature_capacity(D/b)=8192 features=6165 utilization=0.75
+     hash       raw=0.7974+/-0.0640 zero_coll=0.0000 partners=47.9 max_mult=16 (9s)
+     blockperm  raw=0.8044+/-0.0634 zero_coll=0.0000 partners=47.9 max_mult=16 (9s)
+     managed    raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+     shuffle    raw=0.0018+/-0.0004 zero_coll=0.0000 partners=47.9 max_mult=16 (11s)
+
+--- K=258 M=8192 b=16 D=65536 lambda=0.504 feature_capacity(D/b)=4096 features=6165 utilization=1.51
+     hash       raw=0.6729+/-0.0451 zero_coll=0.0000 partners=191.6 max_mult=27 (9s)
+     blockperm  raw=0.6720+/-0.0451 zero_coll=0.0000 partners=191.6 max_mult=27 (9s)
+     managed    raw=0.8516+/-0.0000 zero_coll=0.3288 partners=10.7 max_mult=2 (9s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+     shuffle    raw=0.0017+/-0.0004 zero_coll=0.0000 partners=191.6 max_mult=27 (11s)
+
+--- K=258 M=8192 b=32 D=65536 lambda=1.008 feature_capacity(D/b)=2048 features=6165 utilization=3.01
+     hash       raw=0.3593+/-0.0288 zero_coll=0.0000 partners=768.9 max_mult=44 (9s)
+     blockperm  raw=0.3593+/-0.0289 zero_coll=0.0000 partners=768.9 max_mult=44 (9s)
+     managed    raw=0.7471+/-0.0000 zero_coll=0.0000 partners=64.4 max_mult=4 (9s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+     shuffle    raw=0.0018+/-0.0005 zero_coll=0.0000 partners=768.9 max_mult=44 (11s)
+
+--- K=513 M=8192 b=4 D=65536 lambda=0.250 feature_capacity(D/b)=16384 features=9743 utilization=0.59
+     hash       raw=0.6829+/-0.0873 zero_coll=0.0002 partners=19.0 max_mult=15 (9s)
+     blockperm  raw=0.6865+/-0.0877 zero_coll=0.0002 partners=19.0 max_mult=15 (9s)
+     managed    raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+     shuffle    raw=0.0018+/-0.0007 zero_coll=0.0002 partners=19.0 max_mult=15 (11s)
+
+--- K=513 M=8192 b=8 D=65536 lambda=0.501 feature_capacity(D/b)=8192 features=9743 utilization=1.19
+     hash       raw=0.6237+/-0.0669 zero_coll=0.0000 partners=75.9 max_mult=23 (9s)
+     blockperm  raw=0.6348+/-0.0678 zero_coll=0.0000 partners=75.9 max_mult=23 (9s)
+     managed    raw=0.9678+/-0.0000 zero_coll=0.6816 partners=2.5 max_mult=2 (9s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+     shuffle    raw=0.0021+/-0.0006 zero_coll=0.0000 partners=75.9 max_mult=23 (11s)
+
+--- K=513 M=8192 b=16 D=65536 lambda=1.002 feature_capacity(D/b)=4096 features=9743 utilization=2.38
+     hash       raw=0.4298+/-0.0387 zero_coll=0.0000 partners=303.4 max_mult=35 (9s)
+     blockperm  raw=0.4283+/-0.0386 zero_coll=0.0000 partners=303.4 max_mult=35 (9s)
+     managed    raw=0.8252+/-0.0000 zero_coll=0.0000 partners=23.6 max_mult=3 (9s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+     shuffle    raw=0.0016+/-0.0006 zero_coll=0.0000 partners=303.4 max_mult=35 (11s)
+
+--- K=513 M=8192 b=32 D=65536 lambda=2.004 feature_capacity(D/b)=2048 features=9743 utilization=4.76
+     hash       raw=0.1917+/-0.0153 zero_coll=0.0000 partners=1215.6 max_mult=58 (9s)
+     blockperm  raw=0.1914+/-0.0151 zero_coll=0.0000 partners=1215.6 max_mult=58 (9s)
+     managed    raw=0.6416+/-0.0000 zero_coll=0.0000 partners=121.5 max_mult=5 (10s)
+     cfree      raw=1.0000+/-0.0000 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+     shuffle    raw=0.0020+/-0.0006 zero_coll=0.0000 partners=1215.6 max_mult=58 (11s)
+
+=== VERDICT ===
+   K    M      b   lambda  hash        blockperm   managed     cfree       shuffle | zero_coll(hash) partners
+   258  8192   4   0.126   0.8293      0.8203    1.0000    1.0000      0.0016 | 0.0050   11.9
+   258  8192   8   0.252   0.7974      0.8044    1.0000    1.0000      0.0018 | 0.0000   47.9
+   258  8192   16  0.504   0.6729      0.6720    0.8516    1.0000      0.0017 | 0.0000   191.6
+   258  8192   32  1.008   0.3593      0.3593    0.7471    1.0000      0.0018 | 0.0000   768.9
+   513  8192   4   0.251   0.6829      0.6865    1.0000    1.0000      0.0018 | 0.0002   19.0
+   513  8192   8   0.501   0.6237      0.6348    0.9678    1.0000      0.0021 | 0.0000   75.9
+   513  8192   16  1.002   0.4298      0.4283    0.8252    1.0000      0.0016 | 0.0000   303.4
+   513  8192   32  2.004   0.1917      0.1914    0.6416    1.0000      0.0020 | 0.0000   1215.6
+
+   all_finite=True
+   [harness] K=258 |blockperm-hash| = 0.0009 (expect ~0)
+   [control] K=258 shuffle = 0.0017 vs chance 0.0039
+   [harness] K=513 |blockperm-hash| = 0.0015 (expect ~0)
+   [control] K=513 shuffle = 0.0016 vs chance 0.0019
+
+   capacity recovery at K=513 across M (b=16):
+      M=8192   lambda=1.002 zero_coll=0.0000 hash=0.4298 cfree=1.0
+
+   wrote C:/Users/chan/Desktop/HENRI 7B SWARM/.ceiling_b_sweep.json
+
+########## E3: Directive 2 partition adjudication, K=513, 8 seeds ##########
+=== BLUEPRINT DIRECTIVE 2 ADJUDICATION (4-slot partition) ===
+   M=8192 BD=8 b=16 D=65536 K_atom=513 (512T x 1A)
+   F=9743 features, N=2560 rows, rho16=2.379
+
+   [harness] max|shipped-probe| = 0.000e+00 OK
+   cat distribution: {0: 9728, 1: 6, 2: 9}
+   hash       raw=0.4298+/-0.0387 [0.2607,0.5625] inter_slot_coll=240 zero_coll=0.0000 partners=303.4 max_mult=35 (9s)
+   part4_16   raw=0.1780+/-0.0035 [0.1660,0.1963] inter_slot_coll=0 zero_coll=0.0015 partners=1213.5 max_mult=102 (9s)
+   part4_4    raw=0.5323+/-0.0060 [0.5049,0.5576] inter_slot_coll=0 zero_coll=0.0015 partners=76.0 max_mult=36 (9s)
+   part2_8    raw=0.6440+/-0.0055 [0.6260,0.6689] inter_slot_coll=0 zero_coll=0.0015 partners=151.8 max_mult=36 (9s)
+   managed    raw=0.8252+/-0.0000 [0.8252,0.8252] inter_slot_coll=240 zero_coll=0.0000 partners=23.6 max_mult=3 (10s)
+   cfree      raw=1.0000+/-0.0000 [1.0000,1.0000] inter_slot_coll=0 zero_coll=1.0000 partners=0.0 max_mult=1 (9s)
+
+=== VERDICT (pre-registered) ===
+   hash=0.4298 part4_16=0.178 part4_4=0.5323 part2_8=0.644 managed=0.8252 cfree=1.0
+   receipt target for K=513: 0.5146
+   [baseline] hash@seed0 = 0.5146 vs receipt 0.5146 |d|=0.0000 PASS
+   [salt spread] 8-seed mean=0.4298+/-0.0387 [0.5146,0.5625] (informative, not a fidelity gate)
+   [V-H4] part4_16 inter_slot_collisions = 0 -> V-H4 PASSES (structural only; says nothing about accuracy)
+   [G-D2] part4_16 - hash = -0.2518 -> PARTITION_HURTS (blueprint corrected)
+   [G-D2-CONF] part4_4-hash=+0.1025 part2_8-hash=+0.2142 -> LOAD_MATCHED_PARTITION_MATTERS
+   wrote C:/Users/chan/Desktop/HENRI 7B SWARM/.d2_k513_s8.json
+
+########## E5: ceiling law probe (rho vs lambda), 6 corpora, 8 seeds ##########
+=== CEILING LAW PROBE ===
+   M=8192 BD=8 b=16 D=65536 D/b=4096 seeds=[0, 1, 2, 3, 4, 5, 6, 7]
+
+   [harness] max|shipped-probe| = 0.000e+00 OK
+
+--- ing48 kind=joint K_atom=48 F=3113 classes=512 N=2560 F/K=64.9 rho16=0.760 lambda16=0.094 cfree_feasible(b=16)=True
+     hash     raw=0.8979+/-0.0413 b_eff=16 zero_coll=0.0000 partners=96.7
+     managed  raw=1.0000+/-0.0000 b_eff=16 zero_coll=1.0000 partners=0.0
+     cfree    raw=1.0000+/-0.0000 b_eff=16 zero_coll=1.0000 partners=0.0
+
+--- ing72 kind=joint K_atom=72 F=3513 classes=512 N=2560 F/K=48.8 rho16=0.858 lambda16=0.141 cfree_feasible(b=16)=True
+     hash     raw=0.8801+/-0.0367 b_eff=16 zero_coll=0.0000 partners=109.6
+     managed  raw=1.0000+/-0.0000 b_eff=16 zero_coll=1.0000 partners=0.0
+     cfree    raw=1.0000+/-0.0000 b_eff=16 zero_coll=1.0000 partners=0.0
+
+--- ing258 kind=joint K_atom=258 F=6165 classes=512 N=2560 F/K=23.9 rho16=1.505 lambda16=0.504 cfree_feasible(b=16)=False
+     hash     raw=0.6729+/-0.0451 b_eff=16 zero_coll=0.0000 partners=191.6
+     managed  raw=0.8516+/-0.0000 b_eff=16 zero_coll=0.3288 partners=10.7
+     cfree    raw=1.0000+/-0.0000 b_eff=10 zero_coll=1.0000 partners=0.0
+
+--- ing513 kind=joint K_atom=513 F=9743 classes=512 N=2560 F/K=19.0 rho16=2.379 lambda16=1.002 cfree_feasible(b=16)=False
+     hash     raw=0.4298+/-0.0387 b_eff=16 zero_coll=0.0000 partners=303.4
+     managed  raw=0.8252+/-0.0000 b_eff=16 zero_coll=0.0000 partners=23.6
+     cfree    raw=1.0000+/-0.0000 b_eff=6 zero_coll=1.0000 partners=0.0
+
+--- arb512 kind=arb K_atom=512 F=8721 classes=512 N=2560 F/K=17.0 rho16=2.129 lambda16=1.000 cfree_feasible(b=16)=False
+     hash     raw=0.4933+/-0.0374 b_eff=16 zero_coll=0.0000 partners=271.9
+     managed  raw=0.8477+/-0.0000 b_eff=16 zero_coll=0.0000 partners=18.9
+     cfree    raw=1.0000+/-0.0000 b_eff=7 zero_coll=1.0000 partners=0.0
+
+--- arb128 kind=arb K_atom=128 F=2193 classes=128 N=640 F/K=17.1 rho16=0.535 lambda16=0.250 cfree_feasible(b=16)=True
+     hash     raw=0.8354+/-0.0181 b_eff=16 zero_coll=0.0005 partners=67.1
+     managed  raw=1.0000+/-0.0000 b_eff=16 zero_coll=1.0000 partners=0.0
+     cfree    raw=1.0000+/-0.0000 b_eff=16 zero_coll=1.0000 partners=0.0
+
+=== LAW FIT ===
+   corpus   K     F      rho16   hash              managed   cfree   
+   ing48    48    3113   0.760   0.8979+-0.0413  1.0000    1.0000  
+   ing72    72    3513   0.858   0.8801+-0.0367  1.0000    1.0000  
+   ing258   258   6165   1.505   0.6729+-0.0451  0.8516    1.0000  
+   ing513   513   9743   2.379   0.4298+-0.0387  0.8252    1.0000  
+   arb512   512   8721   2.129   0.4933+-0.0374  0.8477    1.0000  
+   arb128   128   2193   0.535   0.8354+-0.0181  1.0000    1.0000  
+
+   R^2(accuracy ~ rho)    = 0.9486
+   R^2(accuracy ~ lambda) = 0.9861
+   rho-sorted: arb128:0.535->0.8354, ing48:0.760->0.8979, ing72:0.858->0.8801, ing258:1.505->0.6729, arb512:2.129->0.4933, ing513:2.379->0.4298
+   all_finite=True
+   cfree_all_one=True
+   wrote C:/Users/chan/Desktop/HENRI 7B SWARM/.ceiling_law.json
+
+########## deliverable: henri_managed_egress.py test suite ##########
+PASS test_accuracy_recovers_versus_hash
+PASS test_allocator_is_collision_free_when_feasible
+PASS test_collision_free_b_respects_capacity
+PASS test_determinism_across_processes
+PASS test_fails_closed_on_crowded_allocator
+PASS test_fails_closed_on_unknown_feature
+PASS test_layout_matches_encode_egress
+PASS test_negative_control_shipped_hash_is_crowded
+
+8 passed, 0 failed, 8 total
