@@ -1,0 +1,66 @@
+{
+  "schema": "henri.codec-real-prose-transfer.v1",
+  "artifact": "HENRI V2/experiments/verification/codec_real_prose_transfer.py",
+  "runlog": "design/zone_a/evidence/codec_real_prose_transfer_run.log",
+  "date_utc": "2026-10-03",
+  "question": "does the synthetic-corpus egress result survive REAL text?",
+  "why_the_obvious_test_does_not_exist": "the MVP path is retrieve -> text -> backbone -> answer, which carries NO typed labels. Running the typed head on MVP queries would require inventing labels. Refused.",
+  "method": {
+    "prose": "992 unique sentences pooled from 19 committed design documents",
+    "typed_field": "entity; label = the ONE entity the sentence mentions, by deterministic substring match",
+    "holdout": "held-out sentences share an entity with training sentences but share no other tokens",
+    "readout": "nearest class mean (training-free)",
+    "control": "SAME held-out rows, per-sample BLOCK permutation (D5-corrected)"
+  },
+  "results": {
+    "content_frac_real_prose": 0.014162,
+    "content_frac_synthetic_template": 0.001709,
+    "real_over_synthetic": 8.29,
+    "K": 4,
+    "entities_kept": {"TimescaleDB": 9, "Hopfield": 19, "Sagnac": 12, "Qwen": 6},
+    "entities_dropped": {"BaTiO3": 1, "Kuramoto": 0, "Clifford": 2, "BTO": 2, "FHRR": 0, "pgvector": 2},
+    "chance": 0.25,
+    "train": 12, "held_out": 12, "control": 12,
+    "centroid_held_out": 0.6667,
+    "centroid_held_out_x_chance": 2.7,
+    "control": 0.1667,
+    "control_x_chance": 0.67
+  },
+  "gates": {
+    "G-RP-1_real_prose_richer_than_synthetic": "PASS (1.4162% vs 0.1709%)",
+    "G-RP-2_held_out_ge_0.80_and_ctrl_lt_3x": "FAIL (0.6667 < 0.80)"
+  },
+  "verdict": "TABLE_REPORTED",
+  "what_this_does_establish": {
+    "claim": "written prose carries ~8.3x more codec content than my one-word templates",
+    "correction": "an earlier report cited '98.83% filler'. That number described a 3-word TEMPLATE, not written text. Real prose measures 98.58% unfilled, so the direction holds but the magnitude was a template artifact. The correction is recorded against my own earlier statement.",
+    "class": "OBSERVED"
+  },
+  "what_this_does_not_establish": {
+    "claim": "typed entity transfer on real prose",
+    "reason": "pre-registered 0.80 bar NOT met; n=12 held-out is far too small",
+    "directional_note": "8/12 correct vs chance 3/12 is above chance (binomial p ~ 0.0028), so a signal is plausibly present. It is NOT a result at this n, and the control below chance does not license reading it.",
+    "class": "NOT ESTABLISHED"
+  },
+  "defects_caught_before_the_run": {
+    "D24": "unit(Xte) on a 2-D matrix returns the FROBENIUS norm, so every row was divided by the same wrong scalar; accuracy would have been meaningless. Fixed with per-row normalisation.",
+    "D25": "the control re-shuffled buckets and re-encoded, so control rows were DIFFERENT sentences. Fixed to permute the SAME held-out rows.",
+    "D26": "rows_of() indexed [0] assuming encode_egress returns (bytes, ndarray) like encode(). It returns the ndarray directly, so [0] was the first row (8 floats). The shipped module's docstring was right; my probe was wrong.",
+    "D27": "the D26 patch fixed the function but left [0] at all three call sites (partial fix).",
+    "D28": "one document yielded 74 sentences and no entity reached 6 unambiguous ones; the gate correctly returned TABLE_REPORTED. Pooling committed documents gave 992 sentences."
+  },
+  "honest_limits": [
+    "single seed",
+    "K=4 and n=12 held-out: too small for a claim in either direction",
+    "n=12 held-out: 8/12 correct is 4 above chance, but the pre-registered bar is 0.80",
+    "the label rule matches substrings, so a sentence containing an entity name in a quoted context could be mislabelled; unambiguous single-entity sentences were required",
+    "typed fields only; NOT 32,000-token wave->text"
+  ],
+  "cost": {"gpu_usd": 0, "cpu_only": true, "store": false, "training": false},
+  "authorization": {
+    "operator": "2026-10-03 grant of Path A and the executive instructions of HENRI-ARCH-2026-SYSTEMIC-EVALUATION-V3 (message body)",
+    "approval_seal": "#2ddbaa8bee737803",
+    "blueprint_sha256": "9f3cd5cd6116e8e2f1c1f77a0c2ae9c2fc03f6c9dbd90bf59b0243af4ce6b7bf",
+    "scope_note": "completes sec 2.4 item 3 (typed decision manifolds). Not a widening."
+  }
+}
