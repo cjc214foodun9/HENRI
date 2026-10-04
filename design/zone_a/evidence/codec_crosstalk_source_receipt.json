@@ -1,0 +1,82 @@
+{
+  "schema": "henri.codec-crosstalk-source.v1",
+  "artifact": "HENRI V2/experiments/verification/codec_crosstalk_source.py",
+  "runlog": "design/zone_a/evidence/codec_crosstalk_source_run.log",
+  "runner_session": "proc_3ec35f358720",
+  "date_utc": "2026-10-04",
+  "authorization": {
+    "operator_approval": "path A and/or the executive instructions (message body, 2026-10-03)",
+    "scope": "Option C: additive local probe of the measured constant crosstalk. No GPU. No default changed. No store write.",
+    "gate_checkpoint": "not required - CPU only, $0, no default changed"
+  },
+
+  "question": "Where does the constant mean|off-diagonal cosine| between class prototypes come from, and does removing it raise the egress ceiling?",
+
+  "hypothesis_H_C": "Every wave sums the phrase n-gram features. TEMPLATE words (the, report, read, file, ...) appear in EVERY sample regardless of the target word, so their contribution is a COMMON MODE shared across the corpus. Class prototypes therefore share a component that carries no class information but inflates every pairwise cosine.",
+
+  "method": "Measure class-prototype crosstalk before and after subtracting the corpus mean (fit on TRAIN ONLY), then re-run held-out nearest-centroid classification. Centering is not permitted to help by leaking.",
+
+  "pre_registered_gates": {
+    "G-C1_HC_cut_ge_2x": "mean|offdiag| after <= 0.50 x before",
+    "G-C2_no_leak": "mean fit on TRAIN ONLY; held-out rows never touched",
+    "G-C3_accuracy_kept": "held-out after >= before - 0.02",
+    "G-C4_control": "content-destroyed (per-sample BLOCK permutation) control < 3x chance BOTH before and after"
+  },
+
+  "results": {
+    "V8_smoke_ceiling_NOT_a_result": {
+      "crosstalk_before": 0.4207, "crosstalk_after": 0.1409,
+      "acc_before": 1.0000, "acc_after": 1.0000,
+      "note": "Baseline already 1.0000, so G-C3 could not discriminate. D46 lesson: the discriminating scale is where the baseline sits BELOW ceiling."
+    },
+    "V128": {
+      "train": [2048, 65536], "heldout": [1024, 65536], "chance": 0.007812,
+      "crosstalk_before": 0.2086, "crosstalk_after": 0.0209, "cut_factor": 10.0,
+      "signed_before": 0.2086, "signed_after": -0.0077, "negatives_after": 12762,
+      "within_word_before": 0.1401, "within_word_after": 0.1469,
+      "acc_before": 0.9248, "acc_after": 0.9180, "delta": -0.0068,
+      "control_before": 0.0020, "control_after": 0.0029,
+      "x_chance_before": 118.4
+    },
+    "V256": {
+      "train": [4096, 65536], "heldout": [2048, 65536], "chance": 0.003906,
+      "crosstalk_before": 0.2049, "crosstalk_after": 0.0186, "cut_factor": 11.0,
+      "signed_before": 0.2049, "signed_after": -0.0038, "negatives_after": 49124,
+      "within_word_before": 0.1389, "within_word_after": 0.1458,
+      "acc_before": 0.8916, "acc_after": 0.8872, "delta": -0.0044,
+      "control_before": 0.0039, "control_after": 0.0039,
+      "x_chance_before": 228.2
+    }
+  },
+
+  "verdict": "CROSSTALK_IS_COMMON_MODE",
+
+  "two_part_answer": {
+    "part_1_hypothesis_CONFIRMED": "The crosstalk is dominated by a shared template common mode. Subtracting the train-only corpus mean cuts mean|offdiag| by 10-11x (0.2086->0.0209, 0.2049->0.0186) while the content-destroyed control stays at chance and no held-out row touches the mean fit.",
+    "part_2_implication_REFUTED": "Removing the common mode does NOT raise the ceiling. Accuracy moves SLIGHTLY DOWN at both scales (-0.0068, -0.0044), within the G-C3 tolerance but not upward. The ~0.20 crosstalk was therefore NOT the binding constraint on classification accuracy. My own implied follow-on hypothesis is refuted by my own instrument.",
+    "discriminating_signature": "Within-word template crosstalk is UNCHANGED by centering (0.1401->0.1469, 0.1389->0.1458). A common mode inflates pairs of DIFFERENT classes equally and leaves class-specific structure intact. This is the exact signature of a shared component, and it is why centering removes across-class similarity without helping the decision."
+  },
+
+  "bearing_on_prior_findings": {
+    "crosstalk_constant_discrepancy": "This corpus measures ~0.205 at V>=128; the earlier V-sweep reported ~0.343. DIFFERENT TEMPLATE FAMILIES. Both are flat in V at their own scale. The constant is family-dependent, which is itself consistent with the common-mode account (more shared template words -> larger shared component). Not a contradiction; two different corpora.",
+    "ingredient_count_law": "Unaffected. That law (atomic ingredient count sets the ceiling, not manifold size) was measured on a different probe and remains standing.",
+    "what_this_does_NOT_show": "It does not show the egress ceiling is irreducible. It shows this particular bias is removable AND irrelevant to accuracy, so the ceiling must lie elsewhere."
+  },
+
+  "defects_found": {
+    "D49": "centroid_acc ended '.eq(yte)' -- a torch Tensor method on numpy arrays; would have raised AttributeError on the first call. Caught by reading back before the first run. Fixed to '=='.",
+    "D50": "wave_features returns [D/2, 2] per sample, not flat [2D], so Xtr arrived as [N, 32768, 2] and prototypes() made 3-D [K, 32768, 2]; S = P @ P.T died with 'matmul: size 32768 is different from 2'. uflat() already existed in the file for exactly this. Flatten once at collection.",
+    "D51": "At V=128 classes 64..127 had ZERO train rows (WORDS held only 64 entries) -> 'Mean of empty slice' -> nan crosstalk, nan accuracy, and the gate evaluated `nan <= nan` -> False -> printed the definite-sounding verdict CROSSTALK_NOT_COMMON_MODE from garbage. Fixed three ways: pad the vocabulary to V, derive K from the ACTUAL vocabulary, fail closed on an under-populated class, and refuse to evaluate any gate on a non-finite measurement.",
+    "D52": "My own log filter 'grep -vE \"^  \"' stripped every indented output line, producing a log of headers only. Rerun raw. A filter that can silently delete the data under test is itself an instrument."
+  },
+
+  "honest_limits": [
+    "typed-domain labels on REAL codec waves, synthetic word list, one template family per run.",
+    "CPU only. No GPU claim. No latency claim.",
+    "Centering is a post-hoc transform on features, not a change to the shipped codec. encode() and encode_egress() are UNCHANGED.",
+    "V<=256. The crosstalk is not claimed to be common mode at every possible vocabulary.",
+    "Success criterion for G-C3 was 'no harm'; it passed, and the observed direction is mildly negative. Reported as-is."
+  ],
+
+  "evidence_status": "OBSERVED"
+}

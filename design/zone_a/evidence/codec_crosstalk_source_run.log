@@ -1,0 +1,45 @@
+########## V=128 ##########
+OPTION C: source of the constant crosstalk. V=128 words, 16 train + 8 held-out templates, seed=20261004
+   corpus train=(2048, 65536) held-out=(1024, 65536) dim=65536 chance=0.007812
+
+   BEFORE  class-prototype mean|offdiag| = 0.2086 (signed +0.2086, negatives 0)
+   BEFORE  within-word template mean|offdiag| = 0.1401
+   G-C2 no-leak  ||mu||=0.2212  fit on TRAIN ONLY: CONFIRMED
+   AFTER   class-prototype mean|offdiag| = 0.0209 (signed -0.0077, negatives 12762)
+   AFTER   within-word template mean|offdiag| = 0.1469
+
+   accuracy        held-out   control   x chance
+   before center     0.9248    0.0020      118.4
+   after  center     0.9180    0.0029      117.5
+
+   === VERDICT (pre-registered) ===
+   G-C1 crosstalk cut >= 2x   0.0209 <= 0.1043 : PASS
+   G-C2 no-leak (train-only)                        : PASS
+   G-C3 accuracy kept         0.9180 >= 0.9048 : PASS
+   G-C4 controls both < 3x chance                   : PASS
+   VERDICT = CROSSTALK_IS_COMMON_MODE
+
+   elapsed 3.4s   CPU only, $0
+########## V=256 ##########
+OPTION C: source of the constant crosstalk. V=256 words, 16 train + 8 held-out templates, seed=20261004
+   corpus train=(4096, 65536) held-out=(2048, 65536) dim=65536 chance=0.003906
+
+   BEFORE  class-prototype mean|offdiag| = 0.2049 (signed +0.2049, negatives 0)
+   BEFORE  within-word template mean|offdiag| = 0.1389
+   G-C2 no-leak  ||mu||=0.2177  fit on TRAIN ONLY: CONFIRMED
+   AFTER   class-prototype mean|offdiag| = 0.0186 (signed -0.0038, negatives 49124)
+   AFTER   within-word template mean|offdiag| = 0.1458
+
+   accuracy        held-out   control   x chance
+   before center     0.8916    0.0039      228.2
+   after  center     0.8872    0.0039      227.1
+
+   === VERDICT (pre-registered) ===
+   G-C1 crosstalk cut >= 2x   0.0186 <= 0.1024 : PASS
+   G-C2 no-leak (train-only)                        : PASS
+   G-C3 accuracy kept         0.8872 >= 0.8716 : PASS
+   G-C4 controls both < 3x chance                   : PASS
+   VERDICT = CROSSTALK_IS_COMMON_MODE
+
+   elapsed 7.2s   CPU only, $0
+ALLDONE rc=0

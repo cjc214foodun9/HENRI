@@ -73,7 +73,17 @@ COLS = ["red", "orange", "yellow", "green", "blue", "indigo", "violet",
         "black", "white", "gray"]
 MISC = ["north", "south", "east", "west", "node", "edge", "graph", "wave",
         "phase", "field"]
-WORDS = (GREEK + NUMS + COLS + MISC)[:V]
+_BASE = GREEK + NUMS + COLS + MISC
+# D51 SELF-CAUGHT DEFECT (V=128 run, first discriminating scale). K was taken from V,
+# but WORDS held only len(_BASE) = 64 entries. At V=128 classes 64..127 had ZERO train
+# rows, so prototypes() hit "Mean of empty slice" -> nan crosstalk, nan accuracy, and
+# the gate then evaluated `nan <= nan` -> False -> printed the definite-sounding
+# verdict CROSSTALK_NOT_COMMON_MODE. Pad the word list to V and derive K from the
+# ACTUAL vocabulary, never from the requested size.
+if V > len(_BASE):
+    _BASE = _BASE + [f"w{i:03d}" for i in range(V - len(_BASE))]
+WORDS = _BASE[:V]
+assert len(set(WORDS)) == len(WORDS) == V, f"vocabulary must hold {V} distinct words"
 
 TEMPLATES = [
     "the {w} report", "{w} is the word", "describe {w} now", "alpha beta {w} gamma",
@@ -145,8 +155,14 @@ def main():
     yte = np.asarray(yte, dtype=np.int64)
     Xc = uflat(np.asarray(Xc, dtype=np.float32))
     yc = np.asarray(yc, dtype=np.int64)
-    K, D = V, Xtr.shape[1]
+    K, D = len(WORDS), Xtr.shape[1]
     chance = 1.0 / K
+    # D51 GUARD: fail closed on an under-populated class instead of producing nan.
+    _counts = np.bincount(ytr, minlength=K)
+    if _counts.min() == 0:
+        print(f"   INSTRUMENT_INVALID: {int((_counts == 0).sum())} of {K} classes "
+              f"have no training rows (min count {int(_counts.min())})")
+        return 2
     print(f"   corpus train={Xtr.shape} held-out={Xte.shape} dim={D} chance={chance:.6f}")
 
     def prototypes(X, y):
@@ -200,6 +216,15 @@ def main():
     print(f"   after  center   {a1:8.4f}  {c1:8.4f}   {a1/chance:8.1f}")
 
     # ---- verdict (pre-registered)
+    # D51 GUARD: a non-finite measurement must NOT produce a verdict. The V=128 run
+    # printed CROSSTALK_NOT_COMMON_MODE from `nan <= nan` being False.
+    if not (np.isfinite(off0) and np.isfinite(off1) and np.isfinite(a0)
+            and np.isfinite(a1) and np.isfinite(c0) and np.isfinite(c1)):
+        print("\n   === VERDICT (pre-registered) ===")
+        print("   non-finite measurement -- refusing to evaluate the gates")
+        print("   VERDICT = INSTRUMENT_INVALID")
+        print(f"\n   elapsed {time.time()-t0:.1f}s   CPU only, $0")
+        return 2
     g1 = off1 <= 0.50 * off0
     g2 = no_leak
     g3 = a1 >= a0 - 0.02
