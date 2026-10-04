@@ -414,6 +414,19 @@
     <span class="mono">CRITERION</span> to re-open headroom would move a pre-registered gate to
     rescue a null; that is refused, not done.
   </p>
+  <p class="small">
+    <strong>My own proposed repair also failed.</strong> The instrument already printed a different
+    statistic &mdash; per-policy <span class="mono">acc@1</span> &mdash; so testing <em>it</em>
+    needed power, not a new instrument. At 800 trials/rung the
+    <span class="mono">info</span>&minus;<span class="mono">greedy</span> difference
+    <strong>reverses sign between runs</strong> (&minus;0.0567 at 300 trials, +0.0312 at 800, rung
+    0.55; SE&nbsp;&asymp;&nbsp;0.025). Three statistics now fail at K=512:
+    <em>median steps</em> (pinned at 2.0 &mdash; no dynamic range), <em>mean steps</em> (never
+    separates), <em>acc@1</em> (sign-unstable). No K=512 policy ranking is established, and that
+    includes the two repairs recommended by external review &mdash; the
+    <span class="mono">N_MC</span> escalation and <span class="mono">acc@1</span> power &mdash; each
+    refuted by run, not by argument.
+  </p>
 
   <h2>3. Evidence status</h2>
   <table>
@@ -533,9 +546,9 @@
   </p>
 
   <p class="small">
-    <span class="pill">HEAD d7b7297</span>
+    <span class="pill">HEAD e930ae2</span>
     <span class="pill">main a039095 untouched</span>
-    <span class="pill">ledger 1861 chain intact</span>
+    <span class="pill">ledger 1863 chain intact</span>
     <span class="pill">GPU spend $0</span>
     <span class="pill">no secrets stored</span>
   </p>
