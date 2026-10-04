@@ -1,0 +1,39 @@
+=== PATH A: CONTENT-GROUNDED EGRESS HEAD + PRE-REGISTERED D0/Q1-Q4 ===
+   NB=8192 BD=8 DC=32768  V=8  steps=8  batch=8  lr=0.02
+   chance=0.1250   probe_waves=16   beta=26.1
+   corpus built in 0.1s  train=(64, 32768, 2) held-out=(16, 32768, 2) probe=(8, 32768, 2)
+   probe tokens = min(V, N_PROBE) = 8   (denominators below use 8)
+
+   --- ARM LIN ---
+   D0 trained check      : 0.7969  (floor 0.5) -> True
+   top1_token_unique     : pre 7/8  post 5/8   <- operator's metric
+   acc  train / held-out / ctrl : 0.5312 / 0.8125 / 0.2500   chance 0.1250
+   Q1 separation  RAW    : real 0.1271  ctrl 0.4172  delta -0.2901 (floor +0.10)
+   Q1 separation  CENTER : real 1.1377  ctrl 1.1359  delta +0.0018  [diagnostic]
+   Q2 margin             : real 0.1761  ctrl 0.0083  delta +0.1678 (floor +0.10)
+   Q3 determinism        : True
+   Q4 sensitivity        : True  shifts [0.16721, 0.17332, 0.16996]
+
+   --- ARM HOP ---
+   D0 trained check      : 0.0107  (floor 0.5) -> False
+   top1_token_unique     : pre 5/8  post 2/8   <- operator's metric
+   acc  train / held-out / ctrl : 0.4688 / 0.0625 / 0.1250   chance 0.1250
+   Q1 separation  RAW    : real 0.1277  ctrl 0.1213  delta +0.0064 (floor +0.10)
+   Q1 separation  CENTER : real 1.1298  ctrl 1.1355  delta -0.0057  [diagnostic]
+   Q2 margin             : real 15.9006  ctrl 10.9636  delta +4.9370 (floor +0.10)
+   Q3 determinism        : True
+   Q4 sensitivity        : True  shifts [0.17905, 6.22415, 2.30836]
+
+=== VERDICT (pre-registered) ===
+   LIN: FAIL   (accuracy 0.8125, unique post 5/16)
+   HOP: FAIL   (accuracy 0.0625, unique post 2/16)
+
+   operator symptom top1_token_unique=1 across 8 distinct waves:
+      LIN: post-training unique = 5/8
+      HOP: post-training unique = 2/8
+   best arm by held-out accuracy: LIN at 0.8125
+   -> SYMPTOM_DOES_NOT_REPRODUCE: content-grounded training yields distinct,
+      decodable outputs. The A-K5 collapse was a property of the degenerate
+      artifact, not of the egress mechanism.
+
+   elapsed 1.0s  cost $0  CPU only
