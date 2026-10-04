@@ -389,7 +389,7 @@
     reported <span class="mono">G-AI-1</span> firing at one rung (0.45,
     <span class="mono">info 2.0 vs greedy 3.0</span>). <strong>That headline is withdrawn as a
     general claim.</strong> Re-running the identical config across <strong>8 seeds</strong>
-    (<span class="mono">D2&ndash;D43</span> discipline: the 3-seed attempt before it was
+    (<span class="mono">D2&ndash;D45</span> discipline: the 3-seed attempt before it was
     confounded &mdash; it changed seed <em>and</em> CRN <em>and</em> ladder at once):
   </p>
   <p class="small">
@@ -486,8 +486,13 @@
 
   <h3>3.2 Instrument defects caught before they could mislead</h3>
   <p class="small">
-    Self-caught defects this session span <span class="mono">D2&ndash;D43</span>.
-    including: a vacuous global-permutation control that was orthogonal to the classifier; a 137&nbsp;GB
+    Self-caught defects this session span <span class="mono">D2&ndash;D45</span>.
+    The last three are the most transferable: a replication that <em>omitted its regression
+    control</em> because the original seed was assumed rather than read from source; a receipt that
+    recorded &ldquo;single seed&rdquo; but never the seed <em>value</em>; and a report that said
+    &ldquo;withdrawn&rdquo; in one section while still selling the result in another &mdash; the
+    defect introduced <em>by the fix itself</em>. Earlier ones include: a vacuous global-permutation
+    control that was orthogonal to the classifier; a 137&nbsp;GB
     broadcast caught by arithmetic <em>before</em> running; a Hopfield init that read 0.0000 three
     runs and was <em>not</em> a Hopfield finding; a control gate sitting inside sampling noise; a
     display that printed correct decisions as wrong; and a gate using <span class="mono">min()</span>
