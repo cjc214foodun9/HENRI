@@ -1,0 +1,63 @@
+{
+  "schema": "henri.stage6-active-inference.k512.acc1.v1",
+  "artifact": "HENRI V2/experiments/verification/henri_stage6_active_inference.py",
+  "runlog": "design/zone_a/evidence/stage6_k512_acc1_run.log",
+  "date_utc": "2026-10-04",
+  "commit_under_test": "1867613",
+  "corpus_mode": "typed", "K": 512, "K_decomposition": "32 tools x 16 args",
+  "waves": "REAL codec.encode_egress output", "labels": "SYNTHETIC",
+  "evidence_class": "DERIVED",
+  "warning": "Synthetic labels over real waves. NOT real prose, NOT the MVP workload.",
+  "why_this_run": "The steps-to-criterion median is pinned at 2.0 for every policy at K=512, so it has no dynamic range. The per-policy acc@1 that the instrument ALREADY prints is a different statistic and needed power, not a new instrument. Ran at 800 trials (SE of a difference ~0.025).",
+  "config": {"crn": true, "ladder": [0.55, 0.45], "trials_per_rung": 800, "n_probes": 24,
+             "n_mc": 32, "criterion": 0.95, "max_steps": 12, "elapsed_s": 304.3, "rc": 0},
+  "rungs": [
+    {"single_look_acc": 0.55, "sigma": 0.00001,
+     "greedy": {"median": 2.0, "mean": 3.45, "acc1": 0.5575, "acc2": 0.9113},
+     "info":   {"median": 2.0, "mean": 3.71, "acc1": 0.5887, "acc2": 0.9038},
+     "rand":   {"median": 2.0, "mean": 4.01, "acc1": 0.5563, "acc2": 0.8988},
+     "G_AI_1": false, "G_AI_2": false, "G_AI_3": true, "G_AI_4": true,
+     "acc1_info_minus_greedy": 0.0312},
+    {"single_look_acc": 0.45, "sigma": 0.00002,
+     "greedy": {"median": 2.0, "mean": 3.84, "acc1": 0.4088, "acc2": 0.8750},
+     "info":   {"median": 2.0, "mean": 3.48, "acc1": 0.4288, "acc2": 0.9062},
+     "rand":   {"median": 2.0, "mean": 3.77, "acc1": 0.4675, "acc2": 0.8825},
+     "G_AI_1": false, "G_AI_2": false, "G_AI_3": true, "G_AI_4": true,
+     "acc1_info_minus_greedy": 0.0200}
+  ],
+  "verdict": "INSTRUMENT_CANNOT_RESOLVE_EFE",
+  "finding": "THE ACC@1 COMPARISON ALSO FAILS TO RESOLVE EFE vs GREEDY AT K=512.",
+  "sign_instability_across_runs": {
+    "rung_0.55": {"300_trial_crn": -0.0567, "800_trial_crn": 0.0312},
+    "rung_0.45": {"300_trial_crn": -0.0267, "800_trial_crn": 0.0200},
+    "se_of_difference_at_800": 0.025,
+    "interpretation": "the info-minus-greedy acc@1 difference REVERSES SIGN between the two runs and neither value clears 1.5 SE. There is no stable acc@1 effect to measure. This is a null, not a small effect."
+  },
+  "three_metrics_now_failed_at_K512": [
+    "median steps-to-criterion -- pinned at 2.0 for every policy (D37-era run, sealed #9da94b9a1a3d509b)",
+    "mean steps-to-criterion -- never separates (G-AI-1 FAIL at every rung)",
+    "acc@1 single-look accuracy -- sign-unstable across runs, this receipt"
+  ],
+  "root_cause": "the K=512 typed task is too hard and too static for these statistics: single-look accuracy sits near 0.55 and the posterior reaches the 0.95 criterion within 2 looks under every policy, so policies cannot differ in the ways these statistics measure.",
+  "what_DOES_hold_and_at_what_strength": {
+    "info_mean_lt_rand_mean": "OBSERVED at every rung, K=6 and K=512, across all runs. Modest and repeatable.",
+    "info_vs_greedy_K6": "separates at ONE derived rung (0.45) only; not at the measured operating accuracy 0.8043",
+    "info_vs_greedy_K512": "NOT ESTABLISHED by any of three statistics"
+  },
+  "my_own_repair_refuted": {
+    "proposed": "compare acc@1, which the instrument already prints, at higher power",
+    "result": "REFUTED. Third metric to fail. Recording this against my own proposal.",
+    "second_refuted_repair": "N_MC=64/128 escalation -- already cancelled by measurement (pinned median), see sealed #9da94b9a1a3d509b"
+  },
+  "established": [],
+  "not_established": [
+    "any K=512 policy ranking by median steps, mean steps, or acc@1",
+    "that EFE beats greedy at the blueprint's K<=512 bound",
+    "that EFE is worse than greedy at K=512"
+  ],
+  "gates_unchanged": true,
+  "gates_list": ["G-AI-1", "G-AI-2", "G-AI-3", "G-AI-4", "LADDER", "CRITERION", "MAX_STEPS"],
+  "refused": "raising CRITERION post hoc to re-open headroom would move a pre-registered gate to rescue a null. Not done.",
+  "what_would_actually_help": "a NEW pre-registered metric suited to a near-saturated posterior at K=512 -- e.g. the full steps distribution, or scoring the ranking DIRECTLY (did the policy pick the target's most informative probe?) rather than through a saturating belief. That is a scope decision for the operator, not a run.",
+  "billing": [], "gpu_used": false, "store_written": false, "main_touched": false
+}

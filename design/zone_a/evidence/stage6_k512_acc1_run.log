@@ -1,0 +1,34 @@
+corpus=typed  K=512 (32 tools x 16 args)  wave dim=65536
+   REAL codec.encode_egress waves; SYNTHETIC labels. Not real prose.
+   signed mean off-diag cos = +0.20269
+   abs    mean off-diag cos = +0.20269   (D31 test at this K)
+   any NEGATIVE off-diagonal cosines: False
+   measured single-look LOO accuracy     = 0.8043
+   ladder over single-look accuracy      = [0.55, 0.45]
+   trials/rung=800  probes=24  MC=32  criterion=0.95  max_steps=12
+
+   --- rung single-look acc = 0.55  sigma = 0.00001 ---
+      greedy  median=  2.0 mean= 3.45 acc@1=0.5575 acc@2=0.9113 acc_final=0.9113
+      info    median=  2.0 mean= 3.71 acc@1=0.5887 acc@2=0.9038 acc_final=0.9038
+      rand    median=  2.0 mean= 4.01 acc@1=0.5563 acc@2=0.8988 acc_final=0.9000
+      G-AI-1 info median<=0.75*greedy : FAIL  (info 2.0 vs greedy 2.0)
+      G-AI-2 random median>greedy     : FAIL  (rand 2.0 vs greedy 2.0)
+      G-AI-3 CALIBRATION |rand.acc@1-tgt|: PASS  (rand 0.5563 vs 0.55)
+      G-AI-4 info mean<rand mean      : PASS  (info 3.71 vs rand 4.01)
+
+   --- rung single-look acc = 0.45  sigma = 0.00002 ---
+      greedy  median=  2.0 mean= 3.84 acc@1=0.4088 acc@2=0.8750 acc_final=0.8775
+      info    median=  2.0 mean= 3.48 acc@1=0.4288 acc@2=0.9062 acc_final=0.9062
+      rand    median=  2.0 mean= 3.77 acc@1=0.4675 acc@2=0.8825 acc_final=0.8900
+      G-AI-1 info median<=0.75*greedy : FAIL  (info 2.0 vs greedy 2.0)
+      G-AI-2 random median>greedy     : FAIL  (rand 2.0 vs greedy 2.0)
+      G-AI-3 CALIBRATION |rand.acc@1-tgt|: PASS  (rand 0.4675 vs 0.45)
+      G-AI-4 info mean<rand mean      : PASS  (info 3.48 vs rand 3.77)
+
+   === VERDICT (pre-registered) ===
+   rungs where the control COULD NOT lose (G-AI-2 false): [0.55, 0.45]
+   rungs where the control COULD lose (G-AI-2 true): NONE
+   rungs with policy separation (G-AI-1+G-AI-2): NONE
+   VERDICT = INSTRUMENT_CANNOT_RESOLVE_EFE (no rung where the control can lose; the metric cannot discriminate)
+   elapsed 304.3s
+RC=0
