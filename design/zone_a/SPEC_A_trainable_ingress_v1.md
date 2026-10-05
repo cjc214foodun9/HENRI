@@ -138,3 +138,46 @@ wave. **Measured: WRONG.** `_assemble` renormalizes per slot, so norms stayed
 
 Items 1 and 3 are separable. Item 1 is one flag and tests whether routing is the
 constraint. Item 3 is the deeper algebraic repair.
+
+## 10. Kill test #5 outcome — ITEM 1 REJECTED (measured, not argued)
+
+Kill test #5 ran as a **diagnostic only** at commit `fbcc631`. `zone_a.py` is
+untouched. The default path is untouched. This section records the result.
+
+Protocol: `henri_core/exp_ste_router_kill.py`, pin `20261004`, 300 decoder steps
+then 300 router-only steps, bounds unchanged (G-U4 0.95, M4-EM 0.246).
+
+| arm | G-U4 | held-out EM |
+|---|---|---|
+| C untrained | **0.819028** | 0.0000 |
+| A frozen router (decoder trained) | 0.860098 | 0.0000 |
+| B STE router (decoder + router) | 0.851171 | 0.0000 |
+| **delta B − A** | **−0.008927** | **0.000000** |
+
+Guards: router grad `9.160e+00` · routing changed `True` · frozen unchanged
+`True`. Arm C reproduces the committed pinned receipt (`reproduces=True`).
+
+**Honest limit on the M4 half of the criterion.** Held-out exact match is
+`0.0000` in **all three arms**, including the untrained baseline C. That metric
+has no dynamic range in this harness (300 steps on 48 programs drives training
+loss to 0.0030, so the readout memorizes and the floor is 0). The M4-EM delta is
+therefore **UNINFORMATIVE**, not evidence of "no movement". The verdict rests on
+**G-U4 alone**, where the arms do separate (0.819028 / 0.860098 / 0.851171).
+
+**Verdict: `ROUTER_MOVES_NOTHING` → SPEC_A item 1 is REJECTED on its own
+pre-registered criterion.**
+
+Mechanism. The only ingress tensors a gradient can reach are `slot_router` and
+`token_emb`. A token's write **address** is `tok % slot_dim` and its **phase** is
+a frozen buffer. Neither depends on the router. Changing which of four slots a
+token writes to does not change what the readout can extract, because the
+information lives in the address/phase map, and that map is a frozen random
+projection.
+
+Consequence for this contract. Item 1 is dead. A viable replacement must make
+the **address/phase map** learnable — soft dense writes plus learned phases —
+not merely the router. That is a different, larger change and is **not drafted
+here**; it needs its own SpecContract A and its own kill test.
+
+**Status: item 1 REJECTED. Item 3 remains a DRAFT proposal. Nothing approved,
+nothing implemented.**
