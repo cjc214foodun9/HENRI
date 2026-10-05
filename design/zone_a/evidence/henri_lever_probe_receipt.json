@@ -1,0 +1,52 @@
+{
+  "schema": "henri.lever.probe.v1",
+  "verdict": "VACUOUS",
+  "why": "guards angle_grad>0:True baseline_reproduced:False (F=0.856812596321106, baseline=0.819028)",
+  "guards": {
+    "angle_grad_nonzero": true,
+    "wave_changed_gate_corpus": true,
+    "baseline_reproduced": false
+  },
+  "g_u4": {
+    "F_frozen": 0.856812596321106,
+    "P_learnable_phase": 0.8160724639892578,
+    "W_wide_pool": 0.9558107852935791,
+    "bound": 0.95,
+    "committed_baseline": 0.819028
+  },
+  "delta": {
+    "P_minus_F": -0.040740132331848145,
+    "W_minus_F": 0.09899818897247314
+  },
+  "runs": {
+    "F": {
+      "loss_first": 37.16651916503906,
+      "loss_last": 0.00302552105858922,
+      "angle_grad_max": 0.0
+    },
+    "P": {
+      "loss_first": 37.16651916503906,
+      "loss_last": 0.0029736098367720842,
+      "angle_grad_max": 0.46330541372299194
+    },
+    "W": {
+      "loss_first": 35.525020599365234,
+      "loss_last": 0.0029048388823866844,
+      "angle_grad_max": 0.0
+    }
+  },
+  "wide_pool": {
+    "n_mem": 4,
+    "d_k": 32
+  },
+  "run_cfg": {
+    "steps": 300,
+    "n_texts": 1024,
+    "pin": 20261004
+  },
+  "seconds": 40.35,
+  "defects": {
+    "D150": "the router is dead (kill test #5) but the write PHASE holds the information and was never tested as a lever. polar() is differentiable in the phase, so no STE is required.",
+    "D151": "HopfieldCrossPooling computes similarity in d_k = 4 at both scales (resolve_n_mem = d_model // 4). Pooled tokens are confined near a rank-<=4 per-macro-token subspace, which is the candidate cause of the D2 collapse (pair |cos| 0.955)."
+  }
+}

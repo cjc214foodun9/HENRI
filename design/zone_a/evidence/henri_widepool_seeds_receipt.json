@@ -1,0 +1,181 @@
+{
+  "schema": "henri.widepool.seedsweep.v1",
+  "verdict": "WIDE_POOL_STABLE_GAIN",
+  "why": "default mean=0.921786 [0.867919,0.954843] pass=3/5 | wide mean=0.977920 [0.952423,0.991973] pass=5/5 | mean gain +0.056134",
+  "bound": 0.95,
+  "baseline_pre_reproduced": true,
+  "stats": {
+    "default": {
+      "n": 5,
+      "min": 0.8679189682006836,
+      "max": 0.9548434615135193,
+      "mean": 0.9217860102653503,
+      "std": 0.043032173067331314,
+      "pass_ge_bound": 3
+    },
+    "wide": {
+      "n": 5,
+      "min": 0.9524229168891907,
+      "max": 0.9919729828834534,
+      "mean": 0.9779197573661804,
+      "std": 0.01632692664861679,
+      "pass_ge_bound": 5
+    },
+    "pre_train_default": {
+      "n": 5,
+      "min": 0.8190275430679321,
+      "max": 0.9753664135932922,
+      "mean": 0.9175416827201843,
+      "std": 0.06491094827651978,
+      "pass_ge_bound": 3
+    }
+  },
+  "rows": [
+    {
+      "seed": 20261004,
+      "n_mem": 32,
+      "d_k": 4,
+      "g_u4_pre": 0.8190275430679321,
+      "g_u4_post": 0.8679189682006836,
+      "positive_control": 0.9999979138374329,
+      "estimator_sane": true,
+      "loss_last": 0.004049195908010006,
+      "arm": "default"
+    },
+    {
+      "seed": 20261004,
+      "n_mem": 4,
+      "d_k": 32,
+      "g_u4_pre": 0.9681412577629089,
+      "g_u4_post": 0.9524229168891907,
+      "positive_control": 0.9999979138374329,
+      "estimator_sane": true,
+      "loss_last": 0.0038896934129297733,
+      "arm": "wide"
+    },
+    {
+      "seed": 20261005,
+      "n_mem": 32,
+      "d_k": 4,
+      "g_u4_pre": 0.9753664135932922,
+      "g_u4_post": 0.9537140727043152,
+      "positive_control": 0.9999986290931702,
+      "estimator_sane": true,
+      "loss_last": 0.005149526987224817,
+      "arm": "default"
+    },
+    {
+      "seed": 20261005,
+      "n_mem": 4,
+      "d_k": 32,
+      "g_u4_pre": 0.991105318069458,
+      "g_u4_post": 0.9877682328224182,
+      "positive_control": 0.9999986290931702,
+      "estimator_sane": true,
+      "loss_last": 0.003932605497539043,
+      "arm": "wide"
+    },
+    {
+      "seed": 20261006,
+      "n_mem": 32,
+      "d_k": 4,
+      "g_u4_pre": 0.9583984017372131,
+      "g_u4_post": 0.9503691792488098,
+      "positive_control": 0.9999905228614807,
+      "estimator_sane": true,
+      "loss_last": 0.005693941377103329,
+      "arm": "default"
+    },
+    {
+      "seed": 20261006,
+      "n_mem": 4,
+      "d_k": 32,
+      "g_u4_pre": 0.9915592670440674,
+      "g_u4_post": 0.9919729828834534,
+      "positive_control": 0.9999905228614807,
+      "estimator_sane": true,
+      "loss_last": 0.003870489774271846,
+      "arm": "wide"
+    },
+    {
+      "seed": 20261007,
+      "n_mem": 32,
+      "d_k": 4,
+      "g_u4_pre": 0.8847801685333252,
+      "g_u4_post": 0.8820843696594238,
+      "positive_control": 0.9999978542327881,
+      "estimator_sane": true,
+      "loss_last": 0.0036548275966197252,
+      "arm": "default"
+    },
+    {
+      "seed": 20261007,
+      "n_mem": 4,
+      "d_k": 32,
+      "g_u4_pre": 0.9754761457443237,
+      "g_u4_post": 0.9709575772285461,
+      "positive_control": 0.9999978542327881,
+      "estimator_sane": true,
+      "loss_last": 0.003887368831783533,
+      "arm": "wide"
+    },
+    {
+      "seed": 20261008,
+      "n_mem": 32,
+      "d_k": 4,
+      "g_u4_pre": 0.9501361846923828,
+      "g_u4_post": 0.9548434615135193,
+      "positive_control": 0.9999948740005493,
+      "estimator_sane": true,
+      "loss_last": 0.004717512987554073,
+      "arm": "default"
+    },
+    {
+      "seed": 20261008,
+      "n_mem": 4,
+      "d_k": 32,
+      "g_u4_pre": 0.9910827279090881,
+      "g_u4_post": 0.9864770770072937,
+      "positive_control": 0.9999948740005493,
+      "estimator_sane": true,
+      "loss_last": 0.003933407831937075,
+      "arm": "wide"
+    }
+  ],
+  "param_envelope": {
+    "default_total": 439798031,
+    "wide_total": 505922831,
+    "delta": 66124800,
+    "doc_target": 448624640,
+    "default_parts": {
+      "pooling": 135267328,
+      "cross_proj": 65536,
+      "blocks": 270630912,
+      "final_norm": 2048,
+      "heads": 33832207
+    },
+    "wide_parts": {
+      "pooling": 201392128,
+      "cross_proj": 65536,
+      "blocks": 270630912,
+      "final_norm": 2048,
+      "heads": 33832207
+    }
+  },
+  "run": {
+    "seeds": [
+      20261004,
+      20261005,
+      20261006,
+      20261007,
+      20261008
+    ],
+    "steps": 300,
+    "n_texts": 1024
+  },
+  "seconds": 113.8,
+  "defects": {
+    "D152": "lever probe guard compared the TRAINED arm F against the UNTRAINED committed baseline (0.819028), so baseline_reproduced was False and the whole run was marked VACUOUS. The correct check is on the PRE-train reading, which reproduced 0.8190275. Guard corrected here.",
+    "D153": "a single G-U4 value is not a result (D128). The wide-pool gain is tested across construction seeds before any claim."
+  }
+}
