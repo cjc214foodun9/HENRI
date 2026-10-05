@@ -37,8 +37,13 @@ class CliffordVLASlotEncoder(nn.Module):
 
     def __init__(self, dim: int = sub.DEFAULT_DIM, vocab: int = 512,
                  img_patch: int = 16, n_patches: int = 256,
-                 action_dim: int = 7):
+                 action_dim: int = 7, positional: bool = False,
+                 pos_omega: float = math.pi / 2.0):
         super().__init__()
+        # D127: positional algebra. OFF by default so every committed receipt
+        # reproduces byte-for-byte. ON rotates token t's phasor by t * pos_omega.
+        self.positional = bool(positional)
+        self.pos_omega = float(pos_omega)
         self.dim = int(dim)
         self.vocab = int(vocab)
         self.img_patch = int(img_patch)
@@ -75,8 +80,14 @@ class CliffordVLASlotEncoder(nn.Module):
                 tok = tok % self.dim                    # address wraps, deterministic
             s = int(routes[t])
             local = tok % self.slot_dim
-            acc[s][local] += torch.polar(
-                torch.tensor(1.0), self.angle[tok].to(torch.float32))
+            phase = self.angle[tok].to(torch.float32)
+            if self.positional:
+                # D127: token ORDER was discarded. The address depends on token
+                # identity only, so 'ab' and 'ba' wrote identical phasors and
+                # cos('ab','ba') was exactly 1.000000. Rotate by a relative
+                # position angle, as RoPE applies relative position to rotors.
+                phase = phase + float(t) * self.pos_omega
+            acc[s][local] += torch.polar(torch.tensor(1.0), phase)
         return acc, routes
 
     # ------------------------------------------------------------------ public

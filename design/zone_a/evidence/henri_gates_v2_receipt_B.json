@@ -1,0 +1,118 @@
+{
+  "gates": [
+    {
+      "id": "G-U1",
+      "metric": "noise_hash_rows",
+      "value": 0,
+      "op": "<=",
+      "bound": 0,
+      "control_value": 3,
+      "designated_slot": "context",
+      "status": "PASS",
+      "why": "real passes; control 'all_slots_filled' fails as required"
+    },
+    {
+      "id": "G-U2",
+      "metric": "offdiag_max",
+      "value": 4.955717258781078e-08,
+      "op": "<=",
+      "bound": 0.12,
+      "before_retraction": 0.9824437499046326,
+      "control_value": 0.9824437499046326,
+      "status": "PASS",
+      "why": "real passes; control 'no_retraction' fails as required"
+    },
+    {
+      "id": "G-U3",
+      "metric": "distinct_seeds",
+      "value": 8,
+      "op": ">=",
+      "bound": 1,
+      "n_workers": 8,
+      "control_value": 1,
+      "status": "PASS",
+      "why": "real passes; control 'shared_seed' fails as required",
+      "cpu_note": "T_step <= 50us is a CUDA gate; not asserted on CPU"
+    },
+    {
+      "id": "G-U3b",
+      "metric": "monotone_frac",
+      "value": 1.0,
+      "op": ">=",
+      "bound": 0.99,
+      "control_value": 0.75,
+      "height": 5,
+      "status": "PASS",
+      "why": "real passes; control 'injected_overshoot' fails as required"
+    },
+    {
+      "id": "G-U4",
+      "metric": "heldout_slot_profile_r2",
+      "value": 0.8477835059165955,
+      "op": ">=",
+      "bound": 0.95,
+      "control_value": 0.0,
+      "positive_control": 0.9999980330467224,
+      "estimator_sane": true,
+      "n_texts": 1024,
+      "n_train": 512,
+      "n_features": 288,
+      "n_components": 32,
+      "status": "FAIL",
+      "why": "real mechanism did not meet the bound",
+      "profile_std": 0.03850826993584633,
+      "estimator": "TRAIN-only PCA + ridge with intercept, held-out R^2 on the 4-slot energy profile; proxy for the documented KSG MI ratio"
+    },
+    {
+      "id": "G-U6",
+      "metric": "veto_accuracy",
+      "value": 1.0,
+      "op": ">=",
+      "bound": 0.999,
+      "control_value": 0.5,
+      "clean_pass_rate": 1.0,
+      "corrupt_reject_rate": 1.0,
+      "n_clean": 4,
+      "n_corrupt": 4,
+      "threshold": 0.35,
+      "status": "PASS",
+      "why": "real passes; control 'identity_passthrough' fails as required"
+    },
+    {
+      "id": "G-U7",
+      "metric": "offtheshelf_imports",
+      "value": 0,
+      "op": "<=",
+      "bound": 0,
+      "control_value": null,
+      "hits": [],
+      "status": "PASS",
+      "why": "no off-the-shelf import in henri_core",
+      "control_note": "structural AST gate: a negative control is not meaningful; the check reads real import lines"
+    },
+    {
+      "id": "G-D2",
+      "metric": "decoder_params",
+      "value": 439798031,
+      "op": "between",
+      "bound": [
+        400000000.0,
+        500000000.0
+      ],
+      "control_value": 1437391,
+      "target_doc": 448624640,
+      "status": "PASS",
+      "why": "real passes; control 'tiny_config' fails as required"
+    }
+  ],
+  "counts": {
+    "PASS": 7,
+    "FAIL": 1,
+    "VACUOUS": 0,
+    "BLOCKED": 0
+  },
+  "overall": "NOT_ACCEPTED",
+  "gate_rule": "PASS requires the real mechanism to meet the bound AND its negative control to fail",
+  "elapsed_s": 0.76,
+  "schema": "henri.tri-model.gates.v1"
+}

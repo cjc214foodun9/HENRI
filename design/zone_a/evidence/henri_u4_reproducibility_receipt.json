@@ -1,0 +1,96 @@
+{
+  "schema": "henri.gate_u4.reproducibility.v1",
+  "metric": "heldout_slot_profile_r2",
+  "bound": 0.95,
+  "bounds_moved": false,
+  "n_draws": 8,
+  "values": [
+    0.891278,
+    0.840348,
+    0.949125,
+    0.981305,
+    0.886721,
+    0.987174,
+    0.914227,
+    0.8363
+  ],
+  "seeds": [
+    1000,
+    1001,
+    1002,
+    1003,
+    1004,
+    1005,
+    1006,
+    1007
+  ],
+  "min": 0.8363,
+  "max": 0.987174,
+  "range": 0.150874,
+  "mean": 0.91081,
+  "std": 0.058259,
+  "n_pass": 2,
+  "n_fail": 6,
+  "estimator_sane_every_draw": true,
+  "controls_collapse_every_draw": true,
+  "verdict": "NOT_REPRODUCIBLE",
+  "defect": "D128: frozen randomly-initialised ingress makes G-U4 a random draw; the reported value depends on construction RNG state.",
+  "rows": [
+    {
+      "seed": 1000,
+      "value": 0.891278,
+      "status": "FAIL",
+      "positive_control": 0.999998,
+      "negative_control": 0.0
+    },
+    {
+      "seed": 1001,
+      "value": 0.840348,
+      "status": "FAIL",
+      "positive_control": 0.999998,
+      "negative_control": 0.0
+    },
+    {
+      "seed": 1002,
+      "value": 0.949125,
+      "status": "FAIL",
+      "positive_control": 0.999989,
+      "negative_control": 0.0
+    },
+    {
+      "seed": 1003,
+      "value": 0.981305,
+      "status": "PASS",
+      "positive_control": 0.999996,
+      "negative_control": 0.0
+    },
+    {
+      "seed": 1004,
+      "value": 0.886721,
+      "status": "FAIL",
+      "positive_control": 0.999998,
+      "negative_control": 0.0
+    },
+    {
+      "seed": 1005,
+      "value": 0.987174,
+      "status": "PASS",
+      "positive_control": 0.999993,
+      "negative_control": 0.0
+    },
+    {
+      "seed": 1006,
+      "value": 0.914227,
+      "status": "FAIL",
+      "positive_control": 0.999998,
+      "negative_control": 0.0
+    },
+    {
+      "seed": 1007,
+      "value": 0.8363,
+      "status": "FAIL",
+      "positive_control": 0.999998,
+      "negative_control": 0.0
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "schema": "henri.positional.isolation.v1",
+  "defect": "D127 codec discarded token order (cos('ab','ba')=1.0)",
+  "bounds_moved": false,
+  "G_U4_clean": {
+    "metric": "heldout_slot_profile_r2",
+    "bound": 0.95,
+    "off": 0.937130868434906,
+    "on": 0.718781054019928,
+    "delta": -0.21835,
+    "status_off": "FAIL",
+    "status_on": "FAIL",
+    "pos_ctl_off": 0.999995231628418,
+    "neg_ctl_off": 0.0
+  },
+  "G_U4_post_training": {
+    "off": 0.9349603652954102,
+    "on": 0.7510280013084412,
+    "delta": -0.183932
+  },
+  "confound": {
+    "off_gap": -0.002171,
+    "on_gap": 0.032247,
+    "note": "post - clean. Nonzero means run_gates trains the readout in place and only the clean numbers compare with the battery."
+  },
+  "M4_G1": {
+    "bound": 0.246429,
+    "off": 0.03571428571428571,
+    "on": 0.10714285714285714,
+    "delta": 0.071429,
+    "status_off": "FAIL",
+    "status_on": "FAIL"
+  }
+}

@@ -50,6 +50,7 @@ class TriModelSystem(nn.Module):
     def __init__(self, dim: int = sub.DEFAULT_DIM, vocab: int = 512,
                  n_workers: int = 256, steps: int = 8, beta: float = 26.10,
                  n_axioms: int = 8, seed: int = 20261004,
+                 positional: bool = False,
                  decoder_cfg: DecoderConfig | None = None, small: bool = False):
         super().__init__()
         if small:
@@ -70,7 +71,8 @@ class TriModelSystem(nn.Module):
         # ---- MODEL 3: HENRI-Dec-450M
         self.decoder = HenriDec450M(decoder_cfg or DecoderConfig(dim=dim, vocab=vocab))
         # ---- shared ingress and veto
-        self.ingress = CliffordVLASlotEncoder(dim=dim, vocab=vocab)
+        self.ingress = CliffordVLASlotEncoder(dim=dim, vocab=vocab,
+                                              positional=positional)
         self.veto = SagnacHomodyneVeto(dim=dim)
 
         # Axiomatic baseplate: seeded wave bank, pinned by hash of its ids

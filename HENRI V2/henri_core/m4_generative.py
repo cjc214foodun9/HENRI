@@ -459,9 +459,11 @@ def unigram_floor(tok, tr_tgt, ho_tgt) -> float:
     return hit / max(1, tot)
 
 
-def build_system(corpus: Corpus, vocab: int = 512):
+def build_system(corpus: Corpus, vocab: int = 512,
+                 positional: bool = False):
     tok = ByteBPE().train(corpus.corpus_texts, vocab_size=vocab)
-    system = TriModelSystem(vocab=tok.vocab_size, small=True)
+    system = TriModelSystem(vocab=tok.vocab_size, small=True,
+                            positional=positional)
     system.eval()
     return system, tok
 
