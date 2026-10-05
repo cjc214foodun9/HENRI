@@ -1,0 +1,134 @@
+{
+  "schema": "henri.daydream.gates.v1",
+  "overall": "NOT_ACCEPTED",
+  "counts": {
+    "PASS": 4,
+    "BLOCKED": 1,
+    "FAIL": 1,
+    "NOT_APPLICABLE": 1
+  },
+  "gates": [
+    {
+      "id": "G-DD1",
+      "metric": "epiplexity_growth_heldout_ce",
+      "value": 0.6012392044067383,
+      "op": ">",
+      "bound": 0.0,
+      "control_value": 0.0,
+      "status": "PASS",
+      "why": "",
+      "heldout_ce_trace": [
+        5.637338161468506,
+        5.314936637878418,
+        5.036098957061768
+      ],
+      "initial_ce": 5.865834712982178
+    },
+    {
+      "id": "G-DD2",
+      "metric": "subspace_explained_variance_topk",
+      "value": 1.0,
+      "op": ">=",
+      "bound": 0.9,
+      "control_value": 0.00012289763253647834,
+      "status": "PASS",
+      "why": "",
+      "k": 3,
+      "trajectory_points": 3,
+      "scope": "one decoder, not the paper's 1100+ models"
+    },
+    {
+      "id": "G-DD3",
+      "metric": "davis_kahan_op_drift",
+      "value": null,
+      "op": "<=",
+      "bound": null,
+      "control_value": null,
+      "status": "BLOCKED",
+      "why": "fewer than 4 trajectory points"
+    },
+    {
+      "id": "G-DD4",
+      "metric": "info_gain_nats",
+      "value": 0.0,
+      "op": ">",
+      "bound": 0.15,
+      "control_value": 0.0,
+      "status": "FAIL",
+      "why": ""
+    },
+    {
+      "id": "G-DD5",
+      "metric": "stiefel_crosstalk",
+      "value": 0.0655880719423294,
+      "op": "<=",
+      "bound": 0.12,
+      "control_value": 1.0,
+      "status": "PASS",
+      "why": "",
+      "retracted": false,
+      "pre_retraction": 0.0655880719423294
+    },
+    {
+      "id": "G-DD6",
+      "metric": "sagnac_veto_accuracy_phase_noise",
+      "value": 1.0,
+      "op": ">=",
+      "bound": 0.999,
+      "control_value": 1.0,
+      "status": "PASS",
+      "why": "",
+      "corrupt_reject_rate": 1.0
+    },
+    {
+      "id": "G-DD7",
+      "metric": "peak_vram_gib",
+      "value": null,
+      "op": "<=",
+      "bound": 2.2,
+      "control_value": null,
+      "status": "NOT_APPLICABLE",
+      "why": "CPU-only host; the GPU budget stays shut. Reported as CPU peak RSS nan MiB, which is NOT a VRAM pass. Deferred to a GPU run under separate approval."
+    }
+  ],
+  "report": {
+    "epochs": 3,
+    "proposals": 24,
+    "engrams_created": 72,
+    "engrams_pruned": 0,
+    "engrams_axiomatic": 0,
+    "epoch_ce": [
+      5.444012641906738,
+      4.786020278930664,
+      4.636885643005371
+    ],
+    "epoch_heldout_ce": [
+      5.637338161468506,
+      5.314936637878418,
+      5.036098957061768
+    ],
+    "alignment_trace": [
+      0.0,
+      0.5685477224178612,
+      0.35740426799748093
+    ],
+    "crosstalk_trace": [
+      0.06224124878644943,
+      0.052451442927122116,
+      0.0455578975379467
+    ],
+    "subspace_explained": 1.0,
+    "retraction_moved": 2121.0165199786425
+  },
+  "deviations": {
+    "D1": "TimescaleDB/TigerData absent; in-memory engram store + JSONL",
+    "D2": "G-DD7 not testable on CPU; labelled NOT_APPLICABLE",
+    "D3": "document pseudocode omits backward() and flips delta sign; fixed",
+    "D4": "one subspace basis over the flattened text-head path",
+    "D5": "rejection-sampled proposals, not GRPO policy gradient"
+  },
+  "notebooklm": {
+    "status": "BLOCKED",
+    "reason": "Google sign-in wall"
+  }
+}
