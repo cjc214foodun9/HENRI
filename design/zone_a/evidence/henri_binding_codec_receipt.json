@@ -1,0 +1,85 @@
+{
+  "schema": "henri.binding.codec.ablation.v1",
+  "unigram_floor_C": 0.175403,
+  "n_train_rows": 144,
+  "n_compose_rows": 324,
+  "arms": {
+    "A_sum_off": {
+      "loss_first": 6.2926,
+      "loss_last": 0.0007,
+      "s": 7.8,
+      "ev": {
+        "train": {
+          "em": 1.0,
+          "acc": 1.0
+        },
+        "B_input_held": {
+          "em": 0.1875,
+          "acc": 0.285714
+        },
+        "C_compose": {
+          "em": 0.16358,
+          "acc": 0.207661
+        }
+      }
+    },
+    "B_sum_pos": {
+      "loss_first": 6.2551,
+      "loss_last": 0.0006,
+      "s": 6.9,
+      "ev": {
+        "train": {
+          "em": 1.0,
+          "acc": 1.0
+        },
+        "B_input_held": {
+          "em": 0.25,
+          "acc": 0.428571
+        },
+        "C_compose": {
+          "em": 0.132716,
+          "acc": 0.173387
+        }
+      }
+    },
+    "C_fhrr_bind": {
+      "loss_first": 6.3309,
+      "loss_last": 0.0005,
+      "s": 7.0,
+      "ev": {
+        "train": {
+          "em": 1.0,
+          "acc": 1.0
+        },
+        "B_input_held": {
+          "em": 0.166667,
+          "acc": 0.309524
+        },
+        "C_compose": {
+          "em": 0.175926,
+          "acc": 0.195565
+        }
+      }
+    },
+    "D_control": {
+      "loss_first": 6.2895,
+      "loss_last": 0.0006,
+      "s": 6.8,
+      "ev": {
+        "train": {
+          "em": 0.152778,
+          "acc": 0.163043
+        },
+        "B_input_held": {
+          "em": 0.041667,
+          "acc": 0.107143
+        },
+        "C_compose": {
+          "em": 0.138889,
+          "acc": 0.118952
+        }
+      }
+    }
+  },
+  "bounds_moved": false
+}
