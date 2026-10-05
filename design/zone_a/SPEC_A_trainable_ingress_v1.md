@@ -95,3 +95,46 @@ This contract, if approved, would make pinning mandatory in contract v2.
 ---
 
 **Author:** acting agent. **Sealed:** no — DRAFT.
+
+---
+
+## 8. Addendum — D131: the positional phase aliases modulo 4 (measured 2026-10-05)
+
+D127 rotates token t by ONE frequency, `pos_omega = pi/2`. The phase advances
+`pi` every two tokens and repeats every four, so positions 0, 4, 8 land on the
+IDENTICAL phasor. Measured with an exact-id control that bypasses the tokeniser
+(ByteBPE gives I=73, R=82):
+
+| string | cos to `IR`, ON | reading |
+|---|---|---|
+| `RI` | -0.000000 | order encoded |
+| `IRIR` | +0.008508 | differs |
+| `IRIRIR` | **+1.000000** | **aliases back to `IR`** |
+
+Arithmetic: `IRIRIR` accumulates `e^0 + e^{i pi} + e^{i 2pi} = 1` on addr(I) and
+`e^{i pi/2} + e^{i 3pi/2} + e^{i 5pi/2} = i` on addr(R) — exactly the `IR` pair.
+
+M4 corpus specs run 4-5 BPE tokens, so aliasing begins inside the range the
+composition gate measures. **This is a third contract item, and it is a
+codec-geometry change, not a flag.** Candidate remedies, none approved:
+
+- **R1** multi-frequency phases on replicated writes (breaks slot sparsity)
+- **R2** widen `pos_omega` to the corpus length (still single-frequency; aliases later)
+- **R3** adopt the decoder's own RoPE scheme (theta 5e5, multi-frequency) at ingress
+
+Prediction recorded before the test: even-repeat strings would cancel to a zero
+wave. **Measured: WRONG.** `_assemble` renormalizes per slot, so norms stayed
+1.000000 on every string. The wrong prediction is kept here on record.
+
+**Status:** DRAFT item, not approved, not implemented.
+
+## 9. Contract item summary
+
+| # | item | class | needs |
+|---|---|---|---|
+| 1 | train `slot_router` via straight-through estimator | flag + mechanism | approval |
+| 2 | keep `token_emb` frozen (2.1B at full scale) | decision | none |
+| 3 | replace single-frequency positional phase (D131) | codec geometry | approval + design |
+
+Items 1 and 3 are separable. Item 1 is one flag and tests whether routing is the
+constraint. Item 3 is the deeper algebraic repair.
