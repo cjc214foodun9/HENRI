@@ -1,0 +1,262 @@
+{
+  "schema": "henri.daydream.gates.v2",
+  "section": "all",
+  "overall": "NOT_ACCEPTED",
+  "counts": {
+    "PASS": 8,
+    "NOT_INFORMATIVE": 1,
+    "FAIL": 2,
+    "NOT_APPLICABLE": 1
+  },
+  "gates": [
+    {
+      "id": "G-DD1",
+      "metric": "epiplexity_growth_heldout_ce",
+      "value": 0.4379768371582031,
+      "op": ">",
+      "bound": 0.0,
+      "status": "PASS",
+      "control_value": 0.0,
+      "why": "",
+      "heldout_ce_trace": [
+        5.373237609863281,
+        4.935260772705078
+      ],
+      "frozen_ce_trace": [
+        5.863568305969238,
+        5.863568305969238
+      ],
+      "coverage_arm_growth": 0.20442533493041992,
+      "coverage_arm_note": "dreams of length <= 2 cannot cover held-out length 3; a similar growth there is composition, not coverage",
+      "control_kind": "MEASURED zero-step learner (D100)"
+    },
+    {
+      "id": "G-DD2",
+      "metric": "subspace_explained_variance_topk",
+      "value": 0.9998407959938049,
+      "op": ">=",
+      "bound": 0.9,
+      "status": "PASS",
+      "control_value": 0.0002105183230014518,
+      "why": "",
+      "k": 8,
+      "rank_Dc": 11,
+      "n_points": 12,
+      "scope": "one decoder readout head, not the paper's 1100+ models"
+    },
+    {
+      "id": "G-DD3",
+      "metric": "davis_kahan_op_drift",
+      "value": 0.9999846573078933,
+      "op": "<=",
+      "bound": 143.63596036419938,
+      "status": "NOT_INFORMATIVE",
+      "control_value": 0.9999994744476041,
+      "why": "bound 143.636 >= the metric ceiling 1.0 (op_drift is sin(theta_max) in [0,1]); gamma_k=0.000348 makes the document's 0.05/gamma_k bound unfailable. The measurement still stands: drift 0.999985 means the two half-trajectory subspaces are nearly orthogonal.",
+      "gamma_k": 0.0003481022431515157,
+      "n_points": 12,
+      "bound_formula": "2/gamma_k * (2*B*eta_bar + eta_bar^2)"
+    },
+    {
+      "id": "G-DD4",
+      "metric": "info_gain_dynamic_range_nats",
+      "value": 0.015740156173706055,
+      "op": ">",
+      "bound": 0.15,
+      "status": "FAIL",
+      "control_value": 0.0,
+      "why": "",
+      "flat_state_H": 2.0794413089752197,
+      "peak_state_H": 2.0637011528015137,
+      "entropy_range_control": 0.015740156173706055,
+      "beta": 26.1,
+      "bank": "corpus train specs",
+      "note": "bound 0.15 nats is the document's; not moved",
+      "deviation": "D6: normalised cosines; the doc formula saturates to one-hot"
+    },
+    {
+      "id": "G-DD5",
+      "metric": "stiefel_crosstalk",
+      "value": 0.04976853355765343,
+      "op": "<=",
+      "bound": 0.12,
+      "status": "PASS",
+      "control_value": 1.0000001192092896,
+      "why": "",
+      "retracted": false,
+      "pre_retraction": 0.04976853355765343,
+      "post_retraction": 0.04976853355765343
+    },
+    {
+      "id": "G-DD6",
+      "metric": "sagnac_veto_accuracy_phase_noise",
+      "value": 1.0,
+      "op": ">=",
+      "bound": 0.999,
+      "status": "PASS",
+      "control_value": 1.0,
+      "why": "",
+      "corrupt_reject_rate": 1.0
+    },
+    {
+      "id": "G-DD7",
+      "metric": "peak_vram_gib",
+      "value": null,
+      "op": "<=",
+      "bound": 2.2,
+      "status": "NOT_APPLICABLE",
+      "control_value": null,
+      "why": "CPU-only host; the GPU budget stays shut. CPU peak RSS nan MiB is NOT a VRAM pass. Deferred to a GPU run under separate approval.",
+      "cpu_peak_rss_mib": null
+    },
+    {
+      "id": "B-G1",
+      "metric": "decoder_param_formula_error_small",
+      "value": 0.0,
+      "op": "<=",
+      "bound": 0.0,
+      "status": "PASS",
+      "why": "the declared formula must equal the instantiation exactly",
+      "control_value": 0.0,
+      "formula": 1437391,
+      "instantiated": 1437391
+    },
+    {
+      "id": "B-G2",
+      "metric": "decoder_param_full_envelope",
+      "value": 439798031.0,
+      "op": "in",
+      "bound": [
+        400000000,
+        500000000
+      ],
+      "status": "PASS",
+      "control_value": null,
+      "why": "doc p21 documents the 448.6M envelope",
+      "n_mem": 256,
+      "note": "formula only; no 440M instantiation on CPU"
+    },
+    {
+      "id": "C-G1",
+      "metric": "info_gain_dynamic_range_nats",
+      "value": 0.015740156173706055,
+      "op": ">",
+      "bound": 0.15,
+      "status": "FAIL",
+      "control_value": 0.0,
+      "why": "",
+      "uniform_H": 2.0794413089752197,
+      "peaked_H": 2.0637011528015137,
+      "entropy_spread": 0.015740156173706055,
+      "metric_value": 0.015740156173706055,
+      "note": "spread = H(flat query) - H(peaked query); the metric MOVES but does not clear the document's 0.15 nats bound. Bound not moved."
+    },
+    {
+      "id": "C-G2",
+      "metric": "stage3_promotion_fires",
+      "value": 1.0,
+      "op": "==",
+      "bound": 1.0,
+      "status": "PASS",
+      "control_value": null,
+      "why": "an engram with gain 0.50 > promote_info 0.15 must become axiomatic",
+      "survive": [
+        "promote-me",
+        "keep-me"
+      ]
+    },
+    {
+      "id": "C-G3",
+      "metric": "stage3_pruning_fires",
+      "value": 1.0,
+      "op": "==",
+      "bound": 1.0,
+      "status": "PASS",
+      "control_value": 1.0,
+      "why": "a light engram with zero gain must be dropped while the heavier one is kept",
+      "survive": [
+        "promote-me",
+        "keep-me"
+      ]
+    }
+  ],
+  "report": {
+    "epochs": 2,
+    "proposals": 8,
+    "steps_per_epoch": 6,
+    "engrams_created": 16,
+    "engrams_pruned": 0,
+    "engrams_axiomatic": 16,
+    "epoch_ce": [
+      2.2645459175109863,
+      1.6035504341125488
+    ],
+    "epoch_heldout_ce": [
+      5.373237609863281,
+      4.935260772705078
+    ],
+    "alignment_trace_tail": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "alignment_trace_len": 12,
+    "crosstalk_trace": [
+      0.053571440279483795,
+      0.026785720139741898
+    ],
+    "subspace_explained": 0.9998407959938049,
+    "subspace_rank_Dc": 11,
+    "subspace_k": 8,
+    "subspace_points": 12,
+    "retraction_moved": 2193.1405141353607,
+    "retraction_dim_now": 45440,
+    "retraction_dim_fit": 45440,
+    "retraction_shapes": [
+      [
+        353,
+        128
+      ],
+      [
+        128
+      ],
+      [
+        128
+      ]
+    ],
+    "retraction_ce_before": 4.935260772705078,
+    "retraction_ce_after": 5.863568305969238,
+    "retraction_delta_ce": 0.9283075332641602,
+    "notes": []
+  },
+  "deviations": {
+    "D1": "TimescaleDB/TigerData absent; in-memory engram store",
+    "D2": "G-DD7 not testable on CPU; labelled NOT_APPLICABLE",
+    "D3": "doc pseudocode omits backward() and flips the delta sign; fixed",
+    "D4": "one subspace basis over the readout head (45,440 dims), not a 24-layer backbone",
+    "D5": "rejection-sampled proposals, not GRPO policy gradient",
+    "D6": "info_gain normalised with a uniform floor; the doc formula saturates to one-hot and cannot fail"
+  },
+  "defects_fixed": {
+    "D100": "G-DD1 negative control is now a MEASURED zero-step learner",
+    "D101": "a length-2 coverage arm separates coverage from composition",
+    "D102": "G-DD2 carries a rank guard and can report NOT_INFORMATIVE",
+    "D103": "trajectory observed per optimiser step, unblocking G-DD3",
+    "D104": "info_gain had a [1,M,d] query against [8,M,d] engrams; every entropy was 0 and delta H was 0.0 for all inputs",
+    "D105": "stage3 reports pre and post crosstalk, not post only",
+    "D106": "held-out CE is measured before and after the retraction",
+    "D107": "pruning and promotion never executed; C-G2 and C-G3 now assert they fire",
+    "D122": "G-DD3 built U U^T projectors: 45440^2*4 = 8,259,174,400 bytes each, so section A died OOM after training. Replaced with the closed-form sin(theta_max) = sqrt(1 - s_min(U1^T U2)^2).",
+    "D123": "the closed form first used s_MAX, which is the SMALLEST principal angle; a unit check against the brute-force projector difference disagreed on 9 of 12 random cases. cos(theta_max) = s_MIN.",
+    "D124": "G-DD4 banked 'axiom i' waves against an unrelated query, so the slot-sparse codec gave cosine 0 to every bank vector and the entropy dynamic range was 0 for any input. Bank is now drawn from the same corpus and the metric is the flat-vs-peaked range, matching the corrected C-G1.",
+    "D125": "G-DD1 reports growth over the heldout CE trace, which needs at least 2 epochs. With --epochs 1 the trace has one point, growth is 0.0 by construction, and the gate FAILs on an empty comparison rather than on the science.",
+    "D126": "G-DD3 compared op_drift (sin(theta_max) in [0,1]) against the document's 0.05/gamma_k bound, which evaluated to 207.3 at gamma_k=2.41e-4. No value can exceed 1.0, so the gate could not fail and the control could not exceed the bound. Now reports NOT_INFORMATIVE when the bound reaches the metric ceiling. The measurement (drift 0.997) still stands."
+  },
+  "notebooklm": {
+    "status": "BLOCKED",
+    "reason": "Google sign-in wall",
+    "action": "skipped per operator instruction"
+  }
+}

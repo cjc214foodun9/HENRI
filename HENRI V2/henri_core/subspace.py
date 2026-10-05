@@ -111,6 +111,37 @@ class UniversalSubspace:
         return moved
 
     # ------------------------------------------------------------------ drift
+    @staticmethod
+    @torch.no_grad()
+    def projector_op_dist(U1: torch.Tensor, U2: torch.Tensor) -> float:
+        """||U1 U1^T - U2 U2^T||_2 in closed form, with no [P, P] product.
+
+        D122 (self-caught): the first implementation formed P1 = U1 @ U1.T and
+        P2 = U2 @ U2.T. At the real readout width P = 45,440 that allocates
+        45,440^2 * 4 = 8,259,174,400 bytes per projector, and the run died with
+        "not enough memory: you tried to allocate 8259174400 bytes". The path had
+        never executed before, because G-DD3 was BLOCKED in the first receipt and
+        D103 (observe every optimiser step) unblocked it.
+
+        For orthonormal U1, U2 of EQUAL rank k the operator norm is exactly the
+        sine of the largest principal angle: ||P1 - P2||_2 = sin(theta_max), and
+        cos(theta_max) = s_MIN, where s are the singular values of U1^T U2.
+        D123 (self-caught by the unit check): I first used s_MAX. That gives the
+        SMALLEST principal angle, and the closed form then disagreed with the
+        brute-force projector difference on 9 of 12 random cases (k = 2, 4, 8).
+        The unit check compares both forms and fails on any mismatch.
+        If the ranks differ, |k1 - k2| directions of the larger basis are
+        orthogonal to the smaller basis, so the norm is exactly 1.
+        """
+        k1, k2 = int(U1.shape[1]), int(U2.shape[1])
+        if k1 != k2:
+            return 1.0
+        if k1 == 0:
+            return 0.0
+        s = torch.linalg.svdvals(U1.T @ U2)          # cosines, [k] (descending)
+        smin = float(s.min().clamp(0.0, 1.0))
+        return float((1.0 - smin * smin) ** 0.5)
+
     def half_split_drift(self) -> dict:
         """Davis-Kahan sinTheta audit: projectors from the two trajectory halves.
 
@@ -125,9 +156,8 @@ class UniversalSubspace:
         h = len(self._rows) // 2
         U1 = self._basis(D[:h])
         U2 = self._basis(D[h:])
-        P1 = U1 @ U1.T
-        P2 = U2 @ U2.T
-        dist = float(torch.linalg.matrix_norm(P1 - P2, ord=2))
+        # D122: closed form; P1/P2 would each be [45440, 45440] = 8.26 GB.
+        dist = self.projector_op_dist(U1, U2)
         s = self.singular
         k = self.U.shape[1]
         gamma = float(s[k - 1] ** 2 - s[k] ** 2) if len(s) > k else float(s[k - 1] ** 2)

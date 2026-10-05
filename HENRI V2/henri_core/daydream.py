@@ -100,7 +100,11 @@ class DaydreamConfig:
     steps_per_epoch: int = 24
     lr: float = 3e-3
     seed: int = 0
-    k_sub: int = 32
+    k_sub: int = 8                    # D119: must satisfy rank(Dc) > k or the
+                                      # explained-variance gate is vacuous (D102).
+                                      # The doc allows r_hat <= 32; 8 is within it
+                                      # and is honest for a short trajectory, and
+                                      # the rank guard still fires if T is small.
     crosstalk_limit: float = 0.12
     sagnac_threshold: float = 0.35
     beta: float = 26.10
@@ -481,8 +485,14 @@ class DaydreamEngine:
 
             # STAGE 3: consolidate the dream traces with a LIVE information gain
             psi_new = model.wave([b[0] for b in batch])
-            psi_next = psi_new.roll(1, 0)
-            gain = self.info_gain(psi_new, psi_next, psi_new)
+            # D118 (self-caught): the engram's information gain must be the
+            # document's dH(pi) -- the entropy reduction of this trace's wave
+            # against the bank of traces, H(uniform) - H(Hopfield posterior).
+            # The previous line passed psi_new against a ROLL of itself, which is
+            # two arbitrary traces again: the D115 defect, re-appearing inside the
+            # loop. With D104 it pinned every gain at 0, so stage-3 pruning and
+            # promotion never executed (D107).
+            gain = self.information_gain(psi_new, psi_new)
             cons = self.stage3_consolidate(psi_new)
             self.rep.crosstalk_trace.append(cons["crosstalk"])
             for spec, trace in batch:
@@ -629,11 +639,26 @@ def section_a(cfg: DaydreamConfig) -> tuple[list, dict]:
         U1 = UniversalSubspace._basis(D_rows[:len(D_rows) // 2], k)
         rand_arm = UniversalSubspace._basis(
             torch.randn_like(D_rows[len(D_rows) // 2:]), k)
-        ctl = float(torch.linalg.matrix_norm(U1 @ U1.T - rand_arm @ rand_arm.T,
-                                             ord=2))
+        ctl = UniversalSubspace.projector_op_dist(U1, rand_arm)
+        # D126 (self-caught): op_drift is sin(theta_max), so it lives in [0, 1].
+        # The document's bound 0.05/gamma_k evaluated to 207.3 here, because
+        # gamma_k = 2.41e-4. No measurement can exceed 1.0 and the unrelated
+        # control also sits at 1.0, so the gate was structurally incapable of
+        # failing -- the "gate that cannot fail" class. Report NOT_INFORMATIVE
+        # when the bound reaches the metric ceiling. The MEASUREMENT still stands:
+        # drift 0.997 means the two half-trajectory subspaces are nearly
+        # orthogonal, i.e. the subspace is NOT stable across the trajectory.
         ok = value <= bound
         ctl_ok = ctl > bound
-        st, why = _verdict(ok, ctl_ok, "unrelated basis did not drift more")
+        if bound >= 1.0:
+            st, why = "NOT_INFORMATIVE", (
+                f"bound {bound:.6g} >= the metric ceiling 1.0 (op_drift is "
+                f"sin(theta_max) in [0,1]); gamma_k={dk['gamma_k']:.3g} makes the "
+                "document's 0.05/gamma_k bound unfailable. The measurement still "
+                f"stands: drift {value:.6g} means the two half-trajectory "
+                "subspaces are nearly orthogonal.")
+        else:
+            st, why = _verdict(ok, ctl_ok, "unrelated basis did not drift more")
         gates.append(_gate(
             "G-DD3", "davis_kahan_op_drift", value, "<=", bound, st,
             control_value=ctl, why=why, gamma_k=dk["gamma_k"],
@@ -644,26 +669,32 @@ def section_a(cfg: DaydreamConfig) -> tuple[list, dict]:
                            "BLOCKED", why="fewer than 4 trajectory points"))
 
     # ---- G-DD4 information gain, with a real positive control (D104)
-    engrams = rep.model.wave([f"axiom {i}" for i in range(8)])
-    psi_a = rep.model.wave(["apply IR to 1234"])
-    psi_b = rep.model.wave(["apply IIII to 2468"])
-    gain = eng.info_gain(psi_a, psi_b, engrams)
-    gain_ctl = eng.info_gain(psi_a, psi_a.clone(), engrams)   # must be exactly 0
-    # D104 positive control: a deliberately FLAT query against a peaked bank.
-    # If H cannot move off the flat reference, the metric is dead.
-    flat_query = torch.zeros_like(psi_a)
-    h_flat = eng.info_gain_uniform(flat_query, engrams)
-    h_peak = eng.info_gain_uniform(psi_a, engrams)
-    h_range = h_flat - h_peak
-    ok = gain > 0.15
-    ctl_ok = (abs(gain_ctl) <= 1e-9) and (h_range > 0.15)
+    # D124 (self-caught): the first arm built the bank from "axiom i" waves and
+    # the query from an unrelated spec family. Slot-sparse waves with disjoint
+    # support give cosine EXACTLY 0 to every bank vector, so the posterior is
+    # uniform for ANY query and the dynamic range collapses to 0 -- the D120
+    # defect, re-appearing in section A. Draw the bank from the SAME corpus so
+    # the query can concentrate, and measure the flat-vs-peaked DYNAMIC RANGE
+    # (the corrected C-G1 form), not the difference between two arbitrary specs.
+    engrams = rep.model.wave([corpus.specs[i] for i in corpus.train_idx[:8]])
+    peak_q = rep.model.wave([corpus.specs[corpus.train_idx[0]]])
+    flat_q = torch.zeros_like(peak_q)
+    h_flat = eng.info_gain_uniform(flat_q, engrams)
+    h_peak = eng.info_gain_uniform(peak_q, engrams)
+    spread = h_flat - h_peak
+    gain_ctl = eng.info_gain(peak_q, peak_q.clone(), engrams)  # must be exact 0
+    ok = spread > 0.15
+    # D121/D115: the control shows the metric is ALIVE (identical states give
+    # exactly 0 and the dynamic range is nonzero). The bound decides the verdict.
+    ctl_ok = (abs(gain_ctl) <= 1e-9) and (abs(spread) > 1e-6)
     st, why = _verdict(ok, ctl_ok, (
         f"identical states gave {gain_ctl} (must be 0) and the flat-vs-peak "
-        f"entropy range was {h_range} (must exceed the bound)"))
+        f"entropy range was {spread} (must be nonzero for the metric to live)"))
     gates.append(_gate(
-        "G-DD4", "info_gain_nats", gain, ">", 0.15, st,
+        "G-DD4", "info_gain_dynamic_range_nats", spread, ">", 0.15, st,
         control_value=gain_ctl, why=why, flat_state_H=h_flat, peak_state_H=h_peak,
-        entropy_range_control=h_range, beta=cfg.beta,
+        entropy_range_control=spread, beta=cfg.beta, bank="corpus train specs",
+        note="bound 0.15 nats is the document's; not moved",
         deviation="D6: normalised cosines; the doc formula saturates to one-hot"))
 
     # ---- G-DD5 crosstalk, with the measured pre/post pair (D105)
@@ -756,7 +787,10 @@ def section_b(cfg: DaydreamConfig) -> tuple[list, dict]:
     small = DecoderConfig(dim=4096, d_model=128, n_layers=2, n_heads=4,
                           n_kv_heads=1, d_ffn=256, n_macro=16, n_invariants=32,
                           vocab=512)
-    f_small = decoder_param_formula(small)
+    # D116 (self-caught): decoder_param_formula returns a DICT
+    # {"total", "parts", "doc_target"}, not an int. The first draft subtracted an
+    # int from the dict and raised TypeError. Read "total".
+    f_small = int(decoder_param_formula(small)["total"])
     i_small = sum(p.numel() for p in HenriDec450M(small).parameters())
     d_small = abs(f_small - i_small)
     gates.append(_gate(
@@ -767,7 +801,7 @@ def section_b(cfg: DaydreamConfig) -> tuple[list, dict]:
         formula=f_small, instantiated=i_small))
 
     full = DecoderConfig(dim=sub.DEFAULT_DIM)
-    f_full = decoder_param_formula(full)
+    f_full = int(decoder_param_formula(full)["total"])
     in_env = 400_000_000 <= f_full <= 500_000_000
     gates.append(_gate(
         "B-G2", "decoder_param_full_envelope", float(f_full), "in",
@@ -794,31 +828,39 @@ def section_c(cfg: DaydreamConfig) -> tuple[list, dict]:
     model = WaveTextGenerator(system, tok, train_body=True)
     gates = []
 
-    # a bank of distinct but related reference engrams.
-    # D109 (self-caught): the first draft called eng.model_wave(...), which does
-    # not exist. WaveTextGenerator.wave() is the real entry point.
-    g = torch.Generator().manual_seed(7)
-    base = model.wave(["apply IR to 1234"])[0]
-    bank = torch.stack([base * (1.0 + 0.05 * torch.randn(base.shape,
-                                                         generator=g))
-                        for _ in range(8)])
-    flat_q = torch.zeros_like(base).unsqueeze(0)
-    peak_q = base.unsqueeze(0)
+    # a bank of DISTINCT reference engrams.
+    # D109: model.wave() is the entry point (eng.model_wave does not exist).
+    # D120 (self-caught): the first bank was 8 scalar multiples of ONE vector,
+    # base * (1 + 0.05*randn). Parallel bank vectors give cosine +1 to every
+    # query, so the softmax is uniform for ANY input and the entropy spread is
+    # zero BY CONSTRUCTION -- the D85 degeneracy, re-created inside my own
+    # control. Use eight DISTINCT spec waves, whose support overlap is partial.
+    bank_specs = [corpus.specs[i] for i in corpus.train_idx[:8]]
+    bank = torch.stack([model.wave([s])[0] for s in bank_specs])
+    flat_q = torch.zeros_like(bank[0]).unsqueeze(0)
+    peak_q = model.wave([corpus.specs[corpus.heldout_idx[0]]])
     h_flat = eng.info_gain_uniform(flat_q, bank)
     h_peak = eng.info_gain_uniform(peak_q, bank)
     spread = h_flat - h_peak
     gain_matched = eng.info_gain(flat_q, peak_q, bank)
     gain_identical = eng.info_gain(peak_q, peak_q.clone(), bank)
 
-    ok = gain_matched > 0.15
-    ctl_ok = abs(gain_identical) <= 1e-9 and spread > 0.15
+    # D121 (self-caught): the control conflated "the metric is ALIVE" with "the
+    # metric CLEARS THE BOUND". A control must show the measurement CAN move; the
+    # bound decides pass/fail. Requiring spread > 0.15 in ctl_ok made a moving
+    # metric report VACUOUS, which hides the real verdict. Control = (identical
+    # states give 0) AND (the metric moves off its dead value at all).
+    ok = spread > 0.15
+    ctl_ok = (abs(gain_identical) <= 1e-9) and (abs(spread) > 1e-6)
     st, why = _verdict(ok, ctl_ok, (
         f"identical-state gain {gain_identical} must be 0 and the entropy spread "
-        f"{spread} must exceed 0.15 for the metric to be alive"))
+        f"{spread} must be nonzero for the metric to be alive at all"))
     gates.append(_gate(
-        "C-G1", "info_gain_metric_is_alive", gain_matched, ">", 0.15, st,
+        "C-G1", "info_gain_dynamic_range_nats", spread, ">", 0.15, st,
         control_value=gain_identical, why=why, uniform_H=h_flat, peaked_H=h_peak,
-        entropy_spread=spread, note="replaces the dead G-DD4 metric"))
+        entropy_spread=spread, metric_value=spread,
+        note="spread = H(flat query) - H(peaked query); the metric MOVES but does "
+             "not clear the document's 0.15 nats bound. Bound not moved."))
 
     # promotion must fire on an engram whose gain clears promote_info
     st_store = EngramStore(cfg)
@@ -842,7 +884,16 @@ def section_c(cfg: DaydreamConfig) -> tuple[list, dict]:
         why=("a light engram with zero gain must be dropped while the heavier "
              "one is kept"),
         survive=surviving))
-    return gates
+    # D117 (self-caught): section_c returned a bare list, but run_daydream_gates
+    # unpacked two values (g, _ = section_c(cfg)), so the caller raised
+    # "too many values to unpack (expected 2)". Return the same (gates, report)
+    # pair the other two sections return.
+    return gates, {"pruned": pruned, "promoted": promoted,
+                   "surviving": surviving,
+                   "info_gain_matched": gain_matched,
+                   "info_gain_identical": gain_identical,
+                   "uniform_H": h_flat, "peaked_H": h_peak,
+                   "entropy_spread": spread}
 
 
 def run_daydream_gates(cfg: DaydreamConfig | None = None,
@@ -892,6 +943,28 @@ def run_daydream_gates(cfg: DaydreamConfig | None = None,
             "D106": "held-out CE is measured before and after the retraction",
             "D107": "pruning and promotion never executed; C-G2 and C-G3 now "
                     "assert they fire",
+            "D122": "G-DD3 built U U^T projectors: 45440^2*4 = 8,259,174,400 bytes "
+                    "each, so section A died OOM after training. Replaced with the "
+                    "closed-form sin(theta_max) = sqrt(1 - s_min(U1^T U2)^2).",
+            "D123": "the closed form first used s_MAX, which is the SMALLEST "
+                    "principal angle; a unit check against the brute-force "
+                    "projector difference disagreed on 9 of 12 random cases. "
+                    "cos(theta_max) = s_MIN.",
+            "D124": "G-DD4 banked 'axiom i' waves against an unrelated query, so "
+                    "the slot-sparse codec gave cosine 0 to every bank vector and "
+                    "the entropy dynamic range was 0 for any input. Bank is now "
+                    "drawn from the same corpus and the metric is the flat-vs-"
+                    "peaked range, matching the corrected C-G1.",
+            "D125": "G-DD1 reports growth over the heldout CE trace, which needs "
+                    "at least 2 epochs. With --epochs 1 the trace has one point, "
+                    "growth is 0.0 by construction, and the gate FAILs on an "
+                    "empty comparison rather than on the science.",
+            "D126": "G-DD3 compared op_drift (sin(theta_max) in [0,1]) against the "
+                    "document's 0.05/gamma_k bound, which evaluated to 207.3 at "
+                    "gamma_k=2.41e-4. No value can exceed 1.0, so the gate could "
+                    "not fail and the control could not exceed the bound. Now "
+                    "reports NOT_INFORMATIVE when the bound reaches the metric "
+                    "ceiling. The measurement (drift 0.997) still stands.",
         },
         "notebooklm": {"status": "BLOCKED", "reason": "Google sign-in wall",
                        "action": "skipped per operator instruction"},
