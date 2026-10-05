@@ -38,6 +38,7 @@ class DecoderConfig:
     ctx: int = 4096
     vocab: int = 32768
     n_macro: int = 256
+    n_mem: int = 0                   # D85/D86: Hopfield memory slots; 0 = auto
     n_invariants: int = 256          # P_inv column count
     n_vq: int = 8                    # audio RVQ stages (doc p25)
     theta_rope: float = 500_000.0
@@ -65,6 +66,22 @@ class PinnedInvariantProjector(nn.Module):
         return sub.unit_norm(psi - recon)
 
 
+def resolve_n_mem(d_model: int, n_mem: int = 0) -> int:
+    """Memory slot count for the Hopfield cross-pooling. 0 means auto.
+
+    D85: draft 1 held ONE memory slot. softmax over one key is identically 1,
+    so every macro-token was the same value vector times a near-constant
+    scalar -- the defect the operator described.
+    D86 (self-caught): pinning the default to 256 broke small test configs,
+    because d_k = d_model // n_mem = 128 // 256 = 0 gives zero-width tensors.
+    Auto resolves to min(256, d_model // 4), so d_k stays >= 4 at every scale.
+    """
+    n = int(n_mem) if n_mem and n_mem > 0 else min(256, max(1, d_model // 4))
+    if d_model % n != 0:
+        raise ValueError(f"n_mem={n} must divide d_model={d_model}")
+    return n
+
+
 class HopfieldCrossPooling(nn.Module):
     """Compress Psi into K=256 macro-tokens via learned queries.  doc p22 stage 2.
 
@@ -74,29 +91,35 @@ class HopfieldCrossPooling(nn.Module):
     """
 
     def __init__(self, dim: int = sub.DEFAULT_DIM, d_model: int = 1024,
-                 n_macro: int = 256, beta: float = 26.10):
+                 n_macro: int = 256, beta: float = 26.10, n_mem: int = 0):
         super().__init__()
         self.n_macro = int(n_macro)
+        self.n_mem = resolve_n_mem(d_model, n_mem)
         self.beta = float(beta)
-        self.d_k = d_model // 16
-        self.q_macro = nn.Parameter(torch.randn(n_macro, d_model) * 0.02)
+        # D85 (the G-U4 root cause): d_k is d_model // n_mem, NOT a fixed /16.
+        # Draft 1 held a SINGLE memory slot, so softmax over the memory was
+        # identically 1 for every query and all 256 macro-tokens were one vector
+        # times a near-constant scalar. With n_mem = 256 and d_model = 1024 the
+        # memory holds 256 distinct slots of 4 channels, matching the document's
+        # N-pattern Hopfield update instead of a degenerate N=1 case.
+        self.d_k = d_model // self.n_mem
+        self.q_macro = nn.Parameter(torch.randn(n_macro, self.d_k) * 0.02)
         # ONE complex cross-projector wave -> d_model. The doc budgets
         # "65,536 x 1,024 x 2 (Complex Re/Im) ~ 134.2M". Sharing this single
         # projection for key and value is what keeps the 448M envelope.
         self.wave_proj = nn.Linear(2 * dim, d_model, bias=False)
-        self.w_q = nn.Linear(d_model, d_model, bias=False)
-        # Per-token modulation. DISCLOSED DEVIATION: the document's literal
-        # formula yields tokens that differ only by the attention scalar, so all
-        # 256 tokens are scalar multiples of one vector and the sequence is
-        # rank-1. The document calls for "an ordered sequence of 256 dense
-        # macro-tokens", so each token gets a learned direction. Cost M*d.
-        self.token_mod = nn.Parameter(torch.randn(n_macro, d_model) * 0.1)
+        # D85: per-token slot-channel mixing, shape [M, d_k, d_model]. This
+        # replaces token_mod, which added a FIXED learned offset that could not
+        # carry input-dependent routing. Each macro-token now owns a d_k -> d
+        # map applied to its d_k-channel slot mixture, so tokens differ by INPUT
+        # CONTENT. Cost M * d_k * d_model = 1.05M, inside the 134.2M budget.
+        self.mod = nn.Parameter(torch.randn(n_macro, self.d_k, d_model) * 0.02)
 
     def forward(self, psi: torch.Tensor) -> torch.Tensor:
         b = psi.shape[0]
         pair = torch.cat([psi.real, psi.imag], dim=-1)     # [B, 2D] real
         kv = self.wave_proj(pair)                          # [B, d_model]
-        v = kv
+        kv = kv.view(b, self.n_mem, self.d_k)              # [B, N, d_k]   (D85)
         # D82 (self-caught): the Hopfield energy (doc p19) assumes UNIT-NORM
         # patterns -- M = max_i ||x_i||_2, and the separation threshold is
         # defined on x_i^T x_j. Unnormalized keys made the logits O(1e-3), so
@@ -105,14 +128,13 @@ class HopfieldCrossPooling(nn.Module):
         # calls for the single-step "Lexical Snap", which needs beta to act on a
         # cosine in [-1, 1]. Normalize both sides; beta stays at the doc value
         # 26.10, so this aligns the scale to the spec rather than tuning a bound.
-        q = self.w_q(self.q_macro)                         # [M, d_model]
+        q = self.q_macro                                   # [M, d_k]
         q = q / q.norm(dim=-1, keepdim=True).clamp_min(1e-6)
-        kn = kv / kv.norm(dim=-1, keepdim=True).clamp_min(1e-6)
-        cos = q.unsqueeze(0) @ kn.unsqueeze(-1)            # [B, M, 1]
-        logits = (self.beta * cos).squeeze(-1)             # [B, M]
-        att = torch.softmax(logits, dim=-1)                # [B, M] over macros
-        return (att.unsqueeze(-1) * v.unsqueeze(1)
-                * (1.0 + self.token_mod).unsqueeze(0))     # [B, M, d_model]
+        kn = kv / kv.norm(dim=-1, keepdim=True).clamp_min(1e-6)   # [B, N, d_k]
+        logits = self.beta * torch.einsum("mk,bnk->bmn", q, kn)   # [B, M, N]
+        att = torch.softmax(logits, dim=-1)                # [B, M, N] over MEMORY
+        sl = torch.einsum("bmn,bnk->bmk", att, kv)         # [B, M, d_k]
+        return torch.einsum("bmk,mkj->bmj", sl, self.mod)  # [B, M, d_model]
 
 
 def _rope(q: torch.Tensor, theta: float, offset: int = 0) -> torch.Tensor:
@@ -193,7 +215,7 @@ class HenriDec450M(nn.Module):
         self.cfg = cfg or DecoderConfig()
         c = self.cfg
         self.projector = PinnedInvariantProjector(c.dim, c.n_invariants)
-        self.pooling = HopfieldCrossPooling(c.dim, c.d_model, c.n_macro)
+        self.pooling = HopfieldCrossPooling(c.dim, c.d_model, c.n_macro, n_mem=c.n_mem)
         # cross-projector from macro-tokens into the backbone width
         self.cross_proj = nn.Linear(c.n_macro, c.n_macro, bias=False)
         self.router = HRMRouter(c.n_macro)
@@ -266,8 +288,14 @@ def decoder_param_formula(cfg: DecoderConfig) -> dict:
         + 4 * d                     # n1, n2 LayerNorm (2d each)
         + 3 * d * cfg.d_ffn         # w_gate, w_up, w_down
     )
+    dk = d // resolve_n_mem(d, cfg.n_mem)
     parts = {
-        "pooling": 2 * D * d + M * d + d * d + M * d,     # incl. token_mod
+        # D87 (self-caught): mod is a [M, d_k, d_model] tensor, so its cost is
+        # M*d_k*d_model, NOT the M*d_model I first wrote. The mismatch showed up
+        # as formula 3,436,303 vs instantiated 3,484,431, delta 48,128, which is
+        # exactly (M*d_k*d - d_k*d - M*d) at the small config: 65,536 - 1,024 -
+        # 16,384 = 48,128. The d_k*d and M*d terms are the v1 leftovers, now gone.
+        "pooling": 2 * D * d + M * dk + M * dk * d,       # D85: N memories + mod
         "cross_proj": M * M,
         "blocks": cfg.n_layers * per_block,
         "final_norm": 2 * d,

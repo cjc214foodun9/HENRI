@@ -1,0 +1,42 @@
+{
+  "schema": "henri.gates.v2",
+  "written_utc": "2026-10-04",
+  "written_before_first_run": true,
+  "supersedes": "henri.tri-model.gates.v1 (G-U4 carried forward byte-identical)",
+  "authority": {
+    "daydream_doc": "project_henri_tri_model_epistemologies_universal_subspaces_autonomous_daydream_architecture.md",
+    "daydream_doc_sha256_prefix": "cf45f0b1da985f8efcba0cbac08c2b91",
+    "daydream_doc_words": 3103,
+    "base_spec": "design/zone_a/spec/Project_HENRI.pdf.txt sha256 f771617b5843f642027459935dba44a2",
+    "note": "the daydream document is SUGGESTION per the operator; deviations are recorded, not hidden"
+  },
+  "citations_verified_this_turn": {
+    "2609.30063": {"title": "Self-Play Pretraining with Zero Data", "authors": "Cowsik, Dolev, Li, De Luca, Cohen, Goodman, Levine", "submitted": "2026-09-24", "http": 200, "claim_status": "CITED - generator proposes Turing-machine programs, learner predicts byte sequences, generator RL-trained to the learner frontier; the doc's loss decomposition and 'preconditioned gradient-alignment reward' names are NOT in the abstract and remain the authors' rendering"},
+    "2512.05117": {"title": "The Universal Weight Subspace Hypothesis", "authors": "Kaushik, Chaudhari, Vaidya, Chellappa, Yuille", "revised": "2025-12-06", "http": 200, "claim_status": "CITED - >1100 models and majority-variance-in-few-directions confirmed; doc says '50 LLaMA-3' while the abstract says '50 LLaMA-8B'; Davis-Kahan theorem numbering unverified"},
+    "2008.02217": {"title": "Hopfield Networks is All You Need", "authors": "Ramsauer et al.", "http": 200, "claim_status": "CITED - modern Hopfield update, no sqrt(d_k) division, inverse temperature beta"}
+  },
+  "hard_constraints": {
+    "g_u4_bound": 0.95,
+    "g_u4_bound_moved": false,
+    "g_u4_protocol_changed": false,
+    "decoder_param_envelope": [400000000, 500000000],
+    "gpu_spend_usd": 0,
+    "purity": "henri_core imports torch + stdlib only"
+  },
+  "gates": [
+    {"id": "G-U4", "metric": "heldout_slot_profile_r2", "bound": ">= 0.95", "protocol": "IDENTICAL to v1: same corpus, same n_texts=1024, same split, same ridge, same metric. ONLY the pooling mechanism changes.", "negative_control": "shuffled_pairing must collapse", "positive_control": "target_as_feature must reach ~1.0", "fail_if": "value < 0.95 OR positive_control < 0.99 OR negative_control > 0.5"},
+    {"id": "G-U4a", "metric": "routing_diversity", "bound": "mean pairwise |cos| <= 0.65 AND effective_rank >= 64 of 256", "mechanism_control": "the SAME class instantiated with n_mem=1 reproduces the v1 near-constant-scalar defect and MUST fail this gate", "fail_if": "value not met OR the n_mem=1 arm passes"},
+    {"id": "M4-G1", "metric": "heldout_trace_exact_match", "bound": "> unigram_floor + 0.05", "negative_control": "shuffled (wave, trace) pairing must drop to the floor", "fail_if": "value <= floor OR control > floor + 0.05"},
+    {"id": "M4-G2", "metric": "generation_seed_determinism", "bound": "identical across 3 seeds at temperature 0", "negative_control": "temperature 2.0 must DIFFER", "fail_if": "greedy output not identical OR the negative control is identical"},
+    {"id": "M4-G3", "metric": "generated_text_veto_fail_closed", "bound": "1.0 accuracy; a corrupt wave must be rejected", "negative_control": "matching axiom must pass", "fail_if": "any corrupt wave passes"},
+    {"id": "M4-G4", "metric": "trace_loss_improvement", "bound": "> 0.0 over the run", "negative_control": "frozen-head control must stay flat", "fail_if": "no improvement OR the frozen control improves as much"},
+    {"id": "G-DD1", "metric": "epiplexity_growth", "bound": "delta_E > 0 across consecutive dream epochs", "negative_control": "frozen learner must show ~0 growth", "fail_if": "value <= 0 OR control >= value"},
+    {"id": "G-DD2", "metric": "subspace_explained_variance", "bound": "top-32 directions >= 0.90", "negative_control": "random orthonormal basis must score far lower", "fail_if": "value < 0.90"},
+    {"id": "G-DD3", "metric": "davis_kahan_op_drift", "bound": "<= 0.05 / gamma_k", "negative_control": "an unrelated random basis must exceed the bound", "fail_if": "value > bound OR control <= bound"},
+    {"id": "G-DD4", "metric": "info_gain_nats", "bound": "> 0.15 nats", "negative_control": "identical psi_t and psi_next must give 0", "fail_if": "value <= 0.15 OR control > 0.01"},
+    {"id": "G-DD5", "metric": "stiefel_crosstalk", "bound": "<= 0.12", "negative_control": "deliberately correlated engrams must exceed 0.12 before retraction", "fail_if": "value > 0.12 OR control <= 0.12"},
+    {"id": "G-DD6", "metric": "sagnac_veto_accuracy_under_phase_noise", "bound": "1.0 veto of delta_phi=pi corruptions", "negative_control": "clean states must pass", "fail_if": "any corrupted state passes"},
+    {"id": "G-DD7", "metric": "peak_vram_gib", "bound": "<= 2.20 GiB", "status": "NOT_APPLICABLE_CPU", "declared_upfront": true, "why": "the GPU budget stays shut; this host has no CUDA. Reported as CPU RSS with an explicit label, NEVER as a pass of the VRAM bound."}
+  ],
+  "notebooklm": {"status": "BLOCKED", "reason": "notebook.google.com resolves to a Google sign-in wall; no auth", "operator_instruction": "if not possible on your own without auth forget it", "retried": false}
+}
