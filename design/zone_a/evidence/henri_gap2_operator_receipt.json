@@ -1,0 +1,52 @@
+{
+  "schema": "henri.gap2.operator-factorization.v1",
+  "verdict": "VACUOUS",
+  "why": "d(held EM, C-A)=-0.012108; floor=0.108974; C=0.039886 A=0.051994 D=0.070513",
+  "guards": {
+    "positive_control_ok": true,
+    "armC_identifies_programs": false,
+    "armD_below_armC": false,
+    "armA_reproduces_memorization": false
+  },
+  "delta_C_minus_A_held_em": -0.01210826262831688,
+  "arms": {
+    "A_flat": {
+      "train_em": 0.125,
+      "held_em": 0.05199430137872696,
+      "held_tok": 0.11217948794364929
+    },
+    "C_operator": {
+      "train_em": 0.1041666641831398,
+      "held_em": 0.03988603875041008,
+      "held_tok": 0.11022079735994339,
+      "program_identification_acc": 0.20370370149612427
+    },
+    "D_shuffled": {
+      "train_em": 0.0833333358168602,
+      "held_em": 0.07051282376050949,
+      "held_tok": 0.10434473305940628
+    },
+    "positive_control_exact_algebra": 1.0,
+    "unigram_floor_held": 0.10897435992956161
+  },
+  "corpus": {
+    "train": 48,
+    "heldout": 1404,
+    "heldout_by_len": {
+      "3": 108,
+      "4": 324,
+      "5": 972
+    }
+  },
+  "run": {
+    "steps": 600,
+    "lr": 0.003,
+    "seed": 0,
+    "pin": 20261004
+  },
+  "seconds": 2.44,
+  "defects": {
+    "D145": "gap#2 harness: learnable part IDENTIFIES operators; the tripartite algebra APPLIES them exactly (torus shift | position permutation | copy broadcast). Composition is never learned from length-3 examples.",
+    "D146": "vacuity guard: the positive control runs the exact algebra with GROUND-TRUTH operators and must return EM=1.0, else the algebra itself is wrong and no verdict is valid."
+  }
+}

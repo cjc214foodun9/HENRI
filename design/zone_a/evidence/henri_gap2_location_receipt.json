@@ -1,0 +1,49 @@
+{
+  "schema": "henri.gap2.location-diagnostic.v1",
+  "verdict": "L2_POOLING_DESTROYS_SIGNAL",
+  "why": "wave pair |cos| 0.1489 vs random 0.0110: the WAVE separates. The pooled feature collapses to |cos| 0.9553. No probe fits TRAIN (best 0.4792); 1-NN at chance (prog 0.0000, trace 0.0577).",
+  "res": {
+    "D1_wave_pair_cos": {
+      "signed_mean": 0.1489361673593521,
+      "abs_mean": 0.1489361673593521
+    },
+    "D2_pooled_pair_cos": {
+      "signed_mean": 0.955315113067627,
+      "abs_mean": 0.955315113067627
+    },
+    "D3_1nn_program_em_held": 0.0,
+    "D3_1nn_trace_em_held": 0.057692307978868484,
+    "D4_capacity_ladder": {
+      "256": {
+        "train_em": 0.125,
+        "held_em": 0.05982905998826027
+      },
+      "1024": {
+        "train_em": 0.1875,
+        "held_em": 0.037749286741018295
+      },
+      "4096": {
+        "train_em": 0.4791666567325592,
+        "held_em": 0.03632478788495064
+      }
+    },
+    "D5_program_ident": {
+      "train_em": 0.5833333134651184,
+      "held_em": 0.0
+    },
+    "D6_input_ident": {
+      "train_em": 1.0,
+      "held_em": 0.28418803215026855
+    }
+  },
+  "corpus": {
+    "train": 48,
+    "heldout": 1404
+  },
+  "run": {
+    "steps": 800,
+    "pin": 20261004
+  },
+  "seconds": 36.5,
+  "defect": "D148: exp_gap2_operator.py mean-pooled the macro-token sequence to one 128-d vector, so arm A could not fit even 48 training rows (train EM 0.125 vs the M4 baseline 1.000). This diagnostic locates the failure before any redesign."
+}
