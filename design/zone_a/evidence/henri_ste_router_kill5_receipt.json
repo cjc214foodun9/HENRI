@@ -1,0 +1,77 @@
+{
+  "schema": "henri.ste-router.kill5.v2",
+  "diagnostic_only": true,
+  "zone_a_untouched": true,
+  "default_path_untouched": true,
+  "spec_a_implemented": false,
+  "pin_seed": 20261004,
+  "bounds": {
+    "G-U4": 0.95,
+    "M4-EM": 0.246
+  },
+  "run": {
+    "steps_p1": 300,
+    "steps_p2": 300,
+    "n_texts": 1024
+  },
+  "phase1": {
+    "loss_first": 37.16651916503906,
+    "loss_last": 0.0030269064009189606
+  },
+  "phase2": {
+    "loss_first": 0.003015021327883005,
+    "loss_last": 0.003015021327883005,
+    "router_grad_max": 9.159591674804688
+  },
+  "arms": {
+    "A_frozen_router": {
+      "heldout_token_acc": 0.0,
+      "heldout_exact_match": 0.0,
+      "unigram_floor": 0.11607142857142858,
+      "g_u4": 0.8600976467132568,
+      "g_u4_status": "FAIL",
+      "g_u4_positive_control": 0.9999979138374329,
+      "tokens_routing_changed": 0,
+      "tokens_total": 96
+    },
+    "B_ste_router": {
+      "heldout_token_acc": 0.0,
+      "heldout_exact_match": 0.0,
+      "unigram_floor": 0.11607142857142858,
+      "g_u4": 0.8511705994606018,
+      "g_u4_status": "FAIL",
+      "g_u4_positive_control": 0.9999980330467224,
+      "tokens_routing_changed": 0,
+      "tokens_total": 96
+    },
+    "C_untrained": {
+      "heldout_token_acc": 0.0,
+      "heldout_exact_match": 0.0,
+      "unigram_floor": 0.11607142857142858,
+      "g_u4": 0.8190275430679321,
+      "g_u4_status": "FAIL",
+      "g_u4_positive_control": 0.9999979138374329,
+      "tokens_routing_changed": 0,
+      "tokens_total": 0
+    }
+  },
+  "guards": {
+    "router_grad_nonzero": true,
+    "routing_changed": true,
+    "frozen_unchanged": true
+  },
+  "delta": {
+    "g_u4": -0.00892704725265503,
+    "m4_exact_match": 0.0
+  },
+  "delta_decoder_training_g_u4": 0.04107010364532471,
+  "psi_delta_AB_gate_corpus": 0.7071067690849304,
+  "verdict": "ROUTER_MOVES_NOTHING",
+  "why": "dG-U4=-0.008927 dM4-EM=+0.000000; helps_m4=False helps_u4=False hurts_m4=False hurts_u4=False (bounds unchanged: G-U4 0.95, M4-EM 0.246)",
+  "seconds": 30.76,
+  "defects": {
+    "D133": "isolate the router: STE bridges only the argmax. int() indexing and the frozen angle buffer stay as designed.",
+    "D135": "kill criterion was |d|; now SIGNED (ROUTER_HARMS on degradation). The first version rewarded harmful movement.",
+    "D136": "first design trained decoder+router in arm B, confounding every delta. Now phase 1 trains the decoder once and both arms deepcopy that identical state; phase 2 isolates the router."
+  }
+}
