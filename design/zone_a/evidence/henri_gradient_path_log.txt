@@ -1,0 +1,24 @@
+GRADIENT PATH AUDIT: does the wave carry gradient?
+==============================================================================
+  1 system.wave_of(...)        requires_grad = False
+    WaveTextGenerator.wave()   requires_grad = False
+  2 ingress.encode_text(...)   requires_grad = False
+    backward raised: RuntimeError element 0 of tensors does not require grad and does not have a grad_fn
+    ingress params REACHED by backward: NONE
+  3 operations inside _token_writes:
+      argmax                PRESENT  hard assignment, no softmax gradient
+      int(                  PRESENT  cast to Python int detaches the tensor
+      torch.tensor(1.0)     PRESENT  constant magnitude, no leaf
+      self.angle[           PRESENT  buffer lookup, not a parameter
+    _assemble uses a float(n) branch: True
+    system.wave_of wraps in no_grad  : True
+    zone_a.encode_text wraps no_grad : False
+  m4 step    0  ce 5.7631
+  m4 step    2  ce 3.8226
+  4 decoder tensors with grad: 29 | max |grad| = 180.1 | loss 5.7631 -> 3.8226
+  5 wave byte-identical after the step: True
+==============================================================================
+READING
+  If the wave carries no gradient and no backward reaches the
+  ingress, the representation is FROZEN at random init and the
+  readout trains on a constant. That is the mechanism H2 predicts.

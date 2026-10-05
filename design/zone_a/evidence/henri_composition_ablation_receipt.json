@@ -1,0 +1,92 @@
+{
+  "schema": "henri.composition.ablation.v1",
+  "n_train_rows": 144,
+  "n_train_rows_small": 48,
+  "unigram_floor_on_C": 0.252199,
+  "real_small": {
+    "loss_first": 6.5119,
+    "loss_last": 0.0005,
+    "eval_s": 4.8,
+    "ev": {
+      "train": {
+        "acc": 1.0,
+        "em": 1.0
+      },
+      "A_train_full": {
+        "acc": 0.462428,
+        "em": 0.465278
+      },
+      "B_input_held": {
+        "acc": 0.077922,
+        "em": 0.020833
+      },
+      "C_compose": {
+        "acc": 0.090909,
+        "em": 0.095679
+      },
+      "D_both_held": {
+        "acc": 0.037975,
+        "em": 0.037037
+      }
+    }
+  },
+  "real": {
+    "loss_first": 6.5479,
+    "loss_last": 0.0006,
+    "eval_s": 8.8,
+    "ev": {
+      "train": {
+        "acc": 1.0,
+        "em": 1.0
+      },
+      "A_train_full": {
+        "acc": 1.0,
+        "em": 1.0
+      },
+      "B_input_held": {
+        "acc": 0.038961,
+        "em": 0.0
+      },
+      "C_compose": {
+        "acc": 0.052786,
+        "em": 0.055556
+      },
+      "D_both_held": {
+        "acc": 0.0,
+        "em": 0.0
+      }
+    }
+  },
+  "control": {
+    "loss_first": 6.5333,
+    "loss_last": 0.001,
+    "eval_s": 8.8,
+    "ev": {
+      "train": {
+        "acc": 0.160714,
+        "em": 0.145833
+      },
+      "A_train_full": {
+        "acc": 0.179191,
+        "em": 0.152778
+      },
+      "B_input_held": {
+        "acc": 0.038961,
+        "em": 0.0
+      },
+      "C_compose": {
+        "acc": 0.049853,
+        "em": 0.052469
+      },
+      "D_both_held": {
+        "acc": 0.012658,
+        "em": 0.018519
+      }
+    }
+  },
+  "pre_registered": [
+    "H1 data scale",
+    "H2 architecture",
+    "H3 input generalization"
+  ]
+}
