@@ -1,0 +1,40 @@
+{
+  "schema": "henri.gates.v3",
+  "written_utc": "2026-10-04",
+  "written_before_first_run": true,
+  "supersedes": "henri.gates.v2.json (carried forward byte-identical; G-U4 bound unchanged at 0.95)",
+  "authority": {
+    "primary": "HENRI V2/design/zone_a/spec/Project_HENRI.pdf.txt",
+    "suggestion": "Downloads/project_henri_tri_model_epistemologies_universal_subspaces_autonomous_daydream_architecture.md",
+    "suggestion_sha256": "cf45f0b1da985f8efcba0cbac08c2b91",
+    "citations_verified_by_probe": {
+      "2609.30063": "Self-Play Pretraining with Zero Data (Cowsik et al.) HTTP 200",
+      "2512.05117": "The Universal Weight Subspace Hypothesis (Kaushik et al.) HTTP 200",
+      "2008.02217": "Hopfield Networks is All You Need (Ramsauer et al.) HTTP 200"
+    },
+    "citation_discrepancy_logged": "doc says '50 LLaMA-3'; arXiv abstract says '50 LLaMA-8B'"
+  },
+  "carried_forward_unchangeable": {
+    "G-U4": {"bound": 0.95, "rule": "bound NOT adjustable after a measurement"}
+  },
+  "new_gates": {
+    "M4": {
+      "M4-G1": {"metric": "heldout_token_accuracy", "bound": "max(unigram_floor, no_information_control) + 0.05", "controls": ["positive: train-on-all capacity", "negative: shuffled pairing"]},
+      "M4-G2": {"metric": "greedy_seed_determinism", "bound": 1},
+      "M4-G3": {"metric": "generated_text_veto_fail_closed", "bound": 0.999},
+      "M4-G4": {"metric": "wave_conditioning_advantage_train_ce", "bound": "> 0", "controls": ["constant-input arm"]}
+    },
+    "G-DD": {
+      "G-DD1": {"metric": "epiplexity_growth_heldout_ce", "bound": "> 0", "control": "MEASURED zero-step learner trace, not asserted", "coverage_guard": "dream proposals length <= 2 so held-out length 3 is not covered"},
+      "G-DD2": {"metric": "subspace_explained_variance_topk", "bound": ">= 0.90", "control": "random orthonormal basis", "rank_guard": "if (n_points - 1) <= k the gate is NOT_INFORMATIVE, not PASS"},
+      "G-DD3": {"metric": "davis_kahan_op_drift", "bound": "2/gamma_k * (2*B*eta + eta^2)", "control": "unrelated random basis must exceed the bound", "min_points": 4},
+      "G-DD4": {"metric": "info_gain_nats", "bound": "> 0.15", "controls": ["identical states must give exactly 0", "constructed flat-state positive control must exceed bound", "stage-3 promotion control must fire"]},
+      "G-DD5": {"metric": "stiefel_crosstalk", "bound": "<= 0.12", "control": "8 duplicated engrams must exceed the limit"},
+      "G-DD6": {"metric": "sagnac_veto_accuracy_phase_noise", "bound": ">= 0.999", "control": "clean pass rate"},
+      "G-DD7": {"metric": "peak_vram_gib", "bound": "<= 2.20", "status_policy": "CPU host -> NOT_APPLICABLE, never a silent pass"}
+    }
+  },
+  "acceptance": "ACCEPTED requires zero FAIL, zero VACUOUS, zero BLOCKED, zero NOT_INFORMATIVE",
+  "standing_directives": ["no SOTA claim", "GPU budget stays shut", "no off-the-shelf model backbones"],
+  "notebooklm": {"status": "BLOCKED", "reason": "Google sign-in wall", "action": "skipped per operator instruction"}
+}
