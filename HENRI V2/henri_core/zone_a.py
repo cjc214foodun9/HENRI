@@ -40,11 +40,23 @@ class CliffordVLASlotEncoder(nn.Module):
                  img_patch: int = 16, n_patches: int = 256,
                  action_dim: int = 7, positional: bool = False,
                  pos_omega: float = math.pi / 2.0,
+                 pos_multifreq: bool = False,
+                 pos_block: int = 16, pos_rope_theta: float = 5.0e5,
                  ingress_seed: int | None = None):
         super().__init__()
         # D127: positional algebra. OFF by default so every committed receipt
         # reproduces byte-for-byte. ON rotates token t's phasor by t * pos_omega.
         self.positional = bool(positional)
+        # D141 (self-caught): D131 showed the single-frequency rotation
+        # (omega = pi/2) aliases mod 4, so positions 0 and 4 are identical and
+        # 'IRIRIR' collapses back onto 'IR'. This is the multi-frequency remedy:
+        # replicate each token write over a BLOCK of K addresses and rotate entry
+        # j by t * omega_j with RoPE-style geometric frequencies
+        #     omega_j = theta ^ (-2j/K).
+        # Default OFF, so every committed receipt reproduces byte-for-byte.
+        self.pos_multifreq = bool(pos_multifreq)
+        self.pos_block = int(pos_block)
+        self.pos_rope_theta = float(pos_rope_theta)
         self.pos_omega = float(pos_omega)
         self.dim = int(dim)
         self.vocab = int(vocab)
@@ -53,6 +65,36 @@ class CliffordVLASlotEncoder(nn.Module):
         self.action_dim = int(action_dim)
         self.n_slots = sub.N_SLOTS
         self.slot_dim = self.dim // self.n_slots
+        # D143 (self-caught): this set-up MUST run AFTER slot_dim exists. The
+        # first version read self.slot_dim 13 lines early -> AttributeError.
+        if self.pos_multifreq:
+            # D144 (self-caught by the diagnostic): the FIRST version used the
+            # document's RoPE geometric spectrum, omega_j = theta^(-2j/K) with
+            # theta = 5e5. That is tuned for 4096-token contexts. On a 4-5 token
+            # corpus 14 of 16 frequencies evaluate to ~0, so position vectors are
+            # nearly parallel: measured cos('ab','ba') = +0.970052 (SINGLE was
+            # 0.000000), and max alias over shifts 1..8 = +0.990126. VERDICT was
+            # MULTIFREQ_FAIL on 2 of 5 pre-registered properties.
+            #
+            # Analytic cause. The reversal cosine reduces to
+            #     cos('ab','ba') = 2 Re sum_j exp(i omega_j) / (2K)
+            # which is 0 exactly when the sum over the block vanishes, i.e. when
+            # the frequencies are UNIFORMLY spread. Use the DFT basis
+            #     omega_j = 2 pi j / K
+            # so sum_j exp(i omega_j) = 0 and <p(t),p(t')> = 0 for t != t' (mod K).
+            # No aliasing for any shift < K. This keeps multi-frequency phase
+            # encoding while fixing the spectrum to the corpus's length regime.
+            j = torch.arange(self.pos_block, dtype=torch.float64)
+            om = (2.0 * math.pi * j / self.pos_block).to(torch.float32)
+            self.register_buffer("pos_omega_vec", om)
+            self.register_buffer("pos_offsets",
+                                 torch.arange(self.pos_block, dtype=torch.long))
+            self.n_addr = max(1, self.slot_dim // self.pos_block)
+        else:
+            self.register_buffer("pos_omega_vec",
+                                 torch.zeros(1, dtype=torch.float32))
+            self.register_buffer("pos_offsets", torch.zeros(1, dtype=torch.long))
+            self.n_addr = self.slot_dim
 
         # Learned slot router (doc: 4-slot rule enforced on every write).
         # D128: token_emb AND slot_router draw from the global torch RNG, and
@@ -103,8 +145,19 @@ class CliffordVLASlotEncoder(nn.Module):
             if tok >= self.dim:
                 tok = tok % self.dim                    # address wraps, deterministic
             s = int(routes[t])
+            phase0 = self.angle[tok].to(torch.float32)
+            if self.pos_multifreq:
+                # D141: replicate the write over a BLOCK of K addresses, one per
+                # RoPE frequency. This is the D131 fix -- a single omega aliases
+                # modulo 4, so 'IRIRIR' collapsed back onto 'IR'.
+                K = self.pos_block
+                base = (tok % self.n_addr) * K
+                for j in range(K):
+                    ph = phase0 + float(t) * float(self.pos_omega_vec[j])
+                    acc[s][base + j] += torch.polar(torch.tensor(1.0), ph)
+                continue
             local = tok % self.slot_dim
-            phase = self.angle[tok].to(torch.float32)
+            phase = phase0
             if self.positional:
                 # D127: token ORDER was discarded. The address depends on token
                 # identity only, so 'ab' and 'ba' wrote identical phasors and

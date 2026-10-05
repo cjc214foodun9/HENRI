@@ -1,0 +1,64 @@
+{
+  "OFF": {
+    "P1_cos_ab_ba": 1.0,
+    "P1_cos_abc_cba": 1.0,
+    "P3_cos_ab_ab": 1.0,
+    "P4_cos_ab_ac": 0.5,
+    "P5_norm_ab": 0.9999999403953552,
+    "P2_alias_scores_shift1to8": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "P2_max_alias": 1.0
+  },
+  "SINGLE": {
+    "P1_cos_ab_ba": -5.215407838932151e-08,
+    "P1_cos_abc_cba": -0.6666666269302368,
+    "P3_cos_ab_ab": 1.0,
+    "P4_cos_ab_ac": 0.5,
+    "P5_norm_ab": 0.9999999403953552,
+    "P2_alias_scores_shift1to8": [
+      0.008509,
+      0.008509,
+      0.008509,
+      0.008509,
+      0.008509,
+      0.008509,
+      0.008509,
+      0.008509
+    ],
+    "P2_max_alias": 0.008509
+  },
+  "MULTI": {
+    "P1_cos_ab_ba": -3.474997711805372e-08,
+    "P1_cos_abc_cba": 0.1666666716337204,
+    "P3_cos_ab_ab": 1.0,
+    "P4_cos_ab_ac": 0.5,
+    "P5_norm_ab": 0.9999999403953552,
+    "P2_alias_scores_shift1to8": [
+      0.816497,
+      0.816497,
+      0.816497,
+      0.816497,
+      0.816497,
+      0.816497,
+      0.816497,
+      0.816497
+    ],
+    "P2_max_alias": 0.816497
+  },
+  "_checks": {
+    "P1_order_encoded": true,
+    "P2_no_aliasing": true,
+    "P3_identity_kept": true,
+    "P4_overlap_kept": true,
+    "P5_unit_norm": true
+  },
+  "_verdict": "MULTIFREQ_OK"
+}

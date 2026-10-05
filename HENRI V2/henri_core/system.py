@@ -50,7 +50,9 @@ class TriModelSystem(nn.Module):
     def __init__(self, dim: int = sub.DEFAULT_DIM, vocab: int = 512,
                  n_workers: int = 256, steps: int = 8, beta: float = 26.10,
                  n_axioms: int = 8, seed: int = 20261004,
-                 positional: bool = False, ingress_seed: int | None = None,
+                 positional: bool = False, pos_multifreq: bool = False,
+                 pos_block: int = 16, pos_rope_theta: float = 5.0e5,
+                 ingress_seed: int | None = None,
                  decoder_cfg: DecoderConfig | None = None, small: bool = False):
         super().__init__()
         if small:
@@ -73,6 +75,9 @@ class TriModelSystem(nn.Module):
         # ---- shared ingress and veto
         self.ingress = CliffordVLASlotEncoder(dim=dim, vocab=vocab,
                                               positional=positional,
+                                              pos_multifreq=pos_multifreq,
+                                              pos_block=pos_block,
+                                              pos_rope_theta=pos_rope_theta,
                                               ingress_seed=ingress_seed)
         self.veto = SagnacHomodyneVeto(dim=dim)
 
