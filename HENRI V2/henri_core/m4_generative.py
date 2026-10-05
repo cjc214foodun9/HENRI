@@ -38,6 +38,7 @@ Usage:  python henri_core/m4_generative.py [--out PATH]
 from __future__ import annotations
 
 import argparse
+import contextlib
 import itertools
 import json
 import math
@@ -460,10 +461,29 @@ def unigram_floor(tok, tr_tgt, ho_tgt) -> float:
 
 
 def build_system(corpus: Corpus, vocab: int = 512,
-                 positional: bool = False):
+                 positional: bool = False, ingress_seed: int | None = None,
+                 pin_seed: int | None = None):
+    """Build the small system, optionally with a FULL construction pin.
+
+    D130 (self-caught by the pin run): pinning the ingress alone was NOT
+    sufficient. Measured proof: with ingress_seed fixed, two G-U4 readings still
+    differed (0.836174 vs 0.887619, reproduces=False). Cause: HenriDec450M,
+    HenriMem65M and SagnacHomodyneVeto take their init from the GLOBAL torch
+    RNG, and the 440M decoder dominates the readout that G-U4 measures.
+
+    pin_seed wraps the WHOLE construction in a forked RNG, so the global state
+    outside is untouched and the system is byte-identical across processes and
+    across prior global-RNG history. None = legacy behaviour, so every
+    committed receipt reproduces byte-for-byte.
+    """
     tok = ByteBPE().train(corpus.corpus_texts, vocab_size=vocab)
-    system = TriModelSystem(vocab=tok.vocab_size, small=True,
-                            positional=positional)
+    ctx = (torch.random.fork_rng(devices=[]) if pin_seed is not None
+           else contextlib.nullcontext())
+    with ctx:
+        if pin_seed is not None:
+            torch.manual_seed(int(pin_seed))
+        system = TriModelSystem(vocab=tok.vocab_size, small=True,
+                                positional=positional, ingress_seed=ingress_seed)
     system.eval()
     return system, tok
 

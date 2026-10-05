@@ -1,0 +1,30 @@
+{
+  "schema": "henri.gate_u4.pinned_characterization.v1",
+  "ingress_seed": 20261004,
+  "bound": 0.95,
+  "bounds_moved": false,
+  "off_run1": {
+    "positional": false,
+    "value": 0.819028,
+    "status": "FAIL",
+    "positive_control": 0.999998,
+    "negative_control": 0.0
+  },
+  "off_run2": {
+    "positional": false,
+    "value": 0.819028,
+    "status": "FAIL",
+    "positive_control": 0.999998,
+    "negative_control": 0.0
+  },
+  "on_run1": {
+    "positional": true,
+    "value": 0.312125,
+    "status": "FAIL",
+    "positive_control": 0.999998,
+    "negative_control": 0.0
+  },
+  "reproduces": true,
+  "positional_effect": -0.506903,
+  "defect": "D128: frozen random token_emb/slot_router made G-U4 a draw"
+}

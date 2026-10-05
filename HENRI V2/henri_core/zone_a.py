@@ -16,6 +16,7 @@ Mechanism
 """
 from __future__ import annotations
 
+import contextlib
 import math
 
 import torch
@@ -38,7 +39,8 @@ class CliffordVLASlotEncoder(nn.Module):
     def __init__(self, dim: int = sub.DEFAULT_DIM, vocab: int = 512,
                  img_patch: int = 16, n_patches: int = 256,
                  action_dim: int = 7, positional: bool = False,
-                 pos_omega: float = math.pi / 2.0):
+                 pos_omega: float = math.pi / 2.0,
+                 ingress_seed: int | None = None):
         super().__init__()
         # D127: positional algebra. OFF by default so every committed receipt
         # reproduces byte-for-byte. ON rotates token t's phasor by t * pos_omega.
@@ -52,19 +54,41 @@ class CliffordVLASlotEncoder(nn.Module):
         self.n_slots = sub.N_SLOTS
         self.slot_dim = self.dim // self.n_slots
 
-        # Learned slot router (doc: 4-slot rule enforced on every write)
-        self.token_emb = nn.Embedding(self.vocab, 32)
-        self.slot_router = nn.Linear(32, self.n_slots)
+        # Learned slot router (doc: 4-slot rule enforced on every write).
+        # D128: token_emb AND slot_router draw from the global torch RNG, and
+        # both sit in the text path (slot_router consumes token_emb). The ingress
+        # is frozen by the zero-D_c contract, so routing was a random draw that
+        # training never corrected: G-U4 redrew its own verdict across
+        # construction seeds (range 0.150874, 2 pass / 6 fail).
+        # ingress_seed=None keeps legacy behaviour, so every committed receipt
+        # reproduces byte-for-byte. An int forks the RNG and seeds the two layers,
+        # leaving the caller's global RNG state untouched.
+        self.ingress_seed = ingress_seed
+        with (torch.random.fork_rng(devices=[]) if ingress_seed is not None
+              else contextlib.nullcontext()):
+            if ingress_seed is not None:
+                torch.manual_seed(int(ingress_seed))
+            self.token_emb = nn.Embedding(self.vocab, 32)
+            self.slot_router = nn.Linear(32, self.n_slots)
+            # D129 (self-caught by the unit check): joint_proj was created
+            # OUTSIDE this fork, so it still drew from the global RNG and the
+            # "global RNG untouched" claim was FALSE. Moving it inside makes the
+            # pin side-effect-free. The relative global order
+            # token_emb -> slot_router -> joint_proj is preserved, so legacy
+            # (ingress_seed=None) receipts still reproduce byte-for-byte.
+            self.joint_proj = nn.Linear(self.action_dim, self.slot_dim,
+                                        bias=False)
 
         # Per-slot, per-position phase address. Standard normal, seeded, frozen.
         g = torch.Generator().manual_seed(20261004)
         self.register_buffer(
             "angle", torch.rand(self.dim, generator=g) * 2.0 * math.pi)
 
-        # Patch phase address (vision) and joint phase address (action)
+        # Patch phase address (vision). The joint projection is created with the
+        # other random layers above, inside the same fork, so the reset stays
+        # side-effect-free on the global RNG (D129).
         self.register_buffer(
             "patch_phase", torch.rand(self.n_patches, generator=g) * 2.0 * math.pi)
-        self.joint_proj = nn.Linear(self.action_dim, self.slot_dim, bias=False)
 
     # ---------------------------------------------------------------- helpers
     def _token_writes(self, ids: torch.Tensor):
