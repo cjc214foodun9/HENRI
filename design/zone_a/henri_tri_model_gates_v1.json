@@ -1,0 +1,101 @@
+{
+  "schema": "henri.tri-model.gates.v1",
+  "written_utc": "2026-10-04",
+  "written_before_first_run": true,
+  "authority": "design/zone_a/spec/Project_HENRI.pdf.txt  sha256 f771617b5843f642027459935dba44a283bf5daa2b6ef925553a9e49951784ae  42 pages 74600 chars",
+  "operator_directive": "2026-10-04: 3 hyper-fine-tuned micro-models per Project HENRI.pdf; no off-the-shelf backbones; clean minimal operational ML model; staged for benchmarking",
+  "gate_rule": "Every gate names fail_if. A gate that cannot fail is a defect. Each mechanism carries a negative control that MUST fail when the mechanism is absent.",
+  "gates": [
+    {
+      "id": "G-U1",
+      "name": "ingress signal purity",
+      "source": "doc p40 G-U1",
+      "metric": "noise_hash_rows",
+      "op": "<=",
+      "value": 0,
+      "fail_if": "any unused 4-slot subspace holds a non-zero sample (noise-fill defect)",
+      "negative_control": "fill unused slots with a phase vector -> noise_hash_rows MUST exceed 0"
+    },
+    {
+      "id": "G-U2",
+      "name": "gram crosstalk bound",
+      "source": "doc p40 G-U2",
+      "metric": "offdiag_max",
+      "op": "<=",
+      "value": 0.12,
+      "fail_if": "max |off-diagonal| of the dual Gram matrix exceeds 0.12 after Stiefel retraction",
+      "negative_control": "skip retraction -> offdiag_max MUST stay above 0.12"
+    },
+    {
+      "id": "G-U3",
+      "name": "swarm lattice coverage",
+      "source": "doc p40 G-U3 (sub-50us on 5090; N/A on CPU)",
+      "metric": "distinct_seeds",
+      "op": ">=",
+      "value": 1,
+      "fail_if": "workers share perturbation seeds (cross-talk leak, Gate S-1)",
+      "negative_control": "force a shared seed -> distinct_seeds MUST fall to 1",
+      "cpu_note": "latency bound T_step<=50us is a CUDA gate; not asserted on CPU"
+    },
+    {
+      "id": "G-U3b",
+      "name": "viscoelastic energy monotonicity",
+      "source": "doc p16 Gate S-2",
+      "metric": "monotone_frac",
+      "op": ">=",
+      "value": 0.99,
+      "fail_if": "with thermal noise OFF, Hopfield Lyapunov energy does not strictly dissipate",
+      "negative_control": "zero the memory kernel (Markovian) -> monotone_frac MUST drop below 0.99"
+    },
+    {
+      "id": "G-U4",
+      "name": "decoder information retention",
+      "source": "doc p40 G-U4",
+      "metric": "mi_ratio",
+      "op": ">=",
+      "value": 0.95,
+      "fail_if": "I(H_macro;Psi)/H(Psi) below 0.95 under Hopfield cross-pooling",
+      "negative_control": "naive linear down-projection -> mi_ratio MUST fall below 0.95"
+    },
+    {
+      "id": "G-U5",
+      "name": "relational operator headroom",
+      "source": "doc p41 G-U5",
+      "metric": "operator_acc",
+      "op": ">=",
+      "value": 0.85,
+      "fail_if": "training-free centroid snap fails to beat the linear least-squares baseline on held-out operators",
+      "negative_control": "linear least-squares baseline on the same split -> MUST score below the resonator"
+    },
+    {
+      "id": "G-U6",
+      "name": "sagnac fail-closed veto",
+      "source": "doc p41 G-U6",
+      "metric": "veto_accuracy",
+      "op": ">=",
+      "value": 0.999,
+      "fail_if": "phase-inverted (d_phi=pi) candidates are not deflected at the dark port (Delta > 0.35)",
+      "negative_control": "identity pass-through -> veto_accuracy MUST collapse"
+    },
+    {
+      "id": "G-U7",
+      "name": "proprietary purity",
+      "source": "operator directive 2026-10-04",
+      "metric": "offtheshelf_imports",
+      "op": "<=",
+      "value": 0,
+      "fail_if": "any module in henri_core imports transformers, huggingface_hub, or loads a third-party checkpoint",
+      "negative_control": "none (structural AST gate)"
+    },
+    {
+      "id": "G-D2",
+      "name": "decoder parameter envelope",
+      "source": "doc p21 target 448,624,640",
+      "metric": "decoder_params",
+      "op": "between",
+      "value": [400000000, 500000000],
+      "fail_if": "full-config decoder falls outside the 400M-500M sub-billion envelope",
+      "negative_control": "tiny config -> MUST fall below 400M (proves the counter reads real params)"
+    }
+  ]
+}
