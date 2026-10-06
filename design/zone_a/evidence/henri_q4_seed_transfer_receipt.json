@@ -1,0 +1,102 @@
+{
+ "schema": "henri.q4.seed_transfer.v1",
+ "seeds": [
+  20261004,
+  111111,
+  222222,
+  333333,
+  444444
+ ],
+ "per_seed": [
+  {
+   "seed": 20261004,
+   "in6_min": 1.0,
+   "in6_mean": 1.0,
+   "ho_max": 0.223114,
+   "ho_mean": 0.203354,
+   "gap_min_in6_minus_max_ho": 0.776886,
+   "auc_in6_vs_ho": 1.0,
+   "f1_drop_last_max": 0.936347,
+   "f1_drop_last_mean": 0.688955,
+   "f4_synonym_max": 0.516695,
+   "random_text_max": 0.572497,
+   "random_wave_max": 0.039098,
+   "K1_ho_below_all_in6": true
+  },
+  {
+   "seed": 111111,
+   "in6_min": 1.0,
+   "in6_mean": 1.0,
+   "ho_max": 0.257336,
+   "ho_mean": 0.212772,
+   "gap_min_in6_minus_max_ho": 0.742664,
+   "auc_in6_vs_ho": 1.0,
+   "f1_drop_last_max": 0.95178,
+   "f1_drop_last_mean": 0.771111,
+   "f4_synonym_max": 0.413097,
+   "random_text_max": 0.302626,
+   "random_wave_max": 0.044457,
+   "K1_ho_below_all_in6": true
+  },
+  {
+   "seed": 222222,
+   "in6_min": 1.0,
+   "in6_mean": 1.0,
+   "ho_max": 0.296829,
+   "ho_mean": 0.235584,
+   "gap_min_in6_minus_max_ho": 0.703171,
+   "auc_in6_vs_ho": 1.0,
+   "f1_drop_last_max": 0.969425,
+   "f1_drop_last_mean": 0.7743,
+   "f4_synonym_max": 0.340522,
+   "random_text_max": 0.254855,
+   "random_wave_max": 0.04444,
+   "K1_ho_below_all_in6": true
+  },
+  {
+   "seed": 333333,
+   "in6_min": 1.0,
+   "in6_mean": 1.0,
+   "ho_max": 0.308312,
+   "ho_mean": 0.216703,
+   "gap_min_in6_minus_max_ho": 0.691688,
+   "auc_in6_vs_ho": 1.0,
+   "f1_drop_last_max": 0.942701,
+   "f1_drop_last_mean": 0.751228,
+   "f4_synonym_max": 0.50969,
+   "random_text_max": 0.231012,
+   "random_wave_max": 0.048227,
+   "K1_ho_below_all_in6": true
+  },
+  {
+   "seed": 444444,
+   "in6_min": 1.0,
+   "in6_mean": 1.0,
+   "ho_max": 0.249587,
+   "ho_mean": 0.197121,
+   "gap_min_in6_minus_max_ho": 0.750413,
+   "auc_in6_vs_ho": 1.0,
+   "f1_drop_last_max": 0.949726,
+   "f1_drop_last_mean": 0.763693,
+   "f4_synonym_max": 0.517065,
+   "random_text_max": 0.313801,
+   "random_wave_max": 0.045311,
+   "K1_ho_below_all_in6": true
+  }
+ ],
+ "summary": {
+  "K1_all_seeds_separate": true,
+  "K2_gap_positive_all": true,
+  "K3_ho_max_spread": 0.085198,
+  "K3_single_threshold_transfers": true,
+  "K4_auc_min": 1.0,
+  "K4_ordering_stable": true,
+  "in6_min_spread": 0.0,
+  "f1_drop_last_max_spread": 0.033078
+ },
+ "verdict": {
+  "signal_is_real": true,
+  "threshold_transfers_across_seeds": true,
+  "claim": "The membership signal SEPARATES in-bank from held-out corpus on every seed (K1=True, K2=True, AUC min 1.0). A single threshold TRANSFERS: held-out max varies only 0.0852 across seeds. Held-out max spans 0.2231..0.3083 while in-bank min stays 1.0000, so the SEPARATION is robust even where the absolute level is not. The statistic measures stored-wave membership; it is a graded lexical meter, NOT understanding."
+ }
+}

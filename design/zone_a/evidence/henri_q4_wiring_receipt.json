@@ -1,0 +1,35 @@
+{
+ "schema": "henri.q4.wiring.v1",
+ "ingress_seed": 20261004,
+ "all_pass": true,
+ "checks": {
+  "T5_determinism": {
+   "pass": true,
+   "detail": "1.00000024 == 1.00000024"
+  },
+  "T1_default_no_abstain": {
+   "pass": true,
+   "detail": "abstained_present=False novelty_present=True"
+  },
+  "T2_inbank_accepted": {
+   "pass": true,
+   "detail": "score=1.00000024 abstained=False"
+  },
+  "T3_abstain_fires_above_score": {
+   "pass": true,
+   "detail": "score=0.572497 theta=0.672497 abstained=True"
+  },
+  "T3b_abstain_does_not_fire_below_score": {
+   "pass": true,
+   "detail": "theta=0.472497 abstained=False"
+  },
+  "T4_abstain_shape": {
+   "pass": true,
+   "detail": "novelty={'score': 0.57249707, 'threshold': 0.67249707, 'bank': 'axiom_waves', 'n': 10}"
+  },
+  "T6_theta_zero_accepts_all": {
+   "pass": true,
+   "detail": "abstained=False"
+  }
+ }
+}

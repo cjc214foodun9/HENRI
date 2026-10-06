@@ -55,8 +55,9 @@ FAM_KEYS = ["F1_drop_last", "F2_drop_first", "F3_middle_chunk",
 
 
 def build():
+    """Build the system with a PINNED ingress (see exp_q4_margin.build)."""
     tok = ByteBPE().train(CORPUS, vocab_size=512)
-    s = TriModelSystem(vocab=tok.vocab_size, small=True)
+    s = TriModelSystem(vocab=tok.vocab_size, small=True, ingress_seed=PIN)
     s.eval()
     bank = s.build_axioms(CORPUS, tok)
     return s, tok, bank

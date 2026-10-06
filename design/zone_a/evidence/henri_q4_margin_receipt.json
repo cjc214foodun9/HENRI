@@ -1,0 +1,224 @@
+{
+ "schema": "henri.q4.margin.v1",
+ "N": 10,
+ "dim": 4096,
+ "beta_frozen": 26.1,
+ "statistics": {
+  "level": "max_k |<psi_q,psi_k>|",
+  "shape": "beta*(top1-top2)"
+ },
+ "head_at_run": "d86c4d633d0c4f302cca769096dbd3eb13fad0c8",
+ "family_means": {
+  "F0_exact_inbank": {
+   "membership": 1.0,
+   "margin": 18.55932,
+   "n": 10
+  },
+  "F1_drop_last": {
+   "membership": 0.688955,
+   "margin": 8.49614,
+   "n": 10
+  },
+  "F2_drop_first": {
+   "membership": 0.893092,
+   "margin": 15.731648,
+   "n": 10
+  },
+  "F3_middle_chunk": {
+   "membership": 0.580298,
+   "margin": 6.790775,
+   "n": 10
+  },
+  "F4_synonym": {
+   "membership": 0.391576,
+   "margin": 1.806137,
+   "n": 5
+  },
+  "F6_shuffled_order": {
+   "membership": 0.482032,
+   "margin": 5.038719,
+   "n": 10
+  },
+  "F5_random_waves": {
+   "membership": 0.024616,
+   "margin": 0.099901,
+   "n": 100
+  }
+ },
+ "AUC_F0_vs_family": {
+  "F1_drop_last": {
+   "membership": 1.0,
+   "margin": 0.92
+  },
+  "F2_drop_first": {
+   "membership": 1.0,
+   "margin": 0.73
+  },
+  "F3_middle_chunk": {
+   "membership": 1.0,
+   "margin": 1.0
+  },
+  "F4_synonym": {
+   "membership": 1.0,
+   "margin": 1.0
+  },
+  "F6_shuffled_order": {
+   "membership": 1.0,
+   "margin": 0.98
+  },
+  "F5_random_waves": {
+   "membership": 1.0,
+   "margin": 1.0
+  }
+ },
+ "literal_requirement": {
+  "in_bank_min": {
+   "membership": 1.0,
+   "margin": 13.800197
+  },
+  "per_out_of_bank_family": {
+   "F1_drop_last": {
+    "membership_max": 0.936347,
+    "margin_max": 17.713705,
+    "membership_below_all_inbank": true,
+    "margin_below_all_inbank": false
+   },
+   "F2_drop_first": {
+    "membership_max": 0.995019,
+    "margin_max": 21.907614,
+    "membership_below_all_inbank": true,
+    "margin_below_all_inbank": false
+   },
+   "F3_middle_chunk": {
+    "membership_max": 0.738704,
+    "margin_max": 13.519667,
+    "membership_below_all_inbank": true,
+    "margin_below_all_inbank": true
+   },
+   "F4_synonym": {
+    "membership_max": 0.516695,
+    "margin_max": 3.957208,
+    "membership_below_all_inbank": true,
+    "margin_below_all_inbank": true
+   },
+   "F6_shuffled_order": {
+    "membership_max": 0.789586,
+    "margin_max": 15.442127,
+    "membership_below_all_inbank": true,
+    "margin_below_all_inbank": false
+   },
+   "F5_random_waves": {
+    "membership_max": 0.039028,
+    "margin_max": 0.531966,
+    "membership_below_all_inbank": true,
+    "margin_below_all_inbank": true
+   }
+  }
+ },
+ "literal_over_all_out_of_bank": {
+  "membership_max": 0.995019,
+  "margin_max": 21.907614,
+  "membership_satisfies": true,
+  "margin_satisfies": false
+ },
+ "out_of_bank_top_items": [
+  {
+   "family": "F1_drop_last",
+   "query": "memory decays with the relaxation",
+   "source": "memory decays with the relaxation time",
+   "membership": 0.936347,
+   "margin": 17.713705,
+   "identical_to_source": false,
+   "copies_a_corpus_item": false
+  },
+  {
+   "family": "F2_drop_first",
+   "query": "veto rejects the inverted phase",
+   "source": "the veto rejects the inverted phase",
+   "membership": 0.995019,
+   "margin": 16.676744,
+   "identical_to_source": false,
+   "copies_a_corpus_item": false
+  },
+  {
+   "family": "F3_middle_chunk",
+   "query": "the energy saddle",
+   "source": "measuring the energy saddle",
+   "membership": 0.738704,
+   "margin": 13.519667,
+   "identical_to_source": false,
+   "copies_a_corpus_item": false
+  },
+  {
+   "family": "F4_synonym",
+   "query": "the rule keeps the edge in place",
+   "source": "-",
+   "membership": 0.516695,
+   "margin": 3.957208,
+   "identical_to_source": false,
+   "copies_a_corpus_item": false
+  },
+  {
+   "family": "F6_shuffled_order",
+   "query": "inverted the rejects the veto phase",
+   "source": "the veto rejects the inverted phase",
+   "membership": 0.789586,
+   "margin": 13.317506,
+   "identical_to_source": false,
+   "copies_a_corpus_item": false
+  }
+ ],
+ "control_shuffled_bank": {
+  "membership_auc": 0.426,
+  "margin_auc": 0.504,
+  "inbank_margin_real": 18.55932,
+  "inbank_margin_shuffled": 0.180364,
+  "reads_as": "replacing the real bank with random waves must collapse the separation toward chance for a real memory signal"
+ },
+ "TF_heldout_corpus": {
+  "n_in_bank": 6,
+  "n_held_out": 4,
+  "in_bank_min": 1.0,
+  "in_bank_mean": 1.0,
+  "held_out_max": 0.223114,
+  "held_out_mean": 0.203354,
+  "held_out_below_all_in_bank": true,
+  "held_out_items": [
+   {
+    "text": "gradient descent reaches the attractor",
+    "score": 0.223114
+   },
+   {
+    "text": "the swarm finds the lower energy",
+    "score": 0.183281
+   },
+   {
+    "text": "memory decays with the relaxation time",
+    "score": 0.222362
+   },
+   {
+    "text": "the veto rejects the inverted phase",
+    "score": 0.184657
+   }
+  ],
+  "reads_as": "held-out corpus sentences are NOT stored. A membership gate must score them below stored ones. Separation here is real only if the held-out scores are clearly low, not near 1.0."
+ },
+ "verdict": {
+  "hard_negative_AUC_membership": 1.0,
+  "hard_negative_AUC_margin": 0.825,
+  "literal_requirement_met_by_LEVEL": true,
+  "literal_requirement_met_by_SHAPE": false,
+  "margin_beats_level_on_hard_negatives": false,
+  "shuffled_bank_control_collapses_LEVEL": true,
+  "shuffled_bank_control_collapses_SHAPE": true,
+  "gap_in_bank_vs_out_of_bank": 0.004981,
+  "claim": "LITERAL REQUIREMENT MET, BUT DEGENERATELY. Every out-of-bank input scores below every in-bank input (max out 0.995019 < min in 1.000000). However the in-bank minimum is EXACTLY 1.000000 for all 10 items because an exact-bank query IS the stored string: cos(a,a)==1 by construction of ANY deterministic encoder. The calibrated threshold therefore collapses to 1.0, which makes the gate an EXACT-STRING LOOKUP, not a memory. NON-TRIVIAL membership FAILS: a bank member with one word dropped still scores 0.9950, a gap of only 0.004981. The SHAPE (margin) statistic is FALSIFIED as a discriminator: it does NOT satisfy the literal requirement and is WORSE than the level statistic on hard negatives (AUC 0.8250 vs 1.0000). The shuffled-bank control COLLAPSES both (AUC 0.426), so the real bank carries the signal -- but the signal is string-identity plus lexical overlap, NOT semantic membership. CONCLUSION: the gate makes HENRI able to ABSTAIN on unrelated input. It does NOT give HENRI understanding, and the requirement 'an input the bank does not contain scores below one it does' holds only for the trivial reason that no two different strings are equal.",
+  "what_it_is_NOT": [
+   "semantic generalisation",
+   "compositional reasoning",
+   "understanding of paraphrases",
+   "measurably intelligent"
+  ],
+  "degenerate_because": "in-bank queries are exact stored strings; cos(identical,identical) == 1.0 for any encoder"
+ }
+}
