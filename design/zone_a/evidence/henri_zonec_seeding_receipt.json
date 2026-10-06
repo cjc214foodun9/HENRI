@@ -1,0 +1,84 @@
+{
+  "schema": "henri.zonec.seeding.v1",
+  "verdict": "VACUOUS",
+  "why": "guards {'no_parameter_moved': True, 'oracle_reaches_one': False, 'seeded_bank_nonempty': True, 'unseeded_bank_empty': True, 'retrieval_exercised': True}",
+  "guards": {
+    "no_parameter_moved": true,
+    "oracle_reaches_one": false,
+    "seeded_bank_nonempty": true,
+    "unseeded_bank_empty": true,
+    "retrieval_exercised": true
+  },
+  "arms": {
+    "O_oracle": {
+      "arm": "O_oracle",
+      "n_bank": 32,
+      "retrieval_exercised": true,
+      "exact_match": 0.875,
+      "mean_top_sim": 1.0,
+      "sample": [
+        "what is the access code for ENT0000",
+        "what is the access code for ENT0001",
+        "what is the access code for ENT0002"
+      ]
+    },
+    "S_seeded": {
+      "arm": "S_seeded",
+      "n_bank": 32,
+      "retrieval_exercised": true,
+      "exact_match": 0.875,
+      "mean_top_sim": 1.0,
+      "sample": [
+        "00000",
+        "07919",
+        "15838"
+      ]
+    },
+    "S_heldout": {
+      "arm": "S_heldout",
+      "n_bank": 32,
+      "retrieval_exercised": true,
+      "exact_match": 0.0,
+      "mean_top_sim": 0.9864692687988281,
+      "sample": [
+        "82146",
+        "71271",
+        "71271"
+      ]
+    },
+    "U_unseeded": {
+      "arm": "U_unseeded",
+      "n_bank": 0,
+      "retrieval_exercised": false,
+      "exact_match": 0.0,
+      "answer_hit": 0.0
+    },
+    "P_permuted": {
+      "arm": "P_permuted",
+      "n_bank": 32,
+      "retrieval_exercised": true,
+      "exact_match": 0.03125,
+      "mean_top_sim": 1.0,
+      "sample": [
+        "18794",
+        "87109",
+        "23757"
+      ]
+    }
+  },
+  "unigram_floor": 0.0,
+  "bound": 0.25,
+  "isolation": {
+    "params_moved": 0,
+    "max_delta": 0.0
+  },
+  "n_facts": 64,
+  "run": {
+    "pin": 20261004
+  },
+  "seconds": 0.2,
+  "disclosure": {
+    "metric": "exact-match of the ANSWER retrieved for a held-out QUESTION. The bank keys on the question wave, so this measures associative recall, not reasoning.",
+    "no_store": "HenriMem65M is the cognitive governor; no TimescaleDB write occurs. The probe holds the bank in memory."
+  }
+}

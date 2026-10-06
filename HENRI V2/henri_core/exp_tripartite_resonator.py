@@ -132,6 +132,8 @@ class SeqTripartite(nn.Module):
     def forward(self, h: torch.Tensor, gt_prog=None, gt_inp=None,
                 shuffled_prog=None):
         b, m, d = h.shape
+        # D164: same scale fix as FlatSeq. See the note there.
+        h = h / h.norm(dim=-1, keepdim=True).clamp_min(1e-6)
         h = h + self.pos_emb[:m].unsqueeze(0)               # order explicit
         agg_p = self._attend(h, self.q_prog)                # [B,1,d]
         agg_i = self._attend(h, self.q_inp)                 # [B,4,d]
@@ -172,8 +174,15 @@ class FlatSeq(nn.Module):
         # 7680 elements against 1920 -- 4x off. Emit ND and reshape [B,NPOS,ND].
         self.head = nn.Linear(hidden, ND)
 
-    def forward(self, h):
+    def forward(self, h: torch.Tensor):
         b, m, d = h.shape
+        # D164 (self-caught): pooled macro-tokens carry magnitude ~3e-4
+        # (measured: mean abs 0.000304, per-token norm 0.004293), while the
+        # position embedding is randn*0.02 -- about 65x larger. Adding them let
+        # the model fit position NOISE, which is why trainEM stuck at 0.1250
+        # identically at hidden 256, 1024 and 4096. Normalize the features to
+        # unit scale BEFORE adding position, so the signal is the dominant term.
+        h = h / h.norm(dim=-1, keepdim=True).clamp_min(1e-6)
         h = h + self.pos_emb[:m].unsqueeze(0)
         k, v = self.k_proj(h), self.v_proj(h)
         logits = torch.einsum("qd,bmd->bqm", self.q, k) / (d ** 0.5)
