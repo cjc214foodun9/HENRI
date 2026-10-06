@@ -50,7 +50,7 @@ class TriModelSystem(nn.Module):
     def __init__(self, dim: int = sub.DEFAULT_DIM, vocab: int = 512,
                  n_workers: int = 256, steps: int = 16, beta: float = 26.10,
                  n_axioms: int = 8, seed: int = 20261004,
-                 positional: bool = False, pos_multifreq: bool = False,
+                 positional: bool = True, pos_multifreq: bool = False,
                  pos_block: int = 16, pos_rope_theta: float = 5.0e5,
                  ingress_seed: int | None = None,
                  dk_target: int = 32,
@@ -116,13 +116,13 @@ class TriModelSystem(nn.Module):
     @torch.no_grad()
     def solve(self, prompt: str, tokenizer, patterns: torch.Tensor | None = None,
               use_swarm: bool = True, temperature: float | None = None,
-              swarm_bank: str = "random") -> dict:
+              swarm_bank: str = "corpus") -> dict:
         """Run the full closed loop on one prompt.
 
         Returns the decoded tokens, the converged wave, the Sagnac verdict, and
         the memory diagnostics. Nothing is dispatched when the veto is dark.
 
-        swarm_bank: "random" (DEFAULT, unchanged) uses self.axiom_bank, the
+        swarm_bank: "corpus" (DEFAULT as of the approved D2 flip) uses the
                     seeded random bank. "corpus" uses the waves stored by
                     build_axioms. Measured effect on 6 distinct queries:
                     random -> 1 distinct answer, corpus -> 3 distinct answers.
