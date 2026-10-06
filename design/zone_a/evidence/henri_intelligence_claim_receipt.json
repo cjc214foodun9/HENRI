@@ -1,0 +1,79 @@
+{
+ "schema": "henri.intelligence_claim.receipt.v1",
+ "N": 10,
+ "chance": 0.1,
+ "dim": 4096,
+ "config": {
+  "positional": true,
+  "swarm_bank_default": "corpus"
+ },
+ "Q1_lookup": {
+  "cos_query_vs_own_bank_min": 0.99999988,
+  "cos_query_vs_own_bank_mean": 1.0,
+  "IS_A_LOOKUP": true,
+  "kill": ">=0.999 means G1 measures nothing"
+ },
+ "Q2_swarm_work": {
+  "mean_displacement_L2": 0.08496173,
+  "max_displacement_L2": 0.08577453,
+  "NEAR_IDENTITY": false,
+  "distinct_seeds": 8,
+  "kill": "<=0.05 means the swarm contributes ~nothing"
+ },
+ "Q3_order": {
+  "shuffled_query_hits_own_axiom": 2,
+  "n": 10,
+  "accuracy": 0.2,
+  "ORDER_BLIND_AT_RETRIEVAL": false,
+  "kill": ">2x chance means the token SET drives retrieval"
+ },
+ "Q4_no_overlap": {
+  "queries": [
+   {
+    "query": "canine pursues thing",
+    "argmax": 4,
+    "top_sim": 0.989102
+   },
+   {
+    "query": "energy seat measurement",
+    "argmax": 1,
+    "top_sim": 0.985212
+   },
+   {
+    "query": "port cleared by phase",
+    "argmax": 8,
+    "top_sim": 0.990675
+   },
+   {
+    "query": "attractor reached by descent",
+    "argmax": 6,
+    "top_sim": 0.993244
+   }
+  ],
+  "random_top_sim_mean": 0.016733,
+  "synonym_top_sim_mean": 0.989558,
+  "NO_BETTER_THAN_RANDOM": true,
+  "kill": "synonym top-sim ~ random baseline = overlap lookup"
+ },
+ "Q5_control": {
+  "n": 200,
+  "max_bin_fraction": 0.155,
+  "chance": 0.1,
+  "CONTROL_PASSED": true,
+  "can_fail": true
+ },
+ "verdict": {
+  "retrieval_is_a_stored_lookup": true,
+  "swarm_is_near_identity": false,
+  "retrieval_is_order_blind": false,
+  "generalises_without_token_overlap": false,
+  "what_henri_IS": "an associative memory whose store and query share the same encoder, plus a swarm that barely moves the state",
+  "what_henri_is_NOT": [
+   "compositional reasoning",
+   "semantic generalisation",
+   "a learned address space",
+   "measurably intelligent"
+  ],
+  "core_claim_realised": false
+ }
+}
