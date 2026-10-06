@@ -1,0 +1,41 @@
+[tok] vocab=353 threads=96 cpus=192 t=0.1s
+[full] dk=32 seed=20261004 n_mem=32 d_k=32 g_u4=0.974443 pos=0.999998 sane=True build=5.3s gate=26.7s rss=6349MB
+[full] dk=32 seed=20261005 n_mem=32 d_k=32 g_u4=0.997809 pos=0.999999 sane=True build=5.2s gate=27.0s rss=6642MB
+[full] dk=32 seed=20261006 n_mem=32 d_k=32 g_u4=0.996391 pos=0.999991 sane=True build=5.4s gate=25.4s rss=6784MB
+[full] dk=32 seed=20261007 n_mem=32 d_k=32 g_u4=0.992251 pos=0.999998 sane=True build=5.2s gate=23.5s rss=6854MB
+[full] dk=32 seed=20261008 n_mem=32 d_k=32 g_u4=0.993786 pos=0.999995 sane=True build=5.5s gate=23.4s rss=6900MB
+[full] dk=0 seed=20261004 n_mem=256 d_k=4 g_u4=0.929959 pos=0.999998 sane=True build=5.1s gate=26.1s rss=6910MB
+[full] dk=0 seed=20261005 n_mem=256 d_k=4 g_u4=0.981798 pos=0.999999 sane=True build=5.0s gate=24.1s rss=6922MB
+[full] dk=0 seed=20261006 n_mem=256 d_k=4 g_u4=0.986502 pos=0.999991 sane=True build=5.4s gate=24.0s rss=6944MB
+[full] dk=0 seed=20261007 n_mem=256 d_k=4 g_u4=0.953653 pos=0.999998 sane=True build=5.5s gate=26.0s rss=6959MB
+[full] dk=0 seed=20261008 n_mem=256 d_k=4 g_u4=0.978685 pos=0.999995 sane=True build=5.6s gate=24.9s rss=6959MB
+{
+  "verdict": "NOT_DISCRIMINATING",
+  "gates": {
+    "KB5_fullscale_spec_b": true,
+    "KB6_control_old_rule_fails": false
+  },
+  "stats_g_u4": {
+    "spec_b": {
+      "n": 5,
+      "min": 0.9744434952735901,
+      "max": 0.9978086948394775,
+      "mean": 0.9909361004829407,
+      "std": 0.009471595287322998,
+      "pass_ge_0.95": 5
+    },
+    "control_old_rule": {
+      "n": 5,
+      "min": 0.9299589991569519,
+      "max": 0.9865022301673889,
+      "mean": 0.9661194086074829,
+      "std": 0.023885982111096382,
+      "pass_ge_0.95": 4
+    }
+  },
+  "device": {
+    "plumbing": "none (cpu tensors)",
+    "peak_rss_mb": 6958.8
+  },
+  "seconds": 305.5
+}

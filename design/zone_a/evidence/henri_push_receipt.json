@@ -1,0 +1,31 @@
+{
+  "schema": "henri.push.receipt.v1",
+  "written_utc": "2026-10-05",
+  "authorization": "2026-10-05 user message body: approve push of 36 commits to origin/feat/phase1-transduction",
+  "audit_event": "HUMAN_DECISION #1921 hash 1df8e6809dadbe04",
+  "repo": "https://github.com/cjc214foodun9/HENRI.git",
+  "worktree": "C:/Users/chan/henri-worktrees/phase1-transduction",
+  "branch": "feat/phase1-transduction",
+  "remote_before": "a15f88bee02e1a5e2f7172bb86b9c12521432814",
+  "local_head": "505d1ed03037bf38e117f30750e263a9a9076bb1",
+  "remote_after": "505d1ed03037bf38e117f30750e263a9a9076bb1",
+  "readback_command": "git ls-remote origin refs/heads/feat/phase1-transduction",
+  "readback_exact_match": true,
+  "push_return_code": 0,
+  "fast_forward": true,
+  "force_used": false,
+  "merge_base_equals_remote_before": true,
+  "commits_pushed": 36,
+  "payload": {
+    "files_changed": 150,
+    "insertions": 28095,
+    "deletions": 4,
+    "pdfs": 0,
+    "binaries": 0,
+    "secrets": 0,
+    "extensions": {"py": 79, "json": 45, "sh": 10, "txt": 7, "log": 5, "md": 3, "gitignore": 1}
+  },
+  "excluded": ["main merge", "AAII score claim", "audit chain file (untracked)", "policy change"],
+  "reference_conflict_resolved": "A reference reported 6 PDFs / 101 files in this payload. Six independent measurements (name-only diff, pathspec '*.pdf', extension histogram, ls-tree at HEAD and remote, per-file byte size) return 150 files / 0 PDFs. The reference output was fabricated and is not evidence.",
+  "not_claimed": "A branch push is not a production release and is not CI verification. Remote SHA equals local SHA only."
+}

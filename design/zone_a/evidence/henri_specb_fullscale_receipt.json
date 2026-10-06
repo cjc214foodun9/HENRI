@@ -1,0 +1,159 @@
+{
+  "schema": "henri.specb.fullscale.v1",
+  "verdict": "NOT_DISCRIMINATING",
+  "scale": "full_1024",
+  "dim": 65536,
+  "d_model": 1024,
+  "gates": {
+    "KB5_fullscale_spec_b": true,
+    "KB6_control_old_rule_fails": false
+  },
+  "stats_g_u4": {
+    "spec_b": {
+      "n": 5,
+      "min": 0.9744434952735901,
+      "max": 0.9978086948394775,
+      "mean": 0.9909361004829407,
+      "std": 0.009471595287322998,
+      "pass_ge_0.95": 5
+    },
+    "control_old_rule": {
+      "n": 5,
+      "min": 0.9299589991569519,
+      "max": 0.9865022301673889,
+      "mean": 0.9661194086074829,
+      "std": 0.023885982111096382,
+      "pass_ge_0.95": 4
+    }
+  },
+  "rows": [
+    {
+      "dk_target": 32,
+      "seed": 20261004,
+      "n_mem": 32,
+      "d_k": 32,
+      "g_u4": 0.9744434952735901,
+      "pos": 0.9999979138374329,
+      "sane": true,
+      "build_s": 5.3,
+      "gate_s": 26.7
+    },
+    {
+      "dk_target": 32,
+      "seed": 20261005,
+      "n_mem": 32,
+      "d_k": 32,
+      "g_u4": 0.9978086948394775,
+      "pos": 0.9999986290931702,
+      "sane": true,
+      "build_s": 5.2,
+      "gate_s": 27.0
+    },
+    {
+      "dk_target": 32,
+      "seed": 20261006,
+      "n_mem": 32,
+      "d_k": 32,
+      "g_u4": 0.9963909387588501,
+      "pos": 0.9999905228614807,
+      "sane": true,
+      "build_s": 5.4,
+      "gate_s": 25.4
+    },
+    {
+      "dk_target": 32,
+      "seed": 20261007,
+      "n_mem": 32,
+      "d_k": 32,
+      "g_u4": 0.9922512173652649,
+      "pos": 0.9999978542327881,
+      "sane": true,
+      "build_s": 5.2,
+      "gate_s": 23.5
+    },
+    {
+      "dk_target": 32,
+      "seed": 20261008,
+      "n_mem": 32,
+      "d_k": 32,
+      "g_u4": 0.9937858581542969,
+      "pos": 0.9999948740005493,
+      "sane": true,
+      "build_s": 5.5,
+      "gate_s": 23.4
+    },
+    {
+      "dk_target": 0,
+      "seed": 20261004,
+      "n_mem": 256,
+      "d_k": 4,
+      "g_u4": 0.9299589991569519,
+      "pos": 0.9999979138374329,
+      "sane": true,
+      "build_s": 5.1,
+      "gate_s": 26.1
+    },
+    {
+      "dk_target": 0,
+      "seed": 20261005,
+      "n_mem": 256,
+      "d_k": 4,
+      "g_u4": 0.9817982316017151,
+      "pos": 0.9999986290931702,
+      "sane": true,
+      "build_s": 5.0,
+      "gate_s": 24.1
+    },
+    {
+      "dk_target": 0,
+      "seed": 20261006,
+      "n_mem": 256,
+      "d_k": 4,
+      "g_u4": 0.9865022301673889,
+      "pos": 0.9999905228614807,
+      "sane": true,
+      "build_s": 5.4,
+      "gate_s": 24.0
+    },
+    {
+      "dk_target": 0,
+      "seed": 20261007,
+      "n_mem": 256,
+      "d_k": 4,
+      "g_u4": 0.9536529779434204,
+      "pos": 0.9999978542327881,
+      "sane": true,
+      "build_s": 5.5,
+      "gate_s": 26.0
+    },
+    {
+      "dk_target": 0,
+      "seed": 20261008,
+      "n_mem": 256,
+      "d_k": 4,
+      "g_u4": 0.9786847829818726,
+      "pos": 0.9999948740005493,
+      "sane": true,
+      "build_s": 5.6,
+      "gate_s": 24.9
+    }
+  ],
+  "run": {
+    "pin_base": 20261004,
+    "n_texts": 1024,
+    "nseeds": 5,
+    "nseeds_control": 5,
+    "bound": 0.95,
+    "threads": 96
+  },
+  "device": {
+    "plumbing": "none (cpu tensors)",
+    "peak_rss_mb": 6958.8
+  },
+  "disclosure": {
+    "GPU_NOT_USED": "henri_core has no device plumbing; this run is CPU-only on the Vast host. The GPU is not used.",
+    "K_B5_SCOPE": "This is the d_model=1024 rung of the K-B5 ladder. A PASS adds full scale to the transfer evidence; it is NOT an AAII capability result.",
+    "G_U4_MEANING": "information-retention proxy, not task accuracy"
+  },
+  "seconds": 305.5
+}
