@@ -24,6 +24,7 @@ import torch
 import torch.nn as nn
 
 from . import substrate as sub
+from . import novelty_gate as NG
 from .model1_swarm import SwarmConsensusVeto, SwarmWaveResonator
 from .model2_memory import HenriMem65M
 from .model3_decoder import DecoderConfig, HenriDec450M
@@ -116,17 +117,24 @@ class TriModelSystem(nn.Module):
     @torch.no_grad()
     def solve(self, prompt: str, tokenizer, patterns: torch.Tensor | None = None,
               use_swarm: bool = True, temperature: float | None = None,
-              swarm_bank: str = "corpus") -> dict:
+              swarm_bank: str = "corpus",
+              abstain_below: float | None = None) -> dict:
         """Run the full closed loop on one prompt.
 
         Returns the decoded tokens, the converged wave, the Sagnac verdict, and
         the memory diagnostics. Nothing is dispatched when the veto is dark.
 
-        swarm_bank: "corpus" (DEFAULT as of the approved D2 flip) uses the
-                    seeded random bank. "corpus" uses the waves stored by
+        swarm_bank: "corpus" (DEFAULT as of the approved D2 flip) uses the seeded
+                    random bank. "corpus" uses the waves stored by
                     build_axioms. Measured effect on 6 distinct queries:
                     random -> 1 distinct answer, corpus -> 3 distinct answers.
-                    The default is preserved so committed receipts stay valid.
+
+        abstain_below: DEFAULT None (OFF). When set, solve() reads the
+                    PRE-projection membership score s = max_k |<psi_in, bank_k>|
+                    and ABSTAINS if s < abstain_below. The signal is graded, not a
+                    predicate; see henri_core/novelty_gate.py and
+                    design/zone_a/evidence/henri_q4_discriminative_receipt.json.
+                    Not enabled by default: abstention is a behaviour change.
         """
         psi_in = self.wave_of(prompt, tokenizer).unsqueeze(0)
         if patterns is not None:
@@ -137,6 +145,26 @@ class TriModelSystem(nn.Module):
                 raise RuntimeError("swarm_bank='corpus' requires build_axioms first")
         else:
             bank = self.axiom_bank
+
+        # --- D-Q4: PRE-projection membership score (the discriminative signal)
+        # Measured AFTER the swarm, this statistic is ~0.99 for every input (the
+        # CCCP projects any wave onto the bank). Read BEFORE, it discriminates.
+        nov_bank = getattr(self, "axiom_waves", None)
+        novelty = (NG.membership_score(psi_in[0], nov_bank)
+                   if nov_bank is not None and nov_bank.numel() > 0 else None)
+
+        if abstain_below is not None and novelty is not None and novelty < abstain_below:
+            return {
+                "prompt": prompt,
+                "abstained": True,
+                "reason": (f"membership {novelty:.6f} < abstain_below "
+                           f"{abstain_below}"),
+                "novelty": {"score": round(float(novelty), 8),
+                            "threshold": abstain_below,
+                            "bank": "axiom_waves", "n": int(nov_bank.shape[0])},
+                "psi_in": psi_in[0],
+                "models_engaged": [],
+            }
 
         # --- MODEL 2: Zone C maintenance + prefetch on the incoming wave
         mem = self.memory(psi_in)
@@ -182,6 +210,17 @@ class TriModelSystem(nn.Module):
                 "offdiag_max": float(mem["offdiag_max"].mean()),
                 "gamma": mem["gamma"][0].tolist(),
             },
+            # D-Q4: additive, non-breaking. The PRE-projection membership score is
+            # reported on the DEFAULT path so the signal is observable without
+            # enabling abstention. Absent only when build_axioms has not been run.
+            "novelty": ({
+                "score": round(float(novelty), 8),
+                "bank": "axiom_waves",
+                "n": int(nov_bank.shape[0]),
+                "abstain_below": abstain_below,
+                "in_bank_at_threshold": bool(
+                    novelty >= (abstain_below if abstain_below is not None else 0.5)),
+            } if novelty is not None else None),
             "models_engaged": [MODEL_1_ID, MODEL_2_ID, MODEL_3_ID],
         }
 

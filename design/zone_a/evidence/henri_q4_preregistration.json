@@ -1,0 +1,36 @@
+{
+  "schema": "henri.q4.preregistration.v1",
+  "written_local_date": "2026-10-06",
+  "frozen_before_run": true,
+  "head_at_freeze": "295abd6d17118853da7f4959196f848ed68ef83a",
+  "purpose": "Make Q4 able to fail: an input the bank does NOT contain must score below an input it does.",
+  "measured_problem": "POST-projection max-similarity is ~0.99 for EVERY input (synonym 0.9896 vs random baseline 0.0167 was a pre/post confusion). Nothing can be rejected.",
+  "design": {
+    "S_membership": "s(q) = max_k |<psi_q, psi_k>|, computed PRE-projection on the ingress wave only",
+    "S_margin": "m(q) = beta*(top1 - top2) of the same similarities, beta=26.10 (shape, not level)",
+    "confound_to_be_shown": "POST-projection max-similarity after the swarm, expected ~0.99 for all inputs",
+    "rationale": "The swarm projection is the confound. The ingress wave still carries membership information."
+  },
+  "families": {
+    "F0_exact_inbank": "corpus items verbatim (POSITIVE CONTROL, in bank)",
+    "F1_drop_last": "corpus item minus its final word (HARD, out of bank, high overlap)",
+    "F2_drop_first": "corpus item minus its first word (HARD, out of bank, high overlap)",
+    "F3_middle_chunk": "middle three words only (MEDIUM, low overlap)",
+    "F4_synonym": "zero-token-overlap paraphrases (hard by meaning, easy lexically)",
+    "F5_random_waves": "100 random unit waves (EASY FLOOR, sanity only)",
+    "F6_shuffled_order": "corpus item, word order permuted, same token multiset"
+  },
+  "calibration": "Threshold from F0 vs F5 ONLY. The eval families F1-F4 and F6 never set the threshold.",
+  "kill_conditions": {
+    "K1": "AUC(F0 vs F5) <= 0.60 -> statistic FALSIFIED (must approach 1.0)",
+    "K2": "shuffled-label control AUC outside [0.35,0.65] -> harness defect",
+    "K3": "F0 positive control min score < 0.999 -> gate mis-specified",
+    "K4": "if POST-projection similarity is not >=0.95 for >=90% of inputs, the confound claim is FALSIFIED"
+  },
+  "controls_that_can_fail": [
+    "shuffled-label: randomize which query pairs with which bank row; AUC must collapse to ~0.5",
+    "accept-all threshold theta=0.0 must accept the random floor (false accept) - proves theta has meaning"
+  ],
+  "honest_scope": "dim=4096, CPU, small config, corpus N=10. This is an ENCODER-MEMBERSHIP test, NOT semantic understanding. No external benchmark is claimed.",
+  "bounds_moved": false
+}

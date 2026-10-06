@@ -1,0 +1,105 @@
+{
+ "schema": "henri.q4.discriminative.v2",
+ "N": 10,
+ "dim": 4096,
+ "supersedes": "v1 (AUC vs random floor was trivially 1.0)",
+ "calibration": {
+  "theta": 1.0,
+  "balanced_accuracy": 1.0,
+  "pos": "F0_exact_inbank",
+  "neg": "F5_random_waves",
+  "note": "theta is DEGENERATE when F0 is identically 1.0; reported, not hidden"
+ },
+ "metric_a_auc_vs_random_TRIVIAL": {
+  "F0": 1.0,
+  "F1_drop_last": 1.0,
+  "F2_drop_first": 1.0,
+  "F3_middle_chunk": 1.0,
+  "F4_synonym": 1.0,
+  "F6_shuffled_order": 1.0,
+  "warning": "every value is 1.0 because random waves are orthogonal to the bank by construction. NOT evidence of discrimination."
+ },
+ "metric_b_out_of_bank_spread": {
+  "min": 0.167767,
+  "max": 0.976057,
+  "mean": 0.594347,
+  "range": 0.80829,
+  "reads_as": "a membership PREDICATE would give all out-of-bank inputs one low score. A wide range means a graded SIMILARITY METER.",
+  "in_bank_is_saturated": false
+ },
+ "metric_c_lexical_coupling": {
+  "pearson_r_overlap_vs_score": 0.449,
+  "family_means_by_overlap": {
+   "F0_exact_inbank": 1.0,
+   "F2_drop_first": 0.81397,
+   "F1_drop_last": 0.722025,
+   "F3_middle_chunk": 0.489327,
+   "F6_shuffled_order": 0.499893,
+   "F4_synonym": 0.298694,
+   "F5_random_waves": 0.025829
+  },
+  "reads_as": "if r > 0.7 the statistic tracks LEXICAL OVERLAP, not meaning"
+ },
+ "control_shuffled_bank": {
+  "auc_F0_vs_random_on_shuffled_bank": 0.564,
+  "F0_mean_on_shuffled_bank": 0.031822,
+  "F0_mean_on_real_bank": 1.0,
+  "PASSED": true,
+  "reads_as": "if the real bank carries the signal, replacing it with random vectors must COLLAPSE the separation toward chance"
+ },
+ "accept_rate_by_threshold": {
+  "theta_used": 1.0,
+  "table": {
+   "calibrated": {
+    "F0_exact_inbank": 1.0,
+    "F1_drop_last": 0.0,
+    "F2_drop_first": 0.0,
+    "F3_middle_chunk": 0.0,
+    "F4_synonym": 0.0,
+    "F6_shuffled_order": 0.0,
+    "F5_random_waves": 0.0
+   },
+   "0.80": {
+    "F0_exact_inbank": 1.0,
+    "F1_drop_last": 0.4,
+    "F2_drop_first": 0.7,
+    "F3_middle_chunk": 0.0,
+    "F4_synonym": 0.0,
+    "F6_shuffled_order": 0.0,
+    "F5_random_waves": 0.0
+   },
+   "0.50": {
+    "F0_exact_inbank": 1.0,
+    "F1_drop_last": 0.8,
+    "F2_drop_first": 0.9,
+    "F3_middle_chunk": 0.5,
+    "F4_synonym": 0.0,
+    "F6_shuffled_order": 0.5,
+    "F5_random_waves": 0.0
+   }
+  }
+ },
+ "control_posthoc_calibration": {
+  "theta_if_calibrated_on_a_hard_family": 0.418441,
+  "note": "shown to confirm theta does NOT move to accommodate a family; the frozen theta comes from F0 vs F5 only"
+ },
+ "K4_confound": {
+  "post_mean": 0.996382,
+  "frac_ge_0.95": 1.0,
+  "CONFOUND_CONFIRMED": true
+ },
+ "verdict": {
+  "Q4_MECHANISM_EXISTS": true,
+  "literal_requirement_met": true,
+  "shuffled_bank_control_passed": true,
+  "is_graded_similarity_meter": true,
+  "is_lexically_coupled": false,
+  "claim": "A pre-projection membership score separates in-bank from out-of-bank inputs, and the shuffled-bank control collapses it, so the signal is real. BUT the statistic is a graded leXICAL similarity meter, not a membership predicate: out-of-bank scores span 0.167767..0.976057 and correlate with token overlap at r=0.449. It makes HENRI able to ABSTAIN on unrelated input; it does NOT give HENRI semantic membership or understanding.",
+  "what_it_is_NOT": [
+   "semantic generalisation",
+   "compositional reasoning",
+   "understanding of paraphrases",
+   "measurably intelligent"
+  ]
+ }
+}
