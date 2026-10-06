@@ -88,6 +88,14 @@ def node_perturbation_descent(
     """
     if y.dim() != 3 or x.dim() != 3:
         raise ValueError("y and x must be [N, T, *]")
+    # C3 review fix: this module is CPU-only. The generator is pinned to CPU and
+    # the accumulator/perturbation tensors omit a device argument, so a CUDA
+    # input would either raise at the first add (cpu + cuda) or silently shift
+    # work to the host. Refuse loudly instead of half-working.
+    if y.is_cuda or x.is_cuda or labels.is_cuda:
+        raise RuntimeError(
+            "dust_zo is CPU-only: y/x/labels must be on CPU. henri_core has no "
+            "device plumbing; thread a device argument before enabling CUDA here.")
     n_batch, t_len, dim = y.shape
     if cfg.K < 1 or cfg.sigma <= 0:
         raise ValueError("require K >= 1 and sigma > 0")

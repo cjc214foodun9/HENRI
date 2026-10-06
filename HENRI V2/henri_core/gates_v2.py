@@ -31,6 +31,12 @@ import torch
 from . import substrate as sub
 
 PASS, FAIL, VACUOUS, BLOCKED = "PASS", "FAIL", "VACUOUS", "BLOCKED"
+# MEASURED is an INFORMATIONAL result, not a verdict. It reports a statistic that
+# the caller compares across arms; it can never grant acceptance. Added because
+# gate_u5 returned this token while the vocabulary declared only four outcomes,
+# and an aggregator keyed on FAIL/VACUOUS would have read it as success.
+MEASURED = "MEASURED"
+_OUTCOMES = (PASS, FAIL, VACUOUS, BLOCKED, MEASURED)
 
 
 def _finite(x) -> bool:
@@ -300,3 +306,56 @@ def gate_u5_perslot_mi(system, tokenizer, n_texts: int = 512, n_comp: int = 32,
             "mi_role": "reported + shuffle-gated; NOT part of the separation rule",
             "note": "aggregate rank is identical across arms by construction; this "
                     "metric targets the per-slot/per-width structure instead"}
+
+
+# --------------------------------------------------- aggregate driver (C2 fix)
+def run_all_v2(gates) -> dict:
+    """Aggregate gate results WITHOUT the gates.py:360 defect.
+
+    Defect being fixed (independently confirmed): gates.py:360 is
+        if counts[FAIL] or counts[VACUOUS]: overall = "NOT_ACCEPTED"
+    so a BLOCKED arm -- a gate that could not produce a valid number -- falls
+    through to "ACCEPTED". A broken estimator therefore reads as a pass.
+
+    This driver treats any non-PASS outcome as NOT_ACCEPTED. BLOCKED is the
+    most severe: it means the measurement is unavailable, not that the
+    mechanism is good. Acceptance requires every gate to be PASS.
+    """
+    counts = {k: 0 for k in _OUTCOMES}
+    reasons = []
+    for g in gates:
+        st = g.get("status")
+        if st not in _OUTCOMES:
+            st = BLOCKED
+            reasons.append(f"unknown status coerced to BLOCKED: {g.get('id', '?')}")
+        counts[st] += 1
+        if st != PASS:
+            reasons.append(f"{g.get('id', '?')}: {st} -- {g.get('why', '')[:90]}")
+
+    n = max(1, len(gates))
+    # Declared, monotone severity. MEASURED contributes no acceptance weight:
+    # it is informational, so it scores like a non-pass without being a FAIL.
+    # Every value in _OUTCOMES MUST appear here (a missing key is a KeyError,
+    # caught by test_gate_fixes_selfcheck.py).
+    weight = {BLOCKED: 0.0, FAIL: 0.25, VACUOUS: 0.5, MEASURED: 0.0, PASS: 1.0}
+    missing = [k for k in _OUTCOMES if k not in weight]
+    if missing:
+        raise KeyError(f"run_all_v2 weight table missing outcomes: {missing}")
+    score = sum(weight[g.get("status", BLOCKED)] if g.get("status") in _OUTCOMES
+                else 0.0 for g in gates) / n
+
+    overall = "ACCEPTED" if (counts[PASS] == len(gates) and gates) else "NOT_ACCEPTED"
+    return {
+        "driver": "run_all_v2",
+        "supersedes": "gates.run_all (BLOCKED counted as ACCEPTED)",
+        "gates": gates,
+        "counts": counts,
+        "score": round(score, 6),
+        "significance": ("ACCEPTED" if overall == "ACCEPTED" else
+                         ("BLOCKED" if counts[BLOCKED] else "REJECTED")),
+        "blocking_reasons": reasons,
+        "overall": overall,
+        "gate_rule": "ACCEPTED requires EVERY gate PASS. BLOCKED is NOT a pass; "
+                     "an unavailable measurement never grants acceptance.",
+        "outcome_vocabulary": list(_OUTCOMES),
+    }
