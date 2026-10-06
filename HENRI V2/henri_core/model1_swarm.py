@@ -29,12 +29,25 @@ class SwarmWaveResonator(nn.Module):
     def __init__(self, dim: int = sub.DEFAULT_DIM, n_workers: int = 256,
                  n_slices: int = 4, steps: int = 16, beta: float = 26.10,
                  dt: float = 1e-3, noise_std: float = 0.0, sigma: float = 0.05,
-                 seed: int = 0, backtrack: bool = True):
+                 seed: int = 0, backtrack: bool = True, beta_scale: float = 1.0):
         super().__init__()
         self.dim = int(dim)
         self.B = int(n_workers)
         self.steps = int(steps)
+        # D-ZO-COLLAPSE (measured at test time): the CCCP attention
+        #   logits = beta * <z, p>  with UNIT-NORM RANDOM patterns
+        # has <z, p> ~ N(0, 1/D), i.e. |cos| ~ 1/sqrt(D). At D=4096 that is
+        # ~0.0156, so beta=26.10 yields max|logit| ~ 0.5 and softmax entropy
+        # H/lnN ~ 0.97 (near-uniform). `att @ patterns` then converges to the
+        # BANK MEAN for every input: measured cos(cccp_out, mean(bank)) = 0.9748,
+        # and solve() returned 1 distinct answer from 4 distinct queries.
+        # The doc's beta acts on a cosine the random bank cannot produce.
+        # beta_scale multiplies beta so the logit spread matches the formula's
+        # stated domain. DEFAULT 1.0 PRESERVES current behaviour byte-for-byte;
+        # committed receipts stay valid. See audit_root_cause.py.
         self.beta = float(beta)
+        self.beta_scale = float(beta_scale)
+        self.beta_eff = self.beta * self.beta_scale
         self.dt = float(dt)
         self.noise_std = float(noise_std)
         self.sigma = float(sigma)
@@ -65,7 +78,7 @@ class SwarmWaveResonator(nn.Module):
 
     # ------------------------------------------------------------- integration
     def _cccp(self, z: torch.Tensor, patterns: torch.Tensor) -> torch.Tensor:
-        logits = self.beta * (z @ patterns.conj().transpose(0, 1)).real
+        logits = self.beta_eff * (z @ patterns.conj().transpose(0, 1)).real
         att = torch.softmax(logits, dim=-1)
         return att.to(torch.complex64) @ patterns
 
@@ -146,7 +159,7 @@ class SwarmWaveResonator(nn.Module):
     def _entropy(self, z, patterns):
         if patterns is None:
             return torch.zeros(z.shape[0])
-        logits = self.beta * (z @ patterns.conj().transpose(0, 1)).real
+        logits = self.beta_eff * (z @ patterns.conj().transpose(0, 1)).real
         p = torch.softmax(logits, dim=-1)
         return -(p * p.clamp_min(1e-12).log()).sum(dim=-1)
 

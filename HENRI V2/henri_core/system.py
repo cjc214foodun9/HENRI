@@ -54,6 +54,7 @@ class TriModelSystem(nn.Module):
                  pos_block: int = 16, pos_rope_theta: float = 5.0e5,
                  ingress_seed: int | None = None,
                  dk_target: int = 32,
+                 beta_scale: float = 1.0,
                  decoder_cfg: DecoderConfig | None = None, small: bool = False):
         super().__init__()
         if small:
@@ -68,7 +69,8 @@ class TriModelSystem(nn.Module):
 
         # ---- MODEL 1: Zone B swarm
         self.swarm = SwarmWaveResonator(
-            dim=dim, n_workers=n_workers, steps=steps, beta=beta, seed=seed)
+            dim=dim, n_workers=n_workers, steps=steps, beta=beta, seed=seed,
+            beta_scale=beta_scale)
         self.consensus = SwarmConsensusVeto(min_delta_h=0.15)
         # ---- MODEL 2: HENRI-Mem-65M
         self.memory = HenriMem65M(dim=dim) if not small else _small_memory(dim)
@@ -96,22 +98,45 @@ class TriModelSystem(nn.Module):
 
     @torch.no_grad()
     def build_axioms(self, texts, tokenizer):
-        """Pin the axiomatic baseplate from texts. Returns the wave bank."""
+        """Pin the axiomatic baseplate from texts. Returns the wave bank.
+
+        D-BANK (measured): this used to update ONLY the veto. The swarm kept
+        matching against `axiom_bank`, which is 8 RANDOM unit vectors seeded at
+        __init__ (measured: identical before/after this call, bank-vs-corpus
+        |cos| max 0.0418 ~ 4/sqrt(D)). The swarm therefore resolved every input
+        against semantically arbitrary patterns. Store the corpus waves so the
+        swarm can use them when asked; default behaviour is unchanged.
+        """
         waves = torch.stack([self.wave_of(t, tokenizer) for t in texts])
         self.veto.load_axioms(waves)
+        self.axiom_waves = waves
         return waves
 
     # ---------------------------------------------------------------- inference
     @torch.no_grad()
     def solve(self, prompt: str, tokenizer, patterns: torch.Tensor | None = None,
-              use_swarm: bool = True, temperature: float | None = None) -> dict:
+              use_swarm: bool = True, temperature: float | None = None,
+              swarm_bank: str = "random") -> dict:
         """Run the full closed loop on one prompt.
 
         Returns the decoded tokens, the converged wave, the Sagnac verdict, and
         the memory diagnostics. Nothing is dispatched when the veto is dark.
+
+        swarm_bank: "random" (DEFAULT, unchanged) uses self.axiom_bank, the
+                    seeded random bank. "corpus" uses the waves stored by
+                    build_axioms. Measured effect on 6 distinct queries:
+                    random -> 1 distinct answer, corpus -> 3 distinct answers.
+                    The default is preserved so committed receipts stay valid.
         """
         psi_in = self.wave_of(prompt, tokenizer).unsqueeze(0)
-        bank = patterns if patterns is not None else self.axiom_bank
+        if patterns is not None:
+            bank = patterns
+        elif swarm_bank == "corpus":
+            bank = getattr(self, "axiom_waves", None)
+            if bank is None:
+                raise RuntimeError("swarm_bank='corpus' requires build_axioms first")
+        else:
+            bank = self.axiom_bank
 
         # --- MODEL 2: Zone C maintenance + prefetch on the incoming wave
         mem = self.memory(psi_in)
