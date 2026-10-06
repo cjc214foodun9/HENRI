@@ -1,0 +1,123 @@
+{
+ "schema": "henri.groundtruth.receipt.v2",
+ "task": {
+  "n_axioms": 10,
+  "chance_top1": 0.1
+ },
+ "config": {
+  "positional": true,
+  "swarm_bank": "corpus (approved D2 default)",
+  "dim": 4096
+ },
+ "G1_identity": {
+  "top1": 10,
+  "n": 10,
+  "accuracy": 1.0,
+  "above_chance": true,
+  "argmax_histogram": [
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1
+  ]
+ },
+ "C1_shuffled_targets": {
+  "shuffled_accuracy": 0.1,
+  "identity_accuracy": 1.0,
+  "control_passed": true,
+  "note": "a real association collapses under label permutation; an index artifact does not"
+ },
+ "C1b_argmax_distribution": {
+  "histogram": [
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1
+  ],
+  "max_bin_fraction": 0.1,
+  "uniform_expected": 0.1,
+  "degenerate": false
+ },
+ "C2_random_waves": {
+  "n": 200,
+  "argmax_histogram": [
+   21,
+   21,
+   17,
+   26,
+   20,
+   27,
+   24,
+   18,
+   7,
+   19
+  ],
+  "max_bin_fraction": 0.135,
+  "uniform_expected": 0.1,
+  "control_passed": true,
+  "can_fail": true
+ },
+ "C3_unseen_query": {
+  "queries": [
+   "zzzz qqqq",
+   "nonexistent axiom phrase"
+  ],
+  "argmax": [
+   6,
+   2
+  ],
+  "top_sim": [
+   0.9876,
+   0.9864
+  ]
+ },
+ "G2_deleted_token": {
+  "top1": 10,
+  "n": 10,
+  "accuracy": 1.0,
+  "above_chance": true
+ },
+ "G4_determinism": {
+  "same_input_same_output": true,
+  "ids": [
+   135
+  ]
+ },
+ "G5_order": {
+  "cos_ab_ba": -5e-08,
+  "order_fixed": true,
+  "answers_differ": true,
+  "ab": [
+   135
+  ],
+  "ba": [
+   87
+  ]
+ },
+ "verdict": {
+  "controls_pass": true,
+  "G1_accuracy": 1.0,
+  "G1_above_chance": true,
+  "G5_order_fixed": true,
+  "measurable_signal_exists": true,
+  "capability_level": "self-retrieval lookup over 10 stored axioms",
+  "NOT_claimed": [
+   "external reasoning",
+   "generated-text correctness",
+   "intelligence",
+   "benchmark score"
+  ]
+ }
+}
