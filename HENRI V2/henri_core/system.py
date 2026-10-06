@@ -48,12 +48,12 @@ class TriModelSystem(nn.Module):
     """
 
     def __init__(self, dim: int = sub.DEFAULT_DIM, vocab: int = 512,
-                 n_workers: int = 256, steps: int = 8, beta: float = 26.10,
+                 n_workers: int = 256, steps: int = 16, beta: float = 26.10,
                  n_axioms: int = 8, seed: int = 20261004,
                  positional: bool = False, pos_multifreq: bool = False,
                  pos_block: int = 16, pos_rope_theta: float = 5.0e5,
                  ingress_seed: int | None = None,
-                 dk_target: int = 0,
+                 dk_target: int = 32,
                  decoder_cfg: DecoderConfig | None = None, small: bool = False):
         super().__init__()
         if small:

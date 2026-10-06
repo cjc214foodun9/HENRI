@@ -1,0 +1,106 @@
+{
+  "schema": "henri.final_sprint.receipt.v1",
+  "written_utc": "2026-10-05",
+  "pin": 20261004,
+  "authorization": {
+    "typed_advice": {"authorization": false, "status": "ESCALATE"},
+    "bounded_by": "directives HENRI-REVENG-2026-HOLO-COGNITION-AAII-01 sections 7.1-7.3",
+    "gate": "GitHub push and Spec B ratification to main require explicit human approval. No push issued."
+  },
+  "directive_1_spec_b_ratify": {
+    "target_named_in_directive": "henri_hopfield_engine.py",
+    "target_status": "ABSENT",
+    "resolution": "No file named henri_hopfield_engine.py exists in any worktree. The real Spec B site is HENRI V2/henri_core/model3_decoder.py (resolve_n_mem + DecoderConfig).",
+    "directive_text_defect": "'d_k = 32, n_mem = 32 as the default across all sites' is self-contradictory.",
+    "false_literal_measured": {
+      "n_mem": 32,
+      "d_model": 128,
+      "d_k_result": 4,
+      "verdict": "RE-CREATES the rank-4 bottleneck. n_mem=32 is a 1024-scale value only."
+    },
+    "correct_invariant": "d_k == 32 at every scale -> n_mem = d_model // 32",
+    "correct_ladder": {"128": 4, "512": 16, "1024": 32},
+    "code_change": [
+      "henri_core/model3_decoder.py: DecoderConfig.dk_target 0 -> 32; HopfieldCrossPooling.dk_target 0 -> 32",
+      "henri_core/system.py: HenriSystem.dk_target 0 -> 32"
+    ],
+    "param_count_verified": 447145231,
+    "param_parts": {"pooling": 142614528, "cross_proj": 65536, "blocks": 270630912, "final_norm": 2048, "heads": 33832207},
+    "parts_sum_exact": true,
+    "in_envelope_400m_500m": true,
+    "harness_19_of_19": {"command": "python \"HENRI V2/tests/unit/test_henri_tri_model.py\"", "result": "19 passed, 0 failed"},
+    "harness_10_of_10": {"command": "python \"HENRI V2/henri_core/verify_tri_model.py\"", "result": "10 passed, 0 failed"}
+  },
+  "directive_2_multi_step_active_inference": {
+    "target_named_in_directive": "henri_custom_wave_core.py",
+    "target_status": "ABSENT",
+    "resolution": "Real Zone B site is HENRI V2/henri_core/model1_swarm.py (SwarmWaveResonator).",
+    "prior_state": "A bounded Lyapunov/CCCP relaxation loop already existed (steps=8, backtracking line search, monotone_fraction 1.0).",
+    "code_change": [
+      "model1_swarm.py: steps 8 -> 16 (K=16) default",
+      "model1_swarm.py: added continuous per-step information gain delta_h_steps = H(Psi_t) - H(Psi_{t+1})",
+      "system.py: swarm steps default 8 -> 16"
+    ],
+    "measured": {
+      "K": 16,
+      "energies_shape": [17, 8],
+      "delta_h_steps_shape": [16, 8],
+      "monotone_fraction": 1.0,
+      "sum_gain_equals_telescoped_delta_h": true,
+      "distinct_seeds": "8/8"
+    },
+    "status": "IMPLEMENTED_AND_SMOKE_VERIFIED",
+    "not_claimed": "No capability gain measured. The tripartite receipt (held EM 0.011 vs flat 0.038) remains the binding negative result.",
+    "removed_from_request": "StiefelRetract and R_Torus terms in the review eq. are NOT in the named file and were not added; they live in substrate.py (stiefel_retract is used by PinnedInvariantProjector)."
+  },
+  "directive_3_aaii_harness": {
+    "targets_named_in_directive": ["benchmarks/runner.py", "spec_registry.py"],
+    "target_status": "PRESENT",
+    "actual_path": "HENRI V2/benchmarks/",
+    "dataset_integrity": {
+      "method": "sha256 of each MANIFEST entry vs bytes on disk",
+      "hle": {"status": "DATASET_PINNED", "payload_verified": 4, "hash_mismatch": 0, "absent": "7 HF .cache metadata only", "bytes": 274282300},
+      "aa-briefcase": {"status": "DATASET_PINNED", "payload_verified": 198, "hash_mismatch": 0, "absent": "201 HF .cache metadata only", "bytes": 104373012},
+      "aa-omniscience": {"status": "DATASET_PINNED", "payload_verified": 5, "hash_mismatch": 0, "absent": "8 HF .cache metadata only", "bytes": 4183503},
+      "aa-lcr": {"status": "DATASET_PINNED", "payload_verified": 3, "hash_mismatch": 0, "absent": "6 HF .cache metadata only", "bytes": 164672},
+      "aa_lcr_present": true,
+      "note": "aa-lcr DOES exist on disk (the review's dataset list omitted it). All payload files verify; only HuggingFace cache bookkeeping is absent."
+    },
+    "instrument_run": {
+      "command": "python -m benchmarks.runner --task local/egress_managed --seeds 0,1,2,3,4,5,6,7 --K 64 --out ../design/zone_a/evidence/bench_dir3_instrument_receipt.json",
+      "verdict": "PASSED",
+      "gate_G-TOOL-1": "solver_minus_chance 0.9849 >= 0.30 PASS",
+      "receipt": "design/zone_a/evidence/bench_dir3_instrument_receipt.json"
+    },
+    "aaii_official_splits": {
+      "status": "BLOCKED",
+      "reason": "All AAII adapters are stubs with real spec metadata but no executable harness. scoreable_now = 0/10; spec_status DATASET_PINNED or METHODOLOGY_ONLY, never IMPLEMENTED.",
+      "blocker_text": "needs an external grading API (not self-scoreable) OR dataset not in the attached documents; only the URL is.",
+      "no_fabricated_number_can_leave_the_harness": "enforced by adapter assert_ready + G-SPEC-1 anti-laundering count"
+    }
+  },
+  "epistemic_claim_verdict": {
+    "claim": "Project HENRI is not suffering from a mathematical breakdown; path to sovereign SOTA on one RTX 5090 is clear.",
+    "component_physics": "Supported. wave separation |cos|=0.1489 vs 0.011 noise; DFT resolves D131; Spec B G-U4 0.886->0.981 across K-B1..K-B6.",
+    "capability": "NOT supported. m4 held-out EM <= 0.185; tripartite NO_DIFFERENCE; Zone C VACUOUS.",
+    "k_b5_scope": "Reduced ladder {128,512}. No d_model=1024 forward has run. 'full_scale_transfer: true' overstates it.",
+    "g_u4_meaning": "Information-retention proxy, not task accuracy.",
+    "verdict": "PARTIALLY_SUPPORTED_MATERIALLY_OVERCLAIMED"
+  },
+  "github_sync": {
+    "worktree": "C:/Users/chan/henri-worktrees/phase1-transduction",
+    "branch": "feat/phase1-transduction",
+    "remote_branch_head": "a15f88b",
+    "local_head": "bd48daf",
+    "divergence": "local is 35 commits AHEAD of remote; remote is NOT ahead (merge-base == remote head)",
+    "push_issued": false,
+    "gate": "awaiting human approval"
+  },
+  "baseline_suite": {
+    "command": "python -m pytest \"HENRI V2/tests\" -q",
+    "result": "16 failed, 2191 passed, 31 skipped, 3 errors",
+    "failures_are_preexisting": true,
+    "cause": "missing optional deps arcengine/arc_agi (ARC-AGI-3) and henri_pdf_ingress; unrelated to Spec B or the swarm",
+    "delta_from_my_changes": 0
+  }
+}

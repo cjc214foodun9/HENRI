@@ -27,7 +27,7 @@ class SwarmWaveResonator(nn.Module):
     """Launch B perturbed probes and evolve them to a shared attractor."""
 
     def __init__(self, dim: int = sub.DEFAULT_DIM, n_workers: int = 256,
-                 n_slices: int = 4, steps: int = 8, beta: float = 26.10,
+                 n_slices: int = 4, steps: int = 16, beta: float = 26.10,
                  dt: float = 1e-3, noise_std: float = 0.0, sigma: float = 0.05,
                  seed: int = 0, backtrack: bool = True):
         super().__init__()
@@ -107,6 +107,14 @@ class SwarmWaveResonator(nn.Module):
             entropy_trace.append(self._entropy(z, patterns))
 
         E = torch.stack(energies)                                  # [steps+1, B]
+        # DIRECTIVE 2: continuous information gain, per relaxation step.
+        # Delta H_t = H(Psi_t) - E[H(Psi_{t+1})] = H(Psi_t) - H(Psi_{t+1}) for a
+        # deterministic step. The cumulative sum telescopes to H_0 - H_K, which is
+        # the scalar "delta_h" already reported. Exposing the per-step trace makes
+        # the gain continuous instead of a single start/end difference.
+        gain_steps = torch.stack(
+            [entropy_trace[t] - entropy_trace[t + 1]
+             for t in range(len(entropy_trace) - 1)])                # [K, B]
         best = int(E[-1].argmin())
         return {
             "psi": z[best],
@@ -117,7 +125,10 @@ class SwarmWaveResonator(nn.Module):
             "distinct_seeds": len(set(seeds)),
             "final_energy": float(E[-1].min()),
             "delta_h": self._delta_h(entropy_trace),
+            "delta_h_steps": gain_steps,                            # [K, B]
+            "mean_gain_per_step": gain_steps.mean(dim=0),           # [B]
             "height": E.shape[0],
+            "K": self.steps,
         }
 
     def _backtrack(self, z, nxt, patterns, lr):

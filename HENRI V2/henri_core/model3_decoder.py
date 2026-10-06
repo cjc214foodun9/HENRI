@@ -39,7 +39,10 @@ class DecoderConfig:
     vocab: int = 32768
     n_macro: int = 256
     n_mem: int = 0                   # D85/D86: Hopfield memory slots; 0 = auto
-    dk_target: int = 0               # SPEC_B: memory key width; 0 = old auto rule
+    dk_target: int = 32              # SPEC_B RATIFIED: memory key width. d_k == 32
+                                     # at EVERY scale -> n_mem = d_model // 32.
+                                     # (4 @128, 16 @512, 32 @1024; never literal 32.)
+                                     # 0 restores the old D85 auto rule (d_k = 4).
     n_invariants: int = 256          # P_inv column count
     n_vq: int = 8                    # audio RVQ stages (doc p25)
     theta_rope: float = 500_000.0
@@ -114,7 +117,7 @@ class HopfieldCrossPooling(nn.Module):
 
     def __init__(self, dim: int = sub.DEFAULT_DIM, d_model: int = 1024,
                  n_macro: int = 256, beta: float = 26.10, n_mem: int = 0,
-                 dk_target: int = 0):
+                 dk_target: int = 32):
         super().__init__()
         self.n_macro = int(n_macro)
         self.n_mem = resolve_n_mem(d_model, n_mem, dk_target)

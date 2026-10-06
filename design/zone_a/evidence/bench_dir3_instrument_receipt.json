@@ -1,0 +1,207 @@
+{
+  "schema": "henri.bench.v1",
+  "written_utc": "2026-10-06T02:50:35Z",
+  "adapter_id": "local/egress_managed",
+  "spec_status": "IMPLEMENTED",
+  "dataset_sha256": {
+    "0": "636d6fe11b80d86a7f20930c78550db86589b4a2ff97f8afcde7a1c81d64f16f",
+    "1": "9fbc406c6746129b98c1e50a1872fe8f26d50eef90390b0f164051fd0fa403b0",
+    "2": "7c9a8d43a851ddb8279690195636d8ed88b5998b7b88d9811ebb348026cc1419",
+    "3": "388d51985d3a430f42bb60a4c98415d494a17302532c90b960f0c7b923734342",
+    "4": "1fb8f2e321cdf74ccdc046e2d38cef362aa9c36467ff9ca924ede280ac24013a",
+    "5": "838ba990bd2bbdcc7cec763f668738ba3bb989e433750b967c9e16060887f27f",
+    "6": "cded76f8bd6423383020b326f760f7777de49f167597114d174a84b12c4bee7d",
+    "7": "78f931d7c2410d79a8d8d09805b7bd4b48794cc4696649350e52005453f0cc33"
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "n_seeds": 8,
+  "metrics": {
+    "solver_minus_chance": 0.98486328125,
+    "chance_abs_error": 0.00732421875,
+    "oracle_abs_error": 0.0,
+    "managed_mean_acc": 1.0,
+    "hash_mean_acc": 0.99609375,
+    "managed_minus_hash": 0.00390625,
+    "chance_mean_acc": 0.01513671875,
+    "chance_analytic": 0.015625,
+    "unpinned_adapters_scored": 0.0,
+    "solver_headroom": 0.00390625,
+    "saturation_flag": 1.0,
+    "determinism_max_delta": 0.0,
+    "_dynamic_range": {
+      "solver_minus_chance": 0.99609375,
+      "chance_abs_error": 0.01171875
+    },
+    "arm_spread": 0.00390625
+  },
+  "per_seed_aggregate": {
+    "chance": {
+      "n": 8,
+      "mean": 0.015137,
+      "se": 0.003337,
+      "ci95": [
+        0.008596,
+        0.021678
+      ],
+      "min": 0.003906,
+      "max": 0.027344,
+      "spread": 0.023438
+    },
+    "oracle": {
+      "n": 8,
+      "mean": 1.0,
+      "se": 0.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "min": 1.0,
+      "max": 1.0,
+      "spread": 0.0
+    },
+    "hash": {
+      "n": 8,
+      "mean": 0.996094,
+      "se": 0.0,
+      "ci95": [
+        0.996094,
+        0.996094
+      ],
+      "min": 0.996094,
+      "max": 0.996094,
+      "spread": 0.0
+    },
+    "managed": {
+      "n": 8,
+      "mean": 1.0,
+      "se": 0.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "min": 1.0,
+      "max": 1.0,
+      "spread": 0.0
+    }
+  },
+  "gates": [
+    {
+      "id": "G-TOOL-1",
+      "statement": "The instrument separates a perfect solver from a chance agent.",
+      "metric": "solver_minus_chance",
+      "op": ">=",
+      "threshold": 0.3,
+      "value": 0.98486328125,
+      "fail_if": "solver_minus_chance < 0.30, i.e. the harness cannot distinguish skill from guessing and has no instrument power.",
+      "passed": true
+    },
+    {
+      "id": "G-TOOL-2",
+      "statement": "The chance agent sits near its analytic chance rate.",
+      "metric": "chance_abs_error",
+      "op": "<=",
+      "threshold": 0.12,
+      "value": 0.00732421875,
+      "fail_if": "chance_abs_error > 0.12, i.e. the scoring path leaks the answer and the negative control is broken.",
+      "passed": true
+    },
+    {
+      "id": "G-TOOL-3",
+      "statement": "Determinism: the same seed yields the same score across two processes.",
+      "metric": "determinism_max_delta",
+      "op": "<=",
+      "threshold": 0.0,
+      "value": 0.0,
+      "fail_if": "determinism_max_delta > 0.0, i.e. the run is not reproducible and no receipt can be trusted.",
+      "passed": true
+    },
+    {
+      "id": "G-SPEC-1",
+      "statement": "An unpinned AAII adapter yields no score.",
+      "metric": "unpinned_adapters_scored",
+      "op": "==",
+      "threshold": 0.0,
+      "value": 0.0,
+      "fail_if": "unpinned_adapters_scored != 0, i.e. a fabricated benchmark number can be produced. This is the gravest failure mode.",
+      "passed": true
+    }
+  ],
+  "gate_errors": [],
+  "controls": {
+    "chance": "random label, must land near 1/K",
+    "oracle": "perfect label, must land at 1.0 (scoring wiring check)",
+    "crn": "all arms share the split and instances per seed"
+  },
+  "provenance": {
+    "task_id": "local/egress_managed",
+    "K": 64,
+    "n_train_per_class": 8,
+    "n_test_per_class": 4,
+    "corpus_sha256_by_seed": {
+      "0": "636d6fe11b80d86a7f20930c78550db86589b4a2ff97f8afcde7a1c81d64f16f",
+      "1": "9fbc406c6746129b98c1e50a1872fe8f26d50eef90390b0f164051fd0fa403b0",
+      "2": "7c9a8d43a851ddb8279690195636d8ed88b5998b7b88d9811ebb348026cc1419",
+      "3": "388d51985d3a430f42bb60a4c98415d494a17302532c90b960f0c7b923734342",
+      "4": "1fb8f2e321cdf74ccdc046e2d38cef362aa9c36467ff9ca924ede280ac24013a",
+      "5": "838ba990bd2bbdcc7cec763f668738ba3bb989e433750b967c9e16060887f27f",
+      "6": "cded76f8bd6423383020b326f760f7777de49f167597114d174a84b12c4bee7d",
+      "7": "78f931d7c2410d79a8d8d09805b7bd4b48794cc4696649350e52005453f0cc33"
+    },
+    "encoder_arms": [
+      "hash (shipped encode_egress)",
+      "managed (encode_managed_checked, oov=hash)"
+    ],
+    "head": "TypedEgressHead-compatible nearest centroid via wave_features",
+    "arm_meta": {
+      "managed": [
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        },
+        {
+          "mean_oov_rate_train": 0.0
+        }
+      ]
+    },
+    "gates_file": "bench_gates_v1.json",
+    "gates_file_sha256": "51cd993a9525db9f07df9a0bf03531eaaa8c35052b9929c108063d3bb429c94a",
+    "spec_registry_headline": "METHODOLOGY PINNED. DATASETS AND HARNESSES ARE NOT IN THE ATTACHED DOCUMENTS. No AAII v4.3.2 score can be reported until each dataset is fetched and pinned by sha256."
+  },
+  "limitations": [
+    "LOCAL synthetic task. This is NOT an AAII v4.3.2 result.",
+    "Templates are generated; no human-authored items.",
+    "Dataset pinned by generator seed + canonical sha256, not by an external download.",
+    "managed arm uses oov='hash' so unseen test features fall back to shipped addressing; mean oov_rate is reported in arm_meta.",
+    "CEILING EFFECT at this K: arm spread is only 0.0039 (hash 0.9961, managed 1.0000, oracle 1.0000). The task cannot resolve solver differences at this K. Raise K until the shipped hash arm degrades."
+  ],
+  "verdict": "PASSED",
+  "note": "spec_status is IMPLEMENTED; the verdict is meaningful.",
+  "gates_passed": 4,
+  "gates_total": 4
+}
