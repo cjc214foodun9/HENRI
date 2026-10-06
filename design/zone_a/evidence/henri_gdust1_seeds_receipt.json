@@ -1,0 +1,132 @@
+{
+ "schema": "henri.gdust1.seeds.receipt.v1",
+ "pin": 20261005,
+ "question": "is the G-DUST-1 recovery at K in {4096,16384} reproducible across pinned seeds?",
+ "estimator_source": "henri_core.dust_zo.node_perturbation_descent (IMPORTED UNCHANGED)",
+ "base_receipt": "henri_gdust1_kk_receipt.json sha256 73fcac354af175b433ebe3ebbadd61cb9cb3ce84efd8a2a361750a4ca39095e9",
+ "bound": 0.85,
+ "snapshot": {
+  "n": 64,
+  "t": 8,
+  "d_in": 32,
+  "d_out": 256,
+  "classes": 16,
+  "sigma": 0.05,
+  "gamma": 0.98
+ },
+ "seeds": [
+  20261005,
+  20261006,
+  20261007,
+  20261008,
+  20261009,
+  20261010,
+  20261011,
+  20261012
+ ],
+ "rows": [
+  {
+   "K": 4096,
+   "seed": 20261005,
+   "cos": 0.9503620731405831,
+   "sec": 97.7
+  },
+  {
+   "K": 4096,
+   "seed": 20261006,
+   "cos": 0.9476916481851511,
+   "sec": 98.9
+  },
+  {
+   "K": 4096,
+   "seed": 20261007,
+   "cos": 0.9474714073296967,
+   "sec": 98.2
+  },
+  {
+   "K": 4096,
+   "seed": 20261008,
+   "cos": 0.9512141802812301,
+   "sec": 99.1
+  },
+  {
+   "K": 4096,
+   "seed": 20261009,
+   "cos": 0.9465303815958246,
+   "sec": 99.8
+  },
+  {
+   "K": 4096,
+   "seed": 20261010,
+   "cos": 0.949523427732273,
+   "sec": 101.1
+  },
+  {
+   "K": 4096,
+   "seed": 20261011,
+   "cos": 0.9528868694606224,
+   "sec": 99.9
+  },
+  {
+   "K": 4096,
+   "seed": 20261012,
+   "cos": 0.9465285949091493,
+   "sec": 100.8
+  },
+  {
+   "K": 16384,
+   "seed": 20261005,
+   "cos": 0.9875620357206082,
+   "sec": 397.7
+  },
+  {
+   "K": 16384,
+   "seed": 20261006,
+   "cos": 0.9863244749754105,
+   "sec": 400.4
+  },
+  {
+   "K": 16384,
+   "seed": 20261007,
+   "cos": 0.9859930966949321,
+   "sec": 396.9
+  },
+  {
+   "K": 16384,
+   "seed": 20261008,
+   "cos": 0.9870753750582008,
+   "sec": 396.3
+  }
+ ],
+ "summary": {
+  "4096": {
+   "n": 8,
+   "min": 0.9465285949091493,
+   "max": 0.9528868694606224,
+   "mean": 0.9490260728293163,
+   "median": 0.948607537958712,
+   "frac_ge_bound": 1.0,
+   "range_crosses_bound": false,
+   "all_pass": true
+  },
+  "16384": {
+   "n": 4,
+   "min": 0.9859930966949321,
+   "max": 0.9875620357206082,
+   "mean": 0.9867387456122879,
+   "median": 0.9866999250168056,
+   "frac_ge_bound": 1.0,
+   "range_crosses_bound": false,
+   "all_pass": true
+  }
+ },
+ "verdict": "PASS_REPLICATED",
+ "disclosure": {
+  "device": "cpu",
+  "torch": "2.12.0+cu130",
+  "threads": 192,
+  "host": "367cb62159aa",
+  "scope": "single linear layer + fixed readout"
+ },
+ "seconds": 2401.0
+}

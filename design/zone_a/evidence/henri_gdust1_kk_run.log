@@ -1,0 +1,112 @@
+reproducing frozen K set ...
+running approved K=4096 ...
+running approved K=16384 ...
+{
+ "schema": "henri.gdust1.kk.receipt.v1",
+ "pin": 20261005,
+ "question": "does cos(ZO pseudo-grad, autograd) recover to the registered 0.85 at K in {4096, 16384}?",
+ "estimator_source": "henri_core.dust_zo.node_perturbation_descent (IMPORTED UNCHANGED)",
+ "driver": "henri_core.exp_dust_kk (new; frozen file not modified)",
+ "frozen_inputs": {
+  "n": 64,
+  "t": 8,
+  "d_in": 32,
+  "d_out": 256,
+  "classes": 16,
+  "sigma": 0.05,
+  "gamma": 0.98,
+  "seed": 20261005
+ },
+ "rule": "PASS iff cos_real(Kmax_approved) >= 0.85 AND cos_shuffled <= 0.10 AND cos_pos_ctl >= 0.99",
+ "bound_unchanged": 0.85,
+ "rows": [
+  {
+   "arm": "pos_ctl",
+   "K": 64,
+   "cos": 0.9999999999999982,
+   "sec": 0.0
+  },
+  {
+   "arm": "shuffled",
+   "K": 256,
+   "cos": -0.009252061639265131,
+   "sec": 0.0
+  },
+  {
+   "arm": "real",
+   "K": 16,
+   "cos": 0.20452914191982666,
+   "sec": 1.87,
+   "block": "reproduce"
+  },
+  {
+   "arm": "real",
+   "K": 64,
+   "cos": 0.3632954343008476,
+   "sec": 2.5,
+   "block": "reproduce"
+  },
+  {
+   "arm": "real",
+   "K": 256,
+   "cos": 0.6025610920509832,
+   "sec": 6.9,
+   "block": "reproduce"
+  },
+  {
+   "arm": "real",
+   "K": 1024,
+   "cos": 0.8379742054383894,
+   "sec": 25.2,
+   "block": "reproduce"
+  },
+  {
+   "arm": "real",
+   "K": 4096,
+   "cos": 0.9503620731405831,
+   "sec": 98.5,
+   "block": "approved"
+  },
+  {
+   "arm": "real",
+   "K": 16384,
+   "cos": 0.9875620357206082,
+   "sec": 386.4,
+   "block": "approved"
+  }
+ ],
+ "gate": {
+  "id": "G-DUST-1-K4096/16384",
+  "largest_K_approved": 16384,
+  "cos_real": 0.9875620357206082,
+  "cos_shuffled": -0.009252061639265131,
+  "cos_pos_ctl": 0.9999999999999982,
+  "monotone_in_K_full_path": true,
+  "verdict": "PASS"
+ },
+ "reproduction": {
+  "reference_ks": [
+   16,
+   64,
+   256,
+   1024
+  ],
+  "cos": {
+   "16": 0.20452914191982666,
+   "64": 0.3632954343008476,
+   "256": 0.6025610920509832,
+   "1024": 0.8379742054383894
+  }
+ },
+ "disclosure": {
+  "device": "cpu",
+  "why_cpu": "henri_core has no CUDA plumbing; this is a CPU-only estimator path",
+  "host": "367cb62159aa / x86_64",
+  "torch": "2.12.0+cu130",
+  "threads": 192,
+  "centring_shrink": "(1 - 1/K): 0.99976 at K=4096, 0.99994 at K=16384",
+  "scope": "single linear layer + fixed readout; not a full-model replacement",
+  "no_backprop_claim": true
+ },
+ "seconds": 532.3
+}
