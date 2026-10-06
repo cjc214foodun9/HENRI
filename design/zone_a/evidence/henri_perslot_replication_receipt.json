@@ -1,0 +1,141 @@
+{
+ "schema": "henri.perslot_replication.v1",
+ "pin": 20261005,
+ "purpose": "resolve collapse-vs-MI contradiction; add shuffled-target MI control",
+ "ksg_selftest": {
+  "mi_pos_1d": 0.22757805457439595,
+  "mi_neg_1d": 0.027900661147295835,
+  "analytic_1d": 0.22314355131420974,
+  "abs_err": 0.004434503260186212,
+  "monotone": true,
+  "mi_by_rho": {
+   "0.0": -0.012649226190696972,
+   "0.3": 0.05731749413873999,
+   "0.6": 0.23600636521146967,
+   "0.9": 0.8334258001688459
+  },
+  "estimator_sane": true,
+  "n": 512,
+  "k": 5,
+  "rho": 0.6,
+  "note": "1-D primary; multi-D analytic is d-fold additive"
+ },
+ "aggregate": {
+  "old_rule": {
+   "n_mem": 256,
+   "d_k": 4,
+   "collapse": {
+    "mean": 0.9819574952125549,
+    "min": 0.9681486487388611,
+    "max": 0.9926336407661438,
+    "n": 3
+   },
+   "mi_real": {
+    "mean": 0.6273861602079617,
+    "min": 0.5671286544735672,
+    "max": 0.7357215146609253,
+    "n": 3
+   },
+   "mi_shuffled": {
+    "mean": 0.03012318639766794,
+    "min": -0.00564454990893104,
+    "max": 0.0914758635504791,
+    "n": 3
+   }
+  },
+  "spec_b": {
+   "n_mem": 32,
+   "d_k": 32,
+   "collapse": {
+    "mean": 0.8082159956296285,
+    "min": 0.5501905679702759,
+    "max": 0.9626690149307251,
+    "n": 3
+   },
+   "mi_real": {
+    "mean": 0.6096155299308226,
+    "min": 0.5619379851646835,
+    "max": 0.6584636046262062,
+    "n": 3
+   },
+   "mi_shuffled": {
+    "mean": 0.04105900681164165,
+    "min": 0.034985418855463024,
+    "max": 0.04850445557573657,
+    "n": 3
+   }
+  }
+ },
+ "mi_shuffle_control_passes": true,
+ "reading": "if mi_shuffled ~= mi_real the MI is an artifact; if mi_shuffled ~= 0 the MI is measured",
+ "rows": [
+  {
+   "collapse": 0.9850901961326599,
+   "mi_real": 0.7357215146609253,
+   "mi_shuffled": -0.00564454990893104,
+   "collapse_shuffled_proxy": 0.9850901961326599,
+   "scale": "full_1024",
+   "arm": "old_rule",
+   "seed": 20261004,
+   "n_mem": 256,
+   "d_k": 4
+  },
+  {
+   "collapse": 0.9117884039878845,
+   "mi_real": 0.6584636046262062,
+   "mi_shuffled": 0.04850445557573657,
+   "collapse_shuffled_proxy": 0.9117884039878845,
+   "scale": "full_1024",
+   "arm": "spec_b",
+   "seed": 20261004,
+   "n_mem": 32,
+   "d_k": 32
+  },
+  {
+   "collapse": 0.9926336407661438,
+   "mi_real": 0.5793083114893927,
+   "mi_shuffled": 0.0914758635504791,
+   "collapse_shuffled_proxy": 0.9926336407661438,
+   "scale": "full_1024",
+   "arm": "old_rule",
+   "seed": 20261005,
+   "n_mem": 256,
+   "d_k": 4
+  },
+  {
+   "collapse": 0.9626690149307251,
+   "mi_real": 0.608445000001578,
+   "mi_shuffled": 0.03968714600372536,
+   "collapse_shuffled_proxy": 0.9626690149307251,
+   "scale": "full_1024",
+   "arm": "spec_b",
+   "seed": 20261005,
+   "n_mem": 32,
+   "d_k": 32
+  },
+  {
+   "collapse": 0.9681486487388611,
+   "mi_real": 0.5671286544735672,
+   "mi_shuffled": 0.004538245551455766,
+   "collapse_shuffled_proxy": 0.9681486487388611,
+   "scale": "full_1024",
+   "arm": "old_rule",
+   "seed": 20261006,
+   "n_mem": 256,
+   "d_k": 4
+  },
+  {
+   "collapse": 0.5501905679702759,
+   "mi_real": 0.5619379851646835,
+   "mi_shuffled": 0.034985418855463024,
+   "collapse_shuffled_proxy": 0.5501905679702759,
+   "scale": "full_1024",
+   "arm": "spec_b",
+   "seed": 20261006,
+   "n_mem": 32,
+   "d_k": 32
+  }
+ ],
+ "n_texts": 256,
+ "n_comp": 32
+}

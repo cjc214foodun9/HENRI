@@ -1,0 +1,103 @@
+{
+ "schema": "henri.slot_sweep.v1",
+ "pin": 20261005,
+ "question": "at fixed aggregate rank, is the operative variable slot COUNT or slot WIDTH?",
+ "invariant": "n_mem * d_k == d_model for every arm (resolve_n_mem)",
+ "rank_constant": true,
+ "rows": [
+  {
+   "collapse": 0.9850901961326599,
+   "mi_real": 0.7357215146609253,
+   "mi_shuffled": -0.00564454990893104,
+   "collapse_shuffled_proxy": 0.9850901961326599,
+   "dk_target": 4,
+   "n_mem": 256,
+   "d_k": 4,
+   "d_model": 1024,
+   "aggregate_rank": 1024
+  },
+  {
+   "collapse": 0.9351022243499756,
+   "mi_real": 0.7329200106470815,
+   "mi_shuffled": 0.03226594116703119,
+   "collapse_shuffled_proxy": 0.9351022243499756,
+   "dk_target": 8,
+   "n_mem": 128,
+   "d_k": 8,
+   "d_model": 1024,
+   "aggregate_rank": 1024
+  },
+  {
+   "collapse": 0.9259989857673645,
+   "mi_real": 0.7301827671932575,
+   "mi_shuffled": 0.04994219827501922,
+   "collapse_shuffled_proxy": 0.9259989857673645,
+   "dk_target": 16,
+   "n_mem": 64,
+   "d_k": 16,
+   "d_model": 1024,
+   "aggregate_rank": 1024
+  },
+  {
+   "collapse": 0.9117884039878845,
+   "mi_real": 0.6584636046262062,
+   "mi_shuffled": 0.04850445557573657,
+   "collapse_shuffled_proxy": 0.9117884039878845,
+   "dk_target": 32,
+   "n_mem": 32,
+   "d_k": 32,
+   "d_model": 1024,
+   "aggregate_rank": 1024
+  },
+  {
+   "collapse": 0.9347212314605713,
+   "mi_real": 0.6978346530219657,
+   "mi_shuffled": 0.018721501234290727,
+   "collapse_shuffled_proxy": 0.9347212314605713,
+   "dk_target": 64,
+   "n_mem": 16,
+   "d_k": 64,
+   "d_model": 1024,
+   "aggregate_rank": 1024
+  }
+ ],
+ "trend": {
+  "d_k": [
+   4,
+   8,
+   16,
+   32,
+   64
+  ],
+  "n_mem": [
+   256,
+   128,
+   64,
+   32,
+   16
+  ],
+  "collapse": [
+   0.9850901961326599,
+   0.9351022243499756,
+   0.9259989857673645,
+   0.9117884039878845,
+   0.9347212314605713
+  ],
+  "mi_real": [
+   0.7357215146609253,
+   0.7329200106470815,
+   0.7301827671932575,
+   0.6584636046262062,
+   0.6978346530219657
+  ],
+  "mi_shuffled": [
+   -0.00564454990893104,
+   0.03226594116703119,
+   0.04994219827501922,
+   0.04850445557573657,
+   0.018721501234290727
+  ]
+ },
+ "n_texts": 256,
+ "seed": 20261004
+}

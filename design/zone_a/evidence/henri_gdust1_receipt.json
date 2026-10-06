@@ -1,0 +1,74 @@
+{
+ "schema": "henri.gdust1.receipt.v1",
+ "pin": 20261005,
+ "claim": "E[g_hat] == -grad_W L  =>  cos(G_dust, G_autograd) -> 1",
+ "design": {
+  "n": 64,
+  "t": 8,
+  "d_in": 32,
+  "d_out": 256,
+  "classes": 16,
+  "sigma": 0.05,
+  "gamma": 0.98,
+  "seed": 20261005
+ },
+ "rule": "PASS iff cos_real(Kmax) >= 0.85 AND cos_shuffled <= 0.10 AND cos_pos_ctl >= 0.99",
+ "rows": [
+  {
+   "arm": "pos_ctl",
+   "d_out": 256,
+   "K": 0,
+   "cos": 0.9999999999999978,
+   "sec": 0.0
+  },
+  {
+   "arm": "shuffled",
+   "d_out": 256,
+   "K": 256,
+   "cos": -0.0092519958861672,
+   "sec": 0.0
+  },
+  {
+   "arm": "real",
+   "d_out": 256,
+   "K": 16,
+   "cos": 0.2045291662373455,
+   "sec": 0.009
+  },
+  {
+   "arm": "real",
+   "d_out": 256,
+   "K": 64,
+   "cos": 0.36329553810976795,
+   "sec": 0.032
+  },
+  {
+   "arm": "real",
+   "d_out": 256,
+   "K": 256,
+   "cos": 0.6025610932241589,
+   "sec": 0.134
+  },
+  {
+   "arm": "real",
+   "d_out": 256,
+   "K": 1024,
+   "cos": 0.837974200571463,
+   "sec": 0.504
+  }
+ ],
+ "gate": {
+  "id": "G-DUST-1",
+  "largest_K": 1024,
+  "cos_real": 0.837974200571463,
+  "cos_shuffled": -0.0092519958861672,
+  "cos_pos_ctl": 0.9999999999999978,
+  "verdict": "FAIL"
+ },
+ "disclosure": {
+  "device": "cpu",
+  "no_backprop_claim": true,
+  "scope": "single linear layer + fixed readout; not a full-model replacement"
+ },
+ "seconds": 0.833
+}

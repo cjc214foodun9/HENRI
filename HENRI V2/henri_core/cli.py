@@ -138,6 +138,37 @@ def cmd_ask(args):
     return 0 if res["sagnac"]["allow"] else 2
 
 
+def cmd_dust(args):
+    """Zeroth-order (node-perturbation) descent diagnostic. DEFAULT OFF.
+
+    Additive and opt-in. The import is deliberately INSIDE this function, so the
+    module's default import set is unchanged when the flag is absent: the default
+    training path stays byte-identical. With the flag absent this command reports
+    the disabled state and exits 0. Pass --enable (or set HENRI_DUST_ZO=1) to run
+    the G-DUST-1 alignment measurement against autograd.
+    """
+    from henri_core.dust_zo import dust_zo_enabled
+    if not dust_zo_enabled(cli_flag=args.enable):
+        _emit({"schema": "henri.dust.zo.v1", "enabled": False, "default": "OFF",
+               "module": "henri_core/dust_zo.py",
+               "enable_with": "--enable, or HENRI_DUST_ZO=1",
+               "note": "no default-path behavior changes while disabled"})
+        return 0
+    import subprocess
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    script = os.path.join(here, "henri_core", "exp_dust_g1.py")
+    cmd = [sys.executable, script]
+    if args.out:
+        cmd += ["--out", args.out]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=900,
+                       cwd=here)
+    _emit({"schema": "henri.dust.zo.v1", "enabled": True,
+           "returncode": r.returncode,
+           "measurement": "G-DUST-1 cos(ZO pseudo-grad, autograd)",
+           "stdout_tail": r.stdout[-600:], "stderr_tail": r.stderr[-300:]})
+    return r.returncode
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="henri", description="HENRI tri-model CLI")
     p.add_argument("--vocab", type=int, default=512)
@@ -163,9 +194,15 @@ def main(argv=None):
     a.add_argument("--query", required=True)
     a.add_argument("--no-swarm", action="store_true")
 
+    d = sub.add_parser("dust", help="zeroth-order ZO descent diagnostic (default OFF)")
+    d.add_argument("--enable", action="store_true",
+                   help="run the ZO measurement; default OFF")
+    d.add_argument("--out", default=None,
+                   help="write the G-DUST-1 receipt JSON here")
+
     args = p.parse_args(argv)
     return {"info": cmd_info, "gates": cmd_gates, "smoke": cmd_smoke,
-            "train": cmd_train, "ask": cmd_ask}[args.cmd](args)
+            "train": cmd_train, "ask": cmd_ask, "dust": cmd_dust}[args.cmd](args)
 
 
 if __name__ == "__main__":
