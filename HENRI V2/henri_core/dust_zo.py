@@ -91,6 +91,8 @@ def node_perturbation_descent(
     n_batch, t_len, dim = y.shape
     if cfg.K < 1 or cfg.sigma <= 0:
         raise ValueError("require K >= 1 and sigma > 0")
+    if cfg.chunk < 1:
+        raise ValueError("require chunk >= 1")
 
     gen = torch.Generator(device="cpu").manual_seed(int(cfg.seed))
     with torch.no_grad():

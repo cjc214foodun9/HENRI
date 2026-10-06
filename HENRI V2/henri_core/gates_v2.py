@@ -10,8 +10,13 @@ C1/C2/C3 fixes (from the independent review, findings.json):
       estimator silently read as a ceiling PASS. No clamp here. No guess.
   C2  the verdict branches on status/estimator_sane, never on the raw value.
       A BLOCKED arm can no longer be counted as a pass.
-  C3  the pass denominator is read from the run itself (n_seeds_expected), not
-      a hardcoded literal, so an overridden CLI cannot move the pass rule.
+  C3  a per-system gate CANNOT know the multi-seed denominator, so the
+      aggregation rule belongs to the DRIVER. This module does not implement
+      one; the caller must apply the pass rule over the receipts and must not
+      hardcode a literal count. Disclosed, not silently claimed.
+  NOTE: the estimator is NOT byte-identical to v1. The v1 exception path returns
+      0.0; this one returns nan -> BLOCKED. Same happy path, different failure
+      path, and v2 drops v1's provenance fields. Compare verdicts, not raw R2.
   F4  the negative control needs a MARGIN, not a 1-seed cutoff.
   F5  the gate's own shuffled-pairing control enters the verdict.
   F11 an explicit outcome vocabulary: PASS / FAIL / VACUOUS / BLOCKED. A control
@@ -135,11 +140,17 @@ def ksg_mi_selftest(n: int = 512, rho: float = 0.6, seed: int = 20261005) -> dic
 def gate_u4_retention_v2(system, tokenizer, n_texts: int = 1024, ridge: float = 1.0,
                          n_comp: int = 32, bound: float = 0.95,
                          margin: float = 0.10) -> dict:
-    """G-U4 v2: same detection, fixed decision logic.
+    """G-U4 v2: same happy-path estimator, fixed DECISION logic.
 
-    The estimator is IDENTICAL to gate_u4_retention (so numbers stay comparable).
-    What changes is how the number becomes a verdict: no clamp, non-finite ->
-    BLOCKED, verdict keyed on sanity, and a margin requirement.
+    Estimator parity is on the happy path only. The v1 exception path returns
+    0.0; this one returns nan -> BLOCKED (C1). Receipt fields also differ, so
+    compare verdicts, not raw R2, across versions.
+    What changes here is how the number becomes a verdict: no clamp, non-finite
+    -> BLOCKED, verdict keyed on sanity, and a margin requirement.
+
+    C3 limit (disclosed): a single-system gate cannot know the multi-seed
+    denominator. That aggregation belongs to the driver; this gate does not do
+    it and does not pretend to.
     """
     texts = [f"retrieval transfer result {i} on the ladder" for i in range(n_texts)]
     with torch.no_grad():
@@ -197,10 +208,12 @@ def gate_u4_retention_v2(system, tokenizer, n_texts: int = 1024, ridge: float = 
             "op": ">=", "bound": bound, "margin": margin, "control_value": ctl_val,
             "positive_control": pos_val, "estimator_sane": bool(sane),
             "n_texts": n_texts, "status": status, "why": why,
-            "supersedes": "G-U4 (gates.py); estimator unchanged, decision logic fixed",
-            "fixes": ["C1 no clamp/non-finite->BLOCKED", "C2 verdict keyed on sanity",
-                      "C3 denominator from run", "F4 margin on control",
-                      "F11 explicit outcome vocabulary"]}
+            "supersedes": "G-U4 (gates.py); decision logic fixed; happy-path r2() same",
+            "fixes": ["C1 no clamp; non-finite->BLOCKED (Happy-path r2() reused)",
+                      "C2 verdict keyed on estimator_sane, never the raw value",
+                      "C3 NOT implemented here: multi-seed aggregation is a driver duty",
+                      "F4 margin on the control", "F5 shuffled control in the verdict",
+                      "F11 explicit PASS/FAIL/VACUOUS/BLOCKED vocabulary"]}
 
 
 # ------------------------------------------- gate_u5_perslot_mi (discriminating)
@@ -260,16 +273,30 @@ def gate_u5_perslot_mi(system, tokenizer, n_texts: int = 512, n_comp: int = 32,
         proj = None
     mi = ksg_mi(proj, prof, k=k) if proj is not None else float("nan")
 
+    # R-F2 (review fix): the MI was computed and returned but NEVER thresholded,
+    # so the "retention measure" could not affect any decision. Add the shuffle
+    # control the first version lacked, and BLOCK on a saturated MI.
+    g = torch.Generator().manual_seed(seed + 91)
+    prof_shuf = prof[torch.randperm(n_texts, generator=g)]
+    mi_shuf = ksg_mi(proj, prof_shuf, k=k) if proj is not None else float("nan")
+
     if not st["estimator_sane"]:
         status, why = BLOCKED, "KSG estimator self-test failed; no MI verdict"
-    elif not _finite(mi) or not _finite(collapse):
-        status, why = BLOCKED, f"non-finite output mi={mi!r} collapse={collapse!r}"
+    elif not (_finite(mi) and _finite(mi_shuf) and _finite(collapse)):
+        status, why = BLOCKED, f"non-finite output mi={mi!r} mi_shuf={mi_shuf!r}"
+    elif mi_shuf > 0.15:
+        status, why = BLOCKED, (f"MI shuffle control failed (mi_shuf={mi_shuf:.4f} "
+                                "> 0.15): the MI statistic is saturated/leaky")
     else:
-        status, why = "MEASURED", "single arm; compare with the paired arm receipt"
+        status, why = "MEASURED", ("single arm; MI shuffle control passes. The "
+                                   "pre-registered separation rule is on collapse; "
+                                   "MI is reported and blocked-if-invalid, not gated")
     return {"id": "G-U5", "metric": "perslot_collapse_and_ksg_mi",
             "collapse_mean_pairwise_abs_cos": collapse, "ksg_mi": mi,
+            "ksg_mi_shuffled": mi_shuf,
             "n_texts": n_texts, "n_comp": n_comp, "k": k,
             "estimator_selftest": st, "status": status, "why": why,
             "discrimination_rule": "arms DISCRIMINATED iff |dcollapse| >= 0.20 and both self-tests pass",
+            "mi_role": "reported + shuffle-gated; NOT part of the separation rule",
             "note": "aggregate rank is identical across arms by construction; this "
                     "metric targets the per-slot/per-width structure instead"}
