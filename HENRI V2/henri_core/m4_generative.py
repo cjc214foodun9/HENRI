@@ -463,7 +463,8 @@ def unigram_floor(tok, tr_tgt, ho_tgt) -> float:
 def build_system(corpus: Corpus, vocab: int = 512,
                  positional: bool = False, ingress_seed: int | None = None,
                  pin_seed: int | None = None, pos_multifreq: bool = False,
-                 pos_block: int = 16, pos_rope_theta: float = 5.0e5):
+                 pos_block: int = 16, pos_rope_theta: float = 5.0e5,
+                 dk_target: int = 0):
     """Build the small system, optionally with a FULL construction pin.
 
     D130 (self-caught by the pin run): pinning the ingress alone was NOT
@@ -486,7 +487,8 @@ def build_system(corpus: Corpus, vocab: int = 512,
         system = TriModelSystem(vocab=tok.vocab_size, small=True,
                                 positional=positional, ingress_seed=ingress_seed,
                                 pos_multifreq=pos_multifreq, pos_block=pos_block,
-                                pos_rope_theta=pos_rope_theta)
+                                pos_rope_theta=pos_rope_theta,
+                                dk_target=dk_target)
     system.eval()
     return system, tok
 

@@ -139,6 +139,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     ap.add_argument("--steps", type=int, default=800)
+    ap.add_argument("--dk-target", type=int, default=0,
+                    help="SPEC_B pooling width; 0 = old auto rule")
     a = ap.parse_args()
     t0 = time.time()
 
@@ -148,7 +150,11 @@ def main() -> int:
     print(f"[corpus] train={len(tr)} heldout={len(ho)}", flush=True)
 
     corpus = build_corpus(max_len=3, holdout_len=3)
-    system, tok = build_system(corpus, ingress_seed=PIN, pin_seed=PIN)
+    system, tok = build_system(corpus, ingress_seed=PIN, pin_seed=PIN,
+                               dk_target=a.dk_target)
+    pk = system.decoder.pooling
+    print(f"[pooling] n_mem={pk.n_mem} d_k={pk.d_k} n_macro={pk.n_macro} "
+          f"dk_target={a.dk_target}", flush=True)
 
     Wtr, Ftr = feats(system, tok, [r[0] for r in tr])
     Who, Fho = feats(system, tok, [r[0] for r in ho])
@@ -243,7 +249,8 @@ def main() -> int:
         "verdict": verdict, "why": why,
         "res": res,
         "corpus": {"train": len(tr), "heldout": len(ho)},
-        "run": {"steps": a.steps, "pin": PIN},
+        "run": {"steps": a.steps, "pin": PIN, "dk_target": a.dk_target},
+        "pooling": {"n_mem": pk.n_mem, "d_k": pk.d_k},
         "seconds": round(time.time() - t0, 2),
         "defect": "D148: exp_gap2_operator.py mean-pooled the macro-token "
                   "sequence to one 128-d vector, so arm A could not fit even 48 "

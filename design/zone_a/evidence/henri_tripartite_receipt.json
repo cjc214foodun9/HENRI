@@ -1,0 +1,51 @@
+{
+  "schema": "henri.tripartite.resonator.v1",
+  "verdict": "VACUOUS",
+  "why": "guards {'positive_control_ok': True, 'flat_fits_train': False, 'control_below_real': True}",
+  "guards": {
+    "positive_control_ok": true,
+    "flat_fits_train": false,
+    "control_below_real": true
+  },
+  "floor": 0.10897435992956161,
+  "positive_control": 1.0,
+  "arms": {
+    "F_flat_seq": {
+      "train_em": 0.125,
+      "held_em": 0.10897435992956161
+    },
+    "T_tripartite": {
+      "train_em": 0.0,
+      "held_em": 0.0,
+      "program_acc": 0.2102564126253128,
+      "input_acc": 0.3878205120563507
+    },
+    "R_resonator": {
+      "train_em": 0.125,
+      "held_em": 0.08475783467292786,
+      "program_acc": 0.21552707254886627,
+      "input_acc": 0.31997862458229065
+    },
+    "D_shuffled": {
+      "train_em": 0.0,
+      "held_em": 0.0
+    }
+  },
+  "delta_best_minus_flat": -0.02421652525663376,
+  "pooling": {
+    "n_mem": 4,
+    "d_k": 32,
+    "n_macro": 16
+  },
+  "run": {
+    "steps": 800,
+    "dk_target": 32,
+    "pin": 20261004,
+    "hidden": 4096
+  },
+  "seconds": 83.45,
+  "defects": {
+    "D148": "the first gap#2 attempt mean-pooled the macro-token sequence; arm A could not fit 48 rows. No verdict taken.",
+    "D158": "this version PRESERVES the [B,M,d_model] sequence and aggregates with a LEARNED attention plus explicit position embeddings, so token order reaches the operator head."
+  }
+}

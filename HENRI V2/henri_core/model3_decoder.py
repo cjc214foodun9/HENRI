@@ -39,6 +39,7 @@ class DecoderConfig:
     vocab: int = 32768
     n_macro: int = 256
     n_mem: int = 0                   # D85/D86: Hopfield memory slots; 0 = auto
+    dk_target: int = 0               # SPEC_B: memory key width; 0 = old auto rule
     n_invariants: int = 256          # P_inv column count
     n_vq: int = 8                    # audio RVQ stages (doc p25)
     theta_rope: float = 500_000.0
@@ -66,8 +67,10 @@ class PinnedInvariantProjector(nn.Module):
         return sub.unit_norm(psi - recon)
 
 
-def resolve_n_mem(d_model: int, n_mem: int = 0) -> int:
-    """Memory slot count for the Hopfield cross-pooling. 0 means auto.
+def resolve_n_mem(d_model: int, n_mem: int = 0, dk_target: int = 0) -> int:
+    """Memory slot count for the Hopfield cross-pooling.
+
+    Priority: explicit n_mem > dk_target > the D85/D86 auto rule.
 
     D85: draft 1 held ONE memory slot. softmax over one key is identically 1,
     so every macro-token was the same value vector times a near-constant
@@ -75,8 +78,27 @@ def resolve_n_mem(d_model: int, n_mem: int = 0) -> int:
     D86 (self-caught): pinning the default to 256 broke small test configs,
     because d_k = d_model // n_mem = 128 // 256 = 0 gives zero-width tensors.
     Auto resolves to min(256, d_model // 4), so d_k stays >= 4 at every scale.
+
+    SPEC_B (approved). The auto rule fixes d_k = 4 at EVERY scale:
+        d_model=1024 -> n_mem=256 -> d_k=4
+        d_model=128  -> n_mem=32  -> d_k=4
+    Gap#2 located that as the collapse (pooled pair |cos| 0.9553, D2). A d_k
+    TARGET is the scale-invariant parameterization, because the same n_mem maps
+    to different d_k at different d_model:
+        d_model=1024, dk_target=32 -> n_mem=32, d_k=32, total 447,145,231 (in env)
+        d_model=128,  dk_target=32 -> n_mem=4,  d_k=32  (the 5/5 sweep arm)
+    This is the bridge that lets the small-scale result speak to full scale.
+    Default 0 keeps the old rule, so every committed receipt reproduces.
     """
-    n = int(n_mem) if n_mem and n_mem > 0 else min(256, max(1, d_model // 4))
+    if n_mem and n_mem > 0:
+        n = int(n_mem)
+    elif dk_target and dk_target > 0:
+        t = max(1, min(int(dk_target), d_model))
+        n = max(1, d_model // t)
+        while n > 1 and d_model % n != 0:
+            n -= 1
+    else:
+        n = min(256, max(1, d_model // 4))
     if d_model % n != 0:
         raise ValueError(f"n_mem={n} must divide d_model={d_model}")
     return n
@@ -91,10 +113,11 @@ class HopfieldCrossPooling(nn.Module):
     """
 
     def __init__(self, dim: int = sub.DEFAULT_DIM, d_model: int = 1024,
-                 n_macro: int = 256, beta: float = 26.10, n_mem: int = 0):
+                 n_macro: int = 256, beta: float = 26.10, n_mem: int = 0,
+                 dk_target: int = 0):
         super().__init__()
         self.n_macro = int(n_macro)
-        self.n_mem = resolve_n_mem(d_model, n_mem)
+        self.n_mem = resolve_n_mem(d_model, n_mem, dk_target)
         self.beta = float(beta)
         # D85 (the G-U4 root cause): d_k is d_model // n_mem, NOT a fixed /16.
         # Draft 1 held a SINGLE memory slot, so softmax over the memory was
@@ -215,7 +238,9 @@ class HenriDec450M(nn.Module):
         self.cfg = cfg or DecoderConfig()
         c = self.cfg
         self.projector = PinnedInvariantProjector(c.dim, c.n_invariants)
-        self.pooling = HopfieldCrossPooling(c.dim, c.d_model, c.n_macro, n_mem=c.n_mem)
+        self.pooling = HopfieldCrossPooling(c.dim, c.d_model, c.n_macro,
+                                            n_mem=c.n_mem,
+                                            dk_target=c.dk_target)
         # cross-projector from macro-tokens into the backbone width
         self.cross_proj = nn.Linear(c.n_macro, c.n_macro, bias=False)
         self.router = HRMRouter(c.n_macro)
@@ -288,7 +313,7 @@ def decoder_param_formula(cfg: DecoderConfig) -> dict:
         + 4 * d                     # n1, n2 LayerNorm (2d each)
         + 3 * d * cfg.d_ffn         # w_gate, w_up, w_down
     )
-    dk = d // resolve_n_mem(d, cfg.n_mem)
+    dk = d // resolve_n_mem(d, cfg.n_mem, cfg.dk_target)
     parts = {
         # D87 (self-caught): mod is a [M, d_k, d_model] tensor, so its cost is
         # M*d_k*d_model, NOT the M*d_model I first wrote. The mismatch showed up

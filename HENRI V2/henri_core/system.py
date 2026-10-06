@@ -53,13 +53,15 @@ class TriModelSystem(nn.Module):
                  positional: bool = False, pos_multifreq: bool = False,
                  pos_block: int = 16, pos_rope_theta: float = 5.0e5,
                  ingress_seed: int | None = None,
+                 dk_target: int = 0,
                  decoder_cfg: DecoderConfig | None = None, small: bool = False):
         super().__init__()
         if small:
             dim, n_workers, steps = 4096, 8, 4
             decoder_cfg = DecoderConfig(
                 dim=dim, d_model=128, n_layers=2, n_heads=4, n_kv_heads=1,
-                d_ffn=256, n_macro=16, n_invariants=32, vocab=vocab)
+                d_ffn=256, n_macro=16, n_invariants=32, vocab=vocab,
+                dk_target=dk_target)
         self.dim = int(dim)
         self.vocab = int(vocab)
         self.small = bool(small)

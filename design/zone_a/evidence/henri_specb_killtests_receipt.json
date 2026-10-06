@@ -1,0 +1,320 @@
+{
+  "schema": "henri.specb.killtests.v1",
+  "verdict": "ACCEPT",
+  "gates": {
+    "K-B1_baseline_reproduced": true,
+    "K-B2_small_scale_gain": true,
+    "K-B3_envelope": true,
+    "K-B4_no_readout_regression": true,
+    "K-B5_full_scale_transfer": true,
+    "K-B6_negative_control_fails": true
+  },
+  "kb5_transfer_rungs": {
+    "small_128": true,
+    "mid_512": true
+  },
+  "stats_g_u4": {
+    "small_128_old_rule": {
+      "n": 5,
+      "min": 0.8590172529220581,
+      "max": 0.9538888335227966,
+      "mean": 0.9083408117294312,
+      "std": 0.042534440755844116,
+      "pass_ge_0.95": 1
+    },
+    "small_128_spec_b": {
+      "n": 5,
+      "min": 0.9619172215461731,
+      "max": 0.9950804114341736,
+      "mean": 0.9794343113899231,
+      "std": 0.014711642637848854,
+      "pass_ge_0.95": 5
+    },
+    "mid_512_old_rule": {
+      "n": 2,
+      "min": 0.831407368183136,
+      "max": 0.9403460621833801,
+      "mean": 0.8858767151832581,
+      "std": 0.07703129202127457,
+      "pass_ge_0.95": 0
+    },
+    "mid_512_spec_b": {
+      "n": 2,
+      "min": 0.9761028289794922,
+      "max": 0.9865827560424805,
+      "mean": 0.9813427925109863,
+      "std": 0.007410427555441856,
+      "pass_ge_0.95": 2
+    }
+  },
+  "stats_m4_em": {
+    "small_128_old_rule": {
+      "n": 5,
+      "min": 0.018518518656492233,
+      "max": 0.0555555559694767,
+      "mean": 0.04259259253740311,
+      "std": 0.01404236163944006,
+      "pass_ge_0.95": 0
+    },
+    "small_128_spec_b": {
+      "n": 5,
+      "min": 0.0833333358168602,
+      "max": 0.18518517911434174,
+      "mean": 0.138888880610466,
+      "std": 0.04140866547822952,
+      "pass_ge_0.95": 0
+    },
+    "mid_512_old_rule": {
+      "n": 2,
+      "min": 0.02777777798473835,
+      "max": 0.046296294778585434,
+      "mean": 0.03703703731298447,
+      "std": 0.013094568625092506,
+      "pass_ge_0.95": 0
+    },
+    "mid_512_spec_b": {
+      "n": 2,
+      "min": 0.07407407462596893,
+      "max": 0.1111111119389534,
+      "mean": 0.09259259700775146,
+      "std": 0.02618914097547531,
+      "pass_ge_0.95": 0
+    }
+  },
+  "envelope": {
+    "old_total": 439798031,
+    "spec_b_total": 447145231,
+    "spec_b_parts": {
+      "pooling": 142614528,
+      "cross_proj": 65536,
+      "blocks": 270630912,
+      "final_norm": 2048,
+      "heads": 33832207
+    }
+  },
+  "rows": [
+    {
+      "scale": "small_128",
+      "dk_target": 0,
+      "seed": 20261004,
+      "d_model": 128,
+      "n_mem": 32,
+      "d_k": 4,
+      "g_u4_pre": 0.8169392943382263,
+      "g_u4_post": 0.8704966306686401,
+      "g_u4_pos_ctl": 0.9999919533729553,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.046296296296296294,
+      "loss_last": 0.009101124480366707,
+      "arm": "old_rule"
+    },
+    {
+      "scale": "small_128",
+      "dk_target": 32,
+      "seed": 20261004,
+      "d_model": 128,
+      "n_mem": 4,
+      "d_k": 32,
+      "g_u4_pre": 0.9749881029129028,
+      "g_u4_post": 0.9662840366363525,
+      "g_u4_pos_ctl": 0.9999919533729553,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.1111111111111111,
+      "loss_last": 0.008027441799640656,
+      "arm": "spec_b"
+    },
+    {
+      "scale": "small_128",
+      "dk_target": 0,
+      "seed": 20261005,
+      "d_model": 128,
+      "n_mem": 32,
+      "d_k": 4,
+      "g_u4_pre": 0.9664835929870605,
+      "g_u4_post": 0.9144707322120667,
+      "g_u4_pos_ctl": 0.9999931454658508,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.046296296296296294,
+      "loss_last": 0.015573663637042046,
+      "arm": "old_rule"
+    },
+    {
+      "scale": "small_128",
+      "dk_target": 32,
+      "seed": 20261005,
+      "d_model": 128,
+      "n_mem": 4,
+      "d_k": 32,
+      "g_u4_pre": 0.9933409690856934,
+      "g_u4_post": 0.9907088875770569,
+      "g_u4_pos_ctl": 0.9999931454658508,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.16666666666666666,
+      "loss_last": 0.008146820589900017,
+      "arm": "spec_b"
+    },
+    {
+      "scale": "small_128",
+      "dk_target": 0,
+      "seed": 20261006,
+      "d_model": 128,
+      "n_mem": 32,
+      "d_k": 4,
+      "g_u4_pre": 0.9735056161880493,
+      "g_u4_post": 0.9538888335227966,
+      "g_u4_pos_ctl": 0.9999579787254333,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.046296296296296294,
+      "loss_last": 0.02329873852431774,
+      "arm": "old_rule"
+    },
+    {
+      "scale": "small_128",
+      "dk_target": 32,
+      "seed": 20261006,
+      "d_model": 128,
+      "n_mem": 4,
+      "d_k": 32,
+      "g_u4_pre": 0.9908242225646973,
+      "g_u4_post": 0.9950804114341736,
+      "g_u4_pos_ctl": 0.9999579787254333,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.08333333333333333,
+      "loss_last": 0.008504686877131462,
+      "arm": "spec_b"
+    },
+    {
+      "scale": "small_128",
+      "dk_target": 0,
+      "seed": 20261007,
+      "d_model": 128,
+      "n_mem": 32,
+      "d_k": 4,
+      "g_u4_pre": 0.881657063961029,
+      "g_u4_post": 0.8590172529220581,
+      "g_u4_pos_ctl": 0.9999908804893494,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.05555555555555555,
+      "loss_last": 0.008430109359323978,
+      "arm": "old_rule"
+    },
+    {
+      "scale": "small_128",
+      "dk_target": 32,
+      "seed": 20261007,
+      "d_model": 128,
+      "n_mem": 4,
+      "d_k": 32,
+      "g_u4_pre": 0.969797670841217,
+      "g_u4_post": 0.9619172215461731,
+      "g_u4_pos_ctl": 0.9999908804893494,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.14814814814814814,
+      "loss_last": 0.008203648962080479,
+      "arm": "spec_b"
+    },
+    {
+      "scale": "small_128",
+      "dk_target": 0,
+      "seed": 20261008,
+      "d_model": 128,
+      "n_mem": 32,
+      "d_k": 4,
+      "g_u4_pre": 0.9420401453971863,
+      "g_u4_post": 0.9438305497169495,
+      "g_u4_pos_ctl": 0.9999788999557495,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.018518518518518517,
+      "loss_last": 0.012164637446403503,
+      "arm": "old_rule"
+    },
+    {
+      "scale": "small_128",
+      "dk_target": 32,
+      "seed": 20261008,
+      "d_model": 128,
+      "n_mem": 4,
+      "d_k": 32,
+      "g_u4_pre": 0.9803233742713928,
+      "g_u4_post": 0.9831806421279907,
+      "g_u4_pos_ctl": 0.9999788999557495,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.18518518518518517,
+      "loss_last": 0.0081317825242877,
+      "arm": "spec_b"
+    },
+    {
+      "scale": "mid_512",
+      "dk_target": 0,
+      "seed": 20261004,
+      "d_model": 512,
+      "n_mem": 128,
+      "d_k": 4,
+      "g_u4_pre": 0.789556622505188,
+      "g_u4_post": 0.831407368183136,
+      "g_u4_pos_ctl": 0.9999849200248718,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.046296296296296294,
+      "loss_last": 10.425374984741211,
+      "arm": "old_rule"
+    },
+    {
+      "scale": "mid_512",
+      "dk_target": 32,
+      "seed": 20261004,
+      "d_model": 512,
+      "n_mem": 16,
+      "d_k": 32,
+      "g_u4_pre": 0.9745258092880249,
+      "g_u4_post": 0.9761028289794922,
+      "g_u4_pos_ctl": 0.9999849200248718,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.07407407407407407,
+      "loss_last": 0.0036408784799277782,
+      "arm": "spec_b"
+    },
+    {
+      "scale": "mid_512",
+      "dk_target": 0,
+      "seed": 20261005,
+      "d_model": 512,
+      "n_mem": 128,
+      "d_k": 4,
+      "g_u4_pre": 0.9386797547340393,
+      "g_u4_post": 0.9403460621833801,
+      "g_u4_pos_ctl": 0.9999877214431763,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.027777777777777776,
+      "loss_last": 5.692586898803711,
+      "arm": "old_rule"
+    },
+    {
+      "scale": "mid_512",
+      "dk_target": 32,
+      "seed": 20261005,
+      "d_model": 512,
+      "n_mem": 16,
+      "d_k": 32,
+      "g_u4_pre": 0.9922428131103516,
+      "g_u4_post": 0.9865827560424805,
+      "g_u4_pos_ctl": 0.9999877214431763,
+      "g_u4_estimator_sane": true,
+      "m4_heldout_em": 0.1111111111111111,
+      "loss_last": 0.0013237284729257226,
+      "arm": "spec_b"
+    }
+  ],
+  "disclosure": {
+    "K-B5_reduced": "The full 440M CPU forward is not affordable in this session. K-B5 is a d_model LADDER {128, 512}, not the 1024 target. PASS here is evidence of transfer, NOT full-scale proof.",
+    "n_texts": {
+      "small_128": 512,
+      "mid_512": 384
+    }
+  },
+  "run": {
+    "steps": 150,
+    "pin_base": 20261004,
+    "bound": 0.95
+  },
+  "seconds": 290.5
+}
