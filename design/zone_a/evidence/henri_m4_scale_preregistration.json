@@ -1,0 +1,63 @@
+{
+  "schema": "henri.m4.scale.preregistration.v1",
+  "written_local_date": "2026-10-07",
+  "authorization": "GRANTED by user 2026-10-07 (ESCALATE accepted) for the corpus scale-up 48 -> ~10000 verified triples",
+  "frozen_before_run": true,
+  "head_at_freeze": "b2fa76b5dc8baeec1d368622c92d1c0a4a9515ee",
+  "ledger_at_freeze": 1966,
+  "correction_in_writing": {
+    "retracted": "the M4 production readout is 414M params",
+    "why_wrong": "414,115,087 is the decoder of a NON-small TriModelSystem. M4 build_system uses small=True.",
+    "measured": "TriModelSystem(small=True, vocab=353) = 2,292,359 total; decoder (the trained readout) = 1,417,039; ingress = 22,692; 76 params in the optimizer",
+    "lesson": "identify which object a parameter count belongs to before quoting it"
+  },
+  "ontology_guidelines_resolved": {
+    "universal_subspace_hypothesis": {
+      "status_prior": "FALSIFIED IN THIS PROGRAM (not re-run as if new)",
+      "evidence": "objects.jsonl: 'H2 reported NO_SHARED_SUBSPACE for the learned-solution subspace test; H3 is FALSIFIED as pre-registered, with H3b also falsified. Negatives are retained, not discarded.'",
+      "rule_applied": "a killed family stays killed unless a NEW mechanism is proposed; this run does not resurrect it"
+    },
+    "self_play_pretraining_with_zero_data": {
+      "source": "corpus paper 2609.30063, present in objects.jsonl",
+      "rule_applied": "the M4 executor is a ground-truth ORACLE, so generated triples are verified by execution, not annotation. Synthetic data volume is the lever under test."
+    },
+    "epiplexity": {
+      "source": "skills/data-science/henri-architecture/references/epiplexity-paper.md",
+      "quote": "Information CAN be increased by deterministic processes - computation creates epiplexity (synthetic data, self-play, emergent phenomena)",
+      "rule_applied": "generating 10k verified triples by computation is information creation, not information copying"
+    },
+    "cegis_self_play_sandbox": {
+      "source": "skills/software-development/gpu-world-model-dev/references/universal-transduction-and-cegis-self-play.md",
+      "claimed_numbers": {"sandbox_call_reduction": "50.0%", "speedup": "1.61x", "prefilter_latency": "<0.12 ms/candidate"},
+      "status": "UNVERIFIED CLAIM from a design document. Not reproduced here. Treat as HYPOTHESIS."
+    },
+    "fabricated_reference_paths_rejected": [
+      "henri-architecture/references/architecture-vs-self-play-matrix.md (ABSENT - direct [ -f ] test)",
+      "henri-architecture/references/wave-cegis-self-play-cycles.md (ABSENT - direct [ -f ] test)"
+    ]
+  },
+  "scale_design": {
+    "max_len": 5,
+    "n_inputs": 28,
+    "total_specs": 10164,
+    "split_B": "unseen novel programs, all lengths (~80/20 program split)",
+    "split_A": "compositional: train program length < 5, test length == 5"
+  },
+  "decision_rule": {
+    "bar": "max(unigram_floor, best shuffled control) + 0.05",
+    "PASS": "held > bar AND held > own shuffled control",
+    "positive_control": "oracle ridge trained on the held set must reach >= 0.90, else the harness is broken and nothing is interpreted",
+    "interpretation": {
+      "B_trained_arm_passes": "DATA-BOUND",
+      "B_only_retrieval_passes": "RETRIEVAL-BOUND",
+      "B_nothing_passes": "ARCHITECTURE-BOUND at 10k examples",
+      "A_fails_while_B_passes": "data fixes interpolation, NOT composition"
+    }
+  },
+  "caps": {
+    "device": "cpu",
+    "dim": 4096,
+    "diagnostic_only": true,
+    "not_a_model_performance_claim": true
+  }
+}

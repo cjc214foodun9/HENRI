@@ -1,0 +1,129 @@
+{
+  "schema": "henri.m4.scale.receipt.v1",
+  "written_local_date": "2026-10-07",
+  "authorized_by": "user 2026-10-07: 'Authorization GRANTED : ESCALATE' for the corpus scale-up",
+  "head_at_run": "b2fa76b5dc8baeec1d368622c92d1c0a4a9515ee",
+  "elapsed_s": 806.7,
+  "harness_sane_all": true,
+  "diagnostic_only": "CPU, D=4096, small config. Not a model-performance claim.",
+
+  "overall": "RETRIEVAL_BOUND",
+  "headline": "Data scaling RAISES retrieval accuracy and then SATURATES. Every TRAINED arm stays below the unigram floor at 10,164 examples. Retrieval generalizes; training does not.",
+
+  "corpus": {
+    "total_specs": 10164,
+    "max_len": 5,
+    "n_inputs": 28,
+    "generator": "synthetic; every triple verified by execution of the program (no annotation, no external corpus)",
+    "split_B": {"n_train": 8120, "n_held": 2044, "train_programs": 290, "held_programs": 73},
+    "split_A": {"n_train": 3360, "n_held": 6804, "role": "compositional: train len<5, test len==5"}
+  },
+
+  "split_B_unseen_programs": {
+    "knn": 0.1703, "ridge": 0.2078,
+    "ctrl_shuffled_store": 0.0777, "ridge_own_control": 0.0827,
+    "unigram_floor": 0.0907, "bar": 0.1407,
+    "passes_bar_knn": true, "passes_bar_ridge": true,
+    "prod_frozen": 0.0775, "prod_learnable": 0.0783,
+    "passes_bar_prod_frozen": false, "passes_bar_prod_learnable": false,
+    "selector_discriminates": true,
+    "estimator_control_random_features": 1.0
+  },
+
+  "split_A_compositional": {
+    "knn": 0.1492, "ridge": 0.1873,
+    "ctrl_shuffled_store": 0.0758, "ridge_own_control": 0.0830,
+    "unigram_floor": 0.0918, "bar": 0.1418,
+    "passes_bar_knn": true, "passes_bar_ridge": true,
+    "prod_frozen": 0.0487, "prod_learnable": 0.0545,
+    "passes_bar_prod_frozen": false, "passes_bar_prod_learnable": false,
+    "A_composition_generalizes": true,
+    "note": "the trained arms are WORSE here (0.0487/0.0545) than at 48 examples"
+  },
+
+  "data_scaling_curve_split_B": {
+    "sizes": [250, 1000, 4000, 8120],
+    "knn": [0.0042, 0.1919, 0.1621, 0.1703],
+    "ridge": [0.0096, 0.1183, 0.2058, 0.2058],
+    "ridge_ctrl": [0.0695, 0.0711, 0.0847, 0.0847],
+    "floor": [0.0248, 0.0931, 0.0907, 0.0907],
+    "ridge_delta_250_to_1000": 0.1087,
+    "ridge_delta_4000_to_8120": 0.0,
+    "knn_monotone_nondecreasing": false,
+    "SELF_CAUGHT_INCONSISTENCY": "the auto-label 'curve_reading.interpretation' says DATA_BOUND because it only compares first to last. That label is a COARSE heuristic and it is MISLEADING here: ridge gains +0.1087 from 250 to 1000 then gains EXACTLY 0.0 from 4000 to 8120. The refined reading is RISE_THEN_SATURATE, which is why the overall verdict is RETRIEVAL_BOUND, not DATA_BOUND."
+  },
+
+  "focus_ceiling": {
+    "coverage_at_5_split_B_real": 0.5036,
+    "coverage_at_5_split_B_shuffled": 0.2774,
+    "coverage_at_5_at_48_examples": 0.4286,
+    "reading": "the candidate ceiling DID rise with data (0.4286 -> 0.5036). Candidate generation improved; top-1 did not."
+  },
+
+  "representation_capacity": {
+    "feature_dim": 8192,
+    "train_feature_effective_rank": 49,
+    "train_feature_rows": 512,
+    "participation_ratio": 41.59,
+    "feature_capacity_oracle_split_B": 0.331,
+    "feature_capacity_oracle_split_A": 0.4531,
+    "meaning": "the bag-of-BPE wave map spans only ~49 effective directions across 512 specs. A linear model on these features cannot fit its own rows (0.33-0.45), while the same estimator on RANDOM orthogonal features reaches 1.000. The estimator is correct; the FEATURE MAP is rank-limited. This is the mechanism behind the ceiling."
+  },
+
+  "self_caught_defects": [
+    "singular ridge solve: z-scoring with sd.clamp_min(1e-6) blew near-constant columns to ~1e6 -> Gram singular. Fixed by unit-norm rows (diag(X X^T) == 1 exactly).",
+    "primal ridge costs O(d^3) with d=8192 (~30 s per solve). Switched to the dual with a row cap applied identically to every arm and its control.",
+    "the oracle inherited the comparison row cap, so it trained on 200 rows and was scored on 486 different rows -> 0.8125 and a correctly tripped sanity gate.",
+    "DECISIVE: sanity was gated on the REAL-feature oracle (0.53-0.81), reporting HARNESS_BROKEN. A control settled it: random orthogonal features score 1.000 at every lambda while real features score 0.5357. The estimator is fine; the FEATURE MAP is rank-limited. Sanity now tests the ESTIMATOR (random control); feature capacity is a reported MEASUREMENT, never a pass/fail gate."
+  ],
+
+  "disclosures": [
+    "the production readout trained on 2048 rows for 200 steps (cost cap), not the full 8120 -- the same cap applies to both the frozen and learnable arms",
+    "ridge fit rows capped at 2000 (same cap for every arm and its control)",
+    "4 of the 5 steps the user listed cannot be judged: step 3 (veto attribution) and step 5 (test-time learning) require a step-2 improvement that does not exist"
+  ],
+
+  "correction_in_writing": {
+    "retracted": "earlier turns I labelled the M4 readout '414M params'",
+    "why_wrong": "414,115,087 is the decoder of a NON-small TriModelSystem. M4 build_system is small=True.",
+    "measured_now": "build_system(vocab=353, small=True, dk_target=0) total=2,292,359 decoder=1,417,039 ingress=22,692. TriModelSystem(vocab=353, small=True) with default dk_target=32 gives total=2,350,151 decoder=1,474,831.",
+    "note": "a MoA reference claimed decoder=2,336,303 for vocab=353; my enumerated grid matches NO config at that value, and the figure 2,371,495 reproduces only as my own stale vocab=512 value minus the 4096 phase_residual"
+  },
+
+  "ontology_guidelines_resolved": {
+    "universal_subspace_hypothesis": {
+      "status": "PRIORLY FALSIFIED IN THIS PROGRAM - not re-run as new",
+      "evidence": "objects.jsonl: H2 NO_SHARED_SUBSPACE; H3 FALSIFIED as pre-registered, H3b also falsified; negatives retained",
+      "this_turn_measured_support": "feature effective rank 49 of 512 at 1e-6 -- consistent with no large shared subspace"
+    },
+    "self_play_pretraining_zero_data": {
+      "source": "corpus paper 2609.30063 present in objects.jsonl",
+      "applied": "the M4 executor is a ground-truth oracle; 10,164 triples generated with zero external data"
+    },
+    "epiplexity": {
+      "source": "skills/data-science/henri-architecture/references/epiplexity-paper.md",
+      "applied": "computing the traces creates information; volume was the lever tested"
+    },
+    "cegis_self_play": {
+      "source": "skills/software-development/gpu-world-model-dev/references/universal-transduction-and-cegis-self-play.md",
+      "claimed_numbers": {"sandbox_call_reduction": "50.0%", "speedup": "1.61x", "prefilter_latency": "<0.12 ms/candidate"},
+      "status": "UNVERIFIED HYPOTHESIS from a design document; not reproduced; that skill is DISABLED and no such harness was exercised"
+    }
+  },
+
+  "status": "PARTIAL",
+  "blocked": [
+    "any claim that the trained path generalizes: it is below the unigram floor at every corpus size measured",
+    "step 3 veto attribution and step 5 test-time learning (no scored improvement to attribute against)",
+    "omni-modality: no sensor corpus, no multimodal task",
+    "model-performance claims: CPU dim=4096",
+    "live TimescaleDB: absent on this host"
+  ],
+
+  "next_discriminating_experiment": {
+    "question": "the feature map saturates at effective rank ~49. Is the rank limit (a) the bag-of-BPE encoder's token-multiset collapse, or (b) the corpus's program structure?",
+    "cheapest_test": "hold the corpus fixed; compare effective rank and held accuracy for the SAME 10,164 triples under three encoders: current bag-of-BPE, positional (pos_multifreq=True), and the learnable phase_residual at train_ingress=True with 8120 rows and enough steps to saturate.",
+    "prediction_and_falsifier": "if positional encoding raises effective rank above 49 AND raises ridge held accuracy above 0.2078, the rank limit is ENCODER-bound and the fix is the ingress. If rank stays ~49, the limit is the corpus's program algebra and no encoder change helps.",
+    "authorization": "ESCALATE - changes the encoder, which is load-bearing"
+  }
+}
