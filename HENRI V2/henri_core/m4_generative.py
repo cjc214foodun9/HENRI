@@ -129,6 +129,13 @@ class M4Config:
     log_every: int = 100
     pad_id: int = -100
     max_trace: int = 16
+    # D4 (measured): the default build_system(corpus) leaves ingress_seed=None, so
+    # HenriDec450M / HenriMem65M / SagnacHomodyneVeto take their init from the
+    # GLOBAL RNG. Two builds then differ: measured wave fingerprint 7a0d4d5db0de342e
+    # vs 03bb985a8a21f0ba, reproducible=false. pin_seed=None preserves the legacy
+    # default (every committed receipt still reproduces); set it to make an M4 run
+    # byte-identical across processes and across prior global-RNG history.
+    pin_seed: int | None = None
 
 
 @dataclass
@@ -498,12 +505,15 @@ def main() -> int:
     ap.add_argument("--out", default="")
     ap.add_argument("--steps", type=int, default=400)
     ap.add_argument("--holdout-len", type=int, default=3)
+    ap.add_argument("--pin-seed", type=int, default=None,
+                    help="D4: pin the whole system construction so the run is "
+                         "reproducible. Default None preserves legacy behaviour.")
     args = ap.parse_args()
 
     t0 = time.time()
     corpus = build_corpus(max_len=3, holdout_len=args.holdout_len)
-    system, tok = build_system(corpus)
-    cfg = M4Config(steps=args.steps)
+    system, tok = build_system(corpus, pin_seed=args.pin_seed)
+    cfg = M4Config(steps=args.steps, pin_seed=args.pin_seed)
     out = run_gates(system, tok, corpus, cfg)
     out["elapsed_s"] = round(time.time() - t0, 2)
     if args.out:
