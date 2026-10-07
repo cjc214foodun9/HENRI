@@ -1,6 +1,6 @@
 {
  "schema": "henri.prepush.gate.manifest.v1",
- "when": "2026-10-06T22:08:57",
+ "when": "2026-10-06T22:12:50",
  "interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe",
  "cwd": "C:\\Users\\chan\\henri-worktrees\\phase1-transduction\\HENRI V2",
  "gates": [
@@ -68,6 +68,6 @@
  "n_gates": 10,
  "n_failed": 0,
  "all_green": true,
- "head": "a404125b552edfe386859c0f22b975e0e39ac0ba",
- "manifest_sha256": "b97b40daad35f89d1a8b45de433bfe914c31696134c5842a606dc39b1ed08f3f"
+ "head": "3e042be8b99604ced0bdc1c2a8357cfda7eec3af",
+ "manifest_sha256": "4d7060dd465c94acec551f77e4369ed3c0c7438c211552d5834048e80c8de5f6"
 }

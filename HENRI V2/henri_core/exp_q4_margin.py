@@ -116,7 +116,13 @@ def main() -> int:
          "beta_frozen": NG.BETA_FROZEN,
          "statistics": {"level": "max_k |<psi_q,psi_k>|",
                         "shape": "beta*(top1-top2)"}}
-    R["head_at_run"], _ = (os.popen("git -C " + REPO + " rev-parse HEAD").read().strip(), None)
+    # D-DIRTY (self-caught): stamping HEAD into a TRACKED receipt makes the gate
+    # suite dirty the tree on every run, because HEAD changes after each commit.
+    # The stamp is now OPT-IN; the default receipt is byte-stable regardless of
+    # HEAD, so a green gate leaves the worktree clean. Pass HENRI_STAMP_HEAD=1
+    # when a human wants the head recorded in the artifact.
+    if os.environ.get("HENRI_STAMP_HEAD") == "1":
+        R["head_at_run"] = os.popen("git -C " + REPO + " rev-parse HEAD").read().strip()
 
     def both(psi, bk):
         return NG.membership_score(psi, bk), NG.margin_score(psi, bk)

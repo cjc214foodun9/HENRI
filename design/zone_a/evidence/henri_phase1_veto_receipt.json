@@ -603,10 +603,88 @@
   "flips": 7,
   "note": "penalty here is small (<=0.14), so a flip depends on the real Delta_Sagnac: this is the falsifiable content"
  },
- "claim": "lambda=0 reproduces the uncoupled verdict exactly: True. At lambda=0.5, held-out pass rate 0.0 (criterion 1) and in-bank pass rate 1.0 (criterion 2). Near-miss band flips 7/20. Attribution control: permuting the s(q)->item assignment moves the in-bank flip rate by 0.67 and the held-out flip rate by 0.75 (K4 passes=True). CRITICAL FINDING: at lambda=0 the veto released EVERY family (delta_sagnac 0.0036-0.0171 vs threshold 0.35), so the Sagnac term alone could not fail. The coupling is what makes the veto able to reject.",
+ "task_level_h1": {
+  "labels": {
+   "F0_inbank": "DISPATCH",
+   "F1_drop_last": "REJECT",
+   "F2_drop_first": "REJECT",
+   "F4_synonym": "REJECT",
+   "F5_random_text": "REJECT",
+   "HO_heldout": "REJECT"
+  },
+  "n_items": 36,
+  "uncoupled": {
+   "tp": 6,
+   "fp": 30,
+   "fn": 0,
+   "tn": 0,
+   "n": 36,
+   "accuracy": 0.1667,
+   "false_accept_rate": 1.0,
+   "dispatch_precision": 0.1667
+  },
+  "coupled_lambda": {
+   "tp": 6,
+   "fp": 14,
+   "fn": 0,
+   "tn": 16,
+   "n": 36,
+   "accuracy": 0.6111,
+   "false_accept_rate": 0.4667,
+   "dispatch_precision": 0.3
+  },
+  "control_score_shuffled": {
+   "tp": 2,
+   "fp": 18,
+   "fn": 4,
+   "tn": 12,
+   "n": 36,
+   "accuracy": 0.3889,
+   "false_accept_rate": 0.6,
+   "dispatch_precision": 0.1
+  },
+  "control_score_random": {
+   "tp": 6,
+   "fp": 18,
+   "fn": 0,
+   "tn": 12,
+   "n": 36,
+   "accuracy": 0.5,
+   "false_accept_rate": 0.6,
+   "dispatch_precision": 0.25
+  },
+  "lambda_sweep": {
+   "0.00": {
+    "dispatch_accuracy": 0.1667,
+    "false_accept_rate": 1.0,
+    "near_miss_pass_rate": 1.0
+   },
+   "0.25": {
+    "dispatch_accuracy": 0.1667,
+    "false_accept_rate": 1.0,
+    "near_miss_pass_rate": 1.0
+   },
+   "0.50": {
+    "dispatch_accuracy": 0.6111,
+    "false_accept_rate": 0.4667,
+    "near_miss_pass_rate": 0.65
+   },
+   "1.00": {
+    "dispatch_accuracy": 0.7778,
+    "false_accept_rate": 0.2667,
+    "near_miss_pass_rate": 0.4
+   }
+  },
+  "near_miss_pass_rate_real": 0.65,
+  "near_miss_pass_rate_shuffled": 0.6,
+  "near_miss_pass_rate_random": 0.6,
+  "H1_improves_dispatch_accuracy": true,
+  "H1_attributable": false
+ },
+ "claim": "H1 TASK-LEVEL: coupled dispatch accuracy 0.6111 vs uncoupled 0.1667; false-accept rate 0.4667 vs 1.0; attributable=False. lambda=0 reproduces the uncoupled verdict exactly: True. At lambda=0.5, held-out pass rate 0.0 (criterion 1) and in-bank pass rate 1.0 (criterion 2). Near-miss band flips 7/20. Attribution control: permuting the s(q)->item assignment moves the in-bank flip rate by 0.67 and the held-out flip rate by 0.75 (K4 passes=True). CRITICAL FINDING: at lambda=0 the veto released EVERY family (delta_sagnac 0.0036-0.0171 vs threshold 0.35), so the Sagnac term alone could not fail. The coupling is what makes the veto able to reject.",
  "determinism": {
-  "run1": "f2f6bc919f5c42cf",
-  "run2": "f2f6bc919f5c42cf",
+  "run1": "a46a23ad57f53550",
+  "run2": "a46a23ad57f53550",
   "identical": true,
   "K5_deterministic": true
  }

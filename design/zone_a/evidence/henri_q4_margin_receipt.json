@@ -7,7 +7,6 @@
   "level": "max_k |<psi_q,psi_k>|",
   "shape": "beta*(top1-top2)"
  },
- "head_at_run": "d86c4d633d0c4f302cca769096dbd3eb13fad0c8",
  "family_means": {
   "F0_exact_inbank": {
    "membership": 1.0,

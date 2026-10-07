@@ -244,7 +244,87 @@ def run_once():
         "note": ("penalty here is small (<=0.14), so a flip depends on the real "
                  "Delta_Sagnac: this is the falsifiable content"),
     }
+    # ---- H1: the TASK-LEVEL score -------------------------------------------
+    # The blueprint claims the coupling "elevates the net scored task rate". The
+    # veto's task: DISPATCH the bank's own contents, REJECT everything else. A
+    # dispatch of a REJECT-labeled item is a FALSE ACCEPT. This is the metric the
+    # blueprint's criteria 1+2 lack: they never score a decision.
+    labels = {f: ("DISPATCH" if f == "F0_inbank" else "REJECT")
+              for f in {p[0] for p in pairs}}
+
+    def task_metrics(pass_by_fam):
+        tp = fp = fn = tn = 0
+        for fam, ents in pass_by_fam.items():
+            for passed in ents:
+                if labels[fam] == "DISPATCH":
+                    tp += int(passed)
+                    fn += int(not passed)
+                else:
+                    fp += int(passed)
+                    tn += int(not passed)
+        n = tp + fp + fn + tn
+        return {"tp": tp, "fp": fp, "fn": fn, "tn": tn, "n": n,
+                "accuracy": round((tp + tn) / n, 4),
+                "false_accept_rate": round(fp / max(1, fp + tn), 4),
+                "dispatch_precision": round(tp / max(1, tp + fp), 4)}
+
+    def passes_with(scored, lam):
+        acc = {}
+        for (fam, d, _), sc in zip(pairs, scored):
+            acc.setdefault(fam, []).append(bool(d + lam * (1.0 - sc) <= thr))
+        return acc
+
+    real_s = [p[2] for p in pairs]
+    perm2 = H.derangement(len(pairs), H.pinned_generator(4242))
+    gr2 = H.pinned_generator(31337)
+    real_by_pass = passes_with(real_s, 0.0)
+    coupled_pass = passes_with(real_s, LAM)
+    shuf_pass = passes_with([pairs[i][2] for i in perm2], LAM)
+    rand_pass = passes_with([float(torch.rand(1, generator=gr2).item())
+                             for _ in real_s], LAM)
+
+    def nm_rate(pbf):
+        v = [x for f in ("F1_drop_last", "F2_drop_first")
+             for x in pbf.get(f, [])]
+        return round(sum(v) / max(1, len(v)), 4)
+
+    sweep = {}
+    for lam in (0.0, 0.25, 0.5, 1.0):
+        pb = passes_with(real_s, lam)
+        m = task_metrics(pb)
+        sweep[f"{lam:.2f}"] = {"dispatch_accuracy": m["accuracy"],
+                               "false_accept_rate": m["false_accept_rate"],
+                               "near_miss_pass_rate": nm_rate(pb)}
+
+    h1 = {
+        "labels": {f: labels[f] for f in sorted(labels)},
+        "n_items": len(pairs),
+        "uncoupled": task_metrics(real_by_pass),
+        "coupled_lambda": task_metrics(coupled_pass),
+        "control_score_shuffled": task_metrics(shuf_pass),
+        "control_score_random": task_metrics(rand_pass),
+        "lambda_sweep": sweep,
+        "near_miss_pass_rate_real": nm_rate(coupled_pass),
+        "near_miss_pass_rate_shuffled": nm_rate(shuf_pass),
+        "near_miss_pass_rate_random": nm_rate(rand_pass),
+    }
+    h1["H1_improves_dispatch_accuracy"] = bool(
+        h1["coupled_lambda"]["accuracy"] > h1["uncoupled"]["accuracy"])
+    h1["H1_attributable"] = bool(
+        h1["control_score_shuffled"]["accuracy"]
+        < h1["coupled_lambda"]["accuracy"] - 0.05
+        and h1["control_score_random"]["accuracy"]
+        < h1["coupled_lambda"]["accuracy"] - 0.05
+        and h1["near_miss_pass_rate_shuffled"] > h1["near_miss_pass_rate_real"] + 0.10)
+    R["task_level_h1"] = h1
+
     R["claim"] = (
+        f"H1 TASK-LEVEL: coupled dispatch accuracy "
+        f"{h1['coupled_lambda']['accuracy']} vs uncoupled "
+        f"{h1['uncoupled']['accuracy']}; false-accept rate "
+        f"{h1['coupled_lambda']['false_accept_rate']} vs "
+        f"{h1['uncoupled']['false_accept_rate']}; attributable="
+        f"{h1['H1_attributable']}. "
         f"lambda=0 reproduces the uncoupled verdict exactly: {k1}. "
         f"At lambda={LAM}, held-out pass rate {rows['HO_heldout']['pass_rate_lambda5']} "
         f"(criterion 1) and in-bank pass rate {rows['F0_inbank']['pass_rate_lambda5']} "
