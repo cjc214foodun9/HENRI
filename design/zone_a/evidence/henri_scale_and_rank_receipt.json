@@ -1,0 +1,126 @@
+{
+  "schema": "henri.scale.rank.receipt.v1",
+  "written_local_date": "2026-10-07",
+  "authorized_by": "user GRANTED ESCALATE 2026-10-07 (corpus scale-up 48 -> ~10000)",
+  "head_at_run": "59499192afcf255bf893166ab59520da75be297d",
+  "diagnostic_only": "CPU, D=4096, small config. Not a model-performance claim.",
+
+  "PART1_authorized_corpus_scaleup": {
+    "corpus_total_specs": 10164,
+    "elapsed_s": 806.7,
+    "harness_sane_all": true,
+    "estimator_control_random_features": 1.0,
+    "overall": "RETRIEVAL_BOUND",
+    "split_B_unseen_programs": {
+      "n_train": 8120, "n_held": 2044,
+      "knn": 0.1703, "ridge": 0.2078,
+      "ctrl_shuffled_store": 0.0777, "ridge_own_control": 0.0827,
+      "unigram_floor": 0.0907, "bar": 0.1407,
+      "prod_frozen": 0.0775, "prod_learnable": 0.0783,
+      "trained_arms_pass": false, "retrieval_arms_pass": true
+    },
+    "split_A_compositional_len5": {
+      "n_train": 3360, "n_held": 6804,
+      "knn": 0.1492, "ridge": 0.1873,
+      "prod_frozen": 0.0487, "prod_learnable": 0.0545,
+      "trained_arms_pass": false, "retrieval_arms_pass": true
+    },
+    "data_scaling_curve_ridge": {
+      "sizes": [250, 1000, 4000, 8120],
+      "ridge": [0.0096, 0.1183, 0.2058, 0.2058],
+      "rise_250_to_1000": 0.1087,
+      "rise_4000_to_8120": 0.0,
+      "reading": "RISE THEN SATURATE"
+    },
+    "focus_ceiling": {"coverage_at_5_before": 0.4286, "coverage_at_5_now": 0.5036,
+                      "chance": 0.0006},
+    "headline": "Data scaling raises RETRIEVAL accuracy and then saturates. Every TRAINED arm stays BELOW the unigram floor at 10,164 examples."
+  },
+
+  "PART2_rank_limit_localized": {
+    "probe": "exp_raw_vs_pooled.py, ONE system, 200 mixed specs, pin 20261010",
+    "stage_W_raw_wave": {"dim": 8192, "eff_rank_1e6": 28, "participation_ratio": 26.21,
+                         "pair_abs_cos_mean": 0.0666, "pair_abs_cos_p95": 0.5},
+    "stage_P_pooled_feature": {"dim": 2048, "eff_rank_1e6": 200, "participation_ratio": 2.45,
+                               "pair_abs_cos_mean": 0.6158, "pair_abs_cos_p95": 0.8376,
+                               "pair_abs_cos_max": 0.9454},
+    "collapse_ratio_participation_ratio": 10.7,
+    "cosine_rise": 9.2,
+    "verdict": "FEATURE_COLLAPSE_CONFIRMED",
+    "independently_reproduces": {
+      "source": "docs/SPEC_B_pooling_width_v1.md (user upload, measured)",
+      "their_measurement": "wave |cos| 0.1489 -> pooled feature |cos| 0.9553; D5 program identification train 0.5833 -> held 0.0000; verdict L2_POOLING_DESTROYS_SIGNAL",
+      "relationship": "same direction and same stage; different corpus, different probe, same conclusion"
+    },
+    "self_caught_defect": {
+      "defect": "my pre-registered verdict rule used eff_rank at a 1e-6 eigenvalue cut",
+      "why_wrong": "in a 2048-dim space, numerical noise inflates a raw eigenvalue count, so eff_rank went UP (28 -> 200) while the representation actually collapsed",
+      "correct_statistic": "participation ratio tr^2 / tr2",
+      "corrected_verdict": "FEATURE_COLLAPSE_CONFIRMED",
+      "rule_correction": "for any rank claim above ~64 dims, report the participation ratio and the pairwise-cosine distribution; a raw eigenvalue count is not a collapse statistic"
+    }
+  },
+
+  "PART3_positional_encoding_excluded": {
+    "probe": "exp_rank_limit_ab.py + a direct wave/Gram probe",
+    "measured": {
+      "arms_differ": "waves DIFFER between all three arms (max_abs_diff up to 1.6329931)",
+      "gram_identical": "Gram matrices IDENTICAL to <= 1.8e-07 across all three arms",
+      "IR_vs_RI_cos": 0.666667,
+      "IRC_vs_CRI_cos": 0.471405,
+      "note": "the two cosines are IDENTICAL in all three arms"
+    },
+    "finding": "the positional phase encoding is a GRAM-INVARIANT unitary rotation: it changes every wave's coordinates but preserves every pairwise inner product. Any similarity-based readout (kNN, ridge, Hopfield) is therefore blind to it.",
+    "consequence": "positional=True and pos_multifreq=True CANNOT change the rank or any cosine-based readout. The D131 remedy family is excluded as a rank fix.",
+    "spec_A_relationship": "consistent with docs/SPEC_A_trainable_ingress_v1.md section 8, which already measured D131 aliasing (IRIRIR cos to IR = 1.000000). This turn adds WHY the family cannot fix the rank: Gram invariance."
+  },
+
+  "PART4_confounded_arm_recorded_not_used": {
+    "probe": "exp_pooling_width_ab.py",
+    "design": "dk_target=0 vs dk_target=32 as two separately built systems",
+    "why_confounded": [
+      "it measured the rank of the RAW WAVE, which passes through no pooling, so dk_target cannot affect it (identical eff_rank 46, capacity 0.5029)",
+      "dk_target changes the parameter count, so the whole-construction RNG fork consumes a different stream and the INGRESS INIT DIFFERS between arms (ridge_held 0.1862 vs 0.1780 despite identical wave features)"
+    ],
+    "status": "NOT USED AS EVIDENCE. Retained on record. The signal comparing two separately built systems is never attributable.",
+    "pooling_widths_observed": {"dk_target_0": {"n_mem": 32, "d_k": 4},
+                                "dk_target_32": {"n_mem": 4, "d_k": 32}}
+  },
+
+  "PART5_parameter_count_dispute_settled": {
+    "my_measurements": {
+      "build_system_vocab353_small_dk0": {"total": 2292359, "decoder": 1417039},
+      "TriModelSystem_vocab353_small_dk32": {"total": 2350151, "decoder": 1474831},
+      "TriModelSystem_vocab512_small_dk32": {"total": 2375591, "decoder": 1495183},
+      "HenriDec450M_DecoderConfig_full": {"decoder": 447145231}
+    },
+    "reference_claimed": {"total": 2371495, "decoder": 2336303},
+    "finding": "no enumerated config produces 2336303; 2371495 reproduces exactly as my own earlier vocab=512 figure minus the 4096 phase_residual",
+    "status": "DISCREPANCY RECORDED, my measurements are self-consistent and reproducible"
+  },
+
+  "ontology_guidelines_resolved": {
+    "user_uploads_now_in_repo": "docs/SPEC_A_trainable_ingress_v1.md, docs/SPEC_B_pooling_width_v1.md, docs/project_henri_tri_model_epistemologies_universal_subspaces_autonomous_daydream_architecture.md, docs/AUTORESEARCH_zonec_seeding_v1.md",
+    "SPEC_A_status": "its own item 1 was REJECTED on its own pre-registered kill test (ROUTER_MOVES_NOTHING); SPEC_B supersedes it",
+    "SPEC_B_status": "DRAFT, not implemented; its kill tests K-B1..K-B6 are frozen and K-B5 (full-scale transfer) is unrun",
+    "self_play_zero_data": "corpus paper 2609.30063; the M4 executor is the ground-truth oracle used this turn",
+    "epiplexity": "computation creates information; 10,164 executed triples are information creation",
+    "cegis_self_play": "UNVERIFIED design-document claims (50% call reduction, 1.61x speedup, <0.12 ms/candidate); the skill is DISABLED and no such harness was exercised"
+  },
+
+  "status": "PARTIAL",
+  "blocked": [
+    "a trained arm above the unigram floor at any corpus size measured",
+    "SPEC_B promotion: K-B5 (full-scale transfer) is unrun and the gain is small-scale only",
+    "omni-modality: no sensor corpus, no multimodal task",
+    "model-performance claims: CPU dim=4096"
+  ],
+
+  "next_discriminating_experiment": {
+    "question": "does widening the POOLING (d_k 4 -> 32) raise the participation ratio AND the held accuracy, when measured INSIDE ONE SYSTEM?",
+    "design": "load a dk_target=32 checkpoint into the SAME system that has dk_target=0 by swapping only the pooling module, or measure both pooling widths inside one construction using a runtime override. Never compare two separately built systems.",
+    "prediction_and_falsifier": "if the pooled-feature participation ratio rises above 2.45 AND ridge_held rises above 0.2078 at fixed ingress init, SPEC_B's mechanism is confirmed at this scale. If participation ratio stays ~2.45, widening the memory bank does not restore the feature rank and the limit is upstream.",
+    "why_it_matters": "SPEC_B names this as the compositional bottleneck; confirming it inside one system makes K-B5 the only remaining gate",
+    "authorization": "ESCALATE - load-bearing pooling change"
+  }
+}
