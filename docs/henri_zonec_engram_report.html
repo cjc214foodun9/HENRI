@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project HENRI — Zone C ground-truth engrams and the learnable ingress</title>
+<style>
+  :root{--bg:#f7f8fa;--card:#fff;--ink:#1a2733;--mid:#5a6672;--line:#dde3ea;
+    --ok:#2f6b3a;--okbg:#eaf5ea;--warn:#8a6a12;--warnbg:#fdf6e3;
+    --bad:#a13a33;--badbg:#fdecea;--note:#5b4a86;--notebg:#f5f0fa;
+    --mono:"Cascadia Mono",Consolas,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.55 "Segoe UI",system-ui,sans-serif}
+  main{max-width:1080px;margin:0 auto;padding:32px 22px 72px}
+  h1{font-size:30px;margin:0 0 6px}
+  h2{font-size:21px;margin:38px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+  h3{font-size:17px;margin:22px 0 8px}
+  p{margin:10px 0}
+  .sub{color:var(--mid);font-size:14px}
+  code{font-family:var(--mono);font-size:.9em;background:#eef1f5;padding:1px 5px;border-radius:4px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;background:var(--card);font-size:14.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#eef2f7}
+  td.num{font-family:var(--mono);white-space:nowrap}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:16px 0}
+  .ok{background:var(--okbg);border-left:5px solid var(--ok)}
+  .warn{background:var(--warnbg);border-left:5px solid var(--warn)}
+  .bad{background:var(--badbg);border-left:5px solid var(--bad)}
+  .note{background:var(--notebg);border-left:5px solid var(--note)}
+  .tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:6px}
+  .t-obs{background:var(--okbg);color:var(--ok)}
+  .t-fal{background:var(--badbg);color:var(--bad)}
+  .t-par{background:var(--warnbg);color:var(--warn)}
+  .t-blk{background:#eef1f5;color:var(--mid)}
+  ul{margin:10px 0;padding-left:20px}
+  li{margin:6px 0}
+  .verdict{font-size:19px;font-weight:600;margin:14px 0}
+  footer{margin-top:44px;padding-top:14px;border-top:1px solid var(--line);color:var(--mid);font-size:13px}
+  .scope{background:#fff4f2;border:1px solid #e3b7b3;border-left:5px solid var(--bad);border-radius:8px;padding:12px 16px;margin:14px 0}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Zone C ground-truth engrams — measured, not proposed</h1>
+<p class="sub">
+  2026-10-07 · HEAD <code>b2fa76b</code> = origin/main = origin/feat · ledger 1965 ·
+  <code>HenriDecoderConfig() = 447,145,231</code> · 9/9 gates green · CPU, D=4096
+</p>
+
+<div class="scope" role="note">
+  <strong>Scope.</strong> Every number here is a CPU, dim=4096 diagnostic with a control
+  that can fail. It is <em>not</em> a model-performance claim. Model-performance claims
+  need Vast CUDA or canonical CI.
+</div>
+
+<h2>1. Your premise, with one correction that changes the design</h2>
+
+<p>
+  You said the missing ground truth should be found in Zone C. I built the smallest real
+  version of that and measured it. <strong>The correction: Zone C supplies facts;
+  facts are not structure.</strong> A fact store fixes retrieval of remembered content.
+  It does not by itself raise the generative ceiling of a program-synthesis task.
+</p>
+
+<p>
+  That distinction is not philosophy — it is measured. A flat nearest-neighbour engram
+  store over waves scores <strong>0.1667</strong>; the pre-registered bar is
+  <strong>0.1671</strong>. It clears the unigram floor (0.1171) and beats its own control
+  2.25×, but it does not clear the bar. So a Zone C store is a real mechanism and not,
+  by itself, the answer.
+</p>
+
+<h2>2. The five steps, executed</h2>
+
+<table>
+  <thead><tr><th style="width:5%">#</th><th style="width:30%">Step</th>
+    <th style="width:41%">Measured result</th><th style="width:24%">Verdict</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>1</strong></td>
+      <td>Make the ingress learnable, default-OFF flag</td>
+      <td class="num">
+        gradient reaches <code>phase_residual</code>: norm <strong>0.1009</strong><br>
+        param delta <strong>0.01287</strong> (floor 1e-9)<br>
+        fingerprint <code>30dece84</code> → <code>75ff0772</code><br>
+        control (flag OFF): delta <strong>0.0</strong>, no grad<br>
+        default <code>train_ingress=False</code>
+      </td>
+      <td><span class="tag t-obs">PASS</span>Kill test green. One param reached — not twelve.</td>
+    </tr>
+    <tr>
+      <td><strong>2</strong></td>
+      <td>Make M4-G1 passable at ≥3 pinned seeds</td>
+      <td class="num">
+        seed 20261010: <strong>0.0357</strong><br>
+        seed 20261011: <strong>0.0446</strong><br>
+        seed 20261012: <strong>0.0893</strong><br>
+        unigram floor <strong>0.1171</strong> · bar <strong>0.1671</strong><br>
+        <code>all_seeds_pass: false</code>
+      </td>
+      <td><span class="tag t-fal">STILL FAILING</span>Every seed lands <em>below</em> the floor.</td>
+    </tr>
+    <tr>
+      <td><strong>3</strong></td>
+      <td>Veto as a real gate; re-run the coupling</td>
+      <td>Depends on a step-2 scored improvement that does not exist.</td>
+      <td><span class="tag t-blk">BLOCKED</span></td>
+    </tr>
+    <tr>
+      <td><strong>4</strong></td>
+      <td>Raise the focus ceiling above coverage@5 = 0.4286</td>
+      <td>The engram store <em>does</em> lift coverage — see §4. Top-1 does not rise with it.</td>
+      <td><span class="tag t-par">PARTIAL</span></td>
+    </tr>
+    <tr>
+      <td><strong>5</strong></td>
+      <td>Test-time learning</td>
+      <td>Measured directly — see §4. Sequential registration is <em>not</em> supported.</td>
+      <td><span class="tag t-fal">NOT SUPPORTED</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>3. The finding that decides the program order</h2>
+
+<div class="card note">
+  <h3 style="margin-top:0">The text→wave map had <em>no differentiable path at all</em></h3>
+  <p>
+    Step 1 could not be done as written. Unfreezing the ingress would have created a
+    <strong>dead flag</strong>: the optimizer would hold the parameters and the gradient
+    would be exactly zero. Measured, three independent ways:
+  </p>
+  <ul>
+    <li><code>wave_of</code> is wrapped in <code>torch.no_grad()</code>.</li>
+    <li>Calling <code>encode_text()</code> <em>directly</em> still returns
+      <code>requires_grad=False</code>.</li>
+    <li>The path severs at <code>argmax(routes)</code> → python <code>int</code>, at
+      <code>self.angle[tok]</code> (a frozen <em>buffer</em>), and at
+      <code>torch.polar(torch.tensor(1.0), phase)</code>, whose magnitude is a fresh
+      constant. The accumulator is a new <code>zeros</code> tensor.</li>
+  </ul>
+  <p>
+    Measured separately: <code>torch.polar</code> <em>is</em> differentiable in the phase,
+    and <code>Parameter[int_index]</code> <em>does</em> return a grad-carrying tensor.
+    So <code>zone_a.phase_residual</code> — an exact-zeros phase offset indexed by token
+    id — is the minimum construction that makes the ingress trainable. It initializes to
+    zeros, so every committed receipt still reproduces byte-for-byte.
+  </p>
+</div>
+
+<div class="card bad">
+  <h3 style="margin-top:0">Step 1 is necessary and not sufficient</h3>
+  <p>
+    With the ingress trainable and reaching gradient, M4-G1 held-out accuracy is
+    <strong>0.0357 / 0.0446 / 0.0893</strong> across three pinned seeds — every one
+    <em>below</em> the unigram floor of 0.1171. The margin ratio is 1.143 (above its own
+    shuffled control) but the absolute bar is not met.
+  </p>
+  <p>
+    <strong>Reading:</strong> with 48 training examples the unfrozen ingress memorizes
+    too. Reachability is solved; transfer is not. No amount of flag-tuning changes that
+    number.
+  </p>
+</div>
+
+<h2>4. Your Zone C proposal, tested directly</h2>
+
+<p>
+  You proposed that training becomes test-time scanning of a data system, registering
+  data as holographic engrams that then guide inference. For the M4 task the "scan" is
+  free and <em>exact</em>: the program executor produces verified
+  (program, input, trace) triples with no annotation. I built exactly that and measured it.
+</p>
+
+<table>
+  <thead><tr><th style="width:30%">Engram arm</th><th class="num">held-out tok</th>
+    <th>Reading</th></tr></thead>
+  <tbody>
+    <tr><td><strong>E1 co-store</strong><br><code>(Psi_spec, Psi_trace)</code></td>
+      <td class="num"><strong>0.1667</strong></td>
+      <td><span class="tag t-obs">REAL</span>2.25× its own shuffled-store control;
+        above the floor. Misses the 0.1671 bar by <strong>0.0004</strong>.</td></tr>
+    <tr><td>E2 HRR-bound<br><code>Psi_spec ⊛ Psi_trace</code></td>
+      <td class="num">0.0463</td>
+      <td><span class="tag t-fal">WORSE</span>Binding <em>destroys</em> the signal
+        (0.0463 vs 0.1667). Answers your data-level question directly.</td></tr>
+    <tr><td>E3 raw-text substring lookup</td><td class="num">0.0000</td>
+      <td><span class="tag t-obs">BY DESIGN</span>No train spec contains a length-3
+        program string, so no literal shortcut exists. Proves the split is clean.</td></tr>
+    <tr><td>C1 shuffled store</td><td class="num">0.0741</td>
+      <td>Control — the real store beats it 2.25×.</td></tr>
+    <tr><td>unigram floor</td><td class="num">0.1171</td><td>—</td></tr>
+    <tr><td>pre-registered bar</td><td class="num">0.1671</td><td>Not cleared.</td></tr>
+  </tbody>
+</table>
+
+<div class="card ok">
+  <h3 style="margin-top:0">The store is a real candidate proposer — and this is the headline</h3>
+  <table>
+    <thead><tr><th class="num">k</th><th class="num">real store</th>
+      <th class="num">shuffled store</th><th class="num">lift</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td class="num">0.1429</td><td class="num">0.0446</td><td class="num">+0.0983</td></tr>
+      <tr><td class="num">5</td><td class="num"><strong>0.4464</strong></td><td class="num">0.2679</td><td class="num"><strong>+0.1785</strong></td></tr>
+      <tr><td class="num">20</td><td class="num">0.6250</td><td class="num">0.5714</td><td class="num">+0.0536</td></tr>
+      <tr><td class="num">100</td><td class="num">0.8304</td><td class="num">0.8304</td><td class="num">0.0000</td></tr>
+    </tbody>
+  </table>
+  <p>
+    <code>C_control_distinguishable: true</code> — the real and shuffled arms can differ,
+    and they do. The store supplies <strong>real candidate structure</strong> at small k.
+    By k=100 the two arms converge, so the store's value is in <em>ranking quality</em>,
+    not in exhaustiveness. This is exactly where your "sort the noise" architecture belongs.
+  </p>
+</div>
+
+<div class="card warn">
+  <h3 style="margin-top:0">Test-time <em>registration</em> is not yet learning</h3>
+  <p>
+    I ran the sequential version of your proposal: an empty store, register each verified
+    item as you go, measure accuracy on the next item as a function of store size.
+  </p>
+  <table>
+    <thead><tr><th class="num">store size n</th><th>0</th><th>12</th><th>24</th><th>48</th><th>72</th></tr></thead>
+    <tbody>
+      <tr><td>real registration</td><td class="num">0.0</td><td class="num">0.0</td>
+        <td class="num">0.0648</td><td class="num">0.0741</td><td class="num">0.0741</td></tr>
+      <tr><td>shuffled control</td><td class="num">0.0</td><td class="num">0.0463</td>
+        <td class="num">0.0463</td><td class="num">0.0741</td><td class="num"><strong>0.0833</strong></td></tr>
+    </tbody>
+  </table>
+  <p>
+    <code>continuous_learning_supported: false</code>. The real arm rises, but the
+    <em>control is not flat</em> — and at n=72 the shuffled control
+    (<strong>0.0833</strong>) <em>overtakes</em> the real arm (0.0741). A rising curve
+    with a control that rises faster is not learning; it is store-size arithmetic.
+  </p>
+</div>
+
+<h2>5. Your three questions, answered from measurement</h2>
+
+<h3>What should the ground-truth engrams be, at the data level?</h3>
+<p>
+  <code>engram := (Psi_spec, Psi_trace)</code> — the input wave as key, its
+  <strong>executed-and-verified</strong> output wave as value, stored
+  <strong>co-resident, not bound</strong>. This is measured, not asserted:
+  HRR binding scores <strong>0.0463</strong> against co-storage's
+  <strong>0.1667</strong>. Binding adds cost and removes signal at this data level.
+  Each engram also carries provenance — a source digest and the verification that
+  produced it.
+</p>
+
+<h3>Where should the raw data come from?</h3>
+<p>
+  From any system where input→output is <strong>verifiable by execution</strong>.
+  For M4 that is the program executor, which yields exact traces for free and without
+  limit. This generalizes: SQL engines, simulators, type checkers — anywhere a result can
+  be checked by running it. Ground truth is <em>executed</em>, not annotated. One hard
+  rule: never seed the store with benchmark gold answers, or every later score is void.
+</p>
+
+<h3>Is training-as-test-time-scanning a viable route?</h3>
+<p>
+  <strong>As retrieval, yes — measured.</strong> The E1 arm beats its control 2.25× and
+  lifts coverage@5 by 0.1785 over a shuffled store. It is the best non-parametric
+  performer measured on this task, ahead of the 414M readout (0.0000) and level with
+  ridge (0.1339).
+  <br>
+  <strong>As learning, not yet.</strong> Sequential registration fails its own control.
+  The mechanism is worth building; the <em>claim</em> that it improves with experience is
+  not supported by this experiment.
+</p>
+
+<h2>6. Why the program order inverts</h2>
+
+<div class="card bad">
+  <p>
+    Every arm that <em>trains</em> memorizes 48 examples and generalizes to zero: the
+    414M readout (0.0000), the learnable ingress (0.0357 / 0.0446 / 0.0893), the small
+    MLP (below its own control). Every arm that <em>retrieves</em> generalizes a little:
+    k-NN (0.1389), ridge (0.1339), the engram store (0.1667).
+  </p>
+  <p>
+    <strong>The binding constraint is data volume.</strong> Forty-eight examples cannot
+    teach a 414M-parameter model anything transferable, and no mechanism change fixes
+    that. The engram store wins precisely <em>because</em> it does not train.
+  </p>
+</div>
+
+<p>
+  <strong>Next most important decision (ESCALATE — it changes the task definition):</strong>
+  scale the corpus <em>before</em> scaling the model. The M4 executor can generate
+  unlimited verified triples. A 10,000-example corpus on the same pinned harness would
+  make every trained arm falsifiable and would settle whether the representation ceiling
+  is data-bound or architecture-bound. It is the cheapest experiment that can change the
+  verdict, and it needs your approval.
+</p>
+
+<h2>7. Subsystems, restated</h2>
+<table>
+  <thead><tr><th style="width:5%">#</th><th style="width:26%">Subsystem</th>
+    <th style="width:43%">Measured status</th><th style="width:26%">Correct action</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Learnable ingress</td>
+      <td><span class="tag t-par">PARTIAL</span>Trainable and reached by gradient; does
+        not transfer at 48 examples.</td>
+      <td>Keep the flag. Re-judge at 10k examples.</td></tr>
+    <tr><td>2</td><td>Action-conditioned transitions</td>
+      <td><span class="tag t-blk">BLOCKED</span>No scored task that can pass.</td>
+      <td>Wait for the corpus scale-up.</td></tr>
+    <tr><td>3</td><td>Iterative resonator descent</td>
+      <td><span class="tag t-fal">VACUOUS</span>0.0178 held-out vs flat 0.0463 and
+        shuffled 0.0491.</td>
+      <td>Do not extend.</td></tr>
+    <tr><td>4</td><td>Zone C persistence</td>
+      <td><span class="tag t-par">PARTIAL</span>Engram store real (2.25× control);
+        coverage@5 lift +0.1785. No live TimescaleDB on this host.</td>
+      <td>Schema design now; live DB is BLOCKED pending remote infra.</td></tr>
+    <tr><td>5</td><td>Sensorimotor grounding</td>
+      <td><span class="tag t-blk">BLOCKED</span>No sensor corpus, no scored topology
+        task.</td>
+      <td>Design the task before the encoder.</td></tr>
+    <tr><td>6</td><td>Grammar-constrained egress</td>
+      <td><span class="tag t-blk">BLOCKED</span>Cannot exceed a ceiling that does not
+        yet rise.</td>
+      <td>After steps 1–2.</td></tr>
+  </tbody>
+</table>
+
+<h2>8. Defects I found in my own work this turn</h2>
+<ul>
+  <li><strong>Dead loop guard.</strong> My first patch bound the wave before the training
+    loop, so the guard that rebuilds it never fired — measured <code>max_param_delta
+    0.0</code> in <code>fit()</code> while a manual replica of the same code moved
+    <code>0.0 → 0.048</code>. The replica is what exposed it.</li>
+  <li><strong>Autograd on a python float.</strong> The assembler compared
+    <code>float(n)</code> on a grad-carrying tensor — warns and is undefined under
+    autograd. Now <code>float(n.detach())</code>.</li>
+  <li><strong>Vacuous coverage control.</strong> My <code>coverage()</code> took a
+    similarity matrix and then closed over the global one, so the real and shuffled arms
+    printed <em>identical</em> numbers. A control that cannot differ from its treatment
+    is vacuous. Fixed by passing the label map.</li>
+  <li><strong>Two HRR shape bugs.</strong> A flattened 8192-dim query against a 4096-dim
+    complex wave; then a 48-key bind correlated against 108 queries. Rewritten as a
+    Parseval pairwise complex matmul, which allocates no 3-D tensor.</li>
+  <li><strong>One label I got wrong.</strong> I first called the E3 zero a "broken arm."
+    It is zero <em>by construction</em> — no train spec contains a length-3 program — and
+    that is a <em>good</em> control, proving the split has no literal leakage.</li>
+</ul>
+
+<h2>9. Evidence status</h2>
+<table>
+  <thead><tr><th style="width:15%">Class</th><th>Items</th></tr></thead>
+  <tbody>
+    <tr><td><span class="tag t-obs">OBSERVED</span></td>
+      <td>All numbers in §2 and §4. Step-1 kill test (grad 0.1009, delta 0.01287, control
+        0.0). 9/9 gates green. HEAD <code>b2fa76b</code> = main = feat, confirmed by
+        <code>ls-remote</code>. Ledger 1965. <code>447,145,231</code> unchanged.</td></tr>
+    <tr><td><span class="tag t-fal">FALSIFIED</span></td>
+      <td>"Unfreezing the ingress makes M4-G1 passable" (0.0357 / 0.0446 / 0.0893, all
+        below floor). HRR binding over co-storage. Sequential registration as continuous
+        learning (control overtakes at n=72).</td></tr>
+    <tr><td><span class="tag t-par">PARTIAL</span></td>
+      <td>Learnable ingress: mechanism real, does not transfer. Engram store: real
+        proposer, does not clear the bar.</td></tr>
+    <tr><td><span class="tag t-blk">BLOCKED</span></td>
+      <td>Steps 3 and 5 as passes. Live TimescaleDB (absent on this host; no surrogate
+        substituted). Subsystems 5 and 6. All physical D2NN/BTO claims. Any
+        model-performance claim — this run is CPU, dim=4096.</td></tr>
+  </tbody>
+</table>
+
+<footer>
+  <p>
+    Committed and pushed: <code>b2fa76b</code> — <code>zone_a.phase_residual</code>,
+    <code>wave_of(grad=)</code>, <code>M4Config.train_ingress</code> (default
+    <code>False</code>), the kill test, and both experiments. Editable diagram:
+    <code>henri_zonec_engram_store.drawio</code>.
+  </p>
+  <p>
+    Authorization: <strong>ESCALATE</strong>. The corpus scale-up (48 → ~10,000 verified
+    triples) changes the task definition and needs your approval. No gate advances on
+    model agreement.
+  </p>
+</footer>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HENRI — test-time audit: why the answer was constant</title>
+<style>
+  :root { --ink:#12161c; --mut:#5c6673; --line:#dfe4ea; --ok:#0f7b46; --bad:#b3261e; --warn:#8a5a00; --soft:#f6f8fa; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:28px 22px 60px; color:var(--ink); background:#fff;
+         font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:980px; margin:0 auto; }
+  h1 { font-size:24px; margin:0 0 4px; letter-spacing:-.01em; }
+  .sub { color:var(--mut); font-size:13px; margin-bottom:22px; }
+  h2 { font-size:16px; margin:30px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0 4px; }
+  th,td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-weight:600; }
+  td.num,th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  code { background:var(--soft); padding:1px 5px; border-radius:3px; font-size:12.5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:6px; padding:12px; overflow:auto; font-size:12.5px; }
+  .callout { border-left:4px solid var(--line); background:var(--soft); padding:11px 14px; margin:14px 0; border-radius:0 5px 5px 0; }
+  .callout.ok { border-left-color:var(--ok); }
+  .callout.bad { border-left-color:var(--bad); }
+  .callout.warn { border-left-color:var(--warn); }
+  ul { margin:8px 0 8px 20px; padding:0; }
+  .tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em; padding:2px 7px; border-radius:10px; border:1px solid var(--line); background:#fff; }
+  .tag.ok { color:var(--ok); border-color:#b7dfc9; }
+  .tag.bad { color:var(--bad); border-color:#f0c3bf; }
+  .tag.open { color:var(--warn); border-color:#ecd9a8; }
+  footer { margin-top:34px; padding-top:14px; border-top:1px solid var(--line); color:var(--mut); font-size:12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>What HENRI actually computes at test time</h1>
+  <div class="sub">Audit of the shipped default path · base SHA <code>da0aec3</code> · dim=4096 (small), CPU · 2026-10-06</div>
+
+  <div class="callout bad">
+    <strong>Headline finding, measured:</strong> six distinct queries produced <strong>one identical answer</strong>.
+    The collapse is <strong>not</strong> in the tokenizer and <strong>not</strong> in the decoder. It is in the
+    <strong>swarm/consensus stage</strong>. Two independent defects cause it, and both are now fixed behind
+    <strong>default-OFF</strong> flags that leave the shipped path byte-identical.
+  </div>
+
+  <h2>1. The directive's first action — push <code>229fc50</code> to main — is BLOCKED</h2>
+  <p>I measured the relationship before touching anything. A fast-forward is impossible.</p>
+  <table>
+    <thead><tr><th>Measurement</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td><code>origin/main</code></td><td><code>d97ddd94893a337bee6036e6b3a4d4d99b755d3e</code></td></tr>
+      <tr><td><code>git merge-base --is-ancestor origin/main HEAD</code></td><td class="bad">false — fast-forward impossible</td></tr>
+      <tr><td>commits main lacks</td><td>143</td></tr>
+      <tr><td>commits HEAD lacks (main-only)</td><td class="bad">68</td></tr>
+      <tr><td>delta size if merged</td><td>601 files, 0 PDFs, 0 binaries, 0 secrets</td></tr>
+    </tbody>
+  </table>
+  <p>Main has moved 68 commits ahead on its own line. Merging 143 commits / 601 files into production main is
+  <strong>a different action</strong> from the one approved, so I report BLOCKED and bring the decision back to you.
+  I did <strong>not</strong> improvise a merge, and I did <strong>not</strong> force-push.</p>
+  <p class="sub">Preserved work: <code>292edcb</code> and <code>da0aec3</code> pushed to
+  <code>feat/phase1-transduction</code> (RC=0, exact readback, 0/0 ahead-behind).</p>
+
+  <h2>2. The two approved fixes — done and verified</h2>
+  <table>
+    <thead><tr><th>#</th><th>Defect</th><th>Fix</th><th>Verification</th></tr></thead>
+    <tbody>
+      <tr><td>C2</td>
+          <td><strong>CRITICAL.</strong> <code>gates.py:360</code> counts <code>BLOCKED</code> as <code>ACCEPTED</code>:
+              <code>if counts[FAIL] or counts[VACUOUS]</code> — a broken estimator reads as a pass.</td>
+          <td><code>run_all_v2</code> in <code>gates_v2.py</code>. ACCEPTED requires <em>every</em> gate PASS.
+              Unknown status coerced to BLOCKED, never PASS. <code>gates.py</code> stays frozen.</td>
+          <td class="ok">8/8 verdict cases correct; <strong>negative control reproduces the old defect</strong></td></tr>
+      <tr><td>C3</td>
+          <td>MINOR. <code>dust_zo.py</code> had no CUDA guard; a CUDA tensor would break or silently shift to host.</td>
+          <td>Raises <code>RuntimeError</code> on CUDA input, naming the missing device plumbing.</td>
+          <td class="ok">CPU happy path unchanged; estimator regression matches the frozen K=16 value <code>0.204529141920</code></td></tr>
+    </tbody>
+  </table>
+  <p class="sub">Also added: <code>MEASURED</code> to the declared outcome vocabulary as <strong>informational</strong> — it can never grant acceptance.</p>
+
+  <h2>3. The granular test-time audit</h2>
+  <p>Instrumented every stage on the shipped default path. Six distinct queries: <code>ab ba dog god cat act</code>.</p>
+  <table>
+    <thead><tr><th>Stage</th><th>Measurement</th><th>Reading</th></tr></thead>
+    <tbody>
+      <tr><td>S1 tokenize</td><td><code>ab→[97,98]</code>, <code>ba→[98,97]</code></td><td class="ok">order preserved</td></tr>
+      <tr><td>S2 ingress <code>encode_text</code></td>
+          <td><code>cos(psi_ab,psi_dog)=0.000000</code>; <code>cos(psi_ab,psi_ba)=0.9999998808</code></td>
+          <td>inputs are distinct, but <strong>token order is lost</strong></td></tr>
+      <tr><td><strong>S3 swarm CCCP</strong></td>
+          <td><code>&lt;z,p&gt; ~ 1/√D = 0.0156</code>; max&nbsp;|logit| 0.44–0.96; softmax <code>H/lnN 0.95–0.99</code>;
+              <code>cos(cccp_out, mean(bank)) = 0.9748</code></td>
+          <td class="bad"><strong>collapse locus</strong> — attention is near-uniform, so the output is the bank mean</td></tr>
+      <tr><td>S4 psi_conv across queries</td><td>pairwise <code>cos = 0.9997 … 0.9999</code></td>
+          <td class="bad">input identity erased</td></tr>
+      <tr><td>S5 decoder internals</td><td>16/16 <em>distinct</em> macro-tokens; argmax → one token</td>
+          <td>decoder is alive; it receives an already-collapsed vector</td></tr>
+      <tr><td>S6 Sagnac veto</td><td><code>dark_port</code> for all queries (delta 0.95–0.98 vs threshold 0.35)</td>
+          <td>no dispatch path exists; disclosure, not a pass</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Decisive control</h3>
+  <table>
+    <thead><tr><th>Call</th><th class="num">distinct answers</th><th>Conclusion</th></tr></thead>
+    <tbody>
+      <tr><td><code>solve(use_swarm=True)</code></td><td class="num bad">1 of 4</td><td rowspan="2">the swarm/consensus stage destroys input identity</td></tr>
+      <tr><td><code>solve(use_swarm=False)</code></td><td class="num ok">4 of 4</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. Two root causes, both measured</h2>
+
+  <div class="callout bad">
+    <strong>D-ZO-COLLAPSE — the beta scale does not match the logit domain.</strong><br>
+    The CCCP attention is <code>logits = beta·⟨z,p⟩</code> with <strong>unit-norm random</strong> patterns, so
+    <code>⟨z,p⟩ ~ N(0,1/D)</code> and <code>|cos| ~ 1/√D ≈ 0.0156</code>. At <code>beta=26.10</code> that gives
+    max&nbsp;|logit| ≈ 0.5, softmax entropy <code>H/lnN ≈ 0.97</code> (near-uniform), so <code>att @ patterns</code>
+    converges to the <strong>bank mean</strong>. The document's beta assumes a cosine near 1 that a random 4096-d bank
+    cannot produce. This is the same defect class as D82/D85: a Hopfield block whose logits do not match the formula's
+    stated domain.
+  </div>
+
+  <div class="callout bad">
+    <strong>D-BANK — the swarm matched a random bank, not the corpus.</strong><br>
+    <code>build_axioms()</code> updated <strong>only the veto</strong>. Measured: <code>axiom_bank</code> is
+    <strong>identical before and after</strong> that call, and bank-vs-corpus <code>|cos| max = 0.0418 ≈ 4/√D</code>
+    (unrelated). So the swarm resolved every input against <strong>8 seeded random unit vectors</strong> while the veto —
+    the component that <em>did</em> receive the corpus — reported dark for every query. The two halves of the system
+    were looking at different worlds.
+  </div>
+
+  <h2>5. A/B result — real but modest, and not intelligence</h2>
+  <table>
+    <thead><tr><th>Configuration</th><th class="num">distinct ids</th><th class="num">order sens.</th><th class="num">veto dark</th></tr></thead>
+    <tbody>
+      <tr><td>1. default (beta_scale=1, random bank)</td><td class="num bad">2/6</td><td class="num">0/3</td><td class="num">6/6</td></tr>
+      <tr><td>4. beta_scale=√D only</td><td class="num">2/6</td><td class="num">0/3</td><td class="num">6/6</td></tr>
+      <tr><td>2. corpus bank only</td><td class="num">3/6</td><td class="num">0/3</td><td class="num ok">0/6</td></tr>
+      <tr><td>3. corpus bank + beta_scale=√D</td><td class="num ok">3/6</td><td class="num ok">1/3</td><td class="num ok">0/6</td></tr>
+    </tbody>
+  </table>
+  <p>The corpus bank is the stronger repair; the beta scale adds a little. Input dependence improves
+  (2/6 → 3/6, order 0/3 → 1/3) and the veto stops falsely firing. <strong>But 3 distinct answers from 6 queries is not
+  an intelligent system.</strong> No ground-truth output signal exists in this harness, so <strong>correctness is
+  untested</strong>. Distinctness is necessary, not sufficient. I report the gain as measured and stop there.</p>
+
+  <h2>6. The synthesis document is out of regime — I did not build on it</h2>
+  <p>The arithmetic in <code>HENRI-ARCH-2026-FGC-THIN-MATRIX-SYNTHESIS</code> does not survive checking against the
+  paper (<code>2610.06783v1</code>, verified on disk).</p>
+  <table>
+    <thead><tr><th>Claim</th><th>Checked</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>"When N = 10⁶ and ε = 0.06, D ≤ 10⁶·⁰⁶ ≈ 2,290"</td>
+          <td><code>10^(6×0.06) = 10^0.36 = 2.2909</code></td>
+          <td class="bad">off by 1000×</td></tr>
+      <tr><td>Doc operating point N=10⁶, D=2,048</td><td>implied ε = 0.552, bound ε &lt; 0.1204</td>
+          <td class="bad">out of regime</td></tr>
+      <tr><td>N required for D=2,048 (Thm 3's 1/18 precondition)</td><td><code>N ≥ 10^59.6</code></td>
+          <td class="bad">not realisable</td></tr>
+    </tbody>
+  </table>
+  <p>At HENRI-plausible engram counts the thin regime permits <code>D</code> of a few — not 2,048. The Zone C
+  thin-matrix retrieval as specified would compute on a theorem whose precondition it violates. The paper is real and
+  important; the <em>mapping</em> to Zone C is not sound as written. Implementing it would have produced a fast
+  retriever for the wrong problem. <strong>Also falsified by audit:</strong> every module the two documents name
+  (<code>zone_c_retrieval_bridge.py</code>, <code>wave_jepa.py</code>, <code>efe_planner.py</code>,
+  <code>henri_latent_explorer.py</code>, <code>zone_c_bridge.py</code>, and 6 more) <strong>does not exist</strong>.</p>
+  <div class="callout ok">
+    The synthesis document's own epistemic verdict is correct and I hold it: <em>"HENRI does not claim universal
+    superiority over LLMs."</em> The paper was produced <em>by</em> an LLM and Lean-verified. I did not claim a
+    capability win from it, and no such claim appears in any receipt.
+  </div>
+
+  <h2>7. Answers to the core questions</h2>
+  <table>
+    <thead><tr><th>Question</th><th>Measured answer</th></tr></thead>
+    <tbody>
+      <tr><td>Is HENRI intelligent at test time?</td>
+          <td class="bad">Not demonstrated. One answer for six inputs. Zero external benchmark score (0/10 scoreable — adapter stubs).</td></tr>
+      <tr><td>What actually happens at test time?</td>
+          <td>Tokenize (order kept) → ingress (order lost) → <strong>swarm collapses to the bank mean</strong> → decoder emits one token. The veto fires dark, so nothing is dispatched.</td></tr>
+      <tr><td>What is the single highest-leverage defect?</td>
+          <td><strong>D-BANK.</strong> The swarm and the veto read different banks. Fixing that alone moves 2/6 → 3/6.</td></tr>
+      <tr><td>Is the physics broken?</td>
+          <td class="ok">No. Norms are 1.0, energies stable, decoder trains (29 tensors). The break is a <em>scale and wiring</em> defect, not a mathematical one.</td></tr>
+      <tr><td>Can the core claims be brought to reality now?</td>
+          <td class="bad">Not yet. There is no ground-truth output signal and no wired evaluator, so "correct" is undefined in this harness. That is the missing prerequisite.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8. Evidence status</h2>
+  <table>
+    <thead><tr><th>Class</th><th>Items</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag ok">OBSERVED</span></td>
+          <td>All stage measurements, the 1-of-4 vs 4-of-4 control, both root causes, the A/B table, the document arithmetic, the 11 absent modules, fix self-checks, <code>447,145,231</code> params, tri-model 19/19, push readbacks.</td></tr>
+      <tr><td><span class="tag bad">BLOCKED</span></td><td>Push to main (measured fast-forward impossible). Correctness of the repaired path (no ground-truth signal). Zone C thin-matrix implementation (out of theorem regime).</td></tr>
+      <tr><td><span class="tag open">HYPOTHESIS</span></td>
+          <td>Sub-microsecond, 73×, 87.5%, 38.4 µs, BaTiO₃ — appear in no receipt.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. What I did not do, and why</h2>
+  <ul>
+    <li><strong>No merge to main.</strong> Approved as a push; it is not a fast-forward. Reported BLOCKED.</li>
+    <li><strong>No backpropagation removal.</strong> Destructive, unapproved, and the decoder demonstrably trains.</li>
+    <li><strong>No Zone C thin-matrix code.</strong> The premise fails arithmetic and regime checks.</li>
+    <li><strong>No bound moved.</strong> Every repair is default-OFF; the shipped path is byte-identical.</li>
+    <li><strong>No reliance on reference-block tool output.</strong> Every number here came from a command I ran.</li>
+  </ul>
+
+  <h2>10. Recommended next actions, in order</h2>
+  <ol>
+    <li><strong>Decide the main-push path.</strong> Either merge the 143 commits (reviewed) or rebase onto main's 68. Both need your call; I do neither silently.</li>
+    <li><strong>Ask the repairability question that matters:</strong> should the swarm default to the corpus bank? That is a one-line default flip, but it changes committed behaviour, so it needs approval.</li>
+    <li><strong>Build the missing ground-truth signal.</strong> Until a real evaluator is wired, no claim of intelligence is measurable. This is the true blocker on the core claim.</li>
+    <li><strong>Fix the ingress order loss</strong> (<code>cos('ab','ba') = 1.0</code>) separately — it is orthogonal to the swarm collapse.</li>
+  </ol>
+
+  <footer>
+    Editable sources: <code>audit_testtime.py</code>, <code>audit_collapse_locus.py</code>, <code>audit_root_cause.py</code>,
+    <code>audit_swarm_bank.py</code>, <code>exp_collapse_ab.py</code>, <code>exp_beta_scale_ab.py</code>,
+    <code>test_gate_fixes_selfcheck.py</code>. Ledger: 1949 records, chain intact, head <code>d506289e</code>.
+    A hash chain proves byte linkage, not truth.
+  </footer>
+</div>
+</body>
+</html>

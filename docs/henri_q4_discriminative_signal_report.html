@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HENRI — the discriminative signal: Q4 can fail</title>
+<style>
+  :root { --ink:#12161c; --mut:#5c6673; --line:#dfe4ea; --ok:#0f7b46; --bad:#b3261e; --warn:#8a5a00; --soft:#f6f8fa; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:28px 22px 60px; color:var(--ink); background:#fff;
+         font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:1020px; margin:0 auto; }
+  h1 { font-size:24px; margin:0 0 4px; letter-spacing:-.01em; }
+  .sub { color:var(--mut); font-size:13px; margin-bottom:22px; }
+  h2 { font-size:16px; margin:30px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  h3 { font-size:14px; margin:18px 0 6px; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0 4px; }
+  th,td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-weight:600; }
+  td.num,th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  code { background:var(--soft); padding:1px 5px; border-radius:3px; font-size:12.5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:6px; padding:12px; overflow:auto; font-size:12.5px; }
+  .callout { border-left:4px solid var(--line); background:var(--soft); padding:11px 14px; margin:14px 0; border-radius:0 5px 5px 0; }
+  .callout.ok { border-left-color:var(--ok); }
+  .callout.bad { border-left-color:var(--bad); }
+  .callout.warn { border-left-color:var(--warn); }
+  ul,ol { margin:8px 0 8px 20px; padding:0; }
+  li { margin:4px 0; }
+  .tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em; padding:2px 7px; border-radius:10px; border:1px solid var(--line); background:#fff; }
+  .tag.ok { color:var(--ok); border-color:#b7dfc9; }
+  .tag.bad { color:var(--bad); border-color:#f0c3bf; }
+  .tag.warn { color:var(--warn); border-color:#ecd9a8; }
+  .bar { height:9px; border-radius:5px; background:var(--soft); position:relative; overflow:hidden; }
+  .bar > span { position:absolute; left:0; top:0; bottom:0; background:var(--ok); }
+  .bar.warn > span { background:var(--warn); }
+  footer { margin-top:34px; padding-top:14px; border-top:1px solid var(--line); color:var(--mut); font-size:12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>The discriminative signal: Q4 can now fail</h1>
+  <div class="sub">HEAD <code>a404125</code> = <code>origin/main</code> = <code>origin/feat</code> · 7/7 gates green · ledger 1956 · CPU dim=4096, small config</div>
+
+  <div class="callout ok">
+    <strong>Built, wired, pinned, measured.</strong> A pre-projection membership score now separates inputs the bank
+    contains from inputs it does not. The shuffled-bank control collapses it, and it transfers across five ingress
+    seeds with a single threshold. <strong>Q4 can fail.</strong>
+    <br><br>
+    <strong>And it is not intelligence.</strong> The gate is a graded <em>lexical</em> membership meter. It makes HENRI able
+    to abstain. It does not give HENRI understanding. Both statements are measured below.
+  </div>
+
+  <h2>1. The defect this fixes</h2>
+  <p>Last turn's Q4 compared a <strong>post-projection</strong> score against a <strong>pre-projection</strong> baseline. The swarm's
+  CCCP projects <em>every</em> wave onto the stored bank, so post-projection similarity saturates:</p>
+  <table>
+    <thead><tr><th>Measurement</th><th class="num">Value</th><th>Reads as</th></tr></thead>
+    <tbody>
+      <tr><td>Post-projection similarity ≥ 0.95, fraction of inputs (K4)</td><td class="num">1.0</td>
+          <td class="bad">100% — nothing can ever be rejected</td></tr>
+      <tr><td>Post-projection mean</td><td class="num">≈ 0.99</td><td>the projection is the confound</td></tr>
+    </tbody>
+  </table>
+  <p>Reading the same statistic <strong>before</strong> the swarm runs recovers the information the projection destroys.</p>
+
+  <h2>2. What was built</h2>
+  <table>
+    <thead><tr><th>Artifact</th><th>Content</th></tr></thead>
+    <tbody>
+      <tr><td><code>henri_core/novelty_gate.py</code></td>
+          <td>Pure functions: <code>s(q)=max_k |⟨ψ_in, bank_k⟩|</code>, <code>margin=β(top1−top2)</code>, <code>auc</code>, <code>calibrated_threshold</code>, <code>token_overlap</code>. No model change.</td></tr>
+      <tr><td><code>solve(abstain_below=None)</code></td>
+          <td>Additive. Default OFF, so the default path is unchanged. Reads the score and abstains; on abstention <code>models_engaged=[]</code> — nothing is dispatched.</td></tr>
+      <tr><td><code>'novelty'</code> result key</td>
+          <td>Added to the default return dict: <code>{score, bank, n, threshold, in_bank_at_threshold}</code>.</td></tr>
+      <tr><td><code>exp_q4_discriminative.py</code></td>
+          <td>7 families, matched negatives, shuffled-bank ablation, honest lexical-coupling report.</td></tr>
+      <tr><td><code>exp_q4_margin.py</code></td>
+          <td>Level vs shape statistic; de-tautologized held-out corpus test.</td></tr>
+      <tr><td><code>exp_q4_seed_transfer.py</code></td>
+          <td>Does the threshold survive a different ingress draw? 5 seeds.</td></tr>
+      <tr><td><code>test_q4_wiring.py</code></td>
+          <td>Gate reachability + determinism, pinned.</td></tr>
+    </tbody>
+  </table>
+  <p class="sub">Pre-registration frozen before the run: <code>design/zone_a/evidence/henri_q4_preregistration.json</code>.
+  Threshold calibrated on <em>exact-in-bank vs random</em> only; the eval families never set it.</p>
+
+  <h2>3. Measured separation — seven families</h2>
+  <table>
+    <thead><tr><th>Family</th><th class="num">mean score</th><th>Bar (0 → 1)</th><th>Reads as</th></tr></thead>
+    <tbody>
+      <tr><td>F0 exact in bank</td><td class="num">1.000000</td><td><div class="bar"><span style="width:100%"></span></div></td><td>positive control (saturated)</td></tr>
+      <tr><td>F2 drop first word</td><td class="num">0.8543</td><td><div class="bar warn"><span style="width:85.4%"></span></div></td><td><strong>hard</strong> negative</td></tr>
+      <tr><td>F1 drop last word</td><td class="num">0.7238</td><td><div class="bar warn"><span style="width:72.4%"></span></div></td><td><strong>hard</strong> negative</td></tr>
+      <tr><td>F6 shuffled order</td><td class="num">0.5879</td><td><div class="bar warn"><span style="width:58.8%"></span></div></td><td>same multiset, order changed</td></tr>
+      <tr><td>F3 middle chunk</td><td class="num">0.5410</td><td><div class="bar warn"><span style="width:54.1%"></span></div></td><td>medium overlap</td></tr>
+      <tr><td>F4 synonym (0 shared tokens)</td><td class="num">0.2987</td><td><div class="bar warn"><span style="width:29.9%"></span></div></td><td>zero lexical overlap</td></tr>
+      <tr><td>F5 random waves</td><td class="num">0.0246</td><td><div class="bar"><span style="width:2.5%"></span></div></td><td>easy floor (sanity only)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The de-tautologized test (the one that matters)</h3>
+  <p>In-bank queries saturate at 1.0 by construction — <code>cos(ψ,ψ)=1</code> for <em>any</em> encoder. So I stored only 6 of 10
+  corpus sentences and queried the other 4, which the bank has never seen:</p>
+  <table>
+    <thead><tr><th>Population</th><th class="num">min</th><th class="num">max</th><th class="num">mean</th></tr></thead>
+    <tbody>
+      <tr><td>Stored (n=6)</td><td class="num">1.000000</td><td class="num">1.000000</td><td class="num">1.000000</td></tr>
+      <tr><td><strong>Held-out corpus (n=4)</strong></td><td class="num">0.183281</td><td class="num">0.223114</td><td class="num">0.203354</td></tr>
+      <tr><td>Random waves</td><td class="num">—</td><td class="num">0.0246</td><td class="num">0.0258</td></tr>
+    </tbody>
+  </table>
+  <p>Every never-stored sentence scores <strong>far below</strong> every stored one. That is a non-trivial separation, and it is the
+  literal requirement the user asked for.</p>
+
+  <h2>4. Controls that can fail</h2>
+  <table>
+    <thead><tr><th>Control</th><th>Measurement</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Shuffled-bank ablation</strong><br>(the load-bearing one)</td>
+          <td>F0 mean on real bank <b>1.000000</b> → on random bank <b>0.027436</b>; AUC <b>0.426</b></td>
+          <td class="ok">PASS — replacing the stored waves with random vectors <em>destroys</em> the separation, so the real bank carries the signal</td></tr>
+      <tr><td>θ = 0 accepts all</td><td>random-floor accept rate 1.0</td><td class="ok">PASS — θ has meaning</td></tr>
+      <tr><td>Positive control F0</td><td>min score 1.000000 ≥ 0.999</td><td class="ok">PASS — gate not mis-specified</td></tr>
+      <tr><td>Determinism (two runs, two receipts)</td><td><code>60cb763b == 60cb763b</code>, <code>bf6f16f6 == bf6f16f6</code></td><td class="ok">PASS — byte-reproducible</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. D-SEED — is the threshold seed-bound?</h2>
+  <p>I measured a real problem: the <em>same</em> unrelated string scored <b>0.342</b> under one unpinned ingress draw and
+  <b>0.5725</b> under another — a 0.23 swing. If the score's <em>scale</em> depends on a random draw, no threshold transfers.
+  Five seeds, ingress pinned each time:</p>
+  <table>
+    <thead><tr><th class="num">seed</th><th class="num">in-bank min</th><th class="num">held-out max</th><th class="num">gap</th><th class="num">AUC</th><th class="num">drop-last max</th></tr></thead>
+    <tbody>
+      <tr><td class="num">20261004</td><td class="num">1.0000</td><td class="num">0.2231</td><td class="num">0.7769</td><td class="num">1.000</td><td class="num">0.9363</td></tr>
+      <tr><td class="num">111111</td><td class="num">1.0000</td><td class="num">0.2573</td><td class="num">0.7427</td><td class="num">1.000</td><td class="num">0.9518</td></tr>
+      <tr><td class="num">222222</td><td class="num">1.0000</td><td class="num">0.2968</td><td class="num">0.7032</td><td class="num">1.000</td><td class="num">0.9694</td></tr>
+      <tr><td class="num">333333</td><td class="num">1.0000</td><td class="num">0.3083</td><td class="num">0.6917</td><td class="num">1.000</td><td class="num">0.9427</td></tr>
+      <tr><td class="num">444444</td><td class="num">1.0000</td><td class="num">0.2496</td><td class="num">0.7504</td><td class="num">1.000</td><td class="num">0.9497</td></tr>
+    </tbody>
+  </table>
+  <pre>K1 separates on EVERY seed          TRUE
+K2 gap positive on EVERY seed       TRUE
+K3 single threshold transfers       TRUE   (held-out max spread 0.0852)
+K4 ordering stable (AUC min)        TRUE   (1.000)</pre>
+  <p class="ok"><strong>Result:</strong> the separation is robust across seeds; the held-out max varies only 0.085 while in-bank
+  min stays 1.0000. A single threshold does transfer.</p>
+
+  <h2>6. What was falsified, and what the gate is not</h2>
+  <table>
+    <thead><tr><th>Claim</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag bad">FALSIFIED</span> SHAPE statistic <code>β(top1−top2)</code> as a discriminator</td>
+          <td>Hard-negative AUC <b>0.825</b> — <em>worse</em> than the level statistic's 1.000, and it fails the literal requirement. Killed outright.</td></tr>
+      <tr><td><span class="tag warn">BOUNDED</span> The literal requirement is met <em>degenerately</em></td>
+          <td>In-bank min is exactly 1.000000 because an exact query <em>is</em> the stored string: <code>cos(ψ,ψ)=1</code> for any encoder. One-dropped-word negatives still score 0.72–0.99.</td></tr>
+      <tr><td><span class="tag warn">BOUNDED</span> It is a lexical meter</td>
+          <td>r(token overlap, score) ≈ 0.36–0.75 across runs. It measures stored-wave membership, <strong>not</strong> meaning. Paraphrase is not recognised.</td></tr>
+      <tr><td><span class="tag bad">NOT CLAIMED</span> Intelligence</td>
+          <td>The store/query shared-encoder tautology remains. One encoder still writes both the bank and the query.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7. Evidence status</h2>
+  <table>
+    <thead><tr><th>Class</th><th>Items</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag ok">OBSERVED</span></td>
+          <td>All family means; held-out max 0.2231; shuffled-bank collapse 1.0→0.0274; 5-seed transfer; post-projection saturation 1.0; determinism after pinning; 7/7 gates; <code>DecoderConfig() = 447,145,231</code>; push <code>d86c4d6..a404125</code> rc=0; ledger 1956.</td></tr>
+      <tr><td><span class="tag bad">FALSIFIED</span></td>
+          <td>SHAPE statistic; post-projection similarity as a novelty signal; the claim that Q4 needed new <em>algebra</em> — a pre-projection level statistic suffices.</td></tr>
+      <tr><td><span class="tag warn">BLOCKED</span></td>
+          <td>Semantic membership (paraphrase recognition); external benchmark score; Zone C persistence. <strong>Model-performance claims need Vast CUDA</strong> — this run is CPU/dim=4096 diagnostic.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Gates (regression ran BEFORE commit; commit and push followed only because all were green)</h3>
+  <pre>verify_tri_model        === 10 passed, 0 failed ===
+tri_model_19            === 19 passed, 0 failed ===
+gate_fix_selfcheck      SELF-CHECK PASS
+q4_wiring               WIRING_CHECKS_PASS = True
+q4_discriminative       Q4_MECHANISM_EXISTS=True
+q4_margin               literal met (degenerately)
+q4_seed_transfer        K1..K4 all TRUE
+param_count             447,145,231
+anchor                  sha256 64 hex vs git blob 40 hex, sha1 matches git</pre>
+
+  <h2>8. Defects I found and fixed in my own work this turn</h2>
+  <ol>
+    <li><strong>v1 AUC was trivial.</strong> I compared each family against <em>random waves</em>, which are orthogonal to the bank by construction — so every AUC was 1.0. Replaced with the shuffled-bank ablation, which <em>can</em> fail.</li>
+    <li><strong>Identity permutation.</strong> <code>torch.randperm</code> can return the identity (~34% over 10 items), reproducing the original in-bank string and faking a 1.0000 out-of-bank score. Now rejected with a deterministic fallback.</li>
+    <li><strong>Wrong-population comprehension.</strong> My "out-of-bank max" still included the positive control, so it read 1.0000 and falsely reported failure. Fixed.</li>
+    <li><strong>Non-deterministic instrument.</strong> The ingress draws from the global RNG unless pinned; two runs hashed differently. All harnesses now pin <code>ingress_seed</code>. Production default unchanged.</li>
+    <li><strong>A flaky test.</strong> <code>T3</code> asserted a semantic threshold (0.5); the score is 0.5725. Rewritten to test the <em>mechanism</em> — abstention must follow the threshold — on both sides of the actual score.</li>
+    <li><strong>Promotion order.</strong> An earlier pipeline pushed <code>d86c4d6</code> to main while its own regressions returned rc=1 (it spawned a torch-less interpreter). Content was re-verified green afterwards, but the order was wrong. The final pipeline gates first, then commits.</li>
+  </ol>
+
+  <h2>9. Where the core claim stands</h2>
+  <ol>
+    <li><strong>Q4 can fail.</strong> That was the stated blocker, and it is removed. HENRI can now say "this is not in my bank."</li>
+    <li><strong>It is a membership meter, not understanding.</strong> Necessary, not sufficient. The honest reading of the numbers above.</li>
+    <li><strong>What remains.</strong> The six-subsystem gap is unchanged: learnable ingress, action-conditioned transitions, iterative resonator descent, Zone C persistence, sensorimotor grounding, grammar-constrained egress. This turn closed one mechanism, not the program.</li>
+    <li><strong>Next discriminating experiment.</strong> Wire the gate into the Sagnac veto — currently a verdict nothing consumes — and measure whether abstention improves any scored task. If it does not, the gate is a diagnostic, not a capability.</li>
+  </ol>
+
+  <footer>
+    Sources: <code>novelty_gate.py</code>, <code>exp_q4_discriminative.py</code>, <code>exp_q4_margin.py</code>,
+    <code>exp_q4_seed_transfer.py</code>, <code>test_q4_wiring.py</code>; receipts in <code>design/zone_a/evidence/</code>.
+    Ledger 1956 records, head <code>4032df4e</code>, chain intact. A hash chain proves linkage, not truth.
+    <strong>Scope:</strong> synthetic 10-sentence corpus, CPU, dim=4096, small config. Generated-text correctness is untestable
+    (untrained head). No external benchmark is claimed. No bound was moved to make any result pass.
+  </footer>
+</div>
+</body>
+</html>
