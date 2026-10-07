@@ -136,6 +136,16 @@ class M4Config:
     # default (every committed receipt still reproduces); set it to make an M4 run
     # byte-identical across processes and across prior global-RNG history.
     pin_seed: int | None = None
+    # STEP-1 (approved this turn): make the ingress learnable on the M4 path,
+    # behind a DEFAULT-OFF flag. Default False preserves the zero-pretraining
+    # contract and every committed receipt byte-for-byte. True builds a
+    # grad-enabled wave and rebuilds it INSIDE the training loop (a wave computed
+    # once outside is stale after opt.step()).
+    # MEASURED NECESSITY: the text->wave map had NO differentiable path -- wave_of
+    # is no_grad-wrapped, argmax() and a frozen phase buffer sever the rest. So
+    # requires_grad_(True) alone is a DEAD FLAG. zone_a's phase_residual supplies
+    # the missing path and initializes to exact zeros, so the default is unchanged.
+    train_ingress: bool = False
 
 
 @dataclass
@@ -174,9 +184,15 @@ class WaveTextGenerator(nn.Module):
             for p in self.system.ingress.parameters():
                 p.requires_grad_(False)
 
-    def wave(self, specs: list[str]) -> torch.Tensor:
-        with torch.no_grad():
-            return torch.stack([self.system.wave_of(s, self.tok) for s in specs])
+    def wave(self, specs: list[str], grad: bool = False) -> torch.Tensor:
+        """Wave for a batch of specs.
+
+        STEP-1: grad=True returns a grad-carrying wave for the learnable-ingress
+        path. Default False takes wave_of's no_grad branch, so every committed
+        receipt reproduces byte-for-byte.
+        """
+        return torch.stack([self.system.wave_of(s, self.tok, grad=grad)
+                            for s in specs])
 
     def logits_from_wave(self, psi: torch.Tensor) -> torch.Tensor:
         bands, tokens = self.dec.encode_wave(psi)
@@ -189,13 +205,25 @@ class WaveTextGenerator(nn.Module):
             psi: torch.Tensor | None = None) -> M4Report:
         torch.manual_seed(cfg.seed)
         rep = M4Report()
-        if psi is None:
+        # STEP-1 (self-caught): when the ingress trains we must NOT bind a no_grad
+        # wave here. The first patch bound psi unconditionally, so the loop guard
+        # `cfg.train_ingress and psi is None` was DEAD and the loop reused the
+        # stale no-grad wave -- measured max_param_delta 0.0 in fit() while the
+        # same replica moved 0.0->0.048. Leaving psi None makes the loop rebuild
+        # the wave with grad=True every step.
+        if psi is None and not cfg.train_ingress:
             psi = self.wave(specs)
         tgt = torch.full((len(targets), cfg.max_trace), cfg.pad_id,
                          dtype=torch.long)
         for i, ids in enumerate(targets):
             ids = ids[:cfg.max_trace]
             tgt[i, :len(ids)] = torch.tensor(ids)
+        # STEP-1: default-OFF. Unfreezing the ingress is necessary but NOT
+        # sufficient; the differentiable path comes from zone_a's phase_residual.
+        # self.parameters() already yields the ingress submodule's parameters.
+        if cfg.train_ingress:
+            for p in self.system.ingress.parameters():
+                p.requires_grad_(True)
         params = [p for p in self.parameters() if p.requires_grad]
         opt = torch.optim.AdamW(params, lr=cfg.lr)
         flat = [t for ids in targets for t in ids]
@@ -205,7 +233,11 @@ class WaveTextGenerator(nn.Module):
         rep.unigram_ce = float(-(p[p > 0] * p[p > 0].log()).sum())
         rep.uniform_ce = math.log(V)
         for step in range(cfg.steps):
-            logits = self.logits_from_wave(psi)              # [B, M, V]
+            # STEP-1: rebuild the wave each step when the ingress trains. A wave
+            # computed once outside the loop is STALE after opt.step().
+            psi_step = (self.wave(specs, grad=True)
+                        if (cfg.train_ingress and psi is None) else psi)
+            logits = self.logits_from_wave(psi_step)         # [B, M, V]
             m = min(logits.shape[1], tgt.shape[1])
             loss = torch.nn.functional.cross_entropy(
                 logits[:, :m, :].reshape(-1, logits.shape[-1]),

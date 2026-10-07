@@ -1,0 +1,79 @@
+{
+  "schema": "henri.zonec.engram.receipt.v1",
+  "written_local_date": "2026-10-07",
+  "pin": 20261010,
+  "diagnostic_only": "CPU, D=4096, small=True. No model-performance claim.",
+  "head_at_run": "ffb4a0042d98ea48a1b668b67538689c8999a561",
+  "step1_learnable_ingress": {
+    "change": "zone_a.CliffordVLASlotEncoder.phase_residual (nn.Parameter, zeros, requires_grad=False at init) + system.wave_of(grad=) + M4Config.train_ingress (default False)",
+    "why_a_flag_alone_fails": "MEASURED: the text->wave map has NO differentiable path. wave_of is no_grad-wrapped; encode_text() returns requires_grad=False even called directly; the write path severs at argmax(routes)->python int, self.angle[tok] (frozen buffer), and torch.polar(torch.tensor(1.0), phase) (constant magnitude). requires_grad_(True) would be a DEAD FLAG.",
+    "why_phase_residual_works": "MEASURED separately: torch.polar IS differentiable in the phase; Parameter[int_index] DOES return a grad-carrying tensor.",
+    "kill_test": {
+      "K1_control_flag_off": {"grad": 0, "max_param_delta": 0.0, "fingerprint_changed": false},
+      "K2_grad_reaches_ingress": {"pass": true, "param": "phase_residual", "grad_norm": 0.1009402722, "n_params_with_nonzero_grad": 1, "also_reached": "decoder (35 params)"},
+      "K3_param_changes_and_engages": {"pass": true, "max_param_delta": 0.012874625623226166, "fingerprint_change": "30dece8423a26fb5 -> 75ff077250c7ff85", "engagement_floor": 1e-09},
+      "K4_readout_still_trains": {"pass": true, "loss_first": 5.9587, "loss_last": 3.893047},
+      "K5_default_off": true,
+      "kill_test_pass": true
+    },
+    "self_caught_defects": [
+      "first patch left psi bound unconditionally so the loop guard was DEAD: measured max_param_delta 0.0 in fit() while a manual replica moved 0.0->0.048",
+      "_assemble compared float(n) on a grad-carrying tensor (warns, undefined under autograd); now float(n.detach())"
+    ]
+  },
+  "step2_m4g1_learnable": {
+    "seeds": [20261010, 20261011, 20261012],
+    "per_seed": {
+      "20261010": {"frozen": 0.0, "learnable": 0.0357, "ctrl_learnable": 0.0, "floor": 0.1171, "bar": 0.1671, "PASS": false},
+      "20261011": {"frozen": 0.0536, "learnable": 0.0446, "ctrl_learnable": 0.0446, "floor": 0.1171, "bar": 0.1671, "PASS": false},
+      "20261012": {"frozen": 0.0804, "learnable": 0.0893, "ctrl_learnable": 0.0446, "floor": 0.1171, "bar": 0.1671, "PASS": false}
+    },
+    "margin": {"held_mean": 0.0565, "held_std": 0.023453, "ctrl_mean": 0.0297, "margin_ratio": 1.143, "all_seeds_pass": false},
+    "verdict": "M4-G1 STILL FAILING",
+    "reading": "The learnable ingress is NECESSARY but NOT SUFFICIENT. Every seed lands below the 0.1171 unigram floor. With 48 training examples the unfrozen ingress memorizes rather than generalizes."
+  },
+  "zonec_engram_store": {
+    "data_level_answer": "engram := (Psi_spec, Psi_trace). Co-storage, NOT binding.",
+    "E1_costore": {"held_tok": 0.1667, "held_em": 0.1667},
+    "E2_bind_hrr": {"held_tok": 0.0463, "same_as_costore": false},
+    "E3_rawtext_lookup": {"held_em": 0.0, "why": "BY CONSTRUCTION: no train spec contains a length-3 program string, so the compositional split has no literal leakage"},
+    "C1_shuffled_store": {"held_tok": 0.0741},
+    "unigram_floor": 0.1171,
+    "bar": 0.1671,
+    "E1_vs_control_ratio": 2.25,
+    "coverage_at_k": {
+      "real_store":     {"1": 0.1429, "5": 0.4464, "20": 0.625, "100": 0.8304},
+      "shuffled_store": {"1": 0.0446, "5": 0.2679, "20": 0.5714, "100": 0.8304},
+      "control_distinguishable": true,
+      "lift_at_5": "0.4464 vs 0.2679 -- the store supplies real candidate structure"
+    },
+    "sequential_registration": {
+      "store_sizes": [0, 12, 24, 48, 72],
+      "real_registration_curve": [0.0, 0.0, 0.0648, 0.0741, 0.0741],
+      "shuffled_registration_control": [0.0, 0.0463, 0.0463, 0.0741, 0.0833],
+      "continuous_learning_supported": false,
+      "why": "the control is NOT flat; at n=72 the shuffled arm (0.0833) EXCEEDS the real arm (0.0741)"
+    },
+    "verdict": "STORE_REAL_NOT_PASSING",
+    "self_caught_defects": [
+      "coverage() took an argument and closed over S, so real and shuffled produced IDENTICAL numbers (a vacuous control); fixed to read the label map",
+      "HRR bind: first draft multiplied fft(bound)[48,D] by fft(Q)[108,D] -> RuntimeError 48 vs 108; rewritten as a Parseval pairwise complex matmul (no [108,48,D] allocation)",
+      "Q was shadowed by the flattened 8192-dim query -> RuntimeError 4096 vs 8192"
+    ]
+  },
+  "recurring_defect_class": {
+    "rule": "no measurement may sit downstream of an operator that mixes the candidate with the bank, and no control may close over its own treatment",
+    "instances": ["Q4 post-projection saturation", "Sagnac veto scoring psi_conv", "Zone C coverage() closing over S"]
+  },
+  "status": "PARTIAL",
+  "blocked": [
+    "steps 3-5 (depend on a step-2 improvement that does not exist)",
+    "live TimescaleDB (absent on this host; no surrogate substituted)",
+    "any model-performance claim (CPU, dim=4096)"
+  ],
+  "next_decision": {
+    "question": "is the representation ceiling DATA-bound or ARCHITECTURE-bound?",
+    "cheapest_discriminating_experiment": "scale the M4 corpus from 48 to ~10000 verified (program, input, trace) triples on the same pinned harness; every trained arm becomes falsifiable",
+    "authorization": "ESCALATE -- changes the task definition"
+  }
+}

@@ -92,8 +92,17 @@ class TriModelSystem(nn.Module):
         self.register_buffer("axiom_bank", sub.unit_norm(raw))
 
     # ------------------------------------------------------------------ ingress
-    def wave_of(self, text: str, tokenizer) -> torch.Tensor:
-        """Zone A: text -> unit-norm wave [D]."""
+    def wave_of(self, text: str, tokenizer, grad: bool = False) -> torch.Tensor:
+        """Zone A: text -> unit-norm wave [D].
+
+        STEP-1 (measured this turn): the text->wave map is wrapped in no_grad, so
+        requires_grad_(True) alone is a DEAD FLAG -- encode_text() returns
+        requires_grad=False even when called directly. grad=True returns a
+        grad-carrying wave so the learnable ingress can train. Default False
+        preserves every committed receipt byte-for-byte.
+        """
+        if grad:
+            return self.ingress.encode_text(text, tokenizer)
         with torch.no_grad():
             return self.ingress.encode_text(text, tokenizer)
 

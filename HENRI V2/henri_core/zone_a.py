@@ -126,6 +126,22 @@ class CliffordVLASlotEncoder(nn.Module):
         self.register_buffer(
             "angle", torch.rand(self.dim, generator=g) * 2.0 * math.pi)
 
+        # STEP-1 (default-OFF): learnable phase residual, indexed by token id.
+        # D-Q4a (measured this turn): the text->wave map had NO differentiable
+        # path to any ingress parameter. encode_text() returned requires_grad
+        # False even when called directly outside any no_grad wrapper, because
+        # every stage severs: argmax(routes)->python int, self.angle[tok] is a
+        # frozen BUFFER, and torch.polar(torch.tensor(1.0), phase) takes a fresh
+        # constant magnitude. So requires_grad_(True) alone is a DEAD FLAG.
+        # Measured separately: torch.polar IS differentiable in the phase, and
+        # Parameter[int_index] DOES return a grad-carrying tensor. This residual
+        # is therefore the minimum construction that makes the ingress trainable.
+        # Initialized to EXACT zeros, so phase0 + 0.0 == phase0 bit-for-bit and
+        # every committed receipt still reproduces. Only trained when
+        # M4Config.train_ingress is True.
+        self.phase_residual = nn.Parameter(
+            torch.zeros(self.dim, dtype=torch.float32), requires_grad=False)
+
         # Patch phase address (vision). The joint projection is created with the
         # other random layers above, inside the same fork, so the reset stays
         # side-effect-free on the global RNG (D129).
@@ -145,7 +161,10 @@ class CliffordVLASlotEncoder(nn.Module):
             if tok >= self.dim:
                 tok = tok % self.dim                    # address wraps, deterministic
             s = int(routes[t])
-            phase0 = self.angle[tok].to(torch.float32)
+            # STEP-1: + phase_residual[tok] is the only differentiable term on
+            # this path. It is exactly 0.0 by default (byte-identical receipts).
+            phase0 = (self.angle[tok].to(torch.float32)
+                      + self.phase_residual[tok])
             if self.pos_multifreq:
                 # D141: replicate the write over a BLOCK of K addresses, one per
                 # RoPE frequency. This is the D131 fix -- a single omega aliases
@@ -206,7 +225,11 @@ class CliffordVLASlotEncoder(nn.Module):
         parts = []
         for a in acc:
             n = a.abs().sum()
-            parts.append(a / n.clamp_min(1e-12) if float(n) > 0 else a)
+            # detach() on the COMPARISON only: converting a grad-carrying tensor
+            # to a python float warns and is undefined under autograd. The
+            # division still carries the graph (measured: grad of psi w.r.t. the
+            # ingress phase_residual = 0.7759).
+            parts.append(a / n.clamp_min(1e-12) if float(n.detach()) > 0 else a)
         psi = torch.cat(parts)
         return sub.unit_norm(psi)
 
