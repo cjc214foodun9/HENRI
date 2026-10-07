@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HENRI — push + full-scale K-B5 run: result</title>
+<style>
+  :root { --ok:#1a7f37; --warn:#9a6700; --bad:#b42318; --line:var(--border); }
+  body { color: var(--foreground); font-family: inherit; margin:0; }
+  h1 { font-size:1.05rem; margin:0 0 .2rem; }
+  p.sub { color:var(--muted-foreground); margin:0 0 .9rem; font-size:.82rem; }
+  h2 { font-size:.9rem; margin:1.1rem 0 .35rem; }
+  table { border-collapse:collapse; width:100%; font-size:.82rem; }
+  th,td { text-align:left; padding:.32rem .5rem; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted-foreground); font-weight:600; }
+  code { font-size:.78rem; }
+  .pill { display:inline-block; padding:.05rem .45rem; border-radius:999px; font-size:.72rem; font-weight:600; }
+  .pass{color:var(--ok)} .hold{color:var(--warn)} .block{color:var(--bad)}
+  .pill.pass{background:color-mix(in srgb,var(--ok) 15%,transparent)}
+  .pill.hold{background:color-mix(in srgb,var(--warn) 18%,transparent)}
+  .pill.block{background:color-mix(in srgb,var(--bad) 15%,transparent)}
+  .note { margin-top:.7rem; padding:.55rem .7rem; border:1px solid var(--line); border-left:3px solid var(--warn); border-radius:6px; font-size:.82rem; }
+  .ask { margin-top:.9rem; padding:.6rem .7rem; border:1px solid var(--line); border-radius:8px; font-size:.84rem; }
+  button{font:inherit;padding:.35rem .7rem;margin:.35rem .35rem 0 0;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--foreground);cursor:pointer}
+  button:hover{background:var(--accent)}
+</style>
+</head>
+<body>
+  <h1>HENRI — approved push and full-scale K-B5 run: result</h1>
+  <p class="sub">Two approved actions · branch <code>feat/phase1-transduction</code> · remote = local = <code>a9b498f</code> · ledger head <code>f8e1cd57</code> (1928) · Vast 54185275 stopped</p>
+
+  <h2>Part 1 — GitHub sync <span class="pill pass">DONE · VERIFIED</span></h2>
+  <table>
+    <tr><th>Item</th><th>Value</th></tr>
+    <tr><td>Before → after</td><td><code>a15f88b</code> → <code>a9b498f</code> (38 commits: 36 + 2 evidence)</td></tr>
+    <tr><td>Push return code</td><td>0 · fast-forward · no <code>--force</code></td></tr>
+    <tr><td>Readback</td><td><code>git ls-remote</code> exact match = local HEAD · ahead 0 / behind 0</td></tr>
+    <tr><td>Payload safety</td><td>150 files, 0 PDFs, 0 binaries, 0 secrets</td></tr>
+    <tr><td>Ledger</td><td><code>HUMAN_DECISION #1921</code>, <code>PUSHED #1922</code> + <code>#1927</code></td></tr>
+  </table>
+
+  <h2>Part 2 — full-scale K-B5 rung (d_model=1024) <span class="pill block">FALSIFIED — valid</span></h2>
+  <table>
+    <tr><th>Arm</th><th>Pooling</th><th>Seeds clearing 0.95</th><th>Mean G-U4</th></tr>
+    <tr><td>spec_b</td><td><code>n_mem=32, d_k=32</code></td><td>5 / 5</td><td>0.990936</td></tr>
+    <tr><td>control (old rule)</td><td><code>n_mem=256, d_k=4</code></td><td><strong>4 / 5</strong></td><td>0.966119</td></tr>
+  </table>
+  <p class="sub">Verdict <code>NOT_DISCRIMINATING</code>. Positive control ≥ 0.9999 and <code>estimator_sane=True</code> on every arm. Receipt sha256 <code>6265af2f…af4af</code>, matches remote exactly.</p>
+
+  <div class="note">
+    <strong>What this means.</strong> K-B5 passes (spec_b 5/5), but K-B6 fails: the old rule,
+    the exact <code>d_k=4</code> defect Spec B named, <em>also</em> clears 0.95 at full scale.
+    So G-U4 no longer separates the arms at <code>d_model=1024</code>.
+    <strong>Spec B attribution is NOT confirmed at full scale by this metric.</strong>
+    The gate caught its own ceiling and reported it. Recorded, not retried.
+  </div>
+
+  <div class="note">
+    <strong>Structural finding: it was not a CUDA-tensor run.</strong>
+    <code>henri_core</code> has no device plumbing — no <code>.cuda()</code>, no <code>.to(device)</code>.
+    Tensors are CPU. The run executed on the Vast host's CPU (192 cores, 503 GB, peak RSS 6.96 GB, 305.5 s).
+    A true CUDA-tensor run needs a code change (a new mechanism) and is a separate decision.
+  </div>
+
+  <h2>Evidence classes</h2>
+  <table>
+    <tr><th>Status</th><th>Items</th></tr>
+    <tr><td><span class="pass">OBSERVED</span></td><td>push RC=0; remote SHA readback; 10 rows of full-scale G-U4; receipt hash; ledger intact</td></tr>
+    <tr><td><span class="hold">HYPOTHESIS</span></td><td>why the old rule passes at 1024 — <code>n_mem=256</code> gives 256 slots there, unlike 32 at small scale; D85 doc says that matches the N-pattern update</td></tr>
+    <tr><td><span class="block">BLOCKED / NOT DONE</span></td><td>main merge (not approved) · AAII score (0/10 scoreable, stub adapters) · true CUDA-tensor run (needs code change)</td></tr>
+  </table>
+
+  <h2>Independent review — 11 findings (3 Critical)</h2>
+  <p class="sub">A read-only subagent review returned <strong>11 findings: 3 Critical, 5 Important, 3 Minor</strong>.
+  Severity labels are advice; I verified the three Critical claims myself.
+  <strong>Critical 1 — CONFIRMED:</strong> <code>gates.py</code> clamps with <code>max(0.0,min(1.0,r2))</code>, and <code>min(1.0,nan)==1.0</code>, so a non-finite R² reads as a ceiling pass; I ran it (<code>=1.0</code>). No <code>isnan</code> guard exists in the gate.
+  <strong>Critical 2 — CONFIRMED:</strong> the driver scores only the raw value (lines 135–136) and never branches on <code>status</code>/<code>estimator_sane</code>.
+  <strong>Critical 3 — CONFIRMED:</strong> the pass rule is hardcoded <code>&gt;= 4</code> while <code>--nseeds/--n-texts</code> are CLI-overridable.
+  <strong>All three are INERT for this run</strong> — no NaN occurred, all 10 arms <code>estimator_sane=True</code>, and the executed CLI equaled the pre-registration (5/5/1024). The verdict rests on the control <em>passing</em>, a conservative direction. Fix before any future PASS claim; <code>gates.py</code> is load-bearing, so fixes need approval and must be versioned, not in-place.</p>
+
+  <div class="ask">
+    <strong>Decision requested.</strong> The K-B5 attribution is now open, not closed.
+    <div>
+      <button data-hermes-send="Approve a discriminating full-scale test: add a G-U4 alternative (KSG MI or a stricter information metric) that does not saturate at d_model=1024, and re-run the spec_b vs old-rule arms.">Approve a discriminating metric</button>
+      <button data-hermes-send="Investigate the full-scale control pass: measure whether n_mem=256/d_k=4 at d_model=1024 is genuinely less degenerate than n_mem=32/d_k=4 at d_model=128.">Investigate the control pass</button>
+      <button data-hermes-send="Fix the two gate defects in gates.py (NaN clamp and estimator_sane gating) before the next run.">Fix the gate defects</button>
+    </div>
+  </div>
+</body>
+</html>

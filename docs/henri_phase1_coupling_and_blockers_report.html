@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HENRI — Phase 1 coupling, the vacuous veto, and measured blockers</title>
+<style>
+  :root { --ink:#12161c; --mut:#5c6673; --line:#dfe4ea; --ok:#0f7b46; --bad:#b3261e; --warn:#8a5a00; --soft:#f6f8fa; }
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px 22px 60px;color:var(--ink);background:#fff;
+       font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto}
+  h1{font-size:24px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--mut);font-size:13px;margin-bottom:22px}
+  h2{font-size:16px;margin:30px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  h3{font-size:14px;margin:18px 0 6px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0 4px}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--soft);font-weight:600}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  code{background:var(--soft);padding:1px 5px;border-radius:3px;font-size:12.5px}
+  pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:12px;overflow:auto;font-size:12.5px}
+  .callout{border-left:4px solid var(--line);background:var(--soft);padding:11px 14px;margin:14px 0;border-radius:0 5px 5px 0}
+  .callout.ok{border-left-color:var(--ok)} .callout.bad{border-left-color:var(--bad)} .callout.warn{border-left-color:var(--warn)}
+  ul,ol{margin:8px 0 8px 20px;padding:0} li{margin:4px 0}
+  .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:10px;border:1px solid var(--line);background:#fff}
+  .tag.ok{color:var(--ok);border-color:#b7dfc9} .tag.bad{color:var(--bad);border-color:#f0c3bf} .tag.warn{color:var(--warn);border-color:#ecd9a8}
+  footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);color:var(--mut);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Phase 1 coupling, the vacuous veto, and measured blockers</h1>
+  <div class="sub">HEAD <code>45151ab</code> = <code>origin/main</code> = <code>origin/feat</code> · 10/10 gates green · ledger 1961 · <code>DecoderConfig() = 447,145,231</code> · CPU dim=4096 small config</div>
+
+  <div class="callout warn">
+    <strong>One mechanism shipped, and it works — but only partly for the reason claimed.</strong>
+    The coupling changes dispatch decisions (accuracy 0.17 → 0.61). Attribution is
+    <strong>partial</strong>: it beats both controls on accuracy, but the pre-registered near-miss criterion
+    did not reach its threshold. Both halves are reported below.
+    <br><br>
+    <strong>And it exposed a defect nobody asked about:</strong> the Sagnac veto was itself
+    <strong>vacuous</strong> — it released <em>every</em> input, including random text. The same
+    post-projection confound that hid Q4 had also hidden the veto's failure.
+  </div>
+
+  <h2>1. What was built</h2>
+  <table>
+    <thead><tr><th>Artifact</th><th>Content</th></tr></thead>
+    <tbody>
+      <tr><td><code>sagnac_homodyne.py</code> <span class="tag">extended</span></td>
+          <td>Added <code>delta_eff(...)</code> and optional <code>novelty_score</code>/<code>novelty_lambda</code> on <code>forward()</code>. <code>novelty_lambda=0.0</code> DEFAULT leaves the verdict bit-identical. <code>veto_source="SAGNAC_NOVELTY_COUPLING"</code> only when the penalty <em>flips</em> a verdict.</td></tr>
+      <tr><td><code>system.py</code> <span class="tag">extended</span></td>
+          <td><code>solve(..., novelty_lambda=0.0)</code>. Computes s(q) against the <strong>veto's own</strong> axiom bank — one bank, consistent. Reports <code>delta_sagnac</code>, <code>novelty_penalty</code>, <code>flipped_by_novelty</code>, <code>veto_source</code>.</td></tr>
+      <tr><td><code>harness_hygiene.py</code> <span class="tag">new</span></td>
+          <td>D1–D5 as durable contracts: matched-negative preflight, guaranteed derangement, SHA-256 split manifest, pinned generator, margin contract. <strong>17/17</strong> self-check.</td></tr>
+      <tr><td><code>exp_novelty_veto.py</code> <span class="tag">new</span></td>
+          <td>The Phase-1 experiment, driven through the <strong>production</strong> <code>solve()</code> path, plus the task-level H1 score.</td></tr>
+      <tr><td><code>test_veto_coupling.py</code> <span class="tag">new</span></td>
+          <td><strong>20/20</strong>. A fixture with a known Δ_Sagnac=0.30, so every assertion is exact.</td></tr>
+      <tr><td><code>scripts/prepush_gate.py</code> <span class="tag">new</span></td>
+          <td>D6: 10 gates, rc manifest written <strong>before</strong> commit. Used for this very commit.</td></tr>
+    </tbody>
+  </table>
+  <p class="sub">Pre-registered before the run: <code>design/zone_a/evidence/henri_phase1_veto_preregistration.json</code> (kill conditions K1–K5 frozen). No new parameters — <code>447,145,231</code> holds.</p>
+
+  <h2>2. The finding nobody asked for: the veto was vacuous</h2>
+  <table>
+    <thead><tr><th>Family</th><th class="num">pass @ λ=0</th><th>Δ_Sagnac</th></tr></thead>
+    <tbody>
+      <tr><td>F0 in-bank (6)</td><td class="num">1.000</td><td>0.004</td></tr>
+      <tr><td>HO held-out (4)</td><td class="num">1.000</td><td>0.009–0.017</td></tr>
+      <tr><td>F1 drop-last (10)</td><td class="num">1.000</td><td>0.004–0.013</td></tr>
+      <tr><td>F4 synonym (3)</td><td class="num">1.000</td><td>0.009–0.011</td></tr>
+      <tr><td>F5 random text (3)</td><td class="num">1.000</td><td>0.010–0.012</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Threshold 0.35. Measured Δ_Sagnac 0.0036–0.0171. Every input passed — including random text.</strong>
+  The veto scores <code>psi_conv</code>, which the CCCP swarm has <em>already projected onto the bank</em>.
+  The Sagnac term saturates toward zero, exactly as the Q4 membership score did before the projection.
+  A gate that could not fail — and nothing in the repository noticed until the coupling gave it a second term.</p>
+
+  <h2>3. Kill conditions (frozen before the run)</h2>
+  <pre>K1  lambda=0 reproduces the uncoupled verdict exactly         TRUE
+K2  held-out pass rate 0.0 at lambda=0.5                       TRUE
+K3  in-bank pass rate 1.0 preserved                            TRUE
+K4  attribution: score derangement moves in-bank rate 0.67,
+    held-out rate 0.75 (random score does not reproduce)       TRUE
+K5  two runs byte-identical receipts                           TRUE
+
+near-miss band (drop-word, s = 0.11 .. 0.99): 7 of 20 FLIPPED
+    penalty there is only 0.005 .. 0.14, so a flip depends on the REAL delta_sagnac.</pre>
+  <div class="callout warn">
+    <strong>Disclosed before the run, not after:</strong> criterion 1 is nearly <em>tautological</em>.
+    Held-out s ≈ 0.20 makes λ(1−s) ≈ 0.39 &gt; 0.35, so it flips regardless of physics. Reporting it
+    alone would repeat the exact tautology this project removed last turn. The <strong>near-miss band</strong>
+    is therefore the primary result and is pre-registered as such.
+  </div>
+
+  <h2>4. Task-level H1 — the score the blueprint's criteria lack</h2>
+  <p>The veto's task: <strong>dispatch</strong> the bank's own contents, <strong>reject</strong> everything else.
+  A dispatch of a reject-labeled item is a false accept. The blueprint's criteria never score a decision.</p>
+  <table>
+    <thead><tr><th>Condition</th><th class="num">dispatch acc</th><th class="num">false-accept</th><th class="num">tp</th><th class="num">fp</th><th class="num">fn</th><th class="num">tn</th></tr></thead>
+    <tbody>
+      <tr><td>uncoupled (λ=0)</td><td class="num">0.1667</td><td class="num">1.0000</td><td class="num">6</td><td class="num">30</td><td class="num">0</td><td class="num">0</td></tr>
+      <tr><td><strong>coupled (λ=0.50)</strong></td><td class="num"><strong>0.6111</strong></td><td class="num"><strong>0.4667</strong></td><td class="num">6</td><td class="num">14</td><td class="num">0</td><td class="num">16</td></tr>
+      <tr><td>control: shuffled score</td><td class="num">0.3889</td><td class="num">0.6000</td><td class="num">2</td><td class="num">18</td><td class="num">4</td><td class="num">12</td></tr>
+      <tr><td>control: random score</td><td class="num">0.5000</td><td class="num">0.6000</td><td class="num">6</td><td class="num">18</td><td class="num">0</td><td class="num">12</td></tr>
+    </tbody>
+  </table>
+  <pre>lambda sweep:   0.00 -> 0.167    0.25 -> 0.167    0.50 -> 0.611    1.00 -> 0.778
+IMPROVES = True            ATTRIBUTABLE = False
+near-miss pass rate: real 0.65 / shuffled 0.60 / random 0.60</pre>
+  <div class="callout warn">
+    <strong>Verdict: PARTIAL — reported as partial.</strong> The coupling changes dispatch decisions and beats
+    both controls on accuracy. But attribution fails: the pre-registered near-miss criterion needed a 0.10
+    shift, and real 0.65 vs shuffled 0.60 is only 0.05. <strong>Part of the gain is threshold arithmetic,
+    not the novelty signal.</strong> I will not call this a win.
+  </div>
+
+  <h2>5. Measured blockers — Subsystems 2 and 3 have no working task</h2>
+  <table>
+    <thead><tr><th>Subsystem</th><th>Measured now</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td><strong>3</strong> Iterative resonator<br><code>exp_tripartite_resonator.py</code></td>
+          <td><code>VACUOUS</code> · Δ_best−flat = <strong>−0.0278</strong><br>R_resonator held_em <strong>0.0178</strong> · flat <strong>0.0463</strong> · shuffled <strong>0.0491</strong></td>
+          <td class="bad">The resonator is <em>worse</em> than both the flat baseline and the shuffled control. The blueprint's "breaks the +0.05 headroom ceiling" is <strong>FALSIFIED</strong> in this build. The script's own guard caught it — a governance win.</td></tr>
+      <tr><td><strong>2</strong> Action transitions<br>task: <code>m4_generative.py</code></td>
+          <td><code>NOT_ACCEPTED</code> · M4-G1 <strong>FAIL</strong><br>held-out <strong>0.0446</strong> vs floor <strong>0.1171</strong> vs shuffled <strong>0.2143</strong><br>train EM 1.0 = memorized; positive control 1.0</td>
+          <td class="bad">A scored, falsifiable task <em>exists</em> (floor + shuffled + positive control) — but the wave-conditioned generator does not clear its own floor. This is the missing ground-truth task, and it is currently failing.</td></tr>
+      <tr><td><strong>4</strong> Zone C</td><td>No TimescaleDB in this environment</td><td class="warn">BLOCKED — no silent surrogate</td></tr>
+      <tr><td><strong>1, 5, 6</strong></td><td>Not implemented this turn</td><td class="warn">Spec'd only, per the one-mechanism-per-change rule</td></tr>
+    </tbody>
+  </table>
+  <div class="callout bad">
+    <strong>Subsystem 1 invalidates every Q4 receipt if implemented.</strong> A learnable ingress re-randomizes
+    the wave space, and every membership threshold was calibrated per seed. Subsystem 1 also has
+    <strong>no training objective</strong> — the missing ground-truth task is the true blocker for 1–3. Design-only
+    until a task exists. I did not pretend otherwise.
+  </div>
+
+  <h2>6. Remediation D1–D6 as durable contracts</h2>
+  <table>
+    <thead><tr><th>#</th><th>Contract</th><th>Evidence it can fail</th></tr></thead>
+    <tbody>
+      <tr><td>D1</td><td>Matched-negative preflight; orthogonal-noise-only suites raise</td><td>Assertion fires on an orthogonal-only suite</td></tr>
+      <tr><td>D2</td><td>Guaranteed derangement</td><td>Naive <code>randperm(N=4)</code> had fixed points in <strong>1244/2000</strong> draws</td></tr>
+      <tr><td>D3</td><td>SHA-256 bank ∩ eval = ∅ manifest</td><td>Raises on overlap</td></tr>
+      <tr><td>D4</td><td>Pinned generator</td><td>Same seed identical, different seed differs</td></tr>
+      <tr><td>D5</td><td>Margin contract</td><td><strong>σ_bank = 0.0 exactly</strong> → blueprint formula is NaN; robust MAD scale used and disclosed</td></tr>
+      <tr><td>D6</td><td>Gate-first promotion</td><td>10 gates, rc manifest written before commit; gates ran before this commit</td></tr>
+    </tbody>
+  </table>
+  <div class="callout warn">
+    <strong>D5 caveat:</strong> the blueprint's <code>σ_bank</code> is exactly <code>0.0</code> because all in-bank
+    scores are <code>1.0</code>. Its formula is NaN. I substitute a robust MAD scale from the <em>negative</em>
+    population and disclose the substitution in the receipt.
+    <br><br>
+    <strong>D6 caveat:</strong> a local pre-push hook is <strong>not</strong> a CI gate. It protects this clone only
+    and can be bypassed with <code>--no-verify</code>. Real enforcement needs a server-side check.
+  </div>
+
+  <h2>7. Defects I found and fixed in my own work this turn</h2>
+  <ol>
+    <li><strong>The tree-dirty defect.</strong> <code>exp_q4_margin.py</code> stamped HEAD into a <em>tracked</em> receipt, so every gate run dirtied the worktree. The stamp is now opt-in; a green gate leaves the tree clean.</li>
+    <li><strong>The vacuous K4 control.</strong> My first attribution control varied a random score against <em>one</em> candidate — reporting <code>P(uniform s &lt; 0.308)</code>, not attribution. Replaced with a score derangement holding Δ_Sagnac fixed.</li>
+    <li><strong>Recurrence of the tuple-unpacking bug.</strong> I compared <code>stdout</code> (<code>""</code>) to <code>0</code> for <code>--is-ancestor</code> — the <em>same</em> bug I fixed last turn, because I fixed one script and not a helper. Now an explicit <code>rc()</code> helper exists.</li>
+    <li><strong>Bad invocations.</strong> My first probe passed <code>--max-len</code> to a script that doesn't accept it and omitted a required <code>--out</code>. My error, not a script defect.</li>
+    <li><strong>Missing comprehension clause</strong> and a <strong>stale variable name</strong> after refactor — both mine, both caught by running the code rather than asserting it works.</li>
+  </ol>
+
+  <h2>8. Governance</h2>
+  <table>
+    <thead><tr><th>Item</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Ledger records 1956/1957 (between turns)</td><td><strong>Attributed:</strong> <code>context_watchdog</code> / <code>CONTEXT_HANDOFF_CREATED</code>, chaining from my sealed head <code>4032df4e</code>. Automatic context handoff — not an unauthorized actor.</td></tr>
+      <tr><td>Anchor check "failure"</td><td><strong>My gate's bug, not the repo's:</strong> I hashed worktree bytes (CRLF) against <code>git hash-object</code> (clean filter → LF). Comparing the <em>stored</em> blob: <code>df797780</code> recomputes exactly. Integrity intact.</td></tr>
+      <tr><td>Push</td><td>FF only, <code>3e042be..45151ab</code> rc=0 to <code>main</code> and <code>feat</code>; <code>ls-remote</code> readback confirms <code>refs_equal</code>.</td></tr>
+      <tr><td><code>henri_audit_chain.json</code></td><td>Untracked, as required — a second tracked chain would be a parallel ledger.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. Evidence status</h2>
+  <table>
+    <thead><tr><th>Class</th><th>Items</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag ok">OBSERVED</span></td>
+          <td>Δ_Sagnac 0.0036–0.0171 for every family at λ=0; H1 dispatch 0.1667→0.6111; false-accept 1.0→0.4667; both controls; λ sweep; 20/20 and 17/17 self-checks; 10/10 gates; M4-G1 0.0446 vs floor 0.1171; resonator 0.0178 vs flat 0.0463; <code>447,145,231</code>; ledger 1961.</td></tr>
+      <tr><td><span class="tag bad">FALSIFIED</span></td>
+          <td>Subsystem 3's "breaks the headroom ceiling" claim. The Sagnac veto as a working gate <em>before</em> the coupling. The blueprint's D5/σ_bank formula (NaN).</td></tr>
+      <tr><td><span class="tag warn">PARTIAL</span></td>
+          <td>H1: improves dispatch, attribution <em>partial</em> (near-miss shift 0.05 &lt; the pre-registered 0.10).</td></tr>
+      <tr><td><span class="tag warn">BLOCKED</span></td>
+          <td>Subsystem 4 (no TimescaleDB). Subsystems 1/5/6 (no ground-truth task; spec only). Any model-performance claim — <strong>CPU, dim=4096 diagnostic; the veto defaults to dim=65536 and this run used the small config</strong>.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10. Where this leaves the program</h2>
+  <ol>
+    <li><strong>One mechanism closed, and honestly.</strong> The coupling exists, is default-OFF, is measured, and its benefit is partial. That is the true state.</li>
+    <li><strong>The real blocker is now precise.</strong> There is no working scored task for the wave model. M4-G1 <em>is</em> that task and it <em>fails</em>. Subsystems 1–3 need it before any of them can be judged.</li>
+    <li><strong>Next discriminating experiment:</strong> make M4-G1 able to pass — fix the readout path until held-out token accuracy beats the unigram floor <em>and</em> the shuffled control. Until then, subsystem work is decoration.</li>
+    <li><strong>I did not build the six subsystems.</strong> Doing so in one turn would produce untested scaffolding, which the architecture rules forbid. It would also break the per-seed calibration every Q4 receipt depends on.</li>
+    <li><strong>I did not claim "perfected".</strong> HENRI is a wave substrate with one working coupling, one vacuous gate now made able to fail, and no working task.</li>
+  </ol>
+
+  <footer>
+    Sources: <code>sagnac_homodyne.py</code>, <code>system.py</code>, <code>harness_hygiene.py</code>,
+    <code>exp_novelty_veto.py</code>, <code>test_veto_coupling.py</code>, <code>prepush_gate.py</code>;
+    receipts in <code>design/zone_a/evidence/</code>. Ledger 1961, head <code>7762aed2</code>, chain intact.
+    A hash chain proves linkage, not truth.
+    <strong>Scope:</strong> synthetic 10-sentence corpus, CPU, dim=4096 small config, cpu-only diagnostic.
+    Generated-text correctness is untestable at the current M4 result. No external benchmark is claimed.
+    No bound was moved to make any result pass.
+  </footer>
+</div>
+</body>
+</html>

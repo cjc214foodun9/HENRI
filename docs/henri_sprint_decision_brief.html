@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HENRI final sprint — status and approval gate</title>
+<style>
+  :root { --ok:#1a7f37; --warn:#9a6700; --bad:#b42318; }
+  body { color: var(--foreground); font-family: inherit; margin: 0; }
+  h1 { font-size: 1.05rem; margin: 0 0 .25rem; }
+  p.sub { color: var(--muted-foreground); margin: 0 0 .9rem; font-size: .82rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .82rem; }
+  th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted-foreground); font-weight: 600; }
+  code { font-size: .78rem; }
+  .pill { display:inline-block; padding:.05rem .45rem; border-radius:999px; font-size:.72rem; font-weight:600; }
+  .pass { color: var(--ok); } .block { color: var(--bad); } .hold { color: var(--warn); }
+  .pill.pass { background: color-mix(in srgb, var(--ok) 15%, transparent); }
+  .pill.block { background: color-mix(in srgb, var(--bad) 15%, transparent); }
+  .pill.hold { background: color-mix(in srgb, var(--warn) 18%, transparent); }
+  .ask { margin-top: .9rem; padding: .6rem .7rem; border: 1px solid var(--border); border-radius: 8px; font-size: .84rem; }
+  button { font: inherit; padding: .35rem .7rem; margin: .35rem .35rem 0 0; border: 1px solid var(--border);
+           border-radius: 6px; background: transparent; color: var(--foreground); cursor: pointer; }
+  button:hover { background: var(--accent); color: var(--foreground); }
+</style>
+</head>
+<body>
+  <h1>Project HENRI — final sprint status and approval gate</h1>
+  <p class="sub">Pin 20261004 · branch <code>feat/phase1-transduction</code> · commit <code>505d1ed</code> · remote tip unchanged <code>a15f88b</code> · authorization = <strong>false / ESCALATE</strong></p>
+
+  <table>
+    <thead><tr><th>Directive</th><th>Named file</th><th>Status</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>1 — Ratify Spec B</td>
+        <td><code>henri_hopfield_engine.py</code> <span class="block">ABSENT</span></td>
+        <td><span class="pill pass">DONE</span> on real site <code>model3_decoder.py</code></td>
+        <td>447,145,231 verified (parts sum exact); tests 19/19; verify 10/10</td>
+      </tr>
+      <tr>
+        <td>2 — Multi-step active inference</td>
+        <td><code>henri_custom_wave_core.py</code> <span class="block">ABSENT</span></td>
+        <td><span class="pill pass">DONE</span> on real site <code>model1_swarm.py</code></td>
+        <td>K=16 loop; ΔH per step; monotone=1.0; seeds 8/8</td>
+      </tr>
+      <tr>
+        <td>3 — AAII v4.3.2 harness</td>
+        <td><code>benchmarks/runner.py</code>, <code>spec_registry.py</code> <span class="pass">PRESENT</span></td>
+        <td><span class="pill hold">PARTIAL</span></td>
+        <td>4 datasets sha256-verified, 0 mismatches; instrument PASSED</td>
+      </tr>
+      <tr>
+        <td>3 — Official AAII splits</td>
+        <td>—</td>
+        <td><span class="pill block">BLOCKED</span></td>
+        <td>adapters are stubs; scoreable 0/10; no self-scorable harness</td>
+      </tr>
+      <tr>
+        <td>GitHub sync</td>
+        <td>—</td>
+        <td><span class="pill hold">PAUSED</span></td>
+        <td>36 commits ready; push withheld at approval gate</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="ask">
+    <strong>Top risk corrected:</strong> the directive's literal<br>
+    <code>n_mem = 32</code> would have set <code>d_k = 128/32 = 4</code> at small scale —
+    re-creating the rank-4 defect Spec B removed. I used the invariant <code>d_k == 32</code>
+    (n_mem = 4 / 16 / 32 at d_model = 128 / 512 / 1024).<br><br>
+    <strong>Decision requested:</strong> approve the push of 36 commits to
+    <code>origin/feat/phase1-transduction</code>, and approve or decline a Vast CUDA run
+    for the d_model=1024 forward.
+    <div>
+      <button data-hermes-send="Approved: push the 36 commits to origin/feat/phase1-transduction.">Approve push</button>
+      <button data-hermes-send="Decline the push. Keep investigating locally.">Decline push</button>
+      <button data-hermes-send="Approved: run the d_model=1024 forward on Vast CUDA for the Spec B full-scale check.">Approve full-scale run</button>
+    </div>
+  </div>
+</body>
+</html>

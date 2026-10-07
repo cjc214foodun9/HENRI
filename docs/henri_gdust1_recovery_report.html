@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HENRI — G-DUST-1 recovery at the headline population (K=4096/16384)</title>
+<style>
+  :root { --ink:#12161c; --mut:#5c6673; --line:#dfe4ea; --ok:#0f7b46; --bad:#b3261e; --warn:#8a5a00; --bg:#fff; --soft:#f6f8fa; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:28px 22px 60px; background:var(--bg); color:var(--ink);
+         font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:960px; margin:0 auto; }
+  h1 { font-size:24px; margin:0 0 4px; letter-spacing:-.01em; }
+  .sub { color:var(--mut); font-size:13px; margin-bottom:22px; }
+  h2 { font-size:16px; margin:30px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0 4px; }
+  th,td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-weight:600; }
+  td.num,th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .ok { color:var(--ok); font-weight:600; }
+  .bad { color:var(--bad); font-weight:600; }
+  .warn { color:var(--warn); font-weight:600; }
+  code { background:var(--soft); padding:1px 5px; border-radius:3px; font-size:12.5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:6px; padding:12px; overflow:auto; font-size:12.5px; }
+  .callout { border-left:4px solid var(--line); background:var(--soft); padding:11px 14px; margin:14px 0; border-radius:0 5px 5px 0; }
+  .callout.ok { border-left-color:var(--ok); }
+  .callout.bad { border-left-color:var(--bad); }
+  .callout.warn { border-left-color:var(--warn); }
+  ul { margin:8px 0 8px 20px; padding:0; }
+  li { margin:4px 0; }
+  .tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em; padding:2px 7px; border-radius:10px; border:1px solid var(--line); background:#fff; }
+  .tag.ok { color:var(--ok); border-color:#b7dfc9; }
+  .tag.bad { color:var(--bad); border-color:#f0c3bf; }
+  .tag.open { color:var(--warn); border-color:#ecd9a8; }
+  .meter { height:9px; background:#eceff3; border-radius:5px; overflow:hidden; position:relative; }
+  .meter i { display:block; height:100%; background:var(--ok); }
+  .bmark { position:absolute; top:-3px; width:2px; height:15px; background:var(--bad); }
+  footer { margin-top:34px; padding-top:14px; border-top:1px solid var(--line); color:var(--mut); font-size:12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>G-DUST-1 recovery at the headline population</h1>
+  <div class="sub">Vast 54185275 (RTX 5090, CPU path) &middot; base SHA <code>03bce7f</code> &middot; 2026-10-05 &middot; bound 0.85 unchanged</div>
+
+  <div class="callout ok">
+    <strong>Verdict: PASS_REPLICATED.</strong> Cosine alignment between the zeroth-order pseudo-gradient and autograd
+    <strong>recovers to 0.949 (K=4096)</strong> and <strong>0.987 (K=16384)</strong>, on 8 and 4 pinned seeds respectively.
+    No seed crosses the 0.85 bound. The frozen reference K set reproduced before any new number was accepted.
+  </div>
+
+  <h2>1. Result</h2>
+  <table>
+    <thead><tr><th>K</th><th class="num">seeds</th><th class="num">mean cos</th><th class="num">min</th><th class="num">max</th><th class="num">&ge;0.85</th><th>source</th></tr></thead>
+    <tbody>
+      <tr><td>16</td><td class="num">1</td><td class="num">0.2045</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">0/1</td><td>reproduced</td></tr>
+      <tr><td>64</td><td class="num">1</td><td class="num">0.3633</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">0/1</td><td>reproduced</td></tr>
+      <tr><td>256</td><td class="num">1</td><td class="num">0.6026</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">0/1</td><td>reproduced</td></tr>
+      <tr><td>1024</td><td class="num">1</td><td class="num">0.8380</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">0/1</td><td>reproduced (FAIL at bound)</td></tr>
+      <tr><td><strong>4096</strong></td><td class="num"><strong>8</strong></td><td class="num"><strong>0.9490</strong></td><td class="num">0.9465</td><td class="num">0.9529</td><td class="num ok">8/8</td><td>approved</td></tr>
+      <tr><td><strong>16384</strong></td><td class="num"><strong>4</strong></td><td class="num"><strong>0.9867</strong></td><td class="num">0.9860</td><td class="num">0.9876</td><td class="num ok">4/4</td><td>approved</td></tr>
+    </tbody>
+  </table>
+
+  <p style="font-size:13px;color:var(--mut)">Alignment vs K (bar = mean; red mark = the 0.85 bound). Monotone across the full path.</p>
+  <table>
+    <tbody>
+      <tr><td style="width:78px"><code>K=16</code></td><td>
+        <div class="meter"><i style="width:20.5%"></i><span class="bmark" style="left:85%"></span></div></td></tr>
+      <tr><td><code>K=256</code></td><td>
+        <div class="meter"><i style="width:60.3%"></i><span class="bmark" style="left:85%"></span></div></td></tr>
+      <tr><td><code>K=1024</code></td><td>
+        <div class="meter"><i style="width:83.8%"></i><span class="bmark" style="left:85%"></span></div></td></tr>
+      <tr><td><code>K=4096</code></td><td>
+        <div class="meter"><i style="width:94.9%"></i><span class="bmark" style="left:85%"></span></div></td></tr>
+      <tr><td><code>K=16384</code></td><td>
+        <div class="meter"><i style="width:98.7%"></i><span class="bmark" style="left:85%"></span></div></td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. Controls and integrity checks</h2>
+  <table>
+    <thead><tr><th>Check</th><th>Value</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>pos_ctl (perturbation = true descent direction)</td><td class="num">0.9999999999999982</td><td>The estimator pipeline is sane.</td></tr>
+      <tr><td>shuffled (draw&harr;credit pairing permuted)</td><td class="num">&minus;0.00925</td><td>Control fails as required; the signal is real.</td></tr>
+      <tr><td>reference K set reproduced</td><td class="ok">match ~1e-7</td><td>Harness is faithful; new numbers are comparable.</td></tr>
+      <tr><td>range_crosses_bound</td><td class="ok">false</td><td>No seed dips below 0.85 &mdash; the result is not a lucky draw.</td></tr>
+      <tr><td>monotone_in_K (full path)</td><td class="ok">true</td><td>Recovery is systematic, not a single-point anomaly.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <strong>Why this contradicts the earlier FAIL.</strong> The first G-DUST-1 run used K &le; 1024 and reported FAIL
+    (cos 0.838 at K=1024). It was <em>correct but variance-limited</em>. The approved sweep shows the estimator is
+    asymptotically sound: the bound is crossed between K=1024 and K=4096. The earlier negative was a real property of
+    the tested range, not a defect in the estimator.
+  </div>
+
+  <h2>3. Reproduction and provenance</h2>
+  <table>
+    <tbody>
+      <tr><th style="width:220px">Base commit</th><td><code>03bce7f74f0478156eaeb83687f6dce588d42da5</code> (remote == local, pushed)</td></tr>
+      <tr><th>Estimator source</th><td><code>henri_core/dust_zo.py</code> blob <code>86791643</code> &mdash; <strong>imported unchanged, never patched</strong></td></tr>
+      <tr><th>Drivers (new)</th><td><code>exp_dust_kk.py</code>, <code>exp_dust_kk_seeds.py</code></td></tr>
+      <tr><th>Sweep receipt</th><td><code>henri_gdust1_kk_receipt.json</code> sha256 <code>73fcac35&hellip;9095e9</code></td></tr>
+      <tr><th>Seed receipt</th><td><code>henri_gdust1_seeds_receipt.json</code> sha256 <code>af59dc46&hellip;7b8</code></td></tr>
+      <tr><th>Frozen inputs</th><td><code>sigma=0.05, gamma=0.98, n=64, t=8, d_in=32, d_out=256, classes=16</code></td></tr>
+      <tr><th>Run time</th><td>532 s (sweep) + 2401 s (seed replication)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. What this does and does not establish</h2>
+  <div class="callout ok">
+    <span class="tag ok">OBSERVED</span> On this single linear layer with a fixed readout, the zeroth-order node-perturbation
+    estimator aligns with autograd at <strong>cos 0.987</strong> when the population is 16,384. It requires no backward pass.
+  </div>
+  <div class="callout">
+    <span class="tag open">SCOPE LIMIT</span> This is <strong>one linear layer plus a fixed readout</strong>, not a full-model
+    replacement for backpropagation. Nothing here licenses removing the training path or claiming model-wide equivalence.
+  </div>
+  <div class="callout warn">
+    <span class="tag open">DEVICE</span> <code>henri_core</code> has <strong>no CUDA plumbing</strong>. The estimator path is
+    CPU-only; the RTX 5090 was not used for the arithmetic. The Vast host supplied 192 CPU cores. G-DUST-2 (VRAM) and
+    G-DUST-5 (latency roofline) stay <strong>BLOCKED</strong> &mdash; no telemetry claims.
+  </div>
+  <div class="callout warn">
+    <span class="tag open">COST</span> K=16384 needs ~386 s per seed on 192 CPU cores, and the upstream headline
+    configuration is 16,384 draws across 8 GPUs. This is not yet sub-microsecond, continuous, or cheap.
+  </div>
+
+  <h2>5. Open findings (verified, not yet fixed)</h2>
+  <p>An independent read-only review of the new modules produced 11 findings. Three were stale (fixed before the review ran).
+  Two are <strong>live and confirmed by my own inspection</strong>. Both are local fixes that need separate push approval.</p>
+  <table>
+    <thead><tr><th>Severity</th><th>Finding</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag bad">CRITICAL</span></td>
+          <td><code>gates.py:360</code> <code>run_all</code> still counts <code>BLOCKED</code> as <code>ACCEPTED</code>.
+              The C2 fix is gate-level only; no v2 aggregate driver exists, so system-wide C2 is <strong>not</strong> closed.</td>
+          <td><span class="tag open">OPEN</span></td></tr>
+      <tr><td><span class="tag open">MINOR</span></td>
+          <td><code>dust_zo.py</code> has no <code>y.is_cuda</code> guard. A CUDA tensor would break or silently shift to host.</td>
+          <td><span class="tag open">OPEN</span></td></tr>
+      <tr><td><span class="tag">INFO</span></td>
+          <td>Centring across draws leaves a deterministic <code>(1 &minus; 1/K)</code> shrink: 0.99976 at K=4096. Disclosed in the receipt.</td>
+          <td>by design</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Actions taken</h2>
+  <table>
+    <thead><tr><th>Action</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td>Pushed the 2 approved commits</td><td><code>2163238..03bce7f</code>, return code 0, <code>ls-remote</code> exact match, 0/0 ahead-behind</td></tr>
+      <tr><td>Ran the approved sweep and seed replication</td><td>both receipts sha256-verified against the remote</td></tr>
+      <tr><td>Stopped the paid instance</td><td><code>actual_status: exited</code>; destroy <strong>not</strong> done (needs approval)</td></tr>
+      <tr><td>Committed run evidence</td><td><code>229fc50</code> (local, 1 ahead of remote &mdash; push needs approval)</td></tr>
+      <tr><td>Sealed the audit ledger</td><td>1943 records, chain intact, head <code>1a32dfe1</code></td></tr>
+    </tbody>
+  </table>
+
+  <footer>
+    Evidence classes: <strong>OBSERVED</strong> for the cosines, control values, reproduction match, hash matches, and push readback.
+    <strong>BLOCKED</strong> for VRAM and latency gates. The audit chain proves byte linkage, not truth.
+    The word "sovereign", "sub-microsecond", and "BaTiO<sub>3</sub>" figures remain <strong>HYPOTHESIS</strong> and appear in no receipt.
+  </footer>
+</div>
+</body>
+</html>

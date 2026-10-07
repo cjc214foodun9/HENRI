@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project HENRI — strategic audit: are we on the right track?</title>
+<style>
+  :root{
+    --bg:#f7f8fa; --card:#ffffff; --ink:#1a2733; --mid:#5a6672; --line:#dde3ea;
+    --ok:#2f6b3a; --okbg:#eaf5ea; --warn:#8a6a12; --warnbg:#fdf6e3;
+    --bad:#a13a33; --badbg:#fdecea; --note:#5b4a86; --notebg:#f5f0fa;
+    --mono:"Cascadia Mono","SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.55 "Segoe UI",system-ui,-apple-system,Helvetica,Arial,sans-serif}
+  main{max-width:1080px;margin:0 auto;padding:32px 22px 72px}
+  h1{font-size:30px;line-height:1.2;margin:0 0 6px}
+  h2{font-size:21px;margin:38px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+  h3{font-size:17px;margin:24px 0 8px}
+  p{margin:10px 0}
+  .sub{color:var(--mid);font-size:14px;margin:0 0 18px}
+  code,kbd{font-family:var(--mono);font-size:.9em;background:#eef1f5;
+    padding:1px 5px;border-radius:4px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;background:var(--card);
+    font-size:14.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#eef2f7;font-weight:600}
+  td.num{font-family:var(--mono);white-space:nowrap}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:16px 18px;margin:16px 0}
+  .ok{background:var(--okbg);border-left:5px solid var(--ok)}
+  .warn{background:var(--warnbg);border-left:5px solid var(--warn)}
+  .bad{background:var(--badbg);border-left:5px solid var(--bad)}
+  .note{background:var(--notebg);border-left:5px solid var(--note)}
+  .tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.04em;
+    padding:2px 8px;border-radius:999px;margin-right:6px;vertical-align:2px}
+  .t-obs{background:var(--okbg);color:var(--ok);border:1px solid #b6d4b6}
+  .t-fal{background:var(--badbg);color:var(--bad);border:1px solid #e3b7b3}
+  .t-par{background:var(--warnbg);color:var(--warn);border:1px solid #e0cf94}
+  .t-blk{background:#eef1f5;color:var(--mid);border:1px solid #ccd4dd}
+  ul{margin:10px 0 10px 4px;padding-left:20px}
+  li{margin:6px 0}
+  .verdict{font-size:19px;font-weight:600;margin:14px 0}
+  footer{margin-top:44px;padding-top:14px;border-top:1px solid var(--line);
+    color:var(--mid);font-size:13px}
+  .warnbar{background:#fff4f2;border:1px solid #e3b7b3;border-left:5px solid var(--bad);
+    border-radius:8px;padding:12px 16px;margin:14px 0}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Project HENRI — strategic audit</h1>
+<p class="sub">
+  Measured 2026-10-06 · HEAD <code>ffb4a004</code> · HEAD = origin/main = origin/feat ·
+  ledger 1963 · all numbers CPU, D=4096, <strong>diagnostic only</strong>
+</p>
+
+<div class="warnbar" role="note">
+  <strong>Scope warning.</strong> Every number below is a CPU, dim=4096 diagnostic.
+  It is not a model-performance claim. Model-performance claims require Vast CUDA or
+  canonical CI. This report also retracts one claim I made earlier in the turn —
+  see <em>Correction</em>.
+</div>
+
+<h2>1. The direct answer</h2>
+
+<p class="verdict">
+  Discipline: <span style="color:var(--ok)">yes, and it is now real.</span><br>
+  Order: <span style="color:var(--bad)">no — we are building machinery on a substrate
+  with no learned structure.</span>
+</p>
+
+<p>
+  The seven mechanisms measured this program have each produced a bounded, falsifiable
+  verdict. That is genuine progress, because a control that can fail now gates every
+  claim. But we have spent many turns falsifying mechanisms that were never wired to a
+  scored task. Three separate measurements now agree on one root cause, and that cause
+  sits <em>upstream</em> of everything the blueprint wants to build.
+</p>
+
+<div class="card note">
+  <h3 style="margin-top:0">The root cause, stated once</h3>
+  <p>
+    <strong>HENRI has no transferable representation.</strong> The ingress is an
+    explicitly frozen random projection. It carries surface form and weak lexical
+    signal — not a rule the readout can generalize from. Every subsystem in the
+    six-part blueprint sits downstream of that absence.
+  </p>
+</div>
+
+<h2>2. What was measured — five mechanisms, five verdicts</h2>
+
+<table>
+  <thead>
+    <tr><th style="width:20%">Mechanism</th><th style="width:46%">Measured result</th>
+        <th style="width:34%">Verdict</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Q4 membership <code>s(q)=max_k|&lt;psi_in,bank_k&gt;|</code></td>
+      <td class="num">in-bank 1.0000 · held-out corpus 0.2231 · random 0.0246<br>
+        shuffled-bank control: 1.0 → 0.0274</td>
+      <td><span class="tag t-obs">WORKS</span>but it is a graded lexical
+        overlap meter, not understanding. Synonyms with 0 shared tokens score 0.2987
+        — the same as out-of-bank.</td>
+    </tr>
+    <tr>
+      <td>Sagnac homodyne veto at λ=0</td>
+      <td class="num">Δ_Sagnac 0.0036–0.0171 vs threshold 0.35<br>
+        passed <strong>every</strong> family incl. random text</td>
+      <td><span class="tag t-fal">VACUOUS</span>A gate that could not fail.
+        It scored <code>psi_conv</code>, which the CCCP swarm had already projected
+        onto the bank — the same confound that hid Q4.</td>
+    </tr>
+    <tr>
+      <td>Phase-1 coupling<br>
+        <code>Δ_eff = Δ_Sagnac + λ(1−s(q))</code></td>
+      <td class="num">dispatch acc 0.1667 → <strong>0.6111</strong><br>
+        false-accept 1.0000 → <strong>0.4667</strong><br>
+        ctrl shuffled-score 0.3889 · ctrl random-score 0.5000</td>
+      <td><span class="tag t-par">PARTIAL</span>IMPROVES = <strong>True</strong>,
+        ATTRIBUTABLE = <strong>False</strong>. Part of the gain is threshold
+        arithmetic: the pre-registered near-miss criterion needed 0.10 and got 0.05.</td>
+    </tr>
+    <tr>
+      <td>M4-G1 production readout<br>(414M params, frozen wave)</td>
+      <td class="num">train loss 5.9587 → 0.000538; train exact-match <strong>1.0</strong><br>
+        held-out token accuracy <strong>0.0000</strong><br>
+        unigram floor 0.1171</td>
+      <td><span class="tag t-fal">FAIL</span>It <em>memorizes</em> 48 examples
+        completely and lands at zero. 16× worse than a linear probe on identical
+        features.</td>
+    </tr>
+    <tr>
+      <td>Tripartite resonator<br><code>exp_tripartite_resonator.py</code></td>
+      <td class="num">held-out exact-match <strong>0.0178</strong><br>
+        flat baseline 0.0463 · shuffled control 0.0491</td>
+      <td><span class="tag t-fal">VACUOUS</span>Worse than the flat baseline
+        <em>and</em> worse than its own shuffled control. The blueprint's
+        "breaks the headroom ceiling" claim is false in this build.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>3. The decisive root-cause experiment</h2>
+
+<p>
+  The M4 failure alone cannot say <em>where</em> the defect lives. A readout can fail
+  because the representation is empty, or because the readout is wrong. So I held the
+  wave fixed and swapped only the readout:
+</p>
+
+<table>
+  <thead>
+    <tr><th>Arm — identical frozen wave, identical 48/108 split</th>
+        <th class="num">held-out token acc</th><th class="num">own shuffled-label control</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>production readout (414M params)</td><td class="num">0.0000</td><td class="num">—</td></tr>
+    <tr><td><strong>ridge linear probe (λ selected on internal validation split)</strong></td>
+        <td class="num"><strong>0.1339</strong></td><td class="num">0.0089</td></tr>
+    <tr><td>k-NN over waves</td><td class="num">0.1389</td><td class="num">—</td></tr>
+    <tr><td>small MLP</td><td class="num">0.0804</td><td class="num">0.1250 (control beats it)</td></tr>
+    <tr><td>unigram floor</td><td class="num">0.1171</td><td class="num">—</td></tr>
+    <tr><td><em>pre-registered bar</em> = max(floor, best control) + 0.05</td>
+        <td class="num" colspan="2"><strong>0.1671</strong></td></tr>
+  </tbody>
+</table>
+
+<div class="card ok">
+  <h3 style="margin-top:0">What this establishes</h3>
+  <ul>
+    <li><span class="tag t-obs">OBSERVED</span><strong>The readout is a genuine
+      defect.</strong> A linear probe scores 0.1339 where the 414M production readout
+      scores 0.0000 on identical features — a 16× gap.</li>
+    <li><span class="tag t-obs">OBSERVED</span><strong>The wave carries real signal.</strong>
+      The ridge probe beats its own shuffled-label control 0.1339 vs 0.0089 — a 15×
+      separation. The signal is weak, but it is not noise.</li>
+    <li><span class="tag t-fal">NOT CLEARED</span><strong>M4-G1 still fails.</strong>
+      0.1339 &lt; 0.1671. Fixing the readout is necessary and insufficient. The binding
+      ceiling is representation quality.</li>
+  </ul>
+</div>
+
+<p><strong>Two further facts settle the shape of the fix:</strong></p>
+<ul>
+  <li><code>WaveTextGenerator</code> sets <code>ingress.requires_grad_(False)</code>.
+    The ingress is <em>explicitly frozen</em>. Gradient reaches the readout only.</li>
+  <li>Programs tokenize <em>by character</em>: <code>IRC → [73,82,67]</code>,
+    <code>CRI → [67,82,73]</code>. Composition is expressible. There is no
+    opaque-token blocker — and order <em>is</em> encoded
+    (<code>cos(w(RC), w(CR)) = 0.0</code>).</li>
+</ul>
+
+<h2>4. Your intuition was measurable — and it is correct</h2>
+
+<p>
+  You said most inference will be useless noise, and the network's job is to sort it.
+  That is testable, and I tested it with the metric this program was missing:
+  <strong>coverage@k</strong> — is the correct token even <em>in</em> the candidate set?
+</p>
+
+<table>
+  <thead><tr><th class="num">k</th><th class="num">coverage@k</th>
+    <th class="num">chance</th><th class="num">lift</th></tr></thead>
+  <tbody>
+    <tr><td class="num">1</td><td class="num">0.1339</td><td class="num">0.0028</td><td class="num">48×</td></tr>
+    <tr><td class="num">5</td><td class="num"><strong>0.4286</strong></td><td class="num">0.0142</td><td class="num"><strong>30×</strong></td></tr>
+    <tr><td class="num">20</td><td class="num">0.4286</td><td class="num">0.0567</td><td class="num">7.6×</td></tr>
+    <tr><td class="num">100</td><td class="num">0.4643</td><td class="num">0.2833</td><td class="num">1.6×</td></tr>
+  </tbody>
+</table>
+
+<div class="card note">
+  <p style="margin-top:0">
+    <strong>Read this as a ceiling, not a score.</strong> Coverage saturates at
+    ~0.43–0.46. That means <em>no reranker, veto, or resonator can ever exceed ~46%</em>
+    on this task, because the right answer is absent from the candidate set more than
+    half the time. Your "sort the noise" architecture is the correct shape — and this
+    number is exactly where it must be applied. It is also the honest bound on what
+    any downstream subsystem can deliver today.
+  </p>
+</div>
+
+<h2>5. The recurring defect class — measured twice</h2>
+
+<div class="card bad">
+  <p style="margin-top:0">
+    <strong>No measurement may sit downstream of an operator that mixes the candidate
+    with the bank.</strong>
+  </p>
+  <ul>
+    <li><strong>Q4:</strong> <code>s(q)</code> measured <em>after</em> the CCCP swarm
+      projection → saturated at ~0.99 for 100% of inputs. Q4 could never fail.</li>
+    <li><strong>The veto:</strong> Δ_Sagnac measured on <code>psi_conv</code>
+      (post-CCCP) → 0.0036–0.0171, passing every family <em>including random text</em>.
+      The veto could never fail.</li>
+  </ul>
+  <p>
+    Same defect, twice, in two different subsystems. The Phase-1 coupling supplies the
+    missing pre-projection term; without it the veto cannot reject anything. This is why
+    the coupling improved dispatch — and why its attribution is still weak.
+  </p>
+</div>
+
+<h2>6. Correction — a claim I retract</h2>
+
+<div class="card warn">
+  <p style="margin-top:0">
+    <strong>Earlier this turn I read the training log wrong.</strong> The stderr line
+    <code>m4 step 100 ce 3.2826</code> is <code>unigram_ce</code>, printed as a
+    <em>reference</em> — not the model's loss. The receipt shows
+    <code>loss_first 5.9587 → loss_last 0.000538</code>.
+  </p>
+  <p>
+    So the gradient is <strong>not</strong> severed, and "the loss is flat" was false.
+    The correct statement is the opposite and more damning: <strong>the readout trains
+    to completion and memorizes</strong> (train exact-match 1.0), then scores
+    <em>below the unigram floor</em> on held-out data.
+  </p>
+</div>
+
+<h2>7. Six subsystems — what the measurements say about each</h2>
+
+<table>
+  <thead><tr><th style="width:5%">#</th><th style="width:24%">Subsystem</th>
+    <th style="width:41%">Measured status today</th><th style="width:30%">Correct action</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Learnable ingress</td>
+      <td><span class="tag t-obs">BLOCKING</span>Explicitly frozen.
+        The ridge-vs-production gap shows the wave carries signal but too little to
+        clear the bar.</td>
+      <td><strong>Build first.</strong> It is the substrate.</td></tr>
+    <tr><td>2</td><td>Action-conditioned transitions</td>
+      <td><span class="tag t-blk">BLOCKED</span>M4-G1 is the scored task that would
+        judge it, and M4-G1 fails.</td>
+      <td>Wait. No scored task exists to measure a gain.</td></tr>
+    <tr><td>3</td><td>Iterative resonator descent</td>
+      <td><span class="tag t-fal">VACUOUS</span>0.0178 held-out vs flat 0.0463 and
+        shuffled 0.0491.</td>
+      <td>Do not extend. It is worse than not using it.</td></tr>
+    <tr><td>4</td><td>Zone C persistence</td>
+      <td><span class="tag t-blk">BLOCKED</span>No TimescaleDB in the loop. No
+        surrogate will be substituted.</td>
+      <td>Needs remote infra and approval.</td></tr>
+    <tr><td>5</td><td>Sensorimotor grounding</td>
+      <td><span class="tag t-blk">BLOCKED</span>No sensor corpus, no scored topology
+        task.</td>
+      <td>Design the task before the encoder.</td></tr>
+    <tr><td>6</td><td>Grammar-constrained egress</td>
+      <td><span class="tag t-blk">BLOCKED</span>Egress quality cannot exceed the
+        coverage ceiling of ~0.46.</td>
+      <td>Build after step 1 raises the ceiling.</td></tr>
+  </tbody>
+</table>
+
+<h2>8. Recommended program order</h2>
+
+<p>Substrate before machinery. Each step has a kill test that can fail.</p>
+
+<table>
+  <thead><tr><th style="width:6%">Step</th><th style="width:38%">Do</th>
+    <th style="width:56%">Kill test</th></tr></thead>
+  <tbody>
+    <tr><td><strong>1</strong></td>
+      <td>Make the ingress learnable. Unfreeze it on the M4 path behind a
+        default-OFF flag.</td>
+      <td>Gradient demonstrably reaches an ingress parameter and that parameter
+        changes. A frozen flag or a severed path fails the test.</td></tr>
+    <tr><td><strong>2</strong></td>
+      <td>Make M4-G1 passable. Held-out token accuracy must beat
+        <em>both</em> the unigram floor and the shuffled control, across
+        ≥3 pinned seeds.</td>
+      <td>Pre-registered bar, margin-ratio criterion, not a scalar threshold.
+        Currently 0.1339 vs bar 0.1671 → fails.</td></tr>
+    <tr><td><strong>3</strong></td>
+      <td>Make the veto a real gate on that task, and re-run the Phase-1 coupling.</td>
+      <td>ATTRIBUTABLE must become True: the coupling must beat the shuffled-score
+        and random-score controls by the pre-registered margin.</td></tr>
+    <tr><td><strong>4</strong></td>
+      <td>Raise the focus ceiling. Coverage@5 is 0.4286; the architecture must
+        propose better candidates, not better rerank them.</td>
+      <td>Coverage@5 must rise above 0.4286 <em>and</em> top-1 must rise with it.</td></tr>
+    <tr><td><strong>5</strong></td>
+      <td>Only now: test-time learning. Anything the veto rejects must be learned
+        from.</td>
+      <td>Requires a scored task from step 2 to show improvement <em>against</em>.
+        Without it, test-time learning is unfalsifiable.</td></tr>
+  </tbody>
+</table>
+
+<div class="card warn">
+  <p style="margin-top:0">
+    <strong>On the omni-verifying Sagnac/D2NN request.</strong> A D2NN phase-mask
+    interferometer is a fabrication program, and it needs a ground-truth label to
+    learn from. "Anything rejected must be learned from" is degenerate without one —
+    the veto learns to reject everything, or collapses to the prior. The design is
+    sound as an architecture; it cannot be <em>judged</em> until step 3 exists. Physical
+    BTO/D2NN hardware and a CPU emulation at dim=4096 are different claims and must
+    never be conflated.
+  </p>
+</div>
+
+<h2>9. Defects I found in my own work this turn</h2>
+<ul>
+  <li><strong>Misread the loss</strong> — retracted in section 6.</li>
+  <li><strong>Assumed <code>corpus.train_specs</code></strong> — the dataclass has no
+    such field; corrected to <code>[corpus.specs[i] for i in corpus.train_idx]</code>.</li>
+  <li><strong>Index out of bounds</strong> — a 48-length permutation indexed by a
+    108-length loop.</li>
+  <li><strong>Degenerate λ selection</strong> — all six λ values scored 0.0 on the
+    16-row internal validation split. 16 rows is too few to select on. Disclosed
+    rather than hidden.</li>
+  <li><strong>Recurrence of the stdout-vs-exit-code bug</strong> — fixed once in a
+    script, so it came back. Now an explicit <code>rc()</code> helper.</li>
+</ul>
+
+<h2>10. Evidence status</h2>
+
+<table>
+  <thead><tr><th style="width:16%">Class</th><th>Items</th></tr></thead>
+  <tbody>
+    <tr><td><span class="tag t-obs">OBSERVED</span></td>
+      <td>All numbers in sections 3, 4, 5. HEAD <code>ffb4a004</code> =
+        origin/main = origin/feat. Ledger 1963. 7/7 gates green.
+        <code>HenriDecoderConfig() = 447,145,231</code> (Spec B invariant).
+        Pinned build reproducible, unpinned not.</td></tr>
+    <tr><td><span class="tag t-fal">FALSIFIED</span></td>
+      <td>The Sagnac veto as a working gate before coupling. The tripartite resonator
+        headroom claim. Post-projection similarity as a novelty signal. The M4 shape
+        (margin) statistic. My own "flat loss / severed gradient" reading.</td></tr>
+    <tr><td><span class="tag t-par">PARTIAL</span></td>
+      <td>Phase-1 coupling: improves dispatch, not yet attributable.</td></tr>
+    <tr><td><span class="tag t-blk">BLOCKED</span></td>
+      <td>M4-G1 pass (representation ceiling). Zone C persistence. Subsystems 5 and 6.
+        All physical photonic claims. Any model-performance claim — this run is CPU,
+        dim=4096.</td></tr>
+  </tbody>
+</table>
+
+<footer>
+  <p>
+    Deliverables: this report and
+    <code>henri_strategic_audit.drawio</code> (editable source).
+    Receipt: <code>design/zone_a/evidence/henri_m4_root_cause_receipt.json</code>.
+    Fix committed and pushed: <code>M4Config.pin_seed</code> + <code>--pin-seed</code>
+    (default <code>None</code> preserves legacy behaviour, so every committed receipt
+    still reproduces).
+  </p>
+  <p>
+    Authorization status: <strong>ESCALATE</strong>. The program-order change and the
+    learnable-ingress step need your approval before implementation. No approval is
+    assumed, and no gate is advanced on model agreement.
+  </p>
+</footer>
+
+</main>
+</body>
+</html>

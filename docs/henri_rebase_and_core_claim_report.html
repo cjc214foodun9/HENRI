@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HENRI — rebase, four fixes, and the core-claim verdict</title>
+<style>
+  :root { --ink:#12161c; --mut:#5c6673; --line:#dfe4ea; --ok:#0f7b46; --bad:#b3261e; --warn:#8a5a00; --soft:#f6f8fa; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:28px 22px 60px; color:var(--ink); background:#fff;
+         font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:1000px; margin:0 auto; }
+  h1 { font-size:24px; margin:0 0 4px; letter-spacing:-.01em; }
+  .sub { color:var(--mut); font-size:13px; margin-bottom:22px; }
+  h2 { font-size:16px; margin:30px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  h3 { font-size:14px; margin:18px 0 6px; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0 4px; }
+  th,td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-weight:600; }
+  td.num,th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  code { background:var(--soft); padding:1px 5px; border-radius:3px; font-size:12.5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:6px; padding:12px; overflow:auto; font-size:12.5px; }
+  .callout { border-left:4px solid var(--line); background:var(--soft); padding:11px 14px; margin:14px 0; border-radius:0 5px 5px 0; }
+  .callout.ok { border-left-color:var(--ok); }
+  .callout.bad { border-left-color:var(--bad); }
+  .callout.warn { border-left-color:var(--warn); }
+  ul,ol { margin:8px 0 8px 20px; padding:0; }
+  li { margin:4px 0; }
+  .tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em; padding:2px 7px; border-radius:10px; border:1px solid var(--line); background:#fff; }
+  .tag.ok { color:var(--ok); border-color:#b7dfc9; }
+  .tag.bad { color:var(--bad); border-color:#f0c3bf; }
+  .tag.open { color:var(--warn); border-color:#ecd9a8; }
+  footer { margin-top:34px; padding-top:14px; border-top:1px solid var(--line); color:var(--mut); font-size:12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Rebase to main, four approved fixes, and the core-claim verdict</h1>
+  <div class="sub">HEAD = <code>origin/main</code> = <code>origin/feat</code> = <code>295abd6</code> · ledger 1952 · 2026-10-06 · CPU, dim=4096 (small config)</div>
+
+  <div class="callout bad">
+    <strong>The core claim is NOT realised. This is a measured negative, not a setback in tone.</strong>
+    Four real defects were found and fixed, and a ground-truth signal now exists — which is exactly what made
+    the negative <em>visible</em>. HENRI at test time is an associative memory whose store and query share one
+    encoder, wrapped in a swarm that projects <em>any</em> input onto the stored bank.
+  </div>
+
+  <h2>1. D1 — rebase onto main: done, and it was benign</h2>
+  <p>I measured the conflict surface <em>before</em> touching history, then backed up.</p>
+  <table>
+    <thead><tr><th>Step</th><th>Measurement</th></tr></thead>
+    <tbody>
+      <tr><td>Pre-rebase</td><td>HEAD <code>da0aec3</code>; origin/main <code>d97ddd94</code>; main-only 68, ours-only 143</td></tr>
+      <tr><td>Backup first</td><td><code>backup/pre-rebase-da0aec3</code> + full bundle (35.5 MB, verified complete)</td></tr>
+      <tr><td><strong>Overlap</strong></td><td class="ok"><strong>1 file</strong> (<code>m1_open_answer_gate.py</code>) — measured twice, plus predicted by <code>merge-tree</code></td></tr>
+      <tr><td>Conflict</td><td>Both sides fixed the <em>same</em> relocated-import defect (<code>parents[1]</code> → <code>parents[2]</code>). Resolved keeping both; <code>py_compile</code> rc=0</td></tr>
+      <tr><td>Result</td><td class="ok">143/143 replayed; <code>rebase_active: false</code>; main fast-forwarded</td></tr>
+      <tr><td>Main advanced</td><td><code>d97ddd94</code> → <code>e7b064f</code> → <code>3b75301</code> → <code>295abd6</code>, each push rc=0, <code>ls-remote</code> exact</td></tr>
+    </tbody>
+  </table>
+  <p class="sub">Method note: two of my own scripts contained bugs (<code>seal.py</code> passed a list as one argv element;
+  <code>final3.py</code>'s earlier version unpacked <code>rc</code> from <code>stdout</code> and silently skipped the push).
+  Both are fixed; the final push was verified by readback. An earlier rebase in this session used a <code>python</code>
+  helper that resolved the single conflict and continued cleanly.</p>
+
+  <h2>2. D2 + D4 — the approved default flips, measured both sides</h2>
+  <table>
+    <thead><tr><th>Fix</th><th>Before</th><th>After</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td><strong>D4</strong> ingress order</td>
+          <td><code>cos('ab','ba') = 0.9999998808</code><br>(order lost)</td>
+          <td class="ok"><code>cos('ab','ba') = -5e-08</code><br><code>cos('ab','dog') = 0.0</code></td>
+          <td>identify kept; the two answers now differ</td></tr>
+      <tr><td><strong>D2</strong> swarm bank</td>
+          <td>8 <em>random</em> vectors (bank-vs-corpus <code>|cos| max 0.0418</code>)</td>
+          <td class="ok">corpus bank</td>
+          <td>distinct answers 2/6 → 3/6; veto dark 6/6 → 0/6</td></tr>
+    </tbody>
+  </table>
+  <p><strong>D4 mechanism:</strong> the existing <code>positional</code> flag was OFF by default. Turning it on converts the
+  order-blind bag-of-tokens write into an order-bearing one. <strong>D2 mechanism:</strong> <code>build_axioms</code> updated
+  only the veto; the swarm matched a separate random bank. The two halves of the system read different banks.</p>
+
+  <h2>3. D3 — the missing ground-truth signal now exists</h2>
+  <p><code>henri_core/eval_ground_truth.py</code> defines "correct" for the first time.</p>
+  <table>
+    <thead><tr><th>Check</th><th>Result</th><th>Reads as</th></tr></thead>
+    <tbody>
+      <tr><td>G1 identity retrieval</td><td class="num">10/10 (chance 0.1000)</td><td>— see D5: this is a tautology</td></tr>
+      <tr><td>G2 deleted-token</td><td class="num">10/10</td><td>robust to dropping the last word</td></tr>
+      <tr><td>G4 determinism</td><td class="ok">same input → same ids</td><td>reproducible</td></tr>
+      <tr><td>G5 order</td><td class="ok">separated</td><td>D4 confirmed end-to-end</td></tr>
+      <tr><td>C1 shuffled targets</td><td class="num">1.0 → 0.1 (= chance)</td><td class="ok">control can fail</td></tr>
+      <tr><td>C2 random waves ×200</td><td class="num">max bin 0.135 vs 0.100</td><td class="ok">bank not degenerate</td></tr>
+    </tbody>
+  </table>
+  <p class="sub"><strong>Self-caught defect:</strong> the first version of this evaluator had a dead control
+  (<code>... and False</code>, always 0). A control that cannot fail proves nothing. It was rewritten with controls
+  built to be able to fail, and they are reported.</p>
+
+  <h2>4. D5 — the core claim, answered from measurement</h2>
+  <table>
+    <thead><tr><th>#</th><th>Question</th><th>Kill condition</th><th>Measured</th></tr></thead>
+    <tbody>
+      <tr><td>Q1</td><td>Is retrieval real, or a stored lookup?</td><td>≥ 0.999</td>
+          <td class="bad"><code>cos(query_wave, its own stored axiom) = 0.99999988</code></td></tr>
+      <tr><td>Q2</td><td>Does the swarm do work?</td><td>≤ 0.05</td>
+          <td><code>mean ‖ψ_conv − ψ_in‖₂ = 0.08496</code> → moves ~8.5%</td></tr>
+      <tr><td>Q3</td><td>Order, or token set?</td><td>&gt; 2× chance</td>
+          <td class="bad">word-shuffled queries hit their own axiom 2/10 = 0.20 (2× chance)</td></tr>
+      <tr><td>Q4</td><td>Rejection of unknown input?</td><td>≈ random baseline</td>
+          <td class="bad">synonyms (0 tokens shared) score <strong>0.9896</strong> vs random <strong>0.0167</strong></td></tr>
+      <tr><td>Q5</td><td>Control</td><td>≤ 0.30</td><td class="ok">0.155 vs chance 0.100 (passes, can fail)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout bad">
+    <strong>The two decisive findings.</strong><br>
+    <strong>Q1 — G1 is a tautology.</strong> <code>build_axioms</code> stores <code>wave_of(text)</code>; querying with the
+    same text returns the same vector. <code>cos = 0.99999988</code>. The 10/10 measures the encoder, not retrieval.
+    <br><br>
+    <strong>Q4 — there is no novelty rejection.</strong> The swarm's CCCP maps <em>every</em> input onto the stored bank with
+    high confidence. An input the memory does not contain still scores 0.99. That is the difference between an
+    associative memory and a world model.
+  </div>
+
+  <h2>5. What HENRI actually is, at test time</h2>
+  <table>
+    <thead><tr><th>Stage</th><th>Measured behaviour</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>Tokenizer</td><td>BPE, order-preserving: <code>ab→[97,98]</code>, <code>ba→[98,97]</code></td><td class="ok">real</td></tr>
+      <tr><td>Ingress</td><td>token → 65536-d complex unit wave; order now preserved (D4)</td><td class="ok">fixed</td></tr>
+      <tr><td>Swarm + CCCP</td><td>8 probes; attention with unit-norm patterns; projects any input to the bank</td><td class="bad">no rejection</td></tr>
+      <tr><td>Memory (Zone C)</td><td>RAM-only; <code>offdiag_max = 0.000000</code>; no live rows</td><td class="bad">does not persist</td></tr>
+      <tr><td>Decoder 447 M GQA</td><td>Internals alive (16/16 distinct macro-tokens) but no text ground truth</td><td class="bad">untrained head</td></tr>
+      <tr><td>Sagnac veto</td><td>Now allows 6/6 (was dark 6/6) — but nothing consumes the verdict</td><td class="bad">no dispatcher</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Evidence status</h2>
+  <table>
+    <thead><tr><th>Class</th><th>Items</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag ok">OBSERVED</span></td>
+          <td>Overlap = 1 file; rebase completed; main fast-forwarded to <code>295abd6</code>; all D2/D4/Q-series numbers; controls pass; regressions below; ledger 1952.</td></tr>
+      <tr><td><span class="tag bad">FALSIFIED</span></td>
+          <td>G1 as evidence of retrieval (tautology); "intelligence" as a test-time property of this build; novelty rejection.</td></tr>
+      <tr><td><span class="tag open">BLOCKED</span></td>
+          <td>External benchmark score (adapter stubs); Zone C persistence; any latency/VRAM claim.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Regression on every changed tree</h3>
+  <pre>tri-model          === 19 passed, 0 failed ===
+verify_tri_model   === 10 passed, 0 failed ===
+gate-fix selfcheck SELF-CHECK PASS
+gates_v2 selfcheck rc = 0
+DecoderConfig()    447,145,231  (invariant held)</pre>
+
+  <h2>7. What I refused, and why</h2>
+  <ul>
+    <li><strong>No force-push to main.</strong> Main advanced only by fast-forward, verified by <code>ls-remote</code>.</li>
+    <li><strong>No claim of intelligence.</strong> The evaluator exists precisely so the claim can be tested rather than asserted — and it failed.</li>
+    <li><strong>No bound moved.</strong> Both default flips were explicitly approved and are measured on both sides.</li>
+    <li><strong>No continuation on untrusted feedback.</strong> Four of my own scripts had bugs this session; each was fixed and re-run rather than narrated over.</li>
+    <li><strong>No reliance on reference-block tool output.</strong> The reference narratives in context claimed 10 overlapping files and a corruption incident; my own measurements said 1 file and a clean rebase. I used mine.</li>
+  </ul>
+
+  <h2>8. Where the core claim stands, precisely</h2>
+  <ol>
+    <li><strong>Measurable now.</strong> D3 removed the blocker: "correct" is defined and the claim is tested against it.</li>
+    <li><strong>Negative.</strong> <code>core_claim_realised = false</code>. Not because the physics is broken — norms hold, energies are stable, the decoder trains — but because the system has <strong>one</strong> encoder used for both storing and querying, and a projection that cannot say "I don't know".</li>
+    <li><strong>The next real experiment</strong> is not more scale. It is a <em>discriminative</em> signal: an input the bank does not contain must score below an input it does. Until Q4 can fail, no amount of training makes this a world model.</li>
+    <li><strong>Composition</strong> remains untested: the corpus is 10 single-clause axioms. Order sensitivity (Q3 = 2/10) shows the current encoder still leans on token sets.</li>
+  </ol>
+
+  <footer>
+    Sources: <code>exp_d4_order.py</code>, <code>eval_ground_truth.py</code>, <code>exp_intelligence_claim.py</code>,
+    <code>audit_testtime.py</code>, <code>audit_collapse_locus.py</code>; receipts in <code>design/zone_a/evidence/</code>.
+    Ledger 1952 records, head <code>9eecbb5a</code>, chain intact. A hash chain proves linkage, not truth.
+    <strong>Honest scope:</strong> synthetic corpus, CPU, dim=4096. Generated-text correctness is untestable (untrained head). No external benchmark is claimed.
+  </footer>
+</div>
+</body>
+</html>
