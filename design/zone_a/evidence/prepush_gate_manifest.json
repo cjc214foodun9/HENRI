@@ -1,0 +1,73 @@
+{
+ "schema": "henri.prepush.gate.manifest.v1",
+ "when": "2026-10-06T22:08:57",
+ "interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe",
+ "cwd": "C:\\Users\\chan\\henri-worktrees\\phase1-transduction\\HENRI V2",
+ "gates": [
+  {
+   "name": "verify_tri_model",
+   "rc": 0,
+   "tail": "=== 10 passed, 0 failed ===",
+   "interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe"
+  },
+  {
+   "name": "tri_model_19",
+   "rc": 0,
+   "tail": "=== 19 passed, 0 failed ===",
+   "interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe"
+  },
+  {
+   "name": "gate_fix_selfcheck",
+   "rc": 0,
+   "tail": "SELF-CHECK PASS",
+   "interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe"
+  },
+  {
+   "name": "harness_hygiene",
+   "rc": 0,
+   "tail": "==== 17 passed, 0 failed ====",
+   "interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe"
+  },
+  {
+   "name": "q4_wiring",
+   "rc": 0,
+   "tail": "  WIRING_CHECKS_PASS = True",
+   "interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe"
+  },
+  {
+   "name": "veto_coupling",
+   "rc": 0,
+   "tail": "==== 20 passed, 0 failed ====",
+   "interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe"
+  },
+  {
+   "name": "q4_discriminative",
+   "rc": 0,
+   "tail": "  Q4_MECHANISM_EXISTS=True  literal_met=True",
+   "interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe"
+  },
+  {
+   "name": "q4_margin",
+   "rc": 0,
+   "tail": "  LITERAL REQUIREMENT MET, BUT DEGENERATELY. Every out-of-bank input scores below every in-bank input (max out 0.995019 < min in 1.000000). However the in-bank minimum is EXACTLY 1.000000 for all 10 i",
+   "interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe"
+  },
+  {
+   "name": "q4_seed_transfer",
+   "rc": 0,
+   "tail": "  The membership signal SEPARATES in-bank from held-out corpus on every seed (K1=True, K2=True, AUC min 1.0). A single threshold TRANSFERS: held-out max varies only 0.0852 across seeds. Held-out max s",
+   "interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe"
+  },
+  {
+   "name": "phase1_veto",
+   "rc": 0,
+   "tail": "  receipt: C:\\Users\\chan\\henri-worktrees\\phase1-transduction\\design\\zone_a\\evidence\\henri_phase1_veto_receipt.json",
+   "interpreter": "C:\\Users\\chan\\AppData\\Local\\hermes\\hermes-agent\\venv\\Scripts\\python.exe"
+  }
+ ],
+ "n_gates": 10,
+ "n_failed": 0,
+ "all_green": true,
+ "head": "a404125b552edfe386859c0f22b975e0e39ac0ba",
+ "manifest_sha256": "b97b40daad35f89d1a8b45de433bfe914c31696134c5842a606dc39b1ed08f3f"
+}

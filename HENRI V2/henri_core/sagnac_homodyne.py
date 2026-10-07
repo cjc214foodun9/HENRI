@@ -63,29 +63,70 @@ class SagnacHomodyneVeto(nn.Module):
         best, idx = delta.min(dim=-1)
         return best, idx
 
-    def forward(self, psi_cand: torch.Tensor, fail_closed: bool = True):
+    def delta_eff(self, psi_cand: torch.Tensor, novelty_score: float | None = None,
+                  novelty_lambda: float = 0.0) -> torch.Tensor:
+        """Effective divergence: Delta_eff = Delta_Sagnac + lambda*(1 - s(q)).
+
+        novelty_lambda=0.0 (DEFAULT) returns the raw Sagnac divergence, so the
+        default path is bit-identical to the uncoupled veto. The novelty term is
+        non-negative, so coupling can only ADD deflection: it can never release a
+        candidate that the physics alone would have rejected.
+
+        s(q) is the pre-projection membership score from novelty_gate. It must be
+        computed against THIS veto's axiom bank, so one bank is used throughout.
+        """
+        delta, _ = self.margin(psi_cand)
+        if novelty_score is None or float(novelty_lambda) == 0.0:
+            return delta
+        return delta + float(novelty_lambda) * (1.0 - float(novelty_score))
+
+    def forward(self, psi_cand: torch.Tensor, fail_closed: bool = True,
+                novelty_score: float | None = None,
+                novelty_lambda: float = 0.0):
         """Return dict with per-candidate decision.
 
         fail_closed=True (default): any internal error or empty baseplate rejects.
+        novelty_score / novelty_lambda: DEFAULT OFF. When both are given, the Q4
+        pre-projection membership score enters the veto as a novelty penalty
+        lambda*(1 - s(q)). veto_source reports SAGNAC_NOVELTY_COUPLING only when
+        that penalty FLIPS a decision the physics alone would have released.
         """
         try:
-            delta, idx = self.margin(psi_cand)
+            delta0, idx = self.margin(psi_cand)
         except Exception as exc:                      # noqa: BLE001 - fail closed
             b = psi_cand.shape[0] if psi_cand.dim() > 1 else 1
             return {
                 "allow": torch.zeros(b, dtype=torch.bool),
                 "delta": torch.full((b,), float("inf")),
+                "delta_sagnac": torch.full((b,), float("inf")),
+                "novelty_penalty": 0.0,
+                "flipped_by_novelty": torch.zeros(b, dtype=torch.bool),
                 "axiom_index": torch.full((b,), -1, dtype=torch.long),
                 "reason": f"veto_error:{type(exc).__name__}",
                 "threshold": self.threshold,
+                "veto_source": "SAGNAC_HOMODYNE",
             }
+        lam = 0.0 if novelty_score is None else float(novelty_lambda)
+        penalty = (lam * (1.0 - float(novelty_score))
+                   if novelty_score is not None else 0.0)
+        delta = delta0 + penalty
         allow = delta <= self.threshold
+        allow0 = delta0 <= self.threshold
+        # the novelty term only ever adds, so a flip is always allow0 -> ~allow
+        flipped = allow0 & (~allow)
         return {
             "allow": allow,
             "delta": delta,
+            "delta_sagnac": delta0,
+            "novelty_penalty": penalty,
+            "novelty_score": novelty_score,
+            "novelty_lambda": lam,
+            "flipped_by_novelty": flipped,
             "axiom_index": idx,
             "reason": "constructive_port" if bool(allow.all()) else "dark_port",
             "threshold": self.threshold,
+            "veto_source": ("SAGNAC_NOVELTY_COUPLING" if bool(flipped.any())
+                            else "SAGNAC_HOMODYNE"),
         }
 
     def veto_accuracy(self, psi_clean: torch.Tensor, psi_corrupt: torch.Tensor) -> dict:

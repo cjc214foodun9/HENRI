@@ -1,0 +1,36 @@
+{
+  "schema": "henri.phase1.veto_coupling.preregistration.v1",
+  "written_local_date": "2026-10-06",
+  "frozen_before_run": true,
+  "head_at_freeze": "a404125b552edfe386859c0f22b975e0e39ac0ba",
+  "user_authority": "2026-10-06 message body: 'please continue by executing the engineering found in the document'. Jev advice status ESCALATE is advisory.",
+  "purpose": "Test whether coupling the Q4 pre-projection novelty score s(q) into the Sagnac homodyne veto changes the dispatch decision, per the blueprint Delta_eff = Delta_Sagnac + lambda*(1 - s(q)).",
+  "design": {
+    "formula": "delta_eff = delta_sagnac + lambda * (1.0 - s_q)",
+    "lambda_experiment": 0.5,
+    "lambda_default": 0.0,
+    "threshold": 0.35,
+    "s_q_source": "novelty_gate.membership_score(psi_in, veto.axioms) -- the VETO'S OWN axiom bank, so one bank is used consistently",
+    "default_path": "novelty_lambda=0.0 leaves delta_eff == delta_sagnac exactly; production behaviour is unchanged",
+    "families": {
+      "F0_exact_inbank": "the 10 corpus sentences, all stored (s ~ 1.0)",
+      "HO_heldout": "4 corpus sentences, never stored (s ~ 0.21)",
+      "F1_drop_last": "last word removed (s ~ 0.72) -- NEAR-MISS BAND",
+      "F2_drop_first": "first word removed (s ~ 0.85) -- NEAR-MISS BAND",
+      "F4_synonym": "zero shared tokens (s ~ 0.30)",
+      "F5_random_text": "unrelated word salad",
+      "F5_random_wave": "orthogonal noise floor"
+    },
+    "seeds": [20261004],
+    "dim_note": "harness runs the small config (dim 4096); SagnacHomodyneVeto defaults to dim 65536. The measured configuration is 4096 and is disclosed in the receipt."
+  },
+  "kill_conditions_frozen": {
+    "K1_identity_at_lambda_0": "lambda=0.0 reproduces the uncoupled verdict EXACTLY (allow equal elementwise) on every member of every family",
+    "K2_heldout_vetoed": "held-out corpus pass rate is 0.0 at lambda=0.5",
+    "K3_inbank_preserved": "in-bank pass rate stays 1.0 at lambda=0.5",
+    "K4_attribution_control": "replacing s(q) with a RANDOM score does NOT reproduce the held-out flip pattern. If a random score flips the same cases, the effect is not the novelty signal",
+    "K5_determinism": "two consecutive runs produce byte-identical receipts"
+  },
+  "non_tautology_disclosure": "Criterion 1 (held-out vetoed) is NEARLY GUARANTEED by construction: held-out s ~ 0.21 makes the novelty penalty lambda*(1-s) ~ 0.40, which exceeds the 0.35 threshold REGARDLESS of delta_sagnac. Reporting that alone would repeat the tautology this session removed. The discriminating content is the NEAR-MISS BAND: F1/F2 score s = 0.72-0.99, so the penalty is only 0.005-0.14 and the flip depends on the actual delta_sagnac. The receipt therefore reports the per-family FLIP SPECTRUM, not just the extremes.",
+  "honest_scope": "This tests whether the gate CHANGES A DISPATCH DECISION. It does not test whether HENRI is intelligent. The blueprint claims coupling 'elevates the net scored task rate'; no scored task is wired to the veto in this build, so the task-level claim is UNTESTED and is reported as such."
+}

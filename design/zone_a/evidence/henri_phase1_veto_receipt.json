@@ -1,0 +1,613 @@
+{
+ "schema": "henri.phase1.veto_coupling.receipt.v1",
+ "head": null,
+ "seed": 20261004,
+ "lambda": 0.5,
+ "dim": 4096,
+ "n_bank": 6,
+ "threshold": 0.35,
+ "param_count": 2337095,
+ "manifest": {
+  "bank_n": 6,
+  "eval_n": 30,
+  "bank_sha256": [
+   "56903af47a05a132a4818a37be29f6fe0bab98a2bceaa4e198e31e4ba374cbb7",
+   "04d600e7aad5b8a1fc295264f20ff42e30723ffc37fbb622e0fb51d4078f1117",
+   "3b47bb401516f10f2ededbb2127289593e353576e7dad7900f5e7b8273ce2603",
+   "098161d8808754d1f2b10266a2e1b1fb82eafcca1dc01ae6cca948fffa665b7f",
+   "e6ac9a6bf10ebe6253bfdfc1d03d401f012e08ce1342a1c9bdd9de4c3f710bd7",
+   "671d7b2ed83b674ad8db67c5a3b8532fc495a1ae69f1c0ff68348fd6157a948b"
+  ],
+  "eval_sha256": [
+   "9ce767e0beab542e794440fb42395bed5dad7cecb5c97e1c8ac300a5ee45dc5b",
+   "66fb2b0133f68cec922cfc9a8ffaa5cadcac7c62c77cc45f9af2894d9733c054",
+   "81ce440c4cf423fed61a68346f6a0cdae33bab3fefb709c372667b4a1ea966c9",
+   "c23605576df8091fbf62d08446711e2ca9f8f185c1064022629e7fec97e6b778",
+   "0feb9bdedefa39c74b356124a6788bd53b7802166948b8d3a734536977f26145",
+   "a9d3bb238891d7c8c7d7f1e9cc82b588d9a1aa300a7c3d200433c41580d64eca",
+   "1432a56fc23ce13f95ad10fb21b15f709e4eb1ca9e0734ae940f3d8f6c3ddfd5",
+   "8822d53490f06522ce5c3887810837d1703e909cf894bb2558e2167255e1e703",
+   "01b56358c37011595a2605deedd5efcae4a8a5d8a271e5213daad3c1a409e228",
+   "06be61ae06cf24aac6f03d6d8090e010476b0cf4799471fa0338c54fbba1d298",
+   "93c6570cc382e24b34f1531a4eca49946caf8a7e06b3d122fabe653e7c023cbc",
+   "2fc9a46a2ce5d5999608be61345a50754d9354180f829d081c7bd286f70e0ebc",
+   "8c17b10f986709333c3e73f3eed119c051759f2a9e927bdf309d24941a8901f4",
+   "bb21662af247c42208b15ee307c8af8c65efa0bc848abce8c83972302fd7e601",
+   "dc6ad6a8b91552c4c74afaeaefe3184d9b03cb4bfc43817a9ed580bf861c5c4b",
+   "52a51289e2ffbf0a13c96218e789688d5f36a09c9758b9c4e91902c3c29c763c",
+   "1538ae7d92519dca60b52ddc57f2d544d660ba577b52734917acc6b7ea7358f9",
+   "19b7571196daf6f93619ce33e2730034a1bc55a0a5eac1616f533ab8c5c3b9a1",
+   "0a8f0a515d1d8c98eed5b268bc1ee52fd063add4f62feda39c5587f84ea48000",
+   "a9c57b4c2b219537115ab0ad43ad77fc13c6375639efafff854f531df8dbe687",
+   "624ef6b384dd5fd76c613114dab17499b2ead79c37cde59a8808fa4cd3ca6992",
+   "438a7696847c1e8740e28cafcc5c41ec17852b49f176f7d428e7a733cdb463dc",
+   "dc4342a51b5bfaaaaf92936f6f26460b67f1238c3fe0921e41f3dfb88aedea5d",
+   "9fd8cc2bda7f3c60c5e3da45a1f3768319aa1a3ead0afce31ac885d749cc5b6d",
+   "2ac6fe797842776215a7b253a9c75ebe609d5048a901142815c00d60970ea348",
+   "506c1caedddde44e563fcac81ae1312d182b7e7bbf45a3cac03de453f41128b6",
+   "ac613c90fd0db48901f2ca26df510b4e2c34f1e20bbf89fc119153278f11f896",
+   "04c5928b13ee54ed8b840472414fce19f9434a44bd6897f5214622106a7f1d20",
+   "aefb45f1b61e39a726f4b09e6e71f982375aeff5bff4aa503de7922665fc33d9",
+   "f2d0a4bee534b37cf16497907f6a906190abe3ac84df7cc4218ff377ea85a3e5"
+  ],
+  "intersection": [],
+  "intersection_cardinality": 0,
+  "assert_intersection_empty": true
+ },
+ "families": {
+  "F0_inbank": {
+   "kind": "in_bank",
+   "n": 6,
+   "pass_rate_lambda0": 1.0,
+   "pass_rate_lambda5": 1.0,
+   "flips": 0,
+   "flip_rate": 0.0,
+   "s_q_min": 1.0,
+   "s_q_max": 1.0,
+   "delta_sagnac_min": 0.003565,
+   "delta_sagnac_max": 0.003657
+  },
+  "HO_heldout": {
+   "kind": "heldout",
+   "n": 4,
+   "pass_rate_lambda0": 1.0,
+   "pass_rate_lambda5": 0.0,
+   "flips": 4,
+   "flip_rate": 1.0,
+   "s_q_min": 0.183281,
+   "s_q_max": 0.223114,
+   "delta_sagnac_min": 0.008909,
+   "delta_sagnac_max": 0.017108
+  },
+  "F1_drop_last": {
+   "kind": "drop_boundary",
+   "n": 10,
+   "pass_rate_lambda0": 1.0,
+   "pass_rate_lambda5": 0.6,
+   "flips": 4,
+   "flip_rate": 0.4,
+   "s_q_min": 0.112971,
+   "s_q_max": 0.856996,
+   "delta_sagnac_min": 0.003861,
+   "delta_sagnac_max": 0.012884
+  },
+  "F2_drop_first": {
+   "kind": "drop_boundary",
+   "n": 10,
+   "pass_rate_lambda0": 1.0,
+   "pass_rate_lambda5": 0.7,
+   "flips": 3,
+   "flip_rate": 0.3,
+   "s_q_min": 0.180231,
+   "s_q_max": 0.989582,
+   "delta_sagnac_min": 0.004026,
+   "delta_sagnac_max": 0.011911
+  },
+  "F4_synonym": {
+   "kind": "synonym",
+   "n": 3,
+   "pass_rate_lambda0": 1.0,
+   "pass_rate_lambda5": 0.0,
+   "flips": 3,
+   "flip_rate": 1.0,
+   "s_q_min": 0.186375,
+   "s_q_max": 0.279487,
+   "delta_sagnac_min": 0.008669,
+   "delta_sagnac_max": 0.011213
+  },
+  "F5_random_text": {
+   "kind": "heldout",
+   "n": 3,
+   "pass_rate_lambda0": 1.0,
+   "pass_rate_lambda5": 0.3333,
+   "flips": 2,
+   "flip_rate": 0.6667,
+   "s_q_min": 0.079682,
+   "s_q_max": 0.359441,
+   "delta_sagnac_min": 0.009681,
+   "delta_sagnac_max": 0.012431
+  }
+ },
+ "per_item": {
+  "F0_inbank": [
+   {
+    "text": "entity acts on object in context",
+    "s_q": 1.0,
+    "delta_sagnac": 0.003632,
+    "novelty_penalty": -0.0,
+    "delta_eff": 0.003631,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "retrieval transfer result on the ladder",
+    "s_q": 1.0,
+    "delta_sagnac": 0.003595,
+    "novelty_penalty": -0.0,
+    "delta_eff": 0.003594,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "the axiom holds the boundary",
+    "s_q": 1.0,
+    "delta_sagnac": 0.003565,
+    "novelty_penalty": -0.0,
+    "delta_eff": 0.003565,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "measuring the energy saddle",
+    "s_q": 1.0,
+    "delta_sagnac": 0.003657,
+    "novelty_penalty": 0.0,
+    "delta_eff": 0.003657,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "phase interference clears the port",
+    "s_q": 1.0,
+    "delta_sagnac": 0.003629,
+    "novelty_penalty": 0.0,
+    "delta_eff": 0.003629,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "the crystal stores the engram",
+    "s_q": 1.0,
+    "delta_sagnac": 0.003628,
+    "novelty_penalty": 0.0,
+    "delta_eff": 0.003628,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   }
+  ],
+  "HO_heldout": [
+   {
+    "text": "gradient descent reaches the attractor",
+    "s_q": 0.223114,
+    "delta_sagnac": 0.011404,
+    "novelty_penalty": 0.388443,
+    "delta_eff": 0.399847,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   },
+   {
+    "text": "the swarm finds the lower energy",
+    "s_q": 0.183281,
+    "delta_sagnac": 0.009376,
+    "novelty_penalty": 0.408359,
+    "delta_eff": 0.417736,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   },
+   {
+    "text": "memory decays with the relaxation time",
+    "s_q": 0.222362,
+    "delta_sagnac": 0.008909,
+    "novelty_penalty": 0.388819,
+    "delta_eff": 0.397728,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   },
+   {
+    "text": "the veto rejects the inverted phase",
+    "s_q": 0.184657,
+    "delta_sagnac": 0.017108,
+    "novelty_penalty": 0.407671,
+    "delta_eff": 0.424779,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   }
+  ],
+  "F1_drop_last": [
+   {
+    "text": "entity acts on object in",
+    "s_q": 0.856996,
+    "delta_sagnac": 0.003861,
+    "novelty_penalty": 0.071502,
+    "delta_eff": 0.075363,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "retrieval transfer result on the",
+    "s_q": 0.410457,
+    "delta_sagnac": 0.005163,
+    "novelty_penalty": 0.294771,
+    "delta_eff": 0.299935,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "the axiom holds the",
+    "s_q": 0.343337,
+    "delta_sagnac": 0.005369,
+    "novelty_penalty": 0.328331,
+    "delta_eff": 0.3337,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "measuring the energy",
+    "s_q": 0.651801,
+    "delta_sagnac": 0.004608,
+    "novelty_penalty": 0.174099,
+    "delta_eff": 0.178708,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "phase interference clears the",
+    "s_q": 0.695261,
+    "delta_sagnac": 0.004159,
+    "novelty_penalty": 0.15237,
+    "delta_eff": 0.156528,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "the crystal stores the",
+    "s_q": 0.456072,
+    "delta_sagnac": 0.005088,
+    "novelty_penalty": 0.271964,
+    "delta_eff": 0.277052,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "gradient descent reaches the",
+    "s_q": 0.236106,
+    "delta_sagnac": 0.008628,
+    "novelty_penalty": 0.381947,
+    "delta_eff": 0.390574,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   },
+   {
+    "text": "the swarm finds the lower",
+    "s_q": 0.234189,
+    "delta_sagnac": 0.008083,
+    "novelty_penalty": 0.382905,
+    "delta_eff": 0.390988,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   },
+   {
+    "text": "memory decays with the relaxation",
+    "s_q": 0.257661,
+    "delta_sagnac": 0.007974,
+    "novelty_penalty": 0.371169,
+    "delta_eff": 0.379144,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   },
+   {
+    "text": "the veto rejects the inverted",
+    "s_q": 0.112971,
+    "delta_sagnac": 0.012884,
+    "novelty_penalty": 0.443515,
+    "delta_eff": 0.456399,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   }
+  ],
+  "F2_drop_first": [
+   {
+    "text": "acts on object in context",
+    "s_q": 0.759646,
+    "delta_sagnac": 0.004026,
+    "novelty_penalty": 0.120177,
+    "delta_eff": 0.124203,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "transfer result on the ladder",
+    "s_q": 0.935966,
+    "delta_sagnac": 0.00522,
+    "novelty_penalty": 0.032017,
+    "delta_eff": 0.037237,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "axiom holds the boundary",
+    "s_q": 0.989582,
+    "delta_sagnac": 0.011389,
+    "novelty_penalty": 0.005209,
+    "delta_eff": 0.016598,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "the energy saddle",
+    "s_q": 0.738704,
+    "delta_sagnac": 0.011094,
+    "novelty_penalty": 0.130648,
+    "delta_eff": 0.141742,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "interference clears the port",
+    "s_q": 0.924198,
+    "delta_sagnac": 0.011911,
+    "novelty_penalty": 0.037901,
+    "delta_eff": 0.049812,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "crystal stores the engram",
+    "s_q": 0.953463,
+    "delta_sagnac": 0.011395,
+    "novelty_penalty": 0.023269,
+    "delta_eff": 0.034664,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "descent reaches the attractor",
+    "s_q": 0.332674,
+    "delta_sagnac": 0.005879,
+    "novelty_penalty": 0.333663,
+    "delta_eff": 0.339542,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "swarm finds the lower energy",
+    "s_q": 0.192389,
+    "delta_sagnac": 0.00938,
+    "novelty_penalty": 0.403805,
+    "delta_eff": 0.413186,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   },
+   {
+    "text": "decays with the relaxation time",
+    "s_q": 0.228247,
+    "delta_sagnac": 0.007208,
+    "novelty_penalty": 0.385876,
+    "delta_eff": 0.393084,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   },
+   {
+    "text": "veto rejects the inverted phase",
+    "s_q": 0.180231,
+    "delta_sagnac": 0.008679,
+    "novelty_penalty": 0.409884,
+    "delta_eff": 0.418563,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   }
+  ],
+  "F4_synonym": [
+   {
+    "text": "a thing affects another thing nearby",
+    "s_q": 0.186375,
+    "delta_sagnac": 0.011213,
+    "novelty_penalty": 0.406812,
+    "delta_eff": 0.418025,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   },
+   {
+    "text": "memory hands over an answer up the rungs",
+    "s_q": 0.279487,
+    "delta_sagnac": 0.01058,
+    "novelty_penalty": 0.360257,
+    "delta_eff": 0.370837,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   },
+   {
+    "text": "the rule keeps the edge in place",
+    "s_q": 0.213199,
+    "delta_sagnac": 0.008669,
+    "novelty_penalty": 0.393401,
+    "delta_eff": 0.40207,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   }
+  ],
+  "F5_random_text": [
+   {
+    "text": "zzz qqq unrelated gamma",
+    "s_q": 0.195179,
+    "delta_sagnac": 0.009681,
+    "novelty_penalty": 0.40241,
+    "delta_eff": 0.412091,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   },
+   {
+    "text": "wxk pfj blorp tender",
+    "s_q": 0.359441,
+    "delta_sagnac": 0.012393,
+    "novelty_penalty": 0.320279,
+    "delta_eff": 0.332672,
+    "allow_lambda0": true,
+    "allow_lambda5": true,
+    "flipped": false,
+    "veto_source": "SAGNAC_HOMODYNE"
+   },
+   {
+    "text": "qq vv xx zz mm",
+    "s_q": 0.079682,
+    "delta_sagnac": 0.012431,
+    "novelty_penalty": 0.460159,
+    "delta_eff": 0.47259,
+    "allow_lambda0": true,
+    "allow_lambda5": false,
+    "flipped": true,
+    "veto_source": "SAGNAC_NOVELTY_COUPLING"
+   }
+  ]
+ },
+ "kill": {
+  "K1_lambda0_inert": true,
+  "K2_heldout_vetoed_at_lambda": true,
+  "K3_inbank_preserved": true,
+  "K4_attribution_control": {
+   "flip_rate_real": {
+    "F0_inbank": 0.0,
+    "HO_heldout": 1.0,
+    "F1_drop_last": 0.4,
+    "F2_drop_first": 0.3,
+    "F4_synonym": 1.0,
+    "F5_random_text": 0.6667
+   },
+   "flip_rate_score_shuffled": {
+    "F0_inbank": 0.6667,
+    "HO_heldout": 0.25,
+    "F1_drop_last": 0.4,
+    "F2_drop_first": 0.4,
+    "F4_synonym": 0.3333,
+    "F5_random_text": 0.6667
+   },
+   "flip_rate_random_score": {
+    "F0_inbank": 0.0,
+    "HO_heldout": 0.5,
+    "F1_drop_last": 0.4,
+    "F2_drop_first": 0.4,
+    "F4_synonym": 0.3333,
+    "F5_random_text": 0.3333
+   },
+   "inbank_shift_under_shuffle": 0.6667,
+   "heldout_shift_under_shuffle": 0.75,
+   "passes": true,
+   "note": "control passes only if permuting the s(q)->item assignment CHANGES the per-family flip rates; a random score must not reproduce the real structure"
+  },
+  "K5_determinism": true
+ },
+ "vacuous_veto_finding": {
+  "pass_rate_lambda0_every_family": {
+   "F0_inbank": 1.0,
+   "HO_heldout": 1.0,
+   "F1_drop_last": 1.0,
+   "F2_drop_first": 1.0,
+   "F4_synonym": 1.0,
+   "F5_random_text": 1.0
+  },
+  "all_families_pass_at_lambda0": true,
+  "delta_sagnac_min": 0.003565,
+  "delta_sagnac_max": 0.017108,
+  "threshold": 0.35,
+  "note": "At lambda=0 the veto releases EVERY family, including random text and synonyms: delta_sagnac is 0.004-0.017 against a 0.35 threshold. The veto scores psi_conv, which the CCCP swarm has already projected onto the bank, so the Sagnac term is saturated toward 0 by the SAME post-projection confound Q4 found. This gate could not fail before the coupling."
+ },
+ "honest_scope": "This tests whether the gate CHANGES A DISPATCH DECISION. No scored task is wired to the veto in this build, so the blueprint's claim that coupling 'elevates the net scored task rate' is UNTESTED here. Dim is the small config, not 65536.",
+ "near_miss_band": {
+  "n": 20,
+  "s_q_range": [
+   0.112971,
+   0.989582
+  ],
+  "penalty_range": [
+   0.005209,
+   0.443515
+  ],
+  "flips": 7,
+  "note": "penalty here is small (<=0.14), so a flip depends on the real Delta_Sagnac: this is the falsifiable content"
+ },
+ "claim": "lambda=0 reproduces the uncoupled verdict exactly: True. At lambda=0.5, held-out pass rate 0.0 (criterion 1) and in-bank pass rate 1.0 (criterion 2). Near-miss band flips 7/20. Attribution control: permuting the s(q)->item assignment moves the in-bank flip rate by 0.67 and the held-out flip rate by 0.75 (K4 passes=True). CRITICAL FINDING: at lambda=0 the veto released EVERY family (delta_sagnac 0.0036-0.0171 vs threshold 0.35), so the Sagnac term alone could not fail. The coupling is what makes the veto able to reject.",
+ "determinism": {
+  "run1": "f2f6bc919f5c42cf",
+  "run2": "f2f6bc919f5c42cf",
+  "identical": true,
+  "K5_deterministic": true
+ }
+}

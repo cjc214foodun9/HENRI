@@ -118,7 +118,8 @@ class TriModelSystem(nn.Module):
     def solve(self, prompt: str, tokenizer, patterns: torch.Tensor | None = None,
               use_swarm: bool = True, temperature: float | None = None,
               swarm_bank: str = "corpus",
-              abstain_below: float | None = None) -> dict:
+              abstain_below: float | None = None,
+              novelty_lambda: float = 0.0) -> dict:
         """Run the full closed loop on one prompt.
 
         Returns the decoded tokens, the converged wave, the Sagnac verdict, and
@@ -190,7 +191,13 @@ class TriModelSystem(nn.Module):
         decoded = tokenizer.decode(ids.tolist())
 
         # --- Sagnac veto
-        verdict = self.veto(psi_conv)
+        # Phase 1: the Q4 membership score s(q) enters as a novelty penalty.
+        # s(q) is computed against the VETO's own axiom bank, so one bank is used
+        # consistently. novelty_lambda=0.0 (DEFAULT) leaves the verdict unchanged.
+        veto_s = (NG.membership_score(psi_in[0], self.veto.axioms)
+                  if self.veto.n_axioms > 0 else None)
+        verdict = self.veto(psi_conv, novelty_score=veto_s,
+                            novelty_lambda=novelty_lambda)
         return {
             "prompt": prompt,
             "psi_in": psi_in[0],
@@ -201,6 +208,11 @@ class TriModelSystem(nn.Module):
             "sagnac": {
                 "allow": bool(verdict["allow"][0]),
                 "delta": float(verdict["delta"][0]),
+                "delta_sagnac": float(verdict["delta_sagnac"][0]),
+                "novelty_penalty": float(verdict["novelty_penalty"]),
+                "novelty_lambda": float(novelty_lambda),
+                "flipped_by_novelty": bool(verdict["flipped_by_novelty"][0]),
+                "veto_source": verdict["veto_source"],
                 "threshold": float(self.veto.threshold),
                 "reason": verdict["reason"],
             },
