@@ -134,7 +134,17 @@ def main():
     a = ap.parse_args()
     t0 = time.time()
     R = {"schema": "henri.pooling.width.ab.v1", "pin": PIN, "max_len": MAX_LEN,
-         "n_inputs": N_INPUTS, "arms": {}}
+         "n_inputs": N_INPUTS,
+         # INVALIDATED BY DESIGN (self-caught). This compares two SEPARATELY BUILT
+         # systems. dk_target changes the parameter count, so the whole-
+         # construction RNG fork consumes a different stream and the INGRESS INIT
+         # DIFFERS between arms (ridge_held 0.1862 vs 0.1780 on identical wave
+         # features). It also ranked the RAW WAVE, which passes through no pooling.
+         # Do NOT read the verdict below as evidence. Use exp_raw_vs_pooled.py,
+         # which measures both stages INSIDE ONE system.
+         "status": "CONFOUNDED_NOT_EVIDENCE",
+         "superseded_by": "exp_raw_vs_pooled.py",
+         "arms": {}}
 
     inputs = make_inputs(N_INPUTS)
     corpus = build_corpus(max_len=MAX_LEN, holdout_len=MAX_LEN, inputs=inputs)

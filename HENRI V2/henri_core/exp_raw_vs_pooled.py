@@ -155,21 +155,36 @@ def main():
 
     W, P = R["stage_W_raw_wave"], R["stage_P_pooled_feature"]
     R["comparison"] = {
-        "eff_rank_W": W["eff_rank_1e6"], "eff_rank_P": P["eff_rank_1e6"],
-        "eff_rank_ratio_P_over_W": round(P["eff_rank_1e6"] / max(1, W["eff_rank_1e6"]), 3),
+        # PRIMARY collapse statistics: participation ratio + pairwise cosine.
+        # eff_rank@1e-6 is retained for the record but is NOT the decision metric:
+        # in 2048 dims numerical noise inflates a raw eigenvalue count (it read 200
+        # for the COLLAPSED feature and 28 for the good one). See the receipt.
+        "participation_ratio_W": W["participation_ratio"],
+        "participation_ratio_P": P["participation_ratio"],
+        "PR_collapse_ratio_W_over_P": round(
+            W["participation_ratio"] / max(1e-9, P["participation_ratio"]), 2),
         "pair_abs_cos_W": W["pair_abs_cos_mean"],
         "pair_abs_cos_P": P["pair_abs_cos_mean"],
+        "eff_rank_W": W["eff_rank_1e6"], "eff_rank_P": P["eff_rank_1e6"],
+        "eff_rank_note": "NOT the decision metric; inflated by numerical noise",
         "capacity_W": W["capacity_self_recovery"],
         "capacity_P": P["capacity_self_recovery"],
     }
     c = R["comparison"]
+    # CORRECTED RULE (self-caught): the first version keyed on eff_rank@1e-6 and
+    # printed NO_COLLAPSE_FROM_POOLING -- FALSE. In high dimension a raw eigenvalue
+    # count rises with noise, so it reported the collapsed feature as RICHER. The
+    # collapse statistic is the participation ratio.
+    pr_collapse = c["participation_ratio_P"] < c["participation_ratio_W"] * 0.6
+    cos_rise = c["pair_abs_cos_P"] > c["pair_abs_cos_W"] * 1.5
     if not R["controls_pass"]:
         R["verdict"] = "HARNESS_BROKEN_NO_INTERPRETATION"
-    elif (c["eff_rank_P"] < c["eff_rank_W"] * 0.6
-          and c["pair_abs_cos_P"] > c["pair_abs_cos_W"] * 1.5):
+    elif pr_collapse and cos_rise:
         R["verdict"] = "FEATURE_COLLAPSE_CONFIRMED"
     else:
         R["verdict"] = "NO_COLLAPSE_FROM_POOLING"
+    R["decision_rule"] = ("participation_ratio collapses >=1.67x AND pairwise "
+                          "|cos| rises >=1.5x")
     R["elapsed_s"] = round(time.time() - t0, 1)
     with io.open(a.out or (os.environ.get("LOCALAPPDATA", ".") + "/Temp/rawpool.json"),
                  "w", encoding="utf-8") as fh:

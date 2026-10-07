@@ -1,0 +1,78 @@
+{
+  "schema": "henri.selection.headroom.receipt.v1",
+  "written_local_date": "2026-10-07",
+  "head_at_run": "426e61e4ccb50beba1c3a20aabcca029c985ff20",
+  "diagnostic_only": "CPU, D=4096, small config. Not a model-performance claim.",
+  "authorization": "none required: named default-OFF diagnostic flag, no default path changed",
+
+  "CORPUS_SCALE_DISCIPLINE": {
+    "warning": "TWO DIFFERENT CORPUS SIZES appear in this program. They MUST NOT be conflated.",
+    "full_scaleup_corpus": {"n_train": 8120, "n_held": 2044,
+                            "coverage_at_5": 0.5036, "ridge_top1": 0.2078,
+                            "source": "exp_m4_scale.py, 10164 triples"},
+    "this_experiment_corpus": {"n_train": 1092, "n_held": 2268,
+                               "coverage_at_5": 0.1142, "ridge_top1": 0.0401,
+                               "source": "exp_executor_verified_selection.py, 28 inputs"},
+    "self_caught": "I nearly quoted the full-corpus coverage@5 (0.5036) beside this run's top-1 (0.0401). Those are different corpora. The headroom RATIO survives at both scales; the absolute numbers do not transfer."
+  },
+
+  "QUESTION": "Can re-executing the top-5 candidates raise top-1? The M4 executor is a free ground-truth oracle, so the correct candidate in the top-5 is verifiable by execution at zero training cost.",
+
+  "PRE_REGISTERED_READING_RULE": {
+    "oracle_gain_gt_0.05": "SELECTION_HEADROOM_EXISTS",
+    "real_gt_top1_plus_0.05_and_gt_shuffled_plus_0.05": "VERIFIER_WORKS_ON_THIS_TASK",
+    "otherwise": "HEADROOM_EXISTS_VERIFIER_NOT_LEARNED or NO_SELECTION_HEADROOM",
+    "guard": "no arm is read unless the estimator control (random features, same rows in and out) reaches >= 0.99"
+  },
+
+  "MEASURED": {
+    "estimator_control": 1.0,
+    "top1_baseline": 0.0401,
+    "unigram_floor": 0.0792,
+    "coverage_at_k": {"1": 0.0317, "5": 0.1142, "20": 0.2368},
+    "chance_at_5": 0.004579,
+    "oracle_rerank_top5": 0.1142,
+    "oracle_gain_over_top1": 0.0741,
+    "real_verifier_top5": 0.0402,
+    "real_gain_over_top1": 0.0001,
+    "shuffled_verifier_top5": 0.0401,
+    "random_verifier_top5": 0.0579,
+    "real_minus_shuffled_control": 0.0001,
+    "verdict": "HEADROOM_EXISTS_VERIFIER_NOT_LEARNED"
+  },
+
+  "FINDINGS": {
+    "F1_headroom_is_real": "oracle rerank of the top-5 gains +0.0741 over top-1 (0.1142 vs 0.0401). Selection alone, with zero training, can move the metric by more than the entire learned margin. This CONFIRMS the user's architecture intuition: the candidate set already contains the answer ~2.8x more often than rank-1 finds it.",
+    "F2_the_verifier_did_not_learn": "real 0.0402 vs top-1 0.0401 vs shuffled control 0.0401 -- indistinguishable. Random choice among the top-5 (0.0579) BEAT the trained verifier.",
+    "F3_WHY_the_verifier_cannot_learn": "the verifier's only feature was d = <z_query, z_candidate> -- the SAME inner product the ridge ranker already used to build the ranking. A monotone function of the ranking statistic cannot re-rank. The verifier carries no information the ranker lacked. This is an information-identity defect, not a capacity defect.",
+    "F4_the_rejection_label_exists_and_is_free": "measured 11,340 (query, top-5 candidate) pairs, 572 correct execution labels -> pair_label_rate 0.0504. A failed execution check IS a labeled rejection. This is the first real label source for the veto, and it is the honest bridge to executor-verified self-play.",
+    "F5_the_verifier_weight_is_quadratic_in_d": "fitted weights [-0.3602, -0.3602, 1.6903, 0.03] over [d, |d|, d^2, 1]. On a 5% positive rate this pushes toward mid-range similarity. It is a shape that cannot separate; consistent with F3."
+  },
+
+  "SELF_CAUGHT_DESIGN_DEFECT": {
+    "defect": "the first draft of the selection script placed the correct candidate at training slot 0 for 1/7 of rows",
+    "risk": "a per-slot weight could win by memorising the SLOT, which does not exist at test time",
+    "fix": "content-based pair features only; candidate position randomised within each training row",
+    "status": "fixed BEFORE the run; the reported run uses the corrected design"
+  },
+
+  "WHAT_THIS_CHANGES": {
+    "strategy": "My earlier framing said the architecture must propose better candidates, not rerank them. The ceiling logic still holds, but the strategy implication was WRONG: measured oracle rerank gains +0.0741 with zero training, so selection IS worth building -- just not with a verifier that reads the same similarity the ranker used.",
+    "next_verifier_design": "the verifier must consume something the ranker does NOT: candidate-to-candidate structure, position-resolved disagreement, or execution-partial-credit signals. Repeating the inner product is provably uninformative (F3).",
+    "veto_bridge": "F4 supplies the labeled-rejection source the Sagnac veto never had. This is the concrete, measured bridge to the user's 'anything rejected must be learned from' and to executor-verified self-play."
+  },
+
+  "NOT_A_CLAIM": [
+    "this is not a model-performance result (CPU, dim=4096, small config)",
+    "oracle_rerank_top5 is an ORACLE inside the candidate set, not an attainable system; it equals coverage@5 by construction",
+    "SPEC_B remains DRAFT; K-B5 (full-scale transfer) is unrun"
+  ],
+
+  "status": "OBSERVED",
+  "next_discriminating_experiment": {
+    "question": "does a verifier that consumes NON-similarity signal capture any of the +0.0741 headroom?",
+    "design": "verifier features = position-resolved per-slot disagreement between query and candidate plus candidate-pair contrast. Never the plain query-candidate inner product (proved uninformative).",
+    "falsifier": "if such a verifier still lands within 0.005 of its shuffled control, selection cannot be learned on this task and the headroom is oracle-only.",
+    "authorization": "none required while behind a named default-OFF flag"
+  }
+}
