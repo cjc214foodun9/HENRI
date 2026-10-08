@@ -1,0 +1,36 @@
+{
+  "schema": "henri.pooling.swap.preregistration.v1",
+  "written_local_date": "2026-10-07",
+  "authorized_by": "user 2026-10-07: 'authorization granted ... escalate and execute anything you deem safe. only absolute data removal needs to be approved.'",
+  "question": "Is the measured rank collapse (participation ratio 26.21 -> 2.45) caused by the POOLING stage or is it upstream in the ingress?",
+  "design_frozen_before_run": {
+    "one_system_only": true,
+    "confound_removed": "Two separately built systems were INVALID: dk_target changes parameter count, which shifts the pinned RNG fork, which changes ingress init (measured earlier: ridge_held 0.1862 vs 0.1780 on identical wave features). This run uses ONE system, generates the waves ONCE, and applies both pooling widths to the SAME waves.",
+    "same_kv": "kv = pooling.wave_proj(cat[psi.real, psi.imag]) is computed ONCE and shared by both arms. Only the (n_mem, d_k) factorization of that same kv differs.",
+    "arms": {"d_k_4": "n_mem=256, d_k=4 (the system's own pooling, dk_target=0)", "d_k_32": "n_mem=32, d_k=32 (SPEC_B ratified width)"},
+    "new_parameters_dk32": "q_macro [256,32] and mod [256,32,1024] only, drawn from a FIXED torch.Generator seed. wave_proj, beta, n_macro and the entire ingress are IDENTICAL.",
+    "readout": "ridge on the flatted pooled feature, same train rows, same lambda protocol, same row cap as exp_m4_scale.ridge"
+  },
+  "primary_rule_literal": {
+    "confirm": "participation_ratio(d_k=32) > 2.45 AND ridge_held(d_k=32) > 0.2078",
+    "note": "This is the user's literal bar. DISCLOSED RISK: 0.2078 was achieved by ridge on the RAW 8192-d wave. Requiring a POOLED feature to beat the raw wave is a high bar; see the secondary rule."
+  },
+  "secondary_rule_relative": {
+    "confirm_directional": "participation_ratio(d_k=32) > participation_ratio(d_k=4) AND ridge_held(d_k=32) > ridge_held(d_k=4) + 0.02",
+    "purpose": "Pre-registered NOW so that a directional mechanism win is not silently re-read as a literal pass, and a literal miss is not re-read as mechanism failure."
+  },
+  "controls_required": {
+    "raw_wave_PR_reproduces": "expected ~26.21 on this machine/corpus; a large deviation invalidates comparison",
+    "rotation_invariance": "a random orthogonal rotation of the pooled feature must leave participation ratio unchanged (metric sanity)",
+    "estimator_sanity": "ridge on random orthogonal features, trained and scored on the SAME rows, must reach >= 0.99",
+    "shuffled_labels": "ridge with shuffled targets must collapse toward the unigram floor"
+  },
+  "verdicts": {
+    "POOLING_IS_THE_RANK_LEVER": "primary rule passes",
+    "POOLING_IS_THE_LEVER_DIRECTIONAL_ONLY": "primary fails, secondary passes",
+    "POOLING_NOT_THE_LEVER": "primary and secondary both fail; participation ratio stays ~2.45 at both widths -> limit is UPSTREAM and the ingress becomes the target",
+    "HARNESS_BROKEN_NO_INTERPRETATION": "any required control fails"
+  },
+  "what_confirm_does_not_buy": "Even on a literal pass, K-B5 (full-scale transfer) remains the gate before ANY SPEC_B promotion. Confirmation changes which gate is next; it does not promote. No model-performance claim: this is CPU, D=4096, diagnostic only.",
+  "independent_reproduction_target": "prior single-system measurement: stage_W PR 26.21 / |cos| 0.0666 ; stage_P PR 2.45 / |cos| 0.6158"
+}

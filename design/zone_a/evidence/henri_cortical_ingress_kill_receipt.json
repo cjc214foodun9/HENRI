@@ -1,0 +1,95 @@
+{
+  "schema": "henri.cortical.ingress.kill.receipt.v1",
+  "written_local_date": "2026-10-07",
+  "authorized_by": "user 2026-10-07: 'authorization granted ... escalate and execute anything you deem safe ... only absolute data removal needs to be approved.'",
+  "head_at_run": "db15f5fa0c54030fffafe49f2350ccfaf7e8caff",
+  "device": "cpu", "dim": 4096, "diagnostic_only": true,
+
+  "source": {
+    "paper": "Hill et al., 'The Geometry of Cortical Computation: Manifold Disentanglement and Predictive Dynamics in VCNet'",
+    "arxiv": "2508.02995",
+    "venue": "NeurIPS 2025 WORKSHOP (NeurReps + CogInterp), NOT main conference",
+    "cached_full_text": "C:/Users/chan/AppData/Local/hermes/cache/web/arxiv.org-d2022522b6.md",
+    "paper_reported_scores": {"Spots-10": "92.1%", "light_field": "74.4%"}
+  },
+
+  "blueprint_numbers_marked_UNSOURCED": {
+    "values_not_in_the_paper": ["92.08%", "74.42%", "0.04 MB", "3.52 MB", "43% reduction"],
+    "blueprint_vsa_dim_65536": "nn.Linear(65536,65536) is 4.3e9 parameters, ~10x the entire 447M budget. NOT implemented. This module uses dim=4096 complex (8192 flat) to match every committed receipt.",
+    "blueprint_paths_wrong": "blueprint names henri_core/novelty_gate.py and zone_a/ingress.py for the ingress; the real ingress is HENRI V2/henri_core/zone_a.py. Verified before editing.",
+    "blueprint_claims_NOT_verified": "blueprint asserts 'Subsystem 1: SOLVED' and 'Subsystem 5: SOLVED'. A design document solves nothing; measured below."
+  },
+
+  "adaptation_from_image_to_text": {
+    "image_machinery_replaced": "Conv2d / in_channels=3 / light-field -> Conv1d over the TOKEN axis (kernels 3,5,7). M4 is character-tokenized program text.",
+    "global_avg_pool_avoided": "the blueprint's ventral path ends in AdaptiveAvgPool2d((1,1)) = global average pooling, the SAME operator family measured to collapse participation ratio 26.21 -> 2.45. Not used in the order-sensitive path.",
+    "disclosed_tension": "the blueprint binds psi_scene = psi_id (*) psi_pose. HRR binding was measured WORSE than co-storage for the engram store (0.0463 vs 0.1667). That was a memory result, not an ingress result, but it is an adversarial data point, not a free choice. A bound-vs-concat ablation is implemented (bind flag) and NOT yet run."
+  },
+
+  "kill_tests": {
+    "K1_gradient_reach": {
+      "params_with_grad": 22, "params_total": 22, "all_receive_grad": true,
+      "params_that_moved": 22, "max_param_delta": 0.030063,
+      "PASS": true,
+      "defect_found_and_fixed_in_the_TEST": "first draft scored 19/22. The 3 silent params were neuromod (2) and tangent.generator (1): gamma and eps were COMPUTED but never entered the objective. An unused head cannot receive gradient. The objective now exercises every sub-module.",
+      "significance": "This is the repair of the measured dead-flag defect class. Legacy wave_of is no_grad-wrapped, encode_text() returns requires_grad=False even called directly, and the path severs at argmax(routes)->int + frozen angle buffer + constant-magnitude polar. A conv->phase map IS differentiable end to end. That specific defect is fixed."
+    },
+    "K2_default_off_byte_compat": {
+      "legacy_wave_unchanged_after_import": true, "PASS": true,
+      "note": "the cortical module does not perturb the legacy path; committed receipts still reproduce"
+    },
+    "K3_continuity": {
+      "cortical_delta": 2.7319, "legacy_delta": 2.1547, "bounded": true, "PASS": true,
+      "note": "legacy recorded as comparison only; not asserted"
+    },
+    "K4_order_sensitivity": {
+      "cos_cortical_IR_RI": 0.998836,
+      "cos_legacy_IR_RI": 0.0,
+      "bar": "<0.99, pre-registered, NOT moved after the fact",
+      "PASS": false,
+      "SELF_CAUGHT_INVERSION": "my attempted repair made this WORSE: first draft 0.988987 -> after adding a fixed position phase ramp 0.998836. The repair is FALSIFIED. Root cause (hypothesis, not measured): to_phase outputs large-magnitude phases, so exp(i*phase) for the two positions shares a dominant common component and the aggregate is nearly order-invariant.",
+      "consequence": "this module is MORE order-blind than the legacy path it would replace. Legacy cos(IR,RI)=0.0 separates order fully."
+    },
+    "K5_tangent_identity": {
+      "eps_sq": 0.0020727545, "inner_sq": 0.9979265928, "sum": 0.99999935,
+      "PASS": true, "note": "Hermitian projection is correct; a real inner product would have failed this"
+    },
+    "K6_bind_norm": {
+      "scene_norm": 1.0, "raw_combine_norm": 63.9141, "sqrt_D": 64.0, "PASS": true,
+      "defect_found_and_fixed_in_the_TEST": "first draft measured the RAW combine() output (63.80579 = sqrt(4096)) instead of the normalized forward output"
+    }
+  },
+
+  "kill_pass": false,
+  "kill_failures": ["K4"],
+
+  "E1_predictive_measurement": {
+    "split": {"max_len": 5, "holdout_len": 3, "n_train": 336, "n_held": 9828},
+    "cortical_ridge_held": 0.084,
+    "legacy_same_split_ridge_held": 0.1002,
+    "delta_cortical_minus_legacy": -0.0162,
+    "cortical_knn": 0.0407, "legacy_knn": 0.031,
+    "floor": 0.0782,
+    "cortical_estimator_control": 1.0, "legacy_estimator_control": 1.0,
+    "reading": "cortical is ABOVE the floor (carries real signal) but BELOW legacy. The VCNet-derived ingress does not beat the path it would replace on held-out token accuracy."
+  },
+
+  "verdict": "KILL_TEST_FAILED_NO_CLAIM",
+  "verdict_plain": "The cortical ingress repairs the DIFFERENTIABILITY defect (K1 22/22, a real structural gain) but FAILS order sensitivity (K4) and does NOT improve accuracy (E1 -0.0162 vs legacy). It must NOT be promoted. The blueprint's 'Subsystem 1: SOLVED' is FALSIFIED as implemented here.",
+
+  "what_is_established": [
+    "OBSERVED: the pooling stage is not the accuracy lever (POOLING_NOT_THE_LEVER, PR 2.24->27.09 at 12.1x with accuracy +0.0014).",
+    "OBSERVED: the accuracy limit is upstream of pooling.",
+    "OBSERVED: a differentiable text->wave path CAN be built (K1 22/22), unlike the legacy argmax/buffer/polar path.",
+    "FALSIFIED: this particular cortical implementation is order-preserving. It is not.",
+    "FALSIFIED: this cortical ingress improves held-out accuracy. It does not."
+  ],
+
+  "next_gate": {
+    "cheapest_next_repair": "Fix the order channel BEFORE aggregation: apply position coding to the PHASE (not the wave) or use learned position embeddings, then re-run K4. Prediction: cos(IR,RI) can be driven below 0.5 without touching accuracy.",
+    "then": "Re-test E1. Only if E1 exceeds legacy + 0.02 does the cortical-family ingress earn further work.",
+    "do_not": "Do not wire the tangent error into the Sagnac veto (blueprint Directive 3) until (a) the ingress beats legacy and (b) the veto is ATTRIBUTABLE. 11,340 labeled-rejection pairs exist as the label source for that later step."
+  },
+
+  "what_this_does_not_buy": "No promotion. No model-performance claim. CPU, D=4096, diagnostic only. 'Yield a successful project HENRI model' is not satisfied: M4-G1 still fails."
+}

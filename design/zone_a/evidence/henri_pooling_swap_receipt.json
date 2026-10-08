@@ -1,0 +1,72 @@
+{
+  "schema": "henri.pooling.swap.receipt.v1",
+  "written_local_date": "2026-10-07",
+  "authorized_by": "user 2026-10-07: 'authorization granted ... escalate and execute anything you deem safe ... only absolute data removal needs to be approved.'",
+  "head_at_run": "db15f5fa0c54030fffafe49f2350ccfaf7e8caff",
+  "device": "cpu",
+  "dim": 4096,
+  "diagnostic_only": "CPU, D=4096, small config. NOT a model-performance claim.",
+
+  "design_integrity": {
+    "one_system_only": true,
+    "waves_generated_once": true,
+    "confound_removed": "d_k is a factorization of ONE shared wave_proj output. Two separately built systems were INVALID: dk_target changes the parameter count, shifting the pinned whole-construction RNG fork and changing ingress init. That script now self-labels CONFOUNDED_NOT_EVIDENCE.",
+    "wave_proj_identical": true,
+    "kv_width_fixed": true,
+    "arm_dk4": {"n_mem": 32, "d_k": 4, "d_model": 128, "n_macro": 16, "beta": 26.1},
+    "arm_dk32": {"n_mem": 4, "d_k": 32, "d_model": 128, "n_macro": 16, "beta": 26.1},
+    "note": "n_mem * d_k = 128 = d_model in BOTH arms, so the pooling OUTPUT shape is [B,16,128] in both. The swap changes the internal slot factorization only.",
+    "scale_correction": "Two reference transcripts asserted d_model=8192 for this config. Measured here: d_model=128, wave_proj=[128,8192]. 8192 is the FLAT wave width, not d_model."
+  },
+
+  "instrument_reproduction": {
+    "corpus": "max_len=4, holdout_len=1, inputs=12, 200 rows (the exp_raw_vs_pooled reference)",
+    "raw_wave_participation_ratio": 26.21,
+    "pooled_participation_ratio": 2.45,
+    "committed_reference": {"raw_wave_PR": 26.21, "pooled_PR": 2.45},
+    "meter_reproduces": true
+  },
+
+  "split": {"max_len": 5, "holdout_len": 3, "n_train": 336, "n_held": 9828,
+            "total_params": 2317799, "unigram_floor": 0.0782},
+
+  "measured": {
+    "PR_dk4": 2.24, "PR_dk32": 27.09, "PR_ratio_32_over_4": 12.094,
+    "pair_abs_cos_dk4": 0.6528, "pair_abs_cos_dk32": 0.1448,
+    "ridge_dk4": 0.0679, "ridge_dk32": 0.0693, "ridge_delta": 0.0014,
+    "raw_wave_ridge_held": 0.1002,
+    "pr_over_dim_dk4": 0.001094, "pr_over_dim_dk32": 0.026455
+  },
+
+  "controls": {"estimator_sane": true, "meter_reproduces": true,
+               "rotation_invariant": true, "controls_pass": true},
+  "signal_checks": {
+    "dk4_shuffled_collapses_to_floor": true,
+    "dk32_shuffled_collapses_to_floor": true,
+    "dk4_real_above_floor": false, "dk32_real_above_floor": false,
+    "dk4_real_above_shuffled": false, "dk32_real_above_shuffled": false,
+    "gaps_real_minus_shuffled": {"dk4": 0.0007, "dk32": 0.0018}
+  },
+
+  "verdict": "POOLING_NOT_THE_LEVER",
+  "primary_rule_met": false,
+  "relative_rule_met": false,
+  "reading": "Pooling width DOES repair the GEOMETRY: participation ratio rises 2.24 -> 27.09 (12.1x) and pairwise |cos| falls 0.6528 -> 0.1448 (4.5x). Accuracy does NOT follow: ridge moves +0.0014 against a pre-registered +0.02 margin, and BOTH pooled arms sit below the unigram floor 0.0782 while the raw wave scores 0.1002. The pooled feature carries almost no usable signal on this split (real ~ shuffled). CONCLUSION: the accuracy limit is UPSTREAM of the pooling stage. The cortical ingress is the target.",
+
+  "disclosed_calibration_defect": {
+    "issue": "The literal bar ridge_held > 0.2078 was produced by exp_m4_scale on a DIFFERENT split (n_train 8120 / n_held 2044). This run uses n_train 336 / n_held 9828, a harsher split.",
+    "consequence": "The literal comparison is NOT apples-to-apples. The apples-to-apples reference is raw_wave_ridge_held = 0.1002, measured HERE on this same split.",
+    "robustness": "The verdict is unchanged under either reading: pooled-32 (0.0693) is below the literal bar (0.2078) AND below the same-split raw-wave reference (0.1002), and the relative rule also fails (+0.0014 < +0.02).",
+    "not_a_post_hoc_metric_change": "Both rules were frozen in henri_pooling_swap_preregistration.json BEFORE the run. No rule was redefined after seeing the result."
+  },
+
+  "control_reclassification_disclosure": {
+    "what": "The preregistration listed a 'shuffled_labels' control requiring collapse TOWARD the floor. The first implementation used the stricter 'shuffled < real', which cannot gate interpretation: a feature carrying NO signal puts real and shuffled AT the floor together, so the strict test can flip on noise.",
+    "action": "Instrument checks (estimator, meter reproduction, rotation) gate interpretation. Real-vs-shuffled is reported as a SIGNAL check that informs the verdict.",
+    "why_not_a_gaming_move": "The code was made to match the frozen JSON text, not the reverse. The reclassification is disclosed here and the signal checks are reported in full, including the ones that came out negative."
+  },
+
+  "what_this_does_not_buy": "No SPEC_B promotion. SPEC_B's mechanism (wider pooling) is shown to repair geometry but not accuracy; K-B5 remains the gate. No model-performance claim.",
+
+  "next_gate": "Build and test the cortical (multi-scale continuous-phase) ingress as the upstream repair, behind a named DEFAULT-OFF flag. Prediction to test: the ingress, not the pooling, is what bounds held-out accuracy."
+}
