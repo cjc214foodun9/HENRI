@@ -35,7 +35,11 @@
     "pair_abs_cos_dk4": 0.6528, "pair_abs_cos_dk32": 0.1448,
     "ridge_dk4": 0.0679, "ridge_dk32": 0.0693, "ridge_delta": 0.0014,
     "raw_wave_ridge_held": 0.1002,
-    "pr_over_dim_dk4": 0.001094, "pr_over_dim_dk32": 0.026455
+    "pooled_width_both_arms": 2048,
+    "pr_over_dim_dk4": 0.001092,
+    "pr_over_dim_dk32": 0.013226,
+    "pr_over_dim_correction": "The first committed version of this receipt carried pr_over_dim_dk32 = 0.026455, which is 27.09/1024. The measured pooled width is 2048 (n_macro 16 x d_model 128), so the correct value is 0.013226. Both PR/dim figures were recomputed against the true width. Corrected in commit after 42b1ca50; the PRIMARY statistics (PR 2.24 / 27.09, |cos| 0.6528 / 0.1448, ridge 0.0679 / 0.0693) were already correct and the verdict is unaffected.",
+    "raw_wave_PR_this_split": 30.89
   },
 
   "controls": {"estimator_sane": true, "meter_reproduces": true,
