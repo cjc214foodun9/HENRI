@@ -1,0 +1,69 @@
+{
+  "schema": "henri.strace.retraction.receipt.v1",
+  "written_local_date": "2026-10-08",
+  "authorized_by": "user 2026-10-08 broad execution grant; only absolute data removal needs approval",
+  "head_at_run": "749aac1b4d2ab3b9c4eb9ab50bed0b3590af792f",
+  "diagnostic_only": "CPU, D=4096, small config, single seed 20261010. No model-performance claim.",
+
+  "purpose": "STRACE reduction after two same-class ingress repair failures, plus a RETRACTION of a readout lead I raised earlier in the same turn.",
+
+  "part_1_retraction_readout_lambda": {
+    "claim_raised_earlier_this_turn": "On the SAME frozen features the legacy readout is under-regularized: ridge lambda=1e-1 scored 0.1205 held-out vs 0.1002 at the committed lambda=1e-3. Gain +0.0203 from one scalar.",
+    "why_it_was_wrong": "I selected lambda by READING THE HELD-OUT SCORES. That is selection on the test set.",
+    "proper_test": "Fit/val split inside the training rows (224 fit / 112 val, seeded once). Select lambda by VALIDATION accuracy only, refit on all training rows, then read held-out.",
+    "measured": {
+      "legacy": {"val_scores_by_lam": {"1e-4": 0.1559, "1e-3": 0.1559, "1e-2": 0.1559, "1e-1": 0.1559, "1.0": 0.1505, "10.0": 0.1344},
+                  "lam_selected_by_validation": 0.0001,
+                  "held_at_selected_lam": 0.0762,
+                  "held_at_committed_lam_1e-3": 0.1002,
+                  "held_gain_from_selection": -0.024},
+      "cortical_gain1": {"lam_selected_by_validation": 0.0001, "held_at_selected_lam": 0.0926, "held_at_committed_lam_1e-3": 0.0984, "held_gain_from_selection": -0.0058},
+      "cortical_gain4": {"lam_selected_by_validation": 0.01, "held_at_selected_lam": 0.0919, "held_at_committed_lam_1e-3": 0.0922, "held_gain_from_selection": -0.0003}
+    },
+    "readout_gain_is_a_claim": false,
+    "verdict": "FALSIFIED. The +0.0203 was test-set selection. Proper validation transfers NEGATIVE (-0.024). The committed lambda=1e-3 is already the best of the tested values on held-out for this representation.",
+    "secondary_defect_found": "The legacy SELECTOR IS DEGENERATE. Validation is tied at 0.1559 across lambda in {1e-4, 1e-3, 1e-2, 1e-1}; the 0.0215 spread comes only from the two high-lambda arms. argmax therefore picked an arbitrary member of a tie. This is the recorded 'validate the selector, not only the selection' defect, reproduced here.",
+    "artifact_warning": "exp_lambda_validation.py also emits cortical_beats_rebaselined_legacy = true. This is an ARTIFACT of the degenerate selector: it compares cortical (0.0926) against legacy at legacy's BADLY-SELECTED lambda (0.0762). The correct comparison is cortical best (0.0926) vs legacy at its committed lambda (0.1002) -> LEGACY WINS. Do not quote the artifact boolean."
+  },
+
+  "part_2_strace_reduction": {
+    "trigger": "Two same-class ingress repair failures, both below the legacy baseline: plain-mean aggregation 0.0840 and phase-gain / learned-position-embedding best 0.0996, versus legacy 0.1002.",
+    "method": "Freeze the representation; swap only the readout. Five heads at identical budgets, each frozen feature set with its own shuffled-label control.",
+    "measured": {
+      "legacy": {"eff_rank": 34.42, "top10_share": 0.4613, "dim": 8192,
+                  "r0_ridge_1e-3": 0.1002, "r1_ridge_1e-1": 0.1205, "r2_ridge_1e-6": 0.0496,
+                  "r3_nearest_centroid": 0.02, "r4_1nn": 0.031, "r0_shuffled": 0.0879},
+      "cortical_gain1": {"eff_rank": 10.29, "top10_share": 0.8554, "dim": 8192,
+                  "r0_ridge_1e-3": 0.0984, "r1_ridge_1e-1": 0.0817, "r2_ridge_1e-6": 0.0755,
+                  "r3_nearest_centroid": 0.0267, "r4_1nn": 0.0563, "r0_shuffled": 0.0845},
+      "cortical_gain4": {"eff_rank": 162.21, "top10_share": 0.301, "dim": 8192,
+                  "r0_ridge_1e-3": 0.0922, "r1_ridge_1e-1": 0.0931, "r2_ridge_1e-6": 0.0923,
+                  "r3_nearest_centroid": 0.0762, "r4_1nn": 0.052, "r0_shuffled": 0.0669}
+    },
+    "findings": [
+      "RANK IS NOT THE BINDING CONSTRAINT. The order repair raised effective rank 10.29 -> 162.21 (15.8x) and top-10 eigenvalue share fell 0.8554 -> 0.3010, yet held-out accuracy FELL slightly (0.0984 -> 0.0922). A richer spectrum did not convert into accuracy.",
+      "READOUT CAPACITY IS NOT THE BINDING CONSTRAINT. No head in the five tested families on any representation exceeds its own shuffled control by more than 0.0253, and the best absolute value on any cortical representation is 0.0984.",
+      "THE SIGNAL IS TOO WEAK AT THIS TRAINING BUDGET (336 training rows). Every head family lands within 0.008 of the unigram floor 0.0782 or below it.",
+      "ONE REAL SUB-EFFECT: on cortical_gain4 the nearest-centroid head scored 0.0762 versus 0.02 on legacy -- the corrected representation does carry class structure that the legacy wave does not. It is not yet strong enough to clear the floor."
+    ],
+    "verdict": "STRACE_REDUCTION_COMPLETE. The reduced signature is: normalisation/readout/rank all excluded as the primary constraint; the limit is the strength of the signal available from this ingress at this budget.",
+    "no_further_patch": "Per the workflow, no further ingress patch is applied before this reduction. It is now recorded, so a future patch must address the identified locus and not re-try rank, pooling, position coding, or regularisation."
+  },
+
+  "turn_verdict": {
+    "k4_order_channel": "REPAIRED at phase_gain=4 (facade cos(IR,RI) 0.017439 vs pre-registered bar 0.5; controls pass). Committed 749aac1b.",
+    "e1_accuracy": "NOT EARNED. Best cortical 0.0996 vs bar 0.1202 (legacy 0.1002, floor 0.0782).",
+    "ingress_work": "STOPS per the user's pre-registered rule.",
+    "sagnac_veto_directive_3": "BLOCKED. Not implemented. Both preconditions fail (ingress does not beat legacy; veto not ATTRIBUTABLE).",
+    "user_prediction": "Conjunct 1 (cos below 0.5) CONFIRMED. Conjunct 2 (accuracy untouched) FALSIFIED.",
+    "strace": "RUN. Reduction recorded above."
+  },
+
+  "evidence_class": "OBSERVED (diagnostic)",
+  "not_claimed": [
+    "any model-performance or benchmark claim",
+    "that the cortical ingress is superior to the legacy path",
+    "that the readout lambda=1e-1 gain is real (explicitly retracted)",
+    "that the veto is attributable or ready"
+  ]
+}
