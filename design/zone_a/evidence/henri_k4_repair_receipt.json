@@ -1,0 +1,122 @@
+{
+  "schema": "henri.k4.repair.receipt.v1",
+  "written_local_date": "2026-10-08",
+  "authorized_by": "user 2026-10-08: 'continue intelligently engineering ... Repair the order channel before aggregation'",
+  "head_at_run": "4cbc96b0717d609d341499bedf2719cf976fba54",
+  "diagnostic_only": "CPU, D=4096, small config. No model-performance claim.",
+
+  "user_prediction_under_test": {
+    "text": "cos(IR,RI) can be driven below 0.5 without touching accuracy",
+    "conjunct_1_order_below_0.5": "CONFIRMED (gain 4)",
+    "conjunct_2_accuracy_untouched": "FALSIFIED (accuracy below legacy in every arm)"
+  },
+
+  "root_cause_measured": {
+    "statement": "Phase collapse, not a missing position code.",
+    "evidence": {
+      "phase_std_rad": 0.595,
+      "phase_needed_for_circle": 1.8138,
+      "cos_scene_vs_ones_before": 0.999932,
+      "cos_token_wave_I_R": 0.79066,
+      "note": "nn.Linear on LayerNorm'd input emits phases with std ~0.577 rad, so exp(i*phase) ~ 1 + i*phase and every wave collapses onto the all-ones vector. C2 (tiny phases) CONFIRMED. C1 (token indistinctness) REJECTED: token waves are distinguishable at 0.79066."
+    },
+    "stage_localization": {
+      "token_wave_pos0": 0.878237,
+      "psi_t_agg": 0.864381,
+      "psi_id": 0.96253,
+      "psi_pose": 0.864381,
+      "psi_scene": 0.99994,
+      "control_cos_ICC_CCC_psi_scene": 0.999821,
+      "reading": "Order and content both die at the circular-convolution bind / phase collapse. The position ramp was PRESENT in the first draft; it was ineffective because the phase spread was too small for the ramp to separate positions."
+    }
+  },
+
+  "k4_repair": {
+    "mechanism": "phase_gain multiplies the phase map before exp(i*theta), spreading positions around the circle so the position ramp can act.",
+    "flag": "phase_gain, default 1.0 (legacy bytes preserved)",
+    "dead_flag_self_caught": "The first gain sweep returned byte-identical values for gains 1..32 because CorticalIngress.forward RE-IMPLEMENTED the transduction inline and never called MultiScaleTransduction.forward. Fixed by a single shared phase_map() method. The flat sweep exposed it.",
+    "sweep_through_the_facade": {
+      "bar_fixed_at": 0.5,
+      "gain1": {"cos_IR_RI": 0.99994, "eligible": false},
+      "gain2": {"cos_IR_RI": 0.997368, "eligible": false},
+      "gain4": {"cos_IR_RI": 0.111762, "eligible": true},
+      "gain8": {"cos_IR_RI": 0.000506, "eligible": true, "note": "content control -0.010059: near-degenerate, vacuous-fix region"},
+      "gain16": {"cos_IR_RI": -0.007874, "eligible": true, "note": "content control -0.020165"},
+      "gain32": {"cos_IR_RI": 0.001561, "eligible": true, "note": "content control 0.015921"},
+      "chosen": "gain4",
+      "selection_rule": "smallest gain with |cos|<0.5 AND all controls pass. The bar is fixed; argmin only picks which arm to carry forward."
+    },
+    "facade_kill_test_at_gain4": {
+      "cos_cortical_IR_RI": 0.017439,
+      "cos_legacy_IR_RI": 0.0,
+      "ctrl_content_cos_ICC_CCC": 0.000157,
+      "ctrl_collapse_cos_scene_ones": 0.023438,
+      "bar": 0.5,
+      "pass": true,
+      "note": "measured on psi_scene (the facade), not on the component aggregation"
+    }
+  },
+
+  "option_2_learned_position_embeddings": {
+    "implemented": true,
+    "flag": "use_pos_embed, default False",
+    "measured": {
+      "gain1_posembed": {"config": "gain1_posembed1", "cos_IR_RI": 0.999815, "k4_pass": false},
+      "gain2_posembed": {"config": "gain2_posembed1", "cos_IR_RI": 0.996813, "k4_pass": false}
+    },
+    "verdict": "DOES NOT REPAIR K4. pos_embed enters upstream of the phase collapse, so the collapse destroys it as well."
+  },
+
+  "graded_similarity_discriminator": {
+    "why": "A repair that only decorrelates positions can succeed at K4 while offering the readout no signal. This measures whether ANY graded structure exists.",
+    "pairs": ["permuted IR/RI", "share1_pos0 IR/IC", "share1_pos1 IR/CI", "disjoint II/CC"],
+    "gain1": {"permuted": 0.999398, "share1_pos0": 0.999366, "share1_pos1": 0.999662, "disjoint": 0.99971, "spread_content_minus_disjoint": -0.000344},
+    "gain4": {"permuted": 0.043302, "share1_pos0": 0.031501, "share1_pos1": 0.017928, "disjoint": 0.109868, "spread_content_minus_disjoint": -0.078367},
+    "verdict": "NEGATIVE. At gain 1 there is no graded structure (spread ~0). At gain 4 disjoint inputs are MORE similar than content-sharing inputs (wrong sign). No phase structure tested offers the readout a usable similarity gradient."
+  },
+
+  "e1_paired": {
+    "split": "same as exp_m4_scale: max_len=5, holdout_len=3, pin 20261010; n_train 336, n_held 9828",
+    "legacy_paired_ridge_held": 0.1002,
+    "legacy_paired_knn": 0.031,
+    "floor": 0.0782,
+    "bar": 0.1202,
+    "arms": {
+      "gain1_posembed0": {"ridge_held": 0.0984, "knn": 0.0563, "shuffled": 0.0845},
+      "gain4_posembed0": {"ridge_held": 0.0922, "knn": 0.052, "shuffled": 0.0669},
+      "gain1_posembed1": {"ridge_held": 0.0996, "knn": 0.0636, "shuffled": 0.0829},
+      "gain2_posembed1": {"ridge_held": 0.0679, "knn": 0.0599, "shuffled": 0.0742}
+    },
+    "best_by_e1": {"config": "gain1_posembed1", "ridge_held": 0.0996, "earns_promotion": false},
+    "any_earns_promotion": false,
+    "verdict": "E1_NOT_EARNED"
+  },
+
+  "verdict": {
+    "k4": "REPAIRED at gain 4 (facade 0.043302, pre-registered bar 0.5, controls pass)",
+    "e1": "NOT EARNED (best 0.0996 vs bar 0.1202; legacy 0.1002)",
+    "ingress_work": "STOPS per the user's own pre-registered rule: only E1 > legacy + 0.02 earns further ingress work",
+    "user_prediction": "Conjunct 1 CONFIRMED, conjunct 2 FALSIFIED",
+    "mechanism_for_the_tradeoff": "The order repair corrects order by spreading content phases; the same spreading removes the graded token-overlap similarity the ridge readout needs. Measured by the discriminator, not inferred.",
+    "sagnac_veto_directive_3": "BLOCKED by user directive. Not implemented. Ingredients differ: it needs (a) ingress beats legacy and (b) veto ATTRIBUTABLE. Neither holds.",
+    "strace": "INDICATED. Two same-class ingress repair failures (plain-mean 0.0840; phase-gain/pos-embed best 0.0996) both below the legacy baseline 0.1002. Route to STRACE before any further ingress patch."
+  },
+
+  "harness_self_checks": {
+    "legacy_paired_reproduces_committed_reference": true,
+    "legacy_paired_value": 0.1002,
+    "committed_reference_value": 0.1002,
+    "floor_reproduces": 0.0782,
+    "estimator_control_cortical": 1.0,
+    "estimator_control_legacy": 1.0,
+    "note": "The harness reproduces the committed raw-wave reference exactly, so the -0.0004 delta against legacy is real and not a split artifact."
+  },
+
+  "evidence_class": "OBSERVED (diagnostic, CPU, D=4096)",
+  "not_claimed": [
+    "any model-performance or benchmark claim",
+    "that the cortical ingress is superior to the legacy path",
+    "that order repair is sufficient for accuracy",
+    "that the veto is attributable or ready"
+  ]
+}

@@ -78,10 +78,22 @@ class MultiScaleTransduction(nn.Module):
     """
 
     def __init__(self, vocab: int, dim: int = 4096, d_emb: int = 64,
-                 base_channels: int = 32, kernels: tuple[int, ...] = (3, 5, 7)):
+                 base_channels: int = 32, kernels: tuple[int, ...] = (3, 5, 7),
+                 phase_gain: float = 1.0, use_pos_embed: bool = False,
+                 max_len: int = 8):
         super().__init__()
         self.dim = int(dim)
         self.kernels = tuple(kernels)
+        self.use_pos_embed = bool(use_pos_embed)
+        self.max_len = int(max_len)
+        # MEASURED ROOT CAUSE OF ORDER BLINDNESS. Default nn.Linear init on a
+        # LayerNorm'd input emits phases with std ~0.577 rad (measured 0.595),
+        # so exp(i*phase) ~ 1 + i*phase and EVERY wave collapses toward the
+        # all-ones vector: measured cos(scene, ones) = 0.9999 and a content
+        # control pair scored 0.99982. Order-blindness is a SYMPTOM of that
+        # collapse, not a missing position code. phase_gain spreads the phases
+        # across the circle. Default 1.0 preserves legacy bytes.
+        self.phase_gain = float(phase_gain)
         self.embed = nn.Embedding(vocab, d_emb)
         # depthwise-separable: a depthwise conv over channels + a 1x1 mix
         self.branches = nn.ModuleList()
@@ -95,22 +107,41 @@ class MultiScaleTransduction(nn.Module):
         self.lateral = LateralConsistency(ch)
         self.norm = nn.LayerNorm(ch)          # real-valued; applied BEFORE phase map
         self.to_phase = nn.Linear(ch, self.dim)
+        # OPTION 2 (user-specified): LEARNED POSITION EMBEDDINGS. Created ONLY
+        # when enabled, so the default path draws no extra RNG and keeps its
+        # bytes. pos_embed adds order as an OFFSET to the token embedding, which
+        # needs NO phase spreading (gain stays 1.0) and therefore need not
+        # destroy the graded token-overlap similarity the readout relies on.
+        self.pos_embed = (nn.Embedding(self.max_len, d_emb)
+                          if self.use_pos_embed else None)
 
-    def forward(self, ids: torch.Tensor,
-                mask: torch.Tensor | None = None) -> torch.Tensor:
-        """ids [B, T] long -> psi [B, D] complex, unit norm per row."""
+    def phase_map(self, ids: torch.Tensor,
+                  mask: torch.Tensor | None = None) -> torch.Tensor:
+        """ids [B, T] long -> phase angles [B, T, D]. SINGLE implementation.
+
+        SELF-CAUGHT DEAD FLAG: the facade used to RE-IMPLEMENT this computation
+        inline, so a phase_gain patch applied here was unreachable from
+        CorticalIngress.forward. The gain sweep returned byte-identical values
+        for gains 1..32, which exposed it. Both callers now share this method.
+        """
         x = self.embed(ids)                     # [B, T, d_emb]
+        if self.pos_embed is not None:
+            t_ax = ids.shape[1]
+            x = x + self.pos_embed(torch.arange(t_ax, device=ids.device))[None]
         h = x.transpose(1, 2)                   # [B, d_emb, T]
         feats = [br(h) for br in self.branches]
         t = min(f.shape[-1] for f in feats)
         feats = [f[..., :t] for f in feats]
-        cat = torch.cat(feats, dim=1)           # [B, ch, T]
-        cat = self.lateral(cat)
-        cat = cat.transpose(1, 2)               # [B, T, ch]
-        cat = self.norm(cat)
+        cat = self.lateral(torch.cat(feats, dim=1))
+        cat = self.norm(cat.transpose(1, 2))    # [B, T, ch]
         if mask is not None:
             cat = cat * mask[..., None].to(cat.dtype)
-        phase = self.to_phase(cat)              # [B, T, D] continuous
+        return self.phase_gain * self.to_phase(cat)
+
+    def forward(self, ids: torch.Tensor,
+                mask: torch.Tensor | None = None) -> torch.Tensor:
+        """ids [B, T] long -> psi [B, D] complex, unit norm per row."""
+        phase = self.phase_map(ids, mask)                     # [B, T, D]
         psi_t = torch.polar(torch.ones_like(phase), phase)   # exp(i*phase)
         # ORDER-PRESERVING aggregation. A plain position-mean is a BAG OF TOKENS
         # and cannot encode order: the legacy ingress measures cos(w(IR),w(RI))=1.0
@@ -219,25 +250,22 @@ class CorticalIngress(nn.Module):
     """Facade. DEFAULT-OFF: nothing imports this unless a caller asks for it."""
 
     def __init__(self, vocab: int, dim: int = 4096, bind: bool = True,
-                 d_emb: int = 64):
+                 d_emb: int = 64, phase_gain: float = 1.0,
+                 use_pos_embed: bool = False, max_len: int = 8):
         super().__init__()
         self.dim = int(dim)
-        self.transduce = MultiScaleTransduction(vocab, dim, d_emb=d_emb)
+        self.transduce = MultiScaleTransduction(vocab, dim, d_emb=d_emb,
+                                                phase_gain=phase_gain,
+                                                use_pos_embed=use_pos_embed,
+                                                max_len=max_len)
         self.dual = DualStreamDisentanglement(dim, bind=bind)
         self.neuromod = NeuromodulatoryGating(dim)
         self.tangent = TangentPredictionError(dim)
 
     def forward(self, ids: torch.Tensor, mask: torch.Tensor | None = None):
         """-> dict with psi_scene, psi_id, psi_pose, gamma."""
-        x = self.transduce.embed(ids).transpose(1, 2)
-        feats = [br(x) for br in self.transduce.branches]
-        t = min(f.shape[-1] for f in feats)
-        feats = [f[..., :t] for f in feats]
-        cat = self.transduce.lateral(torch.cat(feats, dim=1))
-        cat = self.transduce.norm(cat.transpose(1, 2))
-        if mask is not None:
-            cat = cat * mask[..., None].to(cat.dtype)
-        phase = self.transduce.to_phase(cat)
+        # Shared phase map: no inline duplication (that made phase_gain a dead flag).
+        phase = self.transduce.phase_map(ids, mask)      # [B, T, D]
         psi_t = torch.polar(torch.ones_like(phase), phase)          # [B,T,D]
         psi_id, psi_pose = self.dual(psi_t, mask)
         scene = F.normalize(self.dual.combine(psi_id, psi_pose), p=2, dim=-1)

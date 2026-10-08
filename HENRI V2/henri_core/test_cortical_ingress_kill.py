@@ -52,6 +52,8 @@ LAM = 1e-3
 RIDGE_ROWS = 2000
 LEGACY_REF = 0.1002      # same-split raw-wave ridge, measured in the swap run
 FLOOR_REF = 0.0782
+K4_BAR = 0.5             # user's prediction, pre-registered BEFORE the run
+E1_BAR = LEGACY_REF + 0.02   # 0.1202, paired against the same split
 
 
 def make_inputs(n):
@@ -121,6 +123,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="")
     ap.add_argument("--smoke", action="store_true")
+    # phase_gain is the K4 repair. Default 1.0 keeps the legacy wave bytes; the
+    # measured repair is gain 4 (facade |cos(IR,RI)| = 0.1118 vs bar 0.5).
+    ap.add_argument("--phase-gain", type=float, default=1.0)
     a = ap.parse_args()
     t0 = time.time()
     R = {"schema": "henri.cortical.ingress.kill.v1", "pin": PIN,
@@ -148,9 +153,11 @@ def main():
     R["decoder_params_unchanged"] = sum(p.numel() for p in system.decoder.parameters())
 
     # ---------------- build the cortical ingress ---------------------------
-    ci = CorticalIngress(vocab=Vv, dim=4096, bind=True, d_emb=64)
+    ci = CorticalIngress(vocab=Vv, dim=4096, bind=True, d_emb=64,
+                         phase_gain=a.phase_gain)
     ci.train()
     R["cortical_params"] = sum(p.numel() for p in ci.parameters())
+    R["phase_gain"] = a.phase_gain
 
     def encode_ci(texts, module):
         pad, msk = batch_ids(texts)
@@ -226,6 +233,12 @@ def main():
                "pass": bool(ci_delta < 40.0)}
 
     # ---------------- K4 ORDER SENSITIVITY --------------------------------
+    # BAR FIXED AT 0.5 (the user's prediction), pre-registered before this run.
+    # The earlier <0.99 bar was calibrated wrongly: it let 0.988987 pass. The bar
+    # does NOT move after the fact. Controls must also pass, so a "repair" that
+    # merely destroys all phase structure cannot win (the vacuous-fix trap):
+    #   content control: cos(ICC,CCC) must be < 0.5 (unrelated inputs dissimilar)
+    #   collapse control: cos(scene, ones) must be < 0.95 (wave is not all-ones)
     with torch.no_grad():
         a_ = encode_ci(["IR"], ci)[0]
         b_ = encode_ci(["RI"], ci)[0]
@@ -235,14 +248,24 @@ def main():
         lb = gen.wave(["RI"])[0]
         cos_l = float((la * lb.conj()).real.sum()
                       / (la.abs().norm() * lb.abs().norm()).clamp_min(1e-9))
+        c_ = encode_ci(["ICC"], ci)[0]
+        d_ = encode_ci(["CCC"], ci)[0]
+        cos_content = float((c_ * d_.conj()).real.sum()
+                            / (c_.abs().norm() * d_.abs().norm()).clamp_min(1e-9))
+        ones = torch.ones(a_.shape[-1], dtype=a_.dtype)
+        cos_ones = float((a_ * ones.conj()).real.sum()
+                         / (a_.abs().norm() * ones.abs().norm()).clamp_min(1e-9))
     R["K4"] = {"cos_cortical_IR_RI": round(cos_c, 6),
                "cos_legacy_IR_RI": round(cos_l, 6),
-               "pass": bool(abs(cos_c) < 0.99),
-               "note": ("pre-registered bar is <0.99 and is NOT moved after the "
-                        "fact. The FIRST draft of the module measured 0.988987 and "
-                        "failed it; the order-preserving phase ramp is the repair. "
-                        "The margin is reported so a bare pass is not mistaken for "
-                        "strong separation.")}
+               "ctrl_content_cos_ICC_CCC": round(cos_content, 6),
+               "ctrl_collapse_cos_scene_ones": round(cos_ones, 6),
+               "bar": K4_BAR,
+               "pass": bool(abs(cos_c) < K4_BAR
+                            and abs(cos_content) < K4_BAR
+                            and abs(cos_ones) < 0.95),
+               "note": ("bar is FIXED at 0.5 and pre-registered; it is not moved "
+                        "after the fact. Controls are required so a fix that "
+                        "collapses the wave to noise cannot pass.")}
 
     # ---------------- K5 TANGENT IDENTITY ---------------------------------
     with torch.no_grad():
@@ -340,6 +363,8 @@ def main():
         R["verdict"] = "INGRESS_PARTIAL_SIGNAL"
     else:
         R["verdict"] = "INGRESS_NO_SIGNAL"
+    R["e1_bar"] = E1_BAR
+    R["e1_earns_promotion"] = bool(e1["cortical_ridge_held"] > E1_BAR)
     R["elapsed_s"] = round(time.time() - t0, 1)
 
     out = a.out or os.path.join(os.environ.get("LOCALAPPDATA", "."), "Temp", "cortical.json")
