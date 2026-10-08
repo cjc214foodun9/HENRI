@@ -1,0 +1,106 @@
+{
+  "schema": "henri.mdl_bridge_falsification.receipt.v1",
+  "written_local_date": "2026-10-08",
+  "head_at_run": "8883d1501c80a1b6db6ca0f6c216e6de5df39fa2",
+  "authorized_by": "user 2026-10-08: execute and intelligently engineer; broad execution grant; only absolute data removal needs approval",
+  "scope": "CPU, D=4096, pins 20261010/20262244/20271009. DIAGNOSTIC ONLY. No CUDA. No model-performance claim. Does not clear M4-G1.",
+
+  "provenance_audit": {
+    "paper": "arXiv:2509.22445v3 Shaw et al., ICLR 2026, 'Bridging Kolmogorov Complexity and Deep Learning'",
+    "paper_bytes": 181849,
+    "cache_path": "C:/Users/chan/AppData/Local/hermes/cache/web/arxiv.org-4e74096038.md",
+    "IN_PAPER": [
+      "two-part universal codes + asymptotic optimality (Section 4)",
+      "adaptive Gaussian mixture prior, tractable differentiable variational objective (Section 5.1)",
+      "standard optimizers fail from random init (Section 6.1, Appendix C.2)",
+      "Kraft's inequality -- 4 hits, ALL prefix-code theory (lines 923, 925, 952, 1117)"
+    ],
+    "NOT_IN_PAPER": [
+      "Sagnac -- 0 hits",
+      "Hopfield -- 0 hits",
+      "HENRI -- 0 hits",
+      "candidate ranker -- 0 hits",
+      "tau=0.038316 -- 0 hits",
+      "beta=26.10 -- 0 hits"
+    ],
+    "finding": "The blueprint Section 2 mapping table (Sagnac two-part formula, Hopfield egress coupling, candidate-ranker application) is HENRI-SIDE DESIGN, not paper-derived. The phrase 'asymptotically optimal' does not transfer to L(z_k)=|z_k|+Delta/tau; that is a two-part heuristic with no such guarantee.",
+    "table_1_verbatim_match": "2.5e1/56.4% ; 2.8e6/2.4e2/60.4% ; 8.7e2/0.0/100% -- blueprint reproduces Table 1 exactly (bytes 529-533)",
+    "table_4_blueprint_defect": "Blueprint quotes 'Random 288.0 53.9 100%'. That is the 1e-3 SWEEP row (bytes 2794). The untuned random init is bytes 2791: KL 2.87 / NLL 2640 / accuracy 54%. The quoted row is the best-tuned coefficient and weakens the paper's own claim.",
+    "alta_defect": "bytes 2785: MLP init is 'manually chosen weights ... inspired by how the ALTA compiler generates MLP layers' -- NOT an ALTA compile. The blueprint's 'ALTA-style discrete compiler' directive overstates its source."
+  },
+
+  "mdl_literal_formula_test": {
+    "formula_as_written": "L(z_k|psi_q) = |z_k| + (1/tau) * (1 - Re<psi_q, psi_k>)",
+    "raw_wave_similarity_is_real_valued": true,
+    "sim_range": [0.0, 0.5],
+    "sim_mean": 0.017857,
+    "trace_bit_lengths_distinct": [32],
+    "trace_bits_constant": true,
+    "program_bit_lengths_distinct": [8, 16, 24],
+    "tau_sweep_points": 14,
+    "distinct_top1_maps_over_tau": 4,
+    "tau_0.038316|len=trace": {"top1": 0.0, "cov5": 0.2685, "argmin_eq_argmax_frac": 0.758377},
+    "no_op_finding": "With |z_k| CONSTANT at 32 bits, argmin L == argmax(Re<.>) EXACTLY. Verified tie-break-free: Q1_argmax_eq_argmin_frac = 1.000000 (pins 20261010, 20271009). The 0.758 variant is a float32 artifact of scaling Delta by 1/0.038 (=26.09), NOT a mechanism.",
+    "kraft_sum_distinct_traces": 2.3283064365386963e-10,
+    "kraft_holds": true,
+    "kraft_finding": "Kraft holds VACUOUSLY (206 traces x 2^-32 ~ 2e-10). It is NOT the cause of the 51.4x baseline error; that was deduplication/statistics. The blueprint's 'mathematically explains the 51.4x error' is post-hoc narrative. Reported, NOT asserted as a gate.",
+    "verdict": "MDL_TRANSMISSION_AS_SPECIFIED_DOES_NOT_SELECT. The formula's own named object (the trace) makes it a strict no-op on the ranker it claims to replace. tau is non-identifiable (6 orders of magnitude, 4 distinct maps)."
+  },
+
+  "tie_robust_resolution": {
+    "why_needed": "Every argmax is a tie: frac_untied 0.0, max-group mean 24.27 (raw) / 10.71 (ridge). argmax and argsort agree on only 2.56% of queries (~1/24 = arbitrary tie-group member). Both are tie ARBITRATION, not ranking measurements.",
+    "statistic": "P(some gold candidate is in the max-score tie group), plus a per-query SIZE-MATCHED random control",
+    "raw_wave_similarity": {
+      "max_group_size": 24.272,
+      "P_gold_in_maxgroup": 0.754,
+      "control_same_size": 0.5975,
+      "precision": 0.12498,
+      "base_rate": 0.05223,
+      "precision_lift_over_base": 2.393,
+      "lift_over_control": 1.262
+    },
+    "trained_ridge_ranker": {
+      "max_group_size": 10.714,
+      "P_gold_in_maxgroup": 0.0317,
+      "control_same_size": 0.2397,
+      "precision": 0.03175,
+      "base_rate": 0.05223,
+      "precision_lift_over_base": 0.608,
+      "lift_over_control": 0.132
+    },
+    "random_field_control": {
+      "P_gold_in_maxgroup": 0.0534,
+      "precision_lift_over_base": 1.021,
+      "lift_over_control": 1.035
+    },
+    "FINDING_1_ranker_anti_selective": "The trained ridge readout's maximum group is ANTI-selective: 0.608x the base rate of gold, and only 0.132x a random group of the same size. This is the mechanism behind F1 (top-1 below random). AUC 0.7942 is a GLOBAL property; the extreme of the ordering is inverted.",
+    "FINDING_2_raw_similarity_is_the_more_selective_score": "Raw Re<psi_q,psi_k> -- the object the blueprint calls 'uncalibrated' -- has 2.393x base-rate lift and beats its size-matched control by 1.262x. The blueprint's premise (dot products are the problem) is BACKWARDS for this system.",
+    "FINDING_3_none_is_usable": "Best absolute top-1 on the dedup bank: raw 0.0278, ridge 0.0150, random 0.0046. Both beat chance; neither is usable as a selector.",
+    "reproduces_across_pins": "20261010 / 20262244 / 20271009 -- P_gold_in_maxgroup raw 0.754/0.7571/0.7513, ridge 0.0317/0.0269/0.0260"
+  },
+
+  "plateau_falsifier": {
+    "dedup_candidates": 206,
+    "dedup_raw_sim": {"top1": 0.0278, "top5": 0.1662, "top20": 0.1927, "frac_untied": 0.0},
+    "dedup_ridge": {"top1": 0.015, "top5": 0.0864, "top20": 0.1508, "frac_untied": 1.0},
+    "dedup_row_uniform": {"top1": 0.0046, "top5": 0.0235, "top20": 0.0869},
+    "rank4_excluded_top1": 0.015,
+    "verdict": "PLATEAU_PRESCRIPTION_IS_EMPTY. Excluding the top-4 ranks adds exactly 0.0 to top-1. The rank-4 plateau is real (dedup restores frac_untied 0.0 -> 1.0) but its removal does not repair the head. Signal exists: dedup raw beats matched random 0.0278 vs 0.0046."
+  },
+
+  "defects_in_my_own_work_this_turn": [
+    "exp_mdl_length_probe v1 used the WRONG object: the blueprint names |z_k| = trace length, but I first scored the LEARNED ridge C. Variant tested before the literal formula.",
+    "exp_mdl_length_probe v2 crashed on an index-domain bug (int() on a tensor).",
+    "exp_mdl_sagnac_probe reported argmin_eq_argmax_frac 0.758 as if it were an MDL mechanism. It is float32 tie-break. Self-caught and re-measured at 1.000000.",
+    "Two probes disagreed on the same quantity (raw top1 0.0 vs 0.134) because both used tie-arbitrating operators. Resolved only by the tie-robust statistic.",
+    "My first read of sim_range [0.0, 0.5] made me suspect degeneracy; it is expected (held-out spec vs training-spec wave similarity)."
+  ],
+
+  "blocked_not_touched": [
+    "Sagnac / Directive 3 wiring -- standing order: only after ingress beats legacy AND veto is attributable. Both fail.",
+    "Roadmap Phases 3-5 -- Hopfield egress needs MBPP/HumanEval validation; Phase 4 needs CUDA (host is PyTorch 2.13.0+cpu, no CUDA); Phase 5 is physical BaTiO3 tape-out. BLOCKED on substrate, not attempted.",
+    "E1 re-test at 4,000 rows -- the one route that reopens ingress. Not run in this turn; needs its own pre-registered paired bar (legacy_4000 + 0.02)."
+  ],
+
+  "answer_to_request": "The requested 'transmission bridge' cannot be wired as specified. Measured: (a) its length term is constant for the object it names, making it a strict no-op; (b) its tau is borrowed from an unrelated Hopfield temperature and is non-identifiable; (c) Kraft holds vacuously and explains nothing; (d) the plateau prescription adds 0.0. The real defect is that the trained readout is ANTI-SELECTIVE at its maximum while the untrained wave similarity is selective. Wiring an end-to-end model here would produce top-1 ~0.028 and would repeat the simulation-as-substitute defect."
+}
