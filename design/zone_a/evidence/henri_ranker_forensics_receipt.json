@@ -1,0 +1,100 @@
+{
+  "schema": "henri.ranker.forensics.consolidated_receipt.v1",
+  "written_local_date": "2026-10-08",
+  "head_at_run": "3130f2f4c6950043eebfdf883430917dc0c51e9b",
+  "authorized_by": "user 2026-10-08: 'continue intelligently engineering until project henri has an attributable veto and ingress'",
+  "diagnostic_only": "CPU, D=4096, small config, pins 20261010 / 20262244 / 20271009. No model-performance claim.",
+
+  "trigger": "The user's mandate names an ATTRIBUTABLE VETO as a first-class objective. Blueprint Directive 3 (Sagnac wiring) stays BLOCKED, so only the attribution half was built. The 11,340 executor-labeled rejection pairs are the sanctioned label source.",
+
+  "CORRECTION_TO_A_COMMITTED_ARTIFACT": {
+    "artifact": "design/zone_a/evidence/henri_selection_headroom_receipt.json",
+    "field": "MEASURED.chance_at_5 = 0.004579",
+    "status": "INVALID at the measured bank composition; the artifact is left BYTE-INTACT and is not rewritten",
+    "why": "chance_at_5 computes K/n, the chance under a DISTINCT-candidate bank. The measured bank holds 1092 rows but only 206 DISTINCT traces (5.3x row redundancy), so five random rows are usually copies of one trace.",
+    "measured_true_values": {
+      "row_uniform_top1_exact": 0.0522,
+      "analytic_random_coverage5_rowwise": 0.2353,
+      "trace_uniform_top1_exact": 0.0046,
+      "ratio_true_over_recorded_coverage5": 51.4
+    },
+    "consequence": "the receipt's oracle_gain_over_top1 (+0.0741) and coverage_at_5 (0.1142) were compared against a chance level ~51x too small. The HEADROOM_EXISTS_VERIFIER_NOT_LEARNED verdict for the trained verifier is unaffected (it compared real vs shuffled at the same scale), but no 'beats chance' reading of that receipt survives.",
+    "self_caught": "detected while probing bank composition, not requested"
+  },
+
+  "EXPERIMENTS_THIS_TRACK": [
+    {"script": "HENRI V2/henri_core/exp_attributable_veto.py",
+     "verdict": "VETO_NOT_ATTRIBUTABLE",
+     "note": "reproduced four historical quantities exactly (top1 0.0401, oracle 0.1142, random 0.0579, old-defect verifier 0.0402)"},
+    {"script": "HENRI V2/henri_core/exp_veto_fit_sweep.py",
+     "verdict": "NO_INFORMATION_SELECTOR_DEGENERATE",
+     "note": "lambda spread 0.0015; chosen-pick distribution [736,152,76,40,130] = 64.9% on slot 0"},
+    {"script": "HENRI V2/henri_core/exp_veto_distshift_fix.py",
+     "verdict_label_emitted": "VETO_FIT_STILL_COLLAPSES_TO_RANKER",
+     "verdict_label_is_WRONG": "the measurement showed real 0.1097 vs shuffled 0.0564 vs random 0.0579, and slot-0 share fell 0.649 -> 0.105. T4 failed only because lambda was flat. The emitted fail-label names a failure mode the data excludes. DEFECT REPORTED, not hidden.",
+     "measured": {"real": 0.1097, "shuffled": 0.0564, "random": 0.0579}},
+    {"script": "HENRI V2/henri_core/exp_veto_slot_prior_control.py",
+     "verdict": "SLOT_ARTIFACT_WITHDRAW_THE_GAIN",
+     "measured": {"real_arm": 0.1097, "always_pick_slot4": 0.1128, "slot4_positive_rate": 0.1129, "slot0_positive_rate": 0.0317},
+     "consequence": "the +0.05 veto gain is WITHDRAWN. The arm did not beat the constant rule 'always pick the 5th candidate'."},
+    {"script": "HENRI V2/henri_core/exp_ranker_inversion_probe.py",
+     "verdict": "RANKER_WEAK_NOT_INVERTED",
+     "note": "corr(C, exact-match) = +0.2824 POSITIVE at three pins. The 'rankers' hypothesis raised from the slot-4 rate is FALSIFIED.",
+     "self_caught_defect": "the first draft's self-verifying check compared INDEX identity and used min() over index values. Both wrong under ties. Fixed to value-based, tie-robust comparison."},
+    {"script": "HENRI V2/henri_core/exp_ranker_structure_probe.py",
+     "verdict": ["QUERY_INDEPENDENT_RANKING (LATER FALSIFIED)", "TIE_DEGENERATE_TOP5"],
+     "note": "the QUERY_INDEPENDENT flag came from a 2-D variance decomposition that cannot separate query x candidate interaction from main effects. Superseded by the conditional-info probe."},
+    {"script": "HENRI V2/henri_core/exp_ranker_conditional_info_probe.py",
+     "verdict": "C_QUERY_INFORMATION_PRESENT",
+     "measured": {"auc_C_full": 0.7942, "auc_bias_only": 0.6805, "auc_residual_queryconditional": 0.755,
+                   "b_std_over_C_std": 0.2991, "top5_set_identity_under_1pct_noise": 0.1846},
+     "consequence": "the QUERY_INDEPENDENT_RANKING flag is FALSIFIED. C is a strong global pair ranker. Also self-caught: the kernel row-mean diagnostic read 0.0 because it measured the bank mean, not kernel spread."},
+    {"script": "HENRI V2/henri_core/exp_ranker_tie_forensics.py",
+     "verdict_label_emitted": "TOP1_IS_A_RANKING_METRIC",
+     "verdict_label_is_WRONG": "T1 frac_strict = 0.0. NOT ONE row has an untied argmax. The emitted label names the opposite of what T1 measured. The frozen conjunction (T1<0.50 AND T4_random>T4_argmax+0.005) can be false for a reason the label inverts. DEFECT REPORTED.",
+     "measured": {"frac_untied_argmax": 0.0, "tie_group_min": 3, "tie_group_mean": 10.7,
+                   "tie_group_max": 75, "oracle_within_tie_equals_argmax": true}},
+    {"script": "HENRI V2/henri_core/exp_bank_structure_dedup.py",
+     "verdict": "RANKER_WEAK_BUT_RANKING_VALID",
+     "measured": {"n_train_rows": 1092, "n_distinct_train": 206, "row_redundancy": 5.3,
+                   "frac_untied_argmax_full": 0.0, "frac_untied_argmax_dedup": 1.0,
+                   "ranker_top1_exact": 0.0317, "ranker_coverage5": 0.1142,
+                   "random_full_bank_top1_exact": 0.06, "random_full_bank_coverage5": 0.2133},
+     "consequence": "ties are 100% duplicate-caused. AND the random baseline beats the ranker on both metrics."},
+    {"script": "HENRI V2/henri_core/exp_ranker_debias_probe.py",
+     "verdict": "HEAD_IS_BIAS_PLATEAU_IRREPARABLE",
+     "measured": {"ranker_top1_exact": 0.0317, "row_uniform_random_top1_exact": 0.0522,
+                   "analytic_random_coverage5_rowwise": 0.2353,
+                   "rank_profile_exact_p0_to_p19": [0.0317, 0.0317, 0.0317, 0.0428, 0.1142, 0.1186, 0.1186, 0.1759, 0.1803, 0.1962, 0.2024, 0.22, 0.2183, 0.2183, 0.2183, 0.2271, 0.2271, 0.2271, 0.2271, 0.2271],
+                   "mean_exact_rate_p4_to_p19": 0.1948,
+                   "debias_top1_exact": 0.0269, "debias_coverage5": 0.0639},
+     "consequence": "debiasing does not repair the head; it degrades it. Dedup also degrades it (top1 0.015). The top-1 failure is not a removable bias term."}
+  ],
+
+  "FINDINGS_MEASURED": {
+    "F1_chance_baseline_invalid": "recorded chance_at_5 = 0.004579; true row-wise chance = 0.2353 (coverage@5) and 0.0522 (top-1). At 5.3x row redundancy the recorded baseline is ~51x too small.",
+    "F2_ranker_top1_below_random": "ranker top-1 exact 0.0317 vs row-uniform random 0.0522, at both pins. A uniform random row beats the learned top-1.",
+    "F3_rank_profile_rises_monotonically": "exact-match rate rises from 0.0317 at p0 to 0.2271 at p19; mean p4-p19 = 0.1948 (3.7x the p0 rate, and 3.7x the random baseline). The correct candidate is systematically NOT at the top of the list.",
+    "F4_top_decisions_are_all_ties": "frac_untied_argmax = 0.0 with a minimum tie group of 3; 100% of argmax decisions are tie arbitration. Duplicate traces make the top of the list a plateau by construction; dedup restores frac_untied to 1.0.",
+    "F5_the_veto_gain_was_a_slot_prior": "real 0.1097 vs always-pick-slot4 0.1128. The constant rule matches the fitted arm. Gain WITHDRAWN.",
+    "F6_C_ranks_well_globally": "AUC(C, exact) = 0.7942 and residual AUC 0.755, so the statistic carries genuine query-conditional information. The failure is local to the TOP of the ordering, not global."
+  },
+
+  "MECHANISM_HYPOTHESIS": {
+    "statement": "The ranker has real signal (F6) but its first four ranks are a plateau of high-bias duplicate rows that are usually wrong. Useful signal begins near rank 4, where the exact rate jumps from 0.0428 to 0.1142 and the profile then rises monotonically to 0.2271. The recorded top-1 metric therefore measures the contamination of the top four ranks rather than the ranker's usable accuracy.",
+    "class": "HYPOTHESIS",
+    "supporting": ["F3 rank profile shape", "F4 tie structure", "F5 slot-4 rule matching the fitted arm", "F6 global AUC"],
+    "cheapest_falsifier": "Evaluate the ranker on a DEDUPLICATED candidate set with the top-4 ranks excluded, against a row-uniform random control on the SAME deduplicated set. If the head stays at or below the control, the hypothesis is falsified and the readout family is the bound."
+  },
+
+  "SAGNAC_BOUNDARY": "No Sagnac wiring. Blueprint Directive 3 remains BLOCKED. Both preconditions still fail: the ingress does not beat legacy at this budget, and the veto has no surviving attribution (its only apparent gain was withdrawn as a slot prior).",
+
+  "NOT_CLAIMED": [
+    "any model-performance or benchmark claim",
+    "that the veto is attributable",
+    "that the ranker is inverted (explicitly FALSIFIED)",
+    "that global ranking is absent (explicitly FALSIFIED: AUC 0.7942)",
+    "that dedup or debias repairs the head (both measured to degrade it)"
+  ],
+  "status": "OBSERVED (diagnostic)"
+}

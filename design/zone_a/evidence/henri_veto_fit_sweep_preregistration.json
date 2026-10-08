@@ -1,0 +1,47 @@
+{
+  "schema": "henri.veto.fit_sweep.preregistration.v1",
+  "written_local_date": "2026-10-08",
+  "frozen_before_run": true,
+  "authorized_by": "user 2026-10-08: 'continue intelligently engineering until project henri has an attributable veto and ingress'",
+
+  "context_measured_this_turn": {
+    "veto_run_reproduced_history_exactly": {
+      "top1_baseline": 0.0401, "oracle_rerank_top5": 0.1142,
+      "random_verifier_top5": 0.0579, "old_defect_verifier_top5": 0.0402,
+      "n_pair_labels_available": 11340, "n_pair_labels_correct": 572,
+      "pair_label_rate": 0.0504
+    },
+    "features_carry_signal": {
+      "heldout_pair_auc": 0.6217, "V_E_max_identity_corr": 0.515,
+      "note": "Not information-identical to the ranker statistic (V_E pass) and above chance on 11,340 labeled pairs (V_C pass)."
+    },
+    "the_anomaly": {
+      "real_verifier_top5": 0.0416,
+      "shuffled_verifier_top5": 0.1072,
+      "random_verifier_top5": 0.0579,
+      "reading": "A label-SHUFFLED control scored 2.6x the real arm and near the oracle 0.1142. A control that beats its treatment indicates the FIT is the defect, not the features. Label permutation preserves class balance, so a near-random fit can still load on the single strongest feature."
+    }
+  },
+
+  "question": "Does a standardised, regularised fit convert the pair-level signal into top-1 accuracy, and does it then beat BOTH controls?",
+
+  "protocol_frozen": {
+    "val_test_split": "Held-out QUERIES split half/half into VAL and TEST, seeded PIN+1. The operating lambda is selected on VAL and reported on TEST. Selecting on TEST is the defect retracted earlier this turn; it is not repeated.",
+    "standardisation": "Features z-scored with TRAIN column means and stds, applied identically to VAL and TEST.",
+    "lambda_grid": [1e-4, 1e-3, 1e-2, 1e-1, 1.0, 10.0],
+    "shuffled_control": "refitted at the SAME lambda as the real arm",
+    "random_control": "uniform pick among the top-5, seeded PIN"
+  },
+
+  "frozen_rule": {
+    "PASS": "real_test(lam*) > random_test + 0.005 AND real_test(lam*) > shuffled_test(lam*) + 0.005",
+    "selector_must_discriminate": "max(val) - min(val) > 0.005, else NO_INFORMATION and the selection is void",
+    "verdict_pass": "VETO_ATTRIBUTABLE_WITH_REGULARISED_FIT",
+    "verdict_fail": "VETO_FEATURES_INFORMATIVE_FIT_STILL_FAILS"
+  },
+
+  "secondary_attribution": "Per feature: direction chosen on VAL (max or min), accuracy reported on TEST. Identifies which evidence the veto would actually rest on.",
+
+  "SAGNAC_BOUNDARY": "No Sagnac wiring. Blueprint Directive 3 stays BLOCKED.",
+  "diagnostic_scope": "CPU, D=4096, small config, single pin. No model-performance claim."
+}

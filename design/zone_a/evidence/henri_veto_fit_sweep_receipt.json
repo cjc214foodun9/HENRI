@@ -1,0 +1,75 @@
+{
+  "schema": "henri.veto.fit_sweep.receipt.v1",
+  "written_local_date": "2026-10-08",
+  "head_at_run": "3130f2f4c6950043eebfdf883430917dc0c51e9b",
+  "diagnostic_only": "CPU, D=4096, small config, single pin 20261010. No model-performance claim.",
+
+  "chain": {
+    "stage_1_attributable_veto": {
+      "script": "HENRI V2/henri_core/exp_attributable_veto.py",
+      "verdict": "VETO_NOT_ATTRIBUTABLE",
+      "harness_reproduced_history_exactly": true,
+      "reproduced": {"top1_baseline": 0.0401, "oracle_rerank_top5": 0.1142,
+                      "random_verifier_top5": 0.0579, "old_defect_verifier_top5": 0.0402,
+                      "n_pair_labels_available": 11340, "n_pair_labels_correct": 572,
+                      "pair_label_rate": 0.0504},
+      "measured": {"real_verifier_top5": 0.0416, "shuffled_verifier_top5": 0.1072,
+                    "heldout_pair_auc": 0.6217, "max_abs_identity_corr": 0.515,
+                    "V_A_real_minus_random": -0.0163, "V_B_real_minus_shuffled": -0.0656},
+      "anomaly": "A label-SHUFFLED control scored 2.6x the real arm (0.1072 vs 0.0416) and near the oracle 0.1142. A control beats its treatment => the FIT is the defect, not the features. Pair AUC 0.6217 over 11,340 pairs and V_E 0.515 (< 0.995) show the features are informative and NOT information-identical to the ranker statistic."
+    },
+    "stage_2_fit_sweep": {
+      "script": "HENRI V2/henri_core/exp_veto_fit_sweep.py",
+      "prereg": "design/zone_a/evidence/henri_veto_fit_sweep_preregistration.json",
+      "protocol": "features z-scored with TRAIN stats; lambda swept; selected on a VAL half of held-out queries and reported on the TEST half; shuffled control refitted at the SAME lambda. Selecting on TEST (retracted earlier this turn) was NOT repeated.",
+      "verdict": "NO_INFORMATION_SELECTOR_DEGENERATE",
+      "measured": {
+        "selector_val_spread": 0.0015,
+        "lstsq_val": 0.0397, "lstsq_test": 0.0435,
+        "test_real_by_lam": {"1e-4": 0.0435, "1e-3": 0.0435, "1e-2": 0.0435, "1e-1": 0.0435, "1.0": 0.0421, "10.0": 0.0421},
+        "test_shuffled_by_lam": {"1e-4": 0.1049, "1e-3": 0.1049, "1e-2": 0.1049, "1e-1": 0.1049, "1.0": 0.1049, "10.0": 0.1064},
+        "random_test": 0.0579,
+        "real_test_at_lam_star": 0.0435, "shuffled_test_at_lam_star": 0.1049,
+        "real_minus_random": -0.0144, "real_minus_shuffled": -0.0614,
+        "chosen_index_dist_real": [736, 152, 76, 40, 130],
+        "chosen_index_dist_shuffled": [164, 0, 88, 399, 483],
+        "chosen_index_dist_random": [242, 219, 209, 229, 235]
+      }
+    }
+  },
+
+  "FINDING_F1_fit_drifts_back_to_the_ranker": {
+    "evidence": "chosen_index_dist_real concentrates 736/1134 = 64.9% of picks on candidate slot 0. Slot 0 IS the ranker's top-1 (topk is ordered by descending C). Real 0.0435 vs top1 0.0401.",
+    "reading": "The fitted veto reproduces the ranker. This is the INFORMATION-IDENTITY defect (F3 of the selection receipt) re-entering through the FITTED DIRECTION, even though the raw features are provably not monotone in C (V_E max corr 0.515). Non-monotone features do not protect you if the fit collapses onto the ranker's direction.",
+    "class": "OBSERVED"
+  },
+
+  "FINDING_F2_features_carry_large_signal_the_fit_discards": {
+    "oracle_ceiling": 0.1142,
+    "random": 0.0579,
+    "top1": 0.0401,
+    "single_feature_arms_direction_chosen_on_VAL_reported_on_TEST": {
+      "mean_agree_others(min)_odd_one_out": 0.1128,
+      "rank_by_agree_norm(min)": 0.1128,
+      "first_disagree_norm(max)": 0.1067,
+      "pred_len_mismatch(min)": 0.1051,
+      "min_token_score(max)": 0.1049,
+      "is_medoid(max)": 0.1036,
+      "max_agree_others(min)": 0.1036
+    },
+    "reading": "A single non-similarity feature reaches 0.1128 against an oracle ceiling of 0.1142 (98.8% of the headroom) and beats random by +0.0549. The multi-feature fit collapses this to 0.0435. The odd-one-out feature (pick the candidate LEAST like the other four) is a genuine SET-RELATIVE signal the independently-scoring ranker cannot express.",
+    "caveat": "The best single feature is a best-of-24 selection (12 features x 2 directions) chosen by VAL. VAL->TEST transfer held (0.1175 -> 0.1128) but the arm needs independent confirmation.",
+    "class": "OBSERVED"
+  },
+
+  "ROOT_CAUSE_HYPOTHESIS": {
+    "statement": "Training pairs place the query's OWN row in the candidate set (cand[0] = i), so the training positive is trivially 'is this candidate nearly identical to the query'. Training pair rate 0.1693 vs test pair rate 0.0504. At test time no self row exists in the top-5. The fit therefore learns SELF-DETECTION, which at test time is anti-correlated with the useful odd-one-out direction, and collapses to deferring to the ranker's top-1 (F1).",
+    "class": "HYPOTHESIS",
+    "cheapest_falsifier": "Rebuild the training candidate sets to MIRROR the test distribution: candidates = the ranker's top-K for the query, positive = a DISTINCT row with the same trace, no self row. If the fit then beats random and its own shuffled control, the hypothesis holds. If it still collapses to the ranker, the hypothesis is falsified and the fit family is the bound."
+  },
+
+  "SAGNAC_BOUNDARY": "No Sagnac wiring. Blueprint Directive 3 remains BLOCKED: the ingress does not beat legacy at this budget, and the veto has no measured attribution until a fit survives F1.",
+  "not_claimed": ["any model-performance or benchmark claim", "that the veto is attributable yet",
+                   "that the single-feature arms generalise beyond this pin without confirmation"],
+  "status": "OBSERVED (diagnostic)"
+}

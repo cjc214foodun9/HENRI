@@ -1,0 +1,61 @@
+{
+  "schema": "henri.attributable.veto.preregistration.v1",
+  "written_local_date": "2026-10-08",
+  "frozen_before_run": true,
+  "authorized_by": "user 2026-10-08: 'continue intelligently engineering until project henri has an attributable veto and ingress' + 'The 11,340 labeled-rejection pairs exist as the label source for that step.'",
+
+  "objective": "Build an ATTRIBUTABLE veto over executor-labeled rejections. Attribute = every decision cites the feature that drove it.",
+
+  "hard_constraints_from_prior_measured_failures": {
+    "H1_no_information_identity": "The feature set must NOT contain, nor be a monotone function of, the ranker's own statistic C[q,j] = sum_m s_q[m, t_j[m]]. The old verifier used the plain inner product and scored 0.0402 vs top1 0.0401 vs shuffled 0.0401 (F3, information identity, not capacity).",
+    "H2_read_pre_mixing": "Every statistic is read from the pre-mixing wave / pre-mixing ridge output. No operator may mix the candidate with the bank before the read (the CCCP and psi_conv defects both produced gates that could not fail).",
+    "H3_must_beat_random": "Random pick among the top-5 previously scored 0.0579 and BEAT the trained verifier (0.0402). A real verifier must beat both random and its shuffled-label control.",
+    "H4_non_vacuous": "The veto must reject a non-trivial, non-total fraction. Rejection rate must land in (0.02, 0.98). A gate that cannot fail will pass.",
+    "H5_content_only": "No slot features. Candidate position within the set is randomised at train time and unusable at test time (prior self-caught defect).",
+    "H6_pre_registered_bar": "The E1 / selection bars are frozen here, before the run."
+  },
+
+  "feature_families_all_non_similarity": {
+    "A_position_resolved_bottleneck": {
+      "motivation": "C[q,j] is a SUM over positions. A sum hides a single catastrophic position. These are not monotone in the sum.",
+      "features": ["min_token_score", "argmin_position_norm", "n_positions_below_half", "pred_length_mismatch", "first_disagreement_pos_norm"]
+    },
+    "B_candidate_set_contrast": {
+      "motivation": "The ranker scores each candidate INDEPENDENTLY against the query. Set-relative structure is unavailable to it.",
+      "features": ["mean_token_agreement_with_others", "rank_by_that_agreement_norm", "is_medoid", "hamming_to_set_centroid"]
+    },
+    "C_leave_one_out_wave_influence": {
+      "motivation": "Non-monotone in any single candidate score: how much the SET centroid's match to the query changes when this candidate is removed. Pre-mixing read.",
+      "features": ["loo_centroid_delta", "self_minus_set_centroid_cos"]
+    }
+  },
+
+  "controls": {
+    "shuffled_label_verifier": "identical features, permuted execution labels",
+    "random_verifier": "uniform-random pick among the top-5",
+    "oracle_rerank_top5": "attainable-in-principle ceiling = coverage@5; NOT an attainable system",
+    "top1_baseline": "the ranker alone",
+    "old_defect_verifier": "the plain-inner-product verifier, reproduced as a documented baseline"
+  },
+
+  "reading_rule_FROZEN": {
+    "V_A": "real > random + 0.005",
+    "V_B": "real > shuffled + 0.005",
+    "V_C": "standalone AUC of the fitted score on the pair-labeled reject task > 0.55",
+    "V_D": "rejection rate at the train-selected operating point in (0.02, 0.98)",
+    "V_E": "no single feature has |Pearson r| > 0.995 with C[:, j] within the candidate sets (identity check)",
+    "verdict_if_all_pass": "VETO_ATTRIBUTABLE_ON_THIS_TASK",
+    "verdict_if_any_fail": "VETO_NOT_ATTRIBUTABLE",
+    "explicit_falsifier": "If the real verifier lands within 0.005 of its shuffled control, selection is not learnable on this task and the headroom is ORACLE_ONLY. That closes the selection route."
+  },
+
+  "attribution_requirement": {
+    "per_decision": "record the top-contributing feature for every held-out rejection",
+    "per_feature": "standardized standalone AUC, fitted weight, and leave-one-feature-out delta in rerank accuracy"
+  },
+
+  "SAGNAC_BOUNDARY": "This experiment does NOT wire the veto into the Sagnac destructive port. Blueprint Directive 3 remains BLOCKED: the ingress does not beat legacy and the veto has no measured attribution yet. This work is the ATTRIBUTABLE half only.",
+
+  "diagnostic_scope": "CPU, D=4096, small config, single pin. No model-performance claim. Reuses the committed executor split constants (MAX_LEN 4, N_INPUTS 28, ROWS 1500, K 5, LAM 1e-3) BY IMPORT so no duplication drift is possible.",
+  "status": "PRE_REGISTERED"
+}
