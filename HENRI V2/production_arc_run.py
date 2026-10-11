@@ -842,8 +842,18 @@ def run():
         # 64 while `su3_field` stayed 8192, and `predict_next_field` raised
         # `einsum(): subscript n has size 8192 for operand 1 ... size 64`.
         _num_channels = _macro_num_blocks()
+        # Ruling 3 (HENRI-SPEC-2026-HETERO-SYNAPSE-DREAM-LOOP-V1): the production channel
+        # count is 8,192 = 65,536 / 8 Clifford blades = 2,048 per structural slot. This
+        # expression makes that constant EXPLICIT at the call site; `_macro_num_blocks()`
+        # already returns 8192 at production scale, so the two branches agree there and
+        # the reduced-scale path keeps its measured fix. A hardcoded 8192 on the reduced
+        # path was REMOVED for a measured reason (root_cause_num_channels.json): it emits
+        # a 65,536-wide macro wave against 512-wide Sagnac references and the veto raises
+        # on EVERY step. Restore the production constant without reintroducing that.
         action_outcome_store = ActionOutcomeGeneratorStore(
-            num_actions=_num_actions, num_channels=_num_channels, lr=0.1).to(DEVICE)
+            num_actions=_num_actions,
+            num_channels=8192 if _macro_num_blocks() == 8192 else _macro_num_blocks(),
+            lr=0.1).to(DEVICE)
         stationarity_thermostat = StationarityDissipationThermostat(
             num_actions=_num_actions)
         _p820_gm_basis = GELL_MANN_BASIS.to(DEVICE)
@@ -3618,7 +3628,8 @@ def run():
                 # and says so in telemetry; the verdict comes from REAL pre/post
                 # frames observed at the frame-change site, never from a prediction.
                 _cg_ok, _cg_why = allow_zonec_write(step=step, tele=tele)
-                if _cg_ok:
+                if _cg_ok and not learning_frozen():
+                    # ruling 3: freeze guard re-asserted at the call site.
                     orch.checkpoint_wave(state_wave.cpu(), domain=f"arc3/{env_name}",
                                          sagnac_stress=sagnac_delta,
                                          run_id=attr_run_id, arm_id=attr_arm_id,
