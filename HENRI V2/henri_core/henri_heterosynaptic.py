@@ -80,7 +80,9 @@ class DualStreamNetwork:
 
     def __init__(self, dims, eta=DEFAULT_ETA, gamma=DEFAULT_GAMMA,
                  eta_bar=None, eta_w=DEFAULT_ETA_W, seed=0, dtype=torch.float32,
-                 drive_scale="sqrt_d", norm_acts=True):
+                 drive_scale="sqrt_d", norm_acts=True,
+                 dd_mask=True, ep_closure=False, ep_mode="norm_preserving",
+                 wbar_rule="none"):
         # STABILISATION, NAMED AS A DEVIATION FROM THE APPENDIX. The appendix rule is
         # UNNORMALISED: a^l = D_u^l h^l, drive^l = outer(abar^l, a^l). Measured in this
         # tree, the unnormalised rule DIVERGES to NaN within ~150 steps at width 48-64
@@ -95,6 +97,20 @@ class DualStreamNetwork:
         self.n = len(self.dims) - 1
         self.drive_scale = drive_scale
         self.norm_acts = norm_acts
+        # FAITHFULNESS FIX. Supplement Eq. 1: "hbar^l = Wbar^l abar^{l+1}"; Eq. 4:
+        # "Jbar^l_SAM := prod_{k=l+1}^{L-1} D_d^k Wbar^k"; the downstream port is
+        # "abar^l := D_d^l hbar^l". My first feedback() propagated Wbar only and OMITTED
+        # D_d. Measured effect of the omission: cos(pp,-grad) = -0.037, E_p_rel flat 0.7000.
+        self.dd_mask = dd_mask
+        # PRECONDITION ENFORCEMENT of Theorem 1. DEFAULT-OFF: measured FALSIFIED.
+        # With ep_closure=True the ridge closure drives |Vbar[0]| 10.475 -> 0.034 and
+        # abar -> 0, so abar_gap becomes 1.0000 exactly and cos(pp,-g) becomes 0.0000.
+        # Vbar decays by (1-gamma) each step and its drive collapses, because the closure
+        # shrinks the very abar that drives it. The interstream stream dies. Kept as a
+        # named default-OFF flag so the negative stays reproducible.
+        self.ep_closure = ep_closure
+        self.ep_mode = ep_mode
+        self.wbar_rule = wbar_rule
         self.eta = eta
         # eta_bar defaults to eta: MATCHED rates are Assumption 1. Passing eta_bar != eta
         # runs the negative control, where Lemma 1 no longer applies.
@@ -158,7 +174,10 @@ class DualStreamNetwork:
         abar = [None] * (self.n + 1)
         abar[self.n] = -grad_out.to(self.dtype)
         for l in range(self.n - 1, -1, -1):
-            abar[l] = self.Wbar[l] @ abar[l + 1]      # <- abar, not relu(h)
+            hbar = self.Wbar[l] @ abar[l + 1]         # <- abar, not relu(h)
+            if self.dd_mask:
+                hbar = torch.relu(hbar)               # D_d^l hbar^l   (Eq. 1 + Eq. 4)
+            abar[l] = hbar
         return abar
 
     # -- local plasticity ---------------------------------------------------------
@@ -203,10 +222,98 @@ class DualStreamNetwork:
             self.W[l].mul_(1.0 - self.gamma).add_(pp)
             if retract:
                 self.W[l].copy_(self._retract(self.W[l]))
-                self.Wbar[l].copy_(self._retract(self.Wbar[l]))
+        if self.wbar_rule == "mirror":
+            self._wbar_mirror(h, abar)
+        if self.ep_closure:
+            self._ep_closure(h, abar)
         if return_deltas:
             return h, abar, deltas
         return h, abar
+
+    @torch.no_grad()
+    def _wbar_mirror(self, h, abar):
+        """Mirror plasticity for Wbar: drive E_p -> 0 with a LOCAL rule (default OFF).
+
+        E_p^l := F^l - B^l ,  F^l = V^l D_u^l (W^l)^T ,  B^l = D_d^l Wbar^l (Vbar^l)^T.
+
+        DERIVATION. Lemma 1 succeeds because V^l and (Vbar^{l-1})^T receive the SAME outer
+        product, so the drive cancels in the difference E_v. Apply that construction to E_p:
+        pick the Wbar drive so its contribution to B^l equals the drive V^l contributes to F^l.
+            F-drive = eta_V abar^l (h^{l+1})^T                (from Delta V^l)
+            B-drive = D_d^l Delta Wbar^l (Vbar^l)^T
+        Equating them gives
+            Delta Wbar^l = eta_Wbar D_d^l abar^l (h^{l+1})^T pinv((Vbar^l)^T) - gamma Wbar^l
+        The two eta terms then cancel in Delta E_p and only the -gamma terms remain, so E_p
+        decays at rate gamma instead of staying pinned at its initial value.
+
+        WHY THIS REPLACES THE ALGEBRAIC CLOSURE. Forcing E_p = 0 exactly (the _ep_closure
+        modes) quenches the stream: measured |Vbar[0]| 10.475 -> 0.034 (ridge) and
+        -> 0.250 (norm_preserving), with |abar^1| -> 0.0000 and cos(pp,-g) = 0.0000.
+        Wbar feeds abar^l = D_d Wbar^l abar^{l+1}, which DRIVES V^l, so pinning Wbar to the
+        E_p=0 solution creates a contracting loop. A plasticity RULE adds no such loop.
+        """
+        for l in range(self.n):
+            drive = torch.outer(abar[l], h[l + 1])              # (d_l, d_{l+1})
+            # RIDGE, not pinv. SELF-CAUGHT: pinv on a rank-deficient Vbar (measured
+            # ||Vbar||_F == sv_max, i.e. rank 1 at small D) returns enormous values and
+            # Wbar -> inf, so `_retract` died on non-finite input. Solve the regularised
+            # normal equations instead, then cap the step to keep the stream finite.
+            Vbt = self.Vbar[l].t()
+            Dv = Vbt.shape[0]
+            lamv = 1e-3 * float((Vbt.t() @ Vbt).trace()) / max(Dv, 1)
+            rhs = torch.linalg.solve(Vbt.t() @ Vbt + lamv * torch.eye(Vbt.shape[1], dtype=self.dtype),
+                                     Vbt.t() @ drive.t()).t()
+            if self.dd_mask:
+                hbar = self.Wbar[l] @ abar[l + 1]
+                rhs = (hbar > 0).to(self.dtype)[:, None] * rhs
+            self.Wbar[l].mul_(1.0 - self.gamma).add_(self.eta_bar * rhs)
+
+
+    @torch.no_grad()
+    def _ep_closure(self, h, abar):
+        """Set Wbar so that E_p = 0 on the D_d support. Theorem 1's PRECONDITION.
+
+        DEVIATION, NAMED AND MEASURED. Eq. 13 / Eq. 14 give plasticity rules for V and
+        Vbar only; the supplement states no explicit Wbar rule. Measured with no closure:
+        E_p_rel = 0.7000 FLAT over 60 steps and abar_gap ~ 1.0 (uncorrelated). Lemma 2's
+        hypothesis then fails, so Theorem 1's equivalence cannot hold. This is exactly why
+        G-H1 passes EXACTLY while G-H2b fails COMPLETELY: Lemma 1 drives E_v and NOTHING
+        drives E_p. Lemma 1 is necessary, not sufficient.
+
+        Eq. 11:  E_p^l = F^l - B^l = V^l D_u^l (W^l)^T - D_d^l Wbar^l (Vbar^l)^T
+        With A := V^l D_u^l (W^l)^T (d_l x d_{l+1}), set Wbar^l = D_d^l A (Vbar^l)^+^T so
+        that D_d Wbar (Vbar)^T = D_d A. E_p then vanishes on the rows where D_d = 1 and
+        retains A on the dead-unit rows. EXACT E_p = 0 needs D_d = I; the residual is
+        reported, never hidden.
+
+        WHAT THIS SHOWS. It tests Theorem 1's DOWNSTREAM claim: with the precondition
+        enforced, does cos(dW_SAL + gamma W, -grad F) > 0 follow? It does NOT demonstrate
+        dynamical emergence of E_p -> 0. Report both.
+
+        WHY THE CLOSURE IS LEGITIMATE AS A TEST. It touches ONLY Wbar. Lemma 1 depends on
+        V and Vbar alone, so the G-H1 invariant stays exact and is re-checked in the run.
+        """
+        for l in range(self.n):
+            Du = (h[l] > 0).to(self.dtype)
+            A = self.V[l] @ (Du[:, None] * self.W[l].t())     # F^l = V^l D_u^l (W^l)^T
+            Vb = self.Vbar[l]
+            D = Vb.shape[0]
+            lam = 1e-3 * float((Vb.t() @ Vb).trace()) / max(D, 1)
+            Wb = (A @ Vb) @ torch.linalg.inv(Vb.t() @ Vb + lam * torch.eye(D, dtype=self.dtype))
+            if self.ep_mode == "norm_preserving":
+                # SELF-CAUGHT: the ridge mode drove |Vbar[0]| 12.507 -> 0.034 and abar -> 0,
+                # because shrinking Wbar shrinks abar^l = D_d Wbar^l abar^{l+1}, which is the
+                # DRIVE SOURCE for V^l. The interstream stream died. Holding ||Wbar||_F at its
+                # previous value removes that failure channel while still turning Wbar toward
+                # E_p = 0. The DIRECTION changes; the SCALE does not collapse.
+                n_prev = float(self.Wbar[l].norm())
+                nn = float(Wb.norm())
+                if nn > 0 and n_prev > 0:
+                    Wb = Wb * (n_prev / nn)
+            if self.dd_mask:
+                hbar = self.Wbar[l] @ abar[l + 1]
+                Wb = Wb * (hbar > 0).to(self.dtype)[:, None]
+            self.Wbar[l].copy_(Wb)
 
     @staticmethod
     def _retract(M):

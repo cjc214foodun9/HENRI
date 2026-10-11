@@ -1,0 +1,44 @@
+{
+  "schema": "henri.heterosynaptic.gh2b_root_cause.observed.v1",
+  "evidence_class": "OBSERVED",
+  "supersedes_inferred_claim": {
+    "was": "The -gamma*W decay term (~0.51) dominates the preconditioned drive (~0.08) by ~6:1 and is uncorrelated with the gradient. INFERRED, not measured.",
+    "status": "SUPERSEDED -- the decomposition was never measured, and this receipt measures it",
+    "correction": "abar_gap is the measured defect. The 6:1 decay-dominance story is NOT supported."
+  },
+  "what": "Direct measurement of G-H2b's failure mode in henri_heterosynaptic.py. Separates three competing diagnoses: (A) the abar pairing condition, (B) the -gamma*W composite step, (C) sample-plasticity collapse.",
+  "measured": {
+    "lemma1_still_exact": {
+      "E_v_max": 0.0,
+      "note": "0.00e+00 in EVERY arm; Lemma 1 survives every change"
+    },
+    "gram_control_cHD_fix_ge_0": {
+      "arm_A": 0.1667,
+      "arm_B": 0.0863,
+      "arm_C": 0.0811,
+      "note": "always >= 0. The earlier 'negative cosine' was a MIS-SPECIFIED control: it compared <M M^T (D_u d), d> with unmasked d. The Gram identity needs the SAME vector twice."
+    },
+    "abar_gap_by_fixture_D": {
+      "D=1_single_fixed_sample": "6034.8 -> 19823.4 (growing)",
+      "D=4_distinct_samples": 1.464,
+      "note": "The 10^3-10^4 magnitudes were FIXTURE-INFLATED by a rank-1 collapse. At D=1, ||Vbar[0]||_F == sv_max to 5 digits (rank 1) and ||Vbar[0]^T delta1||/||delta1|| = 2.02e-04, i.e. the preconditioner annihilated the error. At D=4 the same ratio is 0.8300. The honest figure is abar_gap ~ O(1), uncorrelated -- not 10^3."
+    },
+    "E_p_pinned_flat": {
+      "arm_A_first": 1.4628,
+      "arm_A_last": 1.5538,
+      "note": "E_p does NOT decay. Lemma 1 drives E_v; NOTHING drives E_p."
+    },
+    "work_bar_repairs_all_falsified": {
+      "ridge_E_p_closure": "|Vbar[0]| 10.475 -> 0.034 ; |abar^1| -> 0.0000 ; cos=0.00000",
+      "norm_preserving_E_p_closure": "|Vbar[0]| -> 0.250 ; |abar^1| -> 0.0000 ; cos=0.00000",
+      "mirror_Wbar_plasticity_rule": "|Vbar[0]| -> 6.4e+10 ; E_p -> 3.7e+05 (exploded)",
+      "mechanism": "abar^l = relu(Wbar^l abar^{l+1}). Wbar FEEDS abar, and abar DRIVES V^l. Any write to Wbar therefore perturbs the drive source. Pinning Wbar to the E_p = 0 solution creates a contracting loop that quenches the stream. All three tested repairs are now DEFAULT-OFF."
+    }
+  },
+  "verdict": "GH2B_ROOT_CAUSE_IS_THE_ABAR_CONDITION",
+  "derived": "G-H1 passes EXACTLY while G-H2b fails COMPLETELY because they test two DIFFERENT alignment errors. Lemma 1 drives E_v -> 0 (interstream). Theorem 1 additionally needs E_p -> 0 (pathway). Lemma 1 is necessary, not sufficient. The shipped SAL term is not Theorem 1's preconditioned term.",
+  "mechanism_finding_negative": "Four independent Wbar repairs were implemented and measured. All four fail: algebraic closures quench the stream; a plasticity rule explodes it. No G-H2b repair is delivered. The bar stays 0.9000 and stays FAILED.",
+  "narrow_scope": "G-H1's exact cancellation remains true and is unpromised by these negatives. Full report and tests in henri_heterosynaptic.py; probes in AppData/Local/Temp.",
+  "no_bar_moved": true,
+  "no_model_performance_claim": true
+}
