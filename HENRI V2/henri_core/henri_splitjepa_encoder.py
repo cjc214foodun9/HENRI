@@ -168,9 +168,13 @@ class CenteredZCA:
                 "rank_kept": self._rank_kept,
                 "rank_cap_centered_N_minus_1": self._rank_cap,
                 "rank_note": (
-                    f"N={N} < D={D}: Cov(g(z))=I_D is rank-impossible (rank <= N-1). The"
-                    " EXACT achievable identity is (1/(N-1)) Z Z^T = I_N - 11^T/N, the"
-                    " centered projector. Marginals equal I_D only as N -> infinity."),
+                    f"N={N} < D={D}: the POPULATION constraint Cov(g(z))=I_D cannot be"
+                    " met by an EMPIRICAL estimate when N < D, because the centered"
+                    " sample covariance has rank <= N-1. The exact finite-sample identity"
+                    " is (1/(N-1)) Z Z^T = I_N - 11^T/N, the centered projector: diag"
+                    " (N-1)/N, off-diag 1/N. Its marginals approach I_D as N -> infinity."
+                    " This is a statement about finite-sample realisability, NOT a"
+                    " refutation of the SplitJEPA population theorem."),
             })
         else:
             Zc = Z - mu

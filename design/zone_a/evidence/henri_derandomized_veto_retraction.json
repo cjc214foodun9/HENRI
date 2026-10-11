@@ -1,0 +1,80 @@
+{
+  "schema": "henri.derandomized.veto.retraction.v1",
+  "evidence_class": "FALSIFIED_CORRECTION",
+  "author": "henri development arbiter",
+  "created_utc": "2026-10-11",
+  "supersedes_in_part": {
+    "path": "design/zone_a/evidence/henri_derandomized_veto_observed.json",
+    "sha256": "5a80d1a105543b7e2b3131cd2ca3744276c3bd4fbb1320465daaea996df183e2",
+    "note": "The receipt is NOT regenerated and NOT edited. Its measurements stand. This file corrects ONE INTERPRETATION the receipt asserts about its own sample size."
+  },
+
+  "retracted": {
+    "claim": "The cyclic protocol supplies n = 56,700 at SE = 0.00420, which makes the 0.005 bar resolvable without moving it.",
+    "locations": [
+      "henri_derandomized_veto_observed.json findings[0]",
+      "henri_derandomized_veto_observed.json observations.se_r_null = 0.0042",
+      "henri_derandomized_veto_observed.json observations.bar_resolvable_at_this_n = true",
+      "henri_derandomized_veto_observed.json observations.bar_over_se = 1.191",
+      "commit 2fe693e message: spec correction #4"
+    ],
+    "why_false": "The K=5 cyclic offsets pi_k(i) = (i + k) mod N RELABEL the same 11,340 pairs. They are re-indexings, not new draws, so the 56,700 (value, slot) observations are not independent. Dividing SE by sqrt(5) is PSEUDOREPLICATION: it treats one sample as five.",
+    "internal_evidence_it_is_pseudoreplication": {
+      "per_slot_mean": {"0": 0.292747, "1": 0.292747, "2": 0.292747, "3": 0.292747, "4": 0.292747},
+      "max_slot_deviation": 0.0,
+      "reading": "Five supposedly independent offsets return the SAME statistic to six decimals. Identical statistics across 'replicates' is the signature of dependence, and it was present in the artifact all along."
+    },
+    "corrected_arithmetic": {
+      "n_independent_pairs": 11340,
+      "se_r_null_corrected": 0.009391,
+      "ci95_half_width_corrected": 0.018408,
+      "ci95_corrected": [-0.018408, 0.018408],
+      "bar": 0.005,
+      "margin_over_se_corrected": 0.5324,
+      "margin_over_se_as_reported": 1.191,
+      "verdict": "The 95% interval CONTAINS 0.005. The bar is NOT resolvable at the stated n=11340."
+    },
+    "self_caught_defect_class": "This is the SAME failure class I flagged against the blueprint's G-SJ2: a gate that asserts more than its sample can carry. The check tested the POINT ESTIMATE (|r| = 0.0 <= 0.005) and never the confidence bound. I criticised exactly this, then repeated it in the same record."
+  },
+
+  "what_still_stands": {
+    "measurement": "r(slot, delta) = -0.000000; per_slot_trigger_rate identical across all five slots; value_has_variance true; value_sd 0.094125; max_slot_deviation 0.0 over 11,340 pairs.",
+    "harness_positive_control": "arm3 slot control r = -0.707107 with CI95 [-0.711199, -0.702967]. The harness DETECTS slot binding when binding exists. This is the load-bearing evidence that r=0 is not vacuous.",
+    "attribution_falsified": {
+      "false_veto_rate_on_correct": 0.81993,
+      "rejection_rate_on_incorrect": 0.136516,
+      "separation": -0.683414,
+      "ci95": [[0.805348, 0.833854], [0.133626, 0.139445]],
+      "reading": "Non-overlapping CIs. The veto fires on 82% of CORRECT candidates and 14% of incorrect ones. Unchanged by this retraction."
+    },
+    "dark_port": "STILL BLOCKED. HENRI_SAGNAC_DARK_PORT_ENABLE default 0."
+  },
+
+  "unresolved_index_neutrality": {
+    "two_admissible_framings": [
+      "POINT-ESTIMATE READING: r = -0.000000 is a sample estimate. It satisfies the 0.005 bar, but the 95% bound does not exclude |r| > 0.005 at n=11340. Margin 0.53 sigma.",
+      "CONSTRUCTIVE READING: if the veto decision is slot-independent, each cyclic offset assigns the same multiset of decisions to every slot, so the slot means are equal BY ALGEBRA and r = 0 holds by construction. The gate then cannot fail."
+    ],
+    "which_is_true": "UNDETERMINED by the current evidence. The two readings differ in what must be done next: the first needs more independent pairs, the second needs a different statistic entirely.",
+    "precise_permissible_statement": "The point estimate satisfies the bar. The confidence bound does not exclude |r| > 0.005 at n = 11,340. Index-neutrality is NOT proven; it is unresolved.",
+    "statement_now_withdrawn": "Index-neutrality is proven at n=56,700."
+  },
+
+  "does_not_move_any_bar": {
+    "margin": 0.005,
+    "changed": false,
+    "note": "No threshold was altered. The sample was misstated, so the honest conclusion weakens. Moving the bar to make the result stand is the metric-laundering failure mode this project guards against."
+  },
+
+  "next_actions_for_index_neutrality": [
+    "Obtain genuinely independent candidate sets (distinct queries, not relabelled slots) to raise n_eff above 153,659, the count the receipt itself computes for a 0.005 half-width at 95%.",
+    "Or state the gate as UNRESOLVED and record the constructive reading as the alternative explanation."
+  ],
+
+  "not_claims": [
+    "No model-performance claim.",
+    "No task attempted or solved.",
+    "No change to the veto receipt's measured numbers.",
+    "The 0.005 bar is not moved in either direction."
+  ]
+}

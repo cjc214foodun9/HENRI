@@ -35,12 +35,17 @@ from henri_core.henri_splitjepa_encoder import (  # noqa: E402
 
 
 def test_sj_a_whitening_contract_gram_route():
-    """N < D: Cov(g(z)) = I_D is RANK-IMPOSSIBLE (covariance rank <= N-1).
+    """N < D: the population contract Cov(g(z)) = I_D is NOT met by an empirical estimate.
 
-    MEASURED CORRECTION TO THE SPEC. The exact achievable identity on the Gram route is
-    the centered projector (1/(N-1)) Z Z^T = I_N - 11^T/N: diag (N-1)/N, off-diag 1/N.
-    The module reports WHICH identity it checked, so a receipt cannot silently compare a
-    rank-deficient statistic against a full-rank target.
+    MEASURED CORRECTION TO THE SPEC, stated carefully. SplitJEPA's condition is a
+    POPULATION statement. The centered sample covariance has rank <= N-1, so at N < D the
+    empirical covariance CANNOT equal I_D -- not because the theory is wrong, but because
+    a rank-(N-1) matrix cannot be the identity in D dimensions.
+
+    The exact finite-sample identity on the Gram route is the centered projector
+    (1/(N-1)) Z Z^T = I_N - 11^T/N: diag (N-1)/N, off-diag 1/N. The module reports WHICH
+    identity it checked, so a receipt cannot silently compare a rank-deficient statistic
+    against a full-rank target.
     """
     torch.manual_seed(0)
     X = torch.randn(48, 256)
