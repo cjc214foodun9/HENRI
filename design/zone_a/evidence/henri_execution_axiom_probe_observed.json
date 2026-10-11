@@ -1,0 +1,356 @@
+{
+ "schema": "henri.execution.axiom.probe.v1",
+ "pin": 20261010,
+ "k": 5,
+ "auc_bar": 0.05,
+ "clusters": 8,
+ "dependency": {
+  "module": "C:\\Users\\chan\\henri-worktrees\\splitjepa-ace\\HENRI V2\\henri_core\\m4_generative.py",
+  "sha256": "fb46c19b8c15c27cb363eb91eed78f7a0707905426096f4c25d672f42b3ff316",
+  "expected_sha256": "fb46c19b8c15c27cb363eb91eed78f7a0707905426096f4c25d672f42b3ff316",
+  "match": true
+ },
+ "train_execution_labels": {
+  "n_train_queries": 1092,
+  "n_correct_pairs": 1783,
+  "n_total_pairs": 5460,
+  "rate": 0.326557
+ },
+ "heldout_pairs": {
+  "n": 11340,
+  "n_correct": 572,
+  "n_incorrect": 10768,
+  "dim": 8192
+ },
+ "arms": {
+  "A0_query_wave": {
+   "arm": "A0_query_wave",
+   "auc_neg_delta_predicts_correct": 0.175198,
+   "delta_mean_correct": 0.454983,
+   "delta_mean_incorrect": 0.284129,
+   "delta_gap_correct_minus_incorrect": 0.170854,
+   "threshold": 0.25,
+   "false_veto_rate_on_correct": 0.81993,
+   "false_veto_clopper_pearson_95": [
+    0.78594,
+    0.850574
+   ],
+   "rejection_rate_on_incorrect": 0.139023,
+   "rejection_clopper_pearson_95": [
+    0.13254,
+    0.145702
+   ],
+   "separation": -0.680907,
+   "separation_ci_disjoint": false,
+   "n_correct": 572,
+   "n_incorrect": 10768
+  },
+  "A1_exec_centroid": {
+   "arm": "A1_exec_centroid",
+   "auc_neg_delta_predicts_correct": 0.916495,
+   "delta_mean_correct": 0.240113,
+   "delta_mean_incorrect": 0.416852,
+   "delta_gap_correct_minus_incorrect": -0.176739,
+   "threshold": 0.429916,
+   "false_veto_rate_on_correct": 0.006993,
+   "false_veto_clopper_pearson_95": [
+    0.001909,
+    0.017807
+   ],
+   "rejection_rate_on_incorrect": 0.804513,
+   "rejection_clopper_pearson_95": [
+    0.796895,
+    0.811967
+   ],
+   "separation": 0.79752,
+   "separation_ci_disjoint": true,
+   "n_correct": 572,
+   "n_incorrect": 10768
+  },
+  "A2_cluster_centroid": {
+   "arm": "A2_cluster_centroid",
+   "auc_neg_delta_predicts_correct": 0.90633,
+   "delta_mean_correct": 0.124072,
+   "delta_mean_incorrect": 0.293676,
+   "delta_gap_correct_minus_incorrect": -0.169604,
+   "threshold": 0.165231,
+   "false_veto_rate_on_correct": 0.038462,
+   "false_veto_clopper_pearson_95": [
+    0.024258,
+    0.057654
+   ],
+   "rejection_rate_on_incorrect": 0.795319,
+   "rejection_clopper_pearson_95": [
+    0.787573,
+    0.802906
+   ],
+   "separation": 0.756858,
+   "separation_ci_disjoint": true,
+   "n_correct": 572,
+   "n_incorrect": 10768
+  },
+  "A3_random_axiom": {
+   "arm": "A3_random_axiom",
+   "auc_neg_delta_predicts_correct": 0.362023,
+   "delta_mean_correct": 0.502022,
+   "delta_mean_incorrect": 0.499899,
+   "delta_gap_correct_minus_incorrect": 0.002124,
+   "threshold": 0.500533,
+   "false_veto_rate_on_correct": 0.643357,
+   "false_veto_clopper_pearson_95": [
+    0.602566,
+    0.682658
+   ],
+   "rejection_rate_on_incorrect": 0.409175,
+   "rejection_clopper_pearson_95": [
+    0.399868,
+    0.418532
+   ],
+   "separation": -0.234181,
+   "separation_ci_disjoint": false,
+   "n_correct": 572,
+   "n_incorrect": 10768
+  }
+ },
+ "prevalence_diagnostic": {
+  "n_pairs": 11340,
+  "n_correct": 572,
+  "n_distinct_candidates": 139,
+  "n_distinct_correct_candidates": 22,
+  "correct_per_distinct_candidate": 26.0,
+  "max_single_candidate_share_of_correct": 0.092657,
+  "top5_correct_candidates": [
+   [
+    75,
+    53
+   ],
+   [
+    156,
+    53
+   ],
+   [
+    74,
+    46
+   ],
+   [
+    60,
+    35
+   ],
+   [
+    57,
+    33
+   ]
+  ],
+  "verdict": "CONCENTRATED",
+  "implication": "If CONCENTRATED, global label permutation is NOT a valid null: candidate identity leaks correctness. Any AUC must then be reported against a within-query null instead."
+ },
+ "permutation_null_global": {
+  "A0_query_wave": {
+   "auc_observed": 0.175198,
+   "null_mean": 0.500075,
+   "null_sd": 0.011424,
+   "null_p2.5": 0.477123,
+   "null_p97.5": 0.523276,
+   "z": -28.438,
+   "outside_null_95": true
+  },
+  "A1_exec_centroid": {
+   "auc_observed": 0.916495,
+   "null_mean": 0.501057,
+   "null_sd": 0.011442,
+   "null_p2.5": 0.479859,
+   "null_p97.5": 0.522165,
+   "z": 36.308,
+   "outside_null_95": true
+  },
+  "A2_cluster_centroid": {
+   "auc_observed": 0.90633,
+   "null_mean": 0.501522,
+   "null_sd": 0.011484,
+   "null_p2.5": 0.477631,
+   "null_p97.5": 0.5216,
+   "z": 35.25,
+   "outside_null_95": true
+  },
+  "A3_random_axiom": {
+   "auc_observed": 0.362023,
+   "null_mean": 0.501545,
+   "null_sd": 0.012338,
+   "null_p2.5": 0.478119,
+   "null_p97.5": 0.529822,
+   "z": -11.309,
+   "outside_null_95": true
+  }
+ },
+ "permutation_null_within_query": {
+  "A0_query_wave": {
+   "auc_observed": 0.175198,
+   "null_mean": 0.263727,
+   "null_sd": 0.005338,
+   "null_p2.5": 0.254634,
+   "null_p97.5": 0.274698,
+   "z": -16.584,
+   "outside_null_95": true
+  },
+  "A1_exec_centroid": {
+   "auc_observed": 0.916495,
+   "null_mean": 0.785348,
+   "null_sd": 0.006336,
+   "null_p2.5": 0.772656,
+   "null_p97.5": 0.797309,
+   "z": 20.698,
+   "outside_null_95": true
+  },
+  "A2_cluster_centroid": {
+   "auc_observed": 0.90633,
+   "null_mean": 0.797148,
+   "null_sd": 0.005103,
+   "null_p2.5": 0.788399,
+   "null_p97.5": 0.807825,
+   "z": 21.395,
+   "outside_null_95": true
+  },
+  "A3_random_axiom": {
+   "auc_observed": 0.362023,
+   "null_mean": 0.391013,
+   "null_sd": 0.004796,
+   "null_p2.5": 0.382735,
+   "null_p97.5": 0.399679,
+   "z": -6.044,
+   "outside_null_95": true
+  }
+ },
+ "permutation_null": {
+  "A0_query_wave": {
+   "auc_observed": 0.175198,
+   "null_mean": 0.263727,
+   "null_sd": 0.005338,
+   "null_p2.5": 0.254634,
+   "null_p97.5": 0.274698,
+   "z": -16.584,
+   "outside_null_95": true
+  },
+  "A1_exec_centroid": {
+   "auc_observed": 0.916495,
+   "null_mean": 0.785348,
+   "null_sd": 0.006336,
+   "null_p2.5": 0.772656,
+   "null_p97.5": 0.797309,
+   "z": 20.698,
+   "outside_null_95": true
+  },
+  "A2_cluster_centroid": {
+   "auc_observed": 0.90633,
+   "null_mean": 0.797148,
+   "null_sd": 0.005103,
+   "null_p2.5": 0.788399,
+   "null_p97.5": 0.807825,
+   "z": 21.395,
+   "outside_null_95": true
+  },
+  "A3_random_axiom": {
+   "auc_observed": 0.362023,
+   "null_mean": 0.391013,
+   "null_sd": 0.004796,
+   "null_p2.5": 0.382735,
+   "null_p97.5": 0.399679,
+   "z": -6.044,
+   "outside_null_95": true
+  }
+ },
+ "per_query_top1": {
+  "A0_query_wave": {
+   "n_queries_with_a_correct_candidate": 259,
+   "top1_strict": 0.277992,
+   "top1_any_in_argmin_set": 0.498069,
+   "chance_top1": 1.0
+  },
+  "A1_exec_centroid": {
+   "n_queries_with_a_correct_candidate": 259,
+   "top1_strict": 0.984556,
+   "top1_any_in_argmin_set": 0.984556,
+   "chance_top1": 1.0
+  },
+  "A2_cluster_centroid": {
+   "n_queries_with_a_correct_candidate": 259,
+   "top1_strict": 0.984556,
+   "top1_any_in_argmin_set": 0.984556,
+   "chance_top1": 1.0
+  },
+  "A3_random_axiom": {
+   "n_queries_with_a_correct_candidate": 259,
+   "top1_strict": 0.374517,
+   "top1_any_in_argmin_set": 0.374517,
+   "chance_top1": 1.0
+  }
+ },
+ "within_query_preference": {
+  "A0_query_wave": {
+   "preferred_is_correct_rate": 0.277992,
+   "least_preferred_is_correct_rate": 0.779923,
+   "preference_advantage": -0.501931
+  },
+  "A1_exec_centroid": {
+   "preferred_is_correct_rate": 0.984556,
+   "least_preferred_is_correct_rate": 0.293436,
+   "preference_advantage": 0.69112
+  },
+  "A2_cluster_centroid": {
+   "preferred_is_correct_rate": 0.984556,
+   "least_preferred_is_correct_rate": 0.293436,
+   "preference_advantage": 0.69112
+  },
+  "A3_random_axiom": {
+   "preferred_is_correct_rate": 0.374517,
+   "least_preferred_is_correct_rate": 0.482625,
+   "preference_advantage": -0.108108
+  }
+ },
+ "checks": {
+  "auc_invalid_identity_confounded": true,
+  "control_top1_near_chance": false,
+  "inverted_arm_reproduced": true,
+  "exec_centroid_per_query_gain": true,
+  "cluster_centroid_per_query_gain": true
+ },
+ "verdict": "HARNESS_CONTROL_BEATS_CHANCE_PER_QUERY_STILL_UNEXPLAINED",
+ "provisional_read": {
+  "reading_rule": "per-query top-1 and within-query preference gate; AUC is reported but does not gate because it is identity-confounded",
+  "auc_invalidated_by": "prevalence_diagnostic.verdict == CONCENTRATED",
+  "exec_centroid": {
+   "n_queries_with_a_correct_candidate": 259,
+   "top1_strict": 0.984556,
+   "top1_any_in_argmin_set": 0.984556,
+   "chance_top1": 1.0
+  },
+  "cluster_centroid": {
+   "n_queries_with_a_correct_candidate": 259,
+   "top1_strict": 0.984556,
+   "top1_any_in_argmin_set": 0.984556,
+   "chance_top1": 1.0
+  },
+  "query_wave": {
+   "n_queries_with_a_correct_candidate": 259,
+   "top1_strict": 0.277992,
+   "top1_any_in_argmin_set": 0.498069,
+   "chance_top1": 1.0
+  },
+  "control": {
+   "n_queries_with_a_correct_candidate": 259,
+   "top1_strict": 0.374517,
+   "top1_any_in_argmin_set": 0.374517,
+   "chance_top1": 1.0
+  }
+ },
+ "interpretation": {
+  "inversion_is_the_information_identity_defect": "A0 consumes the same query wave the ridge ranker used to build the ranking, so a monotone function of it cannot re-rank. Its inversion reproduces the predicted signature.",
+  "threshold_avoided": "epsilon_hard=0.35 sits below the ~0.5 delta of two independent unit waves, so a thresholded trigger saturates and measures the base rate. Deltas are therefore scored continuously (AUC) with the operating point taken from train.",
+  "scope": "encoder waves, NOT EFE-planned candidates; no task attempted or solved."
+ },
+ "not_claims": [
+  "no dark-port wiring",
+  "no model-performance claim",
+  "no task attempted or solved"
+ ],
+ "elapsed_s": 11.8
+}

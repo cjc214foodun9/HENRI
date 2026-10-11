@@ -1,0 +1,53 @@
+{
+ "schema": "henri.execution.axiom.circularity_test.v1",
+ "pin": 20261010,
+ "k": 5,
+ "margin": 0.1,
+ "dependency": {
+  "module": "C:\\Users\\chan\\henri-worktrees\\splitjepa-ace\\HENRI V2\\henri_core\\m4_generative.py",
+  "sha256": "fb46c19b8c15c27cb363eb91eed78f7a0707905426096f4c25d672f42b3ff316",
+  "expected_sha256": "fb46c19b8c15c27cb363eb91eed78f7a0707905426096f4c25d672f42b3ff316",
+  "match": true
+ },
+ "identity_surface": {
+  "n_train_candidates": 1092,
+  "n_held_queries": 2268,
+  "n_distinct_train_correct_identities": 223,
+  "n_distinct_held_correct_identities": 22,
+  "n_overlap": 22,
+  "overlap_share_of_held_correct": 1.0,
+  "verdict": "CIRCULAR_BY_CONSTRUCTION"
+ },
+ "arms": {
+  "chance_from_actual_composition": 0.441699,
+  "A_full_centroid_of_all_train_correct": {
+   "top1_any_in_argmin_set": 0.752896
+  },
+  "A_leave_identity_out": {
+   "top1_any_in_argmin_set": 0.277992
+  },
+  "A_random_axiom_control": {
+   "top1_any_in_argmin_set": 0.374517
+  }
+ },
+ "checks": {
+  "held_correct_identities_subset_of_train_correct": true,
+  "random_control_above_true_chance": false,
+  "leave_identity_out_beats_control": false,
+  "full_centroid_exceeds_leave_identity_out": true
+ },
+ "verdict": "SIGNAL_IS_CIRCULAR_LOOKUP_TABLE",
+ "interpretation": {
+  "why_full_centroid_is_not_evidence": "A_full is the centroid of the very identities it is scored against, so a high top-1 recovers the label set by construction. The leave-identity-out arm is the only admissible test.",
+  "why_the_random_control_matters": "A fixed axiom scores a candidate identically in every query, so it reads the identity concentration (22 distinct correct identities over 572 pairs). The random arm measures that floor; any arm must clear it.",
+  "earlier_defect_corrected": "the previous probe reported chance_top1 from len(block)/K, which is 1.0 and not a chance level. Chance is (mean correct candidates per query)/K.",
+  "scope": "encoder waves, NOT EFE-planned candidates; no task attempted or solved."
+ },
+ "not_claims": [
+  "no dark-port wiring",
+  "no model-performance claim",
+  "no selection improvement claim",
+  "no task attempted or solved"
+ ],
+ "elapsed_s": 2.2
+}

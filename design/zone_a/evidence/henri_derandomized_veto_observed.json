@@ -1,0 +1,166 @@
+{
+ "schema": "henri.derandomized.veto.audit.v3",
+ "pin": 20261010,
+ "k": 5,
+ "margin": 0.005,
+ "epsilon_hard": 0.35,
+ "prereg": "design/zone_a/evidence/henri_attributable_veto_preregistration.json",
+ "dependency": {
+  "module": "C:\\Users\\chan\\henri-worktrees\\splitjepa-ace\\HENRI V2\\henri_core\\m4_generative.py",
+  "sha256": "fb46c19b8c15c27cb363eb91eed78f7a0707905426096f4c25d672f42b3ff316",
+  "expected_sha256": "fb46c19b8c15c27cb363eb91eed78f7a0707905426096f4c25d672f42b3ff316",
+  "match": true
+ },
+ "surface": {
+  "n_queries": 2268,
+  "k": 5,
+  "n_pairs": 11340,
+  "dim": 8192,
+  "n_pair_labels_correct": 572,
+  "pair_label_rate": 0.0504,
+  "expected_abs_cos_independent_unit": 0.011049,
+  "expected_delta_independent_unit": 0.5,
+  "epsilon_hard": 0.35,
+  "saturation_predicted": true
+ },
+ "observations": {
+  "n_obs": 56700,
+  "n_pairs": 11340,
+  "k_offsets": 5,
+  "se_r_null": 0.0042,
+  "n_required_half_width_0.005_at_95": 153659,
+  "bar_resolvable_at_this_n": true,
+  "bar_over_se": 1.191,
+  "n_status_unavailable": 0
+ },
+ "arm1_content_ref": {
+  "r_slot_value": -0.0,
+  "ci95_fisher_z": [
+   -0.008231,
+   0.008231
+  ],
+  "value_mean": 0.292747,
+  "value_min": 0.25,
+  "value_max": 0.5,
+  "value_sd": 0.094125,
+  "value_has_variance": true,
+  "per_slot_mean": {
+   "0": 0.292747,
+   "1": 0.292747,
+   "2": 0.292747,
+   "3": 0.292747,
+   "4": 0.292747
+  },
+  "per_slot_trigger_rate": {
+   "0": 0.170988,
+   "1": 0.170988,
+   "2": 0.170988,
+   "3": 0.170988,
+   "4": 0.170988
+  },
+  "trigger_rate": 0.170988,
+  "max_slot_deviation": 0.0
+ },
+ "arm2_fixed_axiom": {
+  "r_slot_value": "UNDEFINED_CONSTANT",
+  "ci95_fisher_z": null,
+  "value_mean": 0.412425,
+  "value_min": 0.412425,
+  "value_max": 0.412425,
+  "value_sd": 0.0,
+  "value_has_variance": false,
+  "per_slot_mean": {
+   "0": 0.412425,
+   "1": 0.412425,
+   "2": 0.412425,
+   "3": 0.412425,
+   "4": 0.412425
+  },
+  "per_slot_trigger_rate": {
+   "0": 1.0,
+   "1": 1.0,
+   "2": 1.0,
+   "3": 1.0,
+   "4": 1.0
+  },
+  "trigger_rate": 1.0,
+  "max_slot_deviation": 0.0
+ },
+ "arm3_slot_control": {
+  "r_slot_value": -0.707107,
+  "ci95_fisher_z": [
+   -0.711199,
+   -0.702967
+  ],
+  "value_mean": 0.2,
+  "value_min": 0.0,
+  "value_max": 1.0,
+  "value_sd": 0.4,
+  "value_has_variance": true,
+  "per_slot_mean": {
+   "0": 1.0,
+   "1": 0.0,
+   "2": 0.0,
+   "3": 0.0,
+   "4": 0.0
+  },
+  "trigger_rate": 0.2,
+  "max_slot_deviation": 1.0
+ },
+ "primary_r_slot_delta": {
+  "arm1_content_ref": -0.0,
+  "arm2_fixed_axiom": "UNDEFINED",
+  "arm3_slot_control_on_trigger": -0.707107
+ },
+ "discrimination": {
+  "n_correct_pairs": 2860,
+  "n_incorrect_pairs": 53840,
+  "false_veto_rate_on_correct": 0.81993,
+  "false_veto_clopper_pearson_95": [
+   0.805348,
+   0.833854
+  ],
+  "rejection_rate_on_incorrect": 0.136516,
+  "rejection_clopper_pearson_95": [
+   0.133626,
+   0.139445
+  ],
+  "separation": -0.683414,
+  "note": "An execute-check failure is a labeled rejection. Separation > 0 means the veto carries label information; ~0 means it is content-blind to correctness. Screening statistic, NOT a task-accuracy claim."
+ },
+ "checks": {
+  "harness_detects_slot_binding": true,
+  "content_ref_delta_has_variance": true,
+  "content_ref_index_neutral": true,
+  "bar_resolvable_at_n": true,
+  "veto_discriminates_correctness": false
+ },
+ "verdict": "VETO_INDEX_NEUTRAL_ATTRIBUTION_INVERTED",
+ "verdict_scope": {
+  "proven": "index-neutrality: r(slot, delta) = -0.000000, |r| <= 0.0050 at n=56700",
+  "not_proven": "correctness attribution (see discrimination.separation)",
+  "reads_as_authorization": false,
+  "dark_port_precondition_met": false
+ },
+ "findings": [
+  "The pre-registered 0.005 bar is smaller than one standard error at the spec's stated n=11,340 (SE=0.00939). The cyclic protocol supplies n=56,700 at SE=0.00420, which makes the bar resolvable without moving it.",
+  "epsilon_hard=0.35 sits BELOW the expected delta of two independent unit waves (~0.5 at D=8192). The thresholded veto is therefore expected to saturate and its trigger vector may be constant, making r(slot, trigger) undefined. That is a THRESHOLD-CALIBRATION defect, not slot reading, and the two must not be conflated. The continuous delta is the primary statistic for this reason.",
+  "Arm 1 is index-blind BY CONSTRUCTION: the cyclic protocol places every candidate in every slot exactly once. Its near-zero r is a property of the design. The load-bearing evidence that the harness works is arm 3 failing the bar."
+ ],
+ "interpretation": {
+  "fixed_axiom_saturation": "Arm 2 against the fixed bank-mean axiom names the saturated-axiom outcome explicitly.",
+  "scope": "encoder waves, NOT EFE-planned candidate waves; no task attempted or solved; correctness is not measured."
+ },
+ "dark_port": {
+  "state": "BLOCKED",
+  "enable_flag": "HENRI_SAGNAC_DARK_PORT_ENABLE",
+  "default": "0",
+  "reason": "Standing order: dark-port wiring requires this gate green AND operator ratification. This run authorizes the attributable veto half only; it does not flip the flag."
+ },
+ "not_done": [
+  "no dark-port deflection wired",
+  "no model-performance claim",
+  "candidate waves are encoder waves, not EFE-planned waves"
+ ],
+ "elapsed_s": 37.4
+}
