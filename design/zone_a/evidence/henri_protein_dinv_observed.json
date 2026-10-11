@@ -1,0 +1,115 @@
+{
+  "checks": {
+    "negative_control_operator_responds": true,
+    "sigma_dL_positive_rank_on_all_entries": true,
+    "z_H_invariance_holds_on_all_entries": false
+  },
+  "entries": [
+    {
+      "contact_threshold_angstrom": 8.0,
+      "ensemble_spread": {
+        "pairwise_rmsd_max": 2.759,
+        "pairwise_rmsd_median": 2.0965,
+        "pairwise_rmsd_min": 0.9058
+      },
+      "n_models": 10,
+      "n_residues": 76,
+      "negative_control_contact_operator_responds": [
+        {
+          "contacts_flipped": 1,
+          "frac_flipped": 0.000351,
+          "noise_angstrom": 0.05
+        },
+        {
+          "contacts_flipped": 18,
+          "frac_flipped": 0.006316,
+          "noise_angstrom": 0.25
+        },
+        {
+          "contacts_flipped": 95,
+          "frac_flipped": 0.033333,
+          "noise_angstrom": 1.0
+        }
+      ],
+      "pdb_id": "1D3Z",
+      "pdb_sha256": "21099cb88231455fdfab4095dddfadcc85cc4213e105cf5f9cfff2ca21993378",
+      "z_H_invariant": {
+        "invariance_holds": false,
+        "max_abs_variation": 1.0,
+        "n_contact_features": 2850,
+        "n_contacts_mean": 0.113,
+        "n_contacts_that_differ": 15,
+        "n_unstable_contacts": 15
+      },
+      "z_L_variant": {
+        "condition_number": 870.9594182490799,
+        "dim": 2850,
+        "full_rank_note": "rank 9 of a 2850-dim space. FULL positive definiteness needs more structures than the space has dimensions; the binding constraint is the ensemble size n=10, not the protein.",
+        "positive_definite_on_support": true,
+        "sigma_dL_max_eig": 1939.9353889457425,
+        "sigma_dL_min_positive_eig": 2.227354510782675,
+        "sigma_dL_rank": 9
+      }
+    },
+    {
+      "contact_threshold_angstrom": 8.0,
+      "ensemble_spread": {
+        "pairwise_rmsd_max": 4.8957,
+        "pairwise_rmsd_median": 3.2852,
+        "pairwise_rmsd_min": 0.9897
+      },
+      "n_models": 116,
+      "n_residues": 76,
+      "negative_control_contact_operator_responds": [
+        {
+          "contacts_flipped": 3,
+          "frac_flipped": 0.001053,
+          "noise_angstrom": 0.05
+        },
+        {
+          "contacts_flipped": 18,
+          "frac_flipped": 0.006316,
+          "noise_angstrom": 0.25
+        },
+        {
+          "contacts_flipped": 99,
+          "frac_flipped": 0.034737,
+          "noise_angstrom": 1.0
+        }
+      ],
+      "pdb_id": "2K39",
+      "pdb_sha256": "827f861ae8940825bc6e541511eb0324bd14f7a2e5bd7ae5c61df92432960363",
+      "z_H_invariant": {
+        "invariance_holds": false,
+        "max_abs_variation": 1.0,
+        "n_contact_features": 2850,
+        "n_contacts_mean": 0.114,
+        "n_contacts_that_differ": 258,
+        "n_unstable_contacts": 258
+      },
+      "z_L_variant": {
+        "condition_number": 15527.44426315515,
+        "dim": 2850,
+        "full_rank_note": "rank 115 of a 2850-dim space. FULL positive definiteness needs more structures than the space has dimensions; the binding constraint is the ensemble size n=116, not the protein.",
+        "positive_definite_on_support": true,
+        "sigma_dL_max_eig": 3358.410397869327,
+        "sigma_dL_min_positive_eig": 0.2162886783524608,
+        "sigma_dL_rank": 115
+      }
+    }
+  ],
+  "evidence_class": "OBSERVED",
+  "failures": [],
+  "not_claims": [
+    "no model-performance claim",
+    "staging structure is not understanding it",
+    "no protein is claimed to solve any reasoning task",
+    "the invariant block is the contact map by DEFINITION here, not learned",
+    "z_H contact-map invariance is verified for THESE ensembles, not universally"
+  ],
+  "not_the_fold2reason_corpus": "This is NOT the Fold2Reason FoldingCorpus (OpenFold monomer collection, not in this tree). It is the same KIND of D_inv from public experimental structures.",
+  "retrieved_utc": "2026-10-11T04:59:08Z",
+  "schema": "henri.protein.dinv.observed.v1",
+  "verdict": "DINV_UNRESOLVED_SEE_CHECKS",
+  "what": "A real-structure construction of SplitJEPA's matched invariant pairs D_inv. z_H is the 8 A contact map (fold topology); z_L is the Ca distance vector (geometry). Pairs are models WITHIN one NMR entry, which share the molecule and therefore the fold."
+}
