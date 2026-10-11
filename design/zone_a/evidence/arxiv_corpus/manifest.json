@@ -1,0 +1,727 @@
+{
+  "evidence_class": "OBSERVED_PRIMARY_SOURCE",
+  "failures": [],
+  "guards": [
+    "body must start with %PDF",
+    "extracted text must exceed 20000 chars",
+    "each paper must contain a required phrase from its own abstract"
+  ],
+  "papers": [
+    {
+      "arxiv_id": "2510.04618",
+      "chunks": [
+        {
+          "char_end": 4000,
+          "char_start": 0,
+          "chunk": 0,
+          "page_end": 2,
+          "page_start": 32,
+          "sha256": "7569e8445b390c6cf58653409f59f0715f574b739dcdfec7542a6c9393cbb2fd"
+        },
+        {
+          "char_end": 8000,
+          "char_start": 4000,
+          "chunk": 1,
+          "page_end": 3,
+          "page_start": 2,
+          "sha256": "1aab26c0c2141c71c06f917e60b78d09c58790c4c9af4125ae4442dd4b0abf18"
+        },
+        {
+          "char_end": 12000,
+          "char_start": 8000,
+          "chunk": 2,
+          "page_end": 4,
+          "page_start": 3,
+          "sha256": "1f166308fae5149ce682d6ab5993e7b606055828316f38fbe35e03973bd988f0"
+        },
+        {
+          "char_end": 16000,
+          "char_start": 12000,
+          "chunk": 3,
+          "page_end": 5,
+          "page_start": 4,
+          "sha256": "f37531534148e06de988bfc8249bd7a5a8c6afc46313d5e5c16102ee22c36c8e"
+        },
+        {
+          "char_end": 20000,
+          "char_start": 16000,
+          "chunk": 4,
+          "page_end": 6,
+          "page_start": 5,
+          "sha256": "ce147093b1b5be5fb4c367c2aafcfc2e6c4acaf4961d57e0ba06dcd20fb06142"
+        },
+        {
+          "char_end": 24000,
+          "char_start": 20000,
+          "chunk": 5,
+          "page_end": 7,
+          "page_start": 6,
+          "sha256": "d4df505327d8018f5319467221d8fa6a67c872e6a91d29fecd90768dd45a4e3d"
+        },
+        {
+          "char_end": 28000,
+          "char_start": 24000,
+          "chunk": 6,
+          "page_end": 8,
+          "page_start": 7,
+          "sha256": "58c840915a7c2232d139ef88156a82e7b6f871725308658a6b15c9f9725bfb79"
+        },
+        {
+          "char_end": 32000,
+          "char_start": 28000,
+          "chunk": 7,
+          "page_end": 9,
+          "page_start": 8,
+          "sha256": "d22ed2153b8ff90a5c559dc1c03b7cd28ff27f551a9a95eba88712343174b930"
+        },
+        {
+          "char_end": 36000,
+          "char_start": 32000,
+          "chunk": 8,
+          "page_end": 10,
+          "page_start": 9,
+          "sha256": "c21a15df43f6a7c1aa1b00707c51f6be1e9481741d42773a5586c02751b0783f"
+        },
+        {
+          "char_end": 40000,
+          "char_start": 36000,
+          "chunk": 9,
+          "page_end": 11,
+          "page_start": 10,
+          "sha256": "0c1d88da8cf10c56b2903f1cae21a1646d1391451c46a315121a50f56b8fc610"
+        },
+        {
+          "char_end": 44000,
+          "char_start": 40000,
+          "chunk": 10,
+          "page_end": 12,
+          "page_start": 11,
+          "sha256": "4ff92b336dd2439c9d96bcef1a2149d116f7c18a58daf5fe1e7589d9c5513391"
+        },
+        {
+          "char_end": 48000,
+          "char_start": 44000,
+          "chunk": 11,
+          "page_end": 13,
+          "page_start": 12,
+          "sha256": "0ebd8cc88cacddd25ed38932295a98df93e678f18bdf628a3b9c791958f7b0d4"
+        },
+        {
+          "char_end": 52000,
+          "char_start": 48000,
+          "chunk": 12,
+          "page_end": 14,
+          "page_start": 13,
+          "sha256": "c20e6c8e593482894f3ac38ae702cd050720783774c891a693d9989a90d2abc4"
+        },
+        {
+          "char_end": 56000,
+          "char_start": 52000,
+          "chunk": 13,
+          "page_end": 16,
+          "page_start": 14,
+          "sha256": "4c8832f505d4182598b079aaff787721ee86b658740883c9f55da22262ee4f08"
+        },
+        {
+          "char_end": 60000,
+          "char_start": 56000,
+          "chunk": 14,
+          "page_end": 17,
+          "page_start": 16,
+          "sha256": "9a6b91f3c4003252797fb08d70529f496d3dd45567d38f511e965fab83e3ef77"
+        },
+        {
+          "char_end": 64000,
+          "char_start": 60000,
+          "chunk": 15,
+          "page_end": 19,
+          "page_start": 17,
+          "sha256": "7725d2bd7cdc80e81bfac2932438aa0d054a8ad97e3f98f310d296c4b4f17271"
+        },
+        {
+          "char_end": 68000,
+          "char_start": 64000,
+          "chunk": 16,
+          "page_end": 20,
+          "page_start": 19,
+          "sha256": "3d914dbde10030c1b5a7c4d470e44cc618a97c409d0bc14dfc7f25c4a6101dbe"
+        },
+        {
+          "char_end": 72000,
+          "char_start": 68000,
+          "chunk": 17,
+          "page_end": 21,
+          "page_start": 20,
+          "sha256": "ed8e1ce2652aab7f181ff07febe6d7e83c5b580b537b56632652215c7265543f"
+        },
+        {
+          "char_end": 76000,
+          "char_start": 72000,
+          "chunk": 18,
+          "page_end": 22,
+          "page_start": 21,
+          "sha256": "b0f82553e39ed5b9fb5a6f546e813754789555b9407544115c7ff3e6d288cdc9"
+        },
+        {
+          "char_end": 80000,
+          "char_start": 76000,
+          "chunk": 19,
+          "page_end": 24,
+          "page_start": 22,
+          "sha256": "38f2fdaec95e0442f21a18dc9d6b9a1cc99cae833586a7a2c7f7113fb713f858"
+        },
+        {
+          "char_end": 84000,
+          "char_start": 80000,
+          "chunk": 20,
+          "page_end": 25,
+          "page_start": 24,
+          "sha256": "bc2365cff3a709b1e48a8ee87527d2c8f9415d8f2d1af42449db9371341e3b3f"
+        },
+        {
+          "char_end": 88000,
+          "char_start": 84000,
+          "chunk": 21,
+          "page_end": 26,
+          "page_start": 25,
+          "sha256": "c551daa1816955ff37ed2025c3a6b083171af8a0fc954a6e277cd336630eb9ff"
+        },
+        {
+          "char_end": 92000,
+          "char_start": 88000,
+          "chunk": 22,
+          "page_end": 27,
+          "page_start": 26,
+          "sha256": "5bebe3125113f519ef88a897aa5209ad330be0f1c6b7fba53c904bc6a6b05b07"
+        },
+        {
+          "char_end": 96000,
+          "char_start": 92000,
+          "chunk": 23,
+          "page_end": 28,
+          "page_start": 27,
+          "sha256": "43bd64a511739b5cb76cae2fd2391f26aeb71a16fe9a9b7d9787165e4154ecdc"
+        },
+        {
+          "char_end": 100000,
+          "char_start": 96000,
+          "chunk": 24,
+          "page_end": 28,
+          "page_start": 28,
+          "sha256": "6213e09869c625ce00e6bc8bd729a0b5363b55c70101a6e435d7fe22a4c3e34f"
+        },
+        {
+          "char_end": 104000,
+          "char_start": 100000,
+          "chunk": 25,
+          "page_end": 29,
+          "page_start": 28,
+          "sha256": "1b79f537a0f7b201c29d0489f91e024fb4ccbb96bf7512726f9ce0af90242100"
+        },
+        {
+          "char_end": 108000,
+          "char_start": 104000,
+          "chunk": 26,
+          "page_end": 31,
+          "page_start": 29,
+          "sha256": "71dc2e42f7e74be20e4ec32e5272c1d21f8c086bb7ba6a5e7c3a9ab6745d3dd7"
+        },
+        {
+          "char_end": 112000,
+          "char_start": 108000,
+          "chunk": 27,
+          "page_end": 32,
+          "page_start": 31,
+          "sha256": "5d3bfe239425eb4a58ad441742458f114f35be415d7af0722ec92c542d8b8bde"
+        },
+        {
+          "char_end": 112095,
+          "char_start": 112000,
+          "chunk": 28,
+          "page_end": 32,
+          "page_start": 32,
+          "sha256": "1527cc92d822f524a2ef5c358a4e9d1960d12f8be81ed232fe635973e4bde24f"
+        }
+      ],
+      "n_chunks": 29,
+      "n_pages": 32,
+      "pdf_bytes": 2313268,
+      "pdf_sha256": "51050ced82df75c143b151262d5af8763916968ca50374bd8ff778f40552b0ad",
+      "required_phrase": "Agentic Context Engineering",
+      "role": "ace",
+      "text_chars": 112095,
+      "text_path": "design/zone_a/evidence/arxiv_corpus/2510.04618.md",
+      "text_sha256": "5dba4470b39211b87e487375552571140ab4f941c67d5c432bd434975394dba9",
+      "title": "Agentic Context Engineering: Evolving Contexts for Self-Improving Language Models"
+    },
+    {
+      "arxiv_id": "2609.38879",
+      "chunks": [
+        {
+          "char_end": 4000,
+          "char_start": 0,
+          "chunk": 0,
+          "page_end": 2,
+          "page_start": 35,
+          "sha256": "b2540b9ba856d786ac99959d7f2d846c6255a743d688f5fe0e386ed99e956879"
+        },
+        {
+          "char_end": 8000,
+          "char_start": 4000,
+          "chunk": 1,
+          "page_end": 3,
+          "page_start": 2,
+          "sha256": "bdaa4ee96aa99ef0c4cd9803087bab948831ee641df9396d26d9928983e75d2e"
+        },
+        {
+          "char_end": 12000,
+          "char_start": 8000,
+          "chunk": 2,
+          "page_end": 4,
+          "page_start": 3,
+          "sha256": "4167f5ad538ba6a328fd47a1d8c9969c3f92d5a7d309dd802b225c43264269e6"
+        },
+        {
+          "char_end": 16000,
+          "char_start": 12000,
+          "chunk": 3,
+          "page_end": 4,
+          "page_start": 4,
+          "sha256": "aa07e30f02218c29d2ba99caeb165a0431f24125ef5269bba88d8fc5e5b0bbd8"
+        },
+        {
+          "char_end": 20000,
+          "char_start": 16000,
+          "chunk": 4,
+          "page_end": 5,
+          "page_start": 4,
+          "sha256": "73fb84f48188c156c782cc080597936aafe3ad57b0601fd66733b8eb55ff0c50"
+        },
+        {
+          "char_end": 24000,
+          "char_start": 20000,
+          "chunk": 5,
+          "page_end": 6,
+          "page_start": 5,
+          "sha256": "be21ff3b42f67ac03601faeb5916904a99df2ca9d852ded1bf3c1cf7ddf3aff0"
+        },
+        {
+          "char_end": 28000,
+          "char_start": 24000,
+          "chunk": 6,
+          "page_end": 8,
+          "page_start": 6,
+          "sha256": "2581c3668ccdb25eaeb4a169f82ef7cd51133635dc7bb803d300ead0dc5777ce"
+        },
+        {
+          "char_end": 32000,
+          "char_start": 28000,
+          "chunk": 7,
+          "page_end": 9,
+          "page_start": 8,
+          "sha256": "3f7030c93ba84f8d3e3acb6b37875b5f8f5a71f53f8345489227be8d448991a4"
+        },
+        {
+          "char_end": 36000,
+          "char_start": 32000,
+          "chunk": 8,
+          "page_end": 10,
+          "page_start": 9,
+          "sha256": "6b5797cfb95a3d93b7bba85b9fc9bb0f37ec70aa8afff90a483a4daf947a5b84"
+        },
+        {
+          "char_end": 40000,
+          "char_start": 36000,
+          "chunk": 9,
+          "page_end": 11,
+          "page_start": 10,
+          "sha256": "ef45a007977479115b538753757939e43ac81273b2250dfd218a4a262f575110"
+        },
+        {
+          "char_end": 44000,
+          "char_start": 40000,
+          "chunk": 10,
+          "page_end": 12,
+          "page_start": 11,
+          "sha256": "1b399cc2cc78d3c0e8dbabdc37ec738807ab2bc59b39114e6a63a0e4f1ed9e34"
+        },
+        {
+          "char_end": 48000,
+          "char_start": 44000,
+          "chunk": 11,
+          "page_end": 13,
+          "page_start": 12,
+          "sha256": "ce9ec8e487797965d40f8d3aa8666d98e3d4de179ee34d6e03853a84986f4307"
+        },
+        {
+          "char_end": 52000,
+          "char_start": 48000,
+          "chunk": 12,
+          "page_end": 14,
+          "page_start": 13,
+          "sha256": "a7c00b58f077111b9e158f917421f7bdd239f4168622b4914e73897eda9be7c7"
+        },
+        {
+          "char_end": 56000,
+          "char_start": 52000,
+          "chunk": 13,
+          "page_end": 15,
+          "page_start": 14,
+          "sha256": "ce33e0191d6674a8d54254e7abdf5f3a68c514f9773c734ea2546d5182ef806b"
+        },
+        {
+          "char_end": 60000,
+          "char_start": 56000,
+          "chunk": 14,
+          "page_end": 16,
+          "page_start": 15,
+          "sha256": "3b6d35d6b339eb1fc6f10fd145f7be9d26520a1a6dab514b6a98b80635dcca67"
+        },
+        {
+          "char_end": 64000,
+          "char_start": 60000,
+          "chunk": 15,
+          "page_end": 17,
+          "page_start": 16,
+          "sha256": "e926810d1b3b0a5edfac326af76b360a50834d42527caeaa5713d79c3b55cb28"
+        },
+        {
+          "char_end": 68000,
+          "char_start": 64000,
+          "chunk": 16,
+          "page_end": 18,
+          "page_start": 17,
+          "sha256": "af64de350a66ce1597def77c530d56e9c146bf196d85fb90df5714a08f036be9"
+        },
+        {
+          "char_end": 72000,
+          "char_start": 68000,
+          "chunk": 17,
+          "page_end": 19,
+          "page_start": 18,
+          "sha256": "7b150ffaeb2480f4584841f6ce8e4fbd4e2752b49ba16e081ba1e86215d4c1c0"
+        },
+        {
+          "char_end": 76000,
+          "char_start": 72000,
+          "chunk": 18,
+          "page_end": 20,
+          "page_start": 19,
+          "sha256": "5d02cbb064ead91d63b6bb3ff54ff2b12cf1de3df74daa48f84d911fad706c25"
+        },
+        {
+          "char_end": 80000,
+          "char_start": 76000,
+          "chunk": 19,
+          "page_end": 21,
+          "page_start": 20,
+          "sha256": "89d0fdd837b7b4fb32e10b7020d4af0e87b1554948d4fd3e1390b63ac226503a"
+        },
+        {
+          "char_end": 84000,
+          "char_start": 80000,
+          "chunk": 20,
+          "page_end": 22,
+          "page_start": 21,
+          "sha256": "d0bfc595f0e3fe601f39d1db8e1aabe9b2b6f2096d71c262bff77a1b6a5f7d40"
+        },
+        {
+          "char_end": 88000,
+          "char_start": 84000,
+          "chunk": 21,
+          "page_end": 23,
+          "page_start": 22,
+          "sha256": "f1562d4727f761011c02928bfcb06570842a775e0eae428c30bd25c31671df15"
+        },
+        {
+          "char_end": 92000,
+          "char_start": 88000,
+          "chunk": 22,
+          "page_end": 24,
+          "page_start": 23,
+          "sha256": "74e3cef1ef83e85fd087278df9b451f050d25e1d2b0b569fe7631933dfd57989"
+        },
+        {
+          "char_end": 96000,
+          "char_start": 92000,
+          "chunk": 23,
+          "page_end": 25,
+          "page_start": 24,
+          "sha256": "c5504ff3e75abec973535b303203214794e5d9d4e2a65f34dba5fcd20001cd25"
+        },
+        {
+          "char_end": 100000,
+          "char_start": 96000,
+          "chunk": 24,
+          "page_end": 26,
+          "page_start": 25,
+          "sha256": "8c47f8fc4922374a584a6b0fb868111c13ffcb3f61c440966bb01020ed36f92a"
+        },
+        {
+          "char_end": 104000,
+          "char_start": 100000,
+          "chunk": 25,
+          "page_end": 28,
+          "page_start": 26,
+          "sha256": "da0b0376b02f34e1eeff90e1603577ca5e495494c516b3cac70863a2df50d600"
+        },
+        {
+          "char_end": 108000,
+          "char_start": 104000,
+          "chunk": 26,
+          "page_end": 29,
+          "page_start": 28,
+          "sha256": "9cee0a3f878aeddd0531379449133a454c419c02cbe391ee8e15a84bf05694f7"
+        },
+        {
+          "char_end": 112000,
+          "char_start": 108000,
+          "chunk": 27,
+          "page_end": 30,
+          "page_start": 29,
+          "sha256": "b00a92ce0afe80805338b70d37b4ecac4046d59f586b5cbd8d1cdaad2733546c"
+        },
+        {
+          "char_end": 116000,
+          "char_start": 112000,
+          "chunk": 28,
+          "page_end": 31,
+          "page_start": 30,
+          "sha256": "480ec42d1e13c26d771e7b3577ce5eca5720bf77f11e00510b6c9b0ab6136dbf"
+        },
+        {
+          "char_end": 120000,
+          "char_start": 116000,
+          "chunk": 29,
+          "page_end": 33,
+          "page_start": 31,
+          "sha256": "f0498bdc2cc48bee3f8befbe725c8ba49c1ff8565437b1aca336b5f8e631a4ba"
+        },
+        {
+          "char_end": 124000,
+          "char_start": 120000,
+          "chunk": 30,
+          "page_end": 34,
+          "page_start": 33,
+          "sha256": "7d3be993aebd028a557a0c5d9f5e4211f1ca0a9b009727d5bd6ab02d3ea0f9ca"
+        },
+        {
+          "char_end": 125515,
+          "char_start": 124000,
+          "chunk": 31,
+          "page_end": 35,
+          "page_start": 34,
+          "sha256": "cb5d43020129051e58af3f80f12171d9584a3fc17cc9caa3ffe7bd2669a33340"
+        }
+      ],
+      "n_chunks": 32,
+      "n_pages": 35,
+      "pdf_bytes": 3387998,
+      "pdf_sha256": "4b785a3e3bb345a50c5aa299be4a6589c58da0a0af36d7c52a964435040d2519",
+      "required_phrase": "FoldingCorpus",
+      "role": "fold2reason",
+      "text_chars": 125515,
+      "text_path": "design/zone_a/evidence/arxiv_corpus/2609.38879.md",
+      "text_sha256": "ffa3770407f423e3faa7649e0ba44da0c085a1ee5332c0b70a02b2635574be3a",
+      "title": "Does Learning Protein Folding Generalize to Broader Reasoning?"
+    },
+    {
+      "arxiv_id": "2610.12349",
+      "chunks": [
+        {
+          "char_end": 4000,
+          "char_start": 0,
+          "chunk": 0,
+          "page_end": 1,
+          "page_start": 23,
+          "sha256": "b8ff5c3616aa367069398b4f0595fcce9913229dfa6c85014185249d1b0cfda3"
+        },
+        {
+          "char_end": 8000,
+          "char_start": 4000,
+          "chunk": 1,
+          "page_end": 3,
+          "page_start": 1,
+          "sha256": "5406d2e72305dfcf7e1c52331f8d1e57247c419377fb40d232710adf4c979409"
+        },
+        {
+          "char_end": 12000,
+          "char_start": 8000,
+          "chunk": 2,
+          "page_end": 4,
+          "page_start": 3,
+          "sha256": "7251b981302c51320c1dbe2319a3bb3cf4978b91f5166e5fd40108cc92aff72b"
+        },
+        {
+          "char_end": 16000,
+          "char_start": 12000,
+          "chunk": 3,
+          "page_end": 5,
+          "page_start": 4,
+          "sha256": "b580f43335d1689e441d06450d307f1ca257516d623303a1717ab74ef73acb67"
+        },
+        {
+          "char_end": 20000,
+          "char_start": 16000,
+          "chunk": 4,
+          "page_end": 6,
+          "page_start": 5,
+          "sha256": "7b5f4ce17bdfcfaa51bc53760761b699351cd8e71d900dfff801fbdb7fb0e91c"
+        },
+        {
+          "char_end": 24000,
+          "char_start": 20000,
+          "chunk": 5,
+          "page_end": 6,
+          "page_start": 6,
+          "sha256": "7270b3be869fb1560c0cfe0ed472eda3ff999f0592b67cd677a448e342c1653f"
+        },
+        {
+          "char_end": 28000,
+          "char_start": 24000,
+          "chunk": 6,
+          "page_end": 8,
+          "page_start": 6,
+          "sha256": "51edf8dac5f9697987312ff2d804866813a298f5842fbd784b381e7ae68b63b2"
+        },
+        {
+          "char_end": 32000,
+          "char_start": 28000,
+          "chunk": 7,
+          "page_end": 9,
+          "page_start": 8,
+          "sha256": "77e2a41a95dc57e05ef6c0976eef913614579e9e36afcbd6be07f5c9b8d40bc2"
+        },
+        {
+          "char_end": 36000,
+          "char_start": 32000,
+          "chunk": 8,
+          "page_end": 10,
+          "page_start": 9,
+          "sha256": "d733bde5e5fc461519f775b3dbdc6386414f9324da2141129ec320a4135db4ae"
+        },
+        {
+          "char_end": 40000,
+          "char_start": 36000,
+          "chunk": 9,
+          "page_end": 11,
+          "page_start": 10,
+          "sha256": "0c5eae92ed5b80daae3f40aefdf4e31d2778ab71ad2a83237de737cafb24dd12"
+        },
+        {
+          "char_end": 44000,
+          "char_start": 40000,
+          "chunk": 10,
+          "page_end": 12,
+          "page_start": 11,
+          "sha256": "655ef9b5d8b53cf36adee0657a3460471b1e475a206ef5efeb79e84bc2c77653"
+        },
+        {
+          "char_end": 48000,
+          "char_start": 44000,
+          "chunk": 11,
+          "page_end": 13,
+          "page_start": 12,
+          "sha256": "893a61cc59649fc6b2cedbf30d94e1858ac0d6c6579281a90d22203f3ea56615"
+        },
+        {
+          "char_end": 52000,
+          "char_start": 48000,
+          "chunk": 12,
+          "page_end": 15,
+          "page_start": 13,
+          "sha256": "c2b72b0dff087d6ec5786bff94763ffa563430e9fcbfde68ceee93bbc8f2dfe2"
+        },
+        {
+          "char_end": 56000,
+          "char_start": 52000,
+          "chunk": 13,
+          "page_end": 16,
+          "page_start": 15,
+          "sha256": "119f28001b489e3593ccbdcc2ed952fd9af68a9cc11ebf578ccd465c4a026811"
+        },
+        {
+          "char_end": 60000,
+          "char_start": 56000,
+          "chunk": 14,
+          "page_end": 17,
+          "page_start": 16,
+          "sha256": "782b338e4a64e08a8e0e020dd9244a4103c047b83e87847705d88aa1109eb748"
+        },
+        {
+          "char_end": 64000,
+          "char_start": 60000,
+          "chunk": 15,
+          "page_end": 18,
+          "page_start": 17,
+          "sha256": "e397709132e91f1472b0bc3dbe26da6375915f636cb0bdf209378097fc67b646"
+        },
+        {
+          "char_end": 68000,
+          "char_start": 64000,
+          "chunk": 16,
+          "page_end": 19,
+          "page_start": 18,
+          "sha256": "b193f90e7e9956abd7e787b68b70bd33659915eb7a618a7bc33df15bf6a690a3"
+        },
+        {
+          "char_end": 72000,
+          "char_start": 68000,
+          "chunk": 17,
+          "page_end": 20,
+          "page_start": 19,
+          "sha256": "c3eeb2f772ce3c8508fdb5bfea542f2e31b8bc7b4548bbd6d70119a1e8c2bdd1"
+        },
+        {
+          "char_end": 76000,
+          "char_start": 72000,
+          "chunk": 18,
+          "page_end": 21,
+          "page_start": 20,
+          "sha256": "7547c3a598c50d4af7ecfa010056929689a6c7fb460015163e26d0a1716b8123"
+        },
+        {
+          "char_end": 80000,
+          "char_start": 76000,
+          "chunk": 19,
+          "page_end": 22,
+          "page_start": 21,
+          "sha256": "a027b107143a12aa1d0a3d4e1f24351f52210abf663289c3257b2ecd91960d72"
+        },
+        {
+          "char_end": 84000,
+          "char_start": 80000,
+          "chunk": 20,
+          "page_end": 23,
+          "page_start": 22,
+          "sha256": "24dc53ed416293890f3b4b0dd936e605a94ff2dd5bd3a12fb6d0ffe069d31d65"
+        },
+        {
+          "char_end": 84874,
+          "char_start": 84000,
+          "chunk": 21,
+          "page_end": 23,
+          "page_start": 23,
+          "sha256": "10a8da39a88a2c79199ece6425651a368709b2acf55f09a58fa7dcbe2e64ae6b"
+        }
+      ],
+      "n_chunks": 22,
+      "n_pages": 23,
+      "pdf_bytes": 1661904,
+      "pdf_sha256": "08414ade6ff17b681f241955b5bd25de133aa90f2f45fa2dce7807f9b1faf802",
+      "required_phrase": "SplitJEPA",
+      "role": "splitjepa",
+      "text_chars": 84874,
+      "text_path": "design/zone_a/evidence/arxiv_corpus/2610.12349.md",
+      "text_sha256": "379f9458a9dff005617d7949670e4ad8b3ed63712c5e7fb089522c603f1dfb9a",
+      "title": "SplitJEPA: Learning Invariant and Variant Latent Worlds without Reconstruction"
+    }
+  ],
+  "retrieval": {
+    "retrieved_utc": "2026-10-11T04:43:32Z",
+    "url_template": "https://arxiv.org/pdf/{aid}",
+    "user_agent": "Mozilla/5.0 (compatible; HENRI-corpus-stager/1.0; +https://github.com/cjc214foodun9/HENRI)"
+  },
+  "schema": "henri.arxiv.corpus.manifest.v1",
+  "what": "Text of the arXiv papers the 2026-10 engineering directives cite. The PDFs are NOT stored; each row carries the source PDF sha256 so the extraction is auditable and the upstream document is identifiable."
+}
