@@ -1,0 +1,87 @@
+{
+  "schema": "henri.persistence.lifetime_filter_gd1.observed.v1",
+  "evidence_class": "OBSERVED",
+  "what": "G-D1 repair by persistence-lifetime filtering, the directive's own remedy.",
+  "baseline_falsified_ratio": 1.4444,
+  "bar": 0.8,
+  "sweep": [
+    {
+      "min_lifetime": 0.0,
+      "within_a": 7,
+      "within_b": 15,
+      "max_within": 15,
+      "min_cross": 2,
+      "ratio": 7.5,
+      "passes": false
+    },
+    {
+      "min_lifetime": 0.5,
+      "within_a": 6,
+      "within_b": 14,
+      "max_within": 14,
+      "min_cross": 2,
+      "ratio": 7.0,
+      "passes": false
+    },
+    {
+      "min_lifetime": 1.0,
+      "within_a": 3,
+      "within_b": 15,
+      "max_within": 15,
+      "min_cross": 2,
+      "ratio": 7.5,
+      "passes": false
+    },
+    {
+      "min_lifetime": 2.0,
+      "within_a": 1,
+      "within_b": 5,
+      "max_within": 5,
+      "min_cross": 0,
+      "ratio": Infinity,
+      "passes": false
+    },
+    {
+      "min_lifetime": 2.5,
+      "within_a": 1,
+      "within_b": 4,
+      "max_within": 4,
+      "min_cross": 0,
+      "ratio": Infinity,
+      "passes": false
+    },
+    {
+      "min_lifetime": 3.0,
+      "within_a": 1,
+      "within_b": 5,
+      "max_within": 5,
+      "min_cross": 0,
+      "ratio": Infinity,
+      "passes": false
+    }
+  ],
+  "best": {
+    "min_lifetime": 0.5,
+    "within_a": 6,
+    "within_b": 14,
+    "max_within": 14,
+    "min_cross": 2,
+    "ratio": 7.0,
+    "passes": false
+  },
+  "verdict": "FAIL_LIFETIME_FILTER",
+  "config": {
+    "epsilons": [
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0,
+      9.0,
+      10.0,
+      11.0,
+      12.0
+    ],
+    "max_models": 12
+  }
+}

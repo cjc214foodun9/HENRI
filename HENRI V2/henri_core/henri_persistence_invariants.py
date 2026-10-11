@@ -232,3 +232,116 @@ def separation_test(same_models: list, other: np.ndarray, epsilons: np.ndarray,
         "note": "separation is the falsifiable form of invariance: PH is stable, not "
                 "invariant, so equality cannot hold and must not be asserted.",
     }
+
+
+def persistence_pairs(D: np.ndarray, eps_max: float | None = None,
+                      max_triangles: int = 4_000_000) -> tuple:
+    """Exact H0 and H1 persistence pairs of the Vietoris-Rips filtration of D.
+
+    REPAIRS THE MEASURED FALSIFICATION (ledger, directive 3). Raw Betti CURVES count every
+    feature at every filtration step, so short-lived thermal features enter z_H directly.
+    The directive's own remedy is persistence: keep features with lifetime > 2.5 A.
+
+    H0: union-find over edges in filtration order; the component with the later birth dies
+        at the merge distance. All vertices are present at eps = 0.
+    H1: reduce boundary_2 over GF(2) in filtration order. A 2-simplex whose reduced
+        boundary is nonzero pairs with its PIVOT edge: that edge created a cycle at its own
+        filtration value, and the triangle fills it. Only "positive" edges (those that
+        created a cycle rather than merging components) may serve as pivots.
+
+    Returns (h0_pairs, h1_pairs) as lists of (birth, death); one H0 death is inf.
+    """
+    N = D.shape[0]
+    iu = np.triu_indices(N, k=1)
+    dd = D[iu].astype(np.float64)
+    ij = np.column_stack(iu)
+    if eps_max is None:
+        eps_max = float(dd.max())
+    keep = dd <= eps_max
+    E, ed = ij[keep], dd[keep]
+    order = np.argsort(ed, kind="stable")
+    E, ed = E[order], ed[order]
+    nE = E.shape[0]
+    erank = {(int(a), int(b)): r for r, (a, b) in enumerate(E)}
+
+    # ---- H0 and the POSITIVE-edge set (edges that create a cycle, i.e. an H1 birth) ----
+    parent = list(range(N))
+    birth = [0.0] * N
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    positive = [False] * nE
+    h0 = []
+    for r in range(nE):
+        a, b = int(E[r, 0]), int(E[r, 1])
+        ra, rb = find(a), find(b)
+        if ra == rb:
+            positive[r] = True                      # cycle born: H1 birth candidate
+            continue
+        # later birth dies; tie-break by root index so the result is deterministic
+        if birth[ra] > birth[rb] or (birth[ra] == birth[rb] and ra > rb):
+            dead, live = ra, rb
+        else:
+            dead, live = rb, ra
+        h0.append((birth[dead], float(ed[r])))
+        parent[dead] = live
+        birth[live] = min(birth[live], birth[dead])
+    for v in range(N):
+        if find(v) == v:
+            h0.append((birth[v], float("inf")))
+
+    # ---- H1 via boundary_2 reduction over GF(2) ----
+    tris = []
+    for i in range(N):
+        for j in range(i + 1, N):
+            if D[i, j] > eps_max:
+                continue
+            for k in range(j + 1, N):
+                if D[i, k] > eps_max or D[j, k] > eps_max:
+                    continue
+                tris.append((max(D[i, j], D[i, k], D[j, k]), i, j, k))
+    if len(tris) > max_triangles:
+        raise RuntimeError(f"{len(tris)} triangles exceeds max_triangles; coarsen the "
+                           f"grid or raise the cap rather than approximating silently")
+    tris.sort(key=lambda x: x[0])
+    pivots, h1 = {}, []
+    for t, i, j, k in tris:
+        x = (1 << erank[(i, j)]) ^ (1 << erank[(i, k)]) ^ (1 << erank[(j, k)])
+        while x:
+            p = x.bit_length() - 1
+            if p in pivots:
+                x ^= pivots[p]
+            else:
+                break
+        if x:
+            p = x.bit_length() - 1
+            if not positive[p]:
+                # Cannot happen under exact arithmetic: a non-positive edge is already
+                # paired with an H0 class, so its column is eliminated. Fail loudly.
+                raise RuntimeError(f"non-positive edge used as H1 pivot at rank {p}")
+            pivots[p] = x
+            h1.append((float(ed[p]), float(t)))
+    return h0, h1
+
+
+def _lifetime(pair) -> float:
+    b, d = pair
+    return float("inf") if d == float("inf") else float(d - b)
+
+
+def filtered_betti_curves(D: np.ndarray, epsilons: np.ndarray,
+                          min_lifetime: float = 0.0) -> tuple:
+    """beta_0(eps) and beta_1(eps) counting ONLY features whose lifetime >= min_lifetime.
+
+    min_lifetime = 0.0 must reproduce the raw curves: that identity is the self-check.
+    """
+    h0, h1 = persistence_pairs(D)
+    b0, b1 = [], []
+    for e in np.asarray(epsilons, dtype=float):
+        b0.append(sum(1 for pr in h0 if pr[0] <= e < pr[1] and _lifetime(pr) >= min_lifetime))
+        b1.append(sum(1 for pr in h1 if pr[0] <= e < pr[1] and _lifetime(pr) >= min_lifetime))
+    return np.array(b0, dtype=int), np.array(b1, dtype=int)
