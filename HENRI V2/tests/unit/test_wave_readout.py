@@ -157,6 +157,81 @@ def test_error_paths():
         raise AssertionError("unknown mode must be rejected")
 
 
+def test_purge_no_exponential_sharpening_in_module_ast():
+    """DIRECTIVE-2 PURGE PIN: exp(s/tau) must not return as a tie-breaker.
+
+    WHY AST AND NOT grep. A grep for "exp(" matches the module DOCSTRING, which
+    legitimately discusses the falsified mechanism. The pin must inspect CODE only, so
+    it walks the parsed tree and looks for actual Call nodes named exp. A comment or a
+    docstring cannot satisfy or defeat this check.
+    """
+    import ast
+    import pathlib
+    src_path = pathlib.Path(_V2) / "henri_core" / "wave_readout.py"
+    tree = ast.parse(src_path.read_text(encoding="utf-8"))
+    offenders = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            f = node.func
+            name = getattr(f, "attr", None) or getattr(f, "id", None)
+            if name in ("exp", "exp2", "expm1", "softmax", "log_softmax"):
+                offenders.append((name, getattr(node, "lineno", -1)))
+    assert offenders == [], (
+        f"monotone sharpening reintroduced in {src_path.name}: {offenders}. "
+        "exp(s/tau) is strictly monotone, so it preserves the maximizer set EXACTLY "
+        "and can never split a tie.")
+    print("  [purge-1] AST walk found no exp/softmax call in wave_readout.py")
+
+
+def test_purge_select_signature_has_no_temperature_parameter():
+    """STRUCTURAL PIN: the selector must offer no tau/temperature knob at all.
+
+    A behavioural test can be satisfied by a tau that happens to be ignored. Inspecting
+    the signature is the tighter contract: reintroducing a temperature parameter is a
+    deliberate change that must also update this test.
+    """
+    import inspect
+    params = set(inspect.signature(select).parameters)
+    banned = {"tau", "temperature", "temp", "beta", "sharpness"}
+    hit = params & banned
+    assert hit == set(), f"selector exposes a sharpening parameter: {sorted(hit)}"
+    assert params == {"sim", "channel", "mode", "atol", "generator"}, sorted(params)
+    print(f"  [purge-2] select() params = {sorted(params)}; no sharpening knob")
+
+
+def test_purge_negative_control_sharpening_can_only_grow_the_tie_group():
+    """NEGATIVE CONTROL: the measured REASON the purge is correct.
+
+    exp(s/tau) is strictly increasing, so a correctly-rounded float exp is monotone
+    and the maximizer set is preserved exactly; rounding can only MERGE distinct scores,
+    which GROWS the tie group. The tie group can therefore never shrink, and at small
+    tau it overflows to inf and swallows the ENTIRE row.
+
+    The assertion is one-directional and falsifiable: for every tau, the sharpened max
+    group is a SUPERSET-EQUAL of the reference group, and at least one tau must strictly
+    enlarge it. If a future edit made the module rely on this, the growth is the defect.
+    """
+    S = _tied_sim()
+    ref = [set(g) for g in max_groups(S)]
+    grew = []
+    for tau in (0.038, 0.1, 1.0, 4.0, 0.001):
+        sharp = torch.exp(S / tau)
+        got = [set(g) for g in max_groups(sharp)]
+        for b in range(S.shape[0]):
+            assert ref[b] <= got[b], (
+                f"tau={tau} row={b}: sharpening SHRANK the max group "
+                f"{ref[b]} -> {got[b]}. A monotone map cannot do that.")
+        if any(len(got[b]) > len(ref[b]) for b in range(S.shape[0])):
+            grew.append(tau)
+    assert grew, "no tau enlarged the group; the demonstration measured nothing"
+    # the overflow case must swallow whole rows -- the extreme failure of the mechanism
+    over = torch.exp(S / 0.001)
+    assert any(len(g) == S.shape[1] for g in max_groups(over)), \
+        "tau=0.001 should overflow to inf and tie the WHOLE row"
+    print(f"  [purge-3] sharpening never shrank a group; grew at tau in {grew};"
+          f" tau=0.001 ties all {S.shape[1]} columns")
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     bad = 0
