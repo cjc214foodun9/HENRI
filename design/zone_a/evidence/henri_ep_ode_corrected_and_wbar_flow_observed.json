@@ -1,0 +1,82 @@
+{
+  "C1_identity": {
+    "0": {
+      "ep0": 0.0,
+      "ep1": 0.02760784700512886,
+      "up": 0.02895747870206833,
+      "dn": 0.03624008223414421,
+      "pred": -0.007282603532075882,
+      "resid_abs": 0.03489045053720474,
+      "resid_rel": 3.489045053720474e+28,
+      "dead": 0.4375
+    },
+    "1": {
+      "ep0": 0.0,
+      "ep1": 0.05957307294011116,
+      "up": 0.05534036085009575,
+      "dn": 0.11478270590305328,
+      "pred": -0.059442345052957535,
+      "resid_abs": 0.1190154179930687,
+      "resid_rel": 1.1901541799306868e+29,
+      "dead": 0.484375
+    },
+    "2": {
+      "ep0": 0.0,
+      "ep1": 0.17219695448875427,
+      "up": 0.10665925592184067,
+      "dn": 0.46405595541000366,
+      "pred": -0.357396699488163,
+      "resid_abs": 0.5295936539769173,
+      "resid_rel": 5.2959365397691726e+29,
+      "dead": 0.4375
+    }
+  },
+  "C1_holds": false,
+  "wbar_arms": {
+    "A_no_rule": {
+      "ep_start": 0.0,
+      "ep_end": 1.4482840597629547,
+      "abar_start": 0.8998589813709259,
+      "abar_end": 1.2097565829753876,
+      "vbar_start": 0.0,
+      "vbar_end": 5.033487319946289,
+      "collapse": false,
+      "nonfinite": false,
+      "steps_done": 150,
+      "ep_reduced": false
+    },
+    "B_paper_flow": {
+      "ep_start": 0.0,
+      "ep_end": 40.21181583404541,
+      "abar_start": 0.8998589813709259,
+      "abar_end": 21.422937154769897,
+      "vbar_start": 0.0,
+      "vbar_end": 0.7565473914146423,
+      "collapse": false,
+      "nonfinite": false,
+      "steps_done": 150,
+      "ep_reduced": false
+    },
+    "C_falsified_closure": {
+      "ep_start": 0.0,
+      "ep_end": 0.21117092669010162,
+      "abar_start": 0.8998589813709259,
+      "abar_end": 0.0,
+      "vbar_start": 0.0,
+      "vbar_end": 0.12890209257602692,
+      "collapse": true,
+      "nonfinite": false,
+      "steps_done": 150,
+      "ep_reduced": false
+    }
+  },
+  "paper_rate": {
+    "eta_wbar": 0.8,
+    "gamma_wbar": 0.001,
+    "source": "PNAS SI: eta_W=1.0, eta_Wbar=0.8, eta_V=eta_Vbar=0.8, decay 1e-3 W/Wbar, 0.01 V/Vbar"
+  },
+  "kill_test": {
+    "collapse_factor": 0.05,
+    "bar": "ep_end < ep_start"
+  }
+}

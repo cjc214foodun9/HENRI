@@ -1,0 +1,48 @@
+{
+  "schema": "henri.heterosynaptic.ep_c1_term_decomposition.observed.v1",
+  "evidence_class": "OBSERVED",
+  "source_probe": "HENRI V2/experiments/verification/diag_ep_vdt.py",
+  "module": "HENRI V2/henri_core/henri_heterosynaptic.py",
+  "config": {
+    "dims": [
+      32,
+      64,
+      64,
+      32
+    ],
+    "gamma": 0.02,
+    "eta_w": 0.002,
+    "warmup_steps": 40,
+    "retract": false,
+    "seed": 0,
+    "n_samples": 4
+  },
+  "identity_under_test": "Delta_F = dV.T0 + V0.dT + dV.dT  (algebraic, exact)",
+  "measured": {
+    "layer_0": {
+      "abs_V_dT": 0.0514,
+      "abs_dV_T": 0.0605,
+      "resid_abs": 0.0552,
+      "resid_minus_VdT": 0.0041333
+    },
+    "layer_1": {
+      "abs_V_dT": 11.0941,
+      "abs_dV_T": 1.0233,
+      "resid_abs": 13.3407,
+      "resid_minus_VdT": 2.4232
+    },
+    "layer_2": {
+      "abs_V_dT": 2341.521,
+      "abs_dV_T": 227.6249,
+      "resid_abs": 4576.1299,
+      "resid_minus_VdT": 2287.0
+    }
+  },
+  "conclusion": "The one-step E_p identity holds at layer 0 (resid/|E_p| = 1.20e-02 with the corrected downstream term). It fails at layers 1 and 2 because the omitted V.dT term and the second-order dV.dT term dominate there. Layer 2 operates in a large-step regime (|E_p| = 222.98), where a one-step LINEAR identity is not expected to close. C1 is therefore a layer-0 result, not a global one.",
+  "limits": [
+    "Single seed (0), 4 samples, width 32/64. No seed or width sweep for this identity.",
+    "retract=False removes the Stiefel-retraction confound; the shipped path retracts.",
+    "The second-order dV.dT term is INFERRED as the remainder; only the sum is measured.",
+    "Module uses D_d = relu; the paper benchmarks use D_d = I. Both arms reported in probe_ep_c1_fixed.py: layer 0 holds at 1.20e-02 (relu) and 5.89e-02 (I)."
+  ]
+}

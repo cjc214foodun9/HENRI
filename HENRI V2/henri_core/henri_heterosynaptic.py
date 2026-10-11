@@ -82,7 +82,7 @@ class DualStreamNetwork:
                  eta_bar=None, eta_w=DEFAULT_ETA_W, seed=0, dtype=torch.float32,
                  drive_scale="sqrt_d", norm_acts=True,
                  dd_mask=True, ep_closure=False, ep_mode="norm_preserving",
-                 wbar_rule="none"):
+                 wbar_rule="none", eta_wbar=0.8, gamma_wbar=1e-3):
         # STABILISATION, NAMED AS A DEVIATION FROM THE APPENDIX. The appendix rule is
         # UNNORMALISED: a^l = D_u^l h^l, drive^l = outer(abar^l, a^l). Measured in this
         # tree, the unnormalised rule DIVERGES to NaN within ~150 steps at width 48-64
@@ -111,6 +111,13 @@ class DualStreamNetwork:
         self.ep_closure = ep_closure
         self.ep_mode = ep_mode
         self.wbar_rule = wbar_rule
+        # PAPER HYPERPARAMETERS (PNAS SI text, verbatim): "Per-matrix SAL gradient scales
+        # are eta_W = 1.0, eta_Wbar = 0.8, and matched interstream rates eta_V = eta_Vbar
+        # = 0.8. Weight decay is 1e-3 on W and Wbar and 0.01 on V and Vbar."
+        # This tree uses eta_W = 0.002 and gamma = 0.02, so eta_wbar = 0.8 is ~400x and
+        # gamma_wbar = 1e-3 is 20x SMALLER. Both are paper values, not tuned here.
+        self.eta_wbar = eta_wbar
+        self.gamma_wbar = gamma_wbar
         self.eta = eta
         # eta_bar defaults to eta: MATCHED rates are Assumption 1. Passing eta_bar != eta
         # runs the negative control, where Lemma 1 no longer applies.
@@ -222,6 +229,8 @@ class DualStreamNetwork:
             self.W[l].mul_(1.0 - self.gamma).add_(pp)
             if retract:
                 self.W[l].copy_(self._retract(self.W[l]))
+        if self.wbar_rule == "paper":
+            self._wbar_paper(h, abar)
         if self.wbar_rule == "mirror":
             self._wbar_mirror(h, abar)
         if self.ep_closure:
@@ -229,6 +238,34 @@ class DualStreamNetwork:
         if return_deltas:
             return h, abar, deltas
         return h, abar
+
+    @torch.no_grad()
+    def _wbar_paper(self, h, abar):
+        """PAPER-FAITHFUL Wbar flow (default OFF): the SAME local update, TRANSPOSED.
+
+        VERBATIM ANCHOR (PNAS SI text, §D):
+            "...applying the same local update (transposed) and the same weight decay to
+             the forward and feedback weights during training, so their difference decays
+             exponentially and the feedback weights converge to the transpose of the
+             forward weights."
+
+        W^l      receives  dW^l     = eta_W    * outer(pre^l, a^l)    - gamma     * W^l
+                           pre^l    = D_u^{l+1} (Vbar^l abar^{l+1})
+        Wbar^l   receives  dWbar^l  = eta_Wbar * outer(a^l, pre^l)    - gamma_Wbar* Wbar^l
+
+        outer(a^l, pre^l) has shape (d_l, d_{l+1}) = Wbar^l shape: the transposed drive AND
+        the transposed shape. Paper rates eta_Wbar = 0.8, gamma_Wbar = 1e-3.
+
+        THIS IS A FLOW, NOT A SOLVE. The four falsified repairs each SOLVED for Wbar from a
+        rank-deficient Vbar at ONE time point. Solving is a contraction; every arm died with
+        |abar| -> 0.0000. This rule never inverts a matrix.
+        """
+        for l in range(self.n):
+            Du_next = (h[l + 1] > 0).to(self.dtype)
+            pre = Du_next * (self.Vbar[l] @ abar[l + 1])
+            a_l = self._prep(h[l])
+            self.Wbar[l].mul_(1.0 - self.gamma_wbar).add_(
+                self.eta_wbar * torch.outer(a_l, pre))
 
     @torch.no_grad()
     def _wbar_mirror(self, h, abar):

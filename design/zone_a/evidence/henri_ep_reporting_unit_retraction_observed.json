@@ -1,0 +1,35 @@
+{
+  "schema": "henri.heterosynaptic.ep_reporting_unit_retraction.v1",
+  "evidence_class": "RETRACTION",
+  "supersedes": {
+    "claim": "Absolute ||E_p|| rises monotonically, so the pathway-alignment condition is defective / E_p diverges.",
+    "where": "session record; committed receipt henri_heterosynaptic_ep_mask_correction_observed.json",
+    "status": "SUPERSEDED \u2014 not deleted"
+  },
+  "corrected_measurement": {
+    "probe": "HENRI V2/experiments/verification/probe_ep_ode.py",
+    "layer_0": {
+      "abs_ep_10": 0.3165,
+      "abs_ep_150": 1.4483,
+      "abs_ratio": 4.576,
+      "ratio_10": 1.1955,
+      "ratio_150": 0.9781,
+      "ratio_trend": "DECREASING"
+    },
+    "layer_1": {
+      "abs_ep_10": 0.7087,
+      "abs_ep_150": 3.2111,
+      "abs_ratio": 4.531,
+      "ratio_10": 0.8635,
+      "ratio_150": 0.712,
+      "ratio_trend": "DECREASING"
+    },
+    "paper_reported_quantity": "||E_p|| / ||F|| (PNAS Fig S3 D)"
+  },
+  "permissible_residual_claim": "Absolute ||E_p|| rises ~4.5x at both layers. The paper's reported ratio ||E_p||/||F|| DECREASES at both layers. The absolute rise is compatible with a growing ||F|| denominator and is NOT a mechanism failure.",
+  "error_mechanism": "Reporting-unit substitution: I read a trend off the ABSOLUTE norm where the source defines the RATIO. Same class as measuring at the wrong layer or with the wrong mask.",
+  "unchanged": [
+    "G-H2b still does not clear its bar (frac 0.467 < 0.90).",
+    "E_p dynamics remain an open problem in the source paper, which states verbatim: 'A theory of when and why Ep grows or decreases remains to be developed.'"
+  ]
+}
