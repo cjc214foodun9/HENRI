@@ -32,6 +32,77 @@ from __future__ import annotations
 
 import torch
 
+# ---------------------------------------------------------------------------------
+# RATIFIED GATE BARS (operator ruling 1, HENRI-SPEC-2026-HETERO-SYNAPSE-DREAM-LOOP-V1)
+# ---------------------------------------------------------------------------------
+# G-SJ3 was split because 0.1500 sat ABOVE the deduplicated-bank ceiling of 0.1367.
+# Lowering a bar to a false victory destroys integrity; keeping an impossible bar halts
+# progress. The bifurcation keeps both halves honest.
+G_SJ3A_BAR = 0.0450            # deduplicated 206-candidate bank, top-1 floor
+G_SJ3A_RANDOM_CONTROL = 0.0046  # matched random control on that bank
+G_SJ3A_LIFT_REQUIRED = 10.0    # the bar must be a VERIFIED 10x lift over the control
+G_SJ3A_INDEX_BAR = 0.005       # |r(slot, pick)| index-neutrality
+# G-SJ3b is BLOCKED ON SUBSYSTEM: it requires henri_resonator_flow.py (Lie-subalgebra
+# factorization) to break the 0.1367 containment ceiling. Measured: that module has
+# ZERO files in the tree. The bar is recorded, NOT lowered and NOT claimed reachable.
+G_SJ3B_BAR = 0.1600
+G_SJ3B_STATUS = "BLOCKED_ON_SUBSYSTEM"
+G_SJ3B_REQUIRES = "henri_resonator_flow.py"
+
+
+def gate_sj3a(top1: float, rand_control: float = G_SJ3A_RANDOM_CONTROL,
+              slot_r: float | None = None) -> dict:
+    """G-SJ3a: deduplicated-bank discrimination floor, 10x over the matched control.
+
+    EVERY clause can fail. The lift clause is what makes the bar meaningful: a top-1
+    above 0.0450 that does NOT clear 10x the control would be indistinguishable from
+    bank luck. The index clause refuses a slot-bound picker even at high accuracy --
+    an index-bound selector is the defect this program keeps catching (argmax scored
+    0.0 with 19.5 sigma drift).
+    """
+    lift = (top1 / rand_control) if rand_control > 0 else float("inf")
+    g = {
+        "top1": top1, "bar": G_SJ3A_BAR, "random_control": rand_control,
+        "lift": round(lift, 6), "lift_required": G_SJ3A_LIFT_REQUIRED,
+        "slot_r": slot_r, "slot_r_required": G_SJ3A_INDEX_BAR,
+        "passes_bar": bool(top1 >= G_SJ3A_BAR),
+        "passes_lift": bool(lift >= G_SJ3A_LIFT_REQUIRED),
+        "passes_index_neutrality": bool(slot_r is not None
+                                        and abs(slot_r) <= G_SJ3A_INDEX_BAR),
+        "passes": bool(top1 >= G_SJ3A_BAR and lift >= G_SJ3A_LIFT_REQUIRED
+                       and slot_r is not None and abs(slot_r) <= G_SJ3A_INDEX_BAR),
+    }
+    # A bare bool cannot distinguish "the selector is bad" from "the index statistic was
+    # never measured". Those need opposite responses, so the gate names which it is.
+    if not (top1 >= G_SJ3A_BAR and lift >= G_SJ3A_LIFT_REQUIRED):
+        g["verdict"] = "G_SJ3A_FAILED_DISCRIMINATION"
+    elif slot_r is None:
+        g["verdict"] = "G_SJ3A_BLOCKED_INDEX_UNMEASURED"
+        g["blocked_reason"] = (
+            "The l>=0.0450 and 10x-lift clauses hold, but slot_r on the DEDUPLICATED "
+            "206-candidate bank has never been measured. The recorded r = -0.0216 "
+            "belongs to the FULL 1092-row bank (the 0.1556 row). Those are different "
+            "banks; the full-bank statistic does not license a dedup-bank claim.")
+    else:
+        g["verdict"] = ("G_SJ3A_PASSED" if abs(slot_r) <= G_SJ3A_INDEX_BAR
+                        else "G_SJ3A_FAILED_INDEX_BOUND")
+    return g
+
+
+def gate_sj3b(top1: float | None = None) -> dict:
+    """G-SJ3b: explicit BLOCKED marker, never a pass and never a lowered bar."""
+    return {
+        "bar": G_SJ3B_BAR,
+        "status": G_SJ3B_STATUS,
+        "requires_subsystem": G_SJ3B_REQUIRES,
+        "measured_top1": top1,
+        "passes": False,
+        "why": ("BLOCKED ON SUBSYSTEM. The 0.1600 bar presupposes the Tripartite "
+                "Resonator; henri_resonator_flow.py has zero files in the tree and the "
+                "dedup-bank containment ceiling is 0.1367. No SOTA unbinding claim is "
+                "permitted until that module is written and tested."),
+    }
+
 
 def max_groups(sim: torch.Tensor, atol: float = 0.0):
     """sim [B, K] -> list of index lists, one list per row, the argmax tie group."""
