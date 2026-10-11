@@ -49,8 +49,24 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
 
-OUT = os.path.join(HERE, "sagnac_scale_defect_observed.json")
+from receipt_path import is_redirected, resolve_receipt_path  # noqa: E402
+
+# ------------------------------------------------------------------ receipt path
+# ONE override point, so an experimental or pytest invocation cannot clobber the
+# committed artifact. Priority: --out <path> > HENRI_RECEIPT_DIR <dir> > default.
+#
+# MEASURED DEFECT THIS REPAIRS: the path was a bare hardcoded join, so a full-suite
+# `python -m pytest` run REWRITTEN this committed receipt. Observed in this session:
+# `git status` showed the tracked file modified after a test run, and
+# `test_h1_reports_no_tracked_receipt_modifications` failed in the baseline because
+# of it. Committed bytes restored by `git checkout --` (sha256
+# e5f3f4c2eeb62395c87f3c6797b9f3d55380c8d6b48115de8ed07810bcfc28e5).
+# This is the same failure class receipt_path.py was written to prevent.
+DEFAULT_OUT = Path(HERE) / "sagnac_scale_defect_observed.json"
+OUT = str(resolve_receipt_path(DEFAULT_OUT))
 
 
 def unit(n: int, seed: int, D: int) -> torch.Tensor:
@@ -182,8 +198,32 @@ def main() -> int:
                "EPISTEMIC channel to 0 -- is FALSIFIED by measurement (0.999, not 0). "
                "The real cause is the mean-vs-inner-product scaling, and it pins BOTH "
                "channels near 1.0.")}
-    with open(OUT, "w", encoding="utf-8") as fh:
-        json.dump(out, fh, indent=2)
+    # ------------------------------------------------------------------ write guard
+    # WHY A GUARD ON TOP OF receipt_path: resolve_receipt_path() correctly returns the
+    # DEFAULT when no override is present, so a deliberate run still regenerates the
+    # committed receipt in place. That is intended and must stay.
+    #
+    # The hazard is an AUTOMATED invocation that never asked for a receipt.
+    # test_sagnac_scale_consistency.py::test_legacy_scale_is_reproducible_for_ab runs this
+    # script with cwd=ROOT, env=os.environ copy, NO --out, and reads only its STDOUT.
+    # MEASURED: with the receipt_path patch ALONE the artifact still changed
+    # (07d3cc83... -> fa428f5b...) during that test. So receipt_path was necessary but
+    # not sufficient. This guard closes the remaining path.
+    #
+    # Under pytest with no override, the script prints its numbers and does NOT write.
+    # Pass --out (or set HENRI_RECEIPT_DIR) to record a run.
+    under_pytest = bool(os.environ.get("PYTEST_CURRENT_TEST")
+                        or os.environ.get("PYTEST_VERSION"))
+    write_receipt = True
+    if is_redirected(DEFAULT_OUT, OUT):
+        print(f"   NOTICE: REDIRECTED away from the committed receipt {DEFAULT_OUT}")
+    elif under_pytest:
+        write_receipt = False
+        print(f"   NOTICE: under pytest with no override; NOT writing the committed "
+              f"receipt {DEFAULT_OUT} (pass --out to record a run)")
+    if write_receipt:
+        with open(OUT, "w", encoding="utf-8") as fh:
+            json.dump(out, fh, indent=2)
 
     print("=" * 80)
     print(f"SAGNAC SCALE DEFECT  (D={D}, tau_veto=0.35)")
