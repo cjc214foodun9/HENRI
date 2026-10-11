@@ -91,6 +91,10 @@ class Engram:
     info_gain: float = 0.0
     alignment: float = 0.0
     axiomatic: bool = False
+    # NDL (directive 4, HENRI-SPEC-2026-HETERO-SYNAPSE-DREAM-LOOP-V1): provenance.
+    # "synthetic" = a D_u program drawn from the op grammar; "wake" = a replayed real
+    # episode. Defaulted so every existing construction site keeps its prior meaning.
+    origin: str = "synthetic"
 
 
 @dataclass
@@ -116,6 +120,10 @@ class DaydreamConfig:
     gain_floor: float = 0.05                  # legacy alias, see beta_entropy
     beta_entropy: float = 1.0                 # D110: entropy temperature
     entropy_floor: float = 0.05               # D110: uniform mixture floor
+    # NDL (directive 4): fraction of each offline replay batch drawn from replayed
+    # wake episodes rather than synthetic D_u programs. 0.0 disables wake replay and
+    # reproduces the pre-NDL batch exactly.
+    wake_ratio: float = 0.5
 
 
 @dataclass
@@ -147,11 +155,15 @@ class EngramStore:
         self.items: list[Engram] = []
 
     def add(self, spec: str, trace: str, alignment: float,
-            info_gain: float) -> Engram:
+            info_gain: float, origin: str = "synthetic") -> Engram:
         e = Engram(spec=spec, trace=trace, alignment=alignment,
-                   info_gain=info_gain)
+                   info_gain=info_gain, origin=origin)
         self.items.append(e)
         return e
+
+    def wake_items(self) -> list:
+        """NDL: engrams deposited from real wake episodes (origin == "wake")."""
+        return [e for e in self.items if e.origin == "wake"]
 
     def age(self, t: float) -> None:
         """Fractional viscoelastic decay. doc section 4.3 weight w_i(t)."""
@@ -446,6 +458,51 @@ class DaydreamEngine:
         w = torch.softmax(logits, dim=-1)
         return w @ engrams
 
+    # ------------------------------------------------------------------ NDL
+    def ingest_wake(self, spec: str, trace: str, alignment: float = 0.0,
+                    info_gain: float = 0.0) -> Engram:
+        """NDL: deposit ONE real wake episode for later offline replay.
+
+        This is the only entry point for real experience. It stores the episode as a
+        wake-origin engram and does NOT mix it here; interleaving happens in
+        replay_batch, so one episode can be replayed in an order that differs from the
+        order it was observed in (the consolidation property the loop relies on).
+        """
+        return self.store.add(spec, trace, alignment=alignment,
+                              info_gain=info_gain, origin="wake")
+
+    def replay_batch(self, n: int, gen: torch.Generator,
+                     max_len: int = 4) -> list:
+        """NDL: interleave replayed wake episodes with synthetic D_u programs.
+
+        Directive 4: "replay wake episodes interleaved with synthetic programmatic
+        tasks". wake_ratio sets the mixture. With NO wake engrams, or wake_ratio <= 0,
+        this returns exactly stage1_fictive(n) -- so existing callers, receipts, and
+        the frozen control arm are unchanged. Interleaved, not concatenated: block
+        structure would let the optimiser fit each source separately.
+        """
+        wake = self.store.wake_items()
+        ratio = getattr(self.cfg, "wake_ratio", 0.5)
+        if not wake or ratio <= 0.0 or n <= 0:
+            return self.stage1_fictive(n, gen, max_len=max_len)
+        n_wake = min(len(wake), max(1, int(round(n * ratio))), n)
+        synth = self.stage1_fictive(n - n_wake, gen, max_len=max_len)
+        rev = list(reversed(wake))          # most-recent-first replay
+        replay = [(rev[i % len(rev)].spec, rev[i % len(rev)].trace)
+                  for i in range(n_wake)]
+        parts, si, wi, take_wake = [], 0, 0, n_wake >= len(synth)
+        while len(parts) < n:
+            if take_wake and wi < len(replay):
+                parts.append(replay[wi]); wi += 1
+            elif si < len(synth):
+                parts.append(synth[si]); si += 1
+            elif wi < len(replay):
+                parts.append(replay[wi]); wi += 1
+            else:
+                break
+            take_wake = not take_wake
+        return parts
+
     # -------------------------------------------------------------- the loop
     def run(self, corpus, cfg: M4Config,
             dream_max_len: int = 4) -> DaydreamReport:
@@ -464,8 +521,10 @@ class DaydreamEngine:
         ho_tgt = [self.tok.encode(corpus.traces[i]) for i in corpus.heldout_idx]
 
         for epoch in range(self.cfg.epochs):
-            batch = self.stage1_fictive(self.cfg.proposals, gen,
-                                        max_len=dream_max_len)
+            # NDL: draws from the wake store when episodes exist, else identical to
+            # stage1_fictive. With no wake engrams this line is the previous line.
+            batch = self.replay_batch(self.cfg.proposals, gen,
+                                      max_len=dream_max_len)
             # D103: observe the trajectory at EVERY optimiser step, so the
             # Davis-Kahan gate has more than one point per epoch.
             # D108 (self-caught): max(1, steps) gave a zero-step "frozen" arm one
