@@ -1,5 +1,6 @@
 {
   "checks": {
+    "heldout_invariant_persistence_band_exists": false,
     "negative_control_operator_responds": true,
     "sigma_dL_positive_rank_on_all_entries": true,
     "z_H_invariance_holds_on_all_entries": false
@@ -33,6 +34,60 @@
       ],
       "pdb_id": "1D3Z",
       "pdb_sha256": "21099cb88231455fdfab4095dddfadcc85cc4213e105cf5f9cfff2ca21993378",
+      "persistence_band_search": {
+        "fit_models": 5,
+        "spectrum": [
+          {
+            "activation_mean_test": 0.9944,
+            "frac": 0.5,
+            "frac_of_map_kept": 0.1126,
+            "invariant_on_test": false,
+            "n_contacts_kept": 321,
+            "n_contacts_that_differ_on_heldout": 3
+          },
+          {
+            "activation_mean_test": 0.9987,
+            "frac": 0.7,
+            "frac_of_map_kept": 0.1119,
+            "invariant_on_test": false,
+            "n_contacts_kept": 319,
+            "n_contacts_that_differ_on_heldout": 1
+          },
+          {
+            "activation_mean_test": 0.9987,
+            "frac": 0.8,
+            "frac_of_map_kept": 0.1119,
+            "invariant_on_test": false,
+            "n_contacts_kept": 319,
+            "n_contacts_that_differ_on_heldout": 1
+          },
+          {
+            "activation_mean_test": 1.0,
+            "frac": 0.9,
+            "frac_of_map_kept": 0.1112,
+            "invariant_on_test": true,
+            "n_contacts_kept": 317,
+            "n_contacts_that_differ_on_heldout": 0
+          },
+          {
+            "activation_mean_test": 1.0,
+            "frac": 0.95,
+            "frac_of_map_kept": 0.1112,
+            "invariant_on_test": true,
+            "n_contacts_kept": 317,
+            "n_contacts_that_differ_on_heldout": 0
+          },
+          {
+            "activation_mean_test": 1.0,
+            "frac": 1.0,
+            "frac_of_map_kept": 0.1112,
+            "invariant_on_test": true,
+            "n_contacts_kept": 317,
+            "n_contacts_that_differ_on_heldout": 0
+          }
+        ],
+        "test_models": 5
+      },
       "z_H_invariant": {
         "invariance_holds": false,
         "max_abs_variation": 1.0,
@@ -79,6 +134,60 @@
       ],
       "pdb_id": "2K39",
       "pdb_sha256": "827f861ae8940825bc6e541511eb0324bd14f7a2e5bd7ae5c61df92432960363",
+      "persistence_band_search": {
+        "fit_models": 58,
+        "spectrum": [
+          {
+            "activation_mean_test": 0.9676,
+            "frac": 0.5,
+            "frac_of_map_kept": 0.1133,
+            "invariant_on_test": false,
+            "n_contacts_kept": 323,
+            "n_contacts_that_differ_on_heldout": 80
+          },
+          {
+            "activation_mean_test": 0.9803,
+            "frac": 0.7,
+            "frac_of_map_kept": 0.1095,
+            "invariant_on_test": false,
+            "n_contacts_kept": 312,
+            "n_contacts_that_differ_on_heldout": 69
+          },
+          {
+            "activation_mean_test": 0.9873,
+            "frac": 0.8,
+            "frac_of_map_kept": 0.107,
+            "invariant_on_test": false,
+            "n_contacts_kept": 305,
+            "n_contacts_that_differ_on_heldout": 62
+          },
+          {
+            "activation_mean_test": 0.9948,
+            "frac": 0.9,
+            "frac_of_map_kept": 0.1007,
+            "invariant_on_test": false,
+            "n_contacts_kept": 287,
+            "n_contacts_that_differ_on_heldout": 44
+          },
+          {
+            "activation_mean_test": 0.9962,
+            "frac": 0.95,
+            "frac_of_map_kept": 0.0975,
+            "invariant_on_test": false,
+            "n_contacts_kept": 278,
+            "n_contacts_that_differ_on_heldout": 37
+          },
+          {
+            "activation_mean_test": 0.9982,
+            "frac": 1.0,
+            "frac_of_map_kept": 0.0853,
+            "invariant_on_test": false,
+            "n_contacts_kept": 243,
+            "n_contacts_that_differ_on_heldout": 21
+          }
+        ],
+        "test_models": 58
+      },
       "z_H_invariant": {
         "invariance_holds": false,
         "max_abs_variation": 1.0,
@@ -108,7 +217,15 @@
     "z_H contact-map invariance is verified for THESE ensembles, not universally"
   ],
   "not_the_fold2reason_corpus": "This is NOT the Fold2Reason FoldingCorpus (OpenFold monomer collection, not in this tree). It is the same KIND of D_inv from public experimental structures.",
-  "retrieved_utc": "2026-10-11T04:59:08Z",
+  "persistence_band_search_summary": {
+    "1D3Z": {
+      "frac": 0.9,
+      "frac_of_map_kept": 0.1112,
+      "n_contacts_kept": 317
+    },
+    "2K39": null
+  },
+  "retrieved_utc": "2026-10-11T05:02:59Z",
   "schema": "henri.protein.dinv.observed.v1",
   "verdict": "DINV_UNRESOLVED_SEE_CHECKS",
   "what": "A real-structure construction of SplitJEPA's matched invariant pairs D_inv. z_H is the 8 A contact map (fold topology); z_L is the Ca distance vector (geometry). Pairs are models WITHIN one NMR entry, which share the molecule and therefore the fold."

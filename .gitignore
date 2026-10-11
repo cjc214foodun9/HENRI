@@ -102,3 +102,7 @@ _archive/basal_helpers_20260913/
 # %LOCALAPPDATA%/hermes/audit/henri_audit_chain.jsonl; this repo-root file
 # is a single GENESIS row written at import time and must not be tracked.
 HENRI V2/henri_audit_chain.json
+# The same runtime stub can appear at repo ROOT (written at import time by an older
+# code path). Measured: it holds ONE GENESIS row, 363 bytes. The pattern above does not
+# match the root path, so an `git add -A` would otherwise commit a contentless stub.
+/henri_audit_chain.json

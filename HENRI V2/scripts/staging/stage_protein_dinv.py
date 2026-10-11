@@ -203,6 +203,49 @@ def analyse(pid: str, models: list, a: float = CONTACT_A) -> dict:
     }
 
 
+def persistence_band(models, frac, idx=None) -> np.ndarray:
+    """Boolean mask: contacts present in at least `frac` of the given models."""
+    idx = list(range(len(models))) if idx is None else list(idx)
+    Z = np.array([invariants(models[i][1])[0] for i in idx])
+    return Z.mean(axis=0) >= frac
+
+
+def held_out_persistence(pid: str, models: list, a: float = CONTACT_A,
+                         fracs=(0.5, 0.7, 0.8, 0.9, 0.95, 1.0), seed: int = 20261011) -> dict:
+    """Does a persistence band chosen on FIT models stay invariant on HELD-OUT models?
+
+    AVOIDING THE TAUTOLOGY TRAP. Defining z_H as "contacts present in >= f of THE
+    ENSEMBLE" is invariant BY CONSTRUCTION -- a gate that cannot fail, which is the exact
+    defect class this program keeps catching. Splitting the ensemble removes it: the band
+    is fit on one half and evaluated on the other, and nothing forces the held-out half to
+    preserve it. A held-out failure is real information; so is the contact-count cost.
+    """
+    n = len(models)
+    perm = np.random.default_rng(seed).permutation(n)
+    half = max(1, n // 2)
+    fit, test = perm[:half], perm[half:]
+    spec = []
+    for f in fracs:
+        band = persistence_band(models, f, fit)
+        k = int(band.sum())
+        if k == 0:
+            spec.append({"frac": f, "n_contacts_kept": 0, "frac_of_map_kept": 0.0,
+                         "n_contacts_that_differ_on_heldout": None,
+                         "invariant_on_test": False, "note": "empty band"})
+            continue
+        Zt = np.array([invariants(models[i][1])[0] for i in test])[:, band]
+        varied = int(np.sum((Zt.max(axis=0) - Zt.min(axis=0)) > 0))
+        spec.append({
+            "frac": f,
+            "n_contacts_kept": k,
+            "frac_of_map_kept": round(k / float(max(1, band.size)), 4),
+            "n_contacts_that_differ_on_heldout": varied,
+            "invariant_on_test": varied == 0,
+            "activation_mean_test": round(float(Zt.mean()), 4),
+        })
+    return {"fit_models": len(fit), "test_models": len(test), "spectrum": spec}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default=None, help="receipt path override")
@@ -221,6 +264,7 @@ def main() -> int:
                 raise RuntimeError(f"only {len(models)} models parsed (< {MIN_MODELS}); an "
                                    f"X-ray single-structure file cannot supply D_inv pairs")
             got = analyse(pid, models)
+            got["persistence_band_search"] = held_out_persistence(pid, models)
             got["pdb_sha256"] = hashlib.sha256(text.encode("utf-8")).hexdigest()
             rows.append(got)
             print(f"    n_models={got['n_models']} n_res={got['n_residues']} "
@@ -236,6 +280,18 @@ def main() -> int:
                  for r in rows) if rows else False
     inv_ok = all(r["z_H_invariant"]["invariance_holds"] for r in rows) if rows else False
     var_ok = all(r["z_L_variant"]["sigma_dL_rank"] > 0 for r in rows) if rows else False
+
+    # A persistence band fit on one half and evaluated on the other is NOT a tautology.
+    # This is the falsifiable repair attempt for the invariance failure in §2B.
+    def _best_band(r):
+        for s in r.get("persistence_band_search", {}).get("spectrum", []):
+            if s.get("invariant_on_test"):
+                return {"frac": s["frac"], "n_contacts_kept": s["n_contacts_kept"],
+                        "frac_of_map_kept": s["frac_of_map_kept"]}
+        return None
+
+    bands = {r["pdb_id"]: _best_band(r) for r in rows}
+    band_ok = bool(rows) and all(v is not None for v in bands.values())
 
     receipt = {
         "schema": "henri.protein.dinv.observed.v1",
@@ -253,7 +309,9 @@ def main() -> int:
             "z_H_invariance_holds_on_all_entries": bool(inv_ok),
             "sigma_dL_positive_rank_on_all_entries": bool(var_ok),
             "negative_control_operator_responds": bool(ctl_ok),
+            "heldout_invariant_persistence_band_exists": bool(band_ok),
         },
+        "persistence_band_search_summary": bands,
         "verdict": ("DINV_INVARIANCE_AND_VARIATION_OBSERVED" if (inv_ok and var_ok and ctl_ok)
                     else "DINV_UNRESOLVED_SEE_CHECKS"),
         "not_claims": [
