@@ -56,6 +56,16 @@ SECTIONS = (
 
 DEFAULT_UTILITY_LAMBDA = 1.0
 DEFAULT_EVICTION_THRESHOLD = 1e-4
+# ---- page geometry (RULING 4, operator-ratified) --------------------------------
+# A physical KV page holds 16 tokens; the Blackwell GDDR7 allocator hands out 384.0 KiB
+# slabs. BOTH numbers are BLUEPRINT-DECLARED, NOT MEASURED: this module is a data
+# structure, it has no KV engine, and torch 2.13.0+cpu has no GDDR7. They are declared
+# here so the per-page contract has a single named source and cannot drift by typo.
+# The byte figure is NOT re-derived from the token figure, because no token->byte map
+# is measured in this tree. Do not compute one.
+PAGE_TOKENS = 16
+PAGE_SLAB_KIB = 384.0
+
 DEFAULT_DEDUP_THRESHOLD = 0.92
 
 
@@ -305,6 +315,65 @@ class Playbook:
         return out
 
     # -- compile -----------------------------------------------------------------
+    def page_plan(self, now: float, utility_lambda: Optional[float] = None,
+                  respect_tier4: bool = True) -> dict:
+        """Group live bullets into 16-token pages and mark which pages could evict.
+
+        RULING 4 SEMANTICS: eviction is decided PER PAGE, not per bullet. A physical slab
+        is reclaimed only when EVERY resident bullet has lost its retention value; one
+        live bullet pins its whole page. This is the opposite aggregation from summing a
+        bullet's weight over all four relaxation tiers, which made every bullet a floor of
+        1.0 and froze eviction entirely (see retention_weight).
+
+        METADATA IS PRESERVED ON EVICTION. Eviction clears `alive`; it never deletes the
+        record, so bullet_id, section, content, counters, and timestamps survive for the
+        audit trail. `bullets` is the store of record; `live_ids()` is the working set.
+
+        HARDWARE NON-CLAIM. This returns a PLAN over logical pages. It does not allocate,
+        reclaim, or measure any byte of GDDR7 or L2. PAGE_SLAB_KIB is declared, not probed.
+        """
+        lam = self.utility_lambda if utility_lambda is None else float(utility_lambda)
+        pages, cur, toks = [], [], 0
+        for bid in sorted(self.live_ids()):
+            b = self.bullets[bid]
+            cur.append(bid)
+            toks += b.token_count
+            if toks >= PAGE_TOKENS:
+                pages.append(cur)
+                cur, toks = [], 0
+        if cur:
+            pages.append(cur)
+
+        plan = []
+        for k, ids in enumerate(pages):
+            weights, pinned = [], False
+            for bid in ids:
+                b = self.bullets[bid]
+                if respect_tier4 and b.tier == 4:
+                    pinned = True
+                    weights.append(float("inf"))
+                    continue
+                w = retention_weight(b, now, lam)
+                weights.append(w)
+                if w >= self.eviction_threshold:
+                    pinned = True
+            evictable = (not pinned) and bool(ids)
+            plan.append({"page": k, "bullets": ids, "n_tokens":
+                         sum(self.bullets[i].token_count for i in ids),
+                         "min_weight": min(weights) if weights else None,
+                         "evictable": evictable})
+        return {
+            "page_tokens": PAGE_TOKENS,
+            "slab_kib": PAGE_SLAB_KIB,
+            "n_pages": len(plan),
+            "n_evictable_pages": sum(1 for p in plan if p["evictable"]),
+            "pages": plan,
+            "eviction_unit": "PAGE (all resident bullets must fall below threshold)",
+            "metadata_on_evict": "PRESERVED (alive=False; record not deleted)",
+            "hardware_note": "PLAN over logical pages. No GDDR7/L2 allocation or reclamation.",
+        }
+
+
     def patch_plan(self) -> dict:
         """The delta a KV engine would apply. A PLAN, not a KV cache.
 
