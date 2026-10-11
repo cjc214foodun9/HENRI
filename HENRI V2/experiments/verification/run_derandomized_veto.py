@@ -382,8 +382,22 @@ def main():
     # 95% CIs). Index-neutrality alone therefore MUST NOT authorize deflection -- that
     # would route valid output into the thermal sink. The verdict string encodes both.
     sep = R["discrimination"]["separation"]
-    disc_ok = sep > 0.0
+    # AMENDED G-SJ4 (operator ruling 2, HENRI-SPEC-2026-HETERO-SYNAPSE-DREAM-LOOP-V1):
+    #   Separation = P(veto|incorrect) - P(veto|correct) >= +0.7000
+    #   False-veto rate on gold <= 0.0500
+    # The prior bar (sep > 0.0) would have authorized a veto measured at separation
+    # -0.683414 that fires on 81.99% of CORRECT candidates. Routing valid output into the
+    # thermal sink is a fatal defect, so the bar requires POSITIVE selective attribution.
+    SEP_BAR = 0.7000
+    FALSE_VETO_BAR = 0.0500
+    fv = R["discrimination"].get("false_veto_rate_on_correct")
+    disc_ok = bool(sep >= SEP_BAR and fv is not None and fv <= FALSE_VETO_BAR)
     R["checks"]["veto_discriminates_correctness"] = bool(disc_ok)
+    R["checks"]["g_sj4_separation_bar"] = {
+        "bar": SEP_BAR, "measured": sep, "passes": bool(sep >= SEP_BAR)}
+    R["checks"]["g_sj4_false_veto_bar"] = {
+        "bar": FALSE_VETO_BAR, "measured": fv,
+        "passes": bool(fv is not None and fv <= FALSE_VETO_BAR)}
     if not ctrl_detects:
         R["verdict"] = "HARNESS_BLIND_NO_INTERPRETATION"
     elif not resolvable:

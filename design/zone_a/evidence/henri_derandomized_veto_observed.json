@@ -133,7 +133,17 @@
   "content_ref_delta_has_variance": true,
   "content_ref_index_neutral": true,
   "bar_resolvable_at_n": true,
-  "veto_discriminates_correctness": false
+  "veto_discriminates_correctness": false,
+  "g_sj4_separation_bar": {
+   "bar": 0.7,
+   "measured": -0.683414,
+   "passes": false
+  },
+  "g_sj4_false_veto_bar": {
+   "bar": 0.05,
+   "measured": 0.81993,
+   "passes": false
+  }
  },
  "verdict": "VETO_INDEX_NEUTRAL_ATTRIBUTION_INVERTED",
  "verdict_scope": {
@@ -162,5 +172,5 @@
   "no model-performance claim",
   "candidate waves are encoder waves, not EFE-planned waves"
  ],
- "elapsed_s": 37.4
+ "elapsed_s": 37.7
 }
