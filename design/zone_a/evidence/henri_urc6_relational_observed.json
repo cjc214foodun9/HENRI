@@ -1,0 +1,38 @@
+{
+  "schema": "henri.urc6.relational.observed.v1",
+  "evidence_class": "OBSERVED",
+  "what": "G-URC6 relational operator accuracy >= 0.8500",
+  "bar": 0.85,
+  "non_claims": [
+    "no proxy is reported as G-URC6",
+    "the wiring check below is NOT a benchmark and clears no bar",
+    "no CUDA; no AAII claim"
+  ],
+  "arc_data_audit": {
+    "tracked_files_matching_arc": 381,
+    "real_task_json_count": 0,
+    "note": "ARC receipts and engines exist; ARC task data does not."
+  },
+  "proxy_wiring_check": {
+    "is_a_benchmark": false,
+    "is_g_urc6": false,
+    "clears_no_bar": true,
+    "measured": {
+      "round_trip_rel_error": null,
+      "D": 64,
+      "source": "module exposes no single-call factorize; see unit test"
+    },
+    "note": "Round-trip reconstruction error of the tripartite factorization. This shows the Stage-5 delegation target exists and composes. It is NOT relational accuracy and it clears no bar."
+  },
+  "checks": {
+    "arc_task_data_present": false,
+    "cuda_available": false,
+    "proxy_would_be_a_fabrication": true
+  },
+  "verdict": "G_URC6_BLOCKED_DATA_ABSENT",
+  "provisioning_required": [
+    "ARC-AGI task data (train/test grid pairs) staged into the repository",
+    "a CUDA host whose containment is proven within the boundary"
+  ],
+  "g_urc6_status": "BLOCKED. No ARC relational task data exists in tree (0 of 381 matching files are task JSONs) and no CUDA device is available. Substituting a proxy and reporting it as G-URC6 would be fabrication."
+}

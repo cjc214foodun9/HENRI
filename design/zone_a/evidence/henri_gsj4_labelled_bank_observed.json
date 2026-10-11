@@ -1,0 +1,128 @@
+{
+  "schema": "henri.gsj4.labelled_bank.observed.v1",
+  "evidence_class": "OBSERVED",
+  "what": "per-candidate correctness labels on the real in-tree bank, both veto variants",
+  "target_defect": "VETO_INDEX_NEUTRAL_ATTRIBUTION_INVERTED (separation -0.683414)",
+  "frozen_bars": {
+    "separation": 0.7,
+    "false_veto": 0.05,
+    "eps_hard": 0.35
+  },
+  "label_source": "gold_sets(train_traces, query_traces) -> list[set]; candidate column j answers query q iff j in gold[q]. Derived by re-execution semantics, not supplied by hand.",
+  "non_claims": [
+    "SYNTHETIC in-tree M4 bank; this is NOT the real evaluation bank",
+    "a pass here does NOT earn G-SJ4; the dark port stays mechanically disconnected",
+    "frozen waves, no training; no model-performance claim",
+    "no CUDA; no AAII claim"
+  ],
+  "bank": {
+    "n_train": 156,
+    "n_query": 324,
+    "wave_dim": 8192,
+    "waves_complex": false,
+    "spec": "m4_generative 4-op digit programs",
+    "max_len": 4,
+    "holdout_len": 4,
+    "pin": 20261010,
+    "n_distinct_columns": 35,
+    "n_queries": 324,
+    "gold_nonempty_frac": 0.9598765432098766
+  },
+  "wave_family": {
+    "is_complex": false,
+    "D": 8192,
+    "empirical_chance_mean": 0.12016806751489639,
+    "empirical_chance_rms": 0.24512046575546265,
+    "closed_form_mean_sqrt_pi_over_4D": 0.009791516697777345,
+    "closed_form_rms_1_over_sqrtD": 0.011048543456039804,
+    "n_pairs": 595,
+    "note": "The AttributableVeto closed forms assume an entry-unimodular COMPLEX family. If the bank is real, those constants are inapplicable and the EMPIRICAL null governs every AUC below. Recorded, not assumed."
+  },
+  "arm_shipped_sagnac": {
+    "n_correct": 311,
+    "n_incorrect": 11029,
+    "fire_on_correct": 0.12540192926045016,
+    "fire_on_incorrect": 0.23148064194396592,
+    "separation": 0.10607871268351576,
+    "fire_on_correct_ci95": [
+      0.09310630948719473,
+      0.16683900904758597
+    ],
+    "fire_on_incorrect_ci95": [
+      0.22370317839544973,
+      0.2394451006480925
+    ],
+    "auc_correct_vs_incorrect": 0.5011807514768869,
+    "passes_separation": false,
+    "false_veto_on_correct": 0.12540192926045016,
+    "passes_false_veto": false
+  },
+  "arm_loo_cosine": {
+    "n_correct": 311,
+    "n_incorrect": 11029,
+    "fire_on_correct": 1.0,
+    "fire_on_incorrect": 1.0,
+    "separation": 0.0,
+    "fire_on_correct_ci95": [
+      0.9877983087368379,
+      1.0
+    ],
+    "fire_on_incorrect_ci95": [
+      0.9996518032126919,
+      1.0
+    ],
+    "auc_correct_vs_incorrect": 0.49820525775513197,
+    "passes_separation": false,
+    "false_veto_on_correct": 1.0,
+    "passes_false_veto": false
+  },
+  "arm_attributable": {
+    "n_correct": 311,
+    "n_incorrect": 11029,
+    "fire_on_correct": 1.0,
+    "fire_on_incorrect": 1.0,
+    "separation": 0.0,
+    "fire_on_correct_ci95": [
+      0.9877983087368379,
+      1.0
+    ],
+    "fire_on_incorrect_ci95": [
+      0.9996518032126919,
+      1.0
+    ],
+    "auc_correct_vs_incorrect": 0.5043451654349437,
+    "passes_separation": false,
+    "false_veto_on_correct": 1.0,
+    "passes_false_veto": false
+  },
+  "control_shuffled_labels": {
+    "n": 200,
+    "mean_separation": 0.0005809297266283369,
+    "p95_abs": 0.046030415574957434,
+    "observed_shipped_separation": 0.10607871268351576
+  },
+  "mechanism": {
+    "question": "build_waves encodes the SPEC; gold_sets labels by the TRACE. Is the trace-match label recoverable from spec-wave geometry?",
+    "auc_best_wave_statistic_vs_label": 0.49820525775513197,
+    "interpretation": "AUC near 0.5 means the label is NOT encoded in wave space, so no wave-based veto can earn the bar on this bank, and the correct verdict is a measured ceiling.",
+    "measured_separation_ceiling": 0.10607871268351576,
+    "bar_separation": 0.7
+  },
+  "resolvability": {
+    "n_correct": 311,
+    "n_incorrect": 11029,
+    "resolvable_at_this_n": true
+  },
+  "checks": {
+    "labels_are_non_degenerate": true,
+    "bar_resolvable_at_this_n": true,
+    "shuffled_control_collapses": true,
+    "shipped_saturates_as_recorded": false,
+    "some_arm_earns_separation_bar": false,
+    "best_arm_keeps_false_veto": false,
+    "label_encoded_in_wave_space": false
+  },
+  "verdict": "GSJ4_LABELS_WIRED_NO_ARM_EARNS_BAR_ON_THIS_BANK",
+  "g_sj4_status": "BLOCKED. The synthetic M4 bank now carries per-candidate correctness labels and both arms are measured. BUT this is NOT the real evaluation bank, so G-SJ4 is NOT earned and the dark port stays mechanically disconnected. No flag flipped.",
+  "deliverable": "the label WIRING (gold_sets -> per-candidate correctness) plus an honest measured separation on a synthetic bank"
+}
