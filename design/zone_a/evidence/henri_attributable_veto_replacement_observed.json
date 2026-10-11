@@ -1,0 +1,169 @@
+{
+  "schema": "henri.attributable_veto.replacement.observed.v1",
+  "evidence_class": "OBSERVED",
+  "what": "attributable veto replacement, measured against the shipped defect",
+  "target_defect": "VETO_INDEX_NEUTRAL_ATTRIBUTION_INVERTED (separation -0.683414)",
+  "frozen_bars": {
+    "V_C_auc": 0.55,
+    "V_D_reject_lo": 0.02,
+    "V_D_reject_hi": 0.98,
+    "V_E_identity_r": 0.995
+  },
+  "dims": {
+    "D": 8192,
+    "n_axioms": 64,
+    "n_query": 300,
+    "k_cand": 5,
+    "eps_hard": 0.35
+  },
+  "non_claims": [
+    "fixtures are CONSTRUCTED; a pass is a property of the statistic, not the task",
+    "the real bank carries no per-candidate correctness labels, so G-SJ4 separation cannot be read from it",
+    "dark port remains mechanically disconnected; no flag flipped",
+    "no model-performance claim; synthetic wave family only"
+  ],
+  "arm_A_separable": {
+    "fixture": "A_separable",
+    "noise_scale": 0.1,
+    "n_rows": 1500,
+    "n_gold": 300,
+    "n_distractor": 1200,
+    "shipped_statistic": {
+      "auc": 1.0,
+      "mean_S": 4.969840944640443e-07,
+      "fire_rate_on_correct": 1.0,
+      "fire_rate_on_incorrect": 1.0,
+      "separation": 0.0
+    },
+    "replacement": {
+      "auc": 1.0,
+      "mean_score": -0.01614771406359721,
+      "reject_band": {
+        "n": 1500,
+        "median_threshold": -0.018281408778458942,
+        "reject_rate": 0.49933333333333335,
+        "in_band": true,
+        "saturated": false
+      }
+    },
+    "identity_check_max_feature_r": 0.9999761473933704,
+    "per_feature": {
+      "A_resonance": {
+        "sd": 0.004293456705045813,
+        "auc": 1.0,
+        "carries_signal": true
+      },
+      "B_excess": {
+        "sd": 2.9654282541426068e-05,
+        "auc": 0.5035,
+        "carries_signal": false
+      },
+      "C_loo_delta": {
+        "sd": 0.0023476724387124135,
+        "auc": 0.49954027777777776,
+        "carries_signal": false
+      }
+    },
+    "random_score_auc_control": 0.50455
+  },
+  "arm_B_hard": {
+    "fixture": "B_hard",
+    "noise_scale": 1.5,
+    "n_rows": 1500,
+    "n_gold": 300,
+    "n_distractor": 1200,
+    "shipped_statistic": {
+      "auc": 1.0,
+      "mean_S": 3.3398425214296407e-07,
+      "fire_rate_on_correct": 1.0,
+      "fire_rate_on_incorrect": 1.0,
+      "separation": 0.0
+    },
+    "replacement": {
+      "auc": 1.0,
+      "mean_score": -0.017120916139559246,
+      "reject_band": {
+        "n": 1500,
+        "median_threshold": -0.018281101965878267,
+        "reject_rate": 0.49933333333333335,
+        "in_band": true,
+        "saturated": false
+      }
+    },
+    "identity_check_max_feature_r": 0.999929729081037,
+    "per_feature": {
+      "A_resonance": {
+        "sd": 0.0023463329819012457,
+        "auc": 1.0,
+        "carries_signal": true
+      },
+      "B_excess": {
+        "sd": 2.78312360472382e-05,
+        "auc": 0.4795527777777778,
+        "carries_signal": false
+      },
+      "C_loo_delta": {
+        "sd": 0.002198451678927112,
+        "auc": 0.49993472222222224,
+        "carries_signal": false
+      }
+    },
+    "random_score_auc_control": 0.47526944444444447
+  },
+  "arm_C_null": {
+    "fixture": "C_null",
+    "noise_scale": null,
+    "n_rows": 1500,
+    "n_gold": 300,
+    "n_distractor": 1200,
+    "shipped_statistic": {
+      "auc": 0.5117583333333333,
+      "mean_S": 1.4704911827490008e-07,
+      "fire_rate_on_correct": 1.0,
+      "fire_rate_on_incorrect": 1.0,
+      "separation": 0.0
+    },
+    "replacement": {
+      "auc": 0.49495833333333333,
+      "mean_score": -0.018292821451511534,
+      "reject_band": {
+        "n": 1500,
+        "median_threshold": -0.018293676494105827,
+        "reject_rate": 0.49933333333333335,
+        "in_band": true,
+        "saturated": false
+      }
+    },
+    "identity_check_max_feature_r": 0.7661623460967952,
+    "per_feature": {
+      "A_resonance": {
+        "sd": 3.5158231373861433e-05,
+        "auc": 0.5092611111111112,
+        "carries_signal": false
+      },
+      "B_excess": {
+        "sd": 2.854709496091155e-05,
+        "auc": 0.5023416666666667,
+        "carries_signal": false
+      },
+      "C_loo_delta": {
+        "sd": 0.0024702024081255094,
+        "auc": 0.5001472222222222,
+        "carries_signal": false
+      }
+    },
+    "random_score_auc_control": 0.5037472222222222
+  },
+  "checks": {
+    "A_replacement_separates": true,
+    "A_replacement_rejects_in_band": true,
+    "B_degrades_monotonically": true,
+    "C_null_is_near_chance": true,
+    "C_old_also_null": true,
+    "identity_check_passes": false,
+    "random_control_near_half": true
+  },
+  "identity_mechanism": "V_E fired at r = 1.0000 because the peer term B_excess has ~zero variance on an independent-phase family: every pairwise coherence sits at the chance level, so subtracting it subtracts a constant. The score then equals A_resonance alone, which IS one feature in costume. On the REAL bank (measured 87% tie group, containment 0.82) the opposite failure appears: every candidate matches the axiom family, so A carries no variance either. The two regimes fail in opposite ways, and that is the structural reason the shipped single-similarity gate inverted rather than merely degraded.",
+  "verdict": "VETO_REPLACEMENT_NOT_VALIDATED",
+  "g_sj4_status": "BLOCKED: G-SJ4 requires separation >= +0.7000 and false_veto <= 0.050 on the REAL labelled bank; that bank is absent. A controlled fixture pass does NOT earn the gate."
+}
