@@ -1,0 +1,117 @@
+{
+  "schema": "henri.crossfold.statistic.observed.v1",
+  "evidence_class": "OBSERVED",
+  "what": "cross-fold statistic that survives conformational breathing",
+  "repairs": "henri_persistence_lifetime_gd1_observed.json (verdict FAIL_LIFETIME_FILTER)",
+  "bars": {
+    "ratio_within_over_cross": 0.8
+  },
+  "fetched": {
+    "1D3Z": {
+      "models_parsed": 10,
+      "used": 10
+    },
+    "2K39": {
+      "models_parsed": 116,
+      "used": 10
+    }
+  },
+  "substitution": null,
+  "arms": [
+    {
+      "label": "A_raw_betti",
+      "n_within": 45,
+      "n_cross": 100,
+      "mean_within": 5.288888888888889,
+      "mean_cross": 19.86,
+      "max_within": 11.0,
+      "min_cross": 7.0,
+      "ratio_within_over_cross": 1.5714285714285714,
+      "passes_0p8": false,
+      "mean_ratio_within_over_cross": 0.26630860467718476,
+      "passes_0p8_mean": true,
+      "effect_z": 2.2220944921409176,
+      "pooled_sd": 6.557376908428546
+    },
+    {
+      "label": "B_norm_betti",
+      "n_within": 45,
+      "n_cross": 100,
+      "mean_within": 5.288888888888889,
+      "mean_cross": 19.86,
+      "max_within": 11.0,
+      "min_cross": 7.0,
+      "ratio_within_over_cross": 1.5714285714285714,
+      "passes_0p8": false,
+      "mean_ratio_within_over_cross": 0.26630860467718476,
+      "passes_0p8_mean": true,
+      "effect_z": 2.2220944921409176,
+      "pooled_sd": 6.557376908428546
+    },
+    {
+      "label": "C_landscape",
+      "n_within": 45,
+      "n_cross": 100,
+      "mean_within": 0.08670340711777105,
+      "mean_cross": 0.4421709687768813,
+      "max_within": 0.1807668479535285,
+      "min_cross": 0.1960123888805701,
+      "ratio_within_over_cross": 0.9222215441885631,
+      "passes_0p8": false,
+      "mean_ratio_within_over_cross": 0.1960857072041775,
+      "passes_0p8_mean": true,
+      "effect_z": 2.7870404719251223,
+      "pooled_sd": 0.12754302107912135
+    }
+  ],
+  "arm_B_is_a_no_op": {
+    "self_caught": true,
+    "why": "Betti curves are ALREADY scale-parameterised by the epsilon grid. betti_curves(D, EPS*median) counts the same feature set as betti_curves(D/median, EPS), so ARM B is an exact duplicate of ARM A. Measured: every ARM-A statistic equals ARM B to the printed precision.",
+    "consequence": "Scale normalisation applied to Betti CURVES is vacuous. A genuinely scale-invariant treatment must act on the DIAGRAM (birth,death) pairs, which is what ARM C does via the landscape."
+  },
+  "scale_hypothesis": {
+    "hypothesis": "2K39 is disperse (cited rmsd 3.29 A) so its filtration scale inflates.",
+    "measured_median_ca_distance_A": {
+      "1D3Z": 15.127045399860743,
+      "2K39": 15.055246144288361
+    },
+    "verdict": "FALSIFIED_ON_THIS_TRUNCATION: the two ensembles have essentially the SAME median CA distance, so the fold difference is NOT a global scale effect.",
+    "limit": "2K39 truncated to 10 of 116 models; the full ensemble is more disperse."
+  },
+  "perm_control_raw_betti": {
+    "n": 92,
+    "mean": 32.37771739130435,
+    "p05": 11.4375,
+    "p95": 43.0,
+    "observed": 1.5714285714285714,
+    "p_value_lower_tail": 0.0
+  },
+  "perm_control_norm_betti": {
+    "n": 92,
+    "mean": 32.37771739130435,
+    "p05": 11.4375,
+    "p95": 43.0,
+    "observed": 1.5714285714285714,
+    "p_value_lower_tail": 0.0
+  },
+  "perm_control_landscape": {
+    "n": 200,
+    "mean": 22.87879186700911,
+    "p05": 14.036731308333914,
+    "p95": 30.351974149097273,
+    "observed": 0.9222215441885631,
+    "p_value_lower_tail": 0.0
+  },
+  "best_arm": "C_landscape",
+  "bar_cleared": false,
+  "bar_cleared_mean": true,
+  "two_statistics": "The inherited bar 0.8000 is defined on the EXTREMUM ratio (max_within/min_cross), an order statistic. The MEAN ratio answers a different question. On ARM C the extremum ratio is 0.922 (fail) while the mean ratio clears 0.8 comfortably, and the effect size z and the permutation null both show real separation. Both are reported; NEITHER bar is moved, and the extremum verdict stays FAIL because that is the bar that was set.",
+  "mechanism": "scale normalisation removes the global breathing scale; what remains is diagram SHAPE, which separates folds only if the folds differ in shape",
+  "verdict": "CROSSFOLD_STILL_NOT_SEPARATED_SHAPE_AND_SCALE_BOTH_DIFFER",
+  "limits": [
+    "two ensembles only; the permutation null mixes the same pool, so it tests label exchangeability, not generalisation to unseen proteins",
+    "MAX_MODELS = 10 per ensemble; the cited rmsd 3.29 A is for the FULL 2K39 ensemble",
+    "landscape uses k_max = 3 and a 24-point grid on [0,1]; refinement could move ARM C",
+    "median normalisation is a choice; dividing by max is reported in the receipt"
+  ]
+}
