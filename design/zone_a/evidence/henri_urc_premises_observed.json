@@ -1,0 +1,45 @@
+{
+  "schema": "henri_urc_premises_observed_v1",
+  "probe": "probe_urc_premises.py",
+  "probe_source_sha256": "04d413e96688f5f9e4b2d123040cf94e2f58ce2e72a8122dad83fc4ef0b973cf",
+  "claim1_theorem41": {
+    "verdict": "FALSE_AS_WRITTEN_PREMISE_NONFLAT_SPECTRUM",
+    "generic_unit_conv_norm": 1.0012636511798212,
+    "uniform_unit_conv_norm": 256.0,
+    "sqrt_D": 256.0,
+    "repaired_unimodular_norm_err": 4.440892098500626e-16,
+    "repaired_unimodular_spectrum_min": 0.9999999999999989,
+    "repaired_unimodular_spectrum_max": 1.0000000000000016,
+    "repair": "project each spectrum to unit modulus (phase-only construction); the projection IS the Stage-5 Torus factor"
+  },
+  "claim2_theorem43": {
+    "verdict": "FALSE_AS_WRITTEN_IS_CONTRACTION_NOT_ISOMETRY",
+    "counterexample_lhs": 0.0,
+    "counterexample_rhs": 2.0,
+    "max_expansion_ratio": 1.0000000000000002,
+    "mean_ratio": 0.8266929143740385,
+    "exact_equality_fraction": 0.06305,
+    "operator": "UNARY pairwise sort over adjacent coordinates",
+    "repair": "state MaxMin as 1-Lipschitz (non-expanding) <= ; G-URC4 asserts <= so it remains satisfiable, but the theorem's '=' is falsified"
+  },
+  "claim3_theorem42": {
+    "phase-only unimodular family (D=4096, K=64)": {
+      "max_coh": 0.04873734403940969,
+      "mean_coh": 0.01374970687565346
+    },
+    "generic complex gaussian (D=4096, K=64)": {
+      "max_coh": 0.048720264892806626,
+      "mean_coh": 0.013861296246326319
+    },
+    "verdict": "PREMISE_UNREALISTIC_FOR_COHERENT_FAMILIES",
+    "eta_bound": 0.00390625,
+    "real_bank_found": null
+  },
+  "claim4_pinv": {
+    "verdict": "DECLARED_CONSTANT_NOT_DENSE",
+    "dense_complex64_mib": 8192.0,
+    "dense_float32_mib": 4096.0,
+    "declared_mib": 33.55,
+    "bits_per_entry_if_dense": 0.262109375
+  }
+}
