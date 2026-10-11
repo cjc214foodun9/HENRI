@@ -1,0 +1,7 @@
+{
+  "probe": "HENRI V2/experiments/verification/probe_wbar_regime.py",
+  "rc": 0,
+  "raw_stdout": "============================================================================================\neta_Wbar = 0.8 REGIME SWEEP  (rate held AT the paper value; never retuned)\n============================================================================================\n width     arm    |Ep|_end  |abar|_end  |Vbar|_end  collapse  nonfinite\n    32 no_rule      1.3128      1.2656      4.5278     False         no\n    32   paper     52.3518     17.9186      0.9913     False         no\n    64 no_rule      2.1162      2.1167      8.0190     False         no\n    64   paper     24.3723      4.8966      0.5795     False         no\n   128 no_rule      2.8551      2.9320     11.1843     False         no\n   128   paper     30.8997      3.9950      0.4057     False         no\n\n============================================================================================\n  paper/no-rule ratio  width 32  : 39.878\n  paper/no-rule ratio  width 128 : 10.823\n  VERDICT: RULE_DEFECT_PERSISTS -- worsens with width or stays >2x; report as a\n           rule defect at these widths. Do NOT retune eta_Wbar to pass.\n",
+  "captured_from": "live run; stdout preserved verbatim",
+  "stderr_tail": ""
+}

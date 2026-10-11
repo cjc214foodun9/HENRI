@@ -1,0 +1,33 @@
+{
+  "bank": "design\\zone_a\\evidence\\banks\\candidate_bank_dedup.pt",
+  "K": 217,
+  "Q": 300,
+  "mean_group_size": 188.68666666666667,
+  "arm_conditional": 0.2,
+  "control_random_groups": 0.2321666666666667,
+  "arm_unconditional_most_frequent": 0.16333333333333333,
+  "arm_uniform": 0.0,
+  "arm_argmax": 0.0,
+  "control_shuffled_channel": 0.0033333333333333335,
+  "control_random_channel": 0.01,
+  "slot_r": -0.05303756147623062,
+  "const_pick": false,
+  "perm_drift": 0.0,
+  "perm_top1": 0.2,
+  "gate_sj3a": {
+    "top1": 0.2,
+    "bar": 0.045,
+    "random_control": 0.004608294930875576,
+    "lift": 43.4,
+    "lift_required": 10.0,
+    "slot_r": 0.05303756147623062,
+    "slot_r_required": 0.005,
+    "passes_bar": true,
+    "passes_lift": true,
+    "passes_index_neutrality": false,
+    "passes": false,
+    "verdict": "G_SJ3A_FAILED_INDEX_BOUND"
+  },
+  "leak_verdict": "BASE_RATE_ARTIFACT -- random groups with the SAME channel score 0.2322 vs 0.2000. Stage 1 (the wave max group) adds nothing.",
+  "stage1_gain_vs_random_groups": -0.03216666666666668
+}

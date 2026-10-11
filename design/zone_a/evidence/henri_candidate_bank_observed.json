@@ -1,0 +1,102 @@
+{
+  "pin": 20261010,
+  "training": "NONE (frozen waves)",
+  "dtype": "cpu",
+  "calibration": {
+    "bar": 0.045,
+    "control": 0.0046,
+    "lift_required": 10.0,
+    "index_bar": 0.005
+  },
+  "corpus": {
+    "n_programs": 3600,
+    "n_train_rows": 1170,
+    "n_heldout_rows": 2430,
+    "n_inputs": 30
+  },
+  "sampling": {
+    "n_bank_rows": 1170,
+    "n_queries": 300,
+    "queries_subsampled": true
+  },
+  "wave_dim": 8192,
+  "waves_finite": true,
+  "gold_nonempty_frac": 0.9266666666666666,
+  "bank_full": {
+    "bank_columns": 1170,
+    "n_queries": 300,
+    "containment": 0.7166666666666667,
+    "mean_group_size": 285.1300048828125,
+    "frac_singleton_group": 0.09333333373069763,
+    "within_group_gold_precision": 0.23570313814044067,
+    "row_uniform_chance": 0.11236182336182336,
+    "size_matched_control": 0.6791712020160836,
+    "within_group_control": 0.23570313814044067,
+    "control_note": "size_matched_control = same-size random subset containment (grows with group width); within_group_control == within_group_gold_precision (pick inside the group)"
+  },
+  "bank_dedup": {
+    "bank_columns": 217,
+    "n_queries": 300,
+    "containment": 0.82,
+    "mean_group_size": 188.68666076660156,
+    "frac_singleton_group": 0.023333333432674408,
+    "within_group_gold_precision": 0.0037788018433179706,
+    "row_uniform_chance": 0.0042703533026113676,
+    "size_matched_control": 0.8286328725038403,
+    "within_group_control": 0.0037788018433179706,
+    "control_note": "size_matched_control = same-size random subset containment (grows with group width); within_group_control == within_group_gold_precision (pick inside the group)"
+  },
+  "n_distinct_traces": 217,
+  "redundancy": 5.3917,
+  "channel_noop_check": {
+    "n_unique_values": 8,
+    "min": 1.0,
+    "max": 258.0,
+    "frac_constant": 0.0,
+    "is_noop": false,
+    "term_balance_mean_channel_bits": 5.39170503616333
+  },
+  "selector_dedup": {
+    "argmax": {
+      "mode": "argmax",
+      "top1": 0.0,
+      "top1_under_permutation": 0.0033333333333333335,
+      "drift": 0.0033333333333333335
+    },
+    "uniform": {
+      "mode": "uniform",
+      "top1": 0.003333333333333332,
+      "top1_under_permutation": 0.004249999999999998,
+      "drift": 0.0009166666666666659
+    },
+    "two_stage": {
+      "mode": "two_stage",
+      "top1": 0.2,
+      "top1_under_permutation": 0.2,
+      "drift": 0.0
+    }
+  },
+  "gate_sj3a": {
+    "top1": 0.2,
+    "bar": 0.045,
+    "random_control": 0.0042703533026113676,
+    "lift": 46.834532,
+    "lift_required": 10.0,
+    "slot_r": null,
+    "slot_r_required": 0.005,
+    "passes_bar": true,
+    "passes_lift": true,
+    "passes_index_neutrality": false,
+    "passes": false,
+    "verdict": "G_SJ3A_BLOCKED_INDEX_UNMEASURED",
+    "blocked_reason": "The l>=0.0450 and 10x-lift clauses hold, but slot_r on the DEDUPLICATED 206-candidate bank has never been measured. The recorded r = -0.0216 belongs to the FULL 1092-row bank (the 0.1556 row). Those are different banks; the full-bank statistic does not license a dedup-bank claim."
+  },
+  "bank_matches_calibration": true,
+  "verdict": "G_SJ3A_FAILED_TWO_STAGE",
+  "bank_artifact": {
+    "path": "C:\\Users\\chan\\henri-worktrees\\splitjepa-ace\\design\\zone_a\\evidence\\banks\\candidate_bank_dedup.pt",
+    "sha256": "ef2984c43391f18fe12c039f5ce20fdec8ed373661260a35509a7502fe53b0f5",
+    "bytes": 48709288,
+    "tracked_in_git": false
+  }
+}

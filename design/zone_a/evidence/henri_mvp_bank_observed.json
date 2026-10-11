@@ -1,0 +1,85 @@
+{
+  "pin": 20261010,
+  "substrate": "m4_generative 4-op digit programs",
+  "training": "NONE (frozen)",
+  "dtype": "cpu",
+  "n_programs": 156,
+  "n_train_rows": 48,
+  "n_heldout_queries": 108,
+  "system_pinned": true,
+  "wave_dim": 8192,
+  "waves_finite": true,
+  "gold_nonempty_frac": 0.8611111111111112,
+  "bank_full": {
+    "bank_columns": 48,
+    "n_queries": 108,
+    "containment": 0.3333333333333333,
+    "mean_group_size": 2.870370388031006,
+    "frac_singleton_group": 0.3055555522441864,
+    "within_group_gold_precision": 0.14814814814814814,
+    "row_uniform_chance": 0.046296296296296294,
+    "size_matched_control": 0.15231481481481485
+  },
+  "bank_dedup": {
+    "bank_columns": 28,
+    "n_queries": 108,
+    "containment": 0.19444444444444445,
+    "mean_group_size": 1.8240740299224854,
+    "frac_singleton_group": 0.37037035822868347,
+    "within_group_gold_precision": 0.12654320987654322,
+    "row_uniform_chance": 0.030753968253968252,
+    "size_matched_control": 0.12754629629629627
+  },
+  "n_distinct_traces": 28,
+  "channel_noop_check": {
+    "n_unique_values": 4,
+    "min": 1.0,
+    "max": 6.0,
+    "frac_constant": 0.0,
+    "is_noop": false,
+    "term_balance_mean_channel_bits": 1.7142857313156128
+  },
+  "selector_dedup": {
+    "argmax": {
+      "mode": "argmax",
+      "top1": 0.16666666666666666,
+      "top1_under_permutation": 0.1388888888888889,
+      "drift": 0.027777777777777762
+    },
+    "uniform": {
+      "mode": "uniform",
+      "top1": 0.13101851851851853,
+      "top1_under_permutation": 0.12615740740740738,
+      "drift": 0.004861111111111149
+    },
+    "two_stage": {
+      "mode": "two_stage",
+      "top1": 0.1388888888888889,
+      "top1_under_permutation": 0.12962962962962962,
+      "drift": 0.009259259259259273
+    }
+  },
+  "best_mode": "argmax",
+  "calibration": {
+    "bar_source": "G_SJ3A_BAR=0.0450, control 0.0046 on a 206-candidate dedup bank",
+    "this_bank_columns": 28,
+    "this_bank_control": 0.12754629629629627,
+    "bank_matches_calibration": false,
+    "note": "gate run with the SAME-BANK control; a cross-bank comparison is refused"
+  },
+  "gate_sj3a": {
+    "top1": 0.16666666666666666,
+    "bar": 0.045,
+    "random_control": 0.12754629629629627,
+    "lift": 1.306715,
+    "lift_required": 10.0,
+    "slot_r": null,
+    "slot_r_required": 0.005,
+    "passes_bar": true,
+    "passes_lift": false,
+    "passes_index_neutrality": false,
+    "passes": false,
+    "verdict": "G_SJ3A_FAILED_DISCRIMINATION"
+  },
+  "verdict": "G_SJ3A_BLOCKED_BANK_MISMATCH__ARGMAX"
+}
