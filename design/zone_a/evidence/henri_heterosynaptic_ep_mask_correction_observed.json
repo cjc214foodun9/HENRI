@@ -1,0 +1,30 @@
+{
+  "schema": "henri.heterosynaptic.ep_mask_correction.observed.v1",
+  "evidence_class": "OBSERVED",
+  "supersedes": {
+    "artifact": "henri_heterosynaptic_gh2b_root_cause_observed.json (commit 998f96f)",
+    "field": "measured.E_p_pinned_flat",
+    "superseded_by": "this record; the original is NOT edited"
+  },
+  "defect": "Mask mis-specification in MY OWN measurement. Eq. 11 is E_p^l = V^l D_u^l (W^l)^T - D_d^l Wbar^l (Vbar^l)^T. The probes applied D_u^0 to BOTH terms, i.e. computed R = D_u^0 Wbar^0 (Vbar^0)^T. The downstream term requires D_d^0 = diag(hbar^0 > 0) with hbar^0 = Wbar^0 abar^1. Same failure class as the mis-specified Gram control: one mask, two roles.",
+  "corrected_measurement": {
+    "E_p_correct_t0": 0.0,
+    "E_p_correct_t150": 1.119,
+    "E_p_with_my_bug_t150": 1.6639,
+    "F_norm_t150": 2.605,
+    "B_norm_t150": 3.907,
+    "cos_F_B_t150": 0.6688,
+    "E_p_over_F_norm": 0.4295,
+    "Vbar0_norm_t0": 0.0,
+    "Vbar0_norm_t150": 10.994,
+    "abar1_norm_t0": 4.234,
+    "abar1_norm_t150": 7.0634,
+    "D_d_open_fraction_mean": 0.4922
+  },
+  "corrected_conclusion": "E_p is BOUNDED but O(1). It RISES from exactly 0 (V and Vbar both start at zero, so F(0)=B(0)=0) to ~1.12 and PLATEAUS. Relative to ||F|| = 2.605 the pathway alignment error is 43%. The previous phrasing 'E_p is pinned flat at 0.7000 and does not decay' is replaced.",
+  "sharpened_root_cause": "The supplement defines plasticity rules for V (Eq. 13) and Vbar (Eq. 14) ONLY, and states no Wbar rule. Measured, Wbar is initialized randomly and never updated, so B grows only through Vbar while F grows through V. Nothing coupleg them. Lemma 1 drives E_v -> 0 unconditionally; E_p is a STANDING HYPOTHESIS of Lemma 2 / Theorem 1 (the text writes 'Suppose ... ||E_p^k|| <= eps_p^k'), NOT a conclusion. Measured here the hypothesis FAILS at any useful eps_p.",
+  "why_the_four_repairs_failed": "abar^l = D_d^l Wbar^l abar^{l+1}, and abar is the DRIVE SOURCE for V^l. Overscaling Wbar toward the E_p=0 solution shrinks abar, which shrinks Vbar's drive, which shrinks abar further. Measured: |Vbar[0]| 10.475 -> 0.034 (ridge) and -> 0.250 (norm-preserving), with |abar^1| -> 0.0000 in both. Positive feedback to zero. No algebraic closure on Wbar can succeed while abar^l depends on Wbar^l multiplicatively.",
+  "residual_claim": "G-H1's exact interstream cancellation remains TRUE and unpromised. G-H2b remains FAILED. G-H2a (PSD) remains PASS. No bar moved.",
+  "no_bar_moved": true,
+  "no_model_performance_claim": true
+}
