@@ -449,6 +449,12 @@ def _merge(cont, disc):
     return out
 
 
+def _under_pytest() -> bool:
+    """True when a test harness drives this module. Guards a tracked-receipt write."""
+    return bool(os.environ.get("PYTEST_CURRENT_TEST")
+                or os.environ.get("PYTEST_VERSION"))
+
+
 def _write(R, out=None):
     """Write the receipt, honouring an explicit override.
 
@@ -463,6 +469,11 @@ def _write(R, out=None):
     argv = ["--out", out] if out else None
     path = resolve_receipt_path(default, argv=argv)
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    # Guard propagated from sagnac_scale_defect.py; see run_execution_axiom_probe.py.
+    # This receipt also embeds elapsed_s, so it is a run record, not reproducible.
+    if not out and _under_pytest() and os.path.abspath(path) == os.path.abspath(default):
+        print(f"[receipt] NOT written under pytest (no override): {path}", file=sys.stderr)
+        return path
     with io.open(path, "w", encoding="utf-8") as fh:
         json.dump(R, fh, indent=1, default=str)
     redirected = os.path.abspath(path) != os.path.abspath(default)

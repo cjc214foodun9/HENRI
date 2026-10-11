@@ -232,12 +232,23 @@ def main():
     return 0
 
 
+def _under_pytest() -> bool:
+    """True when a test harness drives this module. Guards a tracked-receipt write."""
+    return bool(os.environ.get("PYTEST_CURRENT_TEST")
+                or os.environ.get("PYTEST_VERSION"))
+
+
 def _write(R):
     from receipt_path import resolve_receipt_path
     default = os.path.join(REPO, "design", "zone_a", "evidence",
                            "henri_execution_axiom_circularity_observed.json")
     path = resolve_receipt_path(default)
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    # Guard propagated from sagnac_scale_defect.py; see run_execution_axiom_probe.py.
+    if _under_pytest() and os.path.abspath(path) == os.path.abspath(default):
+        print(json.dumps(R, indent=1, default=str))
+        print(f"[receipt] NOT written under pytest (no override): {path}", file=sys.stderr)
+        return path
     with io.open(path, "w", encoding="utf-8") as fh:
         json.dump(R, fh, indent=1, default=str)
     print(json.dumps(R, indent=1, default=str))
