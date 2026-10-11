@@ -1,0 +1,88 @@
+{
+  "config": {
+    "epsilons": [
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0,
+      9.0,
+      10.0,
+      11.0,
+      12.0
+    ],
+    "max_models": 8
+  },
+  "cross_protein_control": {
+    "cross_b0": 0,
+    "cross_b1": 9,
+    "cross_total": 9,
+    "note": "If cross-protein distance is not clearly ABOVE the within-protein distance, the invariant does not discriminate folds and invariance would be worthless.",
+    "separates": true,
+    "within_1D3Z_total": 7
+  },
+  "elapsed_s": 1.7,
+  "entries": [
+    {
+      "max_b0_curve_distance": 0,
+      "max_b1_curve_distance": 7,
+      "max_basin_histogram_L1": 0.07894737,
+      "n_models_considered": 10,
+      "n_models_total": 10,
+      "n_models_used": 8,
+      "pdb_id": "1D3Z",
+      "strict_invariance": false,
+      "subsampled": true,
+      "worst_pair": {
+        "d_b0": 0,
+        "d_b1": 7,
+        "d_basin": 0.026316,
+        "pair": [
+          1,
+          5
+        ]
+      }
+    },
+    {
+      "max_b0_curve_distance": 0,
+      "max_b1_curve_distance": 13,
+      "max_basin_histogram_L1": 0.15789474,
+      "n_models_considered": 116,
+      "n_models_total": 116,
+      "n_models_used": 8,
+      "pdb_id": "2K39",
+      "strict_invariance": false,
+      "subsampled": true,
+      "worst_pair": {
+        "d_b0": 0,
+        "d_b1": 13,
+        "d_basin": 0.052632,
+        "pair": [
+          56,
+          73
+        ]
+      }
+    }
+  ],
+  "evidence_class": "OBSERVED",
+  "failures": [],
+  "finding": "Persistent homology is STABLE, not invariant. On a tight ensemble the barcodes can coincide exactly; on a disperse ensemble thermal breathing moves the filtration itself and d_B > 0. The directive's d_B == 0.000 guarantee therefore cannot be asserted as written and must be restated as a separation test with a stated tolerance.",
+  "implementation_scope": {
+    "beta_0": "EXACT single-linkage connected components (union-find).",
+    "beta_1": "EXACT for the complex: |E| - |V| + beta_0 - rank(boundary_2), the rank taken over GF(2) by Gaussian elimination on the 2-simplex boundary matrix. This is homology, NOT the 1-skeleton cycle-rank surrogate.",
+    "curves": "Betti curves over a shared epsilon grid; curve L1 is a conservative stand-in for the bottleneck distance d_B (d_B=0 implies this is 0, not conversely).",
+    "dihedrals": "CA-ONLY pseudo-dihedrals from consecutive C-alpha quadruples. These are NOT true (phi, psi) Ramachandran angles, which need N, CA, C. Labelled as pseudo so no reader mistakes them.",
+    "grid_note": "epsilon grid is coarse (8 points). A coarse grid can force spurious d_B == 0 by quantisation, which is why the cross-protein control is required before any invariance claim."
+  },
+  "not_claims": [
+    "no model-performance claim",
+    "CA-only pseudo-dihedrals are not true Ramachandran angles",
+    "curve L1 is not bottleneck distance",
+    "coarse epsilon grid can force spurious zero distances",
+    "two ensembles do not characterise the tight/disperse boundary",
+    "subsampled to at most 8 models per ensemble"
+  ],
+  "schema": "henri.persistence.invariance.observed.v1",
+  "verdict": "STRICT_INVARIANCE_FAILS_ON_1D3Z_2K39",
+  "what": "Directive-3 persistence-invariance test on real NMR ensembles. Replaces the FALSIFIED 8 A contact map (ledger 1991) with topological invariants."
+}

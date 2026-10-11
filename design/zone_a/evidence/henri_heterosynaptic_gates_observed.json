@@ -1,0 +1,116 @@
+{
+  "checks": {
+    "G-H1 matched rates PASS": true,
+    "G-H1 mismatched rates FAILS (negative control)": true,
+    "G-H2 acute vs autograd": false,
+    "memory graph-O(1)": true
+  },
+  "elapsed_s": 2.2,
+  "evidence_class": "OBSERVED",
+  "g_h1_matched": {
+    "decay_observed": 11.068653913492147,
+    "final_ev_abs": 0.05706678330898285,
+    "final_ev_rel": 0.0011701565235853195,
+    "finite": true,
+    "first_ev_abs": 0.6316524744033813,
+    "passes_threshold": false,
+    "predicted_final_from_lemma1": 0.05706649631200268,
+    "ratio_final_over_pred": 1.000005029167703,
+    "trace_abs_head": [
+      0.63165247,
+      0.61901945,
+      0.60663915,
+      0.59450626
+    ],
+    "trace_abs_tail": [
+      0.0606324412,
+      0.0594197921,
+      0.0582313761,
+      0.0570667833
+    ],
+    "tracks_lemma1_within_2x": true
+  },
+  "g_h1_mismatched_control": {
+    "decay_observed": 0.027073341433314888,
+    "final_ev_abs": 24.275972366333008,
+    "final_ev_rel": 0.5000019073486328,
+    "finite": true,
+    "first_ev_abs": 0.6572316884994507,
+    "passes_threshold": false,
+    "predicted_final_from_lemma1": 0.059377444477377986,
+    "ratio_final_over_pred": 408.84164988915666,
+    "trace_abs_head": [
+      0.65723169,
+      0.89231259,
+      1.29212141,
+      1.74409187
+    ],
+    "trace_abs_tail": [
+      24.125415802,
+      24.176618576,
+      24.2268009186,
+      24.2759723663
+    ],
+    "tracks_lemma1_within_2x": false
+  },
+  "g_h2_psd_alignment": {
+    "finite": true,
+    "fraction_positive_sal_term": 0.49333333333333335,
+    "mean_cosine": 0.0011734712636098266,
+    "mean_cosine_sal_term": 0.0011734712636098266,
+    "mean_cosine_shipped_step": 0.0011734712636098266,
+    "min_cosine_sal_term": -0.03288762643933296,
+    "n_positive": 74,
+    "n_positive_sal_term": 74,
+    "n_positive_shipped_step": 74,
+    "n_steps": 150,
+    "passes": false,
+    "threshold": 0.995
+  },
+  "memory": {
+    "buffer_elements_after": 428032,
+    "buffers_constant": true,
+    "graph_retained": false,
+    "parameter_elements": 428032,
+    "passes_graph_o1": true,
+    "scope": "Lemma 1 removes the TRANSPOSE STORE and the BACKWARD GRAPH. V/Vbar storage remains: the byte count above is real and is NOT claimed to fit SRAM. Fused SRAM residency is a Blackwell gate, BLOCKED here.",
+    "v_vbar_bytes_fp32": 1056768
+  },
+  "not_claims": [
+    "no model-performance claim",
+    "V/Vbar storage remains; SRAM residency NOT claimed (Blackwell gate)",
+    "FP8 E4M3 floor UNMEASURED on this host",
+    "section 5.3 Langevin restatement NOT implemented (Theorem 1 discrete form is)",
+    "representation isolation (dW_H/dPsi_L = 0) does NOT transfer to weight updates",
+    "CPU fp32/bf16 only; no CUDA SRAM kernel executed"
+  ],
+  "precision_sweep": [
+    {
+      "dtype": "fp32",
+      "err": "KeyError: 'final'",
+      "final_ev_norm": null
+    },
+    {
+      "dtype": "bf16",
+      "err": "NotImplementedError: \"linalg_svd_cpu\" not implemented for 'BFloat16'",
+      "final_ev_norm": null
+    },
+    {
+      "dtype": "fp8_e4m3",
+      "err": "BLOCKED: no FP8 support on this CPU host (torch 2.13.0+cpu). The spec targets FP8 phasors; the floor is UNMEASURED here.",
+      "final_ev_norm": null
+    }
+  ],
+  "schema": "henri.heterosynaptic.gates.observed.v1",
+  "source_verified": {
+    "anchors": [
+      "line 99 Lemma 1 (Unconditional Ev decay)",
+      "line 101 matched rates eta_V = eta_Vbar",
+      "line 143 Assumption 1 (standing hypotheses)",
+      "line 168 Theorem 1 (SAL ~ generalized SGD)"
+    ],
+    "appendix": "pnas.2606245123.sapp.pdf extracted locally: 15 pages, 41,491 chars",
+    "note": "implemented from the appendix, not from the spec's paraphrase"
+  },
+  "verdict": "HETEROSYNAPTIC_GATES_FAIL"
+}
