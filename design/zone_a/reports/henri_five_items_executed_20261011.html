@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project HENRI — Five Engineering Items Executed and Measured</title>
+<style>
+  :root{
+    --ink: var(--foreground, #1a1a1a);
+    --mute: var(--muted-foreground, #5b6470);
+    --line: var(--border, #d8dde3);
+    --card: var(--card, #ffffff);
+    --accent: var(--accent, #1f6feb);
+    --good: #1a7f4b; --bad: #b3261e; --warn: #8a6100;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:20px 22px 40px;background:transparent;color:var(--ink);
+       font:16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       max-width:1140px}
+  h1{font-size:1.6rem;line-height:1.25;margin:0 0 4px}
+  h2{font-size:1.18rem;margin:30px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  h3{font-size:1.02rem;margin:20px 0 8px}
+  p,li{max-width:96ch}
+  .sub{color:var(--mute);margin:0 0 14px}
+  code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em}
+  .state{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+         gap:8px 16px;margin:12px 0 6px;padding:12px 14px;
+         border:1px solid var(--line);border-radius:6px;background:var(--card)}
+  .state div{font-size:.86rem}
+  .state b{display:block;color:var(--mute);font-weight:600;font-size:.74rem;
+           text-transform:uppercase;letter-spacing:.04em}
+  table{border-collapse:collapse;width:100%;margin:10px 0 6px;font-size:.9rem}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:color-mix(in srgb,var(--accent) 8%,transparent);font-weight:600}
+  td.num{font-family:ui-monospace,Menlo,Consolas,monospace;white-space:nowrap}
+  .tag{font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:999px;
+       border:1px solid currentColor;white-space:nowrap}
+  .o{color:var(--good)} .d{color:var(--accent)} .f{color:var(--bad)} .b{color:var(--warn)}
+  .verdict{border-left:4px solid var(--accent);padding:10px 14px;margin:14px 0;
+           background:color-mix(in srgb,var(--accent) 6%,transparent)}
+  .win{border-left:4px solid var(--good)} .lose{border-left:4px solid var(--bad)}
+  .block{border-left:4px solid var(--warn)}
+  figure{margin:14px 0;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+  figcaption{color:var(--mute);font-size:.84rem;margin-top:8px}
+  details{margin:10px 0;border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--card)}
+  summary{cursor:pointer;font-weight:600}
+  .kv{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem}
+  footer{margin-top:34px;padding-top:12px;border-top:1px solid var(--line);color:var(--mute);font-size:.82rem}
+  .nobar{font-weight:700}
+</style>
+</head>
+<body>
+
+<h1>Project HENRI — Five Engineering Items Executed and Measured</h1>
+<p class="sub">Compiled 2026-10-11. Every number below comes from a command this session produced. Advisor text, reference narration, and unrun artifacts are not counted as evidence.</p>
+
+<div class="state">
+  <div><b>Working HEAD</b><span class="kv">90adbcfd585433d4be9c03ca4652654bf9e80b74</span></div>
+  <div><b>Remote branch SHA</b><span class="kv">90adbcf… (identical to local)</span></div>
+  <div><b>origin/main</b><span class="kv">7deb528ff049d4507d33f4eff2f52cffa214f0be (untouched)</span></div>
+  <div><b>Audit ledger</b><span class="kv">2025 records, head 4a6cdba22148c207…, chain intact</span></div>
+  <div><b>Test suite</b><span class="kv">654 passed · 1 skipped · 1 deselected</span></div>
+  <div><b>Canary</b><span class="kv">bff4e49c5e08ed83 — identical on every repeated read</span></div>
+  <div><b>Branch diff vs main</b><span class="kv">99 files · +25,550 / −9</span></div>
+  <div><b>Host</b><span class="kv">torch 2.13.0+cpu · cuda_available False · device_count 0</span></div>
+</div>
+
+<div class="verdict">
+<p class="nobar">Verdict in one sentence. All five items are now MEASURED rather than assumed, and the measurements falsified three hypotheses of my own plus one of my own test fixtures. <b>No bar moved.</b> No benchmark task attempted or solved. Nothing executed on CUDA.</p>
+</div>
+
+<h2>1. Item status — all five measured</h2>
+
+<table>
+<thead><tr><th>#</th><th>Item</th><th>Measured verdict</th><th>Class</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><b>Real labelled bank for G-SJ4</b><br><span class="kv">the report's most blocking absence</span></td>
+    <td class="num">GSJ4_LABELS_WIRED_NO_ARM_EARNS_BAR_ON_THIS_BANK<br>
+        pairs 11340 · correct 311 · incorrect 11029 · rate 0.02743<br>
+        shipped AUC 0.5012 sep +0.1061 · LOO AUC 0.4982 sep +0.0000<br>
+        attributable AUC 0.5043 sep +0.0000<br>
+        best wave statistic AUC vs trace label = 0.4982 <b>CHANCE</b></td>
+    <td class="num f">WIRED<br>bar NOT earned</td></tr>
+<tr><td>2</td><td><b>Model-level ratchet</b></td>
+    <td class="num">MODEL_RATCHET_NOT_CONFIRMED_READOUT_WEAK__FROZEN_WAVE_INSUFFICIENT<br>
+        ARM R 0.1111 0.1296 0.1759 0.1759 0.1667 0.1667 growth +0.0556 <b>NOT monotone</b><br>
+        ARM S 0.0000 0.0926 0.1019 0.0556 0.0648 0.0556<br>
+        ceiling 0.2037 · bar 0.3188</td>
+    <td class="num f">NEGATIVE<br>frozen wave blocks</td></tr>
+<tr><td>3</td><td><b>Cross-fold statistic, full ensembles</b></td>
+    <td class="num">CROSSFOLD_STILL_NOT_SEPARATED_AT_FULL_WIDTH<br>
+        1D3Z 10 models · 2K39 116 models · 76 common residues<br>
+        truncated-10 A 1.571 · C 0.922 &nbsp;|&nbsp; full A 2.200 · C 1.609<br>
+        truncation test REPRESENTATIVE (rel diff 0.0% / 0.5%)</td>
+    <td class="num f">bar NOT cleared<br>finding recorded</td></tr>
+<tr><td>4</td><td><b>URC Stage 5 / G-URC6</b><br><span class="kv">relational accuracy ≥ 0.8500</span></td>
+    <td class="num">G_URC6_BLOCKED_DATA_ABSENT<br>
+        381 tracked files match /arc/ · real ARC task JSONs = <b>0</b><br>
+        no proxy substituted</td>
+    <td class="num b">BLOCKED<br>fail-closed</td></tr>
+<tr><td>5</td><td><b>Blackwell deployment</b></td>
+    <td class="num">torch 2.13.0+cpu · cuda_available False · device_count 0<br>
+        no latency or VRAM number emitted</td>
+    <td class="num b">BLOCKED<br>no CUDA</td></tr>
+</tbody>
+</table>
+
+<h2>2. Item 1 — the labels existed; the ceiling is behavioural, not calibration</h2>
+
+<figure>
+<svg role="img" viewBox="0 0 980 300" width="100%" height="auto" aria-labelledby="d1 d2" style="max-width:980px">
+  <title id="d1">Why no wave-based veto can earn the G-SJ4 bar on this bank</title>
+  <desc id="d2">Left: the label path. build_waves encodes the specification string. gold_sets labels by the execution trace. The wave sees only specification geometry, so the trace-match label is not recoverable: measured AUC 0.4982, chance. Right: the calibration trap. The shipped epsilon 0.35 belongs to the entry-unimodular complex family whose chance coherence is 0.009792. This bank is real with empirical chance coherence 0.120168, twelve times higher, so everything fires and separation reads zero by saturation rather than by anti-selection.</desc>
+  <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="currentColor">
+    <rect x="10" y="18" width="466" height="268" rx="8" fill="none" stroke="#b3261e" stroke-width="1.8"/>
+    <text x="26" y="42" font-weight="700" fill="#b3261e">THE MECHANISM — why no threshold can help</text>
+    <text x="26" y="68" >build_waves  encodes the SPEC       "apply R to 1234"</text>
+    <text x="26" y="88" >gold_sets    labels by the TRACE     "4321"</text>
+    <text x="26" y="112">The wave sees ONLY spec geometry.</text>
+    <text x="26" y="140" font-weight="700">Measured AUC of the best wave</text>
+    <text x="26" y="158" font-weight="700">statistic vs the trace label:  0.4982</text>
+    <text x="26" y="186" fill="#b3261e" font-weight="700">AUC is THRESHOLD-FREE. It governs.</text>
+    <text x="26" y="212">shipped      AUC 0.5012  sep +0.1061</text>
+    <text x="26" y="232">LOO cosine   AUC 0.4982  sep +0.0000</text>
+    <text x="26" y="252">attributable AUC 0.5043  sep +0.0000</text>
+    <text x="26" y="276" fill="#b3261e">Ceiling is behavioural: the label is absent from wave space.</text>
+
+    <rect x="494" y="18" width="476" height="268" rx="8" fill="none" stroke="#8a6100" stroke-width="1.8"/>
+    <text x="510" y="42" font-weight="700" fill="#8a6100">MY OWN DEFECT — family mismatch, self-caught</text>
+    <text x="510" y="68" >eps_hard = 0.35 was calibrated for the</text>
+    <text x="510" y="88" >ENTRY-UNIMODULAR COMPLEX family,</text>
+    <text x="510" y="108">where a match gives |coh| near 1.0.</text>
+    <text x="510" y="136">This bank is REAL: waves_complex = False.</text>
+    <text x="510" y="164" font-family="ui-monospace,Menlo,monospace">empirical chance  0.120168</text>
+    <text x="510" y="184" font-family="ui-monospace,Menlo,monospace">closed form       0.009792</text>
+    <text x="510" y="204" font-family="ui-monospace,Menlo,monospace">ratio             12.3x</text>
+    <text x="510" y="232" fill="#8a6100">Every candidate fell below 1 − 0.35, so</text>
+    <text x="510" y="250" fill="#8a6100">the LOO and attributable arms read</text>
+    <text x="510" y="268" fill="#8a6100">+0.0000 by SATURATION, not anti-selection.</text>
+  </g>
+</svg>
+<figcaption><b>Figure 1.</b> Two independent reasons the bar is unreachable here. Text alternative: the wave encodes the specification while correctness is the trace, giving measured AUC 0.4982 at chance; and the shipped epsilon belongs to a different wave family, so its arms saturate rather than discriminate.</figcaption>
+</figure>
+
+<div class="verdict win">
+<p><b>The report called this "the most blocking absence." It was a WIRING gap, not a data gap.</b> Reading <code>gold_sets</code> verbatim — <i>"For each query, the SET of train row indices whose trace equals the query trace"</i> — shows per-candidate correctness was always derivable: candidate column <code>j</code> answers query <code>q</code> iff <code>j ∈ gold[q]</code>. I wired it, labelled 11,340 pairs, and measured both veto variants.</p>
+</div>
+
+<p><b>What the measurement says, stated plainly.</b> The labels are correct and non-degenerate. The controls behave: shuffled labels collapse separation to <span class="kv">+0.00058</span> (|sep| p95 <span class="kv">0.04603</span>). But every arm sits at chance by the threshold-free reading, and the reason is structural — the trace-match label is not encoded in spec-wave geometry. <b>No threshold, and no refit, can earn +0.7000 on this bank.</b> That is a measured ceiling, recorded as such. The bar stays 0.7000 and the dark port stays mechanically disconnected.</p>
+
+<h2>3. Item 2 — the ratchet decays, and that is the finding</h2>
+
+<table>
+<thead><tr><th>Cycle</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>growth</th></tr></thead>
+<tbody>
+<tr><td>ARM R real</td><td class="num">0.1111</td><td class="num">0.1296</td><td class="num">0.1759</td><td class="num">0.1759</td><td class="num">0.1667</td><td class="num">0.1667</td><td class="num">+0.0556</td></tr>
+<tr><td>ARM S shuffled</td><td class="num">0.0000</td><td class="num">0.0926</td><td class="num">0.1019</td><td class="num">0.0556</td><td class="num">0.0648</td><td class="num">0.0556</td><td class="num">—</td></tr>
+<tr><td>ARM N synthetic only</td><td class="num">0.0648</td><td class="num">0.1204</td><td class="num">0.1204</td><td class="num">0.1204</td><td class="num">0.1204</td><td class="num">0.1204</td><td class="num">—</td></tr>
+</tbody>
+</table>
+
+<p><b>The decay is the result.</b> A store-level accumulator is monotone <i>by construction</i> — the union of verified pairs can only grow. An argmax accuracy is not. ARM R rises from <span class="kv">0.1111</span> to a peak of <span class="kv">0.1759</span>, then <b>falls back to 0.1667</b>. More experience did not buy more competence past a point. The store-level ratchet measured earlier (CUM 138 vs 12, margin 11.5) was a genuine prerequisite; it does not compose into readout competence at this scale.</p>
+
+<p>The pre-registered rule was reused, not invented: <code>bar = max(unigram_floor, shuffled-arm held acc) + 0.05 = 0.3188</code>, frozen in <code>exp_m4_readout_capacity.py</code> before its own run. Its second branch fires — the frozen wave carries insufficient information, so a readout fix cannot pass and learnable ingress is a prerequisite. This matches the in-tree M4 result independently: held-out token accuracy <span class="kv">0.0</span> against a <span class="kv">0.1171</span> floor.</p>
+
+<h2>4. Item 3 — the extremum bar is pair-count dependent</h2>
+
+<table>
+<thead><tr><th>Arm</th><th>truncated 10×10</th><th>full 10×116</th><th>movement</th></tr></thead>
+<tbody>
+<tr><td>A_raw_betti extremum ratio</td><td class="num">1.571 fail</td><td class="num">2.200 fail</td><td class="num">+40%</td></tr>
+<tr><td>C_landscape extremum ratio</td><td class="num">0.922 fail</td><td class="num">1.609 fail</td><td class="num">+74%</td></tr>
+<tr><td>C_landscape mean ratio</td><td class="num">0.196</td><td class="num">0.198</td><td class="num">stable</td></tr>
+<tr><td>median CA distance 2K39</td><td class="num">15.055 Å</td><td class="num">15.127 Å</td><td class="num">+0.5%</td></tr>
+</tbody>
+</table>
+
+<div class="verdict block">
+<p><b>Finding, stated as a methodological result and not as a bar change.</b> The truncation preserved filtration <i>scale</i> (median 15.127 Å both ways, relative difference 0.0% / 0.5%). But the extremum ratio degraded <b>74%</b> while the mean ratio stayed flat. The cause: <code>min_cross</code> is a <b>min-order-statistic</b> — it shrinks as the cross set grows from 100 to 1,160 pairs. A bar placed on <code>max_within / min_cross</code> is therefore a function of pair count, not a fixed property of the data. <b>The bar stays 0.8000 and stays FAIL.</b> Redesigning that bar is an operator decision, so it is escalated, not taken.</p>
+</div>
+
+<h2>5. Items 4 and 5 — fail-closed, not worked around</h2>
+
+<table>
+<thead><tr><th>Gate</th><th>Reason, measured</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>G-URC6</td><td class="num">381 tracked files match /arc/; real ARC task JSONs with train/test grid pairs = 0. The tree holds ARC receipts and engines, not task data.</td><td class="num">BLOCKED</td></tr>
+<tr><td>G-URC6 proxy</td><td class="num">refused. A proxy reported as G-URC6 would be fabrication. The receipt says <code>is_a_benchmark: false</code>, <code>clears_no_bar: true</code>.</td><td class="num">REFUSED</td></tr>
+<tr><td>Blackwell / GB202</td><td class="num">torch 2.13.0+cpu · cuda_available False · device_count 0. One check, then BLOCKED; no latency or VRAM figure emitted.</td><td class="num">BLOCKED</td></tr>
+<tr><td>Latency / VRAM contracts</td><td class="num">14.2 µs, 2.14 GiB, 6.0 TB/s remain declared blueprint constants.</td><td class="num">DECLARED</td></tr>
+</tbody>
+</table>
+
+<h2>6. Self-caught defects this session</h2>
+
+<ul>
+<li><b>A tautology in my own new test.</b> I wrote <code>assert s["n_correct"] + s["n_incorrect"] == s["n_correct"] + s["n_incorrect"]</code> — always true, the dead-gate class this program keeps catching. Replaced with a <code>Q×K</code> constraint that can fail.</li>
+<li><b>A wave-family mismatch.</b> I applied <code>eps_hard = 0.35</code> from the entry-unimodular complex family to a <i>real</i> bank whose empirical chance coherence is 12.3× the closed form. Everything fired. Both readings were recorded; the threshold-free AUC governs.</li>
+<li><b>A no-op arm (prior turn, retained).</b> ARM B's scale normalisation on Betti <i>curves</i> was an exact duplicate of ARM A — a curve is already scale-parameterised by the ε grid. Scale normalisation bites only on the <i>diagram</i>, which ARM C uses.</li>
+<li><b>An assumed semantic.</b> My first ratchet test asserted <code>"I"</code> and <code>"II"</code> are both identity. Measured: <code>apply_op("1234","I") = "2345"</code> — <code>I</code> is increment. The real collision is <code>C</code> being idempotent (36 collision groups measured).</li>
+<li>Plus, carried from earlier: the un-normalised inner product, the binary MaxMin tautology, the two-tuple <code>parse_models</code> unpack, and the <code>cmd.exe</code>-vs-bash shell confusion.</li>
+</ul>
+
+<h2>7. One pre-existing environment failure, attributed</h2>
+
+<p>The full unit suite reports <b>654 passed · 1 skipped · 1 failed</b>. The single failure is <b>not</b> a regression, and the attribution is proven rather than assumed:</p>
+
+<table>
+<thead><tr><th>Evidence</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Failure</td><td class="num">test_henri_phase838_zonec_bridge_wiring.py::test_flag_default_off</td></tr>
+<tr><td>Cause</td><td class="num">ModuleNotFoundError: No module named 'arc_agi' at production_arc_run.py:41</td></tr>
+<tr><td>Introduced by</td><td class="num">6320378 "ARC-AGI-3 production run" — a PRIOR session</td></tr>
+<tr><td>Test file added by</td><td class="num">ea6307a "8.38: wire Zone C retrieval bridge consumers" — a PRIOR session</td></tr>
+<tr><td>Does origin/main import it too?</td><td class="num">yes, main:41 → import arc_agi</td></tr>
+<tr><td>Was production_arc_run.py touched this session?</td><td class="num">no — zero commits in the session window</td></tr>
+<tr><td>Reproduces at main?</td><td class="num">yes, identically</td></tr>
+</tbody>
+</table>
+
+<p><b>Conclusion:</b> an uninstalled optional dependency, reproducible at <code>origin/main</code>, unrelated to the five items. The suite is 654 passed with only that one deselected. Provisioning it is a one-line install; I did not install it because changing the environment to make a test pass is not a measurement.</p>
+
+<details>
+<summary>Text alternative — full item status as plain text</summary>
+<pre style="white-space:pre-wrap;font-size:.85rem">
+STATE. HEAD 90adbcfd585433d4be9c03ca4652654bf9e80b74 equals the remote branch SHA.
+origin/main untouched at 7deb528ff049d4507d33f4eff2f52cffa214f0be. Tree clean. Ledger 2025
+records, head 4a6cdba22148c207, chain intact. Suite 654 passed / 1 skipped / 1 deselected.
+Branch diff vs main: 99 files, +25550 / -9. Canary bff4e49c5e08ed83 identical on every read.
+Host torch 2.13.0+cpu, cuda_available False, device_count 0.
+
+ITEM 1 -- real labelled bank for G-SJ4.  GSJ4_LABELS_WIRED_NO_ARM_EARNS_BAR_ON_THIS_BANK.
+It was a WIRING gap, not a data gap: gold_sets returns, per query, the set of train row
+indices whose trace equals the query trace, so candidate j answers query q iff j in gold[q].
+Measured: 11340 pairs, 311 correct, 11029 incorrect, label rate 0.02743. Shipped AUC 0.5012
+sep +0.1061. LOO cosine AUC 0.4982 sep +0.0000. Attributable AUC 0.5043 sep +0.0000.
+Shuffled-label control mean sep +0.00058, |sep| p95 0.04603. MECHANISM: build_waves encodes
+the SPEC, gold_sets labels by the TRACE; best wave statistic vs the trace label AUC 0.4982,
+chance. AUC is threshold-free, so it governs: the 0.7000 bar is unreachable by content.
+MY DEFECT: eps 0.35 belongs to the entry-unimodular complex family; this bank is real, with
+empirical chance 0.120168 against a closed form 0.009792 (12.3x). The LOO and attributable
+arms read +0.0000 by SATURATION, not anti-selection. Dark port stays disconnected. Bars
+unchanged at 0.7000 / 0.0500 / 0.35.
+
+ITEM 2 -- model-level ratchet.  MODEL_RATCHET_NOT_CONFIRMED_READOUT_WEAK__
+FROZEN_WAVE_INSUFFICIENT. ARM R real exact 0.1111 0.1296 0.1759 0.1759 0.1667 0.1667,
+growth +0.0556, NOT monotone. ARM S shuffled 0.0000 0.0926 0.1019 0.0556 0.0648 0.0556.
+ARM N synthetic-only 0.0648 0.1204 0.1204 0.1204 0.1204 0.1204. Ceiling 0.2037. Bar 0.3188,
+reused from exp_m4_readout_capacity.py which froze the rule before its own run. THE FINDING:
+a store-level accumulator is monotone by construction, an argmax accuracy is not. ARM R decays
+from its peak. More experience did not buy more competence past a point. Cross-check: in-tree
+M4 held-out token acc 0.0 against a 0.1171 floor.
+
+ITEM 3 -- cross-fold statistic at full ensemble width.  CROSSFOLD_STILL_NOT_SEPARATED_AT_
+FULL_WIDTH. 1D3Z 10 models, 2K39 116 models, 76 common residues. Truncated-10: A_raw 1.571
+fail, C_landscape 0.922 fail. Full: A_raw 2.200 fail, C_landscape 1.609 fail. Mean ratio
+stable 0.196 to 0.198. Truncation test REPRESENTATIVE, relative difference 0.0% and 0.5%.
+FINDING: min_cross is a min-order-statistic, so the extremum ratio is a function of pair
+count (100 vs 1160 pairs), not of the data. Bar stays 0.8000 and stays FAIL; redesign is an
+operator decision, escalated not taken.
+
+ITEM 4 -- G-URC6 relational accuracy >= 0.8500.  G_URC6_BLOCKED_DATA_ABSENT. 381 tracked
+files match /arc/; real ARC task JSONs with train/test grid pairs = 0. No proxy substituted.
+
+ITEM 5 -- Blackwell deployment.  BLOCKED. torch 2.13.0+cpu, cuda_available False,
+device_count 0. No latency or VRAM figure emitted. The 14.2 us, 2.14 GiB and 6.0 TB/s
+figures remain declared blueprint constants.
+
+SELF-CAUGHT DEFECTS. A tautology in my own new test (x + y == x + y), replaced with a Q*K
+constraint that can fail. A wave-family mismatch driving saturation. A no-op arm in the
+prior turn. An assumed semantic ("I" is increment, not identity; the real collision is C
+being idempotent, 36 collision groups measured).
+
+PRE-EXISTING ENVIRONMENT FAILURE, ATTRIBUTED. test_flag_default_off fails with
+ModuleNotFoundError arc_agi at production_arc_run.py:41. Introduced by 6320378, test added by
+ea6307a, both prior sessions. origin/main imports it too at line 41. The file was not touched
+this session. Reproduces identically at main. Not a regression.
+
+WHAT NONE OF THIS IS. No bar moved. No CUDA number. No benchmark task attempted or solved.
+No AAII claim. The omni-modal infinite-context light-speed goal is untouched and unclaimed.
+</pre>
+</details>
+
+<h2>8. Provisioning only a human can supply</h2>
+
+<ol>
+<li><b>The real evaluation bank with per-candidate correctness labels.</b> This is what would actually unblock G-SJ4. The in-tree synthetic bank is wired and measured; the dark port stays disconnected until the real bank is scored.</li>
+<li><b>ARC-AGI task data</b> — train/test grid pairs staged into the repository. Without it G-URC6 is undecidable here.</li>
+<li><b>A CUDA host with proven within-boundary containment.</b> Every latency, VRAM, and throughput contract is unmeasured until then.</li>
+<li><b>An operator ruling on the extremum-ratio bar</b> (item 3). It is pair-count dependent; the measured alternative is the mean ratio plus the permutation null.</li>
+<li><b><code>arc_agi</code> installed</b> to clear the one pre-existing suite failure.</li>
+</ol>
+
+<footer>
+<p><b>Provenance.</b> Numbers from receipts in <code>design/zone_a/evidence/</code> and from commands executed this session: <code>probe_crossfold_fullwidth.py</code>, <code>probe_gsj4_labelled_bank.py</code>, <code>probe_model_level_ratchet.py</code>, <code>probe_urc6_relational.py</code>, the unit suite, and <code>git ls-remote</code> readback.</p>
+<p><b>Limits.</b> Single seed throughout. ARM R's decay is measured over 6 cycles at 8 wake pairs per cycle — a longer run could differ, and the receipt records the series so it can be re-measured. Item 1's bank is the in-tree synthetic M4 substrate, not the evaluation bank. Items 4 and 5 are blocked on provisioning, not on engineering. The reference streams supplied 72-hex "SHAs" (git SHAs are 40 hex) and a <code>TraceBank</code> API that grep disproved; both were rejected unread, and only readback with a reproducible canary was trusted. No bar was moved in producing this document. Hashes prove byte linkage, not truth.</p>
+</footer>
+
+</body>
+</html>
