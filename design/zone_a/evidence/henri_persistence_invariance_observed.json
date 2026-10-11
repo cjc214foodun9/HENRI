@@ -1,4 +1,7 @@
 {
+  "checks": {
+    "g_d1_separation_passes": false
+  },
   "config": {
     "epsilons": [
       4.0,
@@ -67,6 +70,15 @@
   "evidence_class": "OBSERVED",
   "failures": [],
   "finding": "Persistent homology is STABLE, not invariant. On a tight ensemble the barcodes can coincide exactly; on a disperse ensemble thermal breathing moves the filtration itself and d_B > 0. The directive's d_B == 0.000 guarantee therefore cannot be asserted as written and must be restated as a separation test with a stated tolerance.",
+  "g_d1_separation": {
+    "bar": 0.8,
+    "cross_min_different_fold": 9,
+    "mechanism_if_failed": "The DISPERSE ensemble (2K39, rmsd 3.29 A) spreads its filtration further than the two folds differ, so conformational variation outruns fold identity on this 8-point epsilon grid.",
+    "passes": false,
+    "ratio": 1.444444,
+    "statistic": "Betti-curve L1 is a conservative stand-in for the bottleneck distance d_B: d_B = 0 implies L1 = 0, not conversely.",
+    "within_max_same_fold": 13
+  },
   "implementation_scope": {
     "beta_0": "EXACT single-linkage connected components (union-find).",
     "beta_1": "EXACT for the complex: |E| - |V| + beta_0 - rank(boundary_2), the rank taken over GF(2) by Gaussian elimination on the 2-simplex boundary matrix. This is homology, NOT the 1-skeleton cycle-rank surrogate.",

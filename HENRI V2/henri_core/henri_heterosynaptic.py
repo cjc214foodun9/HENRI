@@ -69,6 +69,10 @@ import torch
 DEFAULT_ETA = 0.05
 DEFAULT_GAMMA = 0.02
 DEFAULT_ETA_W = 0.002         # measured stable with drive_scale="sqrt_d" + norm_acts
+# Scale-free PSD bar for G-H2a. float32 eigvalsh on a Gram matrix whose spectrum spans
+# ~1.4e3 shows relative negatives near 1e-7 (measured 8.2e-08); 1e-4 is far above that
+# and far below the ~1.0 a genuine sign inversion produces.
+PSD_REL_TOL = 1e-4
 
 
 class DualStreamNetwork:
@@ -159,8 +163,14 @@ class DualStreamNetwork:
 
     # -- local plasticity ---------------------------------------------------------
     @torch.no_grad()
-    def sal_step(self, x, grad_out, retract=True):
-        """One SAL step. Returns (h, abar). No graph, in-place, drive computed ONCE."""
+    def sal_step(self, x, grad_out, retract=True, return_deltas=False):
+        """One SAL step. Returns (h, abar) or (h, abar, deltas). No graph, in-place.
+
+        return_deltas yields the PRE-RETRACTION preconditioned drive per layer,
+        pp_l = eta_W * D_u^{l+1} (Vbar^l abar^{l+1}) (a^l)^T, which is exactly
+        dW + gamma*W_old and therefore the quantity G-H2b tests. Exposing it lets the
+        gate measure Theorem 1's term WITHOUT running an unstable retract=False step.
+        """
         h = self.activations(x)
         abar = self.feedback(h, grad_out)
         # drives[l] = outer(abar^l, D_u^l h^l). THE SCALED TENSOR IS BUILT ONCE and used
@@ -169,6 +179,7 @@ class DualStreamNetwork:
         drives = [self._scale(torch.outer(abar[l], self._prep(h[l])), self.dims[l])
                   for l in range(self.n + 1)]
         a = [self._prep(h[l]) for l in range(self.n)]        # a^l for the weight update
+        deltas = []
         for l in range(self.n):
             # --- interstream: ONE update per matrix per step ------------------------
             # V^l     += eta_V     * drive_l          drive_l = outer(abar^l, relu(h^l))
@@ -187,10 +198,14 @@ class DualStreamNetwork:
             # --- Theorem 1 weight update -------------------------------------------
             Du_next = (h[l + 1] > 0).to(self.dtype)
             pre = Du_next * (self.Vbar[l] @ abar[l + 1])
-            self.W[l].mul_(1.0 - self.gamma).add_(self.eta_w * torch.outer(pre, a[l]))
+            pp = self.eta_w * torch.outer(pre, a[l])   # = dW + gamma*W_old
+            deltas.append(pp)
+            self.W[l].mul_(1.0 - self.gamma).add_(pp)
             if retract:
                 self.W[l].copy_(self._retract(self.W[l]))
                 self.Wbar[l].copy_(self._retract(self.Wbar[l]))
+        if return_deltas:
+            return h, abar, deltas
         return h, abar
 
     @staticmethod
@@ -348,6 +363,129 @@ def gate_gh2(dims=(32, 64, 32), steps=150, warmup=60, seed=0):
     }
 
 
+def gate_gh2a(dims=(32, 64, 32), steps=60, seed=0, tol=None):
+    """G-H2a (ruling 2 bifurcation): the interstream preconditioner is PSD.
+
+    H_D^l = (D_u^{l+1} Vbar^l)(D_u^{l+1} Vbar^l)^T is a Gram matrix, so PSD holds BY
+    CONSTRUCTION. A gate that is true by construction cannot fail, so this one ALSO
+    requires ||H_D^l||_F > 0: a zero matrix is trivially PSD and would make the claim
+    vacuous. Reports lambda_min per layer.
+    """
+    net = DualStreamNetwork(dims, seed=seed)
+    x = torch.randn(dims[0], generator=torch.Generator().manual_seed(seed))
+    target = torch.randn(dims[-1], generator=torch.Generator().manual_seed(seed + 9))
+    for _ in range(steps):
+        with torch.no_grad():
+            g = 2.0 * (net.activations(x)[-1] - target)
+        net.sal_step(x, g)
+    with torch.no_grad():
+        h = net.activations(x)
+        abar = net.feedback(h, 2.0 * (h[-1] - target))
+        lam_min, lam_max, fro = [], [], []
+        for l in range(net.n):
+            Du = (h[l + 1] > 0).to(net.dtype)
+            A = Du.unsqueeze(1) * net.Vbar[l]          # D_u Vbar : scale rows
+            H = A @ A.t()
+            ev = torch.linalg.eigvalsh(0.5 * (H + H.t()))
+            lam_min.append(float(ev.min()))
+            lam_max.append(float(ev.max()))
+            fro.append(float(H.norm()))
+    # RELATIVE tolerance. H = A A^T is PSD in exact arithmetic, so this gate verifies
+    # the ARCHITECTURE, not a trained result. SELF-CAUGHT DEFECT: the first version used
+    # an ABSOLUTE tol=1e-9 and reported psd=False with lambda_min=[-1.12e-04, -1.59e-04].
+    # Those magnitudes are float32 eigvalsh error on a matrix whose spectrum spans ~1e6,
+    # i.e. ~1e-10 RELATIVE. An absolute bar on an absolute eigenvalue asserts more than
+    # float32 carries -- the same defect class as the absolute singular-value eps that
+    # corrupted the whitening route earlier. The bar is now relative to |lambda_max|.
+    # OPERATIVE BAR IS SCALE-FREE. SELF-CAUGHT DEFECT, TWICE:
+    #   v1 used an absolute tol=1e-9 -> psd=False on lambda_min=-1.12e-4.
+    #   v2 ANDed that absolute test onto a relative one -> STILL False, because
+    #   -1.12e-4 is not >= -1.377e-6.
+    # H = A A^T is a Gram matrix: PSD in exact arithmetic. Measured |lambda_min|/|lambda_max|
+    # = 8.2e-08, i.e. float32 rounding (eps ~1.2e-7) on a spectrum spanning ~1.4e3. An
+    # absolute eigenvalue bar asserts more than float32 carries -- the same class as the
+    # absolute singular-value eps that corrupted the whitening route. The test is now the
+    # scale-free ratio, which still fails on a REAL sign inversion (rel ~ O(1)).
+    rel = [abs(v) / max(abs(m), 1.0) for v, m in zip(lam_min, lam_max)]
+    psd = all(r <= PSD_REL_TOL for r in rel)
+    nonzero = all(v > 0.0 for v in fro)
+
+    # NEGATIVE CONTROL: a gate that cannot fail is worthless. Build H = -(A A^T), whose
+    # relative negative eigenvalue is ~1.0, and assert the SAME predicate REJECTS it.
+    with torch.no_grad():
+        h = net.activations(x)
+        Du0 = (h[1] > 0).to(net.dtype)
+        A0 = Du0.unsqueeze(1) * net.Vbar[0]
+        H_ok = A0 @ A0.t()
+        H_bad = -H_ok
+        rel_ok = abs(float(torch.linalg.eigvalsh(0.5 * (H_ok + H_ok.t())).min())) / max(
+            abs(float(torch.linalg.eigvalsh(0.5 * (H_ok + H_ok.t())).max())), 1.0)
+        rel_bad = abs(float(torch.linalg.eigvalsh(0.5 * (H_bad + H_bad.t())).min())) / max(
+            abs(float(torch.linalg.eigvalsh(0.5 * (H_bad + H_bad.t())).max())), 1.0)
+    ctrl_ok = bool(rel_ok <= PSD_REL_TOL and rel_bad > PSD_REL_TOL)
+    return {
+        "lambda_min_per_layer": [round(v, 12) for v in lam_min],
+        "lambda_max_per_layer": [round(v, 6) for v in lam_max],
+        "relative_lambda_min": [round(r, 12) for r in rel],
+        "frobenius_per_layer": [round(v, 6) for v in fro],
+        "tolerance": {"scale_free_rel_bar": PSD_REL_TOL,
+                      "why_not_absolute": "float32 eigvalsh error ~ |lambda_max|*eps"},
+        "psd_holds": bool(psd),
+        "nonvacuous_nonzero": bool(nonzero),
+        "negative_control": {"rel_ok": round(rel_ok, 12), "rel_bad": round(rel_bad, 6),
+                             "predicate_rejects_non_psd": ctrl_ok},
+        "passes": bool(psd and nonzero and ctrl_ok),
+        "note": ("PSD is guaranteed by A A^T, so the gate verifies the ARCHITECTURE. The "
+                 "parts that can fail are ||H_D||_F > 0 (non-vacuity) and the negative "
+                 "control (a non-PSD matrix must be rejected)."),
+    }
+
+
+def gate_gh2b(dims=(32, 64, 32), steps=60, warmup=120, seed=0, bar=0.90):
+    """G-H2b (ruling 2 bifurcation): asymptotic alignment of the PRECONDITIONED term.
+
+    After E_v decays (warmup), test cos(dW + gamma*W_old, -grad F) > 0 on >= bar of
+    converged steps. Subtracting gamma*W removes the decay vector, which is orthogonal
+    to the loss gradient in general and dominated the COMPOSITE step in the earlier
+    G-H2 measurement (W ~ 25, gamma*W ~ 0.51 vs drive ~ 0.08). This isolates the
+    component Theorem 1 actually describes.
+    """
+    net = DualStreamNetwork(dims, seed=seed)
+    x = torch.randn(dims[0], generator=torch.Generator().manual_seed(seed))
+    target = torch.randn(dims[-1], generator=torch.Generator().manual_seed(seed + 9))
+    for _ in range(warmup):
+        with torch.no_grad():
+            g = 2.0 * (net.activations(x)[-1] - target)
+        net.sal_step(x, g)
+    cosines = []
+    for _ in range(steps):
+        with torch.no_grad():
+            g = 2.0 * (net.activations(x)[-1] - target)
+        saved = net.W[0]
+        W0 = saved.detach().clone().requires_grad_(True)
+        net.W[0] = W0
+        F = ((net.activations(x)[-1] - target) ** 2).sum()
+        F.backward()
+        true_descent = (-W0.grad).detach()
+        net.W[0] = saved
+        _h, _a, deltas = net.sal_step(x, g, return_deltas=True)
+        pp = deltas[0].flatten()
+        if not math.isfinite(float(pp.norm())):
+            cosines.append(float("nan"))
+            continue
+        cosines.append(float(torch.dot(pp, true_descent.flatten())
+                             / (pp.norm() * true_descent.norm()).clamp_min(1e-12)))
+    finite = bool(all(math.isfinite(c) for c in cosines))
+    pos = sum(1 for c in cosines if c > 0)
+    frac = (pos / steps) if finite else None
+    return {
+        "n_steps": steps, "warmup": warmup, "bar": bar, "finite": finite,
+        "n_positive": pos, "fraction_positive": frac,
+        "mean_cosine": (sum(cosines) / len(cosines)) if finite else None,
+        "passes": bool(finite and frac is not None and frac >= bar),
+    }
+
+
 def precision_sweep(dims=(48, 64, 64, 48), steps=120, seed=0):
     """E_v floor by precision: the shared-drive design should keep the floor low.
 
@@ -394,6 +532,11 @@ def run_gates(write_receipt=True):
     matched = gate_gh1()
     mismatched = gate_gh1(eta_bar=0.075)
     gh2 = gate_gh2()
+    # RULING 2 BIFURCATION: G-H2a (algebraic PSD) and G-H2b (asymptotic alignment of
+    # the PRECONDITIONED term, i.e. dW + gamma*W). Both are wired so the receipt carries
+    # the measured values rather than a claim about them.
+    gh2a = gate_gh2a()
+    gh2b = gate_gh2b()
     mem = gate_memory()
     prec = precision_sweep()
     checks = {
@@ -408,7 +551,10 @@ def run_gates(write_receipt=True):
             and matched["tracks_lemma1_within_2x"]
             and not mismatched["tracks_lemma1_within_2x"]
             and mismatched["final_ev_abs"] > matched["final_ev_abs"] * 10.0),
-        "G-H2 acute vs autograd": bool(gh2["passes"]),
+        "G-H2 acute vs autograd (COMPOSITE step; the original failing form)": bool(
+            gh2["passes"]),
+        "G-H2a preconditioner PSD and non-vacuous": bool(gh2a["passes"]),
+        "G-H2b preconditioned-term alignment >= 0.90": bool(gh2b["passes"]),
         "memory graph-O(1)": bool(mem["passes_graph_o1"]),
     }
     ok = all(checks.values())
@@ -426,6 +572,8 @@ def run_gates(write_receipt=True):
         "g_h1_matched": matched,
         "g_h1_mismatched_control": mismatched,
         "g_h2_psd_alignment": gh2,
+        "g_h2a_preconditioner_psd": gh2a,
+        "g_h2b_preconditioned_alignment": gh2b,
         "memory": mem,
         "precision_sweep": prec,
         "checks": checks,
@@ -447,10 +595,19 @@ def run_gates(write_receipt=True):
     print(f"  mismatched E_v final={mismatched['final_ev_abs']:.3e} "
           f"(control must NOT decay)")
     if gh2["finite"]:
-        print(f"  G-H2 positive={gh2['n_positive']}/{gh2['n_steps']} "
+        print(f"  G-H2  composite  pos={gh2['n_positive']}/{gh2['n_steps']} "
               f"mean_cos={gh2['mean_cosine']:.3f}")
     else:
-        print("  G-H2 DIVERGED (finite=False) -- no cosine reported")
+        print("  G-H2  composite DIVERGED")
+    print(f"  G-H2a lambda_min={gh2a['lambda_min_per_layer']} "
+          f"lambda_max={gh2a['lambda_max_per_layer']}")
+    print(f"  G-H2a rel_min={gh2a['relative_lambda_min']} psd={gh2a['psd_holds']} "
+          f"nonzero={gh2a['nonvacuous_nonzero']}")
+    if gh2b["finite"]:
+        print(f"  G-H2b preconditioned  pos={gh2b['n_positive']}/{gh2b['n_steps']} "
+              f"mean_cos={gh2b['mean_cosine']:.4f} frac={gh2b['fraction_positive']:.3f}")
+    else:
+        print("  G-H2b DIVERGED")
     print(f"  VERDICT: {R['verdict']}")
     if write_receipt:
         dest = pathlib.Path(__file__).resolve().parents[2] / "design" / "zone_a" / "evidence" \

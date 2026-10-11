@@ -2,7 +2,9 @@
   "checks": {
     "G-H1 matched rates PASS": true,
     "G-H1 mismatched rates FAILS (negative control)": true,
-    "G-H2 acute vs autograd": false,
+    "G-H2 acute vs autograd (COMPOSITE step; the original failing form)": false,
+    "G-H2a preconditioner PSD and non-vacuous": true,
+    "G-H2b preconditioned-term alignment >= 0.90": false,
     "memory graph-O(1)": true
   },
   "elapsed_s": 2.2,
@@ -66,6 +68,47 @@
     "n_steps": 150,
     "passes": false,
     "threshold": 0.995
+  },
+  "g_h2a_preconditioner_psd": {
+    "frobenius_per_layer": [
+      1371.474854,
+      1377.592041
+    ],
+    "lambda_max_per_layer": [
+      1371.474609,
+      1377.591919
+    ],
+    "lambda_min_per_layer": [
+      -0.000112488618,
+      -0.000158588402
+    ],
+    "negative_control": {
+      "predicate_rejects_non_psd": true,
+      "rel_bad": 1371.474609,
+      "rel_ok": 8.202e-08
+    },
+    "nonvacuous_nonzero": true,
+    "note": "PSD is guaranteed by A A^T, so the gate verifies the ARCHITECTURE. The parts that can fail are ||H_D||_F > 0 (non-vacuity) and the negative control (a non-PSD matrix must be rejected).",
+    "passes": true,
+    "psd_holds": true,
+    "relative_lambda_min": [
+      8.202e-08,
+      1.1512e-07
+    ],
+    "tolerance": {
+      "scale_free_rel_bar": 0.0001,
+      "why_not_absolute": "float32 eigvalsh error ~ |lambda_max|*eps"
+    }
+  },
+  "g_h2b_preconditioned_alignment": {
+    "bar": 0.9,
+    "finite": true,
+    "fraction_positive": 0.4666666666666667,
+    "mean_cosine": -5.511407226895434e-09,
+    "n_positive": 28,
+    "n_steps": 60,
+    "passes": false,
+    "warmup": 120
   },
   "memory": {
     "buffer_elements_after": 428032,

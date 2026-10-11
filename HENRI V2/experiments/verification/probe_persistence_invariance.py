@@ -107,6 +107,32 @@ def main() -> int:
         }
         print(f"  cross-protein d_b0={cross_b0} d_b1={cross_b1} vs within-1D3Z {within}")
 
+        # ---- G-D1 AS RESTATED BY RULING 3 (Lipschitz stability separation) --------
+        #   ratio = max same-fold d_B / min different-fold d_B  <=  0.8000
+        # The RULING'S OWN FORMULA uses max-over-same-fold, not the first entry's
+        # within-distance. With two entries that is max(7, 13) = 13 against a single
+        # cross pair of 9. Encoded exactly as written so the number is honest.
+        within_max = max(e["max_b0_curve_distance"] + e["max_b1_curve_distance"]
+                         for e in out["entries"])
+        out["g_d1_separation"] = {
+            "within_max_same_fold": int(within_max),
+            "cross_min_different_fold": int(cross_b0 + cross_b1),
+            "ratio": round(within_max / max(1, cross_b0 + cross_b1), 6),
+            "bar": 0.8000,
+            "passes": bool(within_max / max(1, cross_b0 + cross_b1) <= 0.8000),
+            "statistic": ("Betti-curve L1 is a conservative stand-in for the bottleneck "
+                          "distance d_B: d_B = 0 implies L1 = 0, not conversely."),
+            "mechanism_if_failed": ("The DISPERSE ensemble (2K39, rmsd 3.29 A) spreads its "
+                                    "filtration further than the two folds differ, so "
+                                    "conformational variation outruns fold identity on "
+                                    "this 8-point epsilon grid."),
+        }
+        out.setdefault("checks", {})["g_d1_separation_passes"] = bool(
+            out["g_d1_separation"]["passes"])
+        print(f"  G-D1 ratio = {out['g_d1_separation']['ratio']:.4f} "
+              f"(within_max {within_max} / cross_min {cross_b0 + cross_b1}) "
+              f"bar 0.8000 -> {out['g_d1_separation']['passes']}")
+
     strict_any = any(e.get("strict_invariance") for e in out["entries"])
     not_strict = [e["pdb_id"] for e in out["entries"] if not e.get("strict_invariance")]
     out["verdict"] = (
