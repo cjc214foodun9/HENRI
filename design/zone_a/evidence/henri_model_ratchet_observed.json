@@ -1,0 +1,190 @@
+{
+  "schema": "henri.model.ratchet.observed.v1",
+  "evidence_class": "OBSERVED",
+  "what": "model-level ratchet: readout competence across consolidation cycles",
+  "reuses_bar_from": "henri_core/exp_m4_readout_capacity.py (frozen before its own run)",
+  "decision_rule": "bar = max(unigram_floor, shuffled-arm held acc) + 0.05; the constrained arm must beat that bar with its own shuffled control intact, else the frozen wave carries insufficient information",
+  "preregistered": {
+    "cycles": 6,
+    "wake_per_cycle": 8,
+    "replay_per_cycle": 24,
+    "ridge_lambda": 10.0,
+    "seed": 20261011,
+    "ratchet_growth_min": 0.05,
+    "control_margin": 0.05,
+    "min_distinguishable_fraction": 0.6
+  },
+  "non_claims": [
+    "frozen encoder (train_body=False); the wave is NOT trained here",
+    "ridge readout on a synthetic digit-program substrate, single seed, CPU",
+    "NOT an AAII claim, NOT a capability claim, NOT a CUDA result",
+    "the store-level ratchet is a prerequisite and is already measured separately"
+  ],
+  "setup": {
+    "n_pairs": 156,
+    "n_train": 48,
+    "n_heldout": 108,
+    "wave_dim": 8192,
+    "waves_finite": true,
+    "n_output_categories": 35,
+    "pin": 20261010,
+    "lambda": 10.0
+  },
+  "arm_ceiling": {
+    "exact_match": 0.2037037037037037,
+    "token_acc": 0.22453703703703703,
+    "n_store": 48,
+    "n_pred_distinct": 4
+  },
+  "unigram_floor": {
+    "trace_floor": 0.26878306878306873,
+    "token_floor": 68.55555555555556
+  },
+  "arm_R_real": [
+    {
+      "cycle": 0,
+      "n_store": 8,
+      "exact_match": 0.1111111111111111,
+      "token_acc": 0.1412037037037037
+    },
+    {
+      "cycle": 1,
+      "n_store": 16,
+      "exact_match": 0.12962962962962962,
+      "token_acc": 0.16435185185185186
+    },
+    {
+      "cycle": 2,
+      "n_store": 24,
+      "exact_match": 0.17592592592592593,
+      "token_acc": 0.21296296296296297
+    },
+    {
+      "cycle": 3,
+      "n_store": 32,
+      "exact_match": 0.17592592592592593,
+      "token_acc": 0.21296296296296297
+    },
+    {
+      "cycle": 4,
+      "n_store": 40,
+      "exact_match": 0.16666666666666666,
+      "token_acc": 0.20601851851851852
+    },
+    {
+      "cycle": 5,
+      "n_store": 48,
+      "exact_match": 0.16666666666666666,
+      "token_acc": 0.2175925925925926
+    }
+  ],
+  "arm_S_shuffled": [
+    {
+      "cycle": 0,
+      "n_store": 8,
+      "exact_match": 0.0,
+      "token_acc": 0.09722222222222222
+    },
+    {
+      "cycle": 1,
+      "n_store": 16,
+      "exact_match": 0.09259259259259259,
+      "token_acc": 0.12268518518518519
+    },
+    {
+      "cycle": 2,
+      "n_store": 24,
+      "exact_match": 0.10185185185185185,
+      "token_acc": 0.14583333333333334
+    },
+    {
+      "cycle": 3,
+      "n_store": 32,
+      "exact_match": 0.05555555555555555,
+      "token_acc": 0.09259259259259259
+    },
+    {
+      "cycle": 4,
+      "n_store": 40,
+      "exact_match": 0.06481481481481481,
+      "token_acc": 0.11342592592592593
+    },
+    {
+      "cycle": 5,
+      "n_store": 48,
+      "exact_match": 0.05555555555555555,
+      "token_acc": 0.09259259259259259
+    }
+  ],
+  "arm_N_synthetic_only": [
+    {
+      "cycle": 0,
+      "n_store": 8,
+      "exact_match": 0.06481481481481481,
+      "token_acc": 0.1597222222222222
+    },
+    {
+      "cycle": 1,
+      "n_store": 16,
+      "exact_match": 0.12037037037037036,
+      "token_acc": 0.16435185185185186
+    },
+    {
+      "cycle": 2,
+      "n_store": 24,
+      "exact_match": 0.12037037037037036,
+      "token_acc": 0.1597222222222222
+    },
+    {
+      "cycle": 3,
+      "n_store": 32,
+      "exact_match": 0.12037037037037036,
+      "token_acc": 0.1597222222222222
+    },
+    {
+      "cycle": 4,
+      "n_store": 40,
+      "exact_match": 0.12037037037037036,
+      "token_acc": 0.1597222222222222
+    },
+    {
+      "cycle": 5,
+      "n_store": 48,
+      "exact_match": 0.12037037037037036,
+      "token_acc": 0.1597222222222222
+    }
+  ],
+  "shuffle_distinguishable_fraction": {
+    "min": 0.875,
+    "mean": 0.9375
+  },
+  "ratchet": {
+    "exact_match_series_R": [
+      0.1111111111111111,
+      0.12962962962962962,
+      0.17592592592592593,
+      0.17592592592592593,
+      0.16666666666666666,
+      0.16666666666666666
+    ],
+    "monotone": false,
+    "growth_cycle0_to_final": 0.05555555555555555
+  },
+  "decision": {
+    "bar": 0.3187830687830687,
+    "shuffled_final": 0.05555555555555555,
+    "ceiling_exact": 0.2037037037037037,
+    "ceiling_token": 0.22453703703703703
+  },
+  "checks": {
+    "waves_finite": true,
+    "control_is_not_a_noop": true,
+    "arm_R_growth_meets_min": true,
+    "arm_R_is_monotone": false,
+    "arm_R_beats_shuffled_control": true,
+    "arm_R_beats_preregistered_bar": false,
+    "arm_R_reaches_ceiling_region": true
+  },
+  "verdict": "MODEL_RATCHET_NOT_CONFIRMED_READOUT_WEAK__FROZEN_WAVE_INSUFFICIENT",
+  "residual": "The frozen wave carries weak signal and the wave-space geometry is population-invariant (wave_readout docstring ASSUMED block), so this readout measures whether ACCUMULATED EXPERIENCE improves decoding. It does not measure an omni-modal capability."
+}
