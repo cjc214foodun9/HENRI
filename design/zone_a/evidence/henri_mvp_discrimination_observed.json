@@ -1,0 +1,307 @@
+{
+  "probe": "mvp_discrimination",
+  "n_inputs": 8,
+  "Q1_discrimination": {
+    "C": [
+      {
+        "n_demos": 1,
+        "survivors": 1,
+        "names": [
+          "copy_first"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 2,
+        "survivors": 1,
+        "names": [
+          "copy_first"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 3,
+        "survivors": 1,
+        "names": [
+          "copy_first"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 4,
+        "survivors": 1,
+        "names": [
+          "copy_first"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 5,
+        "survivors": 1,
+        "names": [
+          "copy_first"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 6,
+        "survivors": 1,
+        "names": [
+          "copy_first"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 7,
+        "survivors": 1,
+        "names": [
+          "copy_first"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 8,
+        "survivors": 1,
+        "names": [
+          "copy_first"
+        ],
+        "unique": true
+      }
+    ],
+    "I": [
+      {
+        "n_demos": 1,
+        "survivors": 1,
+        "names": [
+          "increment"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 2,
+        "survivors": 1,
+        "names": [
+          "increment"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 3,
+        "survivors": 1,
+        "names": [
+          "increment"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 4,
+        "survivors": 1,
+        "names": [
+          "increment"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 5,
+        "survivors": 1,
+        "names": [
+          "increment"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 6,
+        "survivors": 1,
+        "names": [
+          "increment"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 7,
+        "survivors": 1,
+        "names": [
+          "increment"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 8,
+        "survivors": 1,
+        "names": [
+          "increment"
+        ],
+        "unique": true
+      }
+    ],
+    "R": [
+      {
+        "n_demos": 1,
+        "survivors": 1,
+        "names": [
+          "reverse"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 2,
+        "survivors": 1,
+        "names": [
+          "reverse"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 3,
+        "survivors": 1,
+        "names": [
+          "reverse"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 4,
+        "survivors": 1,
+        "names": [
+          "reverse"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 5,
+        "survivors": 1,
+        "names": [
+          "reverse"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 6,
+        "survivors": 1,
+        "names": [
+          "reverse"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 7,
+        "survivors": 1,
+        "names": [
+          "reverse"
+        ],
+        "unique": true
+      },
+      {
+        "n_demos": 8,
+        "survivors": 1,
+        "names": [
+          "reverse"
+        ],
+        "unique": true
+      }
+    ]
+  },
+  "min_demos_for_unique": {
+    "C": 1,
+    "I": 1,
+    "R": 1
+  },
+  "Q2_shuffled_control": {
+    "C": [
+      {
+        "seed": 1,
+        "survivors": 0,
+        "names": []
+      },
+      {
+        "seed": 2,
+        "survivors": 0,
+        "names": []
+      },
+      {
+        "seed": 3,
+        "survivors": 0,
+        "names": []
+      },
+      {
+        "seed": 4,
+        "survivors": 0,
+        "names": []
+      },
+      {
+        "seed": 5,
+        "survivors": 0,
+        "names": []
+      }
+    ],
+    "I": [
+      {
+        "seed": 1,
+        "survivors": 0,
+        "names": []
+      },
+      {
+        "seed": 2,
+        "survivors": 0,
+        "names": []
+      },
+      {
+        "seed": 3,
+        "survivors": 0,
+        "names": []
+      },
+      {
+        "seed": 4,
+        "survivors": 0,
+        "names": []
+      },
+      {
+        "seed": 5,
+        "survivors": 0,
+        "names": []
+      }
+    ],
+    "R": [
+      {
+        "seed": 1,
+        "survivors": 0,
+        "names": []
+      },
+      {
+        "seed": 2,
+        "survivors": 0,
+        "names": []
+      },
+      {
+        "seed": 3,
+        "survivors": 0,
+        "names": []
+      },
+      {
+        "seed": 4,
+        "survivors": 0,
+        "names": []
+      },
+      {
+        "seed": 5,
+        "survivors": 0,
+        "names": []
+      }
+    ]
+  },
+  "Q2_vacuous_ops": {},
+  "Q2_ill_posed_ops": [],
+  "Q2_pass": true,
+  "accuracy_is_tautological": true,
+  "tautology_reason": "run_program applies apply_op sequentially and the compiled operators ARE apply_op. Once each operator is uniquely identified, composition reproduces the trace with probability 1 for an invertible deterministic algebra. 1.0000 is EXPECTED BY CONSTRUCTION, not earned. The informative content is (a) the compiler rejects 5 distractor candidates and (b) it needs more than one demonstration, both measured in Q1, plus the Q2 negative control.",
+  "what_is_actually_earned": {
+    "distractors_rejected": 5,
+    "candidates_total": 8,
+    "min_demos_for_unique": {
+      "C": 1,
+      "I": 1,
+      "R": 1
+    },
+    "negative_control_fires": true
+  }
+}

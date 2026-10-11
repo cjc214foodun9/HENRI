@@ -1,0 +1,173 @@
+{
+  "inputs": [
+    "1234",
+    "5678",
+    "9012",
+    "2468",
+    "1357",
+    "8642",
+    "9753",
+    "3141"
+  ],
+  "holdout_len": 4,
+  "n_train": 312,
+  "n_heldout": 648,
+  "hypothesis_space": [
+    "IDENTITY",
+    "CONSTANT",
+    "REPEAT_FIRST",
+    "REPEAT_LAST",
+    "PERMUTATION",
+    "SHIFT",
+    "AFFINE"
+  ],
+  "inferred": {
+    "C": {
+      "form": "REPEAT_FIRST",
+      "params": {}
+    },
+    "I": {
+      "form": "SHIFT",
+      "params": {
+        "s": 1
+      }
+    },
+    "R": {
+      "form": "PERMUTATION",
+      "params": {
+        "perm": [
+          3,
+          2,
+          1,
+          0
+        ]
+      }
+    }
+  },
+  "all_inferred": true,
+  "n_evaluated": 648,
+  "n_correct": 648,
+  "heldout_accuracy": 1.0,
+  "sample_misses": [],
+  "by_program_length": {
+    "4": {
+      "correct": 648,
+      "total": 648,
+      "accuracy": 1.0
+    }
+  },
+  "edge_probe_rows": [
+    {
+      "operator": "C:REPEAT_FIRST",
+      "input": "7777",
+      "induced": "7777",
+      "executor": "7777",
+      "agrees": true
+    },
+    {
+      "operator": "C:REPEAT_FIRST",
+      "input": "0123",
+      "induced": "0000",
+      "executor": "0000",
+      "agrees": true
+    },
+    {
+      "operator": "C:REPEAT_FIRST",
+      "input": "9876",
+      "induced": "9999",
+      "executor": "9999",
+      "agrees": true
+    },
+    {
+      "operator": "C:REPEAT_FIRST",
+      "input": "1111",
+      "induced": "1111",
+      "executor": "1111",
+      "agrees": true
+    },
+    {
+      "operator": "C:REPEAT_FIRST",
+      "input": "5005",
+      "induced": "5555",
+      "executor": "5555",
+      "agrees": true
+    },
+    {
+      "operator": "I:SHIFT",
+      "input": "7777",
+      "induced": "8888",
+      "executor": "8888",
+      "agrees": true
+    },
+    {
+      "operator": "I:SHIFT",
+      "input": "0123",
+      "induced": "1234",
+      "executor": "1234",
+      "agrees": true
+    },
+    {
+      "operator": "I:SHIFT",
+      "input": "9876",
+      "induced": "0987",
+      "executor": "0987",
+      "agrees": true
+    },
+    {
+      "operator": "I:SHIFT",
+      "input": "1111",
+      "induced": "2222",
+      "executor": "2222",
+      "agrees": true
+    },
+    {
+      "operator": "I:SHIFT",
+      "input": "5005",
+      "induced": "6116",
+      "executor": "6116",
+      "agrees": true
+    },
+    {
+      "operator": "R:PERMUTATION",
+      "input": "7777",
+      "induced": "7777",
+      "executor": "7777",
+      "agrees": true
+    },
+    {
+      "operator": "R:PERMUTATION",
+      "input": "0123",
+      "induced": "3210",
+      "executor": "3210",
+      "agrees": true
+    },
+    {
+      "operator": "R:PERMUTATION",
+      "input": "9876",
+      "induced": "6789",
+      "executor": "6789",
+      "agrees": true
+    },
+    {
+      "operator": "R:PERMUTATION",
+      "input": "1111",
+      "induced": "1111",
+      "executor": "1111",
+      "agrees": true
+    },
+    {
+      "operator": "R:PERMUTATION",
+      "input": "5005",
+      "induced": "5005",
+      "executor": "5005",
+      "agrees": true
+    }
+  ],
+  "edge_probe_all_agree": true,
+  "limitations": {
+    "substrate_tautology": "The hypothesis space was DESIGNED knowing the executor's operator set is {I,R,C} = {increment, reverse, copy_first}. SHIFT(s=1) IS increment, PERMUTATION([3,2,1,0]) IS reverse, REPEAT_FIRST IS copy_first. So a 1.0000 accuracy is EXPECTED, not earned: the space spans the ground truth. What IS earned is that the PARAMETERS (shift amount, permutation vector) are FIT from pairs and generalise to edge inputs never shown to the inference.",
+    "non_unique_identification": "Operator I reports 2 survivors: SHIFT(s=1) and AFFINE(a=1,b=1) are algebraically identical maps ((d+1) mod 10 either way). The identification is therefore NOT unique for I, and the 'survivors' count alone cannot certify a mechanism. Same duplicate-behaviour class as the compose MVP's library check.",
+    "difficulty": "A 3-operator digit algebra with 4-digit strings is a toy substrate. Nothing here scales to open-vocabulary tasks, and no AAII claim follows."
+  },
+  "verdict": "MVP_INDUCTION_COMPOSES_WITH_SUBSTRATE_TAUTOLOGY"
+}

@@ -1,0 +1,36 @@
+{
+  "n_inputs": 8,
+  "holdout_len": 4,
+  "n_train_rows": 312,
+  "n_heldout_rows": 648,
+  "compiled": {
+    "C": "copy_first",
+    "I": "increment",
+    "R": "reverse"
+  },
+  "ambiguous": {
+    "C": [
+      "copy_first"
+    ],
+    "I": [
+      "increment"
+    ],
+    "R": [
+      "reverse"
+    ]
+  },
+  "n_demos_used": 24,
+  "all_ops_identified_uniquely": true,
+  "n_evaluated": 648,
+  "n_correct": 648,
+  "heldout_accuracy": 1.0,
+  "sample_misses": [],
+  "by_program_length": {
+    "4": {
+      "correct": 648,
+      "total": 648,
+      "accuracy": 1.0
+    }
+  },
+  "verdict": "MVP_COMPOSES_HELDOUT"
+}
