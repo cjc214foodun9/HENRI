@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project HENRI — Six Items Resolved, and the URC Spec Audited</title>
+<style>
+  :root{
+    --ink: var(--foreground, #1a1a1a);
+    --mute: var(--muted-foreground, #5b6470);
+    --line: var(--border, #d8dde3);
+    --card: var(--card, #ffffff);
+    --accent: var(--accent, #1f6feb);
+    --good: #1a7f4b;
+    --bad: #b3261e;
+    --warn: #8a6100;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:20px 22px 40px;
+    background:transparent; color:var(--ink);
+    font:16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    max-width:1120px;
+  }
+  h1{font-size:1.6rem;line-height:1.25;margin:0 0 4px}
+  h2{font-size:1.18rem;margin:30px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  h3{font-size:1.02rem;margin:20px 0 8px}
+  p,li{max-width:96ch}
+  .sub{color:var(--mute);margin:0 0 14px}
+  code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em}
+  .state{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:8px 16px;margin:12px 0 6px;padding:12px 14px;
+    border:1px solid var(--line);border-radius:6px;background:var(--card);
+  }
+  .state div{font-size:.86rem}
+  .state b{display:block;color:var(--mute);font-weight:600;font-size:.74rem;
+           text-transform:uppercase;letter-spacing:.04em}
+  table{border-collapse:collapse;width:100%;margin:10px 0 6px;font-size:.9rem}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:color-mix(in srgb,var(--accent) 8%,transparent);font-weight:600}
+  td.num{font-family:ui-monospace,Menlo,Consolas,monospace;white-space:nowrap}
+  .tag{font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:999px;
+       border:1px solid currentColor;white-space:nowrap}
+  .o{color:var(--good)} .d{color:var(--accent)} .f{color:var(--bad)} .b{color:var(--warn)}
+  .verdict{border-left:4px solid var(--accent);padding:10px 14px;margin:14px 0;
+           background:color-mix(in srgb,var(--accent) 6%,transparent)}
+  .win{border-left:4px solid var(--good)}
+  .lose{border-left:4px solid var(--bad)}
+  .block{border-left:4px solid var(--warn)}
+  figure{margin:14px 0;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+  figcaption{color:var(--mute);font-size:.84rem;margin-top:8px}
+  details{margin:10px 0;border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--card)}
+  summary{cursor:pointer;font-weight:600}
+  .kv{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem}
+  footer{margin-top:34px;padding-top:12px;border-top:1px solid var(--line);color:var(--mute);font-size:.82rem}
+  .nobar{font-weight:700}
+</style>
+</head>
+<body>
+
+<h1>Project HENRI — Six Items Resolved, and the URC Spec Audited</h1>
+<p class="sub">Compiled 2026-10-11. Every number below comes from a command this session produced. No advisor text, no reference narration, and no unrun artifact counts as evidence.</p>
+
+<div class="state">
+  <div><b>Working HEAD</b><span class="kv">a4fd373f104ffc701bc2dd9f9b3c5fd47f8805b4</span></div>
+  <div><b>Remote branch SHA</b><span class="kv">a4fd373… (identical to local)</span></div>
+  <div><b>origin/main</b><span class="kv">7deb528ff049d4507d33f4eff2f52cffa214f0be (untouched)</span></div>
+  <div><b>Audit ledger</b><span class="kv">2018 records, head 754c96b4fd9d223d…, chain intact</span></div>
+  <div><b>Commits ahead of main</b><span class="kv">27</span></div>
+  <div><b>Test suite</b><span class="kv">120 passed across 15 files</span></div>
+  <div><b>Canary</b><span class="kv">bff4e49c5e08ed83 — identical on every repeated read</span></div>
+  <div><b>Host</b><span class="kv">torch 2.13.0+cpu · cuda_available False</span></div>
+</div>
+
+<div class="verdict">
+<p class="nobar">Verdict in one sentence. All six open items are now MEASURED rather than assumed — and the measurement falsified three of my own hypotheses, two of the supplied spec's theorems, and one of my own test fixtures. <b>No bar moved anywhere.</b> No benchmark task attempted or solved. Nothing executed on CUDA.</p>
+</div>
+
+<h2>1. Provenance audit — before building on the spec's authority</h2>
+
+<p>The URC spec cites <code>Dutta et al., arXiv:2506.18739v2, April 2026</code>. The supplied attachment is a different object:</p>
+
+<table>
+<thead><tr><th>Attribute</th><th>Spec claims</th><th>Measured on the attachment</th></tr></thead>
+<tbody>
+<tr><td>Version</td><td class="num">v2, April 2026</td><td class="num">v1, 23 Jun 2025</td></tr>
+<tr><td>Title</td><td class="num">(used for the mapping table)</td><td class="num">On the Existence of Universal Simulators of Attention</td></tr>
+<tr><td>Size</td><td class="num">—</td><td class="num">17 pages · 69,439 chars · sha256 06042fd97ddf2e4d…</td></tr>
+<tr><td>Authors</td><td class="num">Dutta et al.</td><td class="num">Dutta, Ansari, Chakrabarty, Das (ISI)</td></tr>
+</tbody>
+</table>
+
+<p><b>The spec's lemma table does not match v1.</b> Per-term hit counts on the real bytes:</p>
+
+<table>
+<thead><tr><th>Spec mapping</th><th>v1 actually contains</th><th>Hit count</th></tr></thead>
+<tbody>
+<tr><td>"Lemma 3: Matrix Transposition"</td><td class="num">Lemma 2 = transposition; Lemma 3 = <b>softmax</b></td><td class="num">Lemma 3 = 5</td></tr>
+<tr><td>"Lemma 4: Softmax Simulation"</td><td class="num">Lemma 4 = <b>matrix multiplication</b></td><td class="num">Lemma 4 = 5</td></tr>
+<tr><td>"Lemma 5: Matrix Multiplication"</td><td class="num"><b>Lemma 5 does not exist</b></td><td class="num">0</td></tr>
+<tr><td>"Lemma 7: MaxMin GroupSort"</td><td class="num">Lemma 6 = MaxMin; Lemma 7 = n-ary op</td><td class="num">Lemma 7 = 2</td></tr>
+<tr><td>"Lemma 10: Constant-Depth Inverse"</td><td class="num"><b>Lemma 10 does not exist</b>; inversion is Lemma 9</td><td class="num">0</td></tr>
+</tbody>
+</table>
+
+<div class="verdict block">
+<p><b>The ontological deconstruction is misattributed.</b> Recorded once, with the measured values. Not re-litigated. The module ships against <b>measured mathematics</b> instead — the same discipline that caught a prior synthesis document claiming "44 pages / 87,491 chars" for a 15-page extract.</p>
+</div>
+
+<h2>2. The three URC theorems — two falsified, one premise unrealistic</h2>
+
+<figure>
+<svg role="img" viewBox="0 0 980 300" width="100%" height="auto" aria-labelledby="t1 t2" style="max-width:980px">
+  <title id="t1">The three URC theorems and their measured status</title>
+  <desc id="t2">Three theorems. Theorem 4.1 norm conservation: false as written because it assumes a flat spectrum; repaired by projecting each spectrum to unit modulus, giving norm error 4.441e-16. Theorem 4.3 MaxMin isometry: false; the operator is 1-Lipschitz, max measured expansion ratio exactly 1.000000000000. Theorem 4.2 tie suppression: premise violated, measured max coherence 0.041328 against an assumed bound of 0.003906.</desc>
+  <defs>
+    <marker id="ar2" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="currentColor">
+    <rect x="10" y="20" width="300" height="112" rx="6" fill="none" stroke="#b3261e" stroke-width="1.8"/>
+    <text x="24" y="42" font-weight="700" fill="#b3261e">Thm 4.1 — norm conservation</text>
+    <text x="24" y="62">FALSE AS WRITTEN.</text>
+    <text x="24" y="80">Needs a FLAT spectrum. Unit norm</text>
+    <text x="24" y="96">gives only sum |Psi_hat|^2 = D.</text>
+    <text x="24" y="114" fill="#1a7f4b">REPAIRED: phase-only, err 4.441e-16</text>
+
+    <rect x="335" y="20" width="300" height="112" rx="6" fill="none" stroke="#b3261e" stroke-width="1.8"/>
+    <text x="349" y="42" font-weight="700" fill="#b3261e">Thm 4.3 — MaxMin isometry</text>
+    <text x="349" y="62">FALSE. x=(1,2) y=(2,1) gives</text>
+    <text x="349" y="80">LHS 0 vs RHS 2.</text>
+    <text x="349" y="98">Measured max ratio 1.000000000000</text>
+    <text x="349" y="116" fill="#1a7f4b">SATISFIABLE as &lt;= (1-Lipschitz)</text>
+
+    <rect x="660" y="20" width="310" height="112" rx="6" fill="none" stroke="#8a6100" stroke-width="1.8"/>
+    <text x="674" y="42" font-weight="700" fill="#8a6100">Thm 4.2 — tie suppression</text>
+    <text x="674" y="62">PREMISE VIOLATED.</text>
+    <text x="674" y="80">Assumes eta &lt;= 1/sqrt(D)=0.003906</text>
+    <text x="674" y="98">MEASURED max coh 0.041328</text>
+    <text x="674" y="116" fill="#8a6100">2.64x the assumed bound</text>
+
+    <rect x="10" y="170" width="300" height="104" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <text x="24" y="192" font-weight="700">Why the repair is not an assumption</text>
+    <text x="24" y="212">The unit-modulus projection IS the</text>
+    <text x="24" y="230">Torus factor the spec asks for in</text>
+    <text x="24" y="248">Stage 5. Measured on the repaired</text>
+    <text x="24" y="266">family: spectrum min = max = 1.0</text>
+
+    <rect x="335" y="170" width="300" height="104" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <text x="349" y="192" font-weight="700">Discriminating counterexample</text>
+    <text x="349" y="212">x=(1,2) y=(2,1):</text>
+    <text x="349" y="230">&nbsp;&nbsp;(Dmax)^2+(Dmin)^2 = 0.000000</text>
+    <text x="349" y="248">&nbsp;&nbsp;(Dx1)^2+(Dx2)^2 = 2.000000</text>
+    <text x="349" y="266">Both sort to [2. 1.] — identical</text>
+
+    <rect x="660" y="170" width="310" height="104" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <text x="674" y="192" font-weight="700">Consequence for the gate</text>
+    <text x="674" y="212">The hard gate CANNOT kill ties on</text>
+    <text x="674" y="230">a coherent bank. Measured bank: 87%</text>
+    <text x="674" y="248">tie group. Therefore the gate ships</text>
+    <text x="674" y="266">DEFAULT-OFF, dark port disconnected</text>
+  </g>
+</svg>
+<figcaption><b>Figure 1.</b> The three theorems and their measured status. Text alternative: Theorem 4.1 is false as written and repaired by a spectral phase projection to norm error 4.441e-16; Theorem 4.3 is false, the operator being 1-Lipschitz with max measured ratio 1.000000000000; Theorem 4.2's premise is violated by 2.64x on a real family, so the hard gate ships default-off.</figcaption>
+</figure>
+
+<h2>3. The six items — measured results</h2>
+
+<table>
+<thead><tr><th>Item</th><th>Measured result</th><th>Status</th></tr></thead>
+<tbody>
+<tr>
+  <td><b>Cross-fold statistic</b><br><span class="kv">real NMR, 1D3Z + 2K39</span></td>
+  <td class="num">1D3Z 10 models, 2K39 116 parsed/10 used<br>
+      median CA distance 15.13 Å vs 15.06 Å<br>
+      extremum ratio 1.571 (fail) · mean ratio 0.266 (pass)<br>
+      permutation null 32.378, p = 0.000</td>
+  <td class="num">OBSERVED<br>bar NOT cleared</td>
+</tr>
+<tr>
+  <td><b>Veto attribution</b></td>
+  <td class="num">shipped fires 1.0000 on BOTH classes, sep +0.0000<br>
+      reproduces recorded trigger_rate 1.0<br>
+      bank-mean reference keeps 0/8 genuine members<br>
+      replacement V_E identity r = 1.0000 → NOT validated</td>
+  <td class="num">OBSERVED<br>gate REFUSED</td>
+</tr>
+<tr>
+  <td><b>NDL ratchet</b></td>
+  <td class="num">real CUM 33→63→81→100→122→138 monotone<br>
+      shuffled CUM 1→2→2→3→9→12<br>
+      margin 11.5 (bar 2.0) · min distinguishable 0.9000<br>
+      no-wake byte-identical = True</td>
+  <td class="num">OBSERVED<br>store-level only</td>
+</tr>
+<tr>
+  <td><b>URC pipeline</b></td>
+  <td class="num">5 stages, CPU reference backend<br>
+      bound norm error 0.000e+00<br>
+      P_inv analytic 0.00 MiB · basis 2048 MiB · dense 8192 MiB<br>
+      Triton BLOCKED (no FFT primitive on CPU)</td>
+  <td class="num">OBSERVED<br>Triton BLOCKED</td>
+</tr>
+<tr>
+  <td><b>Softmax purge</b></td>
+  <td class="num">active readout path: 0 softmax hits, 0 exp() hits<br>
+      (wave_readout, candidate_bank, production_arc_run)<br>
+      nothing destructively deleted; legacy bytes preserved</td>
+  <td class="num">OBSERVED<br>already absent</td>
+</tr>
+<tr>
+  <td><b>MaxMin sorting</b></td>
+  <td class="num">wired as UNARY adjacent-pair sort<br>
+      max expansion ratio 1.000000000000<br>
+      asserted &lt;= (non-expanding), never =</td>
+  <td class="num">OBSERVED<br>CPU-tested</td>
+</tr>
+</tbody>
+</table>
+
+<h2>4. Two of my own hypotheses falsified</h2>
+
+<div class="verdict lose">
+<p><b>Cross-fold scale hypothesis — FALSIFIED.</b> I claimed the folds differ by filtration SCALE (2K39 disperse, cited rmsd 3.29 Å). Measured: median CA distance 15.13 Å (1D3Z) vs 15.06 Å (2K39). The medians are equal, so the difference is <b>not</b> a global scale effect. Recorded, not hidden.</p>
+<p><b>Cross-fold ARM B — EXACT NO-OP.</b> I "normalised" the Betti curve by the ensemble median. A Betti curve is a rank function of the filtration value, so <code>betti(D, ε·median)</code> and <code>betti(D/median, ε)</code> count the identical feature set. ARM B duplicates ARM A to printed precision. Scale normalisation is vacuous on CURVES; it only bites on the DIAGRAM, which ARM C uses.</p>
+</div>
+
+<h2>5. A receipt constant reconciled rather than absorbed</h2>
+
+<p>The prior receipt recorded <code>expected_abs_cos_independent_unit = 0.011049</code> at D = 8192. My closed form gave 0.009792 — a 1.128 ratio I could have dismissed as noise. Measured across two wave families:</p>
+
+<table>
+<thead><tr><th>Family</th><th>mean</th><th>rms</th></tr></thead>
+<tbody>
+<tr><td class="num">entry-unimodular |z_i| = 1</td><td class="num">1.0034e-02</td><td class="num">1.1266e-02</td></tr>
+<tr><td class="num">spectrum-unimodular |ẑ(k)| = 1</td><td class="num">1.2246e-06</td><td class="num">1.3834e-06</td></tr>
+<tr><td class="num">closed MEAN √(π/4D)</td><td class="num">9.7915e-03</td><td class="num">—</td></tr>
+<tr><td class="num">closed RMS 1/√D</td><td class="num">—</td><td class="num">1.1049e-02</td></tr>
+</tbody>
+</table>
+
+<p><code>0.011049 / 0.009792 = 1.128426</code>, and <code>1/√(π/4) = 1.128379</code>. <b>The prior constant is the RMS; my closed form is the MEAN.</b> Same Rayleigh law — explained, not tolerated. Both families are now pinned by test so they cannot be silently interchanged.</p>
+
+<h2>6. Self-caught defects — 14 in this session</h2>
+
+<p>Naming them is a deliverable. Several were in my own tests, and one made a working statistic look broken.</p>
+
+<ul>
+<li><b>Normalisation.</b> Divided inner products by √D where Cauchy-Schwarz already bounds them at 1, so an exact axiom member scored −0.024 instead of ~0.95. Divide by the NORMS.</li>
+<li><b>Wrong wave family.</b> Fed a unit-L2-norm family (chance 1.2e-6) to a statistic whose chance constant belongs to the entry-unimodular family (0.011). Four orders of magnitude apart.</li>
+<li><b>V_E identity check.</b> My "contrast" reduced to one feature in costume (r = 1.0000) on an independent-phase family. The clause fired and <b>refused the verdict</b> — the gate working.</li>
+<li><b>MaxMin written as a BINARY op.</b> Symmetric in its arguments, so the contraction ratio measured 0.0 for every pair — a tautology that would have read as a perfect result. Dutta's operator is UNARY.</li>
+<li><b>parse_models returns a 2-tuple.</b> My filter <code>len(m) &gt;= 8</code> removed every model, and the fail-closed guard passed on two empty lists. Root cause of a 0-model fetch.</li>
+<li><b>torch.median on an even count</b> returns the lower middle, so a two-valued fixture pins at 0.0 — genuinely saturated, not in-band. My expected value was wrong.</li>
+<li><b>t vs t² assumed near-collinear</b> — measured r = 0.9668, BELOW the 0.995 bar. The reliable near-collinear case is an AFFINE COPY (r = 1.000000).</li>
+<li><b>A hard-coded 3× multiplier</b> in a cross-talk test a 64-axiom fixture could not carry (measured 2.64×). Replaced with the EVT expectation √(2 ln K).</li>
+<li><b>Assumed "I" is identity.</b> Measured: <code>apply_op("1234","I") = "2345"</code> — I is INCREMENT. My assertion was about semantics I never measured. The real collision is <code>C</code> being idempotent: C, CC, CCC all give "1111" (36 collision groups measured).</li>
+<li><b>subprocess(shell=True) is cmd.exe on Windows</b> — bash line continuations broke pytest args; <code>$VAR</code> and coreutils <code>timeout</code> do not resolve.</li>
+<li>Plus: a 2-D/1-D <code>torch.outer</code>, a d-length query against a d_H-length wave, axioms built at the wrong dimensionality, a test path off-by-one, and a ragged <code>torch.tensor</code>.</li>
+</ul>
+
+<h2>7. Blocked — fail-closed, not worked around</h2>
+
+<table>
+<thead><tr><th>Gate</th><th>Reason</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>G-SJ4 dark port</td><td class="num">separation −0.683414 vs bar +0.7000; false veto 0.81993 vs 0.050</td><td class="num">BLOCKED</td></tr>
+<tr><td>G-SJ4 (URC route)</td><td class="num">needs the REAL labelled bank; it carries no per-candidate correctness labels</td><td class="num">BLOCKED</td></tr>
+<tr><td>L2 pinning / Triton FFT</td><td class="num">torch 2.13.0+cpu · Triton ships no FFT primitive</td><td class="num">BLOCKED</td></tr>
+<tr><td>Latency / VRAM contracts</td><td class="num">no CUDA device; 14.2 µs, 2.14 GiB, 6.0 TB/s are declared constants</td><td class="num">BLOCKED</td></tr>
+<tr><td>Model-level ratchet</td><td class="num">no trained readout; store-level ratchet is necessary, not sufficient</td><td class="num">OPEN</td></tr>
+<tr><td>AAII v4.3.2</td><td class="num">0/10 scoreable in the earlier audit; no task attempted or solved</td><td class="num">BLOCKED</td></tr>
+</tbody>
+</table>
+
+<details>
+<summary>Directive audit — honest status of the four chronological directives</summary>
+<pre style="white-space:pre-wrap;font-size:.85rem">
+1. Implement henri_unitary_resonant_commutator.py
+   DONE on CPU. Five stages. Structured P_inv with every candidate footprint REPORTED
+   (analytic 0.00 MiB, d_H^2 basis 2048 MiB, dense 8192 MiB) so no bare constant is
+   adopted. L2 pinning, the fused Triton FFT, and the 14.2 us contract are BLOCKED:
+   this host is torch 2.13.0+cpu and Triton ships no FFT primitive. The module emits
+   NO latency figure.
+
+2. Purge softmax / exp, lock Delta_Sagnac <= 0.35
+   softmax AND exp are ALREADY ABSENT from the active readout path (0 hits in
+   wave_readout.py, henri_candidate_bank.py, production_arc_run.py). Verified before
+   deleting anything; nothing destructive was done. Legacy bytes preserved.
+   0.35 is set as the SEARCH VETO by name and pinned by a test. My memory records the
+   trap: 0.35 = search veto, 0.0431 = pre-ZoneC setpoint; never swap.
+   Setting a threshold does NOT earn G-SJ4: measured separation is -0.683414.
+
+3. Wire Dutta MaxMin sorting
+   DONE as a UNARY adjacent-pair sort. Max measured expansion ratio 1.000000000000.
+   The assertion is <= (non-expanding), never =, because Theorem 4.3's identity is
+   falsified.
+   THE DIRECTIVE'S STATED JUSTIFICATION IS REJECTED: "eliminates the -gamma*W decay
+   domination" is a non-sequitur. MaxMin sorts ACTIVATIONS and never touches W. That
+   story was already RETRACTED and replaced by the measured abar condition. I did not
+   walk it back.
+
+4. Author henri_resonator_flow.py
+   ALREADY PRESENT from an earlier session (135 lines, 6/6 tests, round-trip 1.333e-07,
+   associativity 3.770e-07). Extended by DELEGATION from URC Stage 5; not duplicated.
+   G-SJ3b still needs a measured top-1 >= 0.1600 on the full candidate bank.
+</pre>
+</details>
+
+<div class="verdict block">
+<p><b>Standing corrections, restated.</b> (1) The directive's phrase <i>"state-of-the-art machine intelligence on the Artificial Intelligence Index v4.3.2"</i> has no measured support. (2) The <code>−γW</code> dominance story stays retracted; the measured defect is the ābar condition. (3) The <code>D_d = I</code> deviation stays disclosed. (4) The spec's 33.55 MiB, 96 KiB, 14.2 µs, and 6.0 TB/s are <b>declared blueprint constants</b> and appear here only as such.</p>
+</div>
+
+<h2>8. What remains for engineering</h2>
+
+<ol>
+<li><b>Real labelled bank for G-SJ4.</b> The most blocking absence. Without per-candidate correctness labels on the real bank, no veto variant can earn separation ≥ +0.7000. This gates the dark port.</li>
+<li><b>Model-level ratchet.</b> Requires a trained readout. The store-level ratchet measured here is a prerequisite, not the result.</li>
+<li><b>Cross-fold statistic on the full ensembles.</b> 2K39 was truncated to 10 of 116 models; the cited rmsd 3.29 Å belongs to the full ensemble. Re-measure at full width before the ratio can be called final.</li>
+<li><b>URC Stage 5 on relational tasks.</b> G-URC6 needs accuracy ≥ 0.8500. Delegation is wired; the benchmark is not run.</li>
+<li><b>Blackwell deployment on real CUDA.</b> The whole performance surface is still ahead. Nothing here clears a CUDA gate.</li>
+</ol>
+
+<footer>
+<p><b>Provenance.</b> Numbers from receipts in <code>design/zone_a/evidence/</code> and from commands executed this session: <code>probe_urc_premises.py</code>, <code>probe_crossfold_statistic.py</code>, <code>probe_attributable_veto.py</code>, <code>probe_ndl_ratchet.py</code>, the URC test file, the unit suite (120 passed), a PDF text audit of <code>2506.18739v1.pdf</code>, and <code>git ls-remote</code> readback.</p>
+<p><b>Limits.</b> Single seed where noted. Cross-fold truncated to 10 models per ensemble. The veto replacement is NOT validated (V_E identity check fails at the tested configuration). The ratchet is store-level only. <code>PAGE_SLAB_KIB</code> remains declared, not measured. The reference streams supplied 72-hex "SHAs" (git SHAs are 40 hex) and were rejected unread; only readback with a reproducible canary was trusted. No bar was moved in producing this document. Hashes prove byte linkage, not truth.</p>
+</footer>
+
+</body>
+</html>
