@@ -1,0 +1,222 @@
+{
+  "schema": "henri.thesis.evidence_index.v1",
+  "generated_from": "executed tool results only \u2014 no reference/advisor text adopted",
+  "state": {
+    "head": "ed8b70bb63b0e1f05401e2a6ddb1a821f85fbb9c",
+    "remote_branch": "feat/splitjepa-encoder-derandomized-veto",
+    "remote_sha_readback": "ed8b70bb63b0e1f05401e2a6ddb1a821f85fbb9c",
+    "main_sha": "7deb528ff049d4507d33f4eff2f52cffa214f0be",
+    "tree": "clean",
+    "ledger_records": 2011,
+    "ledger_head": "f5a8ee13281ee95d",
+    "commits_ahead_of_main": 20,
+    "files_changed_vs_main": 52,
+    "insertions_vs_main": 16871,
+    "zone_a_evidence_json": 122,
+    "host": {
+      "torch": "2.13.0+cpu",
+      "cuda_available": false
+    }
+  },
+  "verified_wins": [
+    {
+      "id": "G-H1",
+      "claim": "Lemma 1 cancellation exact in executed code",
+      "measured": {
+        "E_v_predicted": 0.05707,
+        "E_v_measured": 0.05707,
+        "ratio": 1.0,
+        "residual": 1.4e-08,
+        "mismatched_control": 24.28
+      },
+      "class": "OBSERVED"
+    },
+    {
+      "id": "E_v decay",
+      "claim": "E_v_max = 0.00e+00 in EVERY arm of the Wbar sweep",
+      "measured": {
+        "arms": 3,
+        "value": 0.0
+      },
+      "class": "OBSERVED"
+    },
+    {
+      "id": "SplitJEPA",
+      "claim": "whitening reduces the alignment statistic",
+      "measured": {
+        "before": 0.33745,
+        "after": 0.013143,
+        "negative_control": 0.041059,
+        "contrast_x": 3.1
+      },
+      "class": "OBSERVED"
+    },
+    {
+      "id": "persistence",
+      "claim": "exact GF(2) beta_1 matches a reference library",
+      "measured": {
+        "agreement": "exact",
+        "speedup_x": 54
+      },
+      "class": "OBSERVED"
+    },
+    {
+      "id": "resonator",
+      "claim": "Torus(x)Mask(x)Rotor factorization is an algebra",
+      "measured": {
+        "round_trip_err": 1.333e-07,
+        "associativity_err": 3.77e-07,
+        "tests": "6/6"
+      },
+      "class": "OBSERVED"
+    },
+    {
+      "id": "NDL",
+      "claim": "Nested Daydream Loop wired without touching legacy bytes",
+      "measured": {
+        "no_wake_batch": "byte-identical to stage1_fictive",
+        "tests": "5/5"
+      },
+      "class": "OBSERVED"
+    },
+    {
+      "id": "ACE page",
+      "claim": "per-page eviction contract pinned at the 16-token boundary",
+      "measured": {
+        "tests": "8/8",
+        "page_tokens": 16,
+        "slab_kib": 384.0,
+        "slab_status": "declared constant, NOT measured"
+      },
+      "class": "DERIVED"
+    },
+    {
+      "id": "G-SJ4 bars",
+      "claim": "amended veto bars encoded and can fail",
+      "measured": {
+        "separation_bar": 0.7,
+        "separation": -0.683414,
+        "pass": false,
+        "false_veto_bar": 0.05,
+        "false_veto_rate": 0.81993,
+        "pass2": false
+      },
+      "class": "OBSERVED"
+    },
+    {
+      "id": "ruling4 pin",
+      "claim": "per-page reading discriminates from the sum-over-tiers form",
+      "measured": {
+        "tests": "5/5",
+        "teeth": true
+      },
+      "class": "OBSERVED"
+    }
+  ],
+  "falsifications": [
+    {
+      "id": "Wbar repair 1",
+      "mechanism": "ridge algebraic closure",
+      "outcome": "COLLAPSE |Vbar| 10.475 -> 0.034",
+      "class": "FALSIFIED"
+    },
+    {
+      "id": "Wbar repair 2",
+      "mechanism": "norm-preserving closure",
+      "outcome": "COLLAPSE |abar| 7.2972 -> 0.0000",
+      "class": "FALSIFIED"
+    },
+    {
+      "id": "Wbar repair 3",
+      "mechanism": "mirror plasticity rule",
+      "outcome": "DIVERGE |Vbar| 6.4e+10",
+      "class": "FALSIFIED"
+    },
+    {
+      "id": "Wbar repair 4",
+      "mechanism": "PAPER-FAITHFUL flow at the paper's own eta_Wbar=0.8",
+      "outcome": "NO GAIN |Ep| 40.2118 vs no-rule 1.4483 (28x worse); stream ALIVE |abar| 21.4229",
+      "class": "FALSIFIED"
+    },
+    {
+      "id": "G-D1 lifetime filter",
+      "mechanism": "persistence-lifetime filtering (directive remedy)",
+      "outcome": "ratio 7.5000 -> inf across lifetime 0.0..2.5 (bar 0.8000)",
+      "class": "FALSIFIED"
+    },
+    {
+      "id": "Theorem 1 acute angle",
+      "mechanism": "per-step acute angle at this scale",
+      "outcome": "28/60 positive, mean cosine -0.0000",
+      "class": "FALSIFIED"
+    },
+    {
+      "id": "minus-gammaW story",
+      "mechanism": "asserted -gammaW dominance ~6:1",
+      "outcome": "RETRACTED as INFERRED; direct measurement showed the abar condition",
+      "class": "FALSIFIED"
+    },
+    {
+      "id": "dead-unit hypothesis",
+      "mechanism": "E_p plateau tracks dead-unit fraction",
+      "outcome": "Pearson r(dead,|Ep|) = -0.3022 (WRONG SIGN), n=9",
+      "class": "FALSIFIED"
+    },
+    {
+      "id": "my E_p mask",
+      "mechanism": "D_u applied to BOTH terms of Eq. 11",
+      "outcome": "DOWNSTREAM term needs D_d; published number corrected",
+      "class": "RETRACTION"
+    },
+    {
+      "id": "my E_p layer",
+      "mechanism": "E_p reported at layer 0",
+      "outcome": "layer 0 is the layer the paper EXPLICITLY disclaims",
+      "class": "RETRACTION"
+    },
+    {
+      "id": "my E_p unit",
+      "mechanism": "absolute ||E_p|| rise read as a defect",
+      "outcome": "paper reports the RATIO ||Ep||/||F||; ratio DECREASES 1.1955->0.9781",
+      "class": "RETRACTION"
+    }
+  ],
+  "root_cause": {
+    "verdict": "the abar condition is the measured defect; E_p dynamics are an OPEN PROBLEM in the source paper",
+    "verbatim_source": "A theory of when and why Ep grows or decreases remains to be developed.",
+    "measured": {
+      "abar_gap_diverse_fixture": 1.464,
+      "abar_gap_single_sample_fixture": 6034,
+      "fixture_inflation": "rank-1 collapse gave ||.||_F == sv_max",
+      "c1_holds_layer0": true,
+      "c1_resid_layer0": 0.012,
+      "c1_fails_depth": {
+        "layer_1": 4.84,
+        "layer_2": 20.5
+      },
+      "c1_localizer": "omitted V.dT dominates at depth (layer 2: |V.dT| 2341.5 vs |dV.T| 227.6)"
+    }
+  },
+  "blocked": [
+    {
+      "id": "G-SJ3a/b",
+      "reason": "BLOCKED_BANK_ABSENT \u2014 0 npz banks measured in tree"
+    },
+    {
+      "id": "G-SJ4 dark port",
+      "reason": "attribution INVERTED (fires 82% correct, 14% incorrect); remains mechanically disconnected"
+    },
+    {
+      "id": "G-H2b",
+      "reason": "FAIL frac 0.467 < 0.900"
+    },
+    {
+      "id": "Blackwell/CUDA",
+      "reason": "torch 2.13.0+cpu, cuda_available False"
+    },
+    {
+      "id": "AAII v4.3.2 capability",
+      "reason": "0/10 scoreable in the earlier AAII audit; no task attempted or solved"
+    }
+  ]
+}

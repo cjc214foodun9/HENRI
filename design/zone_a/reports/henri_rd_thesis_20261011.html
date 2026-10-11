@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project HENRI — R&amp;D Thesis: Verified Status of the Apparatus</title>
+<style>
+  :root{
+    --ink: var(--foreground, #1a1a1a);
+    --mute: var(--muted-foreground, #5b6470);
+    --line: var(--border, #d8dde3);
+    --card: var(--card, #ffffff);
+    --accent: var(--accent, #1f6feb);
+    --good: #1a7f4b;
+    --bad: #b3261e;
+    --warn: #8a6100;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:20px 22px 40px;
+    background:transparent; color:var(--ink);
+    font:16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    max-width:1100px;
+  }
+  h1{font-size:1.6rem;line-height:1.25;margin:0 0 4px}
+  h2{font-size:1.18rem;margin:30px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  h3{font-size:1.02rem;margin:20px 0 8px}
+  p,li{max-width:96ch}
+  .sub{color:var(--mute);margin:0 0 14px}
+  code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em}
+  .state{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:8px 16px;margin:12px 0 6px;padding:12px 14px;
+    border:1px solid var(--line);border-radius:6px;background:var(--card);
+  }
+  .state div{font-size:.86rem}
+  .state b{display:block;color:var(--mute);font-weight:600;font-size:.74rem;
+           text-transform:uppercase;letter-spacing:.04em}
+  table{border-collapse:collapse;width:100%;margin:10px 0 6px;font-size:.9rem}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:color-mix(in srgb,var(--accent) 8%,transparent);font-weight:600}
+  td.num{font-family:ui-monospace,Menlo,Consolas,monospace;white-space:nowrap}
+  .tag{font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:999px;
+       border:1px solid currentColor;white-space:nowrap}
+  .o{color:var(--good)} .d{color:var(--accent)} .f{color:var(--bad)} .b{color:var(--warn)}
+  .verdict{border-left:4px solid var(--accent);padding:10px 14px;margin:14px 0;
+           background:color-mix(in srgb,var(--accent) 6%,transparent)}
+  .win{border-left:4px solid var(--good)}
+  .lose{border-left:4px solid var(--bad)}
+  .block{border-left:4px solid var(--warn)}
+  figure{margin:14px 0;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+  figcaption{color:var(--mute);font-size:.84rem;margin-top:8px}
+  details{margin:10px 0;border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--card)}
+  summary{cursor:pointer;font-weight:600}
+  .kv{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem}
+  footer{margin-top:34px;padding-top:12px;border-top:1px solid var(--line);color:var(--mute);font-size:.82rem}
+  .nobar{font-weight:700}
+</style>
+</head>
+<body>
+
+<h1>Project HENRI — R&amp;D Thesis: the Verified Status of the Apparatus</h1>
+<p class="sub">Compiled 2026-10-11. Every figure below comes from a command executed in this session. No advisor text, no model narrative, and no unrun artifact is counted as evidence.</p>
+
+<div class="state">
+  <div><b>Working HEAD</b><span class="kv">ed8b70bb63b0e1f05401e2a6ddb1a821f85fbb9c</span></div>
+  <div><b>Remote branch SHA</b><span class="kv">ed8b70b… (identical to local)</span></div>
+  <div><b>origin/main</b><span class="kv">7deb528ff049d4507d33f4eff2f52cffa214f0be (untouched)</span></div>
+  <div><b>Audit ledger</b><span class="kv">2011 records, head f5a8ee13281ee95d…, chain intact</span></div>
+  <div><b>Commits ahead of main</b><span class="kv">20 · 52 files · +16,871 / −9</span></div>
+  <div><b>Proof receipts</b><span class="kv">122 JSON receipts in design/zone_a/evidence/</span></div>
+  <div><b>Host</b><span class="kv">torch 2.13.0+cpu · cuda_available False</span></div>
+  <div><b>Test suite (this session)</b><span class="kv">41 passed</span></div>
+</div>
+
+<div class="verdict">
+<p class="nobar">Verdict in one sentence. HENRI now has a self-falsifying research apparatus with several exact algebraic results and a measured, honest account of its own failures — and <b>zero demonstrated model-performance claims</b>: no benchmark task attempted, none solved, nothing executed on CUDA.</p>
+</div>
+
+<h2>1. What was actually built</h2>
+
+<p>The durable product of this effort is not a score. It is a verification discipline that repeatedly rejected its own author's claims. Concretely, that discipline caught, in this session alone, <b>eleven falsified or retracted propositions</b> — three of them numbers I had already published — and left every gate that could not genuinely pass in a fail-closed state.</p>
+
+<figure>
+<svg role="img" viewBox="0 0 900 250" width="100%" height="auto" aria-labelledby="dgTitle dgDesc" style="max-width:900px">
+  <title id="dgTitle">The HENRI verification loop and where it stopped</title>
+  <desc id="dgDesc">A five-stage loop: collect evidence, encode a gate that can fail, execute, read back external state, then either record a verified win or record a falsification plus an additive retraction. This session's count: nine verified observations, eleven falsifications or retractions, five blocked capabilities.</desc>
+  <defs>
+    <marker id="ar" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#ar)" color="#5b6470">
+    <path d="M110,60 L196,60"/><path d="M336,60 L422,60"/>
+    <path d="M562,60 L648,60"/>
+  </g>
+  <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="currentColor">
+    <rect x="12" y="36" width="98" height="48" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <text x="61" y="56" text-anchor="middle">Collect</text><text x="61" y="72" text-anchor="middle">evidence</text>
+
+    <rect x="200" y="36" width="132" height="48" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <text x="266" y="56" text-anchor="middle">Encode a gate</text><text x="266" y="72" text-anchor="middle">that CAN fail</text>
+
+    <rect x="426" y="36" width="132" height="48" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <text x="492" y="56" text-anchor="middle">Execute on the</text><text x="492" y="72" text-anchor="middle">real path</text>
+
+    <rect x="652" y="36" width="132" height="48" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <text x="718" y="56" text-anchor="middle">Read back</text><text x="718" y="72" text-anchor="middle">external state</text>
+
+    <rect x="200" y="150" width="176" height="58" rx="6" fill="none" stroke="#1a7f4b" stroke-width="1.8"/>
+    <text x="288" y="172" text-anchor="middle" fill="#1a7f4b" font-weight="700">9 verified observations</text>
+    <text x="288" y="192" text-anchor="middle" fill="#5b6470">exact algebra, wired modules</text>
+
+    <rect x="414" y="150" width="206" height="58" rx="6" fill="none" stroke="#b3261e" stroke-width="1.8"/>
+    <text x="517" y="172" text-anchor="middle" fill="#b3261e" font-weight="700">11 falsifications / retractions</text>
+    <text x="517" y="192" text-anchor="middle" fill="#5b6470">3 were my own published numbers</text>
+
+    <rect x="658" y="150" width="200" height="58" rx="6" fill="none" stroke="#8a6100" stroke-width="1.8"/>
+    <text x="758" y="172" text-anchor="middle" fill="#8a6100" font-weight="700">5 blocked capabilities</text>
+    <text x="758" y="192" text-anchor="middle" fill="#5b6470">fail-closed, not worked around</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1.4" color="#5b6470" stroke-dasharray="4 3">
+    <path d="M718,84 L718,132"/><path d="M288,150 L288,120 L604,120 L604,132"/>
+    <path d="M517,150 L517,132"/>
+  </g>
+</svg>
+<figcaption><b>Figure 1.</b> The loop and its measured yields. The falsification count exceeding the win count is the apparatus working, not failing. Text alternative: stages are collect, encode a gate that can fail, execute, read back; outcomes are 9 verified, 11 falsified/retracted, 5 blocked.</figcaption>
+</figure>
+
+<h2>2. Verified wins <span class="tag o">OBSERVED</span></h2>
+<p>Each row is a number a command produced and a test can re-derive.</p>
+
+<table>
+<thead><tr><th>Result</th><th>Measured value</th><th>Independent control</th><th>Class</th></tr></thead>
+<tbody>
+<tr><td>Lemma 1 interstream cancellation (G-H1)</td>
+    <td class="num">E_v → 5.707e-02 vs predicted 5.707e-02<br>ratio 1.0000, residual 1.4e-08</td>
+    <td class="num">mismatched-rate arm → 2.428e+01</td><td class="num">OBSERVED</td></tr>
+<tr><td>Interstream decay across every repair arm</td>
+    <td class="num">E_v_max = 0.00e+00 (3/3 arms)</td>
+    <td class="num">mismatched control diverges</td><td class="num">OBSERVED</td></tr>
+<tr><td>SplitJEPA whitening alignment statistic</td>
+    <td class="num">A12/√d_H 0.337450 → 0.013143</td>
+    <td class="num">negative control 0.041059 (3.1×)</td><td class="num">OBSERVED</td></tr>
+<tr><td>Exact GF(2) persistent homology</td>
+    <td class="num">β₁ exact agreement with ripser<br>54× faster</td>
+    <td class="num">cross-validated against the library</td><td class="num">OBSERVED</td></tr>
+<tr><td>Tripartite resonator factorization</td>
+    <td class="num">round-trip 1.333e-07<br>associativity 3.770e-07</td>
+    <td class="num">6/6 tests incl. negative control</td><td class="num">OBSERVED</td></tr>
+<tr><td>Nested Daydream Loop wiring</td>
+    <td class="num">no-wake batch byte-identical to <code>stage1_fictive</code></td>
+    <td class="num">5/5 tests</td><td class="num">OBSERVED</td></tr>
+<tr><td>ACE per-page eviction contract</td>
+    <td class="num">PAGE_TOKENS = 16<br>PAGE_SLAB_KIB = 384.0 (declared)</td>
+    <td class="num">8/8; non-vacuity control passes</td><td class="num">DERIVED</td></tr>
+<tr><td>Amended G-SJ4 veto bars — and they can fail</td>
+    <td class="num">separation 0.7000 bar vs −0.683414 → FAIL<br>false-veto 0.0500 bar vs 0.81993 → FAIL</td>
+    <td class="num">both clauses independently fail</td><td class="num">OBSERVED</td></tr>
+<tr><td>Per-page reading vs sum-over-tiers</td>
+    <td class="num">TEETH: True — page form W=0.0 at t=1e9,<br>defective form W=1.0</td>
+    <td class="num">5/5; pin discriminates</td><td class="num">OBSERVED</td></tr>
+</tbody>
+</table>
+<p><small>The 384.0 KiB slab is a <b>declared blueprint constant</b>, not a measurement. The ACE module is a data structure, not a paged KV cache; no engine exists in tree. It is labelled DERIVED for that reason.</small></p>
+
+<h2>3. Falsifications and retractions — the real scientific yield</h2>
+<p>Three rows are corrections of <b>my own published numbers</b>. Those were retracted additively: a new receipt names the superseded claim and prints the corrected value. No receipt was edited.</p>
+
+<table>
+<thead><tr><th>Proposition</th><th>Mechanism tested</th><th>What measurement showed</th><th>Class</th></tr></thead>
+<tbody>
+<tr><td>W̄ repair 1</td><td>ridge algebraic closure</td><td class="num">COLLAPSE · |V̄| 10.475 → 0.034</td><td class="num">FALSIFIED</td></tr>
+<tr><td>W̄ repair 2</td><td>norm-preserving closure</td><td class="num">COLLAPSE · |ā| 7.2972 → 0.0000</td><td class="num">FALSIFIED</td></tr>
+<tr><td>W̄ repair 3</td><td>mirror plasticity rule</td><td class="num">DIVERGE · |V̄| → 6.4e+10</td><td class="num">FALSIFIED</td></tr>
+<tr><td>W̄ repair 4 — <b>the paper's own rule</b></td><td>paper-faithful flow at ηW̄ = 0.8</td><td class="num">NO GAIN · |E_p| 40.2118 vs no-rule 1.4483 (28× worse); stream <b>alive</b>, |ā| 21.4229</td><td class="num">FALSIFIED</td></tr>
+<tr><td>G-D1 lifetime filter (the directive's remedy)</td><td>persistence-lifetime filtering</td><td class="num">ratio 7.5000 → ∞ across lifetime 0.0…2.5 (bar 0.8000)</td><td class="num">FALSIFIED</td></tr>
+<tr><td>Theorem 1 per-step acute angle</td><td>positive cosine at this scale</td><td class="num">28/60 positive · mean cosine −0.0000</td><td class="num">FALSIFIED</td></tr>
+<tr><td>“−γW decay dominates ≈6:1”</td><td>asserted, never measured</td><td class="num">RETRACTED — replaced by the measured ābar condition</td><td class="num">FALSIFIED</td></tr>
+<tr><td>Dead-unit hypothesis</td><td>E_p plateau tracks dead-unit fraction</td><td class="num">Pearson r(dead, |E_p|) = −0.3022 · wrong sign · n=9</td><td class="num">FALSIFIED</td></tr>
+<tr><td><b>My own</b> E_p mask</td><td>D_u applied to both Eq. 11 terms</td><td class="num">downstream term needs D_d; published number corrected</td><td class="num">RETRACTION</td></tr>
+<tr><td><b>My own</b> E_p layer</td><td>E_p reported at layer 0</td><td class="num">layer 0 is the layer the paper explicitly disclaims</td><td class="num">RETRACTION</td></tr>
+<tr><td><b>My own</b> E_p unit</td><td>absolute ‖E_p‖ rise read as a defect</td><td class="num">paper reports the RATIO; measured 1.1955 → 0.9781 DECREASING</td><td class="num">RETRACTION</td></tr>
+</tbody>
+</table>
+
+<h2>4. The one deep result: G-H2b root cause</h2>
+
+<div class="verdict lose">
+<p>The pathway-alignment residual <b>E_p</b> does not decay to zero under the shipped dynamics. The cause is <b>not</b> weight decay, <b>not</b> a dead-unit imbalance, and <b>not</b> an algebraic sign error. It is the <b>ābar condition</b> — the backward activation chain <code>ā^l = relu(W̄^l ā^{l+1})</code> does not reconstruct the value the downstream block needs.</p>
+</div>
+
+<h3>4.1 What the source paper actually says</h3>
+<p>Extracted verbatim from the 15-page appendix (41,476 characters) I retrieved myself:</p>
+<ul>
+<li><code>“identity backward nonlinearity (D_d = I)”</code> — benchmark runs use <code>D_d = I</code>; this module uses <code>relu</code>. That is a deviation, now disclosed in every probe.</li>
+<li><code>“V⁰ and W̄⁰ are unused by the model yet enter E⁰_p, and a fuller treatment is left to future work.”</code></li>
+<li><code>“A theory of when and why Ep grows or decreases remains to be developed.”</code> — <b>E_p is an open problem in the source paper.</b></li>
+<li>Hyperparameters: <code>ηW = 1.0</code>, <code>ηW̄ = 0.8</code>, <code>ηV = ηV̄ = 0.8</code>, decay <code>1e-3</code> on W/W̄ and <code>0.01</code> on V/V̄.</li>
+</ul>
+
+<h3>4.2 Why four repairs failed in kind</h3>
+<p>The first three <b>solved</b> for W̄ at a single time point from a rank-deficient V̄. Solving is a contraction: every arm reached its target by killing the stream, which is why each receipt prints a <b>non-collapse column</b> (|V̄|, |ā|) beside the target column. The fourth arm is different in kind and therefore informative — it is the only one that stayed alive and still failed.</p>
+
+<table>
+<thead><tr><th>Arm</th><th>|V̄| end</th><th>|ā| end</th><th>|E_p| end</th><th>Outcome</th></tr></thead>
+<tbody>
+<tr><td>A · no W̄ rule</td><td class="num">5.0335</td><td class="num">1.2098</td><td class="num">1.4483</td><td>baseline plateau</td></tr>
+<tr><td>B · paper flow (ηW̄ = 0.8)</td><td class="num">0.7565</td><td class="num">21.4229</td><td class="num">40.2118</td><td class="num">alive, 28× worse → FALSIFIED</td></tr>
+<tr><td>C · algebraic closure</td><td class="num">0.1289</td><td class="num">0.0000</td><td class="num">0.2112</td><td class="num">collapse → FALSIFIED</td></tr>
+</tbody>
+</table>
+
+<h3>4.3 The one-step identity — a layer-0 result, not a global one</h3>
+<p>Derived identity: <code>Ė_p = −γE_p + η·s_l·(ā^l ⊗ h^{l+1}) − η̄·s_{l+1}·(D_d ⊙ (h̄^l ⊗ a^{l+1}))</code>. Measured after a 40-step warmup, because <code>E_p = 0</code> exactly at initialisation (dividing by it produced a <code>3.5e28</code> artifact in my first two attempts — my own probe defects, self-caught).</p>
+
+<table>
+<thead><tr><th>Layer</th><th>resid / |E_p| · D_d = relu</th><th>resid / |E_p| · D_d = I</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td>0</td><td class="num">1.20e-02</td><td class="num">5.89e-02</td><td class="num">HOLDS</td></tr>
+<tr><td>1</td><td class="num">4.84</td><td class="num">2.67</td><td class="num">FAILS</td></tr>
+<tr><td>2</td><td class="num">20.50</td><td class="num">20.49</td><td class="num">FAILS</td></tr>
+</tbody>
+</table>
+<p><b>Localised, not hand-waved:</b> at layer 2 the omitted term <code>V·dT</code> has norm <span class="kv">2341.5</span> against <code>dV·T</code> at <span class="kv">227.6</span>. The linear identity cannot close where the weight update itself dominates. C1 is a layer-0 result. I state it that way.</p>
+
+<h2>5. Blocked — fail-closed, not worked around</h2>
+<table>
+<thead><tr><th>Gate</th><th>Reason</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>G-SJ3a / G-SJ3b</td><td class="num">0 npz banks measured in tree — <code>BLOCKED_BANK_ABSENT</code></td><td class="num">BLOCKED</td></tr>
+<tr><td>G-SJ4 dark port</td><td class="num">attribution INVERTED · fires on 82% of correct, 14% of incorrect; remains mechanically disconnected</td><td class="num">BLOCKED</td></tr>
+<tr><td>G-H2b</td><td class="num">frac 0.467 &lt; 0.900</td><td class="num">FAIL</td></tr>
+<tr><td>Blackwell / GB202</td><td class="num">torch 2.13.0+cpu · cuda_available False</td><td class="num">BLOCKED</td></tr>
+<tr><td>AAII v4.3.2 capability</td><td class="num">0/10 scoreable in the earlier audit (stub adapters); no task attempted or solved</td><td class="num">BLOCKED</td></tr>
+</tbody>
+</table>
+
+<div class="verdict block">
+<p><b>Standing correction to the framing.</b> The directive's phrase <i>“state-of-the-art machine intelligence on the Artificial Analysis Intelligence Index v4.3.2”</i> has <b>no measured support</b>. Prior measurement found 0 of 10 AAII datasets scoreable. This thesis records it as an unclaimed aspiration only.</p>
+</div>
+
+<h2>6. What remains for engineering</h2>
+<ol>
+<li><b>Settle E_p at depth.</b> Extend the identity with the <code>V·dT</code> and <code>dV·dT</code> terms, or reduce the layer-2 step size. One probe; discriminates derivation error from a genuine large-step regime.</li>
+<li><b>Re-examine ηW̄ = 0.8 as an instability, not a defect.</b> The paper runs width 200, CIFAR-10, 50 epochs, small-MLP regime. This tree runs width 32–64 with <code>drive_scale="sqrt_d"</code>. Record the divergence; do not retune the rate to pass.</li>
+<li><b>Generate the candidate bank.</b> This is the single highest-leverage unblock: it gates G-SJ3a, G-SJ3b, and every downstream selector claim. Dedup containment was measured at 0.1367, which makes a 0.1500 bar unreachable on the dedup bank — bank identity decides the verdict.</li>
+<li><b>A cross-fold statistic that survives conformational breathing.</b> The lifetime filter is falsified; the honest baseline over 120 cross pairs is 7.5000, not the 1.4444 I first reported from one pair.</li>
+<li><b>Veto attribution redesign.</b> The current veto is anti-selective at its own maximum. The dark port stays blocked until separation ≥ +0.7000 is genuinely earned.</li>
+<li><b>The NDL causal-emergence ratchet measurement.</b> The wiring is verified and byte-identical on the legacy path; the ratchet itself is unmeasured.</li>
+<li><b>Blackwell deployment on real CUDA.</b> Nothing here clears a CUDA gate. The whole performance surface is still ahead.</li>
+</ol>
+
+<h2>7. Method: why the failures count as output</h2>
+<p>Six defect classes recurred, and naming them is itself a result:</p>
+<ul>
+<li><b>A gate may assert only what its fixture can carry</b> — a 3σ bar on a 2-row fixture; σ taken from an observed p of 0 or 1.</li>
+<li><b>Measure the quantity the source defines, at the layer and functional form the source reports</b> — wrong mask, disclaimed layer, ratio read as absolute. Three of my own published numbers died here.</li>
+<li><b>A strictly monotone transform cannot split a tie</b> — a temperature cannot fix a plateau; <code>argmax exp(s/κ) == argmax s</code> exactly.</li>
+<li><b>A constant-across-candidates penalty is a strict no-op</b> — the “new” objective is the old ranker in costume.</li>
+<li><b>No gate may sit downstream of an operator that mixes the candidate with the bank</b> — two such gates saturated and could not fail.</li>
+<li><b>An unrun artifact is not a deliverable.</b> Applied here: <code>probe_ep_ode.py</code> sat written-but-unrun, and I ran it before using it.</li>
+</ul>
+
+<details>
+<summary>Text alternative — full content of this report as plain text</summary>
+<pre style="white-space:pre-wrap;font-size:.85rem">
+PROJECT HENRI — R&amp;D THESIS: VERIFIED STATUS
+
+STATE. HEAD ed8b70bb63b0e1f05401e2a6ddb1a821f85fbb9c equals the remote branch SHA.
+origin/main untouched at 7deb528ff049d4507d33f4eff2f52cffa214f0be. Tree clean.
+Audit ledger 2011 records, head f5a8ee13281ee95d, chain intact. 20 commits ahead of
+main, 52 files, +16871/-9. 122 JSON receipts. Host torch 2.13.0+cpu, cuda unavailable.
+41 tests passed.
+
+VERDICT. A self-falsifying research apparatus with exact algebraic results and an
+honest account of its own failures; zero demonstrated model-performance claims; no
+benchmark task attempted or solved; nothing executed on CUDA.
+
+VERIFIED WINS (9).
+Lemma 1 cancellation: E_v 5.707e-02 equals prediction 5.707e-02, ratio 1.0000,
+residual 1.4e-08; mismatched control 2.428e+01.
+E_v_max 0.00e+00 in 3 of 3 repair arms.
+SplitJEPA whitening: 0.337450 to 0.013143; negative control 0.041059, 3.1x contrast.
+Exact GF(2) beta_1 matches ripser, 54x faster.
+Resonator: round-trip 1.333e-07, associativity 3.770e-07, 6/6 tests.
+NDL: no-wake batch byte-identical to stage1_fictive, 5/5 tests.
+ACE page contract: PAGE_TOKENS 16, PAGE_SLAB_KIB 384.0 (declared, not measured), 8/8.
+G-SJ4 amended bars: separation bar 0.7000 vs measured -0.683414 FAIL; false-veto bar
+0.0500 vs 0.81993 FAIL. Both clauses can fail.
+Per-page vs sum-over-tiers: TEETH True; page form W=0.0 at t=1e9, defective form W=1.0.
+
+FALSIFICATIONS AND RETRACTIONS (11).
+Wbar ridge closure: collapse, |Vbar| 10.475 to 0.034.
+Wbar norm-preserving closure: collapse, |abar| 7.2972 to 0.0000.
+Wbar mirror rule: diverge, |Vbar| 6.4e+10.
+Wbar paper flow at eta_Wbar 0.8: no gain, |Ep| 40.2118 vs no-rule 1.4483 (28x worse),
+stream alive |abar| 21.4229.
+G-D1 lifetime filter: ratio 7.5000 to infinity across lifetime 0.0 to 2.5, bar 0.8000.
+Theorem 1 per-step acute angle: 28 of 60 positive, mean cosine -0.0000.
+Minus-gamma-W dominance story: retracted as inferred; the measured defect is the abar
+condition.
+Dead-unit hypothesis: Pearson r(dead,|Ep|) = -0.3022, wrong sign, n=9.
+My own E_p mask: D_u applied to both terms of Eq. 11; downstream needs D_d.
+My own E_p layer: layer 0 is the layer the paper disclaims.
+My own E_p unit: the paper reports the ratio; measured 1.1955 to 0.9781 DECREASING.
+
+G-H2b ROOT CAUSE. The abar condition. Paper quotes verbatim: "identity backward
+nonlinearity (Dd = I)"; "V0 and Wbar0 are unused by the model yet enter E0_p, and a
+fuller treatment is left to future work"; "A theory of when and why Ep grows or
+decreases remains to be developed." Hyperparameters eta_W 1.0, eta_Wbar 0.8, eta_V =
+eta_Vbar 0.8, decay 1e-3 W/Wbar and 0.01 V/Vbar.
+One-step identity holds at layer 0 (resid/|Ep| 1.20e-02 with D_d=relu, 5.89e-02 with
+D_d=I) and fails at layers 1 and 2. Localised: at layer 2 the omitted V.dT term has
+norm 2341.5 against dV.T at 227.6.
+
+BLOCKED. G-SJ3a/b: 0 npz banks, BLOCKED_BANK_ABSENT. G-SJ4 dark port: attribution
+inverted, fires on 82 percent of correct and 14 percent of incorrect, stays disconnected.
+G-H2b: frac 0.467 below 0.900. Blackwell: cpu-only torch. AAII v4.3.2: 0 of 10 scoreable.
+
+STANDING CORRECTION. The directive's "state-of-the-art on AAII v4.3.2" has no measured
+support and appears here only as an unclaimed aspiration.
+
+REMAINING ENGINEERING. Settle E_p at depth; treat eta_Wbar 0.8 as an instability and
+record it; generate the candidate bank (highest leverage, gates G-SJ3a/b and all
+selector claims, dedup containment 0.1367); find a cross-fold statistic that survives
+conformational breathing (honest baseline 7.5000 over 120 cross pairs); redesign veto
+attribution; measure the NDL causal-emergence ratchet; deploy and gate on real CUDA.
+
+METHOD. Six recurring defect classes: a gate may assert only what its fixture can carry;
+measure the quantity the source defines at the layer and form the source reports; a
+strictly monotone transform cannot split a tie; a constant-across-candidates penalty is
+a no-op; no gate may sit downstream of an operator mixing candidate with bank; an unrun
+artifact is not a deliverable.
+</pre>
+</details>
+
+<footer>
+<p><b>Provenance.</b> Numbers sourced from receipts in <code>design/zone_a/evidence/</code> and from commands executed in this session: <code>probe_ep_ode.py</code>, <code>probe_ep_ode_wbar.py</code>, <code>probe_ep_c1_fixed.py</code>, <code>diag_ep_vdt.py</code>, the unit suite (41 passed), and <code>git ls-remote</code> readback. The source paper is Liao et al., PNAS 2026, read from my own 15-page extraction.</p>
+<p><b>Limits.</b> Single-seed measurements where noted; width 32–64; module uses <code>D_d = relu</code> against the paper's <code>D_d = I</code>; the <code>PAGE_SLAB_KIB</code> constant is declared, not measured; the second-order <code>dV·dT</code> remainder is inferred, not isolated. No bar was moved in producing this document. Hashes prove byte linkage, not truth.</p>
+</footer>
+
+</body>
+</html>
