@@ -1,0 +1,137 @@
+{
+  "schema": "henri.crossfold.fullwidth.observed.v1",
+  "evidence_class": "OBSERVED",
+  "what": "cross-fold statistic re-measured at FULL ensemble width",
+  "repairs": "henri_crossfold_statistic_observed.json (MAX_MODELS = 10 truncation)",
+  "preregistered": {
+    "truncation_models": 10,
+    "bar_extremum_ratio": 0.8,
+    "representative_tolerance": 0.2,
+    "arm_B_omitted_because": "exact no-op: a Betti curve is already scale-parameterised",
+    "same_protein": "1D3Z and 2K39 are both ubiquitin; this is a same-protein test"
+  },
+  "fetched": {
+    "1D3Z": {
+      "models_parsed": 10,
+      "common_residues": 76,
+      "models_used_full": 10
+    },
+    "2K39": {
+      "models_parsed": 116,
+      "common_residues": 76,
+      "models_used_full": 116
+    }
+  },
+  "ensemble_spread": {
+    "1D3Z": {
+      "n_models": 10,
+      "n_pairs": 45,
+      "mean_rmsd_A": 1.158394690823991,
+      "max_rmsd_A": 2.067289259684959,
+      "p95_rmsd_A": 1.9136178312518828,
+      "note": "SUPERPOSED pairwise RMSD proxy; not the cited ensemble statistic"
+    },
+    "2K39": {
+      "n_models": 116,
+      "n_pairs": 6670,
+      "mean_rmsd_A": 2.662151491638466,
+      "max_rmsd_A": 6.940687254902298,
+      "p95_rmsd_A": 4.02383511959684,
+      "note": "SUPERPOSED pairwise RMSD proxy; not the cited ensemble statistic"
+    }
+  },
+  "arms": {
+    "truncated": {
+      "A_raw_betti": {
+        "label": "A_raw_betti",
+        "n_within": 45,
+        "n_cross": 100,
+        "mean_within": 5.288888888888889,
+        "mean_cross": 19.86,
+        "max_within": 11.0,
+        "min_cross": 7.0,
+        "ratio_within_over_cross": 1.5714285714285714,
+        "passes_bar": false,
+        "mean_ratio": 0.26630860467718476,
+        "passes_bar_mean": true,
+        "effect_z": 2.2220944921409176
+      },
+      "C_landscape": {
+        "label": "C_landscape",
+        "n_within": 45,
+        "n_cross": 100,
+        "mean_within": 0.08670340711777105,
+        "mean_cross": 0.4421709687768813,
+        "max_within": 0.1807668479535285,
+        "min_cross": 0.1960123888805701,
+        "ratio_within_over_cross": 0.9222215441885631,
+        "passes_bar": false,
+        "mean_ratio": 0.1960857072041775,
+        "passes_bar_mean": true,
+        "effect_z": 2.7870404719251223
+      }
+    },
+    "full": {
+      "A_raw_betti": {
+        "label": "A_raw_betti",
+        "n_within": 45,
+        "n_cross": 1160,
+        "mean_within": 5.288888888888889,
+        "mean_cross": 18.660344827586208,
+        "max_within": 11.0,
+        "min_cross": 5.0,
+        "ratio_within_over_cross": 2.2,
+        "passes_bar": false,
+        "mean_ratio": 0.2834293223279641,
+        "passes_bar_mean": true,
+        "effect_z": 1.9421831829809437
+      },
+      "C_landscape": {
+        "label": "C_landscape",
+        "n_within": 45,
+        "n_cross": 1160,
+        "mean_within": 0.08670340711777105,
+        "mean_cross": 0.43868267779381803,
+        "max_within": 0.1807668479535285,
+        "min_cross": 0.11235294274415952,
+        "ratio_within_over_cross": 1.6089195666655143,
+        "passes_bar": false,
+        "mean_ratio": 0.19764492993845056,
+        "passes_bar_mean": true,
+        "effect_z": 3.150600011539556
+      }
+    }
+  },
+  "truncation_test": {
+    "median_truncated10_A": {
+      "1D3Z": 15.127045399860743,
+      "2K39": 15.055246144288361
+    },
+    "median_full_A": {
+      "1D3Z": 15.127045399860743,
+      "2K39": 15.126868937454178
+    },
+    "relative_difference": {
+      "1D3Z": 0.0,
+      "2K39": 0.0047573312637594605
+    },
+    "tolerance": 0.2,
+    "representative": true,
+    "outcome": "H_representative"
+  },
+  "best_arm_full": "C_landscape",
+  "bar_cleared_full": false,
+  "comparison": {
+    "truncated_best_ratio": 0.9222215441885631,
+    "full_best_ratio": 1.6089195666655143,
+    "truncated_best_arm": "C_landscape",
+    "full_best_arm": "C_landscape"
+  },
+  "verdict": "CROSSFOLD_STILL_NOT_SEPARATED_AT_FULL_WIDTH",
+  "limits": [
+    "same-protein test: 1D3Z and 2K39 are both ubiquitin; this is the stringent case",
+    "superposed pairwise RMSD is a PROXY for the cited ensemble statistic, not the citation",
+    "landscape uses k_max = 3 on a 24-point grid; refinement could move ARM C",
+    "single seed; no training; CPU only"
+  ]
+}
